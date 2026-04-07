@@ -28,7 +28,9 @@
     "submitting": "Signing in...",
     "noAccount": "Don't have an account?",
     "register": "Sign up",
-    "errorInvalidCredentials": "Invalid email or password"
+    "errorInvalidCredentials": "Invalid email or password",
+    "continueWithGoogle": "Continue with Google",
+    "orEmail": "or sign in with email"
   },
   "Register": {
     "subtitle": "Create a new account",
@@ -41,11 +43,15 @@
     "accountType": "Account Type",
     "employee": "👤 Employee (Free)",
     "external": "💳 External User",
+    "employeeHint": "Employee accounts require prior admin approval",
     "submit": "Create Account",
     "submitting": "Creating...",
     "hasAccount": "Already have an account?",
     "login": "Sign in",
-    "errorPasswordShort": "Password must be at least 6 characters"
+    "errorPasswordShort": "Password must be at least 6 characters",
+    "errorNotWhitelisted": "This email is not authorized for an employee account. Please select External User or contact your admin.",
+    "continueWithGoogle": "Continue with Google",
+    "orEmailRegister": "or register with email"
   },
   "Sidebar": {
     "newChat": "New Chat",

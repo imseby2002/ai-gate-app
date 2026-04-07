@@ -28,7 +28,9 @@
     "submitting": "Đang đăng nhập...",
     "noAccount": "Chưa có tài khoản?",
     "register": "Đăng ký ngay",
-    "errorInvalidCredentials": "Email hoặc mật khẩu không hợp lệ"
+    "errorInvalidCredentials": "Email hoặc mật khẩu không hợp lệ",
+    "continueWithGoogle": "Tiếp tục với Google",
+    "orEmail": "hoặc đăng nhập bằng email"
   },
   "Register": {
     "subtitle": "Tạo tài khoản mới",
@@ -41,11 +43,15 @@
     "accountType": "Loại tài khoản",
     "employee": "👤 Nhân viên (Miễn phí)",
     "external": "💳 Người dùng bên ngoài",
+    "employeeHint": "Tài khoản nhân viên cần được quản trị viên phê duyệt trước",
     "submit": "Tạo tài khoản",
     "submitting": "Đang tạo...",
     "hasAccount": "Đã có tài khoản?",
     "login": "Đăng nhập",
-    "errorPasswordShort": "Mật khẩu phải có ít nhất 6 ký tự"
+    "errorPasswordShort": "Mật khẩu phải có ít nhất 6 ký tự",
+    "errorNotWhitelisted": "Email này chưa được cấp phép tài khoản nhân viên. Vui lòng chọn Người dùng bên ngoài hoặc liên hệ quản trị viên.",
+    "continueWithGoogle": "Tiếp tục với Google",
+    "orEmailRegister": "hoặc đăng ký bằng email"
   },
   "Sidebar": {
     "newChat": "Cuộc trò chuyện mới",

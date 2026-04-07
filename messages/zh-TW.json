@@ -28,7 +28,9 @@
     "submitting": "登入中...",
     "noAccount": "還沒有帳號？",
     "register": "立即註冊",
-    "errorInvalidCredentials": "帳號或密碼錯誤"
+    "errorInvalidCredentials": "帳號或密碼錯誤",
+    "continueWithGoogle": "使用 Google 帳號登入",
+    "orEmail": "或使用電子郵件"
   },
   "Register": {
     "subtitle": "建立新帳號",
@@ -41,11 +43,15 @@
     "accountType": "帳號類型",
     "employee": "👤 員工（免費）",
     "external": "💳 外部用戶",
+    "employeeHint": "員工帳號需經管理員預先核准才能使用",
     "submit": "建立帳號",
     "submitting": "建立中...",
     "hasAccount": "已有帳號？",
     "login": "立即登入",
-    "errorPasswordShort": "密碼至少需要 6 個字元"
+    "errorPasswordShort": "密碼至少需要 6 個字元",
+    "errorNotWhitelisted": "此 Email 尚未獲得員工帳號授權，請選擇「外部用戶」或聯絡管理員",
+    "continueWithGoogle": "使用 Google 帳號註冊",
+    "orEmailRegister": "或使用電子郵件註冊"
   },
   "Sidebar": {
     "newChat": "新對話",
