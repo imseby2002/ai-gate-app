@@ -12,6 +12,7 @@ export async function streamDeepSeek(params: ChatParams) {
   const deepseek = createOpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY!,
     baseURL: 'https://api.deepseek.com/v1',
+    compatibility: 'compatible',
   })
 
   const modelName = params.modelId === 'deepseek-reasoner'

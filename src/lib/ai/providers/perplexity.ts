@@ -6,6 +6,7 @@ export async function streamPerplexity(params: ChatParams) {
   const perplexity = createOpenAI({
     apiKey: process.env.PERPLEXITY_API_KEY!,
     baseURL: 'https://api.perplexity.ai',
+    compatibility: 'compatible',
   })
 
   const messages = params.systemPrompt
