@@ -9,14 +9,14 @@ export type RoutingIntent =
   | 'video-gen'
 
 export const MODEL_ROUTING: Record<RoutingIntent, string> = {
-  daily:     'deepseek-chat',
-  finance:   'deepseek-reasoner',
-  creative:  'gemini-2.0-flash',
-  analysis:  'claude-opus-4-5',
-  legal:     'perplexity-sonar-pro',
-  vision:    'gemini-2.0-flash-vision',
-  'image-gen': 'flux-1-pro',
-  'video-gen': 'veo3',
+  daily:       'or-llama-3.3-70b',   // 免費 - Llama 3.3 主力
+  finance:     'or-qwen3-80b',       // 免費 - Qwen3 80B 中文/推理
+  creative:    'or-llama-3.3-70b',   // 免費 - Llama 3.3
+  analysis:    'or-qwen3-80b',       // 免費 - Qwen3 80B 深度分析
+  legal:       'or-llama-3.3-70b',   // 免費 - Llama 3.3（如需網路搜尋可改 perplexity）
+  vision:      'gemini-2.0-flash-vision', // 必須付費 - 視覺辨識只有 Gemini
+  'image-gen': 'flux-1-pro',         // 付費 - 圖片生成
+  'video-gen': 'veo3',               // 付費 - 影片生成
 }
 
 const INTENT_KEYWORDS: Record<RoutingIntent, string[]> = {
