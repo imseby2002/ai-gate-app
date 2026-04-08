@@ -14,7 +14,6 @@ export async function streamOpenRouter(params: ChatParams) {
   const openrouter = createOpenAI({
     apiKey: process.env.OPENROUTER_API_KEY!,
     baseURL: 'https://openrouter.ai/api/v1',
-    compatibility: 'compatible',
     headers: {
       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'https://ai-gate-app-gamma.vercel.app',
       'X-Title': 'AI GATE',
