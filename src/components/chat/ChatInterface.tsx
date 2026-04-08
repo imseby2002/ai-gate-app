@@ -162,6 +162,20 @@ export function ChatInterface({
               }
               setMessages(prev => [...prev, assistantMsg])
               setStreaming(null)
+            } else if (data.type === 'error') {
+              setStreaming(null)
+              setMessages(prev => [...prev, {
+                id: crypto.randomUUID(),
+                conversation_id: newConvId ?? '',
+                user_id: '',
+                role: 'assistant',
+                content: `❌ AI 服務錯誤：${data.error}`,
+                model_id: null,
+                input_tokens: 0, output_tokens: 0, cost_usd: 0,
+                image_urls: null, video_url: null, file_refs: null,
+                latency_ms: null, finish_reason: 'error',
+                created_at: new Date().toISOString(),
+              }])
             }
           } catch {}
         }

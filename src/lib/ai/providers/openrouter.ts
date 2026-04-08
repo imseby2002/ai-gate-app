@@ -5,7 +5,7 @@ import type { ChatParams } from './deepseek'
 // Internal model ID → OpenRouter model string (free tier)
 const MODEL_MAP: Record<string, string> = {
   'or-llama-3.3-70b':  'meta-llama/llama-3.3-70b-instruct:free',
-  'or-qwen3-80b':      'qwen/qwen3-80b:free',
+  'or-qwen3-80b':      'qwen/qwen3-30b-a3b:free',       // qwen3-80b 無免費版，改用 30B MoE 免費版
   'or-qwen-coder':     'qwen/qwen2.5-coder-32b-instruct:free',
   'or-gemma-3-27b':    'google/gemma-3-27b-it:free',
 }
