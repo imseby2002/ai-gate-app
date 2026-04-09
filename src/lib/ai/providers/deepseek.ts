@@ -23,7 +23,7 @@ export async function streamDeepSeek(params: ChatParams) {
     : params.messages
 
   return streamText({
-    model: deepseek(modelName),
+    model: deepseek.chat(modelName),
     messages,
     maxOutputTokens: params.maxTokens ?? 4096,
   })

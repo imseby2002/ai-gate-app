@@ -27,7 +27,7 @@ export async function streamOpenRouter(params: ChatParams) {
     : params.messages
 
   return streamText({
-    model: openrouter(modelName),
+    model: openrouter.chat(modelName),
     messages,
     maxOutputTokens: params.maxTokens ?? 4096,
   })

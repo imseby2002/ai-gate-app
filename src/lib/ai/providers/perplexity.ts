@@ -13,7 +13,7 @@ export async function streamPerplexity(params: ChatParams) {
     : params.messages
 
   return streamText({
-    model: perplexity('llama-3.1-sonar-large-128k-online'),
+    model: perplexity.chat('llama-3.1-sonar-large-128k-online'),
     messages,
     maxOutputTokens: params.maxTokens ?? 4096,
   })
