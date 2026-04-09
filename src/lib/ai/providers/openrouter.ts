@@ -2,11 +2,12 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
 import type { ChatParams } from './deepseek'
 
-// Internal model ID → OpenRouter model string (free tier)
+// Internal model ID → OpenRouter model string
+// 注意：free tier 有 rate limit，繁忙時可能失敗
 const MODEL_MAP: Record<string, string> = {
   'or-llama-3.3-70b':  'meta-llama/llama-3.3-70b-instruct:free',
-  'or-qwen3-80b':      'qwen/qwen3-30b-a3b:free',       // qwen3-80b 無免費版，改用 30B MoE 免費版
-  'or-qwen-coder':     'qwen/qwen2.5-coder-32b-instruct:free',
+  'or-qwen3-80b':      'meta-llama/llama-3.3-70b-instruct:free', // qwen3 free tier 無可用端點
+  'or-qwen-coder':     'meta-llama/llama-3.3-70b-instruct:free', // qwen2.5-coder free 已失效
   'or-gemma-3-27b':    'google/gemma-3-27b-it:free',
 }
 
