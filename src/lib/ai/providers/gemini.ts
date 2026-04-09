@@ -3,9 +3,10 @@ import { streamText } from 'ai'
 import type { ChatParams } from './deepseek'
 
 const MODEL_MAP: Record<string, string> = {
-  'gemini-2.0-flash':          'gemini-2.0-flash',
-  'gemini-2.0-flash-thinking': 'gemini-2.0-flash-thinking-exp',
-  'gemini-2.0-flash-vision':   'gemini-2.0-flash',
+  'gemini-2.0-flash':          'gemini-2.5-flash',
+  'gemini-2.0-flash-thinking': 'gemini-2.5-flash',
+  'gemini-2.0-flash-vision':   'gemini-2.5-flash',
+  'gemini-2.5-flash':          'gemini-2.5-flash',
 }
 
 export async function streamGemini(params: ChatParams & { imageBase64?: string }) {

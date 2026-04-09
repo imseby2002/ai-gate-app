@@ -14,7 +14,7 @@ export const MODEL_ROUTING: Record<RoutingIntent, string> = {
   creative:    'gemini-2.0-flash',        // Gemini Flash - 創意/行銷文案
   analysis:    'deepseek-chat',           // DeepSeek Chat - 深度分析
   legal:       'perplexity-sonar-pro',    // Perplexity - 法條/網路查證
-  vision:      'gemini-2.0-flash-vision', // Gemini Vision - 圖片/OCR
+  vision:      'gemini-2.5-flash',        // Gemini 2.5 Flash - 圖片/OCR（原生多模態）
   'image-gen': 'flux-1-pro',             // FAL - 圖片生成
   'video-gen': 'veo3',                   // VEO3 - 影片生成
 }
