@@ -186,17 +186,20 @@ export async function POST(req: NextRequest) {
         ))
 
         try {
-          for await (const delta of streamResult.textStream) {
-            fullContent += delta
-            controller.enqueue(encoder.encode(
-              `data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`
-            ))
+          for await (const part of streamResult.fullStream) {
+            if (part.type === 'text-delta') {
+              fullContent += part.text
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ type: 'delta', content: part.text })}\n\n`
+              ))
+            } else if (part.type === 'error') {
+              throw part.error
+            } else if (part.type === 'finish') {
+              inputTokens = part.totalUsage?.inputTokens ?? 0
+              outputTokens = part.totalUsage?.outputTokens ?? 0
+            }
           }
 
-          // Get final usage
-          const usage = await streamResult.usage
-          inputTokens = usage?.inputTokens ?? 0
-          outputTokens = usage?.outputTokens ?? 0
           const costUsd = calculateCost(modelId, inputTokens, outputTokens)
           const latencyMs = Date.now() - startTime
 
@@ -226,6 +229,7 @@ export async function POST(req: NextRequest) {
           ))
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         } catch (err) {
+          console.error(`[chat] stream error (model=${modelId}):`, err)
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ type: 'error', error: String(err) })}\n\n`
           ))
