@@ -119,6 +119,8 @@ export function calculateCost(
     'or-qwen3-80b':            { in: 0,        out: 0        },
     'or-qwen-coder':           { in: 0,        out: 0        },
     'or-gemma-3-27b':          { in: 0,        out: 0        },
+    // OpenRouter paid models
+    'or-gpt-4o-mini':          { in: 0.00015,  out: 0.0006   },
   }
 
   const c = costs[modelId]

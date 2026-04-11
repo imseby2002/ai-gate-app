@@ -9,6 +9,7 @@ const MODEL_MAP: Record<string, string> = {
   'or-qwen3-80b':      'meta-llama/llama-3.3-70b-instruct:free', // qwen3 free tier 無可用端點
   'or-qwen-coder':     'meta-llama/llama-3.3-70b-instruct:free', // qwen2.5-coder free 已失效
   'or-gemma-3-27b':    'google/gemma-3-27b-it:free',
+  'or-gpt-4o-mini':    'openai/gpt-4o-mini',                     // 付費測試用
 }
 
 export async function streamOpenRouter(params: ChatParams) {
