@@ -41,7 +41,7 @@ CREATE TABLE public.ai_models (
   id                  TEXT PRIMARY KEY,
   display_name        TEXT NOT NULL,
   provider            TEXT NOT NULL
-                      CHECK (provider IN ('deepseek','google','anthropic','perplexity','fal','kling','veo')),
+                      CHECK (provider IN ('deepseek','google','anthropic','perplexity','fal','kling','veo','openrouter','groq')),
   modality            TEXT NOT NULL
                       CHECK (modality IN ('text','image','video','multimodal')),
   input_cost_per_1k   NUMERIC(10,8) DEFAULT 0,

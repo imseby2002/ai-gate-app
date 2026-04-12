@@ -8,6 +8,14 @@ WHERE model_id IN ('or-llama-3.3-70b', 'or-qwen3-80b', 'or-qwen-coder', 'or-gemm
 DELETE FROM public.ai_models
 WHERE id IN ('or-llama-3.3-70b', 'or-qwen3-80b', 'or-qwen-coder', 'or-gemma-3-27b');
 
+-- Expand provider check constraint to include groq and openrouter
+ALTER TABLE public.ai_models
+  DROP CONSTRAINT IF EXISTS ai_models_provider_check;
+
+ALTER TABLE public.ai_models
+  ADD CONSTRAINT ai_models_provider_check
+  CHECK (provider IN ('deepseek','google','anthropic','perplexity','fal','kling','veo','openrouter','groq'));
+
 -- Add Groq models
 INSERT INTO public.ai_models
   (id, display_name, provider, modality, input_cost_per_1k, output_cost_per_1k,
