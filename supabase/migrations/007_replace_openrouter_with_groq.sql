@@ -1,6 +1,10 @@
 -- Migration 007: Remove OpenRouter free models, add Groq models
 
--- Remove deprecated free OpenRouter models
+-- Clear foreign key references first, then remove deprecated free OpenRouter models
+UPDATE public.conversations
+SET model_id = NULL
+WHERE model_id IN ('or-llama-3.3-70b', 'or-qwen3-80b', 'or-qwen-coder', 'or-gemma-3-27b');
+
 DELETE FROM public.ai_models
 WHERE id IN ('or-llama-3.3-70b', 'or-qwen3-80b', 'or-qwen-coder', 'or-gemma-3-27b');
 
