@@ -82,6 +82,7 @@ export function getProviderFromModel(modelId: string): string {
   if (modelId.startsWith('veo')) return 'veo'
   if (modelId.startsWith('kling')) return 'kling'
   if (modelId.startsWith('or-')) return 'openrouter'
+  if (modelId.startsWith('groq-')) return 'groq'
   return 'deepseek'
 }
 
@@ -114,13 +115,14 @@ export function calculateCost(
     'claude-opus-4-5':         { in: 0.015,    out: 0.075    },
     'claude-sonnet-4-5':       { in: 0.003,    out: 0.015    },
     'perplexity-sonar-pro':    { in: 0.001,    out: 0.001    },
-    // OpenRouter free models — cost is $0
-    'or-llama-3.3-70b':        { in: 0,        out: 0        },
-    'or-qwen3-80b':            { in: 0,        out: 0        },
-    'or-qwen-coder':           { in: 0,        out: 0        },
-    'or-gemma-3-27b':          { in: 0,        out: 0        },
     // OpenRouter paid models
     'or-gpt-4o-mini':          { in: 0.00015,  out: 0.0006   },
+    // Groq models (依 Groq 官方定價)
+    'groq-auto':               { in: 0,        out: 0        },
+    'groq-llama-3.3-70b':      { in: 0,        out: 0        },
+    'groq-qwen3-32b':          { in: 0,        out: 0        },
+    'groq-deepseek-r1':        { in: 0,        out: 0        },
+    'groq-qwq-32b':            { in: 0,        out: 0        },
   }
 
   const c = costs[modelId]

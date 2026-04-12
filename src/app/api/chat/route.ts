@@ -7,6 +7,7 @@ import { streamGemini } from '@/lib/ai/providers/gemini'
 import { streamClaude } from '@/lib/ai/providers/claude'
 import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
+import { streamGroq } from '@/lib/ai/providers/groq'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -167,6 +168,8 @@ export async function POST(req: NextRequest) {
       streamResult = await streamPerplexity(chatParams)
     } else if (provider === 'openrouter') {
       streamResult = await streamOpenRouter(chatParams)
+    } else if (provider === 'groq') {
+      streamResult = await streamGroq(chatParams)
     } else {
       streamResult = await streamDeepSeek({ ...chatParams, modelId: 'deepseek-chat' })
     }
