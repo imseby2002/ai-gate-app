@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot, BarChart3, Settings, Shield,
-  Plus, ChevronLeft, ChevronRight, Image, Video, Zap
+  Plus, ChevronLeft, ChevronRight, Image, Video, Zap, FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -26,6 +26,7 @@ export function Sidebar({ userType, conversations = [] }: SidebarProps) {
     { labelKey: 'assistants', href: '/assistants',  icon: Bot },
     { labelKey: 'imageGen',   href: '/image-gen',   icon: Image },
     { labelKey: 'videoGen',   href: '/video-gen',   icon: Video },
+    { labelKey: 'resume',     href: '/resume',      icon: FileText },
     { labelKey: 'usage',      href: '/usage',       icon: BarChart3 },
     { labelKey: 'settings',   href: '/settings',    icon: Settings },
     { labelKey: 'admin',      href: '/admin',       icon: Shield, adminOnly: true },
