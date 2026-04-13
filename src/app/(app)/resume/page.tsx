@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Loader2, Sparkles, FileText, Upload, X, ClipboardCopy, Check } from 'lucide-react'
+import { Loader2, Sparkles, FileText, Upload, X, ClipboardCopy, Check, Brain, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -20,7 +20,7 @@ const ACCEPTED_TYPES = [
   'application/msword',
 ]
 
-const ACCEPTED_EXTENSIONS = '.jpg,.jpeg,.pdf,.doc,.docx'
+type Phase = 'idle' | 'analyzing' | 'writing' | 'done' | 'error'
 
 function FileTag({ name, onRemove }: { name: string; onRemove: () => void }) {
   return (
@@ -39,12 +39,74 @@ function FileTag({ name, onRemove }: { name: string; onRemove: () => void }) {
   )
 }
 
+function PhaseIndicator({ phase }: { phase: Phase }) {
+  if (phase === 'idle' || phase === 'done') return null
+
+  const steps = [
+    {
+      key: 'analyzing',
+      icon: Brain,
+      label: 'DeepSeek-R1 分析',
+      desc: '比對 JD 關鍵字與經歷落差',
+    },
+    {
+      key: 'writing',
+      icon: Pencil,
+      label: 'Claude Sonnet 生成',
+      desc: '撰寫 ATS 優化履歷',
+    },
+  ]
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl border bg-gray-50 mb-4">
+      {steps.map((step, i) => {
+        const Icon = step.icon
+        const isActive = phase === step.key
+        const isDone =
+          (step.key === 'analyzing' && phase === 'writing') ||
+          (step.key === 'writing' && phase === 'done')
+
+        return (
+          <div key={step.key} className="flex items-center gap-2 flex-1">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all"
+              style={
+                isActive
+                  ? { background: 'color-mix(in oklch, var(--primary) 15%, transparent)', color: 'var(--primary)' }
+                  : isDone
+                  ? { background: '#dcfce7', color: '#16a34a' }
+                  : { background: '#f3f4f6', color: '#9ca3af' }
+              }
+            >
+              {isActive ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Icon className="h-4 w-4" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium truncate"
+                style={isActive ? { color: 'var(--primary)' } : isDone ? { color: '#16a34a' } : { color: '#9ca3af' }}>
+                {step.label}
+              </p>
+              <p className="text-xs text-gray-400 truncate hidden sm:block">{step.desc}</p>
+            </div>
+            {i < steps.length - 1 && (
+              <div className="w-6 h-px bg-gray-300 shrink-0 mx-1" />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function ResumePage() {
   const [jd, setJd] = useState('')
   const [experience, setExperience] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [phase, setPhase] = useState<Phase>('idle')
   const [result, setResult] = useState('')
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -75,42 +137,62 @@ export default function ResumePage() {
 
   const handleSubmit = async () => {
     if (!jd.trim() && !experience.trim()) return
-    setLoading(true)
+    setPhase('analyzing')
     setError('')
     setResult('')
 
     try {
-      // Placeholder: replace with actual API call when backend is ready
-      // const formData = new FormData()
-      // formData.append('jd', jd)
-      // formData.append('experience', experience)
-      // if (file) formData.append('resume', file)
-      // const res = await fetch('/api/resume/optimize', { method: 'POST', body: formData })
-      // const data = await res.json()
-      // if (!res.ok) throw new Error(data.error)
-      // setResult(data.result)
+      const formData = new FormData()
+      formData.append('jd', jd)
+      formData.append('experience', experience)
+      if (file) formData.append('resume', file)
 
-      // Demo: simulate streaming result
-      await new Promise(r => setTimeout(r, 1200))
-      setResult(
-        '## 精準優化後的履歷摘要\n\n' +
-        '**職缺關鍵詞已整合**\n' +
-        '根據您提供的目標職缺，以下是針對性優化建議：\n\n' +
-        '**工作經歷（優化版）**\n' +
-        '- 主導跨部門專案，提升流程效率 35%，與目標職位「專案管理」要求高度吻合\n' +
-        '- 運用數據分析工具（Python / SQL）完成每月業績報告，直接對應 JD 中「數據驅動決策」需求\n' +
-        '- 帶領 5 人團隊達成季度 KPI，展現 JD 所需領導力\n\n' +
-        '**技能關鍵字（ATS 友善）**\n' +
-        'Project Management · Data Analysis · Python · SQL · Cross-functional Collaboration · KPI Management\n\n' +
-        '**自我介紹（優化版）**\n' +
-        '具備 3 年以上產品與數據分析經驗，擅長將複雜數據轉化為可執行策略。\n' +
-        '積極主動、溝通能力強，期待加入貴團隊持續成長。\n\n' +
-        '---\n_此結果由 AI 生成，請依實際情況調整後使用。_'
-      )
+      const res = await fetch('/api/resume/optimize', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? `HTTP ${res.status}`)
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (raw === '[DONE]') break
+
+          try {
+            const event = JSON.parse(raw)
+            if (event.type === 'phase') {
+              setPhase(event.phase as Phase)
+            } else if (event.type === 'delta') {
+              setResult(prev => prev + event.content)
+            } else if (event.type === 'done') {
+              setPhase('done')
+            } else if (event.type === 'error') {
+              throw new Error(event.error)
+            }
+          } catch {
+            // ignore parse errors for individual lines
+          }
+        }
+      }
     } catch (err) {
+      setPhase('error')
       setError(String(err))
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -121,7 +203,8 @@ export default function ResumePage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const canSubmit = (jd.trim().length > 0 || experience.trim().length > 0) && !loading
+  const isLoading = phase === 'analyzing' || phase === 'writing'
+  const canSubmit = (jd.trim().length > 0 || experience.trim().length > 0) && !isLoading
 
   return (
     <div className="h-full overflow-y-auto px-6 py-6">
@@ -132,7 +215,7 @@ export default function ResumePage() {
           精準履歷優化器
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          輸入目標職缺與過往經歷，AI 將為您生成高度匹配的優化履歷
+          DeepSeek-R1 深度分析 JD 落差 &nbsp;→&nbsp; Claude Sonnet 生成 ATS 優化履歷
         </p>
       </div>
 
@@ -157,6 +240,7 @@ export default function ResumePage() {
                 value={jd}
                 onChange={e => setJd(e.target.value)}
                 rows={6}
+                disabled={isLoading}
                 placeholder={'貼上職缺描述（Job Description）…\n\n例如：\n- 負責產品數據分析與報表\n- 需具備 SQL、Python 技能\n- 3 年以上相關工作經驗'}
                 className="resize-none text-sm leading-relaxed"
               />
@@ -172,6 +256,7 @@ export default function ResumePage() {
                 value={experience}
                 onChange={e => setExperience(e.target.value)}
                 rows={6}
+                disabled={isLoading}
                 placeholder={'描述您的工作經歷、技能與成就…\n\n例如：\n- 2021–2024 ABC 公司，數據分析師\n- 使用 Python 建立自動化報表系統\n- 帶領 3 人小組完成季度專案'}
                 className="resize-none text-sm leading-relaxed"
               />
@@ -184,19 +269,28 @@ export default function ResumePage() {
                 <span className="text-xs text-gray-400 font-normal ml-1.5">（選填）</span>
               </label>
               <div
-                className="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 cursor-pointer transition-colors hover:bg-gray-50"
-                onClick={() => fileInputRef.current?.click()}
-                style={file ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 4%, transparent)' } : {}}
+                className="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors"
+                style={
+                  isLoading
+                    ? { opacity: 0.5, pointerEvents: 'none', cursor: 'default' }
+                    : file
+                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 4%, transparent)', cursor: 'pointer' }
+                    : { cursor: 'pointer' }
+                }
+                onClick={() => !isLoading && fileInputRef.current?.click()}
               >
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={ACCEPTED_EXTENSIONS}
+                  accept=".jpg,.jpeg,.pdf,.doc,.docx"
                   className="sr-only"
                   onChange={handleFileChange}
+                  disabled={isLoading}
                 />
                 {file ? (
-                  <FileTag name={file.name} onRemove={e => { e.stopPropagation(); removeFile() }} />
+                  <div onClick={e => e.stopPropagation()}>
+                    <FileTag name={file.name} onRemove={removeFile} />
+                  </div>
                 ) : (
                   <>
                     <Upload className="h-5 w-5 text-gray-400" />
@@ -209,6 +303,12 @@ export default function ResumePage() {
               </div>
               {fileError && (
                 <p className="text-xs text-red-600">{fileError}</p>
+              )}
+              {file && file.type.startsWith('image/') && (
+                <p className="text-xs text-blue-600">✓ JPG 圖片將由 Claude 視覺辨識分析</p>
+              )}
+              {file && !file.type.startsWith('image/') && (
+                <p className="text-xs text-gray-400">PDF / Word 作為參考附件（建議同時填寫上方文字欄位）</p>
               )}
             </div>
 
@@ -226,8 +326,8 @@ export default function ResumePage() {
               className="w-full py-5 text-sm font-semibold rounded-xl"
               size="lg"
             >
-              {loading
-                ? <><Loader2 className="h-4 w-4 animate-spin" />優化中，請稍候…</>
+              {isLoading
+                ? <><Loader2 className="h-4 w-4 animate-spin" />處理中，請稍候…</>
                 : <><Sparkles className="h-4 w-4" />開始優化</>
               }
             </Button>
@@ -240,7 +340,7 @@ export default function ResumePage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-base">AI 優化結果</CardTitle>
-                <CardDescription className="mt-1">優化後的履歷內容將顯示於此</CardDescription>
+                <CardDescription className="mt-1">雙模型協作生成的履歷將顯示於此</CardDescription>
               </div>
               {result && (
                 <Button
@@ -258,44 +358,54 @@ export default function ResumePage() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Loading skeleton */}
-            {loading && (
+            {/* Phase progress indicator */}
+            <PhaseIndicator phase={phase} />
+
+            {/* Streaming skeleton while analyzing (no text yet) */}
+            {phase === 'analyzing' && !result && (
               <div className="space-y-3 animate-pulse">
                 {[100, 80, 90, 60, 75, 85, 55].map((w, i) => (
-                  <div
-                    key={i}
-                    className="h-3 rounded-full bg-gray-200"
-                    style={{ width: `${w}%` }}
-                  />
+                  <div key={i} className="h-3 rounded-full bg-gray-200" style={{ width: `${w}%` }} />
                 ))}
               </div>
             )}
 
-            {/* Result content */}
-            {!loading && result && (
+            {/* Streaming result (writing phase or done) */}
+            {result && (
               <div className="min-h-[300px]">
                 <Textarea
                   readOnly
                   value={result}
-                  rows={20}
+                  rows={22}
                   className="resize-none text-sm leading-relaxed bg-gray-50 cursor-default focus-visible:ring-0 border-gray-200"
                 />
+                {phase === 'writing' && (
+                  <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Claude Sonnet 撰寫中…
+                  </p>
+                )}
               </div>
             )}
 
             {/* Empty state */}
-            {!loading && !result && (
-              <div className="min-h-[300px] flex flex-col items-center justify-center gap-3 text-center rounded-xl border-2 border-dashed border-gray-200 p-8">
-                <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}
-                >
-                  <FileText className="h-6 w-6" style={{ color: 'var(--primary)' }} />
+            {phase === 'idle' && !result && (
+              <div className="min-h-[300px] flex flex-col items-center justify-center gap-4 text-center rounded-xl border-2 border-dashed border-gray-200 p-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50">
+                    <Brain className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="text-gray-300 text-lg font-light">→</div>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}>
+                    <Pencil className="h-5 w-5" style={{ color: 'var(--primary)' }} />
+                  </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">尚無優化結果</p>
+                  <p className="text-sm font-medium text-gray-700">雙模型協作</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    填寫左側表單並點擊「開始優化」<br />AI 生成的履歷將顯示在這裡
+                    DeepSeek-R1 分析落差<br />
+                    Claude Sonnet 撰寫優化履歷
                   </p>
                 </div>
               </div>
