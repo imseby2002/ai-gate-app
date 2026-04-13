@@ -137,7 +137,8 @@ ${experience}
   return streamText({
     model: anthropic('claude-sonnet-4-5'),
     system: systemPrompt,
-    messages: [{ role: 'user', content: userContent as Parameters<typeof streamText>[0]['messages'][0]['content'] }],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    messages: [{ role: 'user' as const, content: userContent as any }],
     maxOutputTokens: 3000,
   })
 }

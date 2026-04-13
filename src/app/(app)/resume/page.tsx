@@ -40,7 +40,7 @@ function FileTag({ name, onRemove }: { name: string; onRemove: () => void }) {
 }
 
 function PhaseIndicator({ phase }: { phase: Phase }) {
-  if (phase === 'idle' || phase === 'done') return null
+  if (phase === 'idle') return null
 
   const steps = [
     {
