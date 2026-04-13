@@ -42,19 +42,9 @@ function FileTag({ name, onRemove }: { name: string; onRemove: () => void }) {
 function PhaseIndicator({ phase }: { phase: Phase }) {
   if (phase === 'idle') return null
 
-  const steps = [
-    {
-      key: 'analyzing',
-      icon: Brain,
-      label: 'DeepSeek-R1 分析',
-      desc: '比對 JD 關鍵字與經歷落差',
-    },
-    {
-      key: 'writing',
-      icon: Pencil,
-      label: 'Claude Sonnet 生成',
-      desc: '撰寫 ATS 優化履歷',
-    },
+  const steps: Array<{ key: Phase; icon: React.ElementType; label: string; desc: string }> = [
+    { key: 'analyzing', icon: Brain,  label: 'DeepSeek-R1 分析', desc: '比對 JD 關鍵字與經歷落差' },
+    { key: 'writing',   icon: Pencil, label: 'Claude Sonnet 生成', desc: '撰寫 ATS 優化履歷' },
   ]
 
   return (
@@ -63,8 +53,8 @@ function PhaseIndicator({ phase }: { phase: Phase }) {
         const Icon = step.icon
         const isActive = phase === step.key
         const isDone =
-          (step.key === 'analyzing' && phase === 'writing') ||
-          (step.key === 'writing' && phase === 'done')
+          (step.key === 'analyzing' && (phase === 'writing' || phase === 'done')) ||
+          (step.key === 'writing'   && phase === 'done')
 
         return (
           <div key={step.key} className="flex items-center gap-2 flex-1">
@@ -78,22 +68,18 @@ function PhaseIndicator({ phase }: { phase: Phase }) {
                   : { background: '#f3f4f6', color: '#9ca3af' }
               }
             >
-              {isActive ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Icon className="h-4 w-4" />
-              )}
+              {isActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-medium truncate"
-                style={isActive ? { color: 'var(--primary)' } : isDone ? { color: '#16a34a' } : { color: '#9ca3af' }}>
+              <p
+                className="text-xs font-medium truncate"
+                style={isActive ? { color: 'var(--primary)' } : isDone ? { color: '#16a34a' } : { color: '#9ca3af' }}
+              >
                 {step.label}
               </p>
               <p className="text-xs text-gray-400 truncate hidden sm:block">{step.desc}</p>
             </div>
-            {i < steps.length - 1 && (
-              <div className="w-6 h-px bg-gray-300 shrink-0 mx-1" />
-            )}
+            {i < steps.length - 1 && <div className="w-6 h-px bg-gray-300 shrink-0 mx-1" />}
           </div>
         )
       })}
@@ -147,14 +133,11 @@ export default function ResumePage() {
       formData.append('experience', experience)
       if (file) formData.append('resume', file)
 
-      const res = await fetch('/api/resume/optimize', {
-        method: 'POST',
-        body: formData,
-      })
+      const res = await fetch('/api/resume/optimize', { method: 'POST', body: formData })
 
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? `HTTP ${res.status}`)
+        throw new Error((data as { error?: string }).error ?? `HTTP ${res.status}`)
       }
 
       const reader = res.body.getReader()
@@ -173,21 +156,13 @@ export default function ResumePage() {
           if (!line.startsWith('data: ')) continue
           const raw = line.slice(6).trim()
           if (raw === '[DONE]') break
-
           try {
-            const event = JSON.parse(raw)
-            if (event.type === 'phase') {
-              setPhase(event.phase as Phase)
-            } else if (event.type === 'delta') {
-              setResult(prev => prev + event.content)
-            } else if (event.type === 'done') {
-              setPhase('done')
-            } else if (event.type === 'error') {
-              throw new Error(event.error)
-            }
-          } catch {
-            // ignore parse errors for individual lines
-          }
+            const event = JSON.parse(raw) as { type: string; phase?: Phase; content?: string; error?: string }
+            if (event.type === 'phase' && event.phase)        setPhase(event.phase)
+            else if (event.type === 'delta' && event.content) setResult(prev => prev + event.content)
+            else if (event.type === 'done')                    setPhase('done')
+            else if (event.type === 'error')                   throw new Error(event.error)
+          } catch { /* ignore individual line parse errors */ }
         }
       }
     } catch (err) {
@@ -207,8 +182,8 @@ export default function ResumePage() {
   const canSubmit = (jd.trim().length > 0 || experience.trim().length > 0) && !isLoading
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6">
-      {/* Header */}
+    <div className="px-6 py-6">
+      {/* Page header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Sparkles className="h-6 w-6" style={{ color: 'var(--primary)' }} />
@@ -219,10 +194,10 @@ export default function ResumePage() {
         </p>
       </div>
 
-      {/* Split-screen layout */}
+      {/* Split-screen */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
-        {/* ── Left: Input Form ── */}
+        {/* ── Left: Input ── */}
         <Card className="rounded-2xl shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="text-base">輸入資料</CardTitle>
@@ -230,11 +205,9 @@ export default function ResumePage() {
           </CardHeader>
           <CardContent className="space-y-5">
 
-            {/* JD */}
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">
-                目標職缺 JD
-                <span className="text-red-500 ml-0.5">*</span>
+                目標職缺 JD <span className="text-red-500">*</span>
               </label>
               <Textarea
                 value={jd}
@@ -246,11 +219,9 @@ export default function ResumePage() {
               />
             </div>
 
-            {/* Experience */}
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">
-                過往經歷
-                <span className="text-red-500 ml-0.5">*</span>
+                過往經歷 <span className="text-red-500">*</span>
               </label>
               <Textarea
                 value={experience}
@@ -262,14 +233,13 @@ export default function ResumePage() {
               />
             </div>
 
-            {/* File Upload */}
             <div className="space-y-2">
               <label className="block text-sm font-medium">
                 上傳現有履歷
                 <span className="text-xs text-gray-400 font-normal ml-1.5">（選填）</span>
               </label>
               <div
-                className="relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors"
+                className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition-colors"
                 style={
                   isLoading
                     ? { opacity: 0.5, pointerEvents: 'none', cursor: 'default' }
@@ -301,9 +271,7 @@ export default function ResumePage() {
                   </>
                 )}
               </div>
-              {fileError && (
-                <p className="text-xs text-red-600">{fileError}</p>
-              )}
+              {fileError && <p className="text-xs text-red-600">{fileError}</p>}
               {file && file.type.startsWith('image/') && (
                 <p className="text-xs text-blue-600">✓ JPG 圖片將由 Claude 視覺辨識分析</p>
               )}
@@ -312,29 +280,19 @@ export default function ResumePage() {
               )}
             </div>
 
-            {/* Error */}
             {error && (
-              <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">
-                {error}
-              </div>
+              <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>
             )}
 
-            {/* Submit */}
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              className="w-full py-5 text-sm font-semibold rounded-xl"
-              size="lg"
-            >
+            <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full py-5 text-sm font-semibold rounded-xl" size="lg">
               {isLoading
                 ? <><Loader2 className="h-4 w-4 animate-spin" />處理中，請稍候…</>
-                : <><Sparkles className="h-4 w-4" />開始優化</>
-              }
+                : <><Sparkles className="h-4 w-4" />開始優化</>}
             </Button>
           </CardContent>
         </Card>
 
-        {/* ── Right: Result Display ── */}
+        {/* ── Right: Result ── */}
         <Card className="rounded-2xl shadow-sm lg:sticky lg:top-6">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -343,25 +301,17 @@ export default function ResumePage() {
                 <CardDescription className="mt-1">雙模型協作生成的履歷將顯示於此</CardDescription>
               </div>
               {result && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopy}
-                  className="shrink-0 gap-1.5 text-xs"
-                >
+                <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0 gap-1.5 text-xs">
                   {copied
                     ? <><Check className="h-3.5 w-3.5 text-green-600" />已複製</>
-                    : <><ClipboardCopy className="h-3.5 w-3.5" />複製</>
-                  }
+                    : <><ClipboardCopy className="h-3.5 w-3.5" />複製</>}
                 </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            {/* Phase progress indicator */}
             <PhaseIndicator phase={phase} />
 
-            {/* Streaming skeleton while analyzing (no text yet) */}
             {phase === 'analyzing' && !result && (
               <div className="space-y-3 animate-pulse">
                 {[100, 80, 90, 60, 75, 85, 55].map((w, i) => (
@@ -370,7 +320,6 @@ export default function ResumePage() {
               </div>
             )}
 
-            {/* Streaming result (writing phase or done) */}
             {result && (
               <div className="min-h-[300px]">
                 <Textarea
@@ -381,14 +330,12 @@ export default function ResumePage() {
                 />
                 {phase === 'writing' && (
                   <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Claude Sonnet 撰寫中…
+                    <Loader2 className="h-3 w-3 animate-spin" />Claude Sonnet 撰寫中…
                   </p>
                 )}
               </div>
             )}
 
-            {/* Empty state */}
             {phase === 'idle' && !result && (
               <div className="min-h-[300px] flex flex-col items-center justify-center gap-4 text-center rounded-xl border-2 border-dashed border-gray-200 p-8">
                 <div className="flex items-center gap-3">
@@ -404,8 +351,7 @@ export default function ResumePage() {
                 <div>
                   <p className="text-sm font-medium text-gray-700">雙模型協作</p>
                   <p className="text-xs text-gray-400 mt-1">
-                    DeepSeek-R1 分析落差<br />
-                    Claude Sonnet 撰寫優化履歷
+                    DeepSeek-R1 分析落差<br />Claude Sonnet 撰寫優化履歷
                   </p>
                 </div>
               </div>
