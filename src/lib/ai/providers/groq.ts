@@ -6,7 +6,6 @@ import type { ChatParams } from './deepseek'
 const MODEL_MAP: Record<string, string> = {
   'groq-llama-3.3-70b': 'llama-3.3-70b-versatile',   // 通用主力，極快
   'groq-qwen3-32b':     'qwen/qwen3-32b',             // 推理/分析，支援繁體中文
-  'groq-deepseek-r1':   'qwen-qwq-32b',                  // 深度推理（R1 已下架，改用 QwQ-32B）
   'groq-qwq-32b':       'qwen-qwq-32b',               // 數學/邏輯推理
 }
 

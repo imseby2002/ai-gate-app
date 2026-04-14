@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server'
-import { createGroq } from '@ai-sdk/groq'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, streamText } from 'ai'
@@ -43,55 +42,20 @@ ${experience || '（未提供）'}
 請給出具體分析，此分析將作為後續履歷撰寫的依據。`
 }
 
-// ── Phase 1: 分析（Groq QwQ → 官方 DeepSeek-R1 → Claude 三重備援）──
-// 注意：把整個 try/await 序列放在 stream 外層執行，
-// 確保任何形式的 AI_APICallError / unhandled rejection 都能被攔截。
+// ── Phase 1: 分析（官方 DeepSeek-R1）────────────────────────────
 async function runAnalysis(jd: string, experience: string): Promise<{ text: string; usedModel: string }> {
   const prompt = buildAnalysisPrompt(jd, experience)
 
-  // ① Groq QwQ-32B（免費，快速推理）
-  // - deepseek-r1-distill-llama-70b 已於 2025 年下架，改用 qwen-qwq-32b
-  if (process.env.GROQ_API_KEY) {
-    try {
-      const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
-      const { text } = await generateText({
-        model: groq('qwen-qwq-32b'),
-        prompt,
-        maxOutputTokens: 2000,
-      })
-      if (text?.trim()) return { text, usedModel: 'Groq QwQ-32B' }
-    } catch (e) {
-      console.warn('[resume/analyze] Groq QwQ-32B failed:', (e as Error).message)
-    }
-  }
-
-  // ② 官方 DeepSeek-R1（Groq 額度耗盡或失敗時啟用）
-  if (process.env.DEEPSEEK_API_KEY) {
-    try {
-      const deepseek = createOpenAI({
-        apiKey: process.env.DEEPSEEK_API_KEY,
-        baseURL: 'https://api.deepseek.com/v1',
-      })
-      const { text } = await generateText({
-        model: deepseek.chat('deepseek-reasoner'),
-        prompt,
-        maxOutputTokens: 2000,
-      })
-      if (text?.trim()) return { text, usedModel: '官方 DeepSeek-R1' }
-    } catch (e) {
-      console.warn('[resume/analyze] DeepSeek official failed:', (e as Error).message)
-    }
-  }
-
-  // ③ Claude Sonnet 最終備援（保證一定有結果）
-  console.warn('[resume/analyze] All R1 providers failed, falling back to Claude Sonnet for analysis')
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+  const deepseek = createOpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY!,
+    baseURL: 'https://api.deepseek.com/v1',
+  })
   const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
+    model: deepseek.chat('deepseek-reasoner'),
     prompt,
     maxOutputTokens: 2000,
   })
-  return { text, usedModel: 'Claude Sonnet（備援）' }
+  return { text, usedModel: '官方 DeepSeek-R1' }
 }
 
 // ── Phase 2: Claude Sonnet 撰寫履歷 ──────────────────────────────
