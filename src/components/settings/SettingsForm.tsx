@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, User, Wallet, Shield, CheckCircle2 } from 'lucide-react'
+import { Loader2, User, Wallet, Shield, CheckCircle2, MessageSquare, Eye, EyeOff, ExternalLink } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
@@ -18,6 +18,15 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
   const [department, setDepartment] = useState(profile?.department ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+
+  // Telegram settings
+  const [tgBotToken, setTgBotToken] = useState(profile?.telegram_bot_token ?? '')
+  const [tgChatId, setTgChatId] = useState(profile?.telegram_chat_id ?? '')
+  const [showToken, setShowToken] = useState(false)
+  const [savingTg, setSavingTg] = useState(false)
+  const [savedTg, setSavedTg] = useState(false)
+  const [testingTg, setTestingTg] = useState(false)
+  const [tgTestResult, setTgTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
   const [topupLoading, setTopupLoading] = useState<PackageId | null>(null)
   const [topupDone, setTopupDone] = useState(false)
 
@@ -62,6 +71,47 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
       alert('Error processing payment. Please try again.')
     } finally {
       setTopupLoading(null)
+    }
+  }
+
+  const handleSaveTelegram = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingTg(true)
+    setTgTestResult(null)
+    const supabase = createClient()
+    await supabase.from('profiles').update({
+      telegram_bot_token: tgBotToken.trim() || null,
+      telegram_chat_id: tgChatId.trim() || null,
+    }).eq('id', profile!.id)
+    setSavingTg(false)
+    setSavedTg(true)
+    setTimeout(() => setSavedTg(false), 3000)
+  }
+
+  const handleTestTelegram = async () => {
+    if (!tgBotToken.trim() || !tgChatId.trim()) return
+    setTestingTg(true)
+    setTgTestResult(null)
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${tgBotToken.trim()}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: tgChatId.trim(),
+          text: '✅ AI GATE 行銷自動化 Telegram 設定成功！\n\n您將在此收到行銷流程的審核通知。',
+          parse_mode: 'HTML',
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setTgTestResult({ ok: true, msg: '測試訊息發送成功！請確認 Telegram 是否收到。' })
+      } else {
+        setTgTestResult({ ok: false, msg: data.description ?? '發送失敗，請確認 Bot Token 與 Chat ID 是否正確。' })
+      }
+    } catch {
+      setTgTestResult({ ok: false, msg: '網路錯誤，請稍後再試。' })
+    } finally {
+      setTestingTg(false)
     }
   }
 
@@ -194,6 +244,107 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
           ))}
         </div>
         <p className="mt-3 text-xs text-gray-400">{t('ecpayNote')}</p>
+      </div>
+
+      {/* Telegram Integration */}
+      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-blue-400" />
+            <h2 className="font-semibold">Telegram 整合</h2>
+          </div>
+          <a
+            href="https://t.me/BotFather"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs text-blue-500 hover:underline"
+          >
+            申請 Bot Token <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          設定後，自動化行銷流程將透過您的 Telegram Bot 發送審核通知，並接收您的核准或修改回覆。
+        </p>
+
+        <form onSubmit={handleSaveTelegram} className="space-y-4">
+          {/* Bot Token */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              Bot Token
+              <span className="ml-2 text-xs font-normal text-gray-400">（從 @BotFather 取得）</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showToken ? 'text' : 'password'}
+                value={tgBotToken}
+                onChange={e => setTgBotToken(e.target.value)}
+                className="w-full h-10 px-3 pr-10 rounded-lg border text-sm outline-none focus:ring-2 font-mono"
+                placeholder="xxxxxxxxxx:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+              />
+              <button
+                type="button"
+                onClick={() => setShowToken(!showToken)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Chat ID */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              Chat ID / 使用者名稱
+              <span className="ml-2 text-xs font-normal text-gray-400">（預設收通知的對象）</span>
+            </label>
+            <input
+              type="text"
+              value={tgChatId}
+              onChange={e => setTgChatId(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+              placeholder="@username 或 -100xxxxxxxxxx（群組）"
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              個人 Chat ID 可傳訊給 <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@userinfobot</a> 查詢；群組請將 Bot 加入後取得群組 ID。
+            </p>
+          </div>
+
+          {/* Test result */}
+          {tgTestResult && (
+            <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
+              tgTestResult.ok
+                ? 'bg-green-50 border border-green-200 text-green-700'
+                : 'bg-red-50 border border-red-200 text-red-700'
+            }`}>
+              {tgTestResult.ok
+                ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                : <Loader2 className="h-4 w-4 flex-shrink-0 mt-0.5" />}
+              {tgTestResult.msg}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={savingTg}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+              style={{ background: 'var(--primary)' }}
+            >
+              {savingTg && <Loader2 className="h-4 w-4 animate-spin" />}
+              {savingTg ? '儲存中…' : '儲存設定'}
+            </button>
+            <button
+              type="button"
+              onClick={handleTestTelegram}
+              disabled={testingTg || !tgBotToken.trim() || !tgChatId.trim()}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              {testingTg && <Loader2 className="h-4 w-4 animate-spin" />}
+              {testingTg ? '傳送中…' : '傳送測試訊息'}
+            </button>
+            {savedTg && <span className="text-sm text-green-600">✓ 已儲存</span>}
+          </div>
+        </form>
       </div>
 
       {/* Account Info */}

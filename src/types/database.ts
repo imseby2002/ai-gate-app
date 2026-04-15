@@ -16,6 +16,8 @@ export interface Profile {
   department: string | null
   monthly_budget: number | null
   credit_balance: number
+  telegram_bot_token: string | null
+  telegram_chat_id: string | null
   created_at: string
   updated_at: string
 }
