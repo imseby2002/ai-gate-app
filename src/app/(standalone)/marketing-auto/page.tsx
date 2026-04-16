@@ -35,7 +35,7 @@ const UNITS: UnitDef[] = [
   { id: 1,  name: '蒐集資訊',  icon: Search,     desc: '新聞、網頁、地圖、評論',         implemented: true  },
   { id: 2,  name: '公司資料',  icon: Building2,  desc: '基本資料、素材上傳',             implemented: true  },
   { id: 3,  name: '分析資料',  icon: BarChart3,  desc: '市場、競爭對手、影片/文案分析',   implemented: true  },
-  { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: false },
+  { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: true  },
   { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: false },
   { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: false },
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: false },
@@ -743,6 +743,233 @@ function Unit3Analyze({
   )
 }
 
+// ─── Unit 4: 文案產出 ─────────────────────────────────────────────────────────
+
+type CopyType =
+  | 'facebook_post' | 'instagram_caption' | 'threads_post' | 'line_message'
+  | 'twitter_post'  | 'linkedin_post'     | 'youtube_description'
+  | 'ad_headline'   | 'email_subject'     | 'email_body'   | 'press_release'
+
+interface Unit4Data {
+  types?: CopyType[]
+  results?: Record<string, string>
+  userInstructions?: string
+  feedback?: string
+}
+
+const COPY_TYPE_DEFS: { id: CopyType; label: string; group: string }[] = [
+  { id: 'facebook_post',       label: 'Facebook 貼文',    group: '社群' },
+  { id: 'instagram_caption',   label: 'Instagram 說明',   group: '社群' },
+  { id: 'threads_post',        label: 'Threads 貼文',     group: '社群' },
+  { id: 'line_message',        label: 'LINE 訊息',        group: '社群' },
+  { id: 'twitter_post',        label: 'Twitter/X 推文',  group: '社群' },
+  { id: 'linkedin_post',       label: 'LinkedIn 貼文',    group: '社群' },
+  { id: 'youtube_description', label: 'YouTube 說明欄',   group: '影片' },
+  { id: 'ad_headline',         label: '廣告標題組',        group: '廣告' },
+  { id: 'email_subject',       label: 'Email 主旨',       group: '電郵' },
+  { id: 'email_body',          label: 'Email 內文',       group: '電郵' },
+  { id: 'press_release',       label: '新聞稿',           group: '其他' },
+]
+
+function Unit4Copy({
+  campaignId: _campaignId,
+  savedData,
+  unit1Data,
+  unit2Data,
+  unit3Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit4Data
+  unit1Data?: { summary?: string }
+  unit2Data?: Unit2Data
+  unit3Data?: Unit3Data
+  onDone: (data: Unit4Data) => void
+}) {
+  const [selectedTypes, setSelectedTypes] = useState<CopyType[]>(
+    savedData?.types ?? ['facebook_post', 'instagram_caption']
+  )
+  const [instructions, setInstructions] = useState(savedData?.userInstructions ?? '')
+  const [feedback, setFeedback] = useState('')
+  const [running, setRunning] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<Unit4Data | null>(savedData?.results ? savedData : null)
+  const [activeTab, setActiveTab] = useState<CopyType | ''>('')
+  const [editedCopy, setEditedCopy] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
+  }, [result, activeTab])
+
+  const toggleType = (t: CopyType) =>
+    setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+
+  const run = async (fb?: string) => {
+    if (selectedTypes.length === 0) { setError('請至少選一種文案類型'); return }
+    setRunning(true); setError('')
+    try {
+      const res = await fetch('/api/marketing/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          copyTypes: selectedTypes,
+          userInstructions: instructions,
+          companyData: unit2Data ?? {},
+          analysisData: unit3Data ?? {},
+          collectedSummary: unit1Data?.summary ?? '',
+          feedback: fb ?? '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const out: Unit4Data = {
+        types: selectedTypes,
+        results: data.results,
+        userInstructions: instructions,
+      }
+      setResult(out)
+      setEditedCopy(data.results ?? {})
+      setActiveTab(selectedTypes[0])
+      setFeedback('')
+      onDone(out)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  // Group copy types
+  const groups = [...new Set(COPY_TYPE_DEFS.map(d => d.group))]
+
+  const displayCopy = (t: string) => editedCopy[t] ?? result?.results?.[t] ?? ''
+
+  return (
+    <div className="space-y-6">
+      {/* Context status */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { label: '蒐集資料', ok: !!unit1Data?.summary },
+          { label: '公司資料', ok: !!unit2Data?.companyName },
+          { label: '分析資料', ok: !!unit3Data?.results },
+        ].map(s => (
+          <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+          }`}>
+            {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+            {s.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Copy type selector */}
+      <div>
+        <label className="block text-sm font-semibold mb-3">選擇文案類型</label>
+        {groups.map(g => (
+          <div key={g} className="mb-3">
+            <div className="text-xs font-medium text-gray-400 mb-1.5">{g}</div>
+            <div className="flex flex-wrap gap-2">
+              {COPY_TYPE_DEFS.filter(d => d.group === g).map(d => {
+                const sel = selectedTypes.includes(d.id)
+                return (
+                  <button key={d.id} type="button" onClick={() => toggleType(d.id)}
+                    className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                    style={sel
+                      ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                      : {}}>
+                    {d.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* User instructions */}
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">
+          使用者特別規定
+          <span className="ml-2 text-xs font-normal text-gray-400">（選填，可指定風格、禁用字詞、必帶訊息等）</span>
+        </label>
+        <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
+          className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+          placeholder="例如：禁止使用『最好』『最強』等誇大字眼；必須提及限時優惠；文案要帶有緊迫感…" />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{error}
+        </div>
+      )}
+
+      <button onClick={() => run()} disabled={running}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        style={{ background: 'var(--primary)' }}>
+        {running ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成中…</> : <><PenLine className="h-4 w-4" />產生文案</>}
+      </button>
+
+      {/* Results */}
+      {result && (
+        <div className="space-y-3">
+          {/* Tab bar */}
+          <div className="flex gap-1.5 flex-wrap border-b pb-2">
+            {result.types?.map(t => {
+              const def = COPY_TYPE_DEFS.find(d => d.id === t)
+              return (
+                <button key={t} onClick={() => setActiveTab(t)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    activeTab === t ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}>
+                  {def?.label ?? t}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Active copy editor */}
+          {activeTab && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">
+                  {COPY_TYPE_DEFS.find(d => d.id === activeTab)?.label} — Claude Sonnet · 可直接編輯
+                </span>
+                <button onClick={() => run()} disabled={running}
+                  className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                  <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+                </button>
+              </div>
+              <textarea
+                value={displayCopy(activeTab)}
+                onChange={e => setEditedCopy(prev => ({ ...prev, [activeTab]: e.target.value }))}
+                rows={12}
+                className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 resize-none font-sans leading-relaxed"
+              />
+            </div>
+          )}
+
+          {/* Feedback & regenerate */}
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
+            <div className="text-xs font-semibold text-amber-800">輸入修改意見，重新生成所有文案</div>
+            <div className="flex gap-2">
+              <input value={feedback} onChange={e => setFeedback(e.target.value)}
+                className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
+                placeholder="例如：語調太正式，改成輕鬆活潑；加入限時優惠感…"
+                onKeyDown={e => e.key === 'Enter' && feedback.trim() && run(feedback)}
+              />
+              <button onClick={() => run(feedback)} disabled={!feedback.trim() || running}
+                className="px-4 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}>
+                重生成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -846,6 +1073,11 @@ export default function MarketingAutoPage() {
   const handleUnit3Done = useCallback(async (data: Unit3Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(3, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit4Done = useCallback(async (data: Unit4Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(4, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -983,7 +1215,17 @@ export default function MarketingAutoPage() {
               onDone={handleUnit3Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 4 && (
+            <Unit4Copy
+              campaignId={campaignId}
+              savedData={unitData[4] as Unit4Data | undefined}
+              unit1Data={unitData[1] as { summary?: string } | undefined}
+              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit3Data={unitData[3] as Unit3Data | undefined}
+              onDone={handleUnit4Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
