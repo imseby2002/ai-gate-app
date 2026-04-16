@@ -38,7 +38,7 @@ const UNITS: UnitDef[] = [
   { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: true  },
   { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: true  },
   { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: true  },
-  { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: false },
+  { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: true  },
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: false },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: false },
   { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE 語音外撥行銷',            implemented: false },
@@ -1566,6 +1566,303 @@ function Unit6ImageGenerate({
   )
 }
 
+// ─── Unit 7: 影片腳本 ─────────────────────────────────────────────────────────
+
+interface VideoScript {
+  id: number
+  content: string
+}
+
+interface Unit7Data {
+  count?: number
+  duration?: string
+  videoTypes?: string[]
+  platforms?: string[]
+  scripts?: VideoScript[]
+  userInstructions?: string
+}
+
+const VIDEO_PLATFORMS: { id: string; label: string }[] = [
+  { id: 'instagram_reels', label: 'IG Reels' },
+  { id: 'facebook_reels',  label: 'FB Reels' },
+  { id: 'youtube_shorts',  label: 'YouTube Shorts' },
+  { id: 'tiktok',          label: 'TikTok' },
+  { id: 'youtube',         label: 'YouTube 一般' },
+]
+
+const VIDEO_TYPES: { id: string; label: string; desc: string }[] = [
+  { id: 'short_video',  label: '短影音',   desc: '直接吸睛，快節奏' },
+  { id: 'ad',           label: '廣告影片', desc: 'AIDA 結構，促轉換' },
+  { id: 'tutorial',     label: '教學影片', desc: '示範產品/服務使用' },
+  { id: 'testimonial',  label: '客戶見證', desc: '真實口碑，建立信任' },
+  { id: 'brand_story',  label: '品牌故事', desc: '情感連結，品牌形象' },
+]
+
+const DURATION_OPTIONS = [
+  { value: '15',  label: '15秒', hint: 'Reels/Shorts' },
+  { value: '30',  label: '30秒', hint: '廣告/短影音' },
+  { value: '60',  label: '60秒', hint: 'IG/TikTok' },
+  { value: '90',  label: '90秒', hint: '教學/介紹' },
+  { value: '120', label: '2分鐘', hint: 'YouTube' },
+]
+
+function Unit7VideoScript({
+  campaignId: _campaignId,
+  savedData,
+  unit1Data,
+  unit2Data,
+  unit3Data,
+  unit4Data,
+  unit5Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit7Data
+  unit1Data?: { summary?: string }
+  unit2Data?: Unit2Data
+  unit3Data?: Unit3Data
+  unit4Data?: Unit4Data
+  unit5Data?: Unit5Data
+  onDone: (data: Unit7Data) => void
+}) {
+  const [count, setCount] = useState(savedData?.count ?? 1)
+  const [duration, setDuration] = useState(savedData?.duration ?? '30')
+  const [videoTypes, setVideoTypes] = useState<string[]>(savedData?.videoTypes ?? ['short_video'])
+  const [platforms, setPlatforms] = useState<string[]>(savedData?.platforms ?? ['instagram_reels', 'tiktok'])
+  const [instructions, setInstructions] = useState(savedData?.userInstructions ?? '')
+  const [feedback, setFeedback] = useState('')
+  const [running, setRunning] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<Unit7Data | null>(savedData?.scripts?.length ? savedData : null)
+  const [activeScript, setActiveScript] = useState(1)
+
+  const toggleType = (id: string) =>
+    setVideoTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  const togglePlatform = (id: string) =>
+    setPlatforms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  const run = async (fb?: string) => {
+    if (videoTypes.length === 0) { setError('請至少選一種影片類型'); return }
+    if (platforms.length === 0) { setError('請至少選一個平台'); return }
+    setRunning(true); setError('')
+    try {
+      const res = await fetch('/api/marketing/video-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          count, duration, videoTypes, platforms,
+          userInstructions: instructions,
+          companyData: unit2Data ?? {},
+          analysisData: unit3Data ?? {},
+          copyData: unit4Data ?? {},
+          imageScripts: unit5Data ?? {},
+          collectedSummary: unit1Data?.summary ?? '',
+          feedback: fb ?? '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const out: Unit7Data = { count, duration, videoTypes, platforms, scripts: data.scripts, userInstructions: instructions }
+      setResult(out)
+      setActiveScript(1)
+      setFeedback('')
+      onDone(out)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Context status */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { label: '蒐集資料', ok: !!unit1Data?.summary },
+          { label: '公司資料', ok: !!unit2Data?.companyName },
+          { label: '分析資料', ok: !!unit3Data?.results },
+          { label: '文案資料', ok: !!unit4Data?.results },
+          { label: '圖片腳本', ok: !!(unit5Data?.scripts?.length) },
+        ].map(s => (
+          <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+          }`}>
+            {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+            {s.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Count */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">產出影片數量</label>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4, 5].map(n => (
+            <button key={n} onClick={() => setCount(n)}
+              className="w-10 h-10 rounded-lg border text-sm font-medium transition-all"
+              style={count === n
+                ? { borderColor: 'var(--primary)', background: 'var(--primary)', color: 'white' }
+                : { background: 'white' }}>
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Duration */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">影片時長</label>
+        <div className="flex gap-2 flex-wrap">
+          {DURATION_OPTIONS.map(opt => (
+            <button key={opt.value} onClick={() => setDuration(opt.value)}
+              className="flex flex-col items-center px-4 py-2 rounded-lg border text-xs transition-all"
+              style={duration === opt.value
+                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                : { background: 'white' }}>
+              <span className="font-semibold">{opt.label}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Video type */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">影片類型</label>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {VIDEO_TYPES.map(vt => {
+            const sel = videoTypes.includes(vt.id)
+            return (
+              <button key={vt.id} onClick={() => toggleType(vt.id)}
+                className="flex items-start gap-2.5 p-3 rounded-xl border-2 text-left transition-all"
+                style={sel
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
+                  : { borderColor: '#e5e7eb' }}>
+                <div className={`w-4 h-4 rounded border-2 mt-0.5 flex-shrink-0 flex items-center justify-center ${sel ? 'border-0' : 'border-gray-300'}`}
+                  style={sel ? { background: 'var(--primary)' } : {}}>
+                  {sel && <CheckCircle2 className="h-4 w-4 text-white" />}
+                </div>
+                <div>
+                  <div className="text-xs font-medium">{vt.label}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{vt.desc}</div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Platform */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">目標發布平台</label>
+        <div className="flex flex-wrap gap-2">
+          {VIDEO_PLATFORMS.map(p => {
+            const sel = platforms.includes(p.id)
+            return (
+              <button key={p.id} onClick={() => togglePlatform(p.id)}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={sel
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : {}}>
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">
+          特別規定
+          <span className="ml-2 text-xs font-normal text-gray-400">（選填）</span>
+        </label>
+        <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
+          className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+          placeholder="例如：必須出現產品特寫；旁白要用台語；開頭用問句勾起好奇心…" />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{error}
+        </div>
+      )}
+
+      <button onClick={() => run()} disabled={running}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        style={{ background: 'var(--primary)' }}>
+        {running
+          ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
+          : <><Film className="h-4 w-4" />產生影片腳本</>}
+      </button>
+
+      {/* Results */}
+      {result && result.scripts && result.scripts.length > 0 && (
+        <div className="space-y-3">
+          {/* Script tabs */}
+          <div className="flex gap-1.5 flex-wrap border-b pb-2">
+            {result.scripts.map(s => (
+              <button key={s.id} onClick={() => setActiveScript(s.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  activeScript === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}>
+                影片 {s.id}
+              </button>
+            ))}
+            <button onClick={() => run()} disabled={running}
+              className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+            </button>
+          </div>
+
+          {/* Active script */}
+          {result.scripts.find(s => s.id === activeScript) && (
+            <div className="p-5 rounded-xl bg-gray-50 border">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-gray-500">
+                  影片 {activeScript} 分鏡腳本 — Claude Sonnet · {result.duration}秒
+                </span>
+                <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
+                  共 {result.scripts.length} 支
+                </span>
+              </div>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto">
+                {result.scripts.find(s => s.id === activeScript)?.content}
+              </pre>
+            </div>
+          )}
+
+          {/* Feedback */}
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
+            <div className="text-xs font-semibold text-amber-800">輸入修改意見，重新生成所有腳本</div>
+            <div className="flex gap-2">
+              <input value={feedback} onChange={e => setFeedback(e.target.value)}
+                className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
+                placeholder="例如：節奏太慢；開頭不夠吸引人；加入更多產品細節…"
+                onKeyDown={e => e.key === 'Enter' && feedback.trim() && run(feedback)}
+              />
+              <button onClick={() => run(feedback)} disabled={!feedback.trim() || running}
+                className="px-4 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}>
+                重生成
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+            <div className="text-xs text-blue-700 font-medium mb-1">💡 使用提示</div>
+            <div className="text-xs text-blue-600">
+              腳本完成後，前往 <strong>單元8 影片產出</strong> 使用 KLING 或 VEO3 將腳本轉換為實際影片。
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -1684,6 +1981,11 @@ export default function MarketingAutoPage() {
   const handleUnit6Done = useCallback(async (data: Unit6Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(6, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit7Done = useCallback(async (data: Unit7Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(7, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -1850,7 +2152,19 @@ export default function MarketingAutoPage() {
               onDone={handleUnit6Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 7 && (
+            <Unit7VideoScript
+              campaignId={campaignId}
+              savedData={unitData[7] as Unit7Data | undefined}
+              unit1Data={unitData[1] as { summary?: string } | undefined}
+              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit3Data={unitData[3] as Unit3Data | undefined}
+              unit4Data={unitData[4] as Unit4Data | undefined}
+              unit5Data={unitData[5] as Unit5Data | undefined}
+              onDone={handleUnit7Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
