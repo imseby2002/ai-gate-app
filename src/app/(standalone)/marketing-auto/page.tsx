@@ -5,7 +5,8 @@ import {
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
   Film, Video, Upload, Phone, Mic, Headphones,
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
-  XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings
+  XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
+  FileText, X
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -270,6 +271,290 @@ function Unit1Collect({
   )
 }
 
+// ─── Unit 2: 公司資料 ─────────────────────────────────────────────────────────
+
+interface UploadedFile {
+  url: string
+  name: string
+  category: 'logo' | 'image' | 'document' | 'faq'
+  mimeType: string
+  sizeKb: number
+  textContent?: string
+}
+
+interface Unit2Data {
+  // Basic info
+  companyName?: string
+  industry?: string
+  employees?: string
+  capital?: string
+  founded?: string
+  address?: string
+  website?: string
+  description?: string
+  products?: string
+  targetAudience?: string
+  // Brand
+  brandTone?: string
+  competitiveAdvantage?: string
+  // Files
+  files?: UploadedFile[]
+}
+
+const INDUSTRY_OPTIONS = [
+  '科技/軟體', '製造業', '零售/電商', '金融服務', '醫療健康',
+  '餐飲/消費', '教育培訓', '房地產', '物流/運輸', '廣告/行銷', '其他',
+]
+const EMPLOYEE_OPTIONS = ['1-10人', '11-50人', '51-200人', '201-500人', '501-1000人', '1000人以上']
+const TONE_OPTIONS = ['專業/正式', '活潑/年輕', '溫暖/親切', '創新/前衛', '奢華/高端', '親民/平易']
+
+function FileUploadZone({
+  category, label, accept, files, uploading,
+  onUpload, onRemove,
+}: {
+  category: UploadedFile['category']
+  label: string
+  accept: string
+  files: UploadedFile[]
+  uploading: boolean
+  onUpload: (f: File, cat: UploadedFile['category']) => void
+  onRemove: (url: string) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const catFiles = files.filter(f => f.category === category)
+
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-2">{label}</label>
+      <div
+        onClick={() => inputRef.current?.click()}
+        className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+      >
+        <Upload className="h-5 w-5 text-gray-300 mx-auto mb-1" />
+        <p className="text-xs text-gray-500">點擊上傳</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">{accept.replace(/,/g, ' / ')}</p>
+      </div>
+      <input
+        ref={inputRef} type="file" multiple className="hidden" accept={accept}
+        onChange={e => { Array.from(e.target.files ?? []).forEach(f => onUpload(f, category)); e.target.value = '' }}
+      />
+      {catFiles.length > 0 && (
+        <div className="mt-2 space-y-1.5">
+          {catFiles.map(f => (
+            <div key={f.url} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border">
+              {f.mimeType.startsWith('image/') ? (
+                <img src={f.url} alt={f.name} className="h-8 w-8 object-cover rounded flex-shrink-0" />
+              ) : (
+                <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium truncate">{f.name}</div>
+                <div className="text-[10px] text-gray-400">{f.sizeKb} KB {f.textContent ? '· 已萃取文字' : ''}</div>
+              </div>
+              <button type="button" onClick={() => onRemove(f.url)} className="text-gray-300 hover:text-red-400 transition-colors">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {uploading && (
+        <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> 上傳中…
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Unit2CompanyData({
+  campaignId: _campaignId,
+  savedData,
+  onSave,
+}: {
+  campaignId: string | null
+  savedData?: Unit2Data
+  onSave: (data: Unit2Data) => void
+}) {
+  const [form, setForm] = useState<Unit2Data>(savedData ?? {})
+  const [files, setFiles] = useState<UploadedFile[]>(savedData?.files ?? [])
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+
+  const set = (key: keyof Unit2Data, value: string) =>
+    setForm(prev => ({ ...prev, [key]: value }))
+
+  const handleUpload = async (file: File, category: UploadedFile['category']) => {
+    setUploading(true); setUploadError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('category', category)
+      const res = await fetch('/api/marketing/upload-file', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setFiles(prev => [...prev, data as UploadedFile])
+    } catch (e) {
+      setUploadError(String(e))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemove = async (url: string) => {
+    setFiles(prev => prev.filter(f => f.url !== url))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const data: Unit2Data = { ...form, files }
+    onSave(data)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  const field = (key: keyof Unit2Data, label: string, placeholder: string, multiline?: boolean) => (
+    <div>
+      <label className="block text-sm font-medium mb-1.5">{label}</label>
+      {multiline ? (
+        <textarea value={(form[key] as string) ?? ''} onChange={e => set(key, e.target.value)}
+          rows={3} placeholder={placeholder}
+          className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none" />
+      ) : (
+        <input value={(form[key] as string) ?? ''} onChange={e => set(key, e.target.value)}
+          placeholder={placeholder}
+          className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+      )}
+    </div>
+  )
+
+  return (
+    <div className="space-y-8">
+      {/* Basic Info */}
+      <section>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">基本資料</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {field('companyName', '公司名稱 *', '例如：台灣科技股份有限公司')}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">產業別</label>
+            <select value={form.industry ?? ''} onChange={e => set('industry', e.target.value)}
+              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+              <option value="">請選擇</option>
+              {INDUSTRY_OPTIONS.map(o => <option key={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">員工人數</label>
+            <select value={form.employees ?? ''} onChange={e => set('employees', e.target.value)}
+              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+              <option value="">請選擇</option>
+              {EMPLOYEE_OPTIONS.map(o => <option key={o}>{o}</option>)}
+            </select>
+          </div>
+          {field('capital', '資本額', '例如：新台幣 1,000 萬元')}
+          {field('founded', '成立年份', '例如：2010')}
+          {field('website', '官方網站', 'https://www.example.com')}
+        </div>
+        <div className="mt-4">
+          {field('address', '公司地址', '縣市 + 區 + 街道')}
+        </div>
+      </section>
+
+      {/* Business Description */}
+      <section>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">業務描述</h3>
+        <div className="space-y-4">
+          {field('description', '公司簡介', '簡述公司背景、發展歷程、核心價值…', true)}
+          {field('products', '主要產品 / 服務', '描述主要產品或服務項目、特色功能…', true)}
+          {field('targetAudience', '目標客群', '描述主要客戶群體、年齡層、消費習慣…', true)}
+          {field('competitiveAdvantage', '核心競爭優勢', '相較競爭對手，公司最大的優勢是…', true)}
+        </div>
+      </section>
+
+      {/* Brand */}
+      <section>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">品牌設定</h3>
+        <div>
+          <label className="block text-sm font-medium mb-2">品牌語調</label>
+          <div className="flex flex-wrap gap-2">
+            {TONE_OPTIONS.map(t => (
+              <button key={t} type="button" onClick={() => set('brandTone', t)}
+                className="px-3 py-1.5 rounded-lg text-sm border transition-all"
+                style={form.brandTone === t
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : {}}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Files */}
+      <section>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">素材上傳</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <FileUploadZone category="logo" label="Logo / 品牌標誌"
+            accept=".jpg,.jpeg,.png,.svg,.webp" files={files} uploading={uploading}
+            onUpload={handleUpload} onRemove={handleRemove} />
+          <FileUploadZone category="image" label="產品 / 情境圖片"
+            accept=".jpg,.jpeg,.png,.webp,.gif" files={files} uploading={uploading}
+            onUpload={handleUpload} onRemove={handleRemove} />
+          <FileUploadZone category="document" label="公司簡介 / 型錄"
+            accept=".pdf,.docx,.doc,.txt" files={files} uploading={uploading}
+            onUpload={handleUpload} onRemove={handleRemove} />
+          <FileUploadZone category="faq" label="FAQ / 對答資料"
+            accept=".xlsx,.xls,.csv,.docx,.doc,.txt" files={files} uploading={uploading}
+            onUpload={handleUpload} onRemove={handleRemove} />
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Excel/Word/PDF 文件將自動萃取文字，供 AI 分析與客服回覆使用。
+        </p>
+        {uploadError && (
+          <div className="mt-2 flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{uploadError}
+          </div>
+        )}
+      </section>
+
+      {/* Save */}
+      <div className="flex items-center gap-3 pt-2">
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+          style={{ background: 'var(--primary)' }}>
+          {saving ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</> : <><CheckCircle2 className="h-4 w-4" />儲存公司資料</>}
+        </button>
+        {saved && <span className="text-sm text-green-600 flex items-center gap-1"><CheckCircle2 className="h-4 w-4" />已儲存</span>}
+      </div>
+
+      {/* Stats preview */}
+      {(form.companyName || files.length > 0) && (
+        <div className="p-4 rounded-xl bg-gray-50 border">
+          <div className="text-xs font-medium text-gray-500 mb-3">資料概覽</div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: '公司名稱', value: form.companyName || '—' },
+              { label: '產業', value: form.industry || '—' },
+              { label: '品牌語調', value: form.brandTone || '—' },
+              { label: '員工人數', value: form.employees || '—' },
+              { label: '上傳檔案', value: `${files.length} 份` },
+              { label: '文字素材', value: `${files.filter(f => f.textContent).length} 份已萃取` },
+            ].map(s => (
+              <div key={s.label} className="text-center">
+                <div className="text-xs font-bold text-gray-800 truncate">{s.value}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -363,6 +648,11 @@ export default function MarketingAutoPage() {
   const handleUnit1Done = useCallback(async (data: Unit1Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(1, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit2Save = useCallback(async (data: Unit2Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(2, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -484,7 +774,14 @@ export default function MarketingAutoPage() {
               onDone={handleUnit1Done}
             />
           )}
-          {activeUnit !== 1 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 2 && (
+            <Unit2CompanyData
+              campaignId={campaignId}
+              savedData={unitData[2] as Unit2Data | undefined}
+              onSave={handleUnit2Save}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
