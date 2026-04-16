@@ -6,7 +6,7 @@ import {
   Film, Video, Upload, Phone, Mic, Headphones,
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
   XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
-  FileText, X
+  FileText, X, Download, Sparkles, Wand2
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ const UNITS: UnitDef[] = [
   { id: 3,  name: '分析資料',  icon: BarChart3,  desc: '市場、競爭對手、影片/文案分析',   implemented: true  },
   { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: true  },
   { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: true  },
-  { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: false },
+  { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: true  },
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: false },
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: false },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: false },
@@ -1210,6 +1210,336 @@ function Unit5ImageScript({
   )
 }
 
+// ─── Unit 6: 圖片產出 ─────────────────────────────────────────────────────────
+
+interface GeneratedImage {
+  scriptId: number
+  url: string
+  prompt: string
+  revisedPrompt?: string
+  size: string
+  quality: string
+  style: string
+  generatedAt: string
+}
+
+interface Unit6Data {
+  images?: GeneratedImage[]
+}
+
+// Extract AI prompt from script content
+function extractPrompt(content: string): string {
+  const patterns = [
+    /AI\s*生成\s*Prompt[：:]\s*(.+?)(?:\n|$)/i,
+    /Prompt[：:]\s*(.+?)(?:\n|$)/i,
+  ]
+  for (const re of patterns) {
+    const m = content.match(re)
+    if (m) return m[1].trim()
+  }
+  return ''
+}
+
+const SIZE_OPTIONS = [
+  { value: '1024x1024', label: '1:1 正方形',    hint: 'IG/FB' },
+  { value: '1024x1792', label: '9:16 直式',      hint: 'Reels/Stories' },
+  { value: '1792x1024', label: '16:9 橫式',      hint: 'YouTube/LinkedIn' },
+]
+
+function Unit6ImageGenerate({
+  campaignId: _campaignId,
+  savedData,
+  unit5Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit6Data
+  unit5Data?: Unit5Data
+  onDone: (data: Unit6Data) => void
+}) {
+  const scripts = unit5Data?.scripts ?? []
+
+  // Per-script state: prompt override, generating, generated image
+  const [prompts, setPrompts] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {}
+    scripts.forEach(s => { init[s.id] = extractPrompt(s.content) })
+    return init
+  })
+  const [size, setSize] = useState('1024x1024')
+  const [quality, setQuality] = useState<'standard' | 'hd'>('standard')
+  const [style, setStyle] = useState<'vivid' | 'natural'>('vivid')
+  const [generating, setGenerating] = useState<Record<number, boolean>>({})
+  const [errors, setErrors] = useState<Record<number, string>>({})
+  const [images, setImages] = useState<GeneratedImage[]>(savedData?.images ?? [])
+  const [manualPrompt, setManualPrompt] = useState('')
+  const [manualGenerating, setManualGenerating] = useState(false)
+  const [manualError, setManualError] = useState('')
+
+  const hasUnit5 = scripts.length > 0
+
+  const generateOne = async (scriptId: number) => {
+    const prompt = prompts[scriptId]?.trim()
+    if (!prompt) { setErrors(prev => ({ ...prev, [scriptId]: 'Prompt 不可為空' })); return }
+    setGenerating(prev => ({ ...prev, [scriptId]: true }))
+    setErrors(prev => ({ ...prev, [scriptId]: '' }))
+    try {
+      const res = await fetch('/api/marketing/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, scriptId, size, quality, style }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const img: GeneratedImage = data
+      setImages(prev => {
+        const filtered = prev.filter(i => i.scriptId !== scriptId)
+        const next = [...filtered, img]
+        onDone({ images: next })
+        return next
+      })
+    } catch (e) {
+      setErrors(prev => ({ ...prev, [scriptId]: String(e) }))
+    } finally {
+      setGenerating(prev => ({ ...prev, [scriptId]: false }))
+    }
+  }
+
+  const generateManual = async () => {
+    if (!manualPrompt.trim()) { setManualError('請輸入 Prompt'); return }
+    setManualGenerating(true); setManualError('')
+    try {
+      const res = await fetch('/api/marketing/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: manualPrompt.trim(), scriptId: 0, size, quality, style }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const img: GeneratedImage = { ...data, scriptId: Date.now() }
+      setImages(prev => {
+        const next = [...prev, img]
+        onDone({ images: next })
+        return next
+      })
+      setManualPrompt('')
+    } catch (e) {
+      setManualError(String(e))
+    } finally {
+      setManualGenerating(false)
+    }
+  }
+
+  const removeImage = (url: string) => {
+    setImages(prev => {
+      const next = prev.filter(i => i.url !== url)
+      onDone({ images: next })
+      return next
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Settings bar */}
+      <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
+        <div className="text-sm font-semibold text-gray-700">圖片設定</div>
+        <div className="flex flex-wrap gap-6">
+          {/* Size */}
+          <div>
+            <div className="text-xs font-medium text-gray-500 mb-2">尺寸比例</div>
+            <div className="flex gap-2">
+              {SIZE_OPTIONS.map(opt => (
+                <button key={opt.value} onClick={() => setSize(opt.value)}
+                  className="flex flex-col items-center px-3 py-2 rounded-lg border text-xs transition-all"
+                  style={size === opt.value
+                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                    : { background: 'white' }}>
+                  <span className="font-medium">{opt.label}</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Quality */}
+          <div>
+            <div className="text-xs font-medium text-gray-500 mb-2">品質</div>
+            <div className="flex gap-2">
+              {(['standard', 'hd'] as const).map(q => (
+                <button key={q} onClick={() => setQuality(q)}
+                  className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
+                  style={quality === q
+                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                    : { background: 'white' }}>
+                  {q === 'standard' ? '標準' : 'HD 高清'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Style */}
+          <div>
+            <div className="text-xs font-medium text-gray-500 mb-2">風格</div>
+            <div className="flex gap-2">
+              {(['vivid', 'natural'] as const).map(st => (
+                <button key={st} onClick={() => setStyle(st)}
+                  className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
+                  style={style === st
+                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                    : { background: 'white' }}>
+                  {st === 'vivid' ? '鮮豔生動' : '自然寫實'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scripts from Unit 5 */}
+      {hasUnit5 ? (
+        <div className="space-y-4">
+          <div className="text-sm font-semibold text-gray-700">
+            從單元5腳本生成（共 {scripts.length} 張）
+          </div>
+          {scripts.map(s => {
+            const img = images.find(i => i.scriptId === s.id)
+            const isGen = generating[s.id]
+            const err = errors[s.id]
+            return (
+              <div key={s.id} className="border rounded-xl overflow-hidden">
+                {/* Script header */}
+                <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700">圖片 {s.id}</span>
+                  {img && <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">已生成</span>}
+                </div>
+
+                <div className="p-4 space-y-3">
+                  {/* Editable prompt */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                      AI 生成 Prompt <span className="text-gray-400 font-normal">（可編輯）</span>
+                    </label>
+                    <textarea
+                      value={prompts[s.id] ?? ''}
+                      onChange={e => setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
+                      placeholder="輸入英文 Prompt，例如：A modern minimalist product photo of skincare bottle..."
+                    />
+                  </div>
+
+                  {err && (
+                    <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{err}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => generateOne(s.id)} disabled={isGen}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
+                      style={{ background: 'var(--primary)' }}>
+                      {isGen
+                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />DALL-E 生成中…</>
+                        : <><Sparkles className="h-3.5 w-3.5" />{img ? '重新生成' : '生成圖片'}</>}
+                    </button>
+                    {img && (
+                      <span className="text-[10px] text-gray-400">
+                        {img.size} · {img.quality === 'hd' ? 'HD' : '標準'} · {new Date(img.generatedAt).toLocaleTimeString('zh-TW')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Generated image */}
+                  {img && (
+                    <div className="relative rounded-xl overflow-hidden border bg-gray-50">
+                      <img src={img.url} alt={`圖片 ${s.id}`}
+                        className="w-full object-contain max-h-96" />
+                      <div className="absolute top-2 right-2 flex gap-1.5">
+                        <a href={img.url} download={`image-${s.id}.png`} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 text-white text-[10px] hover:bg-black/80 transition-colors">
+                          <Download className="h-3 w-3" /> 下載
+                        </a>
+                        <button onClick={() => removeImage(img.url)}
+                          className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {img.revisedPrompt && img.revisedPrompt !== img.prompt && (
+                        <div className="px-3 py-2 bg-gray-50 border-t">
+                          <div className="text-[10px] text-gray-500 font-medium mb-0.5">DALL-E 修訂 Prompt：</div>
+                          <div className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{img.revisedPrompt}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+          <strong>尚未執行單元5（圖片腳本）</strong>，可直接在下方輸入自訂 Prompt 生成圖片。
+        </div>
+      )}
+
+      {/* Manual prompt */}
+      <div className="border rounded-xl p-4 space-y-3">
+        <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Wand2 className="h-4 w-4" style={{ color: 'var(--primary)' }} />
+          手動輸入 Prompt
+        </div>
+        <textarea value={manualPrompt} onChange={e => setManualPrompt(e.target.value)} rows={3}
+          className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
+          placeholder="輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble surface, soft lighting, minimalist style..." />
+        {manualError && (
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{manualError}
+          </div>
+        )}
+        <button onClick={generateManual} disabled={manualGenerating || !manualPrompt.trim()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
+          style={{ background: 'var(--primary)' }}>
+          {manualGenerating
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />生成中…</>
+            : <><Sparkles className="h-3.5 w-3.5" />生成圖片</>}
+        </button>
+
+        {/* Manual generated images */}
+        {images.filter(i => i.scriptId === 0 || !scripts.find(s => s.id === i.scriptId)).length > 0 && (
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            {images
+              .filter(i => i.scriptId === 0 || !scripts.find(s => s.id === i.scriptId))
+              .map(img => (
+                <div key={img.url} className="relative rounded-xl overflow-hidden border">
+                  <img src={img.url} alt="generated" className="w-full object-cover aspect-square" />
+                  <div className="absolute top-1.5 right-1.5 flex gap-1">
+                    <a href={img.url} download="generated.png" target="_blank" rel="noreferrer"
+                      className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg bg-black/60 text-white text-[10px] hover:bg-black/80">
+                      <Download className="h-2.5 w-2.5" />
+                    </a>
+                    <button onClick={() => removeImage(img.url)}
+                      className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* All generated summary */}
+      {images.length > 0 && (
+        <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+          <span className="text-xs text-green-700 font-medium">
+            已生成 {images.length} 張圖片，儲存於 Supabase Storage，可於單元9上傳至各平台。
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -1323,6 +1653,11 @@ export default function MarketingAutoPage() {
   const handleUnit5Done = useCallback(async (data: Unit5Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(5, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit6Done = useCallback(async (data: Unit6Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(6, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -1481,7 +1816,15 @@ export default function MarketingAutoPage() {
               onDone={handleUnit5Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 6 && (
+            <Unit6ImageGenerate
+              campaignId={campaignId}
+              savedData={unitData[6] as Unit6Data | undefined}
+              unit5Data={unitData[5] as Unit5Data | undefined}
+              onDone={handleUnit6Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
