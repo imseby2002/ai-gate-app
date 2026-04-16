@@ -1217,15 +1217,31 @@ interface GeneratedImage {
   url: string
   prompt: string
   revisedPrompt?: string
+  model: string
   size: string
   quality: string
   style: string
+  cost: number
   generatedAt: string
 }
 
 interface Unit6Data {
   images?: GeneratedImage[]
 }
+
+type ImageModel = 'dalle3' | 'flux' | 'nano'
+
+const IMAGE_MODELS: { id: ImageModel; name: string; desc: string; cost: string; badge: string }[] = [
+  { id: 'flux',   name: 'FLUX.1 Pro',   desc: '高品質寫實，最適合行銷圖',    cost: '$0.05/張', badge: '推薦'   },
+  { id: 'dalle3', name: 'DALL-E 3',     desc: '語意理解強，圖中文字清晰',    cost: '$0.08/張', badge: 'OpenAI' },
+  { id: 'nano',   name: 'Nano Banana',  desc: '速度快，適合快速草稿預覽',    cost: '$0.02/張', badge: '快速'   },
+]
+
+const SIZE_OPTIONS = [
+  { value: '1:1',  label: '1:1 正方形', hint: 'IG/FB' },
+  { value: '9:16', label: '9:16 直式',  hint: 'Reels/Stories' },
+  { value: '16:9', label: '16:9 橫式', hint: 'YouTube/LinkedIn' },
+]
 
 // Extract AI prompt from script content
 function extractPrompt(content: string): string {
@@ -1240,12 +1256,6 @@ function extractPrompt(content: string): string {
   return ''
 }
 
-const SIZE_OPTIONS = [
-  { value: '1024x1024', label: '1:1 正方形',    hint: 'IG/FB' },
-  { value: '1024x1792', label: '9:16 直式',      hint: 'Reels/Stories' },
-  { value: '1792x1024', label: '16:9 橫式',      hint: 'YouTube/LinkedIn' },
-]
-
 function Unit6ImageGenerate({
   campaignId: _campaignId,
   savedData,
@@ -1259,15 +1269,15 @@ function Unit6ImageGenerate({
 }) {
   const scripts = unit5Data?.scripts ?? []
 
-  // Per-script state: prompt override, generating, generated image
+  const [model, setModel] = useState<ImageModel>('flux')
+  const [size, setSize] = useState('1:1')
+  const [quality, setQuality] = useState<'standard' | 'hd'>('standard')
+  const [style, setStyle] = useState<'vivid' | 'natural'>('vivid')
   const [prompts, setPrompts] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {}
     scripts.forEach(s => { init[s.id] = extractPrompt(s.content) })
     return init
   })
-  const [size, setSize] = useState('1024x1024')
-  const [quality, setQuality] = useState<'standard' | 'hd'>('standard')
-  const [style, setStyle] = useState<'vivid' | 'natural'>('vivid')
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [errors, setErrors] = useState<Record<number, string>>({})
   const [images, setImages] = useState<GeneratedImage[]>(savedData?.images ?? [])
@@ -1276,6 +1286,10 @@ function Unit6ImageGenerate({
   const [manualError, setManualError] = useState('')
 
   const hasUnit5 = scripts.length > 0
+
+  const buildPayload = (prompt: string, scriptId: number) => ({
+    prompt, scriptId, model, size, quality, style,
+  })
 
   const generateOne = async (scriptId: number) => {
     const prompt = prompts[scriptId]?.trim()
@@ -1286,16 +1300,14 @@ function Unit6ImageGenerate({
       const res = await fetch('/api/marketing/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, scriptId, size, quality, style }),
+        body: JSON.stringify(buildPayload(prompt, scriptId)),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const img: GeneratedImage = data
       setImages(prev => {
-        const filtered = prev.filter(i => i.scriptId !== scriptId)
-        const next = [...filtered, img]
-        onDone({ images: next })
-        return next
+        const next = [...prev.filter(i => i.scriptId !== scriptId), img]
+        onDone({ images: next }); return next
       })
     } catch (e) {
       setErrors(prev => ({ ...prev, [scriptId]: String(e) }))
@@ -1311,15 +1323,13 @@ function Unit6ImageGenerate({
       const res = await fetch('/api/marketing/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: manualPrompt.trim(), scriptId: 0, size, quality, style }),
+        body: JSON.stringify(buildPayload(manualPrompt.trim(), Date.now())),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const img: GeneratedImage = { ...data, scriptId: Date.now() }
       setImages(prev => {
-        const next = [...prev, img]
-        onDone({ images: next })
-        return next
+        const next = [...prev, data as GeneratedImage]
+        onDone({ images: next }); return next
       })
       setManualPrompt('')
     } catch (e) {
@@ -1329,19 +1339,41 @@ function Unit6ImageGenerate({
     }
   }
 
-  const removeImage = (url: string) => {
-    setImages(prev => {
-      const next = prev.filter(i => i.url !== url)
-      onDone({ images: next })
-      return next
-    })
-  }
+  const removeImage = (url: string) =>
+    setImages(prev => { const next = prev.filter(i => i.url !== url); onDone({ images: next }); return next })
+
+  const modelInfo = IMAGE_MODELS.find(m => m.id === model)!
 
   return (
     <div className="space-y-6">
-      {/* Settings bar */}
+
+      {/* Model selector */}
+      <div>
+        <label className="block text-sm font-semibold mb-3">選擇生成模型</label>
+        <div className="grid grid-cols-3 gap-3">
+          {IMAGE_MODELS.map(m => (
+            <button key={m.id} onClick={() => setModel(m.id)}
+              className="relative flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all"
+              style={model === m.id
+                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
+                : { borderColor: '#e5e7eb', background: 'white' }}>
+              <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                style={model === m.id
+                  ? { background: 'var(--primary)', color: 'white' }
+                  : { background: '#f3f4f6', color: '#6b7280' }}>
+                {m.badge}
+              </span>
+              <span className="text-sm font-bold text-gray-800 pr-8">{m.name}</span>
+              <span className="text-[10px] text-gray-400 mt-1 leading-snug">{m.desc}</span>
+              <span className="text-xs font-semibold mt-2" style={{ color: 'var(--primary)' }}>{m.cost}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Image settings */}
       <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-sm font-semibold text-gray-700">圖片設定</div>
+        <div className="text-xs font-semibold text-gray-600">圖片設定</div>
         <div className="flex flex-wrap gap-6">
           {/* Size */}
           <div>
@@ -1359,36 +1391,39 @@ function Unit6ImageGenerate({
               ))}
             </div>
           </div>
-          {/* Quality */}
-          <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">品質</div>
-            <div className="flex gap-2">
-              {(['standard', 'hd'] as const).map(q => (
-                <button key={q} onClick={() => setQuality(q)}
-                  className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
-                  style={quality === q
-                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
-                    : { background: 'white' }}>
-                  {q === 'standard' ? '標準' : 'HD 高清'}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Style */}
-          <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">風格</div>
-            <div className="flex gap-2">
-              {(['vivid', 'natural'] as const).map(st => (
-                <button key={st} onClick={() => setStyle(st)}
-                  className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
-                  style={style === st
-                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
-                    : { background: 'white' }}>
-                  {st === 'vivid' ? '鮮豔生動' : '自然寫實'}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* DALL-E 3 only options */}
+          {model === 'dalle3' && (
+            <>
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">品質</div>
+                <div className="flex gap-2">
+                  {(['standard', 'hd'] as const).map(q => (
+                    <button key={q} onClick={() => setQuality(q)}
+                      className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
+                      style={quality === q
+                        ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                        : { background: 'white' }}>
+                      {q === 'standard' ? '標準' : 'HD 高清'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-2">風格</div>
+                <div className="flex gap-2">
+                  {(['vivid', 'natural'] as const).map(st => (
+                    <button key={st} onClick={() => setStyle(st)}
+                      className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
+                      style={style === st
+                        ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                        : { background: 'white' }}>
+                      {st === 'vivid' ? '鮮豔生動' : '自然寫實'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -1402,17 +1437,19 @@ function Unit6ImageGenerate({
             const img = images.find(i => i.scriptId === s.id)
             const isGen = generating[s.id]
             const err = errors[s.id]
+            const modelLabel = IMAGE_MODELS.find(m => m.id === img?.model)?.name ?? img?.model
             return (
               <div key={s.id} className="border rounded-xl overflow-hidden">
-                {/* Script header */}
                 <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-700">圖片 {s.id}</span>
-                  {img && <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">已生成</span>}
+                  {img && (
+                    <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                      已生成 · {modelLabel}
+                    </span>
+                  )}
                 </div>
-
                 <div className="p-4 space-y-3">
-                  {/* Editable prompt */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">
                       AI 生成 Prompt <span className="text-gray-400 font-normal">（可編輯）</span>
@@ -1422,49 +1459,44 @@ function Unit6ImageGenerate({
                       onChange={e => setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))}
                       rows={3}
                       className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
-                      placeholder="輸入英文 Prompt，例如：A modern minimalist product photo of skincare bottle..."
+                      placeholder="輸入英文 Prompt…"
                     />
                   </div>
-
                   {err && (
                     <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
                       <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{err}
                     </div>
                   )}
-
                   <div className="flex items-center gap-3">
                     <button onClick={() => generateOne(s.id)} disabled={isGen}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
                       style={{ background: 'var(--primary)' }}>
                       {isGen
-                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />DALL-E 生成中…</>
-                        : <><Sparkles className="h-3.5 w-3.5" />{img ? '重新生成' : '生成圖片'}</>}
+                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{modelInfo.name} 生成中…</>
+                        : <><Sparkles className="h-3.5 w-3.5" />{img ? '重新生成' : `用 ${modelInfo.name} 生成`}</>}
                     </button>
                     {img && (
                       <span className="text-[10px] text-gray-400">
-                        {img.size} · {img.quality === 'hd' ? 'HD' : '標準'} · {new Date(img.generatedAt).toLocaleTimeString('zh-TW')}
+                        {img.size} · {modelInfo.cost} · {new Date(img.generatedAt).toLocaleTimeString('zh-TW')}
                       </span>
                     )}
                   </div>
-
-                  {/* Generated image */}
                   {img && (
                     <div className="relative rounded-xl overflow-hidden border bg-gray-50">
-                      <img src={img.url} alt={`圖片 ${s.id}`}
-                        className="w-full object-contain max-h-96" />
+                      <img src={img.url} alt={`圖片 ${s.id}`} className="w-full object-contain max-h-96" />
                       <div className="absolute top-2 right-2 flex gap-1.5">
-                        <a href={img.url} download={`image-${s.id}.png`} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 text-white text-[10px] hover:bg-black/80 transition-colors">
+                        <a href={img.url} download={`img-${s.id}.png`} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 text-white text-[10px] hover:bg-black/80">
                           <Download className="h-3 w-3" /> 下載
                         </a>
                         <button onClick={() => removeImage(img.url)}
-                          className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors">
+                          className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
                           <X className="h-3 w-3" />
                         </button>
                       </div>
                       {img.revisedPrompt && img.revisedPrompt !== img.prompt && (
                         <div className="px-3 py-2 bg-gray-50 border-t">
-                          <div className="text-[10px] text-gray-500 font-medium mb-0.5">DALL-E 修訂 Prompt：</div>
+                          <div className="text-[10px] text-gray-500 font-medium mb-0.5">模型修訂 Prompt：</div>
                           <div className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{img.revisedPrompt}</div>
                         </div>
                       )}
@@ -1489,7 +1521,7 @@ function Unit6ImageGenerate({
         </div>
         <textarea value={manualPrompt} onChange={e => setManualPrompt(e.target.value)} rows={3}
           className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
-          placeholder="輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble surface, soft lighting, minimalist style..." />
+          placeholder="輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble..." />
         {manualError && (
           <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
             <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{manualError}
@@ -1500,34 +1532,28 @@ function Unit6ImageGenerate({
           style={{ background: 'var(--primary)' }}>
           {manualGenerating
             ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />生成中…</>
-            : <><Sparkles className="h-3.5 w-3.5" />生成圖片</>}
+            : <><Sparkles className="h-3.5 w-3.5" />用 {modelInfo.name} 生成</>}
         </button>
-
-        {/* Manual generated images */}
-        {images.filter(i => i.scriptId === 0 || !scripts.find(s => s.id === i.scriptId)).length > 0 && (
+        {images.filter(i => !scripts.find(s => s.id === i.scriptId)).length > 0 && (
           <div className="grid grid-cols-2 gap-3 mt-2">
-            {images
-              .filter(i => i.scriptId === 0 || !scripts.find(s => s.id === i.scriptId))
-              .map(img => (
-                <div key={img.url} className="relative rounded-xl overflow-hidden border">
-                  <img src={img.url} alt="generated" className="w-full object-cover aspect-square" />
-                  <div className="absolute top-1.5 right-1.5 flex gap-1">
-                    <a href={img.url} download="generated.png" target="_blank" rel="noreferrer"
-                      className="flex items-center gap-0.5 px-1.5 py-1 rounded-lg bg-black/60 text-white text-[10px] hover:bg-black/80">
-                      <Download className="h-2.5 w-2.5" />
-                    </a>
-                    <button onClick={() => removeImage(img.url)}
-                      className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
+            {images.filter(i => !scripts.find(s => s.id === i.scriptId)).map(img => (
+              <div key={img.url} className="relative rounded-xl overflow-hidden border">
+                <img src={img.url} alt="generated" className="w-full object-cover aspect-square" />
+                <div className="absolute top-1.5 right-1.5 flex gap-1">
+                  <a href={img.url} download="generated.png" target="_blank" rel="noreferrer"
+                    className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
+                    <Download className="h-2.5 w-2.5" />
+                  </a>
+                  <button onClick={() => removeImage(img.url)} className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* All generated summary */}
       {images.length > 0 && (
         <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
