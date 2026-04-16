@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, User, Wallet, Shield, CheckCircle2, MessageSquare, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { Loader2, User, Wallet, Shield, CheckCircle2, MessageSquare, Eye, EyeOff, ExternalLink, Share2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
 import { CREDIT_PACKAGES, type PackageId } from '@/lib/ecpay/client'
+import { SocialPlatformSettings } from './SocialPlatformSettings'
 
 interface SettingsFormProps {
   profile: Profile | null
@@ -345,6 +346,18 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
             {savedTg && <span className="text-sm text-green-600">✓ 已儲存</span>}
           </div>
         </form>
+      </div>
+
+      {/* Social Platform Connections */}
+      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <Share2 className="h-5 w-5 text-gray-400" />
+          <h2 className="font-semibold">社群平台連結</h2>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          設定後，行銷自動化流程將自動上傳圖片與影片至對應平台。各平台 Token 請至官方開發者後台取得。
+        </p>
+        <SocialPlatformSettings />
       </div>
 
       {/* Account Info */}

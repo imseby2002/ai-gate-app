@@ -58,7 +58,9 @@ const STEPS: Step[] = [
   { id: 13, label: 'Telegram 完成通知', icon: MessageSquare, type: 'telegram', description: '發送完成通知至 Telegram' },
 ]
 
-const PLATFORMS = ['Facebook', 'Instagram', 'YouTube', 'LinkedIn', 'Twitter/X']
+const IMAGE_PLATFORMS = ['Facebook', 'Instagram', 'Threads', 'LINE VOOM', 'Zalo', 'LinkedIn', 'Twitter/X']
+const VIDEO_PLATFORMS = ['FB Reels', 'IG Reels', 'YouTube Shorts', 'TikTok']
+const PLATFORMS = [...IMAGE_PLATFORMS, ...VIDEO_PLATFORMS]
 
 const STATUS_CONFIG: Record<StepStatus, { label: string; color: string; bg: string }> = {
   pending:  { label: '待執行',  color: 'text-gray-400',   bg: 'bg-gray-100' },
@@ -110,6 +112,7 @@ export default function MarketingAutoPage() {
 
   // Settings
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['Facebook', 'Instagram'])
+  const [uploadResults, setUploadResults] = useState<{ platform: string; ok: boolean; postId?: string; error?: string }[]>([])
   const [imageModel, setImageModel] = useState('flux-1-pro')
   const [feedbackInput, setFeedbackInput] = useState('')
 
@@ -422,10 +425,25 @@ export default function MarketingAutoPage() {
 
   const runUpload = async () => {
     updateStatus(12, 'running'); clearError(12)
-    await new Promise(r => setTimeout(r, 1500)) // stub
-    updateStatus(12, 'done')
-    setActiveStep(13)
-    if (campaignId) await patchCampaign(campaignId, { stepStatuses: { ...statuses, 12: 'done' }, activeStep: 13 })
+    try {
+      const res = await fetch('/api/marketing/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaignId,
+          platforms: selectedPlatforms,
+          imageUrls: stepData.imageUrls ?? [],
+          videoUrl: stepData.videoJobId ?? '',
+          copyText: stepData.copy ?? '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setUploadResults(data.results ?? [])
+      updateStatus(12, 'done')
+      setActiveStep(13)
+      if (campaignId) await patchCampaign(campaignId, { stepStatuses: { ...statuses, 12: 'done' }, activeStep: 13 })
+    } catch (e) { setError(12, String(e)); updateStatus(12, 'pending') }
   }
 
   const sendTelegram = async (stepId: number, message: string) => {
@@ -911,25 +929,63 @@ export default function MarketingAutoPage() {
 
             {/* Step 12 */}
             {currentStep.id === 12 && (
-              <div className="space-y-4">
+              <div className="space-y-5">
+                {/* Image platforms */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">選擇上傳平台</label>
+                  <label className="block text-sm font-semibold mb-2">🖼️ 圖文平台</label>
                   <div className="flex flex-wrap gap-2">
-                    {PLATFORMS.map(p => (
+                    {IMAGE_PLATFORMS.map(p => (
                       <button key={p} type="button" onClick={() => togglePlatform(p)}
-                        className="px-4 py-2 rounded-lg border text-sm font-medium transition-all"
+                        disabled={currentStatus === 'done'}
+                        className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-all disabled:cursor-not-allowed"
                         style={selectedPlatforms.includes(p) ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' } : {}}>
                         {p}
                       </button>
                     ))}
                   </div>
                 </div>
-                {currentStatus === 'done' && (
+
+                {/* Video platforms */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">🎬 影片平台</label>
+                  <div className="flex flex-wrap gap-2">
+                    {VIDEO_PLATFORMS.map(p => (
+                      <button key={p} type="button" onClick={() => togglePlatform(p)}
+                        disabled={currentStatus === 'done'}
+                        className="px-3 py-1.5 rounded-lg border text-sm font-medium transition-all disabled:cursor-not-allowed"
+                        style={selectedPlatforms.includes(p) ? { borderColor: '#8b5cf6', background: '#f5f3ff', color: '#7c3aed' } : {}}>
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                  {VIDEO_PLATFORMS.some(p => selectedPlatforms.includes(p)) && !stepData.videoJobId && (
+                    <p className="text-xs text-amber-600 mt-2">⚠ 影片尚未生成（步驟 10），影片平台將在有影片 URL 後才能上傳。</p>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-400">
+                  各平台憑證請至
+                  <a href="/settings" className="text-blue-500 hover:underline mx-1">設定 → 社群平台連結</a>
+                  完成設定。
+                </p>
+
+                {/* Upload results */}
+                {currentStatus === 'done' && uploadResults.length > 0 && (
                   <div className="space-y-2">
-                    {selectedPlatforms.map(p => (
-                      <div key={p} className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-100">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-green-800">{p} 上傳完成</span>
+                    <div className="text-sm font-medium text-gray-700">上傳結果</div>
+                    {uploadResults.map(r => (
+                      <div key={r.platform} className={`flex items-start gap-3 p-3 rounded-lg border text-sm ${
+                        r.ok ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'
+                      }`}>
+                        {r.ok
+                          ? <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                          : <XCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />}
+                        <div>
+                          <span className={r.ok ? 'text-green-800 font-medium' : 'text-red-700 font-medium'}>{r.platform}</span>
+                          {r.ok
+                            ? <span className="text-green-700 ml-2">上傳成功{r.postId ? ` (ID: ${r.postId})` : ''}</span>
+                            : <span className="text-red-600 ml-2">{r.error}</span>}
+                        </div>
                       </div>
                     ))}
                   </div>
