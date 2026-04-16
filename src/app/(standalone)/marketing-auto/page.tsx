@@ -36,7 +36,7 @@ const UNITS: UnitDef[] = [
   { id: 2,  name: '公司資料',  icon: Building2,  desc: '基本資料、素材上傳',             implemented: true  },
   { id: 3,  name: '分析資料',  icon: BarChart3,  desc: '市場、競爭對手、影片/文案分析',   implemented: true  },
   { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: true  },
-  { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: false },
+  { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: true  },
   { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: false },
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: false },
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: false },
@@ -970,6 +970,246 @@ function Unit4Copy({
   )
 }
 
+// ─── Unit 5: 圖片腳本 ─────────────────────────────────────────────────────────
+
+interface ImageScript {
+  id: number
+  content: string
+}
+
+interface Unit5Data {
+  count?: number
+  platforms?: string[]
+  scripts?: ImageScript[]
+  userInstructions?: string
+}
+
+const IMAGE_PLATFORM_OPTIONS: { id: string; label: string }[] = [
+  { id: 'facebook_post',     label: 'Facebook' },
+  { id: 'instagram_caption', label: 'Instagram' },
+  { id: 'threads_post',      label: 'Threads' },
+  { id: 'line_message',      label: 'LINE' },
+  { id: 'twitter_post',      label: 'Twitter/X' },
+  { id: 'linkedin_post',     label: 'LinkedIn' },
+  { id: 'youtube_description', label: 'YouTube' },
+]
+
+function Unit5ImageScript({
+  campaignId: _campaignId,
+  savedData,
+  unit1Data,
+  unit2Data,
+  unit3Data,
+  unit4Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit5Data
+  unit1Data?: { summary?: string }
+  unit2Data?: Unit2Data
+  unit3Data?: Unit3Data
+  unit4Data?: Unit4Data
+  onDone: (data: Unit5Data) => void
+}) {
+  const [count, setCount] = useState(savedData?.count ?? 3)
+  const [platforms, setPlatforms] = useState<string[]>(
+    savedData?.platforms ?? ['facebook_post', 'instagram_caption']
+  )
+  const [instructions, setInstructions] = useState(savedData?.userInstructions ?? '')
+  const [feedback, setFeedback] = useState('')
+  const [running, setRunning] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<Unit5Data | null>(savedData?.scripts?.length ? savedData : null)
+  const [activeScript, setActiveScript] = useState(1)
+
+  const togglePlatform = (p: string) =>
+    setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
+
+  const run = async (fb?: string) => {
+    setRunning(true); setError('')
+    try {
+      const res = await fetch('/api/marketing/image-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          count,
+          platforms,
+          userInstructions: instructions,
+          companyData: unit2Data ?? {},
+          analysisData: unit3Data ?? {},
+          copyData: unit4Data ?? {},
+          collectedSummary: unit1Data?.summary ?? '',
+          feedback: fb ?? '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const out: Unit5Data = {
+        count,
+        platforms,
+        scripts: data.scripts,
+        userInstructions: instructions,
+      }
+      setResult(out)
+      setActiveScript(1)
+      setFeedback('')
+      onDone(out)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  const hasUnit2 = !!unit2Data?.companyName
+  const hasUnit4 = !!unit4Data?.results
+
+  return (
+    <div className="space-y-6">
+      {/* Context status */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { label: '蒐集資料', ok: !!unit1Data?.summary },
+          { label: '公司資料', ok: hasUnit2 },
+          { label: '分析資料', ok: !!unit3Data?.results },
+          { label: '文案資料', ok: hasUnit4 },
+        ].map(s => (
+          <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+          }`}>
+            {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+            {s.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Count selector */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">產出圖片數量</label>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4, 5, 6, 8, 10].map(n => (
+            <button key={n} type="button" onClick={() => setCount(n)}
+              className="w-10 h-10 rounded-lg border text-sm font-medium transition-all"
+              style={count === n
+                ? { borderColor: 'var(--primary)', background: 'var(--primary)', color: 'white' }
+                : { background: 'white' }}>
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Platform selector */}
+      <div>
+        <label className="block text-sm font-semibold mb-2">目標發布平台</label>
+        <div className="flex flex-wrap gap-2">
+          {IMAGE_PLATFORM_OPTIONS.map(p => {
+            const sel = platforms.includes(p.id)
+            return (
+              <button key={p.id} type="button" onClick={() => togglePlatform(p.id)}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={sel
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : {}}>
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* User instructions */}
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">
+          特別規定
+          <span className="ml-2 text-xs font-normal text-gray-400">（選填，可指定圖片風格、禁止元素、必帶資訊等）</span>
+        </label>
+        <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
+          className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+          placeholder="例如：必須包含產品照片；風格要高端奢華；禁止使用紅色；圖片要帶有品牌 Logo 位置…" />
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{error}
+        </div>
+      )}
+
+      <button onClick={() => run()} disabled={running}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        style={{ background: 'var(--primary)' }}>
+        {running
+          ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
+          : <><ImageIcon className="h-4 w-4" />產生圖片腳本</>}
+      </button>
+
+      {/* Results */}
+      {result && result.scripts && result.scripts.length > 0 && (
+        <div className="space-y-3">
+          {/* Script tab bar */}
+          <div className="flex gap-1.5 flex-wrap border-b pb-2">
+            {result.scripts.map(s => (
+              <button key={s.id} onClick={() => setActiveScript(s.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  activeScript === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}>
+                圖片 {s.id}
+              </button>
+            ))}
+            <button onClick={() => run()} disabled={running}
+              className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+            </button>
+          </div>
+
+          {/* Active script content */}
+          {result.scripts.find(s => s.id === activeScript) && (
+            <div className="p-5 rounded-xl bg-gray-50 border">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-gray-500">
+                  圖片 {activeScript} 視覺腳本 — Claude Sonnet
+                </span>
+                <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
+                  共 {result.scripts.length} 張
+                </span>
+              </div>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[500px] overflow-y-auto">
+                {result.scripts.find(s => s.id === activeScript)?.content}
+              </pre>
+            </div>
+          )}
+
+          {/* Feedback */}
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
+            <div className="text-xs font-semibold text-amber-800">輸入修改意見，重新生成所有腳本</div>
+            <div className="flex gap-2">
+              <input value={feedback} onChange={e => setFeedback(e.target.value)}
+                className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
+                placeholder="例如：風格改成更年輕活潑；加入更多產品細節；色調改為暖色系…"
+                onKeyDown={e => e.key === 'Enter' && feedback.trim() && run(feedback)}
+              />
+              <button onClick={() => run(feedback)} disabled={!feedback.trim() || running}
+                className="px-4 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}>
+                重生成
+              </button>
+            </div>
+          </div>
+
+          {/* Copy AI prompt hint */}
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+            <div className="text-xs text-blue-700 font-medium mb-1">💡 使用提示</div>
+            <div className="text-xs text-blue-600">
+              每張腳本末尾的 <strong>AI 生成 Prompt</strong> 可直接複製至 Midjourney、DALL-E 3、Stable Diffusion 等工具生成圖片。
+              完成後前往 <strong>單元6 圖片產出</strong> 進行 AI 生成。
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -1078,6 +1318,11 @@ export default function MarketingAutoPage() {
   const handleUnit4Done = useCallback(async (data: Unit4Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(4, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit5Done = useCallback(async (data: Unit5Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(5, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -1225,7 +1470,18 @@ export default function MarketingAutoPage() {
               onDone={handleUnit4Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 5 && (
+            <Unit5ImageScript
+              campaignId={campaignId}
+              savedData={unitData[5] as Unit5Data | undefined}
+              unit1Data={unitData[1] as { summary?: string } | undefined}
+              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit3Data={unitData[3] as Unit3Data | undefined}
+              unit4Data={unitData[4] as Unit4Data | undefined}
+              onDone={handleUnit5Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
