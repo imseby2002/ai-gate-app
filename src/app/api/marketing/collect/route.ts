@@ -1,23 +1,27 @@
+/**
+ * POST /api/marketing/collect
+ * 蒐集資訊單元 — 支援多種資料來源並行蒐集，最後 DeepSeek 整理摘要
+ *
+ * Body: {
+ *   types: ('news'|'web'|'maps'|'reviews'|'company'|'competitors')[]
+ *   keywords: string
+ *   location?: string          // 地圖/評論/公司需要
+ *   radius?: string            // '1'|'3'|'5'|'10'|'20' (km)
+ *   limit?: number             // 每類最多筆數，預設 10
+ *   language?: string          // 語言，預設 'zh-TW'
+ * }
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
-interface TavilyResult {
-  title: string
-  url: string
-  content: string
-  score: number
-}
+type CollectType = 'news' | 'web' | 'maps' | 'reviews' | 'company' | 'competitors'
 
-interface TavilyResponse {
-  results: TavilyResult[]
-  answer?: string
-}
-
-async function tavilySearch(query: string): Promise<TavilyResponse> {
+// ── Tavily (web / competitors) ─────────────────────────────────────────────────
+async function tavilySearch(query: string, limit = 6): Promise<string> {
   const res = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -25,94 +29,225 @@ async function tavilySearch(query: string): Promise<TavilyResponse> {
       api_key: process.env.TAVILY_API_KEY,
       query,
       search_depth: 'advanced',
-      max_results: 6,
+      max_results: limit,
       include_answer: true,
     }),
   })
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Tavily error: ${err}`)
+  if (!res.ok) throw new Error(`Tavily error: ${res.statusText}`)
+  const data = await res.json()
+  const parts: string[] = []
+  if (data.answer) parts.push(`📌 摘要：${data.answer}`)
+  for (const item of data.results ?? []) {
+    parts.push(`【${item.title}】\n${item.content}\n🔗 ${item.url}`)
   }
-  return res.json()
+  return parts.join('\n\n---\n\n')
 }
 
+// ── Apify Google News ──────────────────────────────────────────────────────────
+async function apifyNews(keywords: string, limit: number, language: string): Promise<string> {
+  const token = process.env.APIFY_API_TOKEN
+  if (!token) return '⚠️ APIFY_API_TOKEN 未設定，跳過新聞蒐集。'
+
+  try {
+    const res = await fetch(
+      `https://api.apify.com/v2/acts/apify~google-news-scraper/run-sync-get-dataset-items?token=${token}&timeout=60`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          queries: [keywords],
+          maxItems: limit,
+          language: language.startsWith('zh') ? 'zh-TW' : 'en',
+          dateRange: 'anytime',
+        }),
+      }
+    )
+    if (!res.ok) throw new Error(res.statusText)
+    const items = await res.json()
+    return (items as Array<{ title: string; url: string; body?: string; date?: string }>)
+      .slice(0, limit)
+      .map((item) => `📰 ${item.title}\n${item.body?.slice(0, 300) ?? ''}\n🔗 ${item.url}`)
+      .join('\n\n---\n\n')
+  } catch (e) {
+    return `⚠️ Apify 新聞蒐集失敗：${String(e)}`
+  }
+}
+
+// ── Outscraper Google Maps ─────────────────────────────────────────────────────
+async function outscraperMaps(keywords: string, location: string, radiusKm: string, limit: number): Promise<string> {
+  const key = process.env.OUTSCRAPER_API_KEY
+  if (!key) return '⚠️ OUTSCRAPER_API_KEY 未設定，跳過地圖蒐集。'
+
+  const query = `${keywords} ${location}`.trim()
+  try {
+    const url = new URL('https://api.app.outscraper.com/maps/search-v3')
+    url.searchParams.set('query', query)
+    url.searchParams.set('limit', String(limit))
+    url.searchParams.set('radius', String(Number(radiusKm) * 1000)) // meters
+    url.searchParams.set('async', 'false')
+
+    const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
+    if (!res.ok) throw new Error(res.statusText)
+    const data = await res.json()
+    const places = (data.data ?? []).flat()
+    return (places as Array<{ name: string; address?: string; rating?: number; reviews?: number; phone?: string; website?: string; category?: string }>)
+      .slice(0, limit)
+      .map((p) =>
+        `🏢 ${p.name}\n📍 ${p.address ?? ''}\n⭐ ${p.rating ?? '-'} (${p.reviews ?? 0} 則評論)\n📞 ${p.phone ?? '-'}\n🌐 ${p.website ?? '-'}\n🏷️ ${p.category ?? ''}`
+      )
+      .join('\n\n---\n\n')
+  } catch (e) {
+    return `⚠️ Outscraper 地圖蒐集失敗：${String(e)}`
+  }
+}
+
+// ── Outscraper Reviews ──────────────────────────────────────────────────────────
+async function outscraperReviews(keywords: string, location: string, limit: number): Promise<string> {
+  const key = process.env.OUTSCRAPER_API_KEY
+  if (!key) return '⚠️ OUTSCRAPER_API_KEY 未設定，跳過評論蒐集。'
+
+  const query = `${keywords} ${location}`.trim()
+  try {
+    const url = new URL('https://api.app.outscraper.com/maps/reviews-v3')
+    url.searchParams.set('query', query)
+    url.searchParams.set('limit', String(limit))
+    url.searchParams.set('sort', 'newest')
+    url.searchParams.set('async', 'false')
+
+    const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
+    if (!res.ok) throw new Error(res.statusText)
+    const data = await res.json()
+    const reviews = (data.data ?? []).flat()
+    return (reviews as Array<{ author_title?: string; review_text?: string; review_rating?: number; review_datetime_utc?: string; owner_answer?: string }>)
+      .slice(0, limit)
+      .filter((r) => r.review_text)
+      .map((r) =>
+        `⭐ ${r.review_rating ?? '-'} — ${r.author_title ?? '匿名'}\n「${r.review_text?.slice(0, 400) ?? ''}」${r.owner_answer ? `\n🔁 商家回覆：${r.owner_answer.slice(0, 200)}` : ''}`
+      )
+      .join('\n\n---\n\n')
+  } catch (e) {
+    return `⚠️ Outscraper 評論蒐集失敗：${String(e)}`
+  }
+}
+
+// ── Main Handler ───────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { topic, industry } = await req.json()
-  if (!topic) return NextResponse.json({ error: 'topic required' }, { status: 400 })
+  const {
+    types = ['web'],
+    keywords,
+    location = '',
+    radius = '5',
+    limit = 10,
+    language = 'zh-TW',
+    // Legacy fallback
+    topic,
+    industry,
+  } = await req.json()
 
-  // ── 1. Tavily 並行搜尋三個面向 ───────────────────────────────────
-  const queries = [
-    `${topic} ${industry ?? ''} 市場趨勢 2024 2025`,
-    `${topic} ${industry ?? ''} 競品分析 主要競爭者`,
-    `${topic} ${industry ?? ''} 消費者需求 目標受眾`,
-  ]
+  const kw = keywords || topic || ''
+  if (!kw) return NextResponse.json({ error: 'keywords required' }, { status: 400 })
 
-  const searchResults = await Promise.allSettled(queries.map(tavilySearch))
+  const selectedTypes: CollectType[] = types
 
-  // Flatten and deduplicate results
-  const allResults: string[] = []
-  for (const r of searchResults) {
+  // ── Dispatch tasks in parallel ──────────────────────────────────────────────
+  const tasks: Promise<[string, string]>[] = []
+
+  if (selectedTypes.includes('news')) {
+    tasks.push(apifyNews(kw, limit, language).then(r => ['📰 新聞', r]))
+  }
+  if (selectedTypes.includes('web')) {
+    const query = industry ? `${kw} ${industry} 市場趨勢` : `${kw} 市場趨勢`
+    tasks.push(tavilySearch(query, limit).then(r => ['🌐 網頁搜尋', r]))
+  }
+  if (selectedTypes.includes('maps')) {
+    tasks.push(outscraperMaps(kw, location, radius, limit).then(r => ['🗺️ Google 地圖', r]))
+  }
+  if (selectedTypes.includes('reviews')) {
+    tasks.push(outscraperReviews(kw, location, limit).then(r => ['⭐ 評論', r]))
+  }
+  if (selectedTypes.includes('company')) {
+    // Company data = maps search with business focus
+    tasks.push(outscraperMaps(`${kw} 公司`, location, radius, limit).then(r => ['🏢 公司資料', r]))
+  }
+  if (selectedTypes.includes('competitors')) {
+    const query = industry
+      ? `${kw} ${industry} 競爭對手 主要品牌 競品`
+      : `${kw} 競爭對手 主要品牌 競品分析`
+    tasks.push(tavilySearch(query, limit).then(r => ['🎯 競爭對手', r]))
+  }
+
+  const results = await Promise.allSettled(tasks)
+  const sections: string[] = []
+  for (const r of results) {
     if (r.status === 'fulfilled') {
-      if (r.value.answer) allResults.push(r.value.answer)
-      for (const item of r.value.results.slice(0, 2)) {
-        allResults.push(`【${item.title}】\n${item.content}`)
-      }
+      const [label, content] = r.value
+      sections.push(`═══ ${label} ═══\n\n${content}`)
     }
   }
 
-  if (allResults.length === 0) {
-    return NextResponse.json({ error: 'Tavily 搜尋無結果，請確認 TAVILY_API_KEY' }, { status: 503 })
+  if (sections.length === 0) {
+    return NextResponse.json({ error: '所有資料來源均無回傳，請確認 API 金鑰設定' }, { status: 503 })
   }
 
-  const rawContent = allResults.join('\n\n---\n\n')
+  const rawContent = sections.join('\n\n\n')
 
-  // ── 2. DeepSeek 整理摘要 ─────────────────────────────────────────
+  // ── DeepSeek 整理摘要 ────────────────────────────────────────────────────────
   const deepseek = createOpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY!,
     baseURL: 'https://api.deepseek.com/v1',
   })
 
-  const { text } = await generateText({
+  const { text: summary } = await generateText({
     model: deepseek.chat('deepseek-chat'),
     messages: [
       {
         role: 'system',
-        content: '你是一位市場調查分析師，擅長從網路資料中提煉出有用的行銷洞察，輸出清晰易讀的繁體中文報告。',
+        content: '你是一位市場調查分析師，擅長從多元來源資料中提煉行銷洞察，以繁體中文輸出清晰結構化報告。',
       },
       {
         role: 'user',
-        content: `請根據以下從網路蒐集到的原始資料，整理出一份行銷市場調查摘要：
+        content: `請根據以下從多個管道蒐集到的原始資料，整理成完整的行銷情報摘要：
 
-主題：${topic}
-產業：${industry ?? '未指定'}
+關鍵字：${kw}
+地區：${location || '未指定'}
+蒐集類型：${selectedTypes.join('、')}
 
 原始資料：
-${rawContent.slice(0, 8000)}
+${rawContent.slice(0, 10000)}
 
-請整理成以下格式（條列式，每項 1-2 句）：
+請整理成以下格式（有哪些資料就呈現哪些，每項條列式）：
 
-【市場趨勢】（3-5點）
+【市場概況】
 • ...
 
-【主要競品】（3-5家，含特色）
+【競品動態】（如有蒐集）
 • ...
 
-【目標受眾特徵】
+【當地商家分佈】（如有地圖資料）
 • ...
 
-【熱門關鍵字】
+【消費者評價摘要】（如有評論資料）
 • ...
 
-【消費者痛點】（3點）
+【熱門關鍵字與話題】
+• ...
+
+【行銷洞察與建議】
 • ...`,
       },
     ],
-    maxOutputTokens: 2048,
+    maxOutputTokens: 3000,
   })
 
-  return NextResponse.json({ data: text })
+  return NextResponse.json({
+    summary,
+    raw: rawContent,
+    types: selectedTypes,
+    keywords: kw,
+    location,
+  })
 }
