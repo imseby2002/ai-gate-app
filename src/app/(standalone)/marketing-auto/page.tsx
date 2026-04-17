@@ -39,7 +39,7 @@ const UNITS: UnitDef[] = [
   { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: true  },
   { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: true  },
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: true  },
-  { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: false },
+  { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: true  },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: false },
   { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE 語音外撥行銷',            implemented: false },
   { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: false },
@@ -1863,6 +1863,356 @@ function Unit7VideoScript({
   )
 }
 
+// ─── Unit 8: 影片產出 ─────────────────────────────────────────────────────────
+
+type VideoModel = 'kling-standard' | 'kling-pro' | 'kling-img2video'
+
+interface GeneratedVideo {
+  scriptId: number
+  url: string
+  requestId: string
+  model: VideoModel
+  generatedAt: string
+}
+
+interface VideoJob {
+  scriptId: number
+  requestId: string
+  model: VideoModel
+  status: 'processing' | 'completed' | 'failed'
+  error?: string
+}
+
+interface Unit8Data {
+  videos?: GeneratedVideo[]
+}
+
+const VIDEO_MODELS: { id: VideoModel; name: string; desc: string; badge: string }[] = [
+  { id: 'kling-standard',  name: 'KLING Standard', desc: '文字生成影片，標準品質，速度較快', badge: '推薦' },
+  { id: 'kling-pro',       name: 'KLING Pro',      desc: '文字生成影片，旗艦品質',          badge: 'Pro'  },
+  { id: 'kling-img2video', name: 'KLING 圖生影片', desc: '從單元6圖片生成動態影片',         badge: '圖轉影' },
+]
+
+const VIDEO_ASPECT_OPTIONS = [
+  { value: '16:9', label: '16:9 橫式', hint: 'YouTube/FB' },
+  { value: '9:16', label: '9:16 直式', hint: 'Reels/TikTok' },
+  { value: '1:1',  label: '1:1 正方形', hint: 'IG/通用' },
+]
+
+// Extract first prompt line from video script
+function extractVideoPrompt(content: string): string {
+  const m = content.match(/開頭\s*Hook.*?畫面[：:]\s*(.+?)(?:\n|$)/i)
+    ?? content.match(/畫面[：:]\s*(.+?)(?:\n|$)/i)
+    ?? content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
+  if (m) return m[1].trim()
+  // fallback: first non-empty line
+  return content.split('\n').find(l => l.trim().length > 10)?.trim() ?? content.slice(0, 150)
+}
+
+function Unit8VideoGenerate({
+  campaignId: _campaignId,
+  savedData,
+  unit6Data,
+  unit7Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit8Data
+  unit6Data?: Unit6Data
+  unit7Data?: Unit7Data
+  onDone: (data: Unit8Data) => void
+}) {
+  const scripts = unit7Data?.scripts ?? []
+  const generatedImages = unit6Data?.images ?? []
+
+  const [model, setModel] = useState<VideoModel>('kling-standard')
+  const [duration, setDuration] = useState<'5' | '10'>('5')
+  const [aspectRatio, setAspectRatio] = useState('16:9')
+  const [prompts, setPrompts] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {}
+    scripts.forEach(s => { init[s.id] = extractVideoPrompt(s.content) })
+    return init
+  })
+  const [selectedImage, setSelectedImage] = useState<string>('')
+  const [manualPrompt, setManualPrompt] = useState('')
+
+  const [jobs, setJobs] = useState<Record<number, VideoJob>>({})
+  const [videos, setVideos] = useState<GeneratedVideo[]>(savedData?.videos ?? [])
+  const [manualJob, setManualJob] = useState<VideoJob | null>(null)
+
+  const hasUnit7 = scripts.length > 0
+  const hasUnit6Images = generatedImages.length > 0
+
+  // Polling
+  const pollJob = useCallback(async (job: VideoJob, key: number | 'manual') => {
+    try {
+      const res = await fetch(
+        `/api/marketing/generate-video?requestId=${job.requestId}&model=${job.model}&scriptId=${job.scriptId}`
+      )
+      const data = await res.json()
+
+      if (data.status === 'processing') return // keep polling
+
+      if (data.status === 'completed') {
+        const vid: GeneratedVideo = { scriptId: job.scriptId, url: data.url, requestId: job.requestId, model: job.model, generatedAt: data.generatedAt }
+        setVideos(prev => {
+          const next = [...prev.filter(v => v.scriptId !== job.scriptId), vid]
+          onDone({ videos: next }); return next
+        })
+        if (key === 'manual') {
+          setManualJob(prev => prev ? { ...prev, status: 'completed' } : null)
+        } else {
+          setJobs(prev => ({ ...prev, [key]: { ...job, status: 'completed' } }))
+        }
+      } else {
+        if (key === 'manual') setManualJob(prev => prev ? { ...prev, status: 'failed', error: data.error } : null)
+        else setJobs(prev => ({ ...prev, [key]: { ...job, status: 'failed', error: data.error } }))
+      }
+    } catch { /* retry next tick */ }
+  }, [onDone])
+
+  // Poll processing jobs every 6 seconds
+  useEffect(() => {
+    const processingJobs = Object.entries(jobs).filter(([, j]) => j.status === 'processing')
+    if (processingJobs.length === 0 && manualJob?.status !== 'processing') return
+    const interval = setInterval(() => {
+      processingJobs.forEach(([key, job]) => pollJob(job, Number(key)))
+      if (manualJob?.status === 'processing') pollJob(manualJob, 'manual')
+    }, 6000)
+    return () => clearInterval(interval)
+  }, [jobs, manualJob, pollJob])
+
+  const submitJob = async (scriptId: number) => {
+    const prompt = prompts[scriptId]?.trim()
+    if (!prompt) return
+    const payload: Record<string, unknown> = { prompt, scriptId, model, duration, aspectRatio }
+    if (model === 'kling-img2video' && selectedImage) payload.imageUrl = selectedImage
+
+    try {
+      const res = await fetch('/api/marketing/generate-video', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const job: VideoJob = { scriptId, requestId: data.requestId, model, status: 'processing' }
+      setJobs(prev => ({ ...prev, [scriptId]: job }))
+    } catch (e) {
+      setJobs(prev => ({ ...prev, [scriptId]: { scriptId, requestId: '', model, status: 'failed', error: String(e) } }))
+    }
+  }
+
+  const submitManual = async () => {
+    if (!manualPrompt.trim()) return
+    const payload: Record<string, unknown> = { prompt: manualPrompt.trim(), scriptId: 0, model, duration, aspectRatio }
+    if (model === 'kling-img2video' && selectedImage) payload.imageUrl = selectedImage
+    try {
+      const res = await fetch('/api/marketing/generate-video', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setManualJob({ scriptId: 0, requestId: data.requestId, model, status: 'processing' })
+    } catch (e) {
+      setManualJob({ scriptId: 0, requestId: '', model, status: 'failed', error: String(e) })
+    }
+  }
+
+  const removeVideo = (url: string) =>
+    setVideos(prev => { const next = prev.filter(v => v.url !== url); onDone({ videos: next }); return next })
+
+  return (
+    <div className="space-y-6">
+
+      {/* Model selector */}
+      <div>
+        <label className="block text-sm font-semibold mb-3">選擇生成模型</label>
+        <div className="grid grid-cols-3 gap-3">
+          {VIDEO_MODELS.map(m => (
+            <button key={m.id} onClick={() => setModel(m.id)}
+              className="relative flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all"
+              style={model === m.id
+                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
+                : { borderColor: '#e5e7eb', background: 'white' }}>
+              <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                style={model === m.id ? { background: 'var(--primary)', color: 'white' } : { background: '#f3f4f6', color: '#6b7280' }}>
+                {m.badge}
+              </span>
+              <span className="text-sm font-bold text-gray-800 pr-8">{m.name}</span>
+              <span className="text-[10px] text-gray-400 mt-1 leading-snug">{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Settings */}
+      <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
+        <div className="text-xs font-semibold text-gray-600">影片設定</div>
+        <div className="flex flex-wrap gap-6">
+          {/* Duration */}
+          <div>
+            <div className="text-xs font-medium text-gray-500 mb-2">影片時長</div>
+            <div className="flex gap-2">
+              {(['5', '10'] as const).map(d => (
+                <button key={d} onClick={() => setDuration(d)}
+                  className="px-4 py-2 rounded-lg border text-xs font-medium transition-all"
+                  style={duration === d
+                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                    : { background: 'white' }}>
+                  {d} 秒
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Aspect ratio */}
+          <div>
+            <div className="text-xs font-medium text-gray-500 mb-2">畫面比例</div>
+            <div className="flex gap-2">
+              {VIDEO_ASPECT_OPTIONS.map(opt => (
+                <button key={opt.value} onClick={() => setAspectRatio(opt.value)}
+                  className="flex flex-col items-center px-3 py-2 rounded-lg border text-xs transition-all"
+                  style={aspectRatio === opt.value
+                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                    : { background: 'white' }}>
+                  <span className="font-medium">{opt.label}</span>
+                  <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Image selector (img2video) */}
+      {model === 'kling-img2video' && (
+        <div className="p-4 rounded-xl border border-blue-100 bg-blue-50 space-y-2">
+          <div className="text-xs font-semibold text-blue-800">選擇來源圖片（單元6 已生成）</div>
+          {hasUnit6Images ? (
+            <div className="flex gap-2 flex-wrap">
+              {generatedImages.map(img => (
+                <button key={img.url} onClick={() => setSelectedImage(img.url)}
+                  className="relative rounded-lg overflow-hidden border-2 transition-all"
+                  style={selectedImage === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
+                  <img src={img.url} alt="圖片" className="w-16 h-16 object-cover" />
+                  {selectedImage === img.url && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <CheckCircle2 className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-blue-600">尚未在單元6生成圖片。請先完成單元6，或使用文字生成影片模式。</p>
+          )}
+          {selectedImage && (
+            <p className="text-[10px] text-blue-500">已選擇圖片，將以此圖生成動態影片</p>
+          )}
+        </div>
+      )}
+
+      {/* From Unit 7 scripts */}
+      {hasUnit7 ? (
+        <div className="space-y-4">
+          <div className="text-sm font-semibold text-gray-700">從單元7腳本生成（共 {scripts.length} 支）</div>
+          {scripts.map(s => {
+            const job = jobs[s.id]
+            const vid = videos.find(v => v.scriptId === s.id)
+            const isProcessing = job?.status === 'processing'
+            const isFailed = job?.status === 'failed'
+            return (
+              <div key={s.id} className="border rounded-xl overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
+                  <Film className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-gray-700">影片 {s.id}</span>
+                  {vid && <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">已生成</span>}
+                  {isProcessing && <span className="ml-auto text-[10px] text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 flex items-center gap-1"><Loader2 className="h-2.5 w-2.5 animate-spin" />生成中（約1-3分鐘）</span>}
+                  {isFailed && <span className="ml-auto text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">失敗</span>}
+                </div>
+                <div className="p-4 space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">影片 Prompt <span className="text-gray-400 font-normal">（可編輯）</span></label>
+                    <textarea value={prompts[s.id] ?? ''} onChange={e => setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))}
+                      rows={3} className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none"
+                      placeholder="描述影片畫面與動作…" />
+                  </div>
+                  {isFailed && (
+                    <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{job?.error}
+                    </div>
+                  )}
+                  <button onClick={() => submitJob(s.id)} disabled={isProcessing}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
+                    style={{ background: 'var(--primary)' }}>
+                    {isProcessing
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />KLING 生成中…</>
+                      : <><Sparkles className="h-3.5 w-3.5" />{vid ? '重新生成' : '生成影片'}</>}
+                  </button>
+                  {vid && (
+                    <div className="rounded-xl overflow-hidden border bg-black">
+                      <video src={vid.url} controls className="w-full max-h-72" />
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
+                        <span className="text-[10px] text-gray-400 flex-1">{VIDEO_MODELS.find(m => m.id === vid.model)?.name} · {new Date(vid.generatedAt).toLocaleString('zh-TW')}</span>
+                        <a href={vid.url} download={`video-${s.id}.mp4`} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
+                          <Download className="h-3 w-3" /> 下載
+                        </a>
+                        <button onClick={() => removeVideo(vid.url)} className="p-1 rounded-lg text-gray-400 hover:text-red-400">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+          <strong>尚未執行單元7（影片腳本）</strong>，可在下方直接輸入 Prompt 生成影片。
+        </div>
+      )}
+
+      {/* Manual prompt */}
+      <div className="border rounded-xl p-4 space-y-3">
+        <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+          <Wand2 className="h-4 w-4" style={{ color: 'var(--primary)' }} />
+          手動輸入 Prompt
+        </div>
+        <textarea value={manualPrompt} onChange={e => setManualPrompt(e.target.value)} rows={3}
+          className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none"
+          placeholder="描述影片畫面，例如：A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…" />
+        {manualJob?.status === 'failed' && (
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+            <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{manualJob.error}
+          </div>
+        )}
+        <button onClick={submitManual} disabled={manualJob?.status === 'processing' || !manualPrompt.trim()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
+          style={{ background: 'var(--primary)' }}>
+          {manualJob?.status === 'processing'
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />KLING 生成中…</>
+            : <><Sparkles className="h-3.5 w-3.5" />生成影片</>}
+        </button>
+      </div>
+
+      {/* Notice */}
+      <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700">
+        <strong>注意：</strong>影片生成通常需要 <strong>1-3 分鐘</strong>，提交後頁面會自動每 6 秒輪詢狀態，請勿離開此頁面。生成完成後影片將自動顯示。
+      </div>
+
+      {videos.length > 0 && (
+        <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+          <span className="text-xs text-green-700 font-medium">已生成 {videos.length} 支影片，可於單元9上傳至各平台。</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -1986,6 +2336,11 @@ export default function MarketingAutoPage() {
   const handleUnit7Done = useCallback(async (data: Unit7Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(7, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit8Done = useCallback(async (data: Unit8Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(8, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -2164,7 +2519,16 @@ export default function MarketingAutoPage() {
               onDone={handleUnit7Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 8 && (
+            <Unit8VideoGenerate
+              campaignId={campaignId}
+              savedData={unitData[8] as Unit8Data | undefined}
+              unit6Data={unitData[6] as Unit6Data | undefined}
+              unit7Data={unitData[7] as Unit7Data | undefined}
+              onDone={handleUnit8Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
