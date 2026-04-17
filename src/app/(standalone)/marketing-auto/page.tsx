@@ -6,7 +6,7 @@ import {
   Film, Video, Upload, Phone, Mic, Headphones,
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
   XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
-  FileText, X, Download, Sparkles, Wand2
+  FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ const UNITS: UnitDef[] = [
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: true  },
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: true  },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: true  },
-  { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE 語音外撥行銷',            implemented: false },
+  { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE / ElevenLabs + Plivo',   implemented: true  },
   { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: false },
   { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: false },
 ]
@@ -2501,6 +2501,380 @@ function Unit9Upload({
   )
 }
 
+// ─── Unit 10: 電話行銷 ────────────────────────────────────────────────────────
+
+interface CallRecord {
+  phone: string
+  ok: boolean
+  id?: string
+  error?: string
+}
+
+interface Unit10Data {
+  lastBatch?: {
+    region: string
+    total: number
+    success: number
+    results: CallRecord[]
+    audioUrl?: string
+    calledAt: string
+  }
+}
+
+const VBEE_VOICES = [
+  { id: 'hn-quynhanh', label: '河內 - 瓊安（女）' },
+  { id: 'hn-thanhtung', label: '河內 - 清松（男）' },
+  { id: 'sg-hoaiphuong', label: '胡志明 - 懷芳（女）' },
+  { id: 'sg-minhquan', label: '胡志明 - 明官（男）' },
+  { id: 'hue-thanhha', label: '順化 - 清霞（女）' },
+]
+
+const ELEVEN_VOICES = [
+  { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah（多語言，女）' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', label: 'Liam（多語言，男）' },
+  { id: 'XB0fDUnXU5powFXDhCwa', label: 'Charlotte（多語言，女）' },
+  { id: 'onwK4e9ZLuTAKqWW03F9', label: 'Daniel（英式英語，男）' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', label: 'Lily（多語言，女）' },
+]
+
+function Unit10PhoneMarketing({
+  campaignId: _campaignId,
+  savedData,
+  unit2Data,
+  unit4Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit10Data
+  unit2Data?: Unit2Data
+  unit4Data?: Unit4Data
+  onDone: (data: Unit10Data) => void
+}) {
+  const [region, setRegion] = useState<'vn' | 'other'>('vn')
+
+  // Script
+  const [script, setScript] = useState('')
+  const [generatingScript, setGeneratingScript] = useState(false)
+
+  // VBEE settings
+  const [vbeeVoice, setVbeeVoice] = useState('hn-quynhanh')
+  const [vbeeSpeed, setVbeeSpeed] = useState(1.0)
+  const [vbeeCallerId, setVbeeCallerId] = useState('')
+
+  // ElevenLabs + Plivo settings
+  const [elevenVoiceId, setElevenVoiceId] = useState('EXAVITQu4vr4xnSDxMaL')
+  const [plivoCallerId, setPlivoCallerId] = useState('')
+
+  // Phone list
+  const [phoneInput, setPhoneInput] = useState('')
+  const [phones, setPhones] = useState<string[]>([])
+
+  // TTS preview
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [previewError, setPreviewError] = useState('')
+
+  // Calling
+  const [calling, setCalling] = useState(false)
+  const [callError, setCallError] = useState('')
+  const [results, setResults] = useState<CallRecord[]>(savedData?.lastBatch?.results ?? [])
+
+  const isVN = region === 'vn'
+
+  // Parse phone numbers from textarea input
+  const parsePhones = (raw: string): string[] =>
+    raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
+
+  const handlePhoneInput = (val: string) => {
+    setPhoneInput(val)
+    setPhones(parsePhones(val))
+  }
+
+  // Auto-generate phone script using Claude
+  const generateScript = async () => {
+    const company = unit2Data?.companyName ?? '我們的公司'
+    const product = unit2Data?.products ?? '我們的產品'
+    const audience = unit2Data?.targetAudience ?? '潛在客戶'
+    const copy = unit4Data?.results
+      ? Object.values(unit4Data.results)[0]?.slice(0, 300)
+      : ''
+    const lang = isVN ? '越南語（tiếng Việt）' : '繁體中文'
+
+    setGeneratingScript(true)
+    try {
+      const res = await fetch('/api/marketing/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          copyTypes: ['line_message'],
+          userInstructions: `請改寫為電話行銷腳本，語言：${lang}。
+格式：問候→自我介紹→痛點→解決方案→行動呼籲，共約 30-60 秒口語化內容（約 100-150 字）。
+不要有標點以外的格式符號，純口語。`,
+          companyData: unit2Data ?? {},
+          collectedSummary: copy,
+        }),
+      })
+      const data = await res.json()
+      const raw: string = data?.results?.line_message ?? ''
+      setScript(raw.slice(0, 800))
+    } catch {
+      // silently fail
+    } finally {
+      setGeneratingScript(false)
+    }
+  }
+
+  // TTS preview
+  const preview = async () => {
+    if (!script.trim()) { setPreviewError('請先輸入或生成腳本'); return }
+    setPreviewLoading(true); setPreviewError(''); setPreviewUrl('')
+    try {
+      const res = await fetch('/api/marketing/phone-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'tts', region,
+          script: script.trim(),
+          vbeeVoice, vbeeSpeed,
+          elevenLabsVoiceId: elevenVoiceId,
+          elevenLabsModelId: 'eleven_multilingual_v2',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setPreviewUrl(data.audioUrl)
+    } catch (e) {
+      setPreviewError(String(e))
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  // Batch call
+  const startCalling = async () => {
+    if (!script.trim()) { setCallError('請先輸入腳本'); return }
+    if (phones.length === 0) { setCallError('請輸入至少一個電話號碼'); return }
+    setCalling(true); setCallError(''); setResults([])
+    try {
+      const res = await fetch('/api/marketing/phone-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'batch', region,
+          script: script.trim(),
+          phones,
+          vbeeVoice, vbeeSpeed, vbeeCallerId,
+          elevenLabsVoiceId: elevenVoiceId,
+          elevenLabsModelId: 'eleven_multilingual_v2',
+          plivoCallerId,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setResults(data.results)
+      onDone({
+        lastBatch: {
+          region,
+          total: data.total,
+          success: data.success,
+          results: data.results,
+          audioUrl: data.audioUrl,
+          calledAt: new Date().toISOString(),
+        },
+      })
+    } catch (e) {
+      setCallError(String(e))
+    } finally {
+      setCalling(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+
+      {/* Region selector */}
+      <div>
+        <label className="block text-sm font-semibold mb-3">地區 / 語音方案</label>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { id: 'vn' as const,    flag: '🇻🇳', title: '越南',   sub: 'VBEE TTS + VBEE CALL' },
+            { id: 'other' as const, flag: '🌏', title: '其他地區', sub: 'ElevenLabs TTS + Plivo' },
+          ].map(r => (
+            <button key={r.id} onClick={() => setRegion(r.id)}
+              className="flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all"
+              style={region === r.id
+                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
+                : { borderColor: '#e5e7eb', background: 'white' }}>
+              <span className="text-2xl">{r.flag}</span>
+              <div>
+                <div className="text-sm font-bold text-gray-800">{r.title}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{r.sub}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Voice settings */}
+      {isVN ? (
+        <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
+          <div className="text-xs font-semibold text-gray-600">VBEE 語音設定</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">語音角色</label>
+              <select value={vbeeVoice} onChange={e => setVbeeVoice(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+                {VBEE_VOICES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">語速 ({vbeeSpeed}x)</label>
+              <input type="range" min={0.5} max={2.0} step={0.1} value={vbeeSpeed}
+                onChange={e => setVbeeSpeed(Number(e.target.value))}
+                className="w-full" />
+              <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                <span>慢 0.5x</span><span>正常 1.0x</span><span>快 2.0x</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">顯示號碼（選填）</label>
+              <input value={vbeeCallerId} onChange={e => setVbeeCallerId(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+                placeholder="+84xxxxxxxxx" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
+          <div className="text-xs font-semibold text-gray-600">ElevenLabs + Plivo 設定</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">ElevenLabs 語音</label>
+              <select value={elevenVoiceId} onChange={e => setElevenVoiceId(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+                {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Plivo 顯示號碼 *</label>
+              <input value={plivoCallerId} onChange={e => setPlivoCallerId(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+                placeholder="+886xxxxxxxxx（需在 Plivo 購買）" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Script */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-sm font-semibold">電話行銷腳本</label>
+          <button onClick={generateScript} disabled={generatingScript}
+            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
+            style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
+            {generatingScript ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            {generatingScript ? 'AI 生成中…' : 'AI 自動生成'}
+          </button>
+        </div>
+        <textarea value={script} onChange={e => setScript(e.target.value)} rows={8}
+          className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+          placeholder={isVN
+            ? 'Xin chào! Tôi là [tên] từ [công ty]...'
+            : '您好！我是來自[公司名稱]的[姓名]，今天打電話是想跟您介紹…'} />
+        <div className="text-[10px] text-gray-400 mt-1">{script.length} 字 · 建議 100-200 字（30-60秒）</div>
+      </div>
+
+      {/* TTS Preview */}
+      <div className="flex items-center gap-3">
+        <button onClick={preview} disabled={previewLoading || !script.trim()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 hover:bg-gray-50">
+          {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+          {previewLoading ? '生成語音中…' : '試聽語音'}
+        </button>
+        {previewUrl && (
+          <audio controls src={previewUrl} className="h-8 flex-1" />
+        )}
+        {previewError && (
+          <span className="text-xs text-red-600">{previewError}</span>
+        )}
+      </div>
+
+      {/* Phone list */}
+      <div>
+        <label className="block text-sm font-semibold mb-1.5">
+          電話號碼清單
+          <span className="ml-2 text-xs font-normal text-gray-400">（已識別 {phones.length} 個號碼）</span>
+        </label>
+        <textarea value={phoneInput} onChange={e => handlePhoneInput(e.target.value)} rows={5}
+          className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
+          placeholder={isVN
+            ? '0901234567\n0912345678\n+84987654321'
+            : '+886912345678\n+886987654321\n0912345678'} />
+        <p className="text-[10px] text-gray-400 mt-1">每行一個號碼，或用逗號分隔，支援國際格式</p>
+      </div>
+
+      {callError && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{callError}
+        </div>
+      )}
+
+      <button onClick={startCalling} disabled={calling || phones.length === 0 || !script.trim()}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+        style={{ background: 'var(--primary)' }}>
+        {calling
+          ? <><Loader2 className="h-4 w-4 animate-spin" />撥打中…（{phones.length} 通）</>
+          : <><PhoneCall className="h-4 w-4" />開始撥打 {phones.length} 通電話</>}
+      </button>
+
+      {/* Results */}
+      {results.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-gray-700">撥打結果</span>
+            <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+              {results.filter(r => r.ok).length}/{results.length} 成功
+            </span>
+          </div>
+          <div className="max-h-64 overflow-y-auto space-y-1.5">
+            {results.map((r, i) => (
+              <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-xs ${
+                r.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+              }`}>
+                {r.ok
+                  ? <PhoneCall className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                  : <PhoneOff className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+                <span className="font-mono font-medium">{r.phone}</span>
+                {r.ok
+                  ? <span className="text-green-700 ml-auto">撥出成功 {r.id ? `· ${r.id}` : ''}</span>
+                  : <span className="text-red-600 ml-auto truncate max-w-[200px]">{r.error}</span>}
+              </div>
+            ))}
+          </div>
+          {savedData?.lastBatch && (
+            <div className="text-[10px] text-gray-400">
+              {new Date(savedData.lastBatch.calledAt).toLocaleString('zh-TW')} · {isVN ? 'VBEE' : 'ElevenLabs + Plivo'}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* API key notice */}
+      <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700 space-y-1">
+        <div className="font-semibold">需要在 Vercel 設定以下環境變數：</div>
+        {isVN
+          ? <div><code className="bg-blue-100 px-1 rounded">VBEE_API_KEY</code></div>
+          : <div className="flex gap-2 flex-wrap">
+              <code className="bg-blue-100 px-1 rounded">ELEVENLABS_API_KEY</code>
+              <code className="bg-blue-100 px-1 rounded">PLIVO_AUTH_ID</code>
+              <code className="bg-blue-100 px-1 rounded">PLIVO_AUTH_TOKEN</code>
+            </div>
+        }
+      </div>
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -2634,6 +3008,11 @@ export default function MarketingAutoPage() {
   const handleUnit9Done = useCallback(async (data: Unit9Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(9, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit10Done = useCallback(async (data: Unit10Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(10, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -2831,7 +3210,16 @@ export default function MarketingAutoPage() {
               onDone={handleUnit9Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 10 && (
+            <Unit10PhoneMarketing
+              campaignId={campaignId}
+              savedData={unitData[10] as Unit10Data | undefined}
+              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit4Data={unitData[4] as Unit4Data | undefined}
+              onDone={handleUnit10Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
