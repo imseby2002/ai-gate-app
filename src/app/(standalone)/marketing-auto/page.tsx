@@ -43,7 +43,7 @@ const UNITS: UnitDef[] = [
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: true  },
   { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE / ElevenLabs + Plivo',   implemented: true  },
   { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: true  },
-  { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: false },
+  { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: true  },
 ]
 
 const COLLECT_TYPE_DEFS: {
@@ -3229,6 +3229,468 @@ function Unit11AvatarMarketing({
   )
 }
 
+// ─── Unit 12: 客服系統 ────────────────────────────────────────────────────────
+
+interface CsLogEntry {
+  message: string
+  reply: string
+  intent: string
+  risk: 'low' | 'medium' | 'high'
+  provider: 'Gemini' | 'Claude'
+  latencyMs: number
+  ts: string
+}
+
+interface Unit12Data {
+  knowledgeBase?: string
+  escalationThreshold?: 'medium' | 'high'
+  replyLanguage?: string
+  logs?: CsLogEntry[]
+}
+
+const CS_PLATFORMS = [
+  {
+    id: 'line',
+    name: 'LINE',
+    color: '#00B900',
+    envVars: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET'],
+    note: '設定 Webhook URL 到 LINE Developers Console → Messaging API',
+  },
+  {
+    id: 'whatsapp',
+    name: 'WhatsApp',
+    color: '#25D366',
+    envVars: ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN'],
+    note: 'Meta Business Suite → WhatsApp → 設定 Webhook',
+  },
+  {
+    id: 'zalo',
+    name: 'Zalo OA',
+    color: '#0068FF',
+    envVars: ['ZALO_OA_ACCESS_TOKEN'],
+    note: 'Zalo for Business → Official Account → Webhook',
+  },
+  {
+    id: 'line-oa',
+    name: 'LINE OA',
+    color: '#00B900',
+    envVars: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET'],
+    note: 'LINE Official Account Manager → 訊息 API → Webhook',
+  },
+  {
+    id: 'whatsapp-biz',
+    name: 'WhatsApp Business',
+    color: '#128C7E',
+    envVars: ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN'],
+    note: 'WhatsApp Business API (雲端版) → Meta Developer',
+  },
+  {
+    id: 'zalo-oa',
+    name: 'Zalo OA Pro',
+    color: '#0052CC',
+    envVars: ['ZALO_OA_ACCESS_TOKEN'],
+    note: 'Zalo Official Account → API 授權 → Webhook',
+  },
+  {
+    id: 'linkedin',
+    name: 'LinkedIn',
+    color: '#0A66C2',
+    envVars: ['LINKEDIN_ACCESS_TOKEN'],
+    note: 'LinkedIn Marketing API → Message Events Webhook（僅接收）',
+  },
+  {
+    id: 'wechat',
+    name: 'WeChat',
+    color: '#07C160',
+    envVars: ['WECHAT_APP_ID', 'WECHAT_APP_SECRET'],
+    note: 'WeChat Official Account → 開發設定 → 伺服器配置',
+  },
+]
+
+type Cs12Tab = 'platforms' | 'ai-settings' | 'test' | 'logs'
+
+function Unit12CustomerService({
+  campaignId,
+  savedData,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit12Data
+  onDone: (data: Unit12Data) => void
+}) {
+  const [tab, setTab] = useState<Cs12Tab>('platforms')
+
+  // AI settings
+  const [knowledgeBase, setKnowledgeBase] = useState(savedData?.knowledgeBase ?? '')
+  const [escalationThreshold, setEscalationThreshold] = useState<'medium' | 'high'>(savedData?.escalationThreshold ?? 'high')
+  const [replyLanguage, setReplyLanguage] = useState(savedData?.replyLanguage ?? 'auto')
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  // Test chat
+  const [testInput, setTestInput] = useState('')
+  const [testHistory, setTestHistory] = useState<{ role: 'user' | 'assistant'; content: string; meta?: { intent?: string; risk?: string; provider?: string } }[]>([])
+  const [testLoading, setTestLoading] = useState(false)
+
+  // Logs
+  const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
+
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
+
+  function saveSettings() {
+    setSavingSettings(true)
+    const data: Unit12Data = { knowledgeBase, escalationThreshold, replyLanguage, logs }
+    onDone(data)
+    setTimeout(() => setSavingSettings(false), 800)
+  }
+
+  async function sendTestMessage() {
+    if (!testInput.trim()) return
+    const userMsg = testInput.trim()
+    setTestInput('')
+    setTestHistory(prev => [...prev, { role: 'user', content: userMsg }])
+    setTestLoading(true)
+
+    try {
+      const res = await fetch('/api/marketing/cs-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMsg,
+          history: testHistory.slice(-6),
+          knowledgeBase,
+          escalationThreshold,
+          language: replyLanguage,
+          campaignId,
+        }),
+      })
+      const data = await res.json()
+      if (data.reply) {
+        const newEntry: CsLogEntry = {
+          message: userMsg,
+          reply: data.reply,
+          intent: data.intent,
+          risk: data.risk,
+          provider: data.provider,
+          latencyMs: data.latencyMs,
+          ts: new Date().toISOString(),
+        }
+        setTestHistory(prev => [...prev, {
+          role: 'assistant',
+          content: data.reply,
+          meta: { intent: data.intent, risk: data.risk, provider: data.provider },
+        }])
+        const updatedLogs = [newEntry, ...logs].slice(0, 100)
+        setLogs(updatedLogs)
+        onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs })
+      } else {
+        setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
+      }
+    } catch (e) {
+      setTestHistory(prev => [...prev, { role: 'assistant', content: `連線錯誤：${String(e)}` }])
+    }
+    setTestLoading(false)
+  }
+
+  const riskColor = (r: string) =>
+    r === 'high' ? 'text-red-600 bg-red-50' :
+    r === 'medium' ? 'text-amber-600 bg-amber-50' :
+    'text-green-600 bg-green-50'
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+            <Headphones className="h-4 w-4" style={{ color: 'var(--primary)' }} />
+            智能客服系統
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">Gemini Flash 意圖分類 · Claude Sonnet 高風險升級</p>
+        </div>
+        <div className="flex gap-1.5">
+          {(['platforms', 'ai-settings', 'test', 'logs'] as Cs12Tab[]).map(t => {
+            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', test: '測試', logs: '記錄' }
+            return (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  tab === t ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+                style={tab === t ? { background: 'var(--primary)' } : {}}>
+                {labels[t]}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Tab: Platforms ──────────────────────────────────────────────────── */}
+      {tab === 'platforms' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500">
+            將下方各平台的 Webhook URL 填入對應的後台設定，並在 Vercel 環境變數中設定對應的 API Key。
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {CS_PLATFORMS.map(p => (
+              <div key={p.id} className="border rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ background: p.color }} />
+                    <span className="font-medium text-sm text-gray-800">{p.name}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-[10px] bg-gray-100 px-2.5 py-1.5 rounded-lg text-gray-700 font-mono truncate">
+                    {appUrl}/api/marketing/cs-webhook/{p.id}
+                  </code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(`${appUrl}/api/marketing/cs-webhook/${p.id}`)}
+                    className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">
+                    複製
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-400">{p.note}</p>
+                <div className="flex gap-1.5 flex-wrap">
+                  {p.envVars.map(v => (
+                    <code key={v} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{v}</code>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: AI Settings ────────────────────────────────────────────────── */}
+      {tab === 'ai-settings' && (
+        <div className="space-y-4">
+
+          {/* Routing info */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+            <div className="font-medium text-sm text-indigo-800 flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />AI 路由架構
+            </div>
+            <div className="flex items-center gap-3 text-xs text-indigo-700">
+              <div className="flex flex-col items-center gap-1">
+                <div className="px-3 py-1.5 rounded-lg bg-blue-100 border border-blue-300 font-medium">Gemini 2.0 Flash</div>
+                <div className="text-[10px] text-gray-500">意圖分類 · 低/中風險回覆</div>
+              </div>
+              <div className="text-gray-400 text-lg">→</div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="px-3 py-1.5 rounded-lg bg-orange-100 border border-orange-300 font-medium">Claude Sonnet</div>
+                <div className="text-[10px] text-gray-500">高風險升級 · 複雜問題</div>
+              </div>
+            </div>
+            <div className="text-xs text-indigo-600">
+              高風險意圖：<span className="font-medium">退換貨/退款、投訴/抱怨、法律/合約</span>（自動升級至 Claude）
+            </div>
+          </div>
+
+          {/* Escalation threshold */}
+          <div className="border rounded-xl p-4 space-y-3">
+            <span className="font-medium text-sm text-gray-700">升級閾值</span>
+            <div className="flex gap-3">
+              {([
+                { value: 'high', label: '高風險才升級', desc: '僅投訴/退款/法律 → Claude', color: 'red' },
+                { value: 'medium', label: '中風險以上升級', desc: '中+高風險均 → Claude', color: 'amber' },
+              ] as const).map(opt => (
+                <button key={opt.value} onClick={() => setEscalationThreshold(opt.value)}
+                  className={`flex-1 p-3 rounded-xl border text-left transition-all ${
+                    escalationThreshold === opt.value
+                      ? `border-${opt.color}-400 bg-${opt.color}-50`
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                  <div className="font-medium text-xs text-gray-800">{opt.label}</div>
+                  <div className="text-[10px] text-gray-500 mt-0.5">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Reply language */}
+          <div className="border rounded-xl p-4 space-y-2">
+            <span className="font-medium text-sm text-gray-700">回覆語言</span>
+            <select value={replyLanguage} onChange={e => setReplyLanguage(e.target.value)}
+              className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              <option value="auto">自動偵測（跟隨客戶語言）</option>
+              <option value="繁體中文">繁體中文</option>
+              <option value="简体中文">简体中文</option>
+              <option value="English">English</option>
+              <option value="Tiếng Việt">Tiếng Việt（越南語）</option>
+              <option value="日本語">日本語</option>
+              <option value="한국어">한국어</option>
+              <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+              <option value="ภาษาไทย">ภาษาไทย（泰語）</option>
+            </select>
+          </div>
+
+          {/* Knowledge base */}
+          <div className="border rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-sm text-gray-700">知識庫</span>
+              <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
+            </div>
+            <p className="text-xs text-gray-500">輸入公司/產品資訊、常見問答（FAQ），AI 回覆時會參考此內容。</p>
+            <textarea value={knowledgeBase} onChange={e => setKnowledgeBase(e.target.value)}
+              rows={10}
+              placeholder="例：&#10;公司名稱：AI GATE&#10;主要產品：AI 行銷自動化平台&#10;&#10;常見問題：&#10;Q: 如何申請試用？&#10;A: 請至官網填寫申請表，我們會在 1 個工作天內回覆。&#10;&#10;Q: 收費方案為何？&#10;A: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。"
+              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono" />
+          </div>
+
+          <button onClick={saveSettings} disabled={savingSettings}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
+            style={{ background: 'var(--primary)' }}>
+            {savingSettings ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</> : <><CheckCircle2 className="h-4 w-4" />儲存設定</>}
+          </button>
+
+          {/* Env hint */}
+          <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-500 space-y-1">
+            <div className="font-medium text-gray-600">需要設定的環境變數：</div>
+            <div className="flex gap-2 flex-wrap">
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded">GOOGLE_GENERATIVE_AI_API_KEY</code>
+              <code className="bg-orange-100 px-1.5 py-0.5 rounded">ANTHROPIC_API_KEY</code>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Test ───────────────────────────────────────────────────────── */}
+      {tab === 'test' && (
+        <div className="space-y-4">
+          <div className="border rounded-xl overflow-hidden">
+            {/* Chat header */}
+            <div className="bg-gray-50 border-b px-4 py-2.5 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400" />
+              <span className="text-xs font-medium text-gray-700">客服測試對話</span>
+              <span className="text-[10px] text-gray-400 ml-auto">Gemini + Claude 路由</span>
+              {testHistory.length > 0 && (
+                <button onClick={() => setTestHistory([])} className="text-[10px] text-gray-400 hover:text-gray-600 ml-1">清除</button>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div className="h-80 overflow-y-auto p-4 space-y-3 bg-white">
+              {testHistory.length === 0 && (
+                <div className="text-center text-xs text-gray-400 py-10">
+                  在下方輸入框模擬客戶訊息，測試 AI 客服回覆。
+                </div>
+              )}
+              {testHistory.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[75%] space-y-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                    <div className={`px-3 py-2 rounded-2xl text-sm ${
+                      msg.role === 'user'
+                        ? 'text-white rounded-tr-sm'
+                        : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                    }`}
+                      style={msg.role === 'user' ? { background: 'var(--primary)' } : {}}>
+                      {msg.content}
+                    </div>
+                    {msg.role === 'assistant' && msg.meta && (
+                      <div className="flex items-center gap-1.5 px-1">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.meta.risk ?? 'low')}`}>
+                          {msg.meta.risk === 'high' ? '高風險' : msg.meta.risk === 'medium' ? '中風險' : '低風險'}
+                        </span>
+                        <span className="text-[10px] text-gray-400">{msg.meta.intent}</span>
+                        <span className="text-[10px] text-gray-300">·</span>
+                        <span className={`text-[10px] font-medium ${msg.meta.provider === 'Claude' ? 'text-orange-500' : 'text-blue-500'}`}>
+                          {msg.meta.provider}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {testLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                    <span className="text-xs text-gray-400">AI 思考中…</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="border-t px-3 py-2.5 flex gap-2 bg-gray-50">
+              <input
+                value={testInput}
+                onChange={e => setTestInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTestMessage() } }}
+                placeholder="輸入客戶訊息… (Enter 送出)"
+                className="flex-1 text-sm border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                disabled={testLoading}
+              />
+              <button onClick={sendTestMessage} disabled={testLoading || !testInput.trim()}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}>
+                送出
+              </button>
+            </div>
+          </div>
+
+          {/* Quick test phrases */}
+          <div className="space-y-2">
+            <div className="text-xs text-gray-500 font-medium">快速測試語句：</div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                '你們的產品怎麼收費？',
+                '我想退款，已付款 3 天了',
+                '帳號無法登入',
+                '你們有提供試用嗎？',
+                '我要投訴你們的服務！',
+                'I would like to know more about your services',
+                'Tôi muốn hỏi về sản phẩm của bạn',
+              ].map(phrase => (
+                <button key={phrase} onClick={() => { setTestInput(phrase); }}
+                  className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
+                  {phrase}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Logs ───────────────────────────────────────────────────────── */}
+      {tab === 'logs' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">對話記錄</span>
+            <span className="text-xs text-gray-400">{logs.length} 筆</span>
+          </div>
+          {logs.length === 0 ? (
+            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">尚無對話記錄</div>
+          ) : (
+            <div className="space-y-2">
+              {logs.map((log, i) => (
+                <div key={i} className="border rounded-xl p-3 space-y-1.5 bg-gray-50">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(log.risk)}`}>
+                      {log.risk === 'high' ? '高風險' : log.risk === 'medium' ? '中風險' : '低風險'}
+                    </span>
+                    <span className="text-[10px] text-gray-500">{log.intent}</span>
+                    <span className={`text-[10px] font-medium ${log.provider === 'Claude' ? 'text-orange-500' : 'text-blue-500'}`}>
+                      {log.provider}
+                    </span>
+                    <span className="text-[10px] text-gray-400">{log.latencyMs}ms</span>
+                    <span className="text-[10px] text-gray-400 ml-auto">{new Date(log.ts).toLocaleString('zh-TW')}</span>
+                  </div>
+                  <div className="text-xs text-gray-700">
+                    <span className="font-medium text-gray-500">客戶：</span>{log.message}
+                  </div>
+                  <div className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
+                    <span className="font-medium text-indigo-500">AI：</span>{log.reply.slice(0, 120)}{log.reply.length > 120 ? '…' : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -3372,6 +3834,11 @@ export default function MarketingAutoPage() {
   const handleUnit11Done = useCallback(async (data: Unit11Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(11, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit12Done = useCallback(async (data: Unit12Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(12, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -3587,7 +4054,14 @@ export default function MarketingAutoPage() {
               onDone={handleUnit11Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 12 && (
+            <Unit12CustomerService
+              campaignId={campaignId}
+              savedData={unitData[12] as Unit12Data | undefined}
+              onDone={handleUnit12Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && activeUnit !== 12 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
