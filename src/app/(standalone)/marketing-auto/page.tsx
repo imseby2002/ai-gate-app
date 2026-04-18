@@ -6,7 +6,7 @@ import {
   Film, Video, Upload, Phone, Mic, Headphones,
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
   XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
-  FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff
+  FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff, Zap
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -3928,9 +3928,13 @@ export default function MarketingAutoPage() {
           })}
         </nav>
 
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-2">
+          <a href="/marketing-pipeline"
+            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
+            <Zap className="h-3.5 w-3.5" /> 自動化流程
+          </a>
           <a href="/settings"
-            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2">
             <Settings className="h-3.5 w-3.5" /> 平台連結設定
           </a>
         </div>
