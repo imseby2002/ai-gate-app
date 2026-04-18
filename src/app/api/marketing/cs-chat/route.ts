@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
 
   const t0 = Date.now()
-  const geminiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  if (!geminiKey) return NextResponse.json({ error: 'GOOGLE_GENERATIVE_AI_API_KEY 未設定' }, { status: 500 })
+  const geminiKey = process.env.GOOGLE_AI_API_KEY
+  if (!geminiKey) return NextResponse.json({ error: 'GOOGLE_AI_API_KEY 未設定' }, { status: 500 })
 
   const google = createGoogleGenerativeAI({ apiKey: geminiKey })
 

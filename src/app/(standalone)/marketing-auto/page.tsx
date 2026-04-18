@@ -3546,7 +3546,7 @@ function Unit12CustomerService({
           <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-500 space-y-1">
             <div className="font-medium text-gray-600">需要設定的環境變數：</div>
             <div className="flex gap-2 flex-wrap">
-              <code className="bg-blue-100 px-1.5 py-0.5 rounded">GOOGLE_GENERATIVE_AI_API_KEY</code>
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded">GOOGLE_AI_API_KEY</code>
               <code className="bg-orange-100 px-1.5 py-0.5 rounded">ANTHROPIC_API_KEY</code>
             </div>
           </div>
