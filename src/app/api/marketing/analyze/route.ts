@@ -15,6 +15,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
@@ -89,9 +90,9 @@ const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
 }
 
 export async function POST(req: NextRequest) {
+  const authUser = await getCronOrUserAuth(req)
+  if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const {

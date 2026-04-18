@@ -6,7 +6,7 @@ import {
   Film, Video, Upload, Phone, Mic, Headphones,
   Play, Pause, RotateCcw, CheckCircle2, AlertCircle,
   Loader2, Bell, BellOff, ChevronRight, Settings2,
-  MessageSquare, Zap, ArrowLeft,
+  MessageSquare, Zap, ArrowLeft, Clock, Calendar,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -31,11 +31,29 @@ interface StepRun {
   doneAt?: string
 }
 
+interface PipelineSchedule {
+  enabled: boolean
+  frequency: 'daily' | 'weekly' | 'monthly'
+  hour: number
+  minute: number
+  weekday: number    // 0=Sun … 6=Sat
+  monthDay: number   // 1-31
+  nextRunAt?: string
+  lastRunAt?: string
+}
+
 interface PipelineConfig {
   steps: { unitId: number; enabled: boolean; notify: boolean }[]
+  schedule: PipelineSchedule
+  // Unit 1
   u1_types: string[]
   u1_keywords: string
   u1_location: string
+  u1_alertRssUrls: string
+  u1_appIds: string
+  u1_shopUrls: string
+  u1_salesData: string
+  // Unit 3-11 (same as before)
   u3_types: string[]
   u4_copyTypes: string[]
   u4_instructions: string
@@ -78,11 +96,25 @@ const STEP_DEFS: PipelineStepDef[] = [
   { unitId: 12, name: '客服系統',  icon: Headphones, desc: '設定後自動運行',       canAuto: false, configKey: '' },
 ]
 
+const DEFAULT_SCHEDULE: PipelineSchedule = {
+  enabled: false,
+  frequency: 'weekly',
+  hour: 8,
+  minute: 0,
+  weekday: 1,
+  monthDay: 1,
+}
+
 const DEFAULT_CONFIG: PipelineConfig = {
   steps: STEP_DEFS.map(s => ({ unitId: s.unitId, enabled: s.canAuto, notify: [4, 6, 8, 9, 10, 11].includes(s.unitId) })),
+  schedule: DEFAULT_SCHEDULE,
   u1_types: ['news', 'web'],
   u1_keywords: '',
   u1_location: '',
+  u1_alertRssUrls: '',
+  u1_appIds: '',
+  u1_shopUrls: '',
+  u1_salesData: '',
   u3_types: ['swot', 'company', 'marketing'],
   u4_copyTypes: ['facebook_post', 'instagram_caption', 'line_message'],
   u4_instructions: '',
@@ -201,7 +233,16 @@ export default function MarketingPipelinePage() {
       const res = await fetch('/api/marketing/collect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ types: config.u1_types, keywords: config.u1_keywords, location: config.u1_location, limit: 8 }),
+        body: JSON.stringify({
+          types: config.u1_types,
+          keywords: config.u1_keywords,
+          location: config.u1_location,
+          limit: 8,
+          alertRssUrls: config.u1_alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          appIds: config.u1_appIds.split('\n').map(s => s.trim()).filter(Boolean),
+          shopUrls: config.u1_shopUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          salesData: config.u1_salesData,
+        }),
       })
       const data = await res.json()
       if (!res.ok) return { ok: false, output: data.error ?? '蒐集失敗' }
@@ -568,6 +609,109 @@ export default function MarketingPipelinePage() {
           {/* ── Config Tab ──────────────────────────────────────────────── */}
           {tab === 'config' && (
             <div className="p-6 max-w-2xl space-y-5">
+
+              {/* ── Schedule Section ───────────────────────────────────── */}
+              <div className="border-2 border-amber-200 rounded-xl p-4 bg-amber-50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    <span className="font-bold text-sm text-amber-800">定時自動執行</span>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-xs text-amber-700">{config.schedule.enabled ? '已啟用' : '已停用'}</span>
+                    <div
+                      onClick={() => setConfig(c => ({ ...c, schedule: { ...c.schedule, enabled: !c.schedule.enabled } }))}
+                      className={`w-10 h-5 rounded-full transition-colors cursor-pointer relative ${config.schedule.enabled ? 'bg-amber-500' : 'bg-gray-300'}`}>
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.schedule.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </div>
+                  </label>
+                </div>
+
+                {config.schedule.enabled && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-amber-700 block mb-1">頻率</label>
+                      <select value={config.schedule.frequency}
+                        onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, frequency: e.target.value as 'daily'|'weekly'|'monthly' } }))}
+                        className="w-full text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                        <option value="daily">每日</option>
+                        <option value="weekly">每週</option>
+                        <option value="monthly">每月</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-amber-700 block mb-1">執行時間</label>
+                      <div className="flex gap-1.5">
+                        <select value={config.schedule.hour}
+                          onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, hour: Number(e.target.value) } }))}
+                          className="flex-1 text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                          {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2,'0')}時</option>)}
+                        </select>
+                        <select value={config.schedule.minute}
+                          onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, minute: Number(e.target.value) } }))}
+                          className="w-20 text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                          <option value={0}>00分</option>
+                          <option value={30}>30分</option>
+                        </select>
+                      </div>
+                    </div>
+                    {config.schedule.frequency === 'weekly' && (
+                      <div>
+                        <label className="text-xs text-amber-700 block mb-1">星期幾</label>
+                        <select value={config.schedule.weekday}
+                          onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, weekday: Number(e.target.value) } }))}
+                          className="w-full text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                          {['日','一','二','三','四','五','六'].map((d, i) => <option key={i} value={i}>星期{d}</option>)}
+                        </select>
+                      </div>
+                    )}
+                    {config.schedule.frequency === 'monthly' && (
+                      <div>
+                        <label className="text-xs text-amber-700 block mb-1">每月第幾日</label>
+                        <input type="number" min={1} max={28} value={config.schedule.monthDay}
+                          onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, monthDay: Number(e.target.value) } }))}
+                          className="w-full text-sm border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="text-[10px] text-amber-600">
+                  排程由 Vercel Cron 每小時檢查，自動執行已勾選的單元。需設定 Vercel 環境變數：
+                  <code className="bg-amber-100 px-1 rounded ml-1">CRON_SECRET</code>
+                  <code className="bg-amber-100 px-1 rounded ml-1">NEXT_PUBLIC_APP_URL</code>
+                  <span className="ml-1">（Vercel Pro 支援每小時，Free 每日一次）</span>
+                </p>
+                {config.schedule.enabled && campaignId && (
+                  <button onClick={async () => {
+                    const { data: row } = await supabase.from('marketing_campaigns').select('unit_data').eq('id', campaignId).single()
+                    const prev = (row?.unit_data ?? {}) as Record<string, unknown>
+                    const scheduleToSave = {
+                      ...config.schedule,
+                      steps: config.steps,
+                      config: {
+                        u1_types: config.u1_types, u1_keywords: config.u1_keywords, u1_location: config.u1_location,
+                        u1_alertRssUrls: config.u1_alertRssUrls.split('\n').filter(Boolean),
+                        u1_appIds: config.u1_appIds.split('\n').filter(Boolean),
+                        u1_shopUrls: config.u1_shopUrls.split('\n').filter(Boolean),
+                        u3_types: config.u3_types, u4_copyTypes: config.u4_copyTypes, u4_instructions: config.u4_instructions,
+                        u5_count: config.u5_count, u5_platforms: config.u5_platforms,
+                        u6_model: config.u6_model, u6_size: config.u6_size, u6_count: config.u6_count,
+                        u7_count: config.u7_count, u7_duration: config.u7_duration, u8_model: config.u8_model,
+                        u9_platforms: config.u9_platforms, u10_phones: config.u10_phones,
+                        u10_voiceId: config.u10_voiceId, u10_callerId: config.u10_callerId,
+                        u11_avatarId: config.u11_avatarId, u11_voiceId: config.u11_voiceId,
+                      },
+                    }
+                    await supabase.from('marketing_campaigns').update({ unit_data: { ...prev, _schedule: scheduleToSave } }).eq('id', campaignId)
+                    alert('排程已儲存！')
+                  }}
+                    className="w-full py-2 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+                    <Calendar className="h-4 w-4" />儲存排程設定
+                  </button>
+                )}
+              </div>
+
               <ConfigSection title="單元 1 · 蒐集資訊" enabled={config.steps.find(s => s.unitId === 1)?.enabled ?? false}>
                 <div className="space-y-3">
                   <div>
@@ -579,7 +723,12 @@ export default function MarketingPipelinePage() {
                   <div>
                     <label className="text-xs text-gray-500 block mb-1">蒐集類型</label>
                     <div className="flex flex-wrap gap-2">
-                      {[['news','新聞'],['web','網頁'],['maps','地圖'],['reviews','評論'],['company','公司'],['competitors','競爭對手']].map(([v, label]) => (
+                      {[
+                        ['news','📰 新聞'],['web','🌐 網頁'],['maps','🗺️ 地圖'],
+                        ['reviews','⭐ Google評論'],['company','🏢 公司'],['competitors','🎯 競爭對手'],
+                        ['google_alerts','🔔 Google快訊'],['platform_reviews','🛒 平台評論'],
+                        ['videos_long','🎬 長影片'],['videos_short','📱 短影片'],['sales_data','📊 銷售資料'],
+                      ].map(([v, label]) => (
                         <label key={v} className="flex items-center gap-1.5 text-xs cursor-pointer">
                           <input type="checkbox" className="rounded accent-amber-500"
                             checked={config.u1_types.includes(v)}
@@ -595,6 +744,39 @@ export default function MarketingPipelinePage() {
                       placeholder="例：台北市信義區"
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300" />
                   </div>
+                  {config.u1_types.includes('google_alerts') && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">🔔 Google Alerts RSS URL（每行一個）</label>
+                      <textarea value={config.u1_alertRssUrls} onChange={e => setConfig(c => ({ ...c, u1_alertRssUrls: e.target.value }))}
+                        rows={3} placeholder={'https://www.google.com/alerts/feeds/XXXXX/XXXXX\nhttps://...'}
+                        className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      <p className="text-[10px] text-gray-400 mt-0.5">至 google.com/alerts → 管理 → 選擇訂閱 → 切換為 RSS feed 後複製 URL</p>
+                    </div>
+                  )}
+                  {config.u1_types.includes('platform_reviews') && (
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">📱 App ID（App Store / Google Play，每行一個）</label>
+                        <textarea value={config.u1_appIds} onChange={e => setConfig(c => ({ ...c, u1_appIds: e.target.value }))}
+                          rows={2} placeholder={'id1234567890\ncom.example.app'}
+                          className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">🛒 商品頁 URL（Shopee/Lazada/Amazon，每行一個）</label>
+                        <textarea value={config.u1_shopUrls} onChange={e => setConfig(c => ({ ...c, u1_shopUrls: e.target.value }))}
+                          rows={2} placeholder={'https://shopee.tw/product/...'}
+                          className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      </div>
+                    </div>
+                  )}
+                  {config.u1_types.includes('sales_data') && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">📊 銷售資料（貼入 CSV 或文字格式）</label>
+                      <textarea value={config.u1_salesData} onChange={e => setConfig(c => ({ ...c, u1_salesData: e.target.value }))}
+                        rows={4} placeholder={'月份,銷量,營收\n2024-01,1200,360000\n2024-02,980,294000\n...'}
+                        className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+                  )}
                 </div>
               </ConfigSection>
 
