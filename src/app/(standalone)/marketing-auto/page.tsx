@@ -42,7 +42,7 @@ const UNITS: UnitDef[] = [
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: true  },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: true  },
   { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE / ElevenLabs + Plivo',   implemented: true  },
-  { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: false },
+  { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: true  },
   { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: false },
 ]
 
@@ -2762,6 +2762,473 @@ function Unit10PhoneMarketing({
   )
 }
 
+// ─── Unit 11: 主播行銷 ────────────────────────────────────────────────────────
+
+interface HeyGenAvatar {
+  id: string
+  name: string
+  preview: string
+  gender: string
+}
+
+interface HeyGenVoice {
+  id: string
+  name: string
+  language: string
+  gender: string
+  preview: string
+}
+
+interface AvatarVideo {
+  videoId: string
+  script: string
+  avatarName: string
+  voiceName: string
+  ratio: string
+  status: 'processing' | 'completed' | 'failed'
+  videoUrl?: string
+  createdAt: string
+}
+
+interface Unit11Data {
+  videos: AvatarVideo[]
+}
+
+const AVATAR_RATIOS = [
+  { value: '16:9', label: '橫式 16:9', desc: 'YouTube / 廣告' },
+  { value: '9:16', label: '直式 9:16', desc: 'Reels / TikTok' },
+  { value: '1:1',  label: '方形 1:1',  desc: 'Instagram' },
+]
+
+const BG_PRESETS = [
+  { value: '#FFFFFF', label: '白色' },
+  { value: '#000000', label: '黑色' },
+  { value: '#F0F4FF', label: '淡藍' },
+  { value: '#FFF8F0', label: '淡橙' },
+  { value: '#F0FFF4', label: '淡綠' },
+]
+
+function Unit11AvatarMarketing({
+  campaignId,
+  savedData,
+  unit2Data,
+  unit4Data,
+  onDone,
+}: {
+  campaignId: string | null
+  savedData?: Unit11Data
+  unit2Data?: Unit2Data
+  unit4Data?: Unit4Data
+  onDone: (data: Unit11Data) => void
+}) {
+  // Avatars / voices
+  const [avatars, setAvatars] = useState<HeyGenAvatar[]>([])
+  const [voices, setVoices] = useState<HeyGenVoice[]>([])
+  const [loadingAssets, setLoadingAssets] = useState(false)
+  const [assetsLoaded, setAssetsLoaded] = useState(false)
+
+  // Form
+  const [selectedAvatar, setSelectedAvatar] = useState<HeyGenAvatar | null>(null)
+  const [selectedVoice, setSelectedVoice] = useState<HeyGenVoice | null>(null)
+  const [script, setScript] = useState('')
+  const [ratio, setRatio] = useState('16:9')
+  const [background, setBackground] = useState('#FFFFFF')
+  const [customBg, setCustomBg] = useState('')
+
+  // Script AI gen
+  const [genCount, setGenCount] = useState(1)
+  const [genDuration, setGenDuration] = useState(60)
+  const [genStyle, setGenStyle] = useState('專業親切')
+  const [generatingScript, setGeneratingScript] = useState(false)
+  const [scriptOptions, setScriptOptions] = useState<string[]>([])
+
+  // Video submission / polling
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [videos, setVideos] = useState<AvatarVideo[]>(savedData?.videos ?? [])
+  const pollingRef = useRef<Record<string, ReturnType<typeof setInterval>>>({})
+
+  // ── Load avatars & voices ──────────────────────────────────────────────────
+  async function loadAssets() {
+    setLoadingAssets(true)
+    try {
+      const [avatarRes, voiceRes] = await Promise.all([
+        fetch('/api/marketing/heygen-avatar?type=avatars'),
+        fetch('/api/marketing/heygen-avatar?type=voices'),
+      ])
+      const [avatarJson, voiceJson] = await Promise.all([avatarRes.json(), voiceRes.json()])
+      setAvatars(avatarJson.avatars ?? [])
+      setVoices(voiceJson.voices ?? [])
+      setAssetsLoaded(true)
+    } catch (e) {
+      console.error(e)
+    }
+    setLoadingAssets(false)
+  }
+
+  // ── Poll video status ──────────────────────────────────────────────────────
+  function startPolling(videoId: string) {
+    if (pollingRef.current[videoId]) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/marketing/heygen-avatar?videoId=${videoId}`)
+        const data = await res.json()
+        if (data.status === 'completed' || data.status === 'failed') {
+          clearInterval(pollingRef.current[videoId])
+          delete pollingRef.current[videoId]
+          setVideos(prev => {
+            const updated = prev.map(v =>
+              v.videoId === videoId
+                ? { ...v, status: data.status, videoUrl: data.videoUrl ?? v.videoUrl }
+                : v
+            )
+            onDone({ videos: updated })
+            return updated
+          })
+        }
+      } catch (_) {}
+    }, 8000)
+    pollingRef.current[videoId] = interval
+  }
+
+  // Resume polling for processing videos on mount
+  useEffect(() => {
+    videos.filter(v => v.status === 'processing').forEach(v => startPolling(v.videoId))
+    return () => {
+      Object.values(pollingRef.current).forEach(clearInterval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── AI generate script ────────────────────────────────────────────────────
+  async function generateScript() {
+    if (!campaignId) { setSubmitError('請先建立活動'); return }
+    setGeneratingScript(true)
+    setScriptOptions([])
+    try {
+      const res = await fetch('/api/marketing/avatar-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId, count: genCount, duration: genDuration, style: genStyle }),
+      })
+      const data = await res.json()
+      if (data.scripts?.length) {
+        setScriptOptions(data.scripts)
+        setScript(data.scripts[0])
+      } else {
+        setSubmitError(data.error ?? 'AI 生成失敗')
+      }
+    } catch (e) {
+      setSubmitError(String(e))
+    }
+    setGeneratingScript(false)
+  }
+
+  // ── Submit video generation ───────────────────────────────────────────────
+  async function submitVideo() {
+    if (!selectedAvatar) { setSubmitError('請選擇主播 Avatar'); return }
+    if (!selectedVoice)  { setSubmitError('請選擇聲音'); return }
+    if (!script.trim())  { setSubmitError('請輸入腳本'); return }
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      const res = await fetch('/api/marketing/heygen-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          avatarId: selectedAvatar.id,
+          voiceId: selectedVoice.id,
+          script,
+          ratio,
+          background: customBg || background,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setSubmitError(data.error ?? '提交失敗'); return }
+
+      const newVideo: AvatarVideo = {
+        videoId: data.videoId,
+        script: script.slice(0, 80) + (script.length > 80 ? '…' : ''),
+        avatarName: selectedAvatar.name,
+        voiceName: selectedVoice.name,
+        ratio,
+        status: 'processing',
+        createdAt: new Date().toISOString(),
+      }
+      const updated = [newVideo, ...videos]
+      setVideos(updated)
+      onDone({ videos: updated })
+      startPolling(data.videoId)
+    } catch (e) {
+      setSubmitError(String(e))
+    }
+    setSubmitting(false)
+  }
+
+  const bgFinal = customBg || background
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+            <Mic className="h-4 w-4" style={{ color: 'var(--primary)' }} />
+            主播行銷
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">使用 HeyGen 虛擬主播生成行銷影片</p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border rounded-lg px-3 py-2">
+          <span className="font-medium text-indigo-600">HeyGen</span>
+          <span>AI Avatar 影片</span>
+          <span className="text-gray-300">·</span>
+          <span>自動存入 Supabase</span>
+        </div>
+      </div>
+
+      {/* Step 1: Load avatars */}
+      {!assetsLoaded ? (
+        <div className="border rounded-xl p-5 space-y-3 bg-indigo-50 border-indigo-200">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4 text-indigo-600" />
+            <span className="font-medium text-indigo-800 text-sm">載入 HeyGen 主播資源</span>
+          </div>
+          <p className="text-xs text-indigo-600">點擊下方按鈕從 HeyGen 載入可用的 Avatar 主播與聲音清單。</p>
+          {loadingAssets
+            ? <div className="flex items-center gap-2 text-sm text-indigo-600"><Loader2 className="h-4 w-4 animate-spin" />載入中…</div>
+            : <button onClick={loadAssets}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                style={{ background: 'var(--primary)' }}>
+                載入主播 &amp; 聲音清單
+              </button>
+          }
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Left: Config panel */}
+          <div className="space-y-4">
+
+            {/* Avatar selector */}
+            <div className="border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm text-gray-700">選擇主播 Avatar</span>
+                <span className="text-xs text-gray-400">{avatars.length} 個可用</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                {avatars.map(av => (
+                  <button key={av.id} onClick={() => setSelectedAvatar(av)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
+                      selectedAvatar?.id === av.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                    {av.preview
+                      ? <img src={av.preview} alt={av.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                      : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                          <Mic className="h-4 w-4 text-gray-400" />
+                        </div>
+                    }
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium text-gray-800 truncate">{av.name}</div>
+                      <div className="text-[10px] text-gray-400 capitalize">{av.gender}</div>
+                    </div>
+                    {selectedAvatar?.id === av.id && <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500 ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Voice selector */}
+            <div className="border rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm text-gray-700">選擇聲音</span>
+                <span className="text-xs text-gray-400">{voices.length} 個可用</span>
+              </div>
+              <select value={selectedVoice?.id ?? ''}
+                onChange={e => setSelectedVoice(voices.find(v => v.id === e.target.value) ?? null)}
+                className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="">— 選擇聲音 —</option>
+                {voices.map(v => (
+                  <option key={v.id} value={v.id}>
+                    {v.name} ({v.language} · {v.gender})
+                  </option>
+                ))}
+              </select>
+              {selectedVoice?.preview && (
+                <audio controls src={selectedVoice.preview} className="w-full h-8 mt-1" />
+              )}
+            </div>
+
+            {/* Ratio & Background */}
+            <div className="border rounded-xl p-4 space-y-3">
+              <span className="font-medium text-sm text-gray-700">影片格式 &amp; 背景</span>
+              <div className="flex gap-2">
+                {AVATAR_RATIOS.map(r => (
+                  <button key={r.value} onClick={() => setRatio(r.value)}
+                    className={`flex-1 text-center py-2 px-2 rounded-lg border text-xs transition-all ${
+                      ratio === r.value ? 'border-indigo-400 bg-indigo-50 font-medium text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    }`}>
+                    <div className="font-medium">{r.label}</div>
+                    <div className="text-[10px] text-gray-400">{r.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-500">背景色：</span>
+                {BG_PRESETS.map(b => (
+                  <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg('') }}
+                    title={b.label}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${background === b.value && !customBg ? 'border-indigo-400 scale-110' : 'border-gray-200'}`}
+                    style={{ background: b.value }} />
+                ))}
+                <input type="color" value={customBg || background}
+                  onChange={e => setCustomBg(e.target.value)}
+                  className="w-6 h-6 rounded-full border border-gray-300 cursor-pointer"
+                  title="自訂顏色" />
+                <div className="w-5 h-5 rounded border" style={{ background: bgFinal }} />
+                <span className="text-[10px] text-gray-400">{bgFinal}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Script panel */}
+          <div className="space-y-4">
+            {/* AI script generator */}
+            <div className="border rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <span className="font-medium text-sm text-gray-700">AI 腳本生成</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">份數</label>
+                  <input type="number" min={1} max={5} value={genCount}
+                    onChange={e => setGenCount(Number(e.target.value))}
+                    className="w-full text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">時長（秒）</label>
+                  <input type="number" min={15} max={300} step={15} value={genDuration}
+                    onChange={e => setGenDuration(Number(e.target.value))}
+                    className="w-full text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">風格</label>
+                  <select value={genStyle} onChange={e => setGenStyle(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                    <option>專業親切</option>
+                    <option>熱情活力</option>
+                    <option>沉穩信任</option>
+                    <option>輕鬆幽默</option>
+                    <option>商務正式</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={generateScript} disabled={generatingScript || !campaignId}
+                className="w-full py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                {generatingScript ? <><Loader2 className="h-4 w-4 animate-spin" />AI 生成中…</> : <><Wand2 className="h-4 w-4" />AI 生成腳本</>}
+              </button>
+
+              {/* Script options */}
+              {scriptOptions.length > 1 && (
+                <div className="space-y-2">
+                  <div className="text-[10px] text-gray-500">點擊選用：</div>
+                  {scriptOptions.map((s, i) => (
+                    <button key={i} onClick={() => setScript(s)}
+                      className={`w-full text-left text-xs p-2 rounded-lg border transition-all ${script === s ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <span className="font-medium text-gray-600">腳本 {i+1}：</span>
+                      {s.slice(0, 60)}…
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Script editor */}
+            <div className="border rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm text-gray-700">主播腳本</span>
+                <span className="text-xs text-gray-400">{script.length} 字</span>
+              </div>
+              <textarea value={script} onChange={e => setScript(e.target.value)}
+                rows={8}
+                placeholder="輸入主播要朗讀的腳本…&#10;&#10;例：大家好！我是 AI Gate 的智能助理，今天要向您介紹我們最新的 AI 行銷解決方案…"
+                className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+
+            {/* Submit button */}
+            {submitError && (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {submitError}
+              </div>
+            )}
+            <button onClick={submitVideo} disabled={submitting}
+              className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
+              style={{ background: 'var(--primary)' }}>
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" />提交生成中…</> : <><Film className="h-4 w-4" />生成主播影片</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Video list */}
+      {videos.length > 0 && (
+        <div className="border rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-sm text-gray-700">主播影片記錄</span>
+            <span className="text-xs text-gray-400">{videos.length} 部</span>
+          </div>
+          <div className="space-y-3">
+            {videos.map(v => (
+              <div key={v.videoId} className="border rounded-lg p-3 space-y-2 bg-gray-50">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        v.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        v.status === 'failed'    ? 'bg-red-100 text-red-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {v.status === 'completed' ? '✓ 完成' : v.status === 'failed' ? '✗ 失敗' : '⏳ 生成中'}
+                      </span>
+                      <span className="text-[10px] text-gray-500">{v.avatarName}</span>
+                      <span className="text-[10px] text-gray-400">·</span>
+                      <span className="text-[10px] text-gray-500">{v.voiceName}</span>
+                      <span className="text-[10px] text-gray-400">·</span>
+                      <span className="text-[10px] text-gray-500">{v.ratio}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 truncate">{v.script}</p>
+                    <p className="text-[10px] text-gray-400">{new Date(v.createdAt).toLocaleString('zh-TW')}</p>
+                  </div>
+                  {v.status === 'processing' && <Loader2 className="h-4 w-4 animate-spin text-amber-500 shrink-0 mt-0.5" />}
+                </div>
+                {v.status === 'completed' && v.videoUrl && (
+                  <div className="space-y-1.5">
+                    <video src={v.videoUrl} controls className="w-full max-h-48 rounded-lg bg-black" />
+                    <a href={v.videoUrl} download target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800">
+                      <Download className="h-3.5 w-3.5" />下載影片
+                    </a>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Env var hint */}
+      <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-500 space-y-1">
+        <div className="font-medium text-gray-600">需要設定的環境變數：</div>
+        <div className="flex gap-2 flex-wrap">
+          <code className="bg-indigo-100 px-1.5 py-0.5 rounded">HEYGEN_API_KEY</code>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
@@ -2900,6 +3367,11 @@ export default function MarketingAutoPage() {
   const handleUnit10Done = useCallback(async (data: Unit10Data) => {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(10, data, cid)
+  }, [ensureCampaign, saveUnitResult])
+
+  const handleUnit11Done = useCallback(async (data: Unit11Data) => {
+    const cid = await ensureCampaign()
+    if (cid) saveUnitResult(11, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
@@ -3106,7 +3578,16 @@ export default function MarketingAutoPage() {
               onDone={handleUnit10Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && <ComingSoon unit={currentUnit} />}
+          {activeUnit === 11 && (
+            <Unit11AvatarMarketing
+              campaignId={campaignId}
+              savedData={unitData[11] as Unit11Data | undefined}
+              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit4Data={unitData[4] as Unit4Data | undefined}
+              onDone={handleUnit11Done}
+            />
+          )}
+          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
