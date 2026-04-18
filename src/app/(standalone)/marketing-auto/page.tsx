@@ -14,8 +14,8 @@ import {
 
 type UnitStatus = 'idle' | 'running' | 'done' | 'error'
 type CollectType =
-  | 'news' | 'web' | 'maps' | 'reviews' | 'company' | 'competitors'
-  | 'google_alerts' | 'platform_reviews' | 'videos_long' | 'videos_short' | 'sales_data'
+  | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
+  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors'
 
 interface Campaign {
   id: string
@@ -49,23 +49,127 @@ const UNITS: UnitDef[] = [
   { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: true  },
 ]
 
-const COLLECT_TYPE_DEFS: {
-  id: CollectType; label: string; icon: React.ElementType; desc: string; needsLocation: boolean; isNew?: boolean
-}[] = [
-  { id: 'news',             label: '新聞',          icon: Newspaper,  desc: 'Apify Google 新聞',                   needsLocation: false },
-  { id: 'web',              label: '網頁搜尋',       icon: Globe,      desc: 'Tavily 深度搜尋',                      needsLocation: false },
-  { id: 'maps',             label: 'Google 地圖',   icon: Map,        desc: 'Outscraper 地圖資料',                  needsLocation: true  },
-  { id: 'reviews',          label: 'Google 評論',   icon: Star,       desc: 'Outscraper Google 評論',               needsLocation: true  },
-  { id: 'company',          label: '公司資料',       icon: Building2,  desc: 'Outscraper 公司清單',                  needsLocation: true  },
-  { id: 'competitors',      label: '競爭對手',       icon: Target,     desc: 'Tavily 競品情報',                      needsLocation: false },
-  { id: 'google_alerts',    label: 'Google 快訊',   icon: Bell,       desc: 'Google Alerts RSS 即時訊號',           needsLocation: false, isNew: true },
-  { id: 'platform_reviews', label: '各平台評論',     icon: ShoppingBag,desc: 'IG/FB/TikTok/Shopee/Amazon/Yelp 等',  needsLocation: false, isNew: true },
-  { id: 'videos_long',      label: '長影片',         icon: Film,       desc: 'YouTube/Vimeo 長影音蒐集',             needsLocation: false, isNew: true },
-  { id: 'videos_short',     label: '短影片',         icon: Smartphone, desc: 'TikTok/Reels/Shorts 短影音蒐集',      needsLocation: false, isNew: true },
-  { id: 'sales_data',       label: '銷售資料',       icon: TrendingUp, desc: 'Shopee/Lazada/Amazon 銷售數據',       needsLocation: false, isNew: true },
+interface CollectSubOption { id: string; label: string }
+interface CollectTypeDef {
+  id: CollectType
+  label: string
+  emoji: string
+  desc: string
+  subOptions: CollectSubOption[]
+  needsLocation?: boolean
+  needsCountry?: boolean
+  needsAppIds?: boolean
+  needsRssUrls?: boolean
+}
+
+const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
+  {
+    id: 'map', label: '地圖搜尋', emoji: '🗺️',
+    desc: '組織: 公司/門市等',
+    needsLocation: true,
+    subOptions: [
+      { id: 'info',        label: '基本資訊 (名稱/地址/電話)' },
+      { id: 'coordinates', label: '經緯度/距離計算' },
+      { id: 'reviews',     label: 'MAP 評論' },
+      { id: 'hours',       label: '營業時間' },
+    ],
+  },
+  {
+    id: 'tiktok', label: 'TikTok', emoji: '📱',
+    desc: '影音搜尋 / 評論',
+    subOptions: [
+      { id: 'videos',   label: '影音搜尋' },
+      { id: 'comments', label: '評論' },
+    ],
+  },
+  {
+    id: 'facebook', label: 'Facebook', emoji: '👥',
+    desc: '內文 / 評論',
+    subOptions: [
+      { id: 'posts',    label: '內文' },
+      { id: 'comments', label: '評論' },
+    ],
+  },
+  {
+    id: 'instagram', label: 'Instagram', emoji: '📸',
+    desc: '內文 / 評論',
+    subOptions: [
+      { id: 'posts',    label: '內文' },
+      { id: 'comments', label: '評論' },
+    ],
+  },
+  {
+    id: 'threads', label: 'Threads', emoji: '🧵',
+    desc: '內文 / 評論',
+    subOptions: [
+      { id: 'posts',    label: '內文' },
+      { id: 'comments', label: '評論' },
+    ],
+  },
+  {
+    id: 'youtube', label: 'YouTube', emoji: '🎬',
+    desc: '短影音 / 長影音 / 評論',
+    subOptions: [
+      { id: 'shorts',   label: '短影音' },
+      { id: 'videos',   label: '長影音' },
+      { id: 'comments', label: '評論' },
+    ],
+  },
+  {
+    id: 'amazon', label: 'Amazon', emoji: '📦',
+    desc: '產品 / 評論',
+    subOptions: [
+      { id: 'products', label: '產品' },
+      { id: 'reviews',  label: '評論' },
+    ],
+  },
+  {
+    id: 'shopee', label: 'Shopee', emoji: '🛒',
+    desc: '產品 / 評論 (可選國家)',
+    needsCountry: true,
+    subOptions: [
+      { id: 'products', label: '產品' },
+      { id: 'reviews',  label: '評論' },
+    ],
+  },
+  {
+    id: 'ios_android', label: 'iOS / Android', emoji: '📲',
+    desc: 'App Store / Google Play 評論',
+    needsAppIds: true,
+    subOptions: [
+      { id: 'reviews', label: '評論' },
+    ],
+  },
+  {
+    id: 'news', label: '新聞搜尋', emoji: '🔔',
+    desc: 'Google Alerts RSS',
+    needsRssUrls: true,
+    subOptions: [],
+  },
+  {
+    id: 'web', label: '網頁搜尋', emoji: '🌐',
+    desc: 'Tavily 深度搜尋',
+    subOptions: [],
+  },
+  {
+    id: 'competitors', label: '競爭對手', emoji: '🎯',
+    desc: 'Tavily 競品分析',
+    subOptions: [],
+  },
 ]
 
-const RADIUS_OPTIONS = ['1', '3', '5', '10', '20']
+const SHOPEE_COUNTRIES = [
+  { code: 'tw', label: '🇹🇼 台灣' },
+  { code: 'vn', label: '🇻🇳 越南' },
+  { code: 'id', label: '🇮🇩 印尼' },
+  { code: 'ph', label: '🇵🇭 菲律賓' },
+  { code: 'my', label: '🇲🇾 馬來西亞' },
+  { code: 'th', label: '🇹🇭 泰國' },
+  { code: 'sg', label: '🇸🇬 新加坡' },
+  { code: 'br', label: '🇧🇷 巴西' },
+  { code: 'mx', label: '🇲🇽 墨西哥' },
+  { code: 'co', label: '🇨🇴 哥倫比亞' },
+]
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
@@ -100,12 +204,12 @@ interface Unit1Data {
   summary?: string
   raw?: string
   types?: CollectType[]
+  subOptions?: Record<string, string[]>
   keywords?: string
   location?: string
-  alertRssUrls?: string[]
+  shopeeCountry?: string
   appIds?: string[]
-  shopUrls?: string[]
-  salesData?: string
+  alertRssUrls?: string[]
 }
 
 function Unit1Collect({
@@ -117,27 +221,38 @@ function Unit1Collect({
   savedData?: Unit1Data
   onDone: (data: Unit1Data) => void
 }) {
-  const [selectedTypes, setSelectedTypes] = useState<CollectType[]>(savedData?.types ?? ['web', 'news'])
+  const [selectedTypes, setSelectedTypes] = useState<CollectType[]>(savedData?.types ?? ['web'])
+  const [subOptions, setSubOptions] = useState<Record<string, string[]>>(savedData?.subOptions ?? {})
   const [keywords, setKeywords] = useState(savedData?.keywords ?? '')
   const [location, setLocation] = useState(savedData?.location ?? '')
-  const [radius, setRadius] = useState('5')
+  const [shopeeCountry, setShopeeCountry] = useState(savedData?.shopeeCountry ?? 'tw')
+  const [appIds, setAppIds] = useState(savedData?.appIds?.join('\n') ?? '')
+  const [alertRssUrls, setAlertRssUrls] = useState(savedData?.alertRssUrls?.join('\n') ?? '')
   const [limit, setLimit] = useState(10)
   const [language, setLanguage] = useState('zh-TW')
-  const [alertRssUrls, setAlertRssUrls] = useState(savedData?.alertRssUrls?.join('\n') ?? '')
-  const [appIds, setAppIds] = useState(savedData?.appIds?.join('\n') ?? '')
-  const [shopUrls, setShopUrls] = useState(savedData?.shopUrls?.join('\n') ?? '')
-  const [salesData, setSalesData] = useState(savedData?.salesData ?? '')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit1Data | null>(savedData?.summary ? savedData : null)
   const [tab, setTab] = useState<'summary' | 'raw'>('summary')
 
-  const needsLocation = selectedTypes.some(
-    t => COLLECT_TYPE_DEFS.find(c => c.id === t)?.needsLocation
-  )
+  const toggleType = (t: CollectType) => {
+    if (selectedTypes.includes(t)) {
+      setSelectedTypes(prev => prev.filter(x => x !== t))
+    } else {
+      setSelectedTypes(prev => [...prev, t])
+      const def = COLLECT_TYPE_DEFS.find(d => d.id === t)
+      if (def && def.subOptions.length > 0 && !(subOptions[t]?.length)) {
+        setSubOptions(prev => ({ ...prev, [t]: def.subOptions.map(s => s.id) }))
+      }
+    }
+  }
 
-  const toggleType = (t: CollectType) =>
-    setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  const toggleSub = (type: CollectType, sub: string) => {
+    setSubOptions(prev => {
+      const cur = prev[type] ?? []
+      return { ...prev, [type]: cur.includes(sub) ? cur.filter(x => x !== sub) : [...cur, sub] }
+    })
+  }
 
   const run = async () => {
     if (!keywords.trim()) { setError('請輸入關鍵字'); return }
@@ -149,24 +264,24 @@ function Unit1Collect({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           types: selectedTypes,
+          subOptions,
           keywords: keywords.trim(),
           location: location.trim(),
-          radius, limit, language,
-          alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          shopeeCountry,
           appIds: appIds.split('\n').map(s => s.trim()).filter(Boolean),
-          shopUrls: shopUrls.split('\n').map(s => s.trim()).filter(Boolean),
-          salesData,
+          alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          limit, language,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const out: Unit1Data = {
-        summary: data.summary, raw: data.raw, types: selectedTypes,
+        summary: data.summary, raw: data.raw,
+        types: selectedTypes, subOptions,
         keywords: keywords.trim(), location: location.trim(),
-        alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+        shopeeCountry,
         appIds: appIds.split('\n').map(s => s.trim()).filter(Boolean),
-        shopUrls: shopUrls.split('\n').map(s => s.trim()).filter(Boolean),
-        salesData,
+        alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
       }
       setResult(out)
       onDone(out)
@@ -178,35 +293,7 @@ function Unit1Collect({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Type selector */}
-      <div>
-        <label className="block text-sm font-semibold mb-3">選擇蒐集項目</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {COLLECT_TYPE_DEFS.map(ct => {
-            const Icon = ct.icon
-            const selected = selectedTypes.includes(ct.id)
-            return (
-              <button key={ct.id} type="button" onClick={() => toggleType(ct.id)}
-                className="flex items-start gap-2.5 p-3 rounded-xl border-2 text-left transition-all relative"
-                style={selected
-                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
-                  : { borderColor: '#e5e7eb' }}>
-                {ct.isNew && (
-                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded bg-amber-400 text-white leading-none">NEW</span>
-                )}
-                <Icon className="h-4 w-4 mt-0.5 flex-shrink-0"
-                  style={selected ? { color: 'var(--primary)' } : { color: '#9ca3af' }} />
-                <div>
-                  <div className="text-sm font-medium">{ct.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{ct.desc}</div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
+    <div className="space-y-5">
       {/* Keywords */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">關鍵字 / 搜尋主題</label>
@@ -216,82 +303,109 @@ function Unit1Collect({
           placeholder="例如：火鍋餐廳、手機殼品牌、健身房..." />
       </div>
 
-      {/* Location (maps-related) */}
-      {needsLocation && (
-        <div className="space-y-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
-          <div className="text-sm font-semibold text-blue-800">地圖搜尋設定</div>
+      {/* Type cards */}
+      <div>
+        <label className="block text-sm font-semibold mb-3">選擇蒐集管道</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {COLLECT_TYPE_DEFS.map(ct => {
+            const selected = selectedTypes.includes(ct.id)
+            const curSubs = subOptions[ct.id] ?? ct.subOptions.map(s => s.id)
+            return (
+              <div key={ct.id}
+                className="rounded-xl border-2 overflow-hidden transition-all"
+                style={selected ? { borderColor: 'var(--primary)' } : { borderColor: '#e5e7eb' }}>
+                {/* Header row — click to toggle */}
+                <button type="button" onClick={() => toggleType(ct.id)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                  style={selected ? { background: 'color-mix(in oklch, var(--primary) 6%, transparent)' } : {}}>
+                  <span className="text-xl leading-none">{ct.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold">{ct.label}</div>
+                    <div className="text-[11px] text-gray-400">{ct.desc}</div>
+                  </div>
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    selected ? 'border-transparent text-white' : 'border-gray-300'
+                  }`} style={selected ? { background: 'var(--primary)' } : {}}>
+                    {selected && <span className="text-[10px] font-bold">✓</span>}
+                  </div>
+                </button>
+                {/* Sub-options (only when selected and has sub-options) */}
+                {selected && ct.subOptions.length > 0 && (
+                  <div className="px-3 pb-2.5 pt-1 flex flex-wrap gap-x-3 gap-y-1.5 border-t"
+                    style={{ borderColor: 'color-mix(in oklch, var(--primary) 20%, transparent)', background: 'color-mix(in oklch, var(--primary) 3%, transparent)' }}>
+                    {ct.subOptions.map(so => (
+                      <label key={so.id} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+                        <input type="checkbox"
+                          className="rounded"
+                          style={{ accentColor: 'var(--primary)' }}
+                          checked={curSubs.includes(so.id)}
+                          onChange={() => toggleSub(ct.id, so.id)}
+                        />
+                        {so.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Location (for map) */}
+      {selectedTypes.includes('map') && (
+        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 space-y-2">
+          <div className="text-xs font-semibold text-blue-800">🗺️ 地圖搜尋設定</div>
           <div>
-            <label className="block text-xs font-medium mb-1.5 text-blue-700">地點 / 城市 / 地址</label>
+            <label className="block text-xs text-blue-700 mb-1">地點 / 城市 / 地址（用於定位搜尋範圍）</label>
             <input value={location} onChange={e => setLocation(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
+              className="w-full h-8 px-3 rounded-lg border text-xs outline-none focus:ring-2 bg-white border-blue-200"
               placeholder="例如：台北市信義區、新北市板橋區..." />
           </div>
-          <div>
-            <label className="block text-xs font-medium mb-1.5 text-blue-700">搜尋半徑</label>
-            <div className="flex gap-2 flex-wrap">
-              {RADIUS_OPTIONS.map(r => (
-                <button key={r} type="button" onClick={() => setRadius(r)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
-                  style={radius === r
-                    ? { borderColor: 'var(--primary)', background: 'var(--primary)', color: 'white' }
-                    : { background: 'white' }}>
-                  {r} km
-                </button>
-              ))}
-            </div>
+        </div>
+      )}
+
+      {/* Shopee country */}
+      {selectedTypes.includes('shopee') && (
+        <div className="p-3.5 rounded-xl bg-orange-50 border border-orange-200">
+          <label className="block text-xs font-semibold text-orange-800 mb-2">🛒 Shopee 國家</label>
+          <div className="flex flex-wrap gap-1.5">
+            {SHOPEE_COUNTRIES.map(c => (
+              <button key={c.code} type="button" onClick={() => setShopeeCountry(c.code)}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
+                style={shopeeCountry === c.code
+                  ? { background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' }
+                  : { background: 'white', borderColor: '#e5e7eb' }}>
+                {c.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Google Alerts RSS */}
-      {selectedTypes.includes('google_alerts') && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
-          <div className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
-            <Bell className="h-4 w-4" />Google 快訊 RSS URL
-          </div>
+      {/* App IDs (iOS/Android) */}
+      {selectedTypes.includes('ios_android') && (
+        <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 space-y-1.5">
+          <div className="text-xs font-semibold text-purple-800">📲 App ID（App Store / Google Play，每行一個）</div>
+          <textarea value={appIds} onChange={e => setAppIds(e.target.value)}
+            rows={2} placeholder={'id1234567890\ncom.example.app'}
+            className="w-full text-xs border border-purple-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white" />
+          <p className="text-[10px] text-purple-600">App Store: id 開頭數字 ID｜Google Play: package name</p>
+        </div>
+      )}
+
+      {/* Google Alerts RSS (news) */}
+      {selectedTypes.includes('news') && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-1.5">
+          <div className="text-xs font-semibold text-amber-800">🔔 Google Alerts RSS URL（每行一個）</div>
           <textarea value={alertRssUrls} onChange={e => setAlertRssUrls(e.target.value)}
-            rows={3} placeholder={'https://www.google.com/alerts/feeds/XXXXX/XXXXX\nhttps://...（每行一個）'}
+            rows={3} placeholder={'https://www.google.com/alerts/feeds/XXXXX/XXXXX\nhttps://...'}
             className="w-full text-xs border border-amber-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white" />
-          <p className="text-[10px] text-amber-700">前往 google.com/alerts → 管理 → 選擇訂閱 → 改為「RSS 訂閱」後複製 URL</p>
+          <p className="text-[10px] text-amber-700">前往 google.com/alerts → 管理 → 訂閱 → 選「RSS 訂閱」後複製 URL</p>
         </div>
       )}
 
-      {/* Platform Reviews */}
-      {selectedTypes.includes('platform_reviews') && (
-        <div className="p-4 rounded-xl bg-purple-50 border border-purple-200 space-y-3">
-          <div className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
-            <ShoppingBag className="h-4 w-4" />各平台評論設定
-          </div>
-          <div className="text-xs text-purple-700">自動蒐集：IG · FB · TikTok · YouTube · Shopee · Lazada · Amazon · Yelp 等平台評論</div>
-          <div>
-            <label className="text-xs text-purple-700 block mb-1">App ID（App Store / Google Play，每行一個）</label>
-            <textarea value={appIds} onChange={e => setAppIds(e.target.value)}
-              rows={2} placeholder={'id1234567890\ncom.example.app'}
-              className="w-full text-xs border border-purple-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white" />
-          </div>
-          <div>
-            <label className="text-xs text-purple-700 block mb-1">商品/店家頁面 URL（每行一個）</label>
-            <textarea value={shopUrls} onChange={e => setShopUrls(e.target.value)}
-              rows={2} placeholder={'https://shopee.tw/product/...\nhttps://www.amazon.com/dp/...'}
-              className="w-full text-xs border border-purple-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white" />
-          </div>
-        </div>
-      )}
-
-      {/* Sales Data */}
-      {selectedTypes.includes('sales_data') && (
-        <div className="p-4 rounded-xl bg-green-50 border border-green-200 space-y-2">
-          <div className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
-            <TrendingUp className="h-4 w-4" />銷售資料
-          </div>
-          <textarea value={salesData} onChange={e => setSalesData(e.target.value)}
-            rows={4} placeholder={'貼入 CSV 或文字格式銷售數據：\n月份,銷量,營收\n2024-01,1200,360000\n2024-02,980,294000'}
-            className="w-full text-xs border border-green-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-green-300 bg-white" />
-          <p className="text-[10px] text-green-700">可貼入 Shopee/Lazada/Amazon 後台匯出的 CSV，或手動填寫關鍵數字</p>
-        </div>
-      )}
-
-      {/* Advanced */}
+      {/* Settings row */}
       <div className="flex gap-4 flex-wrap">
         <div>
           <label className="block text-xs font-medium mb-1.5 text-gray-500">每類資料筆數</label>
@@ -353,6 +467,7 @@ function Unit1Collect({
     </div>
   )
 }
+
 
 // ─── Unit 2: 公司資料 ─────────────────────────────────────────────────────────
 

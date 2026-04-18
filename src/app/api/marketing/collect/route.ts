@@ -1,23 +1,17 @@
 /**
  * POST /api/marketing/collect
- * 蒐集資訊單元 — 支援多種資料來源並行蒐集，最後 DeepSeek 整理摘要
- *
- * types:
- *   原有：news | web | maps | reviews | company | competitors
- *   新增：google_alerts | platform_reviews | videos_long | videos_short | sales_data
+ * 蒐集資訊單元 — 12 種蒐集管道，每種可選子項目
  *
  * Body: {
  *   types: CollectType[]
+ *   subOptions: Record<string, string[]>   // per-type sub-options
  *   keywords: string
- *   location?: string
- *   radius?: string
+ *   location?: string        // for map search
+ *   shopeeCountry?: string   // tw/vn/id/ph/my/th/sg/br/mx/co
+ *   appIds?: string[]        // App Store / Google Play IDs
+ *   alertRssUrls?: string[]  // Google Alerts RSS feeds
  *   limit?: number
  *   language?: string
- *   // 新增欄位
- *   alertRssUrls?: string[]   // Google Alerts RSS URLs
- *   appIds?: string[]         // App Store / Google Play App IDs
- *   shopUrls?: string[]       // Shopee / Lazada / Amazon 商品頁 URL
- *   salesData?: string        // 手動貼入的銷售資料（CSV 或文字）
  * }
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -29,12 +23,11 @@ import { generateText } from 'ai'
 export const maxDuration = 120
 
 type CollectType =
-  | 'news' | 'web' | 'maps' | 'reviews' | 'company' | 'competitors'
-  | 'google_alerts' | 'platform_reviews' | 'videos_long' | 'videos_short' | 'sales_data'
+  | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
+  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ── Tavily (web / competitors / fallback search) ──────────────────────────────
 async function tavilySearch(query: string, limit = 6): Promise<string> {
   const res = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -57,31 +50,256 @@ async function tavilySearch(query: string, limit = 6): Promise<string> {
   return parts.join('\n\n---\n\n')
 }
 
-// ── Apify Google News ─────────────────────────────────────────────────────────
-async function apifyNews(keywords: string, limit: number, language: string): Promise<string> {
-  const token = process.env.APIFY_API_TOKEN
-  if (!token) return '⚠️ APIFY_API_TOKEN 未設定，跳過新聞蒐集。'
-  try {
-    const res = await fetch(
-      `https://api.apify.com/v2/acts/apify~google-news-scraper/run-sync-get-dataset-items?token=${token}&timeout=60`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ queries: [keywords], maxItems: limit, language: language.startsWith('zh') ? 'zh-TW' : 'en' }),
+// ── 1. 地圖搜尋 (Outscraper) ──────────────────────────────────────────────────
+async function mapSearch(
+  keywords: string,
+  location: string,
+  subOptions: string[],
+  limit: number,
+): Promise<string> {
+  const key = process.env.OUTSCRAPER_API_KEY
+  if (!key) return '⚠️ OUTSCRAPER_API_KEY 未設定'
+  const query = `${keywords} ${location}`.trim()
+  const sections: string[] = []
+
+  // Basic info + coordinates + hours via maps/search-v3
+  if (subOptions.includes('info') || subOptions.includes('coordinates') || subOptions.includes('hours')) {
+    try {
+      const url = new URL('https://api.app.outscraper.com/maps/search-v3')
+      url.searchParams.set('query', query)
+      url.searchParams.set('limit', String(limit))
+      url.searchParams.set('async', 'false')
+      const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
+      if (res.ok) {
+        const data = await res.json()
+        const places = (data.data ?? []).flat() as Array<{
+          name: string; address?: string; phone?: string; website?: string
+          category?: string; rating?: number; reviews?: number
+          latitude?: number; longitude?: number
+          working_hours?: Record<string, string>
+        }>
+        const lines = places.slice(0, limit).map(p => {
+          const parts: string[] = [`🏢 ${p.name}`]
+          if (subOptions.includes('info')) {
+            if (p.address) parts.push(`📍 ${p.address}`)
+            if (p.phone) parts.push(`📞 ${p.phone}`)
+            if (p.website) parts.push(`🌐 ${p.website}`)
+            if (p.category) parts.push(`🏷️ ${p.category}`)
+            if (p.rating != null) parts.push(`⭐ ${p.rating} (${p.reviews ?? 0} 則評論)`)
+          }
+          if (subOptions.includes('coordinates') && p.latitude != null) {
+            parts.push(`📐 ${p.latitude}, ${p.longitude}`)
+          }
+          if (subOptions.includes('hours') && p.working_hours) {
+            const h = Object.entries(p.working_hours).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' / ')
+            parts.push(`🕐 ${h}`)
+          }
+          return parts.join('\n')
+        })
+        if (lines.length) sections.push(`🗺️ 地圖組織資訊：\n\n${lines.join('\n\n---\n\n')}`)
       }
-    )
-    if (!res.ok) throw new Error(res.statusText)
-    const items = await res.json()
-    return (items as Array<{ title: string; url: string; body?: string }>)
-      .slice(0, limit)
-      .map((item) => `📰 ${item.title}\n${item.body?.slice(0, 300) ?? ''}\n🔗 ${item.url}`)
-      .join('\n\n---\n\n')
-  } catch (e) {
-    return `⚠️ Apify 新聞蒐集失敗：${String(e)}`
+    } catch (e) {
+      sections.push(`⚠️ 地圖搜尋失敗：${String(e)}`)
+    }
   }
+
+  // MAP 評論 via reviews-v3
+  if (subOptions.includes('reviews')) {
+    try {
+      const url = new URL('https://api.app.outscraper.com/maps/reviews-v3')
+      url.searchParams.set('query', query)
+      url.searchParams.set('limit', String(limit))
+      url.searchParams.set('sort', 'newest')
+      url.searchParams.set('async', 'false')
+      const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
+      if (res.ok) {
+        const data = await res.json()
+        const reviews = (data.data ?? []).flat() as Array<{
+          author_title?: string; review_text?: string; review_rating?: number; owner_answer?: string
+        }>
+        const lines = reviews.filter(r => r.review_text).slice(0, limit).map(r =>
+          `⭐ ${r.review_rating ?? '-'} — ${r.author_title ?? '匿名'}\n「${r.review_text?.slice(0, 300) ?? ''}」`
+        )
+        if (lines.length) sections.push(`📝 MAP 評論：\n\n${lines.join('\n\n---\n\n')}`)
+      }
+    } catch (e) {
+      sections.push(`⚠️ MAP 評論取得失敗：${String(e)}`)
+    }
+  }
+
+  return sections.join('\n\n') || '⚠️ 無地圖資料'
 }
 
-// ── Google Alerts RSS ─────────────────────────────────────────────────────────
+// ── 2-5. 社群平台 TikTok / Facebook / Instagram / Threads (Tavily) ────────────
+async function socialSearch(
+  platform: 'tiktok' | 'facebook' | 'instagram' | 'threads',
+  keywords: string,
+  subOptions: string[],
+  limit: number,
+): Promise<string> {
+  const cfg: Record<string, { name: string; emoji: string; site: string }> = {
+    tiktok:    { name: 'TikTok',    emoji: '📱', site: 'tiktok.com' },
+    facebook:  { name: 'Facebook',  emoji: '👥', site: 'facebook.com' },
+    instagram: { name: 'Instagram', emoji: '📸', site: 'instagram.com' },
+    threads:   { name: 'Threads',   emoji: '🧵', site: 'threads.net' },
+  }
+  const p = cfg[platform]
+  const parts: string[] = []
+  const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
+
+  for (const sub of subOptions) {
+    const isComment = sub === 'comments'
+    const query = isComment
+      ? `site:${p.site} ${keywords} review comment 評論`
+      : `site:${p.site} ${keywords}`
+    const label = isComment ? '評論' : (platform === 'tiktok' ? '影音' : '內文')
+    try {
+      const result = await tavilySearch(query, perQ)
+      parts.push(`${p.emoji} ${p.name} ${label}：\n${result}`)
+    } catch { /* skip */ }
+  }
+  return parts.join('\n\n')
+}
+
+// ── 6. YouTube ────────────────────────────────────────────────────────────────
+async function youtubeSearch(keywords: string, subOptions: string[], limit: number): Promise<string> {
+  const parts: string[] = []
+  const apiKey = process.env.YOUTUBE_API_KEY
+  const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
+
+  for (const sub of subOptions) {
+    if (sub === 'comments') {
+      const result = await tavilySearch(`site:youtube.com ${keywords} review comment`, perQ)
+      parts.push(`🎬 YouTube 評論：\n${result}`)
+      continue
+    }
+    const isShort = sub === 'shorts'
+    const label = isShort ? 'YouTube Shorts' : 'YouTube 長影片'
+
+    if (apiKey) {
+      try {
+        const url = new URL('https://www.googleapis.com/youtube/v3/search')
+        url.searchParams.set('q', keywords)
+        url.searchParams.set('part', 'snippet')
+        url.searchParams.set('type', 'video')
+        url.searchParams.set('maxResults', String(perQ))
+        url.searchParams.set('videoDuration', isShort ? 'short' : 'long')
+        url.searchParams.set('order', 'viewCount')
+        url.searchParams.set('key', apiKey)
+        const res = await fetch(url.toString())
+        if (res.ok) {
+          const data = await res.json()
+          const items = (data.items ?? []) as Array<{
+            id: { videoId: string }
+            snippet: { title: string; description: string; channelTitle: string }
+          }>
+          if (items.length > 0) {
+            const lines = items.map(v =>
+              `【${v.snippet.title}】\n頻道：${v.snippet.channelTitle}\n${v.snippet.description?.slice(0, 150) ?? ''}\n🔗 https://youtube.com/watch?v=${v.id.videoId}`
+            )
+            parts.push(`🎬 ${label}：\n\n${lines.join('\n\n---\n\n')}`)
+            continue
+          }
+        }
+      } catch { /* fallback */ }
+    }
+    // Fallback Tavily
+    const q = isShort ? `YouTube Shorts ${keywords} viral` : `YouTube ${keywords} 影片`
+    const result = await tavilySearch(q, perQ)
+    parts.push(`🎬 ${label}：\n${result}`)
+  }
+  return parts.join('\n\n')
+}
+
+// ── 7. Amazon ─────────────────────────────────────────────────────────────────
+async function amazonSearch(keywords: string, subOptions: string[], limit: number): Promise<string> {
+  const parts: string[] = []
+  const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
+  for (const sub of subOptions) {
+    const q = sub === 'reviews'
+      ? `site:amazon.com ${keywords} customer review stars`
+      : `site:amazon.com ${keywords} product`
+    const label = sub === 'reviews' ? '評論' : '產品'
+    const result = await tavilySearch(q, perQ)
+    parts.push(`📦 Amazon ${label}：\n${result}`)
+  }
+  return parts.join('\n\n')
+}
+
+// ── 8. Shopee ─────────────────────────────────────────────────────────────────
+const SHOPEE_DOMAINS: Record<string, string> = {
+  tw: 'shopee.tw',
+  vn: 'shopee.vn',
+  id: 'shopee.co.id',
+  ph: 'shopee.ph',
+  my: 'shopee.com.my',
+  th: 'shopee.co.th',
+  sg: 'shopee.sg',
+  br: 'shopee.com.br',
+  mx: 'shopee.com.mx',
+  co: 'shopee.com.co',
+}
+
+async function shopeeSearch(
+  keywords: string,
+  country: string,
+  subOptions: string[],
+  limit: number,
+): Promise<string> {
+  const domain = SHOPEE_DOMAINS[country] ?? 'shopee.tw'
+  const parts: string[] = []
+  const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
+  for (const sub of subOptions) {
+    const q = sub === 'reviews'
+      ? `site:${domain} ${keywords} 評價 review`
+      : `site:${domain} ${keywords} 產品`
+    const label = sub === 'reviews' ? '評論' : '產品'
+    const result = await tavilySearch(q, perQ)
+    parts.push(`🛒 Shopee (${domain}) ${label}：\n${result}`)
+  }
+  return parts.join('\n\n')
+}
+
+// ── 9. iOS / Android ──────────────────────────────────────────────────────────
+async function appReviews(appIds: string[], keywords: string, limit: number): Promise<string> {
+  const parts: string[] = []
+
+  // App Store (iTunes RSS, free)
+  for (const appId of appIds.slice(0, 3)) {
+    try {
+      const res = await fetch(
+        `https://itunes.apple.com/rss/customerreviews/page=1/id=${appId.trim()}/sortby=mostrecent/json`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' } },
+      )
+      if (!res.ok) continue
+      const data = await res.json()
+      const appName = data?.feed?.['im:name']?.label ?? appId
+      const entries = (data?.feed?.entry ?? []).slice(0, limit) as Array<{
+        title: { label: string }; content: { label: string }
+        'im:rating': { label: string }; author: { name: { label: string } }
+      }>
+      if (entries.length > 0) {
+        const lines = entries.map(e =>
+          `⭐ ${e['im:rating']?.label ?? '-'} — ${e.author?.name?.label ?? '匿名'}\n「${e.content?.label?.slice(0, 300) ?? ''}」`
+        )
+        parts.push(`📱 ${appName} (App Store)：\n\n${lines.join('\n\n---\n\n')}`)
+      }
+    } catch { /* skip */ }
+  }
+
+  // Google Play via Tavily
+  try {
+    const q = appIds.length > 0
+      ? `site:play.google.com ${keywords} review rating`
+      : `Google Play ${keywords} app review`
+    const result = await tavilySearch(q, Math.ceil(limit / 2))
+    parts.push(`🤖 Google Play 評論：\n${result}`)
+  } catch { /* skip */ }
+
+  return parts.join('\n\n') || '⚠️ 無 App 評論資料'
+}
+
+// ── 10. Google Alerts RSS ─────────────────────────────────────────────────────
 async function googleAlertsRss(rssUrls: string[]): Promise<string> {
   if (!rssUrls || rssUrls.length === 0) return '⚠️ 未提供 Google Alerts RSS URL。'
   const results: string[] = []
@@ -90,11 +308,10 @@ async function googleAlertsRss(rssUrls: string[]): Promise<string> {
       const res = await fetch(url.trim(), { headers: { 'User-Agent': 'Mozilla/5.0' } })
       if (!res.ok) { results.push(`⚠️ 無法取得 ${url}`); continue }
       const xml = await res.text()
-      // Parse Atom feed entries
       const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)]
       const parsed = entries.slice(0, 10).map(m => {
-        const title = m[1].match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, '').trim() ?? ''
-        const link  = m[1].match(/<link[^>]*href="([^"]+)"/)?.[1] ?? ''
+        const title   = m[1].match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.replace(/<!\[CDATA\[|\]\]>/g, '').trim() ?? ''
+        const link    = m[1].match(/<link[^>]*href="([^"]+)"/)?.[1] ?? ''
         const summary = m[1].match(/<content[^>]*>([\s\S]*?)<\/content>/)?.[1]?.replace(/<[^>]+>/g, '').slice(0, 200).trim() ?? ''
         const updated = m[1].match(/<updated>([\s\S]*?)<\/updated>/)?.[1]?.trim() ?? ''
         return `🔔 ${title}\n${summary}\n🔗 ${link}\n📅 ${updated}`
@@ -107,209 +324,6 @@ async function googleAlertsRss(rssUrls: string[]): Promise<string> {
   return results.join('\n\n---\n\n') || '無 Alerts 資料'
 }
 
-// ── App Store Reviews (iTunes API — free, no key) ─────────────────────────────
-async function appStoreReviews(appIds: string[], limit: number): Promise<string> {
-  if (!appIds || appIds.length === 0) return '⚠️ 未提供 App ID。'
-  const results: string[] = []
-  for (const appId of appIds.slice(0, 3)) {
-    try {
-      const res = await fetch(
-        `https://itunes.apple.com/rss/customerreviews/page=1/id=${appId.trim()}/sortby=mostrecent/json`,
-        { headers: { 'User-Agent': 'Mozilla/5.0' } }
-      )
-      if (!res.ok) throw new Error(res.statusText)
-      const data = await res.json()
-      const entries = (data?.feed?.entry ?? []).slice(0, limit) as Array<{
-        title: { label: string }; content: { label: string }; 'im:rating': { label: string }; author: { name: { label: string } }
-      }>
-      if (entries.length === 0) { results.push(`App ${appId}：無評論資料`); continue }
-      const appName = data?.feed?.['im:name']?.label ?? appId
-      results.push(`📱 ${appName} App Store 評論：`)
-      entries.forEach(e => {
-        results.push(`⭐ ${e['im:rating']?.label ?? '-'} — ${e.author?.name?.label ?? '匿名'}\n「${e.content?.label?.slice(0, 300) ?? ''}」`)
-      })
-    } catch (e) {
-      results.push(`⚠️ App Store 評論失敗 (${appId})：${String(e)}`)
-    }
-  }
-  return results.join('\n\n---\n\n')
-}
-
-// ── Multi-Platform Reviews (IG/FB/TikTok/YouTube/Shopee/Amazon/Lazada/Yelp) ──
-async function platformReviews(keywords: string, shopUrls: string[], limit: number): Promise<string> {
-  const parts: string[] = []
-  const perPlatform = Math.max(2, Math.ceil(limit / 8))
-
-  // Social media & video platforms
-  const socialPlatforms: { name: string; query: string; emoji: string }[] = [
-    { name: 'Instagram', emoji: '📸', query: `site:instagram.com ${keywords} review` },
-    { name: 'Facebook',  emoji: '👥', query: `site:facebook.com ${keywords} review rating` },
-    { name: 'TikTok',    emoji: '📱', query: `site:tiktok.com ${keywords} review` },
-    { name: 'YouTube',   emoji: '🎬', query: `site:youtube.com ${keywords} review unboxing` },
-    { name: 'Yelp',      emoji: '⭐', query: `site:yelp.com ${keywords} review` },
-  ]
-
-  // E-commerce platforms
-  const ecommercePlatforms: { name: string; emoji: string; query: string }[] = [
-    { name: 'Shopee',    emoji: '🛒', query: `site:shopee.tw OR site:shopee.vn OR site:shopee.co.id ${keywords} review 評價` },
-    { name: 'Lazada',    emoji: '🛍️', query: `site:lazada.com ${keywords} review rating` },
-    { name: 'Amazon',    emoji: '📦', query: `site:amazon.com ${keywords} review stars` },
-    { name: 'Yelp',      emoji: '⭐', query: `${keywords} yelp review rating stars` },
-    { name: 'momo/PChome', emoji: '🏪', query: `site:momo.com.tw OR site:pchome.com.tw ${keywords} 評價` },
-  ]
-
-  // Fetch social platforms in parallel
-  const socialTasks = socialPlatforms.map(async p => {
-    try {
-      const res = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: p.query, max_results: perPlatform, search_depth: 'basic' }),
-      })
-      if (!res.ok) return null
-      const data = await res.json()
-      const items = (data.results ?? []) as Array<{ title: string; content: string; url: string }>
-      if (items.length === 0) return null
-      const section = [`${p.emoji} ${p.name} 相關內容：`]
-      items.forEach(item => section.push(`• ${item.title}\n  ${item.content?.slice(0, 200)}\n  🔗 ${item.url}`))
-      return section.join('\n')
-    } catch { return null }
-  })
-
-  // Fetch e-commerce in parallel
-  const ecommerceTasks = ecommercePlatforms.slice(0, 4).map(async p => {
-    try {
-      const res = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: p.query, max_results: perPlatform, search_depth: 'basic' }),
-      })
-      if (!res.ok) return null
-      const data = await res.json()
-      const items = (data.results ?? []) as Array<{ title: string; content: string; url: string }>
-      if (items.length === 0) return null
-      const section = [`${p.emoji} ${p.name} 評論：`]
-      items.forEach(item => section.push(`• ${item.title}\n  ${item.content?.slice(0, 200)}`))
-      return section.join('\n')
-    } catch { return null }
-  })
-
-  const allResults = await Promise.all([...socialTasks, ...ecommerceTasks])
-  allResults.filter(Boolean).forEach(r => parts.push(r!))
-
-  // Specific shop URLs
-  for (const url of (shopUrls ?? []).slice(0, 3)) {
-    try {
-      const res = await fetch('https://api.tavily.com/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: url, max_results: 3, search_depth: 'basic' }),
-      })
-      if (!res.ok) continue
-      const data = await res.json()
-      const items = (data.results ?? []) as Array<{ content: string }>
-      if (items.length > 0) parts.push(`🔗 商品頁 ${url}\n${items.map(i => `• ${i.content?.slice(0, 250)}`).join('\n')}`)
-    } catch (_) {}
-  }
-
-  return parts.join('\n\n---\n\n') || '⚠️ 平台評論蒐集失敗，請確認 TAVILY_API_KEY'
-}
-
-// ── YouTube (long-form videos) ────────────────────────────────────────────────
-async function youtubeVideos(keywords: string, limit: number, isShort: boolean): Promise<string> {
-  const apiKey = process.env.YOUTUBE_API_KEY
-  if (apiKey) {
-    try {
-      const duration = isShort ? 'short' : 'long'
-      const url = new URL('https://www.googleapis.com/youtube/v3/search')
-      url.searchParams.set('q', keywords)
-      url.searchParams.set('part', 'snippet')
-      url.searchParams.set('type', 'video')
-      url.searchParams.set('maxResults', String(limit))
-      url.searchParams.set('videoDuration', duration)
-      url.searchParams.set('order', 'viewCount')
-      url.searchParams.set('key', apiKey)
-      const res = await fetch(url.toString())
-      if (res.ok) {
-        const data = await res.json()
-        const items = (data.items ?? []) as Array<{
-          id: { videoId: string }
-          snippet: { title: string; description: string; channelTitle: string; publishedAt: string }
-        }>
-        if (items.length > 0) {
-          const label = isShort ? 'YouTube Shorts / 短影片' : 'YouTube 長影片'
-          return `🎬 ${label}：\n\n` + items.map(v =>
-            `【${v.snippet.title}】\n頻道：${v.snippet.channelTitle}\n${v.snippet.description?.slice(0, 200) ?? ''}\n🔗 https://youtube.com/watch?v=${v.id.videoId}`
-          ).join('\n\n---\n\n')
-        }
-      }
-    } catch (_) {}
-  }
-  // Fallback: Tavily search
-  const platformLabel = isShort ? 'TikTok OR YouTube Shorts OR Instagram Reels' : 'YouTube'
-  const query = `${platformLabel} ${keywords} ${isShort ? '短影片 viral' : '影片 channel'}`
-  return await tavilySearch(query, limit)
-}
-
-// ── Outscraper Google Maps ────────────────────────────────────────────────────
-async function outscraperMaps(keywords: string, location: string, radiusKm: string, limit: number): Promise<string> {
-  const key = process.env.OUTSCRAPER_API_KEY
-  if (!key) return '⚠️ OUTSCRAPER_API_KEY 未設定，跳過地圖蒐集。'
-  const query = `${keywords} ${location}`.trim()
-  try {
-    const url = new URL('https://api.app.outscraper.com/maps/search-v3')
-    url.searchParams.set('query', query)
-    url.searchParams.set('limit', String(limit))
-    url.searchParams.set('radius', String(Number(radiusKm) * 1000))
-    url.searchParams.set('async', 'false')
-    const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
-    if (!res.ok) throw new Error(res.statusText)
-    const data = await res.json()
-    const places = (data.data ?? []).flat()
-    return (places as Array<{ name: string; address?: string; rating?: number; reviews?: number; phone?: string; website?: string; category?: string }>)
-      .slice(0, limit)
-      .map(p => `🏢 ${p.name}\n📍 ${p.address ?? ''}\n⭐ ${p.rating ?? '-'} (${p.reviews ?? 0} 則評論)\n📞 ${p.phone ?? '-'}\n🌐 ${p.website ?? '-'}\n🏷️ ${p.category ?? ''}`)
-      .join('\n\n---\n\n')
-  } catch (e) {
-    return `⚠️ Outscraper 地圖蒐集失敗：${String(e)}`
-  }
-}
-
-// ── Outscraper Reviews ────────────────────────────────────────────────────────
-async function outscraperReviews(keywords: string, location: string, limit: number): Promise<string> {
-  const key = process.env.OUTSCRAPER_API_KEY
-  if (!key) return '⚠️ OUTSCRAPER_API_KEY 未設定，跳過評論蒐集。'
-  const query = `${keywords} ${location}`.trim()
-  try {
-    const url = new URL('https://api.app.outscraper.com/maps/reviews-v3')
-    url.searchParams.set('query', query)
-    url.searchParams.set('limit', String(limit))
-    url.searchParams.set('sort', 'newest')
-    url.searchParams.set('async', 'false')
-    const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
-    if (!res.ok) throw new Error(res.statusText)
-    const data = await res.json()
-    const reviews = (data.data ?? []).flat()
-    return (reviews as Array<{ author_title?: string; review_text?: string; review_rating?: number; owner_answer?: string }>)
-      .slice(0, limit)
-      .filter(r => r.review_text)
-      .map(r => `⭐ ${r.review_rating ?? '-'} — ${r.author_title ?? '匿名'}\n「${r.review_text?.slice(0, 400) ?? ''}」${r.owner_answer ? `\n🔁 回覆：${r.owner_answer.slice(0, 200)}` : ''}`)
-      .join('\n\n---\n\n')
-  } catch (e) {
-    return `⚠️ Outscraper 評論蒐集失敗：${String(e)}`
-  }
-}
-
-// ── Sales Data ────────────────────────────────────────────────────────────────
-async function collectSalesData(keywords: string, salesData: string): Promise<string> {
-  if (salesData?.trim()) {
-    return `📊 手動輸入銷售資料：\n\n${salesData.slice(0, 5000)}`
-  }
-  // Search for market sales data via Tavily
-  const query = `${keywords} 銷售數據 市場佔有率 銷量 revenue`
-  return await tavilySearch(query, 5)
-}
-
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const user = await getCronOrUserAuth(req)
@@ -318,65 +332,74 @@ export async function POST(req: NextRequest) {
 
   const {
     types = ['web'],
+    subOptions = {} as Record<string, string[]>,
     keywords,
     location = '',
-    radius = '5',
+    shopeeCountry = 'tw',
+    appIds = [] as string[],
+    alertRssUrls = [] as string[],
     limit = 10,
     language = 'zh-TW',
     topic,
     industry,
-    // New fields
-    alertRssUrls = [],
-    appIds = [],
-    shopUrls = [],
-    salesData = '',
   } = await req.json()
 
   const kw = keywords || topic || ''
   if (!kw) return NextResponse.json({ error: 'keywords required' }, { status: 400 })
 
   const selectedTypes: CollectType[] = types
+
+  // getSub: return user-selected sub-options, or all defaults if none specified
+  const getSub = (type: string, defaults: string[]): string[] =>
+    (subOptions[type] ?? []).length > 0 ? (subOptions[type] as string[]) : defaults
+
   const tasks: Promise<[string, string]>[] = []
 
-  // ── Original types ───────────────────────────────────────────────────────
+  if (selectedTypes.includes('map')) {
+    const sub = getSub('map', ['info', 'reviews'])
+    tasks.push(mapSearch(kw, location, sub, limit).then(r => ['🗺️ 地圖搜尋', r]))
+  }
+  if (selectedTypes.includes('tiktok')) {
+    const sub = getSub('tiktok', ['videos', 'comments'])
+    tasks.push(socialSearch('tiktok', kw, sub, limit).then(r => ['📱 TikTok', r]))
+  }
+  if (selectedTypes.includes('facebook')) {
+    const sub = getSub('facebook', ['posts', 'comments'])
+    tasks.push(socialSearch('facebook', kw, sub, limit).then(r => ['👥 Facebook', r]))
+  }
+  if (selectedTypes.includes('instagram')) {
+    const sub = getSub('instagram', ['posts', 'comments'])
+    tasks.push(socialSearch('instagram', kw, sub, limit).then(r => ['📸 Instagram', r]))
+  }
+  if (selectedTypes.includes('threads')) {
+    const sub = getSub('threads', ['posts', 'comments'])
+    tasks.push(socialSearch('threads', kw, sub, limit).then(r => ['🧵 Threads', r]))
+  }
+  if (selectedTypes.includes('youtube')) {
+    const sub = getSub('youtube', ['videos', 'comments'])
+    tasks.push(youtubeSearch(kw, sub, limit).then(r => ['🎬 YouTube', r]))
+  }
+  if (selectedTypes.includes('amazon')) {
+    const sub = getSub('amazon', ['products', 'reviews'])
+    tasks.push(amazonSearch(kw, sub, limit).then(r => ['📦 Amazon', r]))
+  }
+  if (selectedTypes.includes('shopee')) {
+    const sub = getSub('shopee', ['products', 'reviews'])
+    tasks.push(shopeeSearch(kw, shopeeCountry, sub, limit).then(r => ['🛒 Shopee', r]))
+  }
+  if (selectedTypes.includes('ios_android')) {
+    tasks.push(appReviews(appIds, kw, limit).then(r => ['📱 iOS/Android', r]))
+  }
   if (selectedTypes.includes('news')) {
-    tasks.push(apifyNews(kw, limit, language).then(r => ['📰 新聞', r]))
+    tasks.push(googleAlertsRss(alertRssUrls).then(r => ['🔔 新聞 (Google Alerts)', r]))
   }
   if (selectedTypes.includes('web')) {
-    const query = industry ? `${kw} ${industry} 市場趨勢` : `${kw} 市場趨勢`
-    tasks.push(tavilySearch(query, limit).then(r => ['🌐 網頁搜尋', r]))
-  }
-  if (selectedTypes.includes('maps')) {
-    tasks.push(outscraperMaps(kw, location, radius, limit).then(r => ['🗺️ Google 地圖', r]))
-  }
-  if (selectedTypes.includes('reviews')) {
-    tasks.push(outscraperReviews(kw, location, limit).then(r => ['⭐ Google 評論', r]))
-  }
-  if (selectedTypes.includes('company')) {
-    tasks.push(outscraperMaps(`${kw} 公司`, location, radius, limit).then(r => ['🏢 公司資料', r]))
+    const q = industry ? `${kw} ${industry} 市場趨勢` : `${kw} 市場趨勢`
+    tasks.push(tavilySearch(q, limit).then(r => ['🌐 網頁搜尋', r]))
   }
   if (selectedTypes.includes('competitors')) {
-    const query = industry ? `${kw} ${industry} 競爭對手 競品` : `${kw} 競爭對手 競品分析`
-    tasks.push(tavilySearch(query, limit).then(r => ['🎯 競爭對手', r]))
-  }
-
-  // ── New types ────────────────────────────────────────────────────────────
-  if (selectedTypes.includes('google_alerts')) {
-    tasks.push(googleAlertsRss(alertRssUrls).then(r => ['🔔 Google 快訊', r]))
-  }
-  if (selectedTypes.includes('platform_reviews')) {
-    const appTask   = appIds.length > 0 ? appStoreReviews(appIds, Math.ceil(limit / 2)) : Promise.resolve('（未提供 App ID）')
-    const shopTask  = platformReviews(kw, shopUrls, limit)
-    tasks.push(Promise.all([appTask, shopTask]).then(([a, b]) => ['🛒 平台評論', [a, b].join('\n\n')]))
-  }
-  if (selectedTypes.includes('videos_long')) {
-    tasks.push(youtubeVideos(kw, limit, false).then(r => ['🎬 長影片', r]))
-  }
-  if (selectedTypes.includes('videos_short')) {
-    tasks.push(youtubeVideos(kw, limit, true).then(r => ['📱 短影片', r]))
-  }
-  if (selectedTypes.includes('sales_data')) {
-    tasks.push(collectSalesData(kw, salesData).then(r => ['📊 銷售資料', r]))
+    const q = industry ? `${kw} ${industry} 競爭對手 競品` : `${kw} 競爭對手 競品分析`
+    tasks.push(tavilySearch(q, limit).then(r => ['🎯 競爭對手', r]))
   }
 
   const results = await Promise.allSettled(tasks)
@@ -394,16 +417,11 @@ export async function POST(req: NextRequest) {
 
   const rawContent = sections.join('\n\n\n')
 
-  // ── DeepSeek 整理摘要 ─────────────────────────────────────────────────────
+  // ── DeepSeek 整理摘要 ─────────────────────────────────────────────────────────
   const deepseek = createOpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY!,
     baseURL: 'https://api.deepseek.com/v1',
   })
-
-  const hasVideo    = selectedTypes.includes('videos_long') || selectedTypes.includes('videos_short')
-  const hasSales    = selectedTypes.includes('sales_data')
-  const hasAlerts   = selectedTypes.includes('google_alerts')
-  const hasPlatform = selectedTypes.includes('platform_reviews')
 
   const { text: summary } = await generateText({
     model: deepseek.chat('deepseek-chat'),
@@ -421,15 +439,17 @@ export async function POST(req: NextRequest) {
 原始資料：
 ${rawContent.slice(0, 12000)}
 
-請整理成以下格式（有哪些就呈現哪些，條列式）：
-
+請整理成結構化格式（條列式），包含：
 【市場概況】
 • ...
 
-【競品動態】（如有蒐集）
+【競品動態】（如有）
 • ...
 
-${hasAlerts ? '【Google 快訊摘要】\n• ...\n\n' : ''}${hasPlatform ? '【各平台評論分析】\n• ...\n\n' : ''}${hasVideo ? '【熱門影片趨勢】\n• ...\n\n' : ''}${hasSales ? '【銷售數據摘要】\n• ...\n\n' : ''}【消費者評價摘要】（如有評論）
+【各平台內容分析】（如有社群/電商資料）
+• ...
+
+【消費者評價摘要】（如有評論資料）
 • ...
 
 【熱門關鍵字與話題】

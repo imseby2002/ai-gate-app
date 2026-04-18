@@ -47,12 +47,12 @@ interface PipelineConfig {
   schedule: PipelineSchedule
   // Unit 1
   u1_types: string[]
+  u1_subOptions: Record<string, string[]>
   u1_keywords: string
   u1_location: string
-  u1_alertRssUrls: string
+  u1_shopeeCountry: string
   u1_appIds: string
-  u1_shopUrls: string
-  u1_salesData: string
+  u1_alertRssUrls: string
   // Unit 3-11 (same as before)
   u3_types: string[]
   u4_copyTypes: string[]
@@ -108,13 +108,13 @@ const DEFAULT_SCHEDULE: PipelineSchedule = {
 const DEFAULT_CONFIG: PipelineConfig = {
   steps: STEP_DEFS.map(s => ({ unitId: s.unitId, enabled: s.canAuto, notify: [4, 6, 8, 9, 10, 11].includes(s.unitId) })),
   schedule: DEFAULT_SCHEDULE,
-  u1_types: ['news', 'web'],
+  u1_types: ['web'],
+  u1_subOptions: {},
   u1_keywords: '',
   u1_location: '',
-  u1_alertRssUrls: '',
+  u1_shopeeCountry: 'tw',
   u1_appIds: '',
-  u1_shopUrls: '',
-  u1_salesData: '',
+  u1_alertRssUrls: '',
   u3_types: ['swot', 'company', 'marketing'],
   u4_copyTypes: ['facebook_post', 'instagram_caption', 'line_message'],
   u4_instructions: '',
@@ -238,10 +238,10 @@ export default function MarketingPipelinePage() {
           keywords: config.u1_keywords,
           location: config.u1_location,
           limit: 8,
-          alertRssUrls: config.u1_alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          subOptions: config.u1_subOptions,
+          shopeeCountry: config.u1_shopeeCountry,
           appIds: config.u1_appIds.split('\n').map(s => s.trim()).filter(Boolean),
-          shopUrls: config.u1_shopUrls.split('\n').map(s => s.trim()).filter(Boolean),
-          salesData: config.u1_salesData,
+          alertRssUrls: config.u1_alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
         }),
       })
       const data = await res.json()
@@ -689,10 +689,11 @@ export default function MarketingPipelinePage() {
                       ...config.schedule,
                       steps: config.steps,
                       config: {
-                        u1_types: config.u1_types, u1_keywords: config.u1_keywords, u1_location: config.u1_location,
-                        u1_alertRssUrls: config.u1_alertRssUrls.split('\n').filter(Boolean),
+                        u1_types: config.u1_types, u1_keywords: config.u1_keywords,
+                        u1_subOptions: config.u1_subOptions, u1_location: config.u1_location,
+                        u1_shopeeCountry: config.u1_shopeeCountry,
                         u1_appIds: config.u1_appIds.split('\n').filter(Boolean),
-                        u1_shopUrls: config.u1_shopUrls.split('\n').filter(Boolean),
+                        u1_alertRssUrls: config.u1_alertRssUrls.split('\n').filter(Boolean),
                         u3_types: config.u3_types, u4_copyTypes: config.u4_copyTypes, u4_instructions: config.u4_instructions,
                         u5_count: config.u5_count, u5_platforms: config.u5_platforms,
                         u6_model: config.u6_model, u6_size: config.u6_size, u6_count: config.u6_count,
@@ -721,60 +722,95 @@ export default function MarketingPipelinePage() {
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300" />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">蒐集類型</label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="text-xs text-gray-500 block mb-1">蒐集管道（點選後可設定子項目）</label>
+                    <div className="space-y-1">
                       {[
-                        ['news','📰 新聞'],['web','🌐 網頁'],['maps','🗺️ 地圖'],
-                        ['reviews','⭐ Google評論'],['company','🏢 公司'],['competitors','🎯 競爭對手'],
-                        ['google_alerts','🔔 Google快訊'],['platform_reviews','🛒 平台評論'],
-                        ['videos_long','🎬 長影片'],['videos_short','📱 短影片'],['sales_data','📊 銷售資料'],
-                      ].map(([v, label]) => (
-                        <label key={v} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                          <input type="checkbox" className="rounded accent-amber-500"
-                            checked={config.u1_types.includes(v)}
-                            onChange={e => setConfig(c => ({ ...c, u1_types: e.target.checked ? [...c.u1_types, v] : c.u1_types.filter(t => t !== v) }))} />
-                          {label}
-                        </label>
-                      ))}
+                        { id: 'map',         emoji: '🗺️', label: '地圖搜尋',       subs: [{ id: 'info', l: '基本資訊' }, { id: 'coordinates', l: '距離' }, { id: 'reviews', l: '評論' }, { id: 'hours', l: '營業時間' }] },
+                        { id: 'tiktok',      emoji: '📱', label: 'TikTok',         subs: [{ id: 'videos', l: '影音' }, { id: 'comments', l: '評論' }] },
+                        { id: 'facebook',    emoji: '👥', label: 'Facebook',        subs: [{ id: 'posts', l: '內文' }, { id: 'comments', l: '評論' }] },
+                        { id: 'instagram',   emoji: '📸', label: 'Instagram',       subs: [{ id: 'posts', l: '內文' }, { id: 'comments', l: '評論' }] },
+                        { id: 'threads',     emoji: '🧵', label: 'Threads',         subs: [{ id: 'posts', l: '內文' }, { id: 'comments', l: '評論' }] },
+                        { id: 'youtube',     emoji: '🎬', label: 'YouTube',         subs: [{ id: 'shorts', l: '短影音' }, { id: 'videos', l: '長影音' }, { id: 'comments', l: '評論' }] },
+                        { id: 'amazon',      emoji: '📦', label: 'Amazon',          subs: [{ id: 'products', l: '產品' }, { id: 'reviews', l: '評論' }] },
+                        { id: 'shopee',      emoji: '🛒', label: 'Shopee',          subs: [{ id: 'products', l: '產品' }, { id: 'reviews', l: '評論' }] },
+                        { id: 'ios_android', emoji: '📲', label: 'iOS/Android',     subs: [{ id: 'reviews', l: '評論' }] },
+                        { id: 'news',        emoji: '🔔', label: '新聞搜尋',        subs: [] },
+                        { id: 'web',         emoji: '🌐', label: '網頁搜尋',        subs: [] },
+                        { id: 'competitors', emoji: '🎯', label: '競爭對手',        subs: [] },
+                      ].map(t => {
+                        const on = config.u1_types.includes(t.id)
+                        const curSubs: string[] = (config.u1_subOptions[t.id] ?? t.subs.map(s => s.id))
+                        return (
+                          <div key={t.id} className={`rounded-lg border overflow-hidden transition-all ${on ? 'border-amber-400' : 'border-gray-200'}`}>
+                            <label className={`flex items-center gap-2 px-2.5 py-1.5 cursor-pointer ${on ? 'bg-amber-50' : 'bg-white'}`}>
+                              <input type="checkbox" className="rounded accent-amber-500"
+                                checked={on}
+                                onChange={e => {
+                                  const next = e.target.checked ? [...config.u1_types, t.id] : config.u1_types.filter(x => x !== t.id)
+                                  const nextSubs = e.target.checked && t.subs.length > 0 && !config.u1_subOptions[t.id]
+                                    ? { ...config.u1_subOptions, [t.id]: t.subs.map(s => s.id) }
+                                    : config.u1_subOptions
+                                  setConfig(c => ({ ...c, u1_types: next, u1_subOptions: nextSubs }))
+                                }} />
+                              <span className="text-sm">{t.emoji} {t.label}</span>
+                            </label>
+                            {on && t.subs.length > 0 && (
+                              <div className="flex flex-wrap gap-3 px-3 py-1.5 border-t border-amber-100 bg-amber-50/50">
+                                {t.subs.map(s => (
+                                  <label key={s.id} className="flex items-center gap-1 text-xs cursor-pointer">
+                                    <input type="checkbox" className="rounded accent-amber-500"
+                                      checked={curSubs.includes(s.id)}
+                                      onChange={e => {
+                                        const next = e.target.checked ? [...curSubs, s.id] : curSubs.filter(x => x !== s.id)
+                                        setConfig(c => ({ ...c, u1_subOptions: { ...c.u1_subOptions, [t.id]: next } }))
+                                      }} />
+                                    {s.l}
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500 block mb-1">地點（地圖/評論用）</label>
-                    <input value={config.u1_location} onChange={e => setConfig(c => ({ ...c, u1_location: e.target.value }))}
-                      placeholder="例：台北市信義區"
-                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                  </div>
-                  {config.u1_types.includes('google_alerts') && (
+                  {config.u1_types.includes('map') && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">🗺️ 地點（地圖搜尋用）</label>
+                      <input value={config.u1_location} onChange={e => setConfig(c => ({ ...c, u1_location: e.target.value }))}
+                        placeholder="例：台北市信義區"
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+                  )}
+                  {config.u1_types.includes('shopee') && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">🛒 Shopee 國家</label>
+                      <select value={config.u1_shopeeCountry} onChange={e => setConfig(c => ({ ...c, u1_shopeeCountry: e.target.value }))}
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300">
+                        {[
+                          { code: 'tw', label: '🇹🇼 台灣' }, { code: 'vn', label: '🇻🇳 越南' },
+                          { code: 'id', label: '🇮🇩 印尼' }, { code: 'ph', label: '🇵🇭 菲律賓' },
+                          { code: 'my', label: '🇲🇾 馬來西亞' }, { code: 'th', label: '🇹🇭 泰國' },
+                          { code: 'sg', label: '🇸🇬 新加坡' }, { code: 'br', label: '🇧🇷 巴西' },
+                        ].map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  {config.u1_types.includes('ios_android') && (
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-1">📲 App ID（App Store / Google Play，每行一個）</label>
+                      <textarea value={config.u1_appIds} onChange={e => setConfig(c => ({ ...c, u1_appIds: e.target.value }))}
+                        rows={2} placeholder={'id1234567890\ncom.example.app'}
+                        className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                    </div>
+                  )}
+                  {config.u1_types.includes('news') && (
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">🔔 Google Alerts RSS URL（每行一個）</label>
                       <textarea value={config.u1_alertRssUrls} onChange={e => setConfig(c => ({ ...c, u1_alertRssUrls: e.target.value }))}
                         rows={3} placeholder={'https://www.google.com/alerts/feeds/XXXXX/XXXXX\nhttps://...'}
                         className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                      <p className="text-[10px] text-gray-400 mt-0.5">至 google.com/alerts → 管理 → 選擇訂閱 → 切換為 RSS feed 後複製 URL</p>
-                    </div>
-                  )}
-                  {config.u1_types.includes('platform_reviews') && (
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs text-gray-500 block mb-1">📱 App ID（App Store / Google Play，每行一個）</label>
-                        <textarea value={config.u1_appIds} onChange={e => setConfig(c => ({ ...c, u1_appIds: e.target.value }))}
-                          rows={2} placeholder={'id1234567890\ncom.example.app'}
-                          className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500 block mb-1">🛒 商品頁 URL（Shopee/Lazada/Amazon，每行一個）</label>
-                        <textarea value={config.u1_shopUrls} onChange={e => setConfig(c => ({ ...c, u1_shopUrls: e.target.value }))}
-                          rows={2} placeholder={'https://shopee.tw/product/...'}
-                          className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                      </div>
-                    </div>
-                  )}
-                  {config.u1_types.includes('sales_data') && (
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">📊 銷售資料（貼入 CSV 或文字格式）</label>
-                      <textarea value={config.u1_salesData} onChange={e => setConfig(c => ({ ...c, u1_salesData: e.target.value }))}
-                        rows={4} placeholder={'月份,銷量,營收\n2024-01,1200,360000\n2024-02,980,294000\n...'}
-                        className="w-full text-xs border rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      <p className="text-[10px] text-gray-400 mt-0.5">至 google.com/alerts → 管理 → 訂閱 → RSS feed → 複製 URL</p>
                     </div>
                   )}
                 </div>
