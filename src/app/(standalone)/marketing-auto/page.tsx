@@ -6,13 +6,16 @@ import {
   Film, Video, Upload, Phone, Mic, Headphones,
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
   XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
-  FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff, Zap
+  FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff, Zap,
+  Bell, ShoppingBag, Smartphone, TrendingUp
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type UnitStatus = 'idle' | 'running' | 'done' | 'error'
-type CollectType = 'news' | 'web' | 'maps' | 'reviews' | 'company' | 'competitors'
+type CollectType =
+  | 'news' | 'web' | 'maps' | 'reviews' | 'company' | 'competitors'
+  | 'google_alerts' | 'platform_reviews' | 'videos_long' | 'videos_short' | 'sales_data'
 
 interface Campaign {
   id: string
@@ -47,14 +50,19 @@ const UNITS: UnitDef[] = [
 ]
 
 const COLLECT_TYPE_DEFS: {
-  id: CollectType; label: string; icon: React.ElementType; desc: string; needsLocation: boolean
+  id: CollectType; label: string; icon: React.ElementType; desc: string; needsLocation: boolean; isNew?: boolean
 }[] = [
-  { id: 'news',        label: '新聞',       icon: Newspaper, desc: 'Apify Google 新聞',   needsLocation: false },
-  { id: 'web',         label: '網頁搜尋',    icon: Globe,     desc: 'Tavily 深度搜尋',      needsLocation: false },
-  { id: 'maps',        label: 'Google 地圖', icon: Map,       desc: 'Outscraper 地圖資料',  needsLocation: true  },
-  { id: 'reviews',     label: '評論',        icon: Star,      desc: 'Outscraper 評論',      needsLocation: true  },
-  { id: 'company',     label: '公司資料',    icon: Building2, desc: 'Outscraper 公司清單',  needsLocation: true  },
-  { id: 'competitors', label: '競爭對手',    icon: Target,    desc: 'Tavily 競品情報',      needsLocation: false },
+  { id: 'news',             label: '新聞',          icon: Newspaper,  desc: 'Apify Google 新聞',                   needsLocation: false },
+  { id: 'web',              label: '網頁搜尋',       icon: Globe,      desc: 'Tavily 深度搜尋',                      needsLocation: false },
+  { id: 'maps',             label: 'Google 地圖',   icon: Map,        desc: 'Outscraper 地圖資料',                  needsLocation: true  },
+  { id: 'reviews',          label: 'Google 評論',   icon: Star,       desc: 'Outscraper Google 評論',               needsLocation: true  },
+  { id: 'company',          label: '公司資料',       icon: Building2,  desc: 'Outscraper 公司清單',                  needsLocation: true  },
+  { id: 'competitors',      label: '競爭對手',       icon: Target,     desc: 'Tavily 競品情報',                      needsLocation: false },
+  { id: 'google_alerts',    label: 'Google 快訊',   icon: Bell,       desc: 'Google Alerts RSS 即時訊號',           needsLocation: false, isNew: true },
+  { id: 'platform_reviews', label: '各平台評論',     icon: ShoppingBag,desc: 'IG/FB/TikTok/Shopee/Amazon/Yelp 等',  needsLocation: false, isNew: true },
+  { id: 'videos_long',      label: '長影片',         icon: Film,       desc: 'YouTube/Vimeo 長影音蒐集',             needsLocation: false, isNew: true },
+  { id: 'videos_short',     label: '短影片',         icon: Smartphone, desc: 'TikTok/Reels/Shorts 短影音蒐集',      needsLocation: false, isNew: true },
+  { id: 'sales_data',       label: '銷售資料',       icon: TrendingUp, desc: 'Shopee/Lazada/Amazon 銷售數據',       needsLocation: false, isNew: true },
 ]
 
 const RADIUS_OPTIONS = ['1', '3', '5', '10', '20']
@@ -94,6 +102,10 @@ interface Unit1Data {
   types?: CollectType[]
   keywords?: string
   location?: string
+  alertRssUrls?: string[]
+  appIds?: string[]
+  shopUrls?: string[]
+  salesData?: string
 }
 
 function Unit1Collect({
@@ -111,6 +123,10 @@ function Unit1Collect({
   const [radius, setRadius] = useState('5')
   const [limit, setLimit] = useState(10)
   const [language, setLanguage] = useState('zh-TW')
+  const [alertRssUrls, setAlertRssUrls] = useState(savedData?.alertRssUrls?.join('\n') ?? '')
+  const [appIds, setAppIds] = useState(savedData?.appIds?.join('\n') ?? '')
+  const [shopUrls, setShopUrls] = useState(savedData?.shopUrls?.join('\n') ?? '')
+  const [salesData, setSalesData] = useState(savedData?.salesData ?? '')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit1Data | null>(savedData?.summary ? savedData : null)
@@ -131,11 +147,27 @@ function Unit1Collect({
       const res = await fetch('/api/marketing/collect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ types: selectedTypes, keywords: keywords.trim(), location: location.trim(), radius, limit, language }),
+        body: JSON.stringify({
+          types: selectedTypes,
+          keywords: keywords.trim(),
+          location: location.trim(),
+          radius, limit, language,
+          alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          appIds: appIds.split('\n').map(s => s.trim()).filter(Boolean),
+          shopUrls: shopUrls.split('\n').map(s => s.trim()).filter(Boolean),
+          salesData,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const out: Unit1Data = { summary: data.summary, raw: data.raw, types: selectedTypes, keywords: keywords.trim(), location: location.trim() }
+      const out: Unit1Data = {
+        summary: data.summary, raw: data.raw, types: selectedTypes,
+        keywords: keywords.trim(), location: location.trim(),
+        alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+        appIds: appIds.split('\n').map(s => s.trim()).filter(Boolean),
+        shopUrls: shopUrls.split('\n').map(s => s.trim()).filter(Boolean),
+        salesData,
+      }
       setResult(out)
       onDone(out)
     } catch (e) {
@@ -156,10 +188,13 @@ function Unit1Collect({
             const selected = selectedTypes.includes(ct.id)
             return (
               <button key={ct.id} type="button" onClick={() => toggleType(ct.id)}
-                className="flex items-start gap-2.5 p-3 rounded-xl border-2 text-left transition-all"
+                className="flex items-start gap-2.5 p-3 rounded-xl border-2 text-left transition-all relative"
                 style={selected
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
                   : { borderColor: '#e5e7eb' }}>
+                {ct.isNew && (
+                  <span className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded bg-amber-400 text-white leading-none">NEW</span>
+                )}
                 <Icon className="h-4 w-4 mt-0.5 flex-shrink-0"
                   style={selected ? { color: 'var(--primary)' } : { color: '#9ca3af' }} />
                 <div>
@@ -205,6 +240,54 @@ function Unit1Collect({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Google Alerts RSS */}
+      {selectedTypes.includes('google_alerts') && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+          <div className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
+            <Bell className="h-4 w-4" />Google 快訊 RSS URL
+          </div>
+          <textarea value={alertRssUrls} onChange={e => setAlertRssUrls(e.target.value)}
+            rows={3} placeholder={'https://www.google.com/alerts/feeds/XXXXX/XXXXX\nhttps://...（每行一個）'}
+            className="w-full text-xs border border-amber-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white" />
+          <p className="text-[10px] text-amber-700">前往 google.com/alerts → 管理 → 選擇訂閱 → 改為「RSS 訂閱」後複製 URL</p>
+        </div>
+      )}
+
+      {/* Platform Reviews */}
+      {selectedTypes.includes('platform_reviews') && (
+        <div className="p-4 rounded-xl bg-purple-50 border border-purple-200 space-y-3">
+          <div className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
+            <ShoppingBag className="h-4 w-4" />各平台評論設定
+          </div>
+          <div className="text-xs text-purple-700">自動蒐集：IG · FB · TikTok · YouTube · Shopee · Lazada · Amazon · Yelp 等平台評論</div>
+          <div>
+            <label className="text-xs text-purple-700 block mb-1">App ID（App Store / Google Play，每行一個）</label>
+            <textarea value={appIds} onChange={e => setAppIds(e.target.value)}
+              rows={2} placeholder={'id1234567890\ncom.example.app'}
+              className="w-full text-xs border border-purple-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white" />
+          </div>
+          <div>
+            <label className="text-xs text-purple-700 block mb-1">商品/店家頁面 URL（每行一個）</label>
+            <textarea value={shopUrls} onChange={e => setShopUrls(e.target.value)}
+              rows={2} placeholder={'https://shopee.tw/product/...\nhttps://www.amazon.com/dp/...'}
+              className="w-full text-xs border border-purple-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white" />
+          </div>
+        </div>
+      )}
+
+      {/* Sales Data */}
+      {selectedTypes.includes('sales_data') && (
+        <div className="p-4 rounded-xl bg-green-50 border border-green-200 space-y-2">
+          <div className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
+            <TrendingUp className="h-4 w-4" />銷售資料
+          </div>
+          <textarea value={salesData} onChange={e => setSalesData(e.target.value)}
+            rows={4} placeholder={'貼入 CSV 或文字格式銷售數據：\n月份,銷量,營收\n2024-01,1200,360000\n2024-02,980,294000'}
+            className="w-full text-xs border border-green-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-green-300 bg-white" />
+          <p className="text-[10px] text-green-700">可貼入 Shopee/Lazada/Amazon 後台匯出的 CSV，或手動填寫關鍵數字</p>
         </div>
       )}
 

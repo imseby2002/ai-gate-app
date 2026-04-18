@@ -135,28 +135,69 @@ async function appStoreReviews(appIds: string[], limit: number): Promise<string>
   return results.join('\n\n---\n\n')
 }
 
-// ── Shopee / Amazon / Platform Reviews (via Tavily) ───────────────────────────
+// ── Multi-Platform Reviews (IG/FB/TikTok/YouTube/Shopee/Amazon/Lazada/Yelp) ──
 async function platformReviews(keywords: string, shopUrls: string[], limit: number): Promise<string> {
   const parts: string[] = []
-  // Search for reviews on major e-commerce platforms
-  const platforms = ['shopee', 'lazada', 'amazon', 'momo', 'pcstore']
-  for (const platform of platforms.slice(0, 3)) {
+  const perPlatform = Math.max(2, Math.ceil(limit / 8))
+
+  // Social media & video platforms
+  const socialPlatforms: { name: string; query: string; emoji: string }[] = [
+    { name: 'Instagram', emoji: '📸', query: `site:instagram.com ${keywords} review` },
+    { name: 'Facebook',  emoji: '👥', query: `site:facebook.com ${keywords} review rating` },
+    { name: 'TikTok',    emoji: '📱', query: `site:tiktok.com ${keywords} review` },
+    { name: 'YouTube',   emoji: '🎬', query: `site:youtube.com ${keywords} review unboxing` },
+    { name: 'Yelp',      emoji: '⭐', query: `site:yelp.com ${keywords} review` },
+  ]
+
+  // E-commerce platforms
+  const ecommercePlatforms: { name: string; emoji: string; query: string }[] = [
+    { name: 'Shopee',    emoji: '🛒', query: `site:shopee.tw OR site:shopee.vn OR site:shopee.co.id ${keywords} review 評價` },
+    { name: 'Lazada',    emoji: '🛍️', query: `site:lazada.com ${keywords} review rating` },
+    { name: 'Amazon',    emoji: '📦', query: `site:amazon.com ${keywords} review stars` },
+    { name: 'Yelp',      emoji: '⭐', query: `${keywords} yelp review rating stars` },
+    { name: 'momo/PChome', emoji: '🏪', query: `site:momo.com.tw OR site:pchome.com.tw ${keywords} 評價` },
+  ]
+
+  // Fetch social platforms in parallel
+  const socialTasks = socialPlatforms.map(async p => {
     try {
-      const query = `site:${platform}.com ${keywords} review rating`
       const res = await fetch('https://api.tavily.com/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query, max_results: Math.ceil(limit / 3), search_depth: 'basic' }),
+        body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: p.query, max_results: perPlatform, search_depth: 'basic' }),
       })
-      if (!res.ok) continue
+      if (!res.ok) return null
       const data = await res.json()
       const items = (data.results ?? []) as Array<{ title: string; content: string; url: string }>
-      if (items.length === 0) continue
-      parts.push(`🛒 ${platform.toUpperCase()} 相關評論：`)
-      items.forEach(item => parts.push(`• ${item.title}\n  ${item.content?.slice(0, 200)}\n  🔗 ${item.url}`))
-    } catch (_) {}
-  }
-  // Also fetch specific shop URLs if provided
+      if (items.length === 0) return null
+      const section = [`${p.emoji} ${p.name} 相關內容：`]
+      items.forEach(item => section.push(`• ${item.title}\n  ${item.content?.slice(0, 200)}\n  🔗 ${item.url}`))
+      return section.join('\n')
+    } catch { return null }
+  })
+
+  // Fetch e-commerce in parallel
+  const ecommerceTasks = ecommercePlatforms.slice(0, 4).map(async p => {
+    try {
+      const res = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: process.env.TAVILY_API_KEY, query: p.query, max_results: perPlatform, search_depth: 'basic' }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      const items = (data.results ?? []) as Array<{ title: string; content: string; url: string }>
+      if (items.length === 0) return null
+      const section = [`${p.emoji} ${p.name} 評論：`]
+      items.forEach(item => section.push(`• ${item.title}\n  ${item.content?.slice(0, 200)}`))
+      return section.join('\n')
+    } catch { return null }
+  })
+
+  const allResults = await Promise.all([...socialTasks, ...ecommerceTasks])
+  allResults.filter(Boolean).forEach(r => parts.push(r!))
+
+  // Specific shop URLs
   for (const url of (shopUrls ?? []).slice(0, 3)) {
     try {
       const res = await fetch('https://api.tavily.com/search', {
@@ -166,10 +207,11 @@ async function platformReviews(keywords: string, shopUrls: string[], limit: numb
       })
       if (!res.ok) continue
       const data = await res.json()
-      const items = (data.results ?? []) as Array<{ title: string; content: string }>
-      items.forEach(item => parts.push(`🔗 ${url}\n• ${item.content?.slice(0, 300)}`))
+      const items = (data.results ?? []) as Array<{ content: string }>
+      if (items.length > 0) parts.push(`🔗 商品頁 ${url}\n${items.map(i => `• ${i.content?.slice(0, 250)}`).join('\n')}`)
     } catch (_) {}
   }
+
   return parts.join('\n\n---\n\n') || '⚠️ 平台評論蒐集失敗，請確認 TAVILY_API_KEY'
 }
 
