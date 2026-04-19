@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cf:build": "npx @opennextjs/cloudflare build",
+    "cf:build": "node_modules/.bin/opennextjs-cloudflare build",
     "cf:deploy": "npm run cf:build && wrangler pages deploy .open-next/assets --project-name ai-gate-app",
     "cf:preview": "npm run cf:build && wrangler pages dev .open-next/assets"
   },
@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
+    "@opennextjs/cloudflare": "^1.19.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
