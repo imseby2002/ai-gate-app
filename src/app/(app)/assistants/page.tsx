@@ -1,8 +1,10 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Bot, Plus, FileText, MessageSquare, Trash2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils/format'
+
+export const runtime = 'edge'
 
 export default async function AssistantsPage() {
   const supabase = await createClient()

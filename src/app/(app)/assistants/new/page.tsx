@@ -1,6 +1,8 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AssistantForm } from '@/components/assistants/AssistantForm'
+
+export const runtime = 'edge'
 
 export default async function NewAssistantPage() {
   const supabase = await createClient()

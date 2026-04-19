@@ -1,5 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { ModelConfigTable } from '@/components/admin/ModelConfigTable'
+
+export const runtime = 'edge'
 
 export default async function AdminModelsPage() {
   const supabase = await createClient()

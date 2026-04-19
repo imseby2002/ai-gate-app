@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { Zap, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
+
+export const runtime = 'edge'
 
 export default function RegisterPage() {
   const router = useRouter()

@@ -1,6 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { UserManagementTable } from '@/components/admin/UserManagementTable'
 import { EmployeeWhitelistManager } from '@/components/admin/EmployeeWhitelistManager'
+
+export const runtime = 'edge'
 
 export default async function AdminUsersPage() {
   const supabase = await createClient()

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect, ReactNode } from 'react'
 import {
@@ -9,6 +9,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+
+export const runtime = 'edge'
 
 // ─── Types ───────────────────────────────────────────────────────
 type Phase      = 'idle' | 'analyzing' | 'writing' | 'done' | 'error'

@@ -1,7 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Loader2, Video, Play } from 'lucide-react'
+
+export const runtime = 'edge'
 
 const VIDEO_MODELS = [
   { id: 'veo3', name: 'VEO3', desc: 'Google 最新影片生成，高品質寫實', cost: '$0.15/秒' },

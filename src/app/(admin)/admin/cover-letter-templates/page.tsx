@@ -1,9 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Eye, EyeOff, Save, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+
+export const runtime = 'edge'
 
 const CATEGORIES = [
   { value: 'formal',        label: '傳統正式型' },

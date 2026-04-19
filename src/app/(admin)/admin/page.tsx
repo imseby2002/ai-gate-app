@@ -1,6 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+﻿import { createClient } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { Users, MessageSquare, DollarSign, Activity } from 'lucide-react'
+
+export const runtime = 'edge'
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()

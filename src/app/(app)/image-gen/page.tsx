@@ -1,7 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Loader2, Download, Wand2 } from 'lucide-react'
+
+export const runtime = 'edge'
 
 const IMAGE_MODELS = [
   { id: 'flux-1-pro', name: 'FLUX.1 Pro', desc: '高品質寫實風格', cost: '$0.05/張' },

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
@@ -9,6 +9,8 @@ import {
   MessageSquare, Zap, ArrowLeft, Clock, Calendar,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+
+export const runtime = 'edge'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

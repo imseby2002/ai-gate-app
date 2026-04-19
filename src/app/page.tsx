@@ -1,8 +1,10 @@
-import Link from 'next/link'
+﻿import Link from 'next/link'
 import { Zap, Bot, BarChart3, Shield, MessageSquare, Image, Video } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
 import { getLocale } from 'next-intl/server'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+
+export const runtime = 'edge'
 
 export default async function LandingPage() {
   const t = await getTranslations('Landing')

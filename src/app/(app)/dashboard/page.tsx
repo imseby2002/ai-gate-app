@@ -1,9 +1,11 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { MessageSquare, Bot, BarChart3, Zap, ArrowRight, TrendingUp } from 'lucide-react'
 import { formatCost, formatTokens } from '@/lib/utils/format'
+
+export const runtime = 'edge'
 
 export default async function DashboardPage() {
   const supabase = await createClient()

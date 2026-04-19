@@ -1,7 +1,9 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { UsageCharts } from '@/components/usage/UsageCharts'
+
+export const runtime = 'edge'
 
 export default async function UsagePage() {
   const supabase = await createClient()
