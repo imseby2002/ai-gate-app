@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const config = getEcpayConfig()
 
   // 驗證 CheckMacValue
-  if (!verifyCheckMac(params, config.hashKey, config.hashIV)) {
+  if (!await verifyCheckMac(params, config.hashKey, config.hashIV)) {
     console.error('[ECPay] CheckMacValue 驗證失敗', params)
     return new NextResponse('0|CheckMacValue Error', { status: 200 })
   }

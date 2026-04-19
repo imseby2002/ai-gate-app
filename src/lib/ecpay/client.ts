@@ -1,5 +1,3 @@
-import crypto from 'crypto'
-
 // ECPay 環境設定
 export function getEcpayConfig() {
   const isSandbox = process.env.ECPAY_IS_SANDBOX !== 'false'
@@ -14,20 +12,19 @@ export function getEcpayConfig() {
   }
 }
 
-// 綠界 CheckMacValue 產生（SHA256）
-export function generateCheckMac(
+// 綠界 CheckMacValue 產生（SHA256）— 使用 Web Crypto API（Edge 相容）
+export async function generateCheckMac(
   params: Record<string, string>,
   hashKey: string,
   hashIV: string
-): string {
-  // 移除 CheckMacValue 本身，按 key 字母排序（不分大小寫）
+): Promise<string> {
   const sorted = Object.keys(params)
     .filter(k => k !== 'CheckMacValue')
     .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
 
   const raw = `HashKey=${hashKey}&${sorted.map(k => `${k}=${params[k]}`).join('&')}&HashIV=${hashIV}`
 
-  // 綠界特殊 URL encode（與標準不同）
+  // 綠界特殊 URL encode
   const encoded = encodeURIComponent(raw)
     .replace(/%20/g, '+')
     .replace(/%21/g, '!')
@@ -39,18 +36,22 @@ export function generateCheckMac(
     .replace(/%5F/g, '_')
     .toLowerCase()
 
-  return crypto.createHash('sha256').update(encoded).digest('hex').toUpperCase()
+  // Web Crypto API SHA-256
+  const msgBuffer = new TextEncoder().encode(encoded)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase()
 }
 
 // 驗證綠界回傳的 CheckMacValue
-export function verifyCheckMac(
+export async function verifyCheckMac(
   params: Record<string, string>,
   hashKey: string,
   hashIV: string
-): boolean {
+): Promise<boolean> {
   const received = params.CheckMacValue
   if (!received) return false
-  const expected = generateCheckMac(params, hashKey, hashIV)
+  const expected = await generateCheckMac(params, hashKey, hashIV)
   return received.toUpperCase() === expected.toUpperCase()
 }
 
@@ -61,15 +62,12 @@ export function generateTradeNo(userId: string): string {
   return `AG${uid}${now}`.slice(0, 20)
 }
 
-// 從訂單編號解析 userId（存在 metadata 裡，這裡只做前綴辨識）
-// 實際 userId 存在 credit_transactions 的 description 欄位
-
 // 儲值方案（TWD → USD 以 1:32 換算，給用戶 5% 優惠）
 export const CREDIT_PACKAGES = [
   {
     id: 'pkg_300',
     twdAmount: 300,
-    usdCredit: 10.0,      // $10 USD credit
+    usdCredit: 10.0,
     label: 'NT$300',
     desc: '獲得 $10 美元 AI 點數',
     badge: '',
@@ -77,7 +75,7 @@ export const CREDIT_PACKAGES = [
   {
     id: 'pkg_1000',
     twdAmount: 1000,
-    usdCredit: 35.0,      // $35 USD credit（優惠 12%）
+    usdCredit: 35.0,
     label: 'NT$1,000',
     desc: '獲得 $35 美元 AI 點數',
     badge: '推薦',
@@ -85,7 +83,7 @@ export const CREDIT_PACKAGES = [
   {
     id: 'pkg_3000',
     twdAmount: 3000,
-    usdCredit: 110.0,     // $110 USD credit（優惠 15%）
+    usdCredit: 110.0,
     label: 'NT$3,000',
     desc: '獲得 $110 美元 AI 點數',
     badge: '最超值',

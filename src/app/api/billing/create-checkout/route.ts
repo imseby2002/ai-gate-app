@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     ClientBackURL:    `${appUrl}/settings?payment=cancel`,
   }
 
-  params.CheckMacValue = generateCheckMac(params, config.hashKey, config.hashIV)
+  params.CheckMacValue = await generateCheckMac(params, config.hashKey, config.hashIV)
 
   // 回傳表單參數讓前端自動提交
   return NextResponse.json({
