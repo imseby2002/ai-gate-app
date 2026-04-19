@@ -1,9 +1,9 @@
 ﻿'use client'
 
+export const runtime = 'edge'
+
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
-
-export const runtime = 'edge'
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
   Film, Video, Upload, Phone, Mic, Headphones,
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
