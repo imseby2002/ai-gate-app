@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 // Public endpoint: check if an email is in the employee whitelist
 export async function POST(request: NextRequest) {

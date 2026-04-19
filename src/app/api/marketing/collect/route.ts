@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/collect
  * 蒐集資訊單元 — 12 種蒐集管道，每種可選子項目
  *
@@ -20,7 +20,8 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 
-export const maxDuration = 120
+export const runtime = 'edge'
+
 
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'

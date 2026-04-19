@@ -1,10 +1,12 @@
-/**
+﻿/**
  * GET    /api/marketing/campaign/[id]  — load full campaign
  * PATCH  /api/marketing/campaign/[id]  — update campaign state
  * DELETE /api/marketing/campaign/[id]  — archive campaign
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 type Params = { params: Promise<{ id: string }> }
 

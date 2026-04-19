@@ -1,10 +1,12 @@
-/**
+﻿/**
  * GET  /api/social/credentials        — 取得所有平台憑證 (credentials 欄位加密不回傳，只回傳 is_connected)
  * POST /api/social/credentials        — 儲存或更新平台憑證
  * DELETE /api/social/credentials?platform=xxx — 清除平台憑證
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 export async function GET() {
   const supabase = await createClient()

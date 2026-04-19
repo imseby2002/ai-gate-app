@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 // 回傳用戶的點數交易紀錄（取代 Stripe billing portal）
 export async function GET() {

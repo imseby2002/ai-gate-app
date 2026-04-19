@@ -1,10 +1,10 @@
-import { NextRequest } from 'next/server'
+﻿import { NextRequest } from 'next/server'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, streamText } from 'ai'
 
-export const runtime = 'nodejs'
-export const maxDuration = 120
+export const runtime = 'edge'
+
 
 // ── SSE helper ───────────────────────────────────────────────────
 function sse(controller: ReadableStreamDefaultController, payload: object) {
@@ -136,7 +136,11 @@ export async function POST(req: NextRequest) {
     const file = form.get('resume') as File | null
     if (file && file.type.startsWith('image/')) {
       const buf = await file.arrayBuffer()
-      imageBase64 = Buffer.from(buf).toString('base64')
+      // Edge-compatible base64 encoding (no Buffer)
+      const uint8 = new Uint8Array(buf)
+      let binary = ''
+      for (let i = 0; i < uint8.byteLength; i++) binary += String.fromCharCode(uint8[i])
+      imageBase64 = btoa(binary)
     }
   } else {
     const body = await req.json()

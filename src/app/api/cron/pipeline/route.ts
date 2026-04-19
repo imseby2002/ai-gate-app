@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET /api/cron/pipeline
  * Vercel Cron Job — 每小時執行，檢查並觸發排程 Pipeline
  *
@@ -14,7 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export const maxDuration = 300  // 5 min max
+export const runtime = 'edge'
+
 
 // ── Supabase service role (no cookie needed) ──────────────────────────────────
 function getServiceClient() {

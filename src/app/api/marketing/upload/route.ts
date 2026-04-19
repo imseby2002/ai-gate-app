@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/upload
  * 上傳行銷素材至各大社群平台
  *
@@ -16,6 +16,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 interface PlatformResult {
   platform: string

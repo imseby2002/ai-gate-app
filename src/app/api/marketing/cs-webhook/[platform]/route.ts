@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/cs-webhook/[platform]
  * 統一客服 Webhook 接收端點
  *
@@ -12,6 +12,8 @@
  * 收到訊息後 → 呼叫 /api/marketing/cs-chat → 回覆給客戶
  */
 import { NextRequest, NextResponse } from 'next/server'
+
+export const runtime = 'edge'
 
 // ── LINE signature verification ───────────────────────────────────────────────
 async function verifyLineSignature(body: string, signature: string, secret: string): Promise<boolean> {

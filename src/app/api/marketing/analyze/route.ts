@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/analyze
  * 分析資料單元 — Gemini 1.5 Flash 多維度分析
  *
@@ -19,7 +19,8 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
-export const maxDuration = 120
+export const runtime = 'edge'
+
 
 type AnalysisType =
   | 'swot'

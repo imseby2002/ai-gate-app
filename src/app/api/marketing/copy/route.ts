@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/copy
  * 文案產出單元 — Claude Sonnet 生成多平台行銷文案
  *
@@ -22,7 +22,8 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 type CopyType =
   | 'facebook_post'

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+﻿import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectIntent, resolveModel, getProviderFromModel, calculateCost, isImageModel, isVideoModel } from '@/lib/ai/router'
 import { buildSystemPrompt, formatMessagesForContext } from '@/lib/ai/context-builder'
@@ -9,8 +9,8 @@ import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
 
-export const runtime = 'nodejs'
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()

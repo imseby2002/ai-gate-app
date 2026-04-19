@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/image-script
  * 圖片腳本單元 — Claude Sonnet 生成圖片視覺腳本
  *
@@ -19,7 +19,8 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)

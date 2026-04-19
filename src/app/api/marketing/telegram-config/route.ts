@@ -1,9 +1,11 @@
-/**
+﻿/**
  * GET /api/marketing/telegram-config
  * 回傳目前使用者的 Telegram 設定是否完整
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 export async function GET() {
   const supabase = await createClient()

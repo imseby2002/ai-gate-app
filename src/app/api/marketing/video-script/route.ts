@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/video-script
  * 影片腳本單元 — Claude Sonnet 生成分鏡影片腳本
  *
@@ -22,7 +22,8 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const maxDuration = 90
+export const runtime = 'edge'
+
 
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Telegram Webhook — receives messages from the Telegram bot
  *
  * Setup (one-time):
@@ -13,6 +13,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+
+export const runtime = 'edge'
 
 // Use service-role client — webhook has no user session
 function getServiceClient() {

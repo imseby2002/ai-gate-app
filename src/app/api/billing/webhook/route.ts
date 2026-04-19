@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe/client'
 import { createAdminClient } from '@/lib/supabase/server'
 import type Stripe from 'stripe'
 
-export const runtime = 'nodejs'
+export const runtime = 'edge'
+
 
 export async function POST(req: NextRequest) {
   const body = await req.text()

@@ -1,10 +1,10 @@
-import { NextRequest } from 'next/server'
+﻿import { NextRequest } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { streamText } from 'ai'
 
-export const runtime = 'nodejs'
-export const maxDuration = 90
+export const runtime = 'edge'
+
 
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   const encoder = new TextEncoder()

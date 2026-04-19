@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/telegram-poll
  * 使用使用者自己的 Bot Token，呼叫 getUpdates 輪詢新訊息
  * 前端每 5 秒呼叫一次（當有步驟處於 waiting 時）
@@ -8,6 +8,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+export const runtime = 'edge'
 
 const APPROVE_KEYWORDS = ['核准', '通過', '同意', 'ok', 'approve', 'yes', '好', '可以', '👍', '✅']
 

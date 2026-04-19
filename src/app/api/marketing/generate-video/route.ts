@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/generate-video
  * 提交影片生成任務至 FAL AI Queue
  *
@@ -17,7 +17,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 const FAL_ENDPOINTS: Record<string, string> = {
   'kling-standard':  'fal-ai/kling-video/v1.6/standard/text-to-video',

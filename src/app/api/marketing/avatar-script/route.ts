@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/avatar-script
  * 用 Claude 生成 HeyGen 主播腳本
  *
@@ -14,7 +14,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()

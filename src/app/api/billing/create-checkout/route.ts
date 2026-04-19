@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   getEcpayConfig,
@@ -7,6 +7,8 @@ import {
   CREDIT_PACKAGES,
   type PackageId,
 } from '@/lib/ecpay/client'
+
+export const runtime = 'edge'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()

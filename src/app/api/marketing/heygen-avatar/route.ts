@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET  /api/marketing/heygen-avatar          → 列出可用 avatars & voices
  * POST /api/marketing/heygen-avatar          → 提交影片生成任務
  * GET  /api/marketing/heygen-avatar?videoId= → 查詢任務狀態
@@ -10,7 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 const HEYGEN_BASE = 'https://api.heygen.com'
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/marketing/cs-chat
  * 客服 AI 路由引擎
  *
@@ -30,7 +30,8 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const runtime = 'edge'
+
 
 const INTENT_CATEGORIES = [
   '產品諮詢',
