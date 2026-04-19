@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cf:build": "next build && npx @cloudflare/next-on-pages",
-    "cf:deploy": "npm run cf:build && wrangler pages deploy .vercel/output/static --project-name ai-gate-app",
-    "cf:preview": "npm run cf:build && wrangler pages dev .vercel/output/static"
+    "cf:build": "npx @opennextjs/cloudflare build",
+    "cf:deploy": "npm run cf:build && wrangler pages deploy .open-next/assets --project-name ai-gate-app",
+    "cf:preview": "npm run cf:build && wrangler pages dev .open-next/assets"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.66",
