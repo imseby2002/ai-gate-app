@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "patch-package",
-    "cf:build": "node_modules/.bin/opennextjs-cloudflare build && node -e \"const fs=require('fs');fs.copyFileSync('.open-next/worker.js','.open-next/assets/_worker.js');\"",
+    "cf:build": "node_modules/.bin/opennextjs-cloudflare build && node scripts/cf-copy-worker.js",
     "cf:deploy": "npm run cf:build && wrangler pages deploy .open-next/assets --project-name ai-gate-app",
     "cf:preview": "npm run cf:build && wrangler pages dev .open-next/assets"
   },
