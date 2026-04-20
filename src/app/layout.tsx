@@ -15,8 +15,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale()
-  const messages = await getMessages()
+  let locale = 'zh-TW'
+  let messages: Record<string, unknown> = {}
+  try {
+    locale = await getLocale()
+    messages = await getMessages()
+  } catch {
+    // Fallback: load default locale directly
+    try {
+      messages = (await import('../../messages/zh-TW.json')).default as Record<string, unknown>
+    } catch {
+      messages = {}
+    }
+  }
 
   return (
     <html lang={locale} className="h-full antialiased">
