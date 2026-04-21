@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
 // ─── Edge-compatible text extraction ─────────────────────────────────────────
 // Cloudflare Workers with nodejs_compat supports pure-JS packages.
 // mammoth and xlsx are pure JS (no native bindings) → work via nodejs_compat.

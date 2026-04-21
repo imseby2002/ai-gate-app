@@ -10,8 +10,6 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-export const runtime = 'edge'
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped' | 'waiting'

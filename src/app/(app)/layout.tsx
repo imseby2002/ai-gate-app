@@ -4,8 +4,6 @@ import { getLocale } from 'next-intl/server'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 
-export const runtime = 'edge'
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 

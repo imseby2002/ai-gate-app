@@ -9,9 +9,6 @@ import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
 
-export const runtime = 'edge'
-
-
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
 

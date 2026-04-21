@@ -17,9 +17,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
-
 const FAL_ENDPOINTS: Record<string, string> = {
   'kling-standard':  'fal-ai/kling-video/v1.6/standard/text-to-video',
   'kling-pro':       'fal-ai/kling-video/v1.6/pro/text-to-video',

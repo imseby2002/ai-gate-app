@@ -19,9 +19,6 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
-export const runtime = 'edge'
-
-
 type AnalysisType =
   | 'swot'
   | 'company'

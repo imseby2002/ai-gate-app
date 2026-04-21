@@ -14,9 +14,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const runtime = 'edge'
-
-
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

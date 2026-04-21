@@ -20,9 +20,6 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 
-export const runtime = 'edge'
-
-
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
   | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors'

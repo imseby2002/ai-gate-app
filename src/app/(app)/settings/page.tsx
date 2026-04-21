@@ -3,8 +3,6 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 
-export const runtime = 'edge'
-
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

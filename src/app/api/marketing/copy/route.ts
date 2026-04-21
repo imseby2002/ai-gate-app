@@ -22,9 +22,6 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const runtime = 'edge'
-
-
 type CopyType =
   | 'facebook_post'
   | 'instagram_caption'

@@ -10,8 +10,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
 // ─── Text extraction (pure-JS, nodejs_compat) ────────────────────────────────
 
 async function extractDocx(arrayBuffer: ArrayBuffer): Promise<string> {

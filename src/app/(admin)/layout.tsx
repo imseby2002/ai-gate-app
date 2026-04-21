@@ -3,8 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Zap, Users, BarChart3, Settings, Home, FileText } from 'lucide-react'
 import Link from 'next/link'
 
-export const runtime = 'edge'
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

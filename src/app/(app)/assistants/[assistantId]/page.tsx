@@ -2,8 +2,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { AssistantForm } from '@/components/assistants/AssistantForm'
 
-export const runtime = 'edge'
-
 export default async function EditAssistantPage({
   params,
 }: {

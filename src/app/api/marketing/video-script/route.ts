@@ -22,9 +22,6 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const runtime = 'edge'
-
-
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

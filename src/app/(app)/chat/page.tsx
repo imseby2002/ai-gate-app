@@ -2,8 +2,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ChatPageClient } from '@/components/chat/ChatPageClient'
 
-export const runtime = 'edge'
-
 export default async function ChatPage({
   searchParams,
 }: {

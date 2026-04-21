@@ -4,8 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { Bot, Plus, FileText, MessageSquare, Trash2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils/format'
 
-export const runtime = 'edge'
-
 export default async function AssistantsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

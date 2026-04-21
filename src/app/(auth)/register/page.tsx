@@ -7,8 +7,6 @@ import { Zap, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
-export const runtime = 'edge'
-
 export default function RegisterPage() {
   const router = useRouter()
   const t = useTranslations('Register')

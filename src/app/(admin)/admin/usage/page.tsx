@@ -2,8 +2,6 @@
 import { formatCost, formatTokens, formatDate } from '@/lib/utils/format'
 import { UsageCharts } from '@/components/usage/UsageCharts'
 
-export const runtime = 'edge'
-
 export default async function AdminUsagePage() {
   const supabase = await createClient()
 

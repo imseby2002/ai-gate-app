@@ -23,9 +23,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
-
 // ── ElevenLabs TTS → Supabase Storage ─────────────────────────────────────────
 async function elevenLabsTTS(
   script: string,

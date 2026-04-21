@@ -2,8 +2,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Zap } from 'lucide-react'
 
-export const runtime = 'edge'
-
 export default async function StandaloneLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

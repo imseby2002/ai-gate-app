@@ -3,9 +3,6 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { streamText } from 'ai'
 
-export const runtime = 'edge'
-
-
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   const encoder = new TextEncoder()
   controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))

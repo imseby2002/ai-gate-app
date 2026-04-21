@@ -9,8 +9,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
 const APPROVE_KEYWORDS = ['核准', '通過', '同意', 'ok', 'approve', 'yes', '好', '可以', '👍', '✅']
 
 function detectAction(text: string): 'approved' | 'feedback' {

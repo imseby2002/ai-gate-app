@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 
-export const runtime = 'edge'
-
 // ─── Types ───────────────────────────────────────────────────────
 type Phase      = 'idle' | 'analyzing' | 'writing' | 'done' | 'error'
 type Tab        = 'resume' | 'cover-letter'

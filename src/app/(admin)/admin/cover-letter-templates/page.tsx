@@ -5,8 +5,6 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, Save, X, Loader2 } from 'lucide-reac
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
-export const runtime = 'edge'
-
 const CATEGORIES = [
   { value: 'formal',        label: '傳統正式型' },
   { value: 'creative',      label: '現代創意型' },

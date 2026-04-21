@@ -2,8 +2,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyCheckMac, getEcpayConfig } from '@/lib/ecpay/client'
 
-export const runtime = 'edge'
-
 export async function POST(req: NextRequest) {
   // ECPay 送來的是 application/x-www-form-urlencoded
   const body = await req.text()

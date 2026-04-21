@@ -3,9 +3,6 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, streamText } from 'ai'
 
-export const runtime = 'edge'
-
-
 // ── SSE helper ───────────────────────────────────────────────────
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   const encoder = new TextEncoder()

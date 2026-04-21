@@ -13,8 +13,6 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 
-export const runtime = 'edge'
-
 // ── LINE signature verification ───────────────────────────────────────────────
 async function verifyLineSignature(body: string, signature: string, secret: string): Promise<boolean> {
   try {

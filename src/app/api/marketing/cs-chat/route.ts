@@ -30,9 +30,6 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
-export const runtime = 'edge'
-
-
 const INTENT_CATEGORIES = [
   '產品諮詢',
   '價格/報價',

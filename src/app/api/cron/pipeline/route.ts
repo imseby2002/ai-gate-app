@@ -14,9 +14,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export const runtime = 'edge'
-
-
 // ── Supabase service role (no cookie needed) ──────────────────────────────────
 function getServiceClient() {
   return createClient(

@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { Loader2, Video, Play } from 'lucide-react'
 
-export const runtime = 'edge'
-
 const VIDEO_MODELS = [
   { id: 'veo3', name: 'VEO3', desc: 'Google 最新影片生成，高品質寫實', cost: '$0.15/秒' },
   { id: 'kling-v2', name: 'Kling V2', desc: '創意風格影片，多種藝術效果', cost: '$0.10/秒' },

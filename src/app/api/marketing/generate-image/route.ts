@@ -14,9 +14,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-export const runtime = 'edge'
-
-
 // Size mapping per provider
 const DALLE_SIZES: Record<string, string> = {
   '1:1':  '1024x1024',
