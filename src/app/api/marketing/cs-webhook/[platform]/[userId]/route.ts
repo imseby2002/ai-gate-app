@@ -56,6 +56,14 @@ async function replyWhatsApp(to: string, text: string, phoneId: string, token: s
   })
 }
 
+async function replyTelegram(chatId: string | number, text: string, botToken: string) {
+  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text }),
+  })
+}
+
 // ── Fetch AI reply ────────────────────────────────────────────────────────────
 async function getAIReply(message: string, baseUrl: string, knowledgeBase: string): Promise<string> {
   try {
@@ -120,6 +128,23 @@ export async function POST(
       const to: string   = msg.from
       const reply = await getAIReply(text, baseUrl, knowledgeBase)
       if (token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Telegram ──────────────────────────────────────────────────────────────
+  if (platform === 'telegram') {
+    const creds    = await loadCredentials(userId, platform)
+    const botToken = creds.telegram_bot_token ?? ''
+    const body     = await req.json()
+    const message  = body?.message ?? body?.edited_message
+    if (message?.text && botToken) {
+      const chatId: string | number = message.chat?.id
+      const text: string = message.text
+      if (chatId && text && !text.startsWith('/')) {
+        const reply = await getAIReply(text, baseUrl, knowledgeBase)
+        await replyTelegram(chatId, reply, botToken)
+      }
     }
     return NextResponse.json({ ok: true })
   }

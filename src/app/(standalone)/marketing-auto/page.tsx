@@ -3449,10 +3449,10 @@ interface Unit12Data {
 const CS_PLATFORMS = [
   {
     id: 'line',
-    name: 'LINE',
+    name: 'LINE OA',
     color: '#00B900',
     envVars: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET'],
-    note: '設定 Webhook URL 到 LINE Developers Console → Messaging API',
+    note: 'LINE Developers Console → Messaging API → Webhook URL',
   },
   {
     id: 'whatsapp',
@@ -3462,39 +3462,18 @@ const CS_PLATFORMS = [
     note: 'Meta Business Suite → WhatsApp → 設定 Webhook',
   },
   {
+    id: 'telegram',
+    name: 'Telegram',
+    color: '#2AABEE',
+    envVars: ['TELEGRAM_BOT_TOKEN'],
+    note: '向 @BotFather 建立 Bot → 取得 Token → 填入後系統自動設定 Webhook',
+  },
+  {
     id: 'zalo',
     name: 'Zalo OA',
     color: '#0068FF',
     envVars: ['ZALO_OA_ACCESS_TOKEN'],
-    note: 'Zalo for Business → Official Account → Webhook',
-  },
-  {
-    id: 'line-oa',
-    name: 'LINE OA',
-    color: '#00B900',
-    envVars: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET'],
-    note: 'LINE Official Account Manager → 訊息 API → Webhook',
-  },
-  {
-    id: 'whatsapp-biz',
-    name: 'WhatsApp Business',
-    color: '#128C7E',
-    envVars: ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN'],
-    note: 'WhatsApp Business API (雲端版) → Meta Developer',
-  },
-  {
-    id: 'zalo-oa',
-    name: 'Zalo OA Pro',
-    color: '#0052CC',
-    envVars: ['ZALO_OA_ACCESS_TOKEN'],
-    note: 'Zalo Official Account → API 授權 → Webhook',
-  },
-  {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    color: '#0A66C2',
-    envVars: ['LINKEDIN_ACCESS_TOKEN'],
-    note: 'LinkedIn Marketing API → Message Events Webhook（僅接收）',
+    note: 'Zalo for Business → Official Account → Webhook（個人版 Zalo 無開放 API）',
   },
   {
     id: 'wechat',
@@ -3576,28 +3555,16 @@ function Unit12CustomerService({
         { key: 'line_channel_access_token', label: 'Channel Access Token', placeholder: 'U...', secret: true },
         { key: 'line_channel_secret', label: 'Channel Secret', placeholder: '...', secret: true },
       ],
-      'line-oa': [
-        { key: 'line_channel_access_token', label: 'Channel Access Token', placeholder: 'U...', secret: true },
-        { key: 'line_channel_secret', label: 'Channel Secret', placeholder: '...', secret: true },
-      ],
       whatsapp: [
         { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
         { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
-        { key: 'whatsapp_verify_token', label: 'Verify Token (自訂)', placeholder: 'my_verify_token', secret: false },
+        { key: 'whatsapp_verify_token', label: 'Verify Token（自訂任意字串）', placeholder: 'my_verify_token', secret: false },
       ],
-      'whatsapp-biz': [
-        { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
-        { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
-        { key: 'whatsapp_verify_token', label: 'Verify Token (自訂)', placeholder: 'my_verify_token', secret: false },
+      telegram: [
+        { key: 'telegram_bot_token', label: 'Bot Token（從 @BotFather 取得）', placeholder: '123456789:AAF...', secret: true },
       ],
       zalo: [
         { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
-      ],
-      'zalo-oa': [
-        { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
-      ],
-      linkedin: [
-        { key: 'linkedin_access_token', label: 'Access Token', placeholder: '...', secret: true },
       ],
       wechat: [
         { key: 'wechat_app_id', label: 'App ID', placeholder: 'wx...', secret: false },

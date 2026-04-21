@@ -47,6 +47,21 @@ export async function POST(req: NextRequest) {
     .upsert({ user_id: user.id, platform, credentials, is_connected }, { onConflict: 'user_id,platform' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-register Telegram webhook when bot token is saved
+  if (platform === 'telegram' && (credentials as Record<string, string>).telegram_bot_token) {
+    const botToken = (credentials as Record<string, string>).telegram_bot_token
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    const webhookUrl = `${appUrl}/api/marketing/cs-webhook/telegram/${user.id}`
+    try {
+      await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: webhookUrl }),
+      })
+    } catch { /* ignore — user can set manually */ }
+  }
+
   return NextResponse.json({ ok: true })
 }
 
