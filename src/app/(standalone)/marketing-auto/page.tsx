@@ -3532,7 +3532,80 @@ function Unit12CustomerService({
   // Logs
   const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
 
+  // Per-user credentials
+  const [userId, setUserId] = useState<string | null>(null)
+  const [platformCreds, setPlatformCreds] = useState<Record<string, Record<string, string>>>({})
+  const [platformConnected, setPlatformConnected] = useState<Record<string, boolean>>({})
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
+  const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
+
   const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.id) setUserId(d.id) }).catch(() => {})
+    fetch('/api/social/credentials').then(r => r.json()).then(d => {
+      if (d.platforms) {
+        const connected: Record<string, boolean> = {}
+        Object.entries(d.platforms).forEach(([k, v]) => {
+          connected[k] = (v as any).is_connected
+        })
+        setPlatformConnected(connected)
+      }
+    }).catch(() => {})
+  }, [])
+
+  async function savePlatformCreds(platformId: string) {
+    const creds = platformCreds[platformId]
+    if (!creds) return
+    setSavingPlatform(platformId)
+    try {
+      await fetch('/api/social/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: platformId, credentials: creds }),
+      })
+      setPlatformConnected(prev => ({ ...prev, [platformId]: Object.values(creds).some(v => v.trim()) }))
+      setEditingPlatform(null)
+    } catch {}
+    setSavingPlatform(null)
+  }
+
+  function getCredentialFields(platformId: string): { key: string; label: string; placeholder: string; secret: boolean }[] {
+    const map: Record<string, { key: string; label: string; placeholder: string; secret: boolean }[]> = {
+      line: [
+        { key: 'line_channel_access_token', label: 'Channel Access Token', placeholder: 'U...', secret: true },
+        { key: 'line_channel_secret', label: 'Channel Secret', placeholder: '...', secret: true },
+      ],
+      'line-oa': [
+        { key: 'line_channel_access_token', label: 'Channel Access Token', placeholder: 'U...', secret: true },
+        { key: 'line_channel_secret', label: 'Channel Secret', placeholder: '...', secret: true },
+      ],
+      whatsapp: [
+        { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
+        { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
+        { key: 'whatsapp_verify_token', label: 'Verify Token (自訂)', placeholder: 'my_verify_token', secret: false },
+      ],
+      'whatsapp-biz': [
+        { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
+        { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
+        { key: 'whatsapp_verify_token', label: 'Verify Token (自訂)', placeholder: 'my_verify_token', secret: false },
+      ],
+      zalo: [
+        { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
+      ],
+      'zalo-oa': [
+        { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
+      ],
+      linkedin: [
+        { key: 'linkedin_access_token', label: 'Access Token', placeholder: '...', secret: true },
+      ],
+      wechat: [
+        { key: 'wechat_app_id', label: 'App ID', placeholder: 'wx...', secret: false },
+        { key: 'wechat_app_secret', label: 'App Secret', placeholder: '...', secret: true },
+      ],
+    }
+    return map[platformId] ?? []
+  }
 
   function saveSettings() {
     setSavingSettings(true)
@@ -3625,33 +3698,73 @@ function Unit12CustomerService({
       {tab === 'platforms' && (
         <div className="space-y-3">
           <p className="text-xs text-gray-500">
-            將下方各平台的 Webhook URL 填入對應的後台設定，並在 Vercel 環境變數中設定對應的 API Key。
+            設定各平台的 API Key，再將 Webhook URL 複製到對應平台後台。
           </p>
           <div className="grid grid-cols-1 gap-3">
             {CS_PLATFORMS.map(p => (
-              <div key={p.id} className="border rounded-xl p-4 space-y-2">
+              <div key={p.id} className="border rounded-xl p-4 space-y-3">
+                {/* Header row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ background: p.color }} />
                     <span className="font-medium text-sm text-gray-800">{p.name}</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${platformConnected[p.id] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {platformConnected[p.id] ? '已連線' : '未設定'}
+                    </span>
+                    <button onClick={() => setEditingPlatform(editingPlatform === p.id ? null : p.id)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">
+                      設定
+                    </button>
+                  </div>
                 </div>
+
+                {/* Webhook URL */}
                 <div className="flex items-center gap-2">
                   <code className="flex-1 text-[10px] bg-gray-100 px-2.5 py-1.5 rounded-lg text-gray-700 font-mono truncate">
-                    {appUrl}/api/marketing/cs-webhook/{p.id}
+                    {appUrl}/api/marketing/cs-webhook/{p.id}/{userId ?? '(登入後顯示)'}
                   </code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(`${appUrl}/api/marketing/cs-webhook/${p.id}`)}
+                  <button onClick={() => userId && navigator.clipboard.writeText(`${appUrl}/api/marketing/cs-webhook/${p.id}/${userId}`)}
                     className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">
                     複製
                   </button>
                 </div>
+
+                {/* Note */}
                 <p className="text-[10px] text-gray-400">{p.note}</p>
-                <div className="flex gap-1.5 flex-wrap">
-                  {p.envVars.map(v => (
-                    <code key={v} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">{v}</code>
-                  ))}
-                </div>
+
+                {/* Credential inputs (when editing) */}
+                {editingPlatform === p.id && (
+                  <div className="space-y-2 border-t pt-3">
+                    {getCredentialFields(p.id).map(field => (
+                      <div key={field.key}>
+                        <label className="text-[10px] text-gray-500 block mb-1">{field.label}</label>
+                        <input
+                          type={field.secret ? 'password' : 'text'}
+                          placeholder={field.placeholder}
+                          value={platformCreds[p.id]?.[field.key] ?? ''}
+                          onChange={e => setPlatformCreds(prev => ({
+                            ...prev,
+                            [p.id]: { ...prev[p.id], [field.key]: e.target.value }
+                          }))}
+                          className="w-full text-xs border rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        />
+                      </div>
+                    ))}
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => savePlatformCreds(p.id)} disabled={savingPlatform === p.id}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium text-white"
+                        style={{ background: 'var(--primary)' }}>
+                        {savingPlatform === p.id ? '儲存中...' : '儲存'}
+                      </button>
+                      <button onClick={() => setEditingPlatform(null)}
+                        className="px-3 py-1.5 rounded-lg text-xs bg-gray-100 text-gray-600">
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
