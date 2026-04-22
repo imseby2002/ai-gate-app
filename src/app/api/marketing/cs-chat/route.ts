@@ -95,7 +95,7 @@ async function handlePost(req: NextRequest) {
 
   try {
     const { text: classifyText } = await generateText({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.5-flash'),
       messages: [{ role: 'user', content: classifyPrompt }],
     })
     const parsed = JSON.parse(classifyText.replace(/```json\n?|```/g, '').trim())
@@ -161,7 +161,7 @@ ${langInstruction}
   if (provider === 'Gemini') {
     try {
       const { text } = await generateText({
-        model: google('gemini-2.0-flash'),
+        model: google('gemini-2.5-flash'),
         system: systemPrompt,
         messages: msgHistory,
       })

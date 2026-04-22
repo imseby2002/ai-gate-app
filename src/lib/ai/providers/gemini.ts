@@ -14,7 +14,7 @@ export async function streamGemini(params: ChatParams & { imageBase64?: string }
     apiKey: process.env.GOOGLE_AI_API_KEY!,
   })
 
-  const geminiModel = MODEL_MAP[params.modelId] ?? 'gemini-2.0-flash'
+  const geminiModel = MODEL_MAP[params.modelId] ?? 'gemini-2.5-flash'
   const maxOut = params.maxTokens ?? 4096
 
   const baseMessages = params.systemPrompt
