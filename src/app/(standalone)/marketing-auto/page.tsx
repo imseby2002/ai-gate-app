@@ -3494,7 +3494,21 @@ const CS_PLATFORMS = [
   },
 ]
 
-type Cs12Tab = 'platforms' | 'ai-settings' | 'test' | 'logs'
+type Cs12Tab = 'platforms' | 'ai-settings' | 'data-sources' | 'test' | 'logs'
+
+interface CsDataSource {
+  id: string
+  name: string
+  enabled: boolean
+  config: {
+    apiKey: string
+    spreadsheetId: string
+    sheetName: string
+    keyColumn: string
+    returnColumns: string[]
+    triggerKeywords: string[]
+  }
+}
 
 function Unit12CustomerService({
   campaignId,
@@ -3529,6 +3543,93 @@ function Unit12CustomerService({
 
   // Logs
   const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
+
+  // Data sources
+  const [dataSources, setDataSources] = useState<CsDataSource[]>([])
+  const [dsLoading, setDsLoading] = useState(false)
+  const [editingDs, setEditingDs] = useState<CsDataSource | null>(null)
+  const [editingDsForm, setEditingDsForm] = useState<CsDataSource['config'] & { name: string }>({
+    name: '', apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [],
+  })
+  const [savingDs, setSavingDs] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/marketing/cs-datasource').then(r => r.json()).then(d => {
+      if (d.sources) setDataSources(d.sources)
+    }).catch(() => {})
+  }, [])
+
+  function openAddDs() {
+    setEditingDs({ id: '', name: '', enabled: true, config: { apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [] } })
+    setEditingDsForm({ name: '', apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [] })
+  }
+
+  function openEditDs(src: CsDataSource) {
+    setEditingDs(src)
+    setEditingDsForm({
+      name: src.name,
+      apiKey: src.config.apiKey,
+      spreadsheetId: src.config.spreadsheetId,
+      sheetName: src.config.sheetName,
+      keyColumn: src.config.keyColumn,
+      returnColumns: src.config.returnColumns ?? [],
+      triggerKeywords: src.config.triggerKeywords ?? [],
+    })
+  }
+
+  async function saveDs() {
+    setSavingDs(true)
+    try {
+      const config = {
+        apiKey: editingDsForm.apiKey,
+        spreadsheetId: editingDsForm.spreadsheetId,
+        sheetName: editingDsForm.sheetName,
+        keyColumn: editingDsForm.keyColumn,
+        returnColumns: editingDsForm.returnColumns,
+        triggerKeywords: editingDsForm.triggerKeywords,
+      }
+      if (editingDs?.id) {
+        const r = await fetch(`/api/marketing/cs-datasource/${editingDs.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editingDsForm.name, config, enabled: editingDs.enabled }),
+        })
+        const d = await r.json()
+        if (d.source) setDataSources(prev => prev.map(s => s.id === editingDs.id ? d.source : s))
+      } else {
+        const r = await fetch('/api/marketing/cs-datasource', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editingDsForm.name, config }),
+        })
+        const d = await r.json()
+        if (d.source) setDataSources(prev => [...prev, d.source])
+      }
+      setEditingDs(null)
+    } catch {}
+    setSavingDs(false)
+  }
+
+  async function deleteDs(id: string) {
+    setDsLoading(true)
+    try {
+      await fetch(`/api/marketing/cs-datasource/${id}`, { method: 'DELETE' })
+      setDataSources(prev => prev.filter(s => s.id !== id))
+    } catch {}
+    setDsLoading(false)
+  }
+
+  async function toggleDs(src: CsDataSource) {
+    try {
+      const r = await fetch(`/api/marketing/cs-datasource/${src.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: src.name, config: src.config, enabled: !src.enabled }),
+      })
+      const d = await r.json()
+      if (d.source) setDataSources(prev => prev.map(s => s.id === src.id ? d.source : s))
+    } catch {}
+  }
 
   // Per-user credentials
   const [userId, setUserId] = useState<string | null>(null)
@@ -3679,8 +3780,8 @@ function Unit12CustomerService({
           <p className="text-xs text-gray-500 mt-0.5">Gemini Flash 意圖分類 · Claude Sonnet 高風險升級</p>
         </div>
         <div className="flex gap-1.5">
-          {(['platforms', 'ai-settings', 'test', 'logs'] as Cs12Tab[]).map(t => {
-            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', test: '測試', logs: '記錄' }
+          {(['platforms', 'ai-settings', 'data-sources', 'test', 'logs'] as Cs12Tab[]).map(t => {
+            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'data-sources': '資料來源', test: '測試', logs: '記錄' }
             return (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -3877,6 +3978,126 @@ function Unit12CustomerService({
               <code className="bg-blue-100 px-1.5 py-0.5 rounded">GOOGLE_AI_API_KEY</code>
               <code className="bg-orange-100 px-1.5 py-0.5 rounded">ANTHROPIC_API_KEY</code>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Data Sources ───────────────────────────────────────────────── */}
+      {tab === 'data-sources' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-700">外部資料來源</div>
+              <div className="text-xs text-gray-400 mt-0.5">客戶輸入觸發關鍵字時，AI 自動查詢對應 Google Sheets</div>
+            </div>
+            <button onClick={openAddDs}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1"
+              style={{ background: 'var(--primary)' }}>
+              <Plus className="h-3.5 w-3.5" />新增
+            </button>
+          </div>
+
+          {dsLoading && <div className="text-xs text-gray-400 text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />載入中…</div>}
+
+          {dataSources.length === 0 && !dsLoading && !editingDs && (
+            <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
+              尚無資料來源。點擊「新增」設定 Google Sheets 查詢。
+            </div>
+          )}
+
+          {dataSources.length > 0 && !editingDs && (
+            <div className="space-y-2">
+              {dataSources.map(src => (
+                <div key={src.id} className="border rounded-xl p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-800 truncate">{src.name}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+                      觸發詞：{(src.config.triggerKeywords ?? []).join('、') || '（未設定）'}
+                    </div>
+                  </div>
+                  <button onClick={() => toggleDs(src)}
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {src.enabled ? '啟用' : '停用'}
+                  </button>
+                  <button onClick={() => openEditDs(src)}
+                    className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                  <button onClick={() => deleteDs(src.id)}
+                    className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {editingDs !== null && (
+            <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
+              <div className="font-medium text-sm text-gray-700">{editingDs.id ? '編輯資料來源' : '新增資料來源'}</div>
+
+              {[
+                { key: 'name', label: '名稱', placeholder: '例：訂單密碼表', secret: false },
+                { key: 'apiKey', label: 'Google Sheets API Key', placeholder: 'AIzaSy...', secret: true },
+                { key: 'spreadsheetId', label: 'Spreadsheet ID', placeholder: '1BxiMVs0...（網址列中間那段）', secret: false },
+                { key: 'sheetName', label: '工作表名稱（Sheet Name）', placeholder: '工作表1 或 Sheet1', secret: false },
+                { key: 'keyColumn', label: '查詢欄位名稱（標題列的欄名）', placeholder: '例：訂單編號', secret: false },
+              ].map(({ key, label, placeholder, secret }) => (
+                <div key={key}>
+                  <label className="text-[10px] text-gray-500 block mb-1">{label}</label>
+                  <input
+                    type={secret ? 'password' : 'text'}
+                    placeholder={placeholder}
+                    value={(editingDsForm as Record<string, unknown>)[key] as string ?? ''}
+                    onChange={e => setEditingDsForm(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                </div>
+              ))}
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">回傳欄位（逗號分隔，留空回傳所有欄位）</label>
+                <input
+                  type="text"
+                  placeholder="例：密碼,到期日"
+                  value={editingDsForm.returnColumns.join(',')}
+                  onChange={e => setEditingDsForm(prev => ({ ...prev, returnColumns: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）</label>
+                <input
+                  type="text"
+                  placeholder="例：訂單,密碼,查詢"
+                  value={editingDsForm.triggerKeywords.join(',')}
+                  onChange={e => setEditingDsForm(prev => ({ ...prev, triggerKeywords: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
+                <div className="font-medium">如何取得 Spreadsheet ID：</div>
+                <div>從 Google Sheets 網址複製：docs.google.com/spreadsheets/d/<strong>【這段】</strong>/edit</div>
+                <div className="font-medium mt-1">Google Sheets 需設為「知道連結的人可以查看」，並啟用 Sheets API。</div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={saveDs} disabled={savingDs}
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-70"
+                  style={{ background: 'var(--primary)' }}>
+                  {savingDs ? '儲存中…' : '儲存'}
+                </button>
+                <button onClick={() => setEditingDs(null)}
+                  className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
+            <div className="font-medium">使用說明</div>
+            <div>• 每位使用者可新增多個資料來源，各自填入自己的 Google API Key 與試算表。</div>
+            <div>• 客戶訊息包含「觸發關鍵字」時，AI 自動查詢該試算表並附上結果。</div>
+            <div>• 例：客戶輸入「訂單 A001 密碼」→ AI 查詢訂單 A001 欄位 → 回覆對應密碼。</div>
           </div>
         </div>
       )}

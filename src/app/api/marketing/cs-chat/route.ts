@@ -1,29 +1,3 @@
-﻿/**
- * POST /api/marketing/cs-chat
- * 客服 AI 路由引擎
- *
- * 流程：
- *   1. Gemini Flash 分類意圖（intent）+ 風險等級（risk: low/medium/high）
- *   2. 若 risk >= escalationThreshold → Claude Sonnet 生成深度回覆
- *   3. 否則 Gemini Flash 直接生成回覆
- *
- * Body: {
- *   message: string               // 客戶訊息
- *   history?: { role, content }[] // 對話歷史（最近 N 輪）
- *   campaignId?: string
- *   knowledgeBase?: string        // 知識庫文字
- *   escalationThreshold?: 'medium' | 'high'  // 預設 'high'
- *   language?: string             // 回覆語言（預設 auto-detect）
- * }
- *
- * Response: {
- *   reply: string
- *   intent: string
- *   risk: 'low' | 'medium' | 'high'
- *   provider: 'Gemini' | 'Claude'
- *   latencyMs: number
- * }
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
@@ -31,19 +5,57 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
 const INTENT_CATEGORIES = [
-  '產品諮詢',
-  '價格/報價',
-  '訂單查詢',
-  '退換貨/退款',
-  '技術支援',
-  '投訴/抱怨',
-  '帳號/登入問題',
-  '一般問候',
-  '法律/合約',
-  '其他',
+  '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
+  '技術支援', '投訴/抱怨', '帳號/登入問題', '一般問候', '法律/合約', '其他',
 ]
-
 const HIGH_RISK_INTENTS = ['退換貨/退款', '投訴/抱怨', '法律/合約']
+
+interface SheetConfig {
+  apiKey: string
+  spreadsheetId: string
+  sheetName: string
+  keyColumn: string
+  returnColumns: string[]
+  triggerKeywords: string[]
+}
+
+async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
+  const triggered = config.triggerKeywords.some(kw =>
+    kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase())
+  )
+  if (!triggered) return null
+
+  try {
+    const range = encodeURIComponent(`${config.sheetName}!A:Z`)
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}?key=${config.apiKey}`
+    const res = await fetch(url)
+    if (!res.ok) return null
+
+    const json = await res.json()
+    const rows: string[][] = json.values ?? []
+    if (rows.length < 2) return null
+
+    const headers = rows[0]
+    const dataRows = rows.slice(1)
+
+    // Pick only key column + return columns (or all if not specified)
+    const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
+    const colIdxs = wantedCols.length > 0
+      ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
+      : headers.map((_, i) => i)
+
+    const pickedHeaders = colIdxs.map(i => headers[i])
+    const pickedRows = dataRows.map(row => colIdxs.map(i => row[i] ?? ''))
+
+    const table = [pickedHeaders, ...pickedRows]
+      .map(r => r.join(' | '))
+      .join('\n')
+
+    return `【外部資料表：${config.sheetName}】\n${table}`
+  } catch {
+    return null
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,7 +87,26 @@ async function handlePost(req: NextRequest) {
 
   const google = createGoogleGenerativeAI({ apiKey: geminiKey })
 
-  // ── Step 1: Gemini intent classification ─────────────────────────────────
+  // ── Query external data sources ───────────────────────────────────────────
+  const { data: sources } = await supabase
+    .from('cs_data_sources')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('enabled', true)
+
+  const sheetResults: string[] = []
+  if (sources?.length) {
+    await Promise.all(sources.map(async (src) => {
+      const result = await queryGoogleSheet(src.config as SheetConfig, message)
+      if (result) sheetResults.push(result)
+    }))
+  }
+
+  const externalDataSection = sheetResults.length > 0
+    ? `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。`
+    : ''
+
+  // ── Intent classification ─────────────────────────────────────────────────
   const knowledgeSection = knowledgeBase
     ? `\n\n【知識庫】\n${knowledgeBase.slice(0, 3000)}`
     : ''
@@ -102,14 +133,12 @@ async function handlePost(req: NextRequest) {
     intent = parsed.intent ?? intent
     risk = parsed.risk ?? risk
     summary = parsed.summary ?? summary
-
-    // Force high risk for certain intents
     if (HIGH_RISK_INTENTS.includes(intent)) risk = 'high'
   } catch (_) {
-    // Keep defaults on parse failure
+    // keep defaults
   }
 
-  // ── Step 2: Determine provider ────────────────────────────────────────────
+  // ── Build system prompt ───────────────────────────────────────────────────
   const shouldEscalate =
     risk === 'high' ||
     (escalationThreshold === 'medium' && (risk === 'medium' || risk === 'high'))
@@ -124,7 +153,7 @@ ${langInstruction}
 - 語氣親切、專業，避免過於制式
 - 簡潔明瞭，重點在解決客戶問題
 - 若需要人工介入，請告知客戶將安排專員跟進
-- 不要捏造資訊，若不確定請誠實告知${knowledgeBase ? `\n\n知識庫參考：\n${knowledgeBase.slice(0, 4000)}` : ''}`
+- 不要捏造資訊，若不確定請誠實告知${knowledgeBase ? `\n\n知識庫參考：\n${knowledgeBase.slice(0, 4000)}` : ''}${externalDataSection}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
@@ -138,7 +167,6 @@ ${langInstruction}
   let provider: 'Gemini' | 'Claude' = 'Gemini'
 
   if (shouldEscalate) {
-    // ── Claude for high-risk ───────────────────────────────────────────────
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     if (!anthropicKey) {
       provider = 'Gemini'
@@ -153,7 +181,7 @@ ${langInstruction}
         })
         reply = text
       } catch {
-        provider = 'Gemini' // fallback to Gemini on Claude error
+        provider = 'Gemini'
       }
     }
   }
@@ -173,17 +201,15 @@ ${langInstruction}
 
   const latencyMs = Date.now() - t0
 
-  // Optionally save log to Supabase
   if (campaignId) {
     await supabase.from('marketing_campaigns').select('id').eq('id', campaignId).single().then(async ({ data }) => {
       if (!data) return
-      // Append to cs_logs in unit_data[12]
       const { data: camp } = await supabase.from('marketing_campaigns').select('unit_data').eq('id', campaignId).single()
       const unitData = (camp?.unit_data ?? {}) as Record<string, unknown>
       const unit12 = (unitData[12] as { logs?: unknown[] } | undefined) ?? {}
       const logs = (unit12.logs ?? []) as unknown[]
       const newLog = { message, reply, intent, risk, provider, latencyMs, ts: new Date().toISOString() }
-      const updatedLogs = [newLog, ...logs].slice(0, 100) // keep latest 100
+      const updatedLogs = [newLog, ...logs].slice(0, 100)
       await supabase.from('marketing_campaigns').update({
         unit_data: { ...unitData, 12: { ...unit12, logs: updatedLogs } },
       }).eq('id', campaignId)
