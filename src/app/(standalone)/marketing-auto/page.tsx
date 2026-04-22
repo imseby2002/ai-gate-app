@@ -3499,10 +3499,12 @@ type Cs12Tab = 'platforms' | 'ai-settings' | 'test' | 'logs'
 function Unit12CustomerService({
   campaignId,
   savedData,
+  unit2Data,
   onDone,
 }: {
   campaignId: string | null
   savedData?: Unit12Data
+  unit2Data?: Unit2Data
   onDone: (data: Unit12Data) => void
 }) {
   const [tab, setTab] = useState<Cs12Tab>('platforms')
@@ -3606,13 +3608,20 @@ function Unit12CustomerService({
     setTestLoading(true)
 
     try {
+      // Merge manual knowledge base + extracted text from Unit 2 uploaded FAQ files
+      const faqTexts = (unit2Data?.files ?? [])
+        .filter(f => f.textContent)
+        .map(f => `【${f.name}】\n${f.textContent}`)
+        .join('\n\n')
+      const mergedKnowledge = [knowledgeBase, faqTexts].filter(Boolean).join('\n\n')
+
       const res = await fetch('/api/marketing/cs-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsg,
           history: testHistory.slice(-6),
-          knowledgeBase,
+          knowledgeBase: mergedKnowledge,
           escalationThreshold,
           language: replyLanguage,
           campaignId,
@@ -3839,7 +3848,14 @@ function Unit12CustomerService({
           <div className="border rounded-xl p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-medium text-sm text-gray-700">知識庫</span>
-              <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
+              <div className="flex items-center gap-2">
+                {(unit2Data?.files ?? []).filter(f => f.textContent).length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                    + {(unit2Data?.files ?? []).filter(f => f.textContent).length} 份上傳檔案
+                  </span>
+                )}
+                <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
+              </div>
             </div>
             <p className="text-xs text-gray-500">輸入公司/產品資訊、常見問答（FAQ），AI 回覆時會參考此內容。</p>
             <textarea value={knowledgeBase} onChange={e => setKnowledgeBase(e.target.value)}
@@ -4374,6 +4390,7 @@ export default function MarketingAutoPage() {
             <Unit12CustomerService
               campaignId={campaignId}
               savedData={unitData[12] as Unit12Data | undefined}
+              unit2Data={unitData[2] as Unit2Data | undefined}
               onDone={handleUnit12Done}
             />
           )}
