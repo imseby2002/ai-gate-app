@@ -3612,9 +3612,9 @@ function Unit12CustomerService({
         }),
       })
       const raw = await res.text()
-      let data: Record<string, unknown>
+      let data: Record<string, unknown> = {}
       try {
-        data = JSON.parse(raw)
+        data = JSON.parse(raw) as Record<string, unknown>
       } catch {
         throw new Error(raw.slice(0, 200) || `伺服器回應錯誤 (HTTP ${res.status})`)
       }

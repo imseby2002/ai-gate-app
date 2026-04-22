@@ -46,6 +46,14 @@ const INTENT_CATEGORIES = [
 const HIGH_RISK_INTENTS = ['退換貨/退款', '投訴/抱怨', '法律/合約']
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req)
+  } catch (e) {
+    return NextResponse.json({ error: `伺服器錯誤：${String(e)}` }, { status: 500 })
+  }
+}
+
+async function handlePost(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
