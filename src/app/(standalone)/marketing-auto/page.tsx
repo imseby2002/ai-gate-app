@@ -3612,9 +3612,10 @@ function Unit12CustomerService({
         }),
       })
       const raw = await res.text()
-      let data: Record<string, unknown> = {}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let data: Record<string, any> = {}
       try {
-        data = JSON.parse(raw) as Record<string, unknown>
+        data = JSON.parse(raw)
       } catch {
         throw new Error(raw.slice(0, 200) || `伺服器回應錯誤 (HTTP ${res.status})`)
       }
