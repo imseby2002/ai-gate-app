@@ -3511,6 +3511,13 @@ function Unit12CustomerService({
   const [knowledgeBase, setKnowledgeBase] = useState(savedData?.knowledgeBase ?? '')
   const [escalationThreshold, setEscalationThreshold] = useState<'medium' | 'high'>(savedData?.escalationThreshold ?? 'high')
   const [replyLanguage, setReplyLanguage] = useState(savedData?.replyLanguage ?? 'auto')
+
+  // Sync when savedData loads asynchronously from Supabase
+  useEffect(() => {
+    if (savedData?.knowledgeBase !== undefined) setKnowledgeBase(savedData.knowledgeBase)
+    if (savedData?.escalationThreshold) setEscalationThreshold(savedData.escalationThreshold)
+    if (savedData?.replyLanguage) setReplyLanguage(savedData.replyLanguage)
+  }, [savedData])
   const [savingSettings, setSavingSettings] = useState(false)
 
   // Test chat
