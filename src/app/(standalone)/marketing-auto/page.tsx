@@ -3452,35 +3452,45 @@ const CS_PLATFORMS = [
     name: 'LINE OA',
     color: '#00B900',
     envVars: ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET'],
-    note: 'LINE Developers Console → Messaging API → Webhook URL',
+    note: 'LINE Developers Console → Messaging API → 填入下方 Webhook URL',
+    docUrl: 'https://developers.line.biz/en/docs/messaging-api/getting-started/',
+    showWebhook: true,
   },
   {
     id: 'whatsapp',
     name: 'WhatsApp',
     color: '#25D366',
     envVars: ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN'],
-    note: 'Meta Business Suite → WhatsApp → 設定 Webhook',
+    note: 'Meta Developer → WhatsApp → Configuration → 填入下方 Webhook URL',
+    docUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',
+    showWebhook: true,
   },
   {
     id: 'telegram',
     name: 'Telegram',
     color: '#2AABEE',
     envVars: ['TELEGRAM_BOT_TOKEN'],
-    note: '向 @BotFather 建立 Bot → 取得 Token → 填入後系統自動設定 Webhook',
+    note: '向 @BotFather 建立 Bot，取得 Bot Token 填入即可，無需設定 Webhook',
+    docUrl: 'https://core.telegram.org/bots/tutorial',
+    showWebhook: false,
   },
   {
     id: 'zalo',
     name: 'Zalo OA',
     color: '#0068FF',
     envVars: ['ZALO_OA_ACCESS_TOKEN'],
-    note: 'Zalo for Business → Official Account → Webhook（個人版 Zalo 無開放 API）',
+    note: 'Zalo for Business → Official Account → Webhook → 填入下方 Webhook URL',
+    docUrl: 'https://developers.zalo.me/docs/official-account',
+    showWebhook: true,
   },
   {
     id: 'wechat',
     name: 'WeChat',
     color: '#07C160',
     envVars: ['WECHAT_APP_ID', 'WECHAT_APP_SECRET'],
-    note: 'WeChat Official Account → 開發設定 → 伺服器配置',
+    note: 'WeChat Official Account → 開發設定 → 伺服器配置 → 填入下方 Webhook URL',
+    docUrl: 'https://developers.weixin.qq.com/doc/offiaccount/Getting_Started/Overview.html',
+    showWebhook: true,
   },
 ]
 
@@ -3601,7 +3611,13 @@ function Unit12CustomerService({
           campaignId,
         }),
       })
-      const data = await res.json()
+      const raw = await res.text()
+      let data: Record<string, unknown>
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        throw new Error(raw.slice(0, 200) || `伺服器回應錯誤 (HTTP ${res.status})`)
+      }
       if (data.reply) {
         const newEntry: CsLogEntry = {
           message: userMsg,
@@ -3688,18 +3704,28 @@ function Unit12CustomerService({
                 </div>
 
                 {/* Webhook URL */}
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[10px] bg-gray-100 px-2.5 py-1.5 rounded-lg text-gray-700 font-mono truncate">
-                    {appUrl}/api/marketing/cs-webhook/{p.id}/{userId ?? '(登入後顯示)'}
-                  </code>
-                  <button onClick={() => userId && navigator.clipboard.writeText(`${appUrl}/api/marketing/cs-webhook/${p.id}/${userId}`)}
-                    className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">
-                    複製
-                  </button>
-                </div>
+                {p.showWebhook && (
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-[10px] bg-gray-100 px-2.5 py-1.5 rounded-lg text-gray-700 font-mono truncate">
+                      {appUrl}/api/marketing/cs-webhook/{p.id}/{userId ?? '(登入後顯示)'}
+                    </code>
+                    <button onClick={() => userId && navigator.clipboard.writeText(`${appUrl}/api/marketing/cs-webhook/${p.id}/${userId}`)}
+                      className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">
+                      複製
+                    </button>
+                  </div>
+                )}
 
                 {/* Note */}
-                <p className="text-[10px] text-gray-400">{p.note}</p>
+                <p className="text-[10px] text-gray-400">
+                  {p.note}
+                  {p.docUrl && (
+                    <a href={p.docUrl} target="_blank" rel="noopener noreferrer"
+                      className="ml-1.5 text-indigo-400 hover:text-indigo-600 underline">
+                      官方說明 ↗
+                    </a>
+                  )}
+                </p>
 
                 {/* Credential inputs (when editing) */}
                 {editingPlatform === p.id && (

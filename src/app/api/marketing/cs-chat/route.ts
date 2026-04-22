@@ -133,27 +133,34 @@ ${langInstruction}
     // ── Claude for high-risk ───────────────────────────────────────────────
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     if (!anthropicKey) {
-      // Fallback to Gemini even for high-risk if Claude not available
       provider = 'Gemini'
     } else {
       provider = 'Claude'
-      const anthropic = createAnthropic({ apiKey: anthropicKey })
-      const { text } = await generateText({
-        model: anthropic('claude-sonnet-4-5'),
-        system: systemPrompt,
-        messages: msgHistory,
-      })
-      reply = text
+      try {
+        const anthropic = createAnthropic({ apiKey: anthropicKey })
+        const { text } = await generateText({
+          model: anthropic('claude-sonnet-4-5'),
+          system: systemPrompt,
+          messages: msgHistory,
+        })
+        reply = text
+      } catch {
+        provider = 'Gemini' // fallback to Gemini on Claude error
+      }
     }
   }
 
   if (provider === 'Gemini') {
-    const { text } = await generateText({
-      model: google('gemini-2.0-flash'),
-      system: systemPrompt,
-      messages: msgHistory,
-    })
-    reply = text
+    try {
+      const { text } = await generateText({
+        model: google('gemini-2.0-flash'),
+        system: systemPrompt,
+        messages: msgHistory,
+      })
+      reply = text
+    } catch (e) {
+      return NextResponse.json({ error: `Gemini 呼叫失敗：${String(e).slice(0, 200)}` }, { status: 500 })
+    }
   }
 
   const latencyMs = Date.now() - t0
