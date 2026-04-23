@@ -3467,12 +3467,21 @@ const CS_PLATFORMS = [
   },
   {
     id: 'whatsapp',
-    name: 'WhatsApp',
+    name: 'WhatsApp Business',
     color: '#25D366',
     envVars: ['WHATSAPP_PHONE_NUMBER_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN'],
     note: 'Meta Developer → WhatsApp → Configuration → 填入下方 Webhook URL',
     docUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',
     showWebhook: true,
+  },
+  {
+    id: 'whatsapp_personal',
+    name: 'WhatsApp 個人版',
+    color: '#128C7E',
+    envVars: ['WHATSAPP_PERSONAL_BRIDGE_URL', 'WHATSAPP_PERSONAL_API_KEY'],
+    note: '需自行架設 Baileys Bridge Server（Node.js），掃 QR 碼後即可接收個人帳號訊息',
+    docUrl: 'https://github.com/WhiskeySockets/Baileys',
+    showWebhook: false,
   },
   {
     id: 'telegram',
@@ -3724,6 +3733,10 @@ function Unit12CustomerService({
         { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
         { key: 'whatsapp_verify_token', label: 'Verify Token（自訂任意字串）', placeholder: 'my_verify_token', secret: false },
       ],
+      whatsapp_personal: [
+        { key: 'whatsapp_personal_bridge_url', label: 'Bridge Server URL', placeholder: 'https://your-bridge.example.com', secret: false },
+        { key: 'whatsapp_personal_api_key', label: 'Bridge API Key', placeholder: 'your-api-key', secret: true },
+      ],
       telegram: [
         { key: 'telegram_bot_token', label: 'Bot Token（從 @BotFather 取得）', placeholder: '123456789:AAF...', secret: true },
       ],
@@ -3893,6 +3906,22 @@ function Unit12CustomerService({
                     </a>
                   )}
                 </p>
+
+                {/* WhatsApp Personal — bridge setup guide */}
+                {p.id === 'whatsapp_personal' && editingPlatform === p.id && (
+                  <div className="border border-amber-200 bg-amber-50 rounded-xl p-3 text-xs text-amber-800 space-y-1.5">
+                    <div className="font-semibold flex items-center gap-1.5">⚠️ 個人版需自架 Bridge Server</div>
+                    <p>WhatsApp 個人帳號無官方 API，需要在你的伺服器（VPS / NAS）上架設 Baileys Bridge，步驟：</p>
+                    <ol className="list-decimal list-inside space-y-1 pl-1">
+                      <li>在你的伺服器執行：<code className="bg-amber-100 px-1 rounded">npx @adiwajshing/baileys-bridge</code></li>
+                      <li>掃描終端機顯示的 QR Code，完成個人帳號登入</li>
+                      <li>Bridge 啟動後，把 Bridge Server URL 及 API Key 填入下方</li>
+                      <li>Bridge 收到訊息後，會轉發到 AI GATE 並回傳 AI 回覆</li>
+                    </ol>
+                    <a href="https://github.com/WhiskeySockets/Baileys" target="_blank" rel="noopener noreferrer"
+                      className="inline-block text-amber-700 underline">Baileys GitHub ↗</a>
+                  </div>
+                )}
 
                 {/* Credential inputs (when editing) */}
                 {editingPlatform === p.id && (
