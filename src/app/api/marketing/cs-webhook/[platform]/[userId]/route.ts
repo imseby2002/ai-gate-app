@@ -3,9 +3,13 @@
  * 用戶專屬客服 Webhook 接收端點（從 Supabase 讀取 API 憑證）
  *
  * 使用 service role key 繞過 RLS，因為 webhook 來自外部平台（無用戶 session）
+ * AI 直接在此呼叫，不轉發至 cs-chat（cs-chat 需要 session auth）
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateText } from 'ai'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -25,6 +29,148 @@ async function loadCredentials(userId: string, platform: string): Promise<Record
     .eq('platform', platform)
     .single()
   return (data?.credentials as Record<string, string>) ?? {}
+}
+
+// ── Load CS knowledge base (unit_data[12]) + company data ────────────────────
+interface CsKnowledge {
+  systemPrompt: string
+  knowledgeBase: string
+  escalationThreshold: 'medium' | 'high'
+  replyLanguage: string
+}
+
+async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
+  const supabase = getServiceClient()
+
+  // Load most recently updated campaign unit_data[12]
+  const { data: campaigns } = await supabase
+    .from('marketing_campaigns')
+    .select('unit_data, updated_at')
+    .eq('user_id', userId)
+    .neq('status', 'archived')
+    .order('updated_at', { ascending: false })
+    .limit(10)
+
+  let systemPrompt = ''
+  let escalationThreshold: 'medium' | 'high' = 'high'
+  let replyLanguage = 'auto'
+  const knowledgeParts: string[] = []
+
+  // Find first campaign that has unit_data[12] with content
+  if (campaigns?.length) {
+    for (const camp of campaigns) {
+      const unit12 = (camp.unit_data as Record<string, unknown>)?.[12] as Record<string, unknown> | undefined
+      if (!unit12) continue
+
+      if (unit12.knowledgeBase) systemPrompt = String(unit12.knowledgeBase)
+      if (unit12.escalationThreshold) escalationThreshold = unit12.escalationThreshold as 'medium' | 'high'
+      if (unit12.replyLanguage) replyLanguage = String(unit12.replyLanguage)
+
+      // Dialogue files (CS-specific)
+      const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>
+      for (const f of dialogueFiles) {
+        if (f.textContent) {
+          knowledgeParts.push(`【知識庫｜${f.name}】\n${f.textContent}`)
+        }
+      }
+
+      if (systemPrompt || knowledgeParts.length > 0) break
+    }
+  }
+
+  // Load company data as fallback knowledge
+  const { data: companyRow } = await supabase
+    .from('company_data')
+    .select('data')
+    .eq('user_id', userId)
+    .single()
+
+  if (companyRow?.data) {
+    const cd = companyRow.data as Record<string, unknown>
+    // Company FAQ files
+    const files = (cd.files ?? []) as Array<{ name: string; textContent?: string }>
+    for (const f of files) {
+      if (f.textContent) {
+        knowledgeParts.push(`【公司資料｜${f.name}】\n${f.textContent}`)
+      }
+    }
+    // Company info text
+    if (cd.companyInfo) {
+      knowledgeParts.push(`【公司簡介】\n${cd.companyInfo}`)
+    }
+  }
+
+  return {
+    systemPrompt,
+    knowledgeBase: knowledgeParts.join('\n\n').slice(0, 8000),
+    escalationThreshold,
+    replyLanguage,
+  }
+}
+
+// ── AI reply (直接呼叫 Gemini / Claude，不經過 cs-chat 路由) ─────────────────
+async function getAIReply(
+  message: string,
+  knowledge: CsKnowledge,
+  history: Array<{ role: 'user' | 'assistant'; content: string }> = []
+): Promise<string> {
+  const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
+
+  try {
+    const langInstruction = knowledge.replyLanguage === 'auto'
+      ? '請使用與客戶相同的語言回覆。'
+      : `請使用 ${knowledge.replyLanguage} 回覆。`
+
+    const baseInstructions = knowledge.systemPrompt?.trim()
+      ? knowledge.systemPrompt.trim()
+      : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。'
+
+    const systemPrompt = `${baseInstructions}
+
+【重要格式規定】
+- 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
+- ${langInstruction}
+- 若需要人工介入，請告知客戶將安排專員跟進
+- 不確定的資訊請誠實說明，勿猜測${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}`
+
+    const messages = [
+      ...history.slice(-6),
+      { role: 'user' as const, content: message },
+    ]
+
+    const geminiKey = process.env.GOOGLE_AI_API_KEY
+    if (!geminiKey) return FALLBACK
+
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+
+    // High risk → try Claude first
+    const HIGH_RISK_KEYWORDS = ['退款', '退貨', '投訴', '抱怨', '法律', 'refund', 'complaint', 'lawsuit']
+    const isHighRisk = HIGH_RISK_KEYWORDS.some(kw => message.toLowerCase().includes(kw.toLowerCase()))
+
+    if (isHighRisk) {
+      const anthropicKey = process.env.ANTHROPIC_API_KEY
+      if (anthropicKey) {
+        try {
+          const anthropic = createAnthropic({ apiKey: anthropicKey })
+          const { text } = await generateText({
+            model: anthropic('claude-sonnet-4-5'),
+            system: systemPrompt,
+            messages,
+          })
+          return text || FALLBACK
+        } catch { /* fall through to Gemini */ }
+      }
+    }
+
+    const { text } = await generateText({
+      model: google('gemini-2.5-flash'),
+      system: systemPrompt,
+      messages,
+    })
+    return text || FALLBACK
+  } catch {
+    return FALLBACK
+  }
 }
 
 // ── LINE signature verification ───────────────────────────────────────────────
@@ -64,29 +210,14 @@ async function replyTelegram(chatId: string | number, text: string, botToken: st
   })
 }
 
-// ── Fetch AI reply ────────────────────────────────────────────────────────────
-async function getAIReply(message: string, baseUrl: string, knowledgeBase: string): Promise<string> {
-  try {
-    const res = await fetch(`${baseUrl}/api/marketing/cs-chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, knowledgeBase }),
-    })
-    if (!res.ok) return '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
-    const data = await res.json()
-    return data.reply ?? '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
-  } catch {
-    return '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
-  }
-}
-
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ platform: string; userId: string }> }
 ) {
   const { platform, userId } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? `https://${req.headers.get('host')}`
-  const knowledgeBase = ''
+
+  // Load CS knowledge base once for all platforms
+  const knowledge = await loadCsKnowledge(userId)
 
   // ── LINE ──────────────────────────────────────────────────────────────────
   if (platform === 'line' || platform === 'line-oa') {
@@ -106,7 +237,7 @@ export async function POST(
       if (event.type !== 'message' || event.message?.type !== 'text') continue
       const text: string = event.message.text
       const replyToken: string = event.replyToken
-      const reply = await getAIReply(text, baseUrl, knowledgeBase)
+      const reply = await getAIReply(text, knowledge)
       if (token && replyToken) await replyLine(replyToken, reply, token)
     }
     return NextResponse.json({ ok: true })
@@ -126,7 +257,7 @@ export async function POST(
       if (msg.type !== 'text') continue
       const text: string = msg.text?.body ?? ''
       const to: string   = msg.from
-      const reply = await getAIReply(text, baseUrl, knowledgeBase)
+      const reply = await getAIReply(text, knowledge)
       if (token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
     }
     return NextResponse.json({ ok: true })
@@ -134,15 +265,16 @@ export async function POST(
 
   // ── Telegram ──────────────────────────────────────────────────────────────
   if (platform === 'telegram') {
-    const creds    = await loadCredentials(userId, platform)
+    const creds    = await loadCredentials(userId, 'telegram')
     const botToken = creds.telegram_bot_token ?? ''
     const body     = await req.json()
     const message  = body?.message ?? body?.edited_message
+
     if (message?.text && botToken) {
       const chatId: string | number = message.chat?.id
       const text: string = message.text
       if (chatId && text && !text.startsWith('/')) {
-        const reply = await getAIReply(text, baseUrl, knowledgeBase)
+        const reply = await getAIReply(text, knowledge)
         await replyTelegram(chatId, reply, botToken)
       }
     }
@@ -159,7 +291,7 @@ export async function POST(
       const text: string     = body?.message?.text ?? ''
       const senderId: string = body?.sender?.id ?? ''
       if (text) {
-        const reply = await getAIReply(text, baseUrl, knowledgeBase)
+        const reply = await getAIReply(text, knowledge)
         if (oaToken && senderId) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
@@ -184,7 +316,7 @@ export async function POST(
     const to   = toMatch?.[1] ?? ''
 
     if (text && from && to) {
-      const reply = await getAIReply(text, baseUrl, knowledgeBase)
+      const reply = await getAIReply(text, knowledge)
       const xmlReply = `<xml>
 <ToUserName><![CDATA[${from}]]></ToUserName>
 <FromUserName><![CDATA[${to}]]></FromUserName>
