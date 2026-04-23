@@ -53,6 +53,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if ('selectedPlatforms' in body) patch.selected_platforms = body.selectedPlatforms
   if ('feedbacks'         in body) patch.feedbacks          = body.feedbacks
   if ('status'            in body) patch.status             = body.status
+  if ('unit_data'         in body) patch.unit_data          = body.unit_data
+  if ('unit_statuses'     in body) patch.unit_statuses      = body.unit_statuses
 
   const { error } = await supabase
     .from('marketing_campaigns')

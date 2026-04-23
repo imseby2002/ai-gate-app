@@ -7,7 +7,8 @@ import {
   Plus, ChevronDown, Loader2, CheckCircle2, AlertCircle,
   XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
   FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff, Zap,
-  Bell, ShoppingBag, Smartphone, TrendingUp
+  Bell, ShoppingBag, Smartphone, TrendingUp,
+  MoreHorizontal, Pencil, Trash2, Check
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -3439,11 +3440,19 @@ interface CsLogEntry {
   ts: string
 }
 
+interface CsDialogueFile {
+  url: string
+  name: string
+  sizeKb: number
+  textContent: string
+}
+
 interface Unit12Data {
   knowledgeBase?: string
   escalationThreshold?: 'medium' | 'high'
   replyLanguage?: string
   logs?: CsLogEntry[]
+  dialogueFiles?: CsDialogueFile[]
 }
 
 const CS_PLATFORMS = [
@@ -3494,7 +3503,7 @@ const CS_PLATFORMS = [
   },
 ]
 
-type Cs12Tab = 'platforms' | 'ai-settings' | 'data-sources' | 'test' | 'logs'
+type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'test' | 'logs'
 
 interface CsDataSource {
   id: string
@@ -3533,8 +3542,43 @@ function Unit12CustomerService({
     if (savedData?.knowledgeBase !== undefined) setKnowledgeBase(savedData.knowledgeBase)
     if (savedData?.escalationThreshold) setEscalationThreshold(savedData.escalationThreshold)
     if (savedData?.replyLanguage) setReplyLanguage(savedData.replyLanguage)
+    if (savedData?.dialogueFiles !== undefined) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
   const [savingSettings, setSavingSettings] = useState(false)
+
+  // Dialogue files
+  const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
+  const [uploadingDialogue, setUploadingDialogue] = useState(false)
+  const dialogueInputRef = useRef<HTMLInputElement>(null)
+
+  const handleDialogueUpload = async (file: File) => {
+    setUploadingDialogue(true)
+    const form = new FormData()
+    form.append('file', file)
+    form.append('category', 'faq')
+    try {
+      const res = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok && data.file) {
+        const newFiles = [...dialogueFiles, {
+          url: data.file.url,
+          name: file.name,
+          sizeKb: Math.round(file.size / 1024),
+          textContent: data.file.textContent ?? '',
+        }]
+        setDialogueFiles(newFiles)
+        onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
+      }
+    } finally {
+      setUploadingDialogue(false)
+    }
+  }
+
+  const removeDialogueFile = (url: string) => {
+    const newFiles = dialogueFiles.filter(f => f.url !== url)
+    setDialogueFiles(newFiles)
+    onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
+  }
 
   // Test chat
   const [testInput, setTestInput] = useState('')
@@ -3696,7 +3740,7 @@ function Unit12CustomerService({
 
   function saveSettings() {
     setSavingSettings(true)
-    const data: Unit12Data = { knowledgeBase, escalationThreshold, replyLanguage, logs }
+    const data: Unit12Data = { knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -3709,12 +3753,16 @@ function Unit12CustomerService({
     setTestLoading(true)
 
     try {
-      // Merge manual knowledge base + extracted text from Unit 2 uploaded FAQ files
+      // Dialogue files (CS-specific, highest priority) → Unit 2 company FAQ files (fallback)
+      const dialogueTexts = (dialogueFiles)
+        .filter(f => f.textContent)
+        .map(f => `【對話資料｜${f.name}】\n${f.textContent}`)
+        .join('\n\n')
       const faqTexts = (unit2Data?.files ?? [])
         .filter(f => f.textContent)
-        .map(f => `【${f.name}】\n${f.textContent}`)
+        .map(f => `【公司資料｜${f.name}】\n${f.textContent}`)
         .join('\n\n')
-      const mergedKnowledge = [knowledgeBase, faqTexts].filter(Boolean).join('\n\n')
+      const mergedKnowledge = [knowledgeBase, dialogueTexts, faqTexts].filter(Boolean).join('\n\n')
 
       const res = await fetch('/api/marketing/cs-chat', {
         method: 'POST',
@@ -3780,8 +3828,8 @@ function Unit12CustomerService({
           <p className="text-xs text-gray-500 mt-0.5">Gemini Flash 意圖分類 · Claude Sonnet 高風險升級</p>
         </div>
         <div className="flex gap-1.5">
-          {(['platforms', 'ai-settings', 'data-sources', 'test', 'logs'] as Cs12Tab[]).map(t => {
-            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'data-sources': '資料來源', test: '測試', logs: '記錄' }
+          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'test', 'logs'] as Cs12Tab[]).map(t => {
+            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '對話資料', 'data-sources': '資料來源', test: '測試', logs: '記錄' }
             return (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -3979,6 +4027,54 @@ function Unit12CustomerService({
               <code className="bg-orange-100 px-1.5 py-0.5 rounded">ANTHROPIC_API_KEY</code>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Tab: Dialogue Files ─────────────────────────────────────────────── */}
+      {tab === 'dialogue-files' && (
+        <div className="space-y-4">
+          <div>
+            <div className="text-sm font-medium text-gray-700">對話資料庫</div>
+            <div className="text-xs text-gray-400 mt-0.5">上傳 FAQ、對話紀錄、產品說明等文件，AI 客服優先從這裡查找答案，找不到才回到公司資料</div>
+          </div>
+
+          {/* Upload zone */}
+          <div
+            onClick={() => !uploadingDialogue && dialogueInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${uploadingDialogue ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+          >
+            <input
+              ref={dialogueInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.docx,.xlsx,.txt"
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleDialogueUpload(f); e.target.value = '' }}
+            />
+            {uploadingDialogue
+              ? <><Loader2 className="h-6 w-6 text-gray-400 mx-auto mb-2 animate-spin" /><p className="text-xs text-gray-500">上傳中…</p></>
+              : <><Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" /><p className="text-xs text-gray-500">點擊上傳 PDF / DOCX / XLSX / TXT · 最大 50MB</p></>
+            }
+          </div>
+
+          {/* File list */}
+          {dialogueFiles.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-4">尚未上傳任何對話資料</p>
+          ) : (
+            <div className="space-y-2">
+              {dialogueFiles.map(f => (
+                <div key={f.url} className="flex items-center gap-3 p-3 rounded-xl border bg-gray-50">
+                  <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{f.name}</p>
+                    <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? `已萃取 ${f.textContent.length.toLocaleString()} 字` : '無文字內容'}</p>
+                  </div>
+                  <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -4267,19 +4363,36 @@ export default function MarketingAutoPage() {
   const [campaignTitle, setCampaignTitle] = useState('未命名行銷專案')
   const [showCampaigns, setShowCampaigns] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [campaignMenu, setCampaignMenu] = useState<string | null>(null) // campaign id with open "..." menu
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   const [activeUnit, setActiveUnit] = useState(1)
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
 
+  // Shared company data (Unit 2) — global, not per campaign
+  const [companyData, setCompanyData] = useState<Unit2Data>({})
+
   const dropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setShowCampaigns(false)
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setShowCampaigns(false)
+        setCampaignMenu(null)
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Load shared company data on mount
+  useEffect(() => {
+    fetch('/api/marketing/company-data')
+      .then(r => r.json())
+      .then(d => { if (d.data) setCompanyData(d.data) })
+      .catch(() => {})
   }, [])
 
   const loadCampaigns = useCallback(async () => {
@@ -4336,9 +4449,13 @@ export default function MarketingAutoPage() {
   }, [ensureCampaign, saveUnitResult])
 
   const handleUnit2Save = useCallback(async (data: Unit2Data) => {
-    const cid = await ensureCampaign()
-    if (cid) saveUnitResult(2, data, cid)
-  }, [ensureCampaign, saveUnitResult])
+    setCompanyData(data)
+    await fetch('/api/marketing/company-data', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+  }, [])
 
   const handleUnit3Done = useCallback(async (data: Unit3Data) => {
     const cid = await ensureCampaign()
@@ -4417,14 +4534,73 @@ export default function MarketingAutoPage() {
                   <Plus className="h-3.5 w-3.5" /> 新建專案
                 </button>
                 {campaigns.map(c => (
-                  <button key={c.id} onClick={() => loadCampaign(c.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-gray-50 text-left ${c.id === campaignId ? 'bg-gray-50 font-medium' : ''}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate">{c.title}</div>
-                      <div className="text-gray-400 text-[10px]">{new Date(c.updated_at).toLocaleDateString('zh-TW')}</div>
-                    </div>
-                    {c.id === campaignId && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
-                  </button>
+                  <div key={c.id} className={`relative flex items-center group ${c.id === campaignId ? 'bg-gray-50 font-medium' : ''}`}>
+                    {/* rename inline */}
+                    {renamingId === c.id ? (
+                      <div className="flex-1 flex items-center gap-1 px-3 py-1.5">
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={e => setRenameValue(e.target.value)}
+                          onKeyDown={async e => {
+                            if (e.key === 'Enter') {
+                              await patchCampaign(c.id, { title: renameValue })
+                              setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, title: renameValue } : x))
+                              if (c.id === campaignId) setCampaignTitle(renameValue)
+                              setRenamingId(null)
+                            }
+                            if (e.key === 'Escape') setRenamingId(null)
+                          }}
+                          className="flex-1 h-6 px-1 text-xs border rounded outline-none focus:ring-1"
+                        />
+                        <button onClick={async () => {
+                          await patchCampaign(c.id, { title: renameValue })
+                          setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, title: renameValue } : x))
+                          if (c.id === campaignId) setCampaignTitle(renameValue)
+                          setRenamingId(null)
+                        }} className="p-0.5 text-green-600 hover:text-green-700">
+                          <Check className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => loadCampaign(c.id)}
+                        className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-gray-50 text-left">
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate">{c.title}</div>
+                          <div className="text-gray-400 text-[10px]">{new Date(c.updated_at).toLocaleDateString('zh-TW')}</div>
+                        </div>
+                        {c.id === campaignId && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                      </button>
+                    )}
+                    {/* "..." menu */}
+                    {renamingId !== c.id && (
+                      <div className="relative flex-shrink-0 pr-1">
+                        <button
+                          onClick={e => { e.stopPropagation(); setCampaignMenu(campaignMenu === c.id ? null : c.id) }}
+                          className="p-1 rounded text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                        {campaignMenu === c.id && (
+                          <div className="absolute right-0 top-full mt-0.5 w-24 bg-white border rounded-lg shadow-lg z-50 overflow-hidden text-xs">
+                            <button onClick={() => { setRenamingId(c.id); setRenameValue(c.title); setCampaignMenu(null) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
+                              <Pencil className="h-3 w-3" /> 更名
+                            </button>
+                            <button onClick={async () => {
+                              if (!confirm(`確定刪除「${c.title}」？`)) return
+                              await fetch(`/api/marketing/campaign/${c.id}`, { method: 'DELETE' })
+                              if (c.id === campaignId) { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}) }
+                              setCampaigns(prev => prev.filter(x => x.id !== c.id))
+                              setCampaignMenu(null)
+                            }} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 text-red-600 text-left">
+                              <Trash2 className="h-3 w-3" /> 刪除
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
                 {campaigns.length === 0 && <div className="px-3 py-3 text-xs text-gray-400 text-center">尚無專案</div>}
               </div>
@@ -4516,7 +4692,7 @@ export default function MarketingAutoPage() {
           {activeUnit === 2 && (
             <Unit2CompanyData
               campaignId={campaignId}
-              savedData={unitData[2] as Unit2Data | undefined}
+              savedData={companyData}
               onSave={handleUnit2Save}
             />
           )}
@@ -4525,7 +4701,7 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[3] as Unit3Data | undefined}
               unit1Data={unitData[1] as { summary?: string; raw?: string } | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               onDone={handleUnit3Done}
             />
           )}
@@ -4534,7 +4710,7 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[4] as Unit4Data | undefined}
               unit1Data={unitData[1] as { summary?: string } | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               unit3Data={unitData[3] as Unit3Data | undefined}
               onDone={handleUnit4Done}
             />
@@ -4544,7 +4720,7 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[5] as Unit5Data | undefined}
               unit1Data={unitData[1] as { summary?: string } | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               unit3Data={unitData[3] as Unit3Data | undefined}
               unit4Data={unitData[4] as Unit4Data | undefined}
               onDone={handleUnit5Done}
@@ -4563,7 +4739,7 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[7] as Unit7Data | undefined}
               unit1Data={unitData[1] as { summary?: string } | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               unit3Data={unitData[3] as Unit3Data | undefined}
               unit4Data={unitData[4] as Unit4Data | undefined}
               unit5Data={unitData[5] as Unit5Data | undefined}
@@ -4593,7 +4769,7 @@ export default function MarketingAutoPage() {
             <Unit10PhoneMarketing
               campaignId={campaignId}
               savedData={unitData[10] as Unit10Data | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               unit4Data={unitData[4] as Unit4Data | undefined}
               onDone={handleUnit10Done}
             />
@@ -4602,7 +4778,7 @@ export default function MarketingAutoPage() {
             <Unit11AvatarMarketing
               campaignId={campaignId}
               savedData={unitData[11] as Unit11Data | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               unit4Data={unitData[4] as Unit4Data | undefined}
               onDone={handleUnit11Done}
             />
@@ -4611,7 +4787,7 @@ export default function MarketingAutoPage() {
             <Unit12CustomerService
               campaignId={campaignId}
               savedData={unitData[12] as Unit12Data | undefined}
-              unit2Data={unitData[2] as Unit2Data | undefined}
+              unit2Data={companyData}
               onDone={handleUnit12Done}
             />
           )}
