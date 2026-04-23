@@ -3829,7 +3829,7 @@ function Unit12CustomerService({
         </div>
         <div className="flex gap-1.5">
           {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'test', 'logs'] as Cs12Tab[]).map(t => {
-            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '對話資料', 'data-sources': '資料來源', test: '測試', logs: '記錄' }
+            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '知識庫', 'data-sources': '資料來源', test: '測試', logs: '記錄' }
             return (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -3993,24 +3993,17 @@ function Unit12CustomerService({
             </select>
           </div>
 
-          {/* Knowledge base */}
+          {/* System Prompt */}
           <div className="border rounded-xl p-4 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm text-gray-700">知識庫</span>
-              <div className="flex items-center gap-2">
-                {(unit2Data?.files ?? []).filter(f => f.textContent).length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                    + {(unit2Data?.files ?? []).filter(f => f.textContent).length} 份上傳檔案
-                  </span>
-                )}
-                <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
-              </div>
+              <span className="font-medium text-sm text-gray-700">系統提示詞（Prompt）</span>
+              <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
             </div>
-            <p className="text-xs text-gray-500">輸入公司/產品資訊、常見問答（FAQ），AI 回覆時會參考此內容。</p>
+            <p className="text-xs text-gray-500">設定 AI 客服的角色與回答風格。知識庫內容（FAQ、文件）請到「知識庫」分頁設定。</p>
             <textarea value={knowledgeBase} onChange={e => setKnowledgeBase(e.target.value)}
-              rows={10}
-              placeholder="例：&#10;公司名稱：AI GATE&#10;主要產品：AI 行銷自動化平台&#10;&#10;常見問題：&#10;Q: 如何申請試用？&#10;A: 請至官網填寫申請表，我們會在 1 個工作天內回覆。&#10;&#10;Q: 收費方案為何？&#10;A: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。"
-              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono" />
+              rows={6}
+              placeholder="例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。"
+              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
 
           <button onClick={saveSettings} disabled={savingSettings}
@@ -4034,47 +4027,70 @@ function Unit12CustomerService({
       {tab === 'dialogue-files' && (
         <div className="space-y-4">
           <div>
-            <div className="text-sm font-medium text-gray-700">對話資料庫</div>
-            <div className="text-xs text-gray-400 mt-0.5">上傳 FAQ、對話紀錄、產品說明等文件，AI 客服優先從這裡查找答案，找不到才回到公司資料</div>
+            <div className="text-sm font-medium text-gray-700">知識庫</div>
+            <div className="text-xs text-gray-400 mt-0.5">AI 客服優先從這裡查找答案，找不到才回到公司資料（Unit 2）</div>
           </div>
 
-          {/* Upload zone */}
-          <div
-            onClick={() => !uploadingDialogue && dialogueInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${uploadingDialogue ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-          >
-            <input
-              ref={dialogueInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,.docx,.xlsx,.txt"
-              onChange={e => { const f = e.target.files?.[0]; if (f) handleDialogueUpload(f); e.target.value = '' }}
-            />
-            {uploadingDialogue
-              ? <><Loader2 className="h-6 w-6 text-gray-400 mx-auto mb-2 animate-spin" /><p className="text-xs text-gray-500">上傳中…</p></>
-              : <><Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" /><p className="text-xs text-gray-500">點擊上傳 PDF / DOCX / XLSX / TXT · 最大 50MB</p></>
-            }
-          </div>
-
-          {/* File list */}
-          {dialogueFiles.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-4">尚未上傳任何對話資料</p>
-          ) : (
-            <div className="space-y-2">
-              {dialogueFiles.map(f => (
-                <div key={f.url} className="flex items-center gap-3 p-3 rounded-xl border bg-gray-50">
-                  <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{f.name}</p>
-                    <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? `已萃取 ${f.textContent.length.toLocaleString()} 字` : '無文字內容'}</p>
-                  </div>
-                  <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+          {/* Direct text input */}
+          <div className="border rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-600">直接輸入知識內容</span>
+              <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
             </div>
-          )}
+            <textarea
+              value={knowledgeBase}
+              onChange={e => setKnowledgeBase(e.target.value)}
+              rows={8}
+              placeholder="例：&#10;Q: 如何申請試用？&#10;A: 請至官網填寫申請表，我們會在 1 個工作天內回覆。&#10;&#10;Q: 收費方案為何？&#10;A: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。"
+              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono"
+            />
+          </div>
+
+          {/* File upload */}
+          <div className="border rounded-xl p-4 space-y-3">
+            <span className="text-xs font-medium text-gray-600">上傳文件（PDF / DOCX / XLSX / TXT）</span>
+            <div
+              onClick={() => !uploadingDialogue && dialogueInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${uploadingDialogue ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+            >
+              <input
+                ref={dialogueInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.docx,.xlsx,.txt"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleDialogueUpload(f); e.target.value = '' }}
+              />
+              {uploadingDialogue
+                ? <><Loader2 className="h-5 w-5 text-gray-400 mx-auto mb-1 animate-spin" /><p className="text-xs text-gray-500">上傳中…</p></>
+                : <><Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500">點擊上傳 · 最大 50MB</p></>
+              }
+            </div>
+            {dialogueFiles.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center">尚未上傳任何文件</p>
+            ) : (
+              <div className="space-y-1.5">
+                {dialogueFiles.map(f => (
+                  <div key={f.url} className="flex items-center gap-3 p-2.5 rounded-lg border bg-gray-50">
+                    <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{f.name}</p>
+                      <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? `已萃取 ${f.textContent.length.toLocaleString()} 字` : '無文字內容'}</p>
+                    </div>
+                    <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Save */}
+          <button onClick={saveSettings} disabled={savingSettings}
+            className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
+            style={{ background: 'var(--primary)' }}>
+            {savingSettings ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</> : <><CheckCircle2 className="h-4 w-4" />儲存知識庫</>}
+          </button>
         </div>
       )}
 
