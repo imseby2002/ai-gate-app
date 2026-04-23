@@ -3559,12 +3559,12 @@ function Unit12CustomerService({
     try {
       const res = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
       const data = await res.json()
-      if (res.ok && data.file) {
+      if (res.ok && data.url) {
         const newFiles = [...dialogueFiles, {
-          url: data.file.url,
+          url: data.url,
           name: file.name,
-          sizeKb: Math.round(file.size / 1024),
-          textContent: data.file.textContent ?? '',
+          sizeKb: data.sizeKb ?? Math.round(file.size / 1024),
+          textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
         onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
