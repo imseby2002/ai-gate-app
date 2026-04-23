@@ -3756,13 +3756,13 @@ function Unit12CustomerService({
       // Dialogue files (CS-specific, highest priority) → Unit 2 company FAQ files (fallback)
       const dialogueTexts = (dialogueFiles)
         .filter(f => f.textContent)
-        .map(f => `【對話資料｜${f.name}】\n${f.textContent}`)
+        .map(f => `【知識庫｜${f.name}】\n${f.textContent}`)
         .join('\n\n')
       const faqTexts = (unit2Data?.files ?? [])
         .filter(f => f.textContent)
         .map(f => `【公司資料｜${f.name}】\n${f.textContent}`)
         .join('\n\n')
-      const mergedKnowledge = [knowledgeBase, dialogueTexts, faqTexts].filter(Boolean).join('\n\n')
+      const mergedKnowledge = [dialogueTexts, faqTexts].filter(Boolean).join('\n\n')
 
       const res = await fetch('/api/marketing/cs-chat', {
         method: 'POST',
@@ -3770,6 +3770,7 @@ function Unit12CustomerService({
         body: JSON.stringify({
           message: userMsg,
           history: testHistory.slice(-6),
+          systemPrompt: knowledgeBase,
           knowledgeBase: mergedKnowledge,
           escalationThreshold,
           language: replyLanguage,
