@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MessageSquare, FileText, Loader2, CheckCircle, AlertCircle, Clock, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { MessageSquare, FileText, Loader2, CheckCircle, AlertCircle, Clock, Trash2 } from 'lucide-react'
 import { formatDateTime } from '@/lib/utils/format'
 import type { Assistant, AssistantFile } from '@/types/database'
 
@@ -14,7 +14,6 @@ interface Props {
 export function AssistantCard({ assistant }: Props) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
-  const [showFiles, setShowFiles] = useState(false)
 
   const files = assistant.assistant_files ?? []
   const doneFiles = files.filter(f => f.processing_status === 'done')
@@ -57,25 +56,18 @@ export function AssistantCard({ assistant }: Props) {
           </button>
         </div>
 
-        {/* File count + toggle */}
-        <div className="mb-3">
-          <button
-            type="button"
-            onClick={() => setShowFiles(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-          >
+        {/* File list - always visible */}
+        <div className="mb-4">
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
             <FileText className="h-3.5 w-3.5" />
-            <span>{doneFiles.length}/{files.length} 份文件</span>
-            {files.length > 0 && (
-              showFiles ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-            )}
-          </button>
-
-          {/* File list */}
-          {showFiles && files.length > 0 && (
-            <div className="mt-2 space-y-1">
+            <span>知識庫文件 ({doneFiles.length}/{files.length})</span>
+          </div>
+          {files.length === 0 ? (
+            <p className="text-xs text-gray-400 italic pl-5">尚未上傳文件</p>
+          ) : (
+            <div className="space-y-1">
               {files.map(f => (
-                <div key={f.id} className="flex items-center gap-2 px-2 py-1 rounded-md bg-gray-50 text-xs text-gray-600">
+                <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-gray-50 text-xs text-gray-600">
                   {statusIcon(f.processing_status)}
                   <span className="truncate flex-1">{f.file_name}</span>
                 </div>
