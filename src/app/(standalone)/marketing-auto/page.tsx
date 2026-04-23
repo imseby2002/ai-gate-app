@@ -3690,6 +3690,8 @@ function Unit12CustomerService({
   const [platformConnected, setPlatformConnected] = useState<Record<string, boolean>>({})
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
+  const [telegramSetupLoading, setTelegramSetupLoading] = useState(false)
+  const [telegramSetupResult, setTelegramSetupResult] = useState<{ ok: boolean; msg: string; webhookUrl?: string } | null>(null)
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -3720,6 +3722,29 @@ function Unit12CustomerService({
       setEditingPlatform(null)
     } catch {}
     setSavingPlatform(null)
+  }
+
+  async function registerTelegramWebhook() {
+    setTelegramSetupLoading(true)
+    setTelegramSetupResult(null)
+    try {
+      const res = await fetch('/api/marketing/telegram-setup', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setTelegramSetupResult({ ok: false, msg: data.error ?? '註冊失敗' })
+      } else {
+        const tgOk = data.setResult?.ok === true
+        const webhookSet = data.infoResult?.result?.url ?? ''
+        setTelegramSetupResult({
+          ok: tgOk,
+          msg: tgOk ? `Webhook 已成功註冊` : `Telegram 回傳：${JSON.stringify(data.setResult)}`,
+          webhookUrl: webhookSet,
+        })
+      }
+    } catch (e) {
+      setTelegramSetupResult({ ok: false, msg: String(e) })
+    }
+    setTelegramSetupLoading(false)
   }
 
   function getCredentialFields(platformId: string): { key: string; label: string; placeholder: string; secret: boolean }[] {
@@ -3906,6 +3931,29 @@ function Unit12CustomerService({
                     </a>
                   )}
                 </p>
+
+                {/* Telegram — webhook registration button */}
+                {p.id === 'telegram' && platformConnected['telegram'] && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={registerTelegramWebhook}
+                        disabled={telegramSetupLoading}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 disabled:opacity-50">
+                        {telegramSetupLoading ? '註冊中...' : '🔗 重新註冊 Webhook'}
+                      </button>
+                      <span className="text-[10px] text-gray-400">若 Bot 沒回應，請點此重新綁定</span>
+                    </div>
+                    {telegramSetupResult && (
+                      <div className={`text-[10px] rounded-lg px-3 py-2 ${telegramSetupResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                        {telegramSetupResult.ok ? '✅ ' : '❌ '}{telegramSetupResult.msg}
+                        {telegramSetupResult.webhookUrl && (
+                          <div className="mt-1 font-mono break-all">{telegramSetupResult.webhookUrl}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* WhatsApp Personal — bridge setup guide */}
                 {p.id === 'whatsapp_personal' && editingPlatform === p.id && (
