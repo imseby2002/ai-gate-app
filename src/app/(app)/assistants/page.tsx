@@ -1,8 +1,8 @@
 ﻿import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Bot, Plus, FileText, MessageSquare, Trash2 } from 'lucide-react'
-import { formatDateTime } from '@/lib/utils/format'
+import { Bot, Plus } from 'lucide-react'
+import { AssistantCard } from '@/components/assistants/AssistantCard'
 
 export default async function AssistantsPage() {
   const supabase = await createClient()
@@ -11,7 +11,7 @@ export default async function AssistantsPage() {
 
   const { data: assistants } = await supabase
     .from('assistants')
-    .select('*, assistant_files(id, file_name, file_type, processing_status)')
+    .select('*, assistant_files(id, file_name, file_type, file_size_bytes, processing_status)')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
 
@@ -48,58 +48,9 @@ export default async function AssistantsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {assistants.map(assistant => {
-            const files = assistant.assistant_files ?? []
-            const doneFiles = files.filter((f: { processing_status: string }) => f.processing_status === 'done')
-            return (
-              <div key={assistant.id} className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow group">
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="text-3xl">{assistant.avatar_emoji}</div>
-                      <div>
-                        <h3 className="font-semibold">{assistant.name}</h3>
-                        {assistant.description && (
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{assistant.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
-                    <span className="flex items-center gap-1">
-                      <FileText className="h-3.5 w-3.5" />
-                      {doneFiles.length}/{files.length} 檔案
-                    </span>
-                    <span>更新於 {formatDateTime(assistant.updated_at)}</span>
-                  </div>
-
-                  {assistant.system_prompt && (
-                    <p className="text-xs text-gray-400 italic line-clamp-2 mb-4 border-l-2 pl-2 border-gray-200">
-                      {assistant.system_prompt.slice(0, 100)}
-                    </p>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/chat?assistantId=${assistant.id}`}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-white"
-                      style={{ background: 'var(--primary)' }}
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      開始對話
-                    </Link>
-                    <Link
-                      href={`/assistants/${assistant.id}`}
-                      className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium border hover:bg-gray-50"
-                    >
-                      編輯
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          {assistants.map(assistant => (
+            <AssistantCard key={assistant.id} assistant={assistant} />
+          ))}
         </div>
       )}
     </div>
