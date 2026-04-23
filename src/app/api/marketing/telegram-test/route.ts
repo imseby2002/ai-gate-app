@@ -65,7 +65,17 @@ export async function GET() {
     })
   } catch { /* ignore */ }
 
-  return NextResponse.json({ info, me, recentChats })
+  // Self-check: verify the cs-webhook URL is publicly accessible (not 307)
+  let endpointStatus: number | null = null
+  try {
+    const selfCheck = await fetch(webhookUrl, {
+      method: 'GET',
+      redirect: 'manual', // don't follow redirects — we want to see the 307
+    })
+    endpointStatus = selfCheck.status
+  } catch { /* ignore */ }
+
+  return NextResponse.json({ info, me, recentChats, endpointStatus })
 }
 
 export async function POST(req: NextRequest) {

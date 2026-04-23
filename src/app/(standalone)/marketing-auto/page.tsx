@@ -3692,7 +3692,7 @@ function Unit12CustomerService({
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
   const [telegramSetupLoading, setTelegramSetupLoading] = useState(false)
   const [telegramSetupResult, setTelegramSetupResult] = useState<{ ok: boolean; msg: string; webhookUrl?: string } | null>(null)
-  const [telegramDiag, setTelegramDiag] = useState<{ info?: Record<string, unknown>; me?: Record<string, unknown>; recentChats?: Array<{ chatId: number; name: string; username?: string }> } | null>(null)
+  const [telegramDiag, setTelegramDiag] = useState<{ info?: Record<string, unknown>; me?: Record<string, unknown>; recentChats?: Array<{ chatId: number; name: string; username?: string }>; endpointStatus?: number } | null>(null)
   const [telegramDiagLoading, setTelegramDiagLoading] = useState(false)
   const [telegramTestChatId, setTelegramTestChatId] = useState('')
   const [telegramTestLoading, setTelegramTestLoading] = useState(false)
@@ -3995,6 +3995,14 @@ function Unit12CustomerService({
                     {/* Diag result */}
                     {telegramDiag && (
                       <div className="text-[10px] rounded-lg px-3 py-2 bg-gray-800 text-gray-100 space-y-1 font-mono">
+                        {/* Endpoint self-check */}
+                        {telegramDiag.endpointStatus != null && (
+                          <div className={telegramDiag.endpointStatus === 200 ? 'text-green-400' : 'text-red-400'}>
+                            🌐 Webhook 端點: HTTP {telegramDiag.endpointStatus}
+                            {telegramDiag.endpointStatus === 307 ? ' ← 仍被重導，等待 Vercel 部署完成後再試' : ''}
+                            {telegramDiag.endpointStatus === 200 ? ' ← 正常可存取' : ''}
+                          </div>
+                        )}
                         {/* Bot info */}
                         {(telegramDiag.me as any)?.ok && (
                           <div>🤖 Bot: @{(telegramDiag.me as any).result?.username} ({(telegramDiag.me as any).result?.first_name})</div>
