@@ -24,6 +24,11 @@ export async function GET() {
   const botToken = await getBotToken(user.id)
   if (!botToken) return NextResponse.json({ error: '尚未設定 Bot Token' }, { status: 400 })
 
+  // Temporarily delete webhook to allow getUpdates (they conflict)
+  // We'll re-register after fetching
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const webhookUrl = `${appUrl}/api/marketing/cs-webhook/telegram/${user.id}`
+
   const [infoRes, meRes] = await Promise.all([
     fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`),
     fetch(`https://api.telegram.org/bot${botToken}/getMe`),
@@ -32,7 +37,35 @@ export async function GET() {
   const info = await infoRes.json()
   const me   = await meRes.json()
 
-  return NextResponse.json({ info, me })
+  // Try to get recent chat IDs via deleteWebhook + getUpdates + re-setWebhook
+  let recentChats: Array<{ chatId: number; name: string; username?: string }> = []
+  try {
+    await fetch(`https://api.telegram.org/bot${botToken}/deleteWebhook`, { method: 'POST' })
+    const updatesRes = await fetch(`https://api.telegram.org/bot${botToken}/getUpdates?limit=20`)
+    const updates = await updatesRes.json()
+    if (updates.ok) {
+      const seen = new Set<number>()
+      for (const u of updates.result ?? []) {
+        const chat = u.message?.chat ?? u.edited_message?.chat
+        if (chat && !seen.has(chat.id)) {
+          seen.add(chat.id)
+          recentChats.push({
+            chatId: chat.id,
+            name: [chat.first_name, chat.last_name].filter(Boolean).join(' ') || chat.title || String(chat.id),
+            username: chat.username,
+          })
+        }
+      }
+    }
+    // Re-register webhook
+    await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: webhookUrl }),
+    })
+  } catch { /* ignore */ }
+
+  return NextResponse.json({ info, me, recentChats })
 }
 
 export async function POST(req: NextRequest) {

@@ -47,7 +47,9 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/api/locale') ||
       pathname.startsWith('/api/auth/check-whitelist') ||
       pathname.startsWith('/favicon') ||
-      pathname.startsWith('/api/health')
+      pathname.startsWith('/api/health') ||
+      pathname.startsWith('/api/marketing/cs-webhook') ||
+      pathname.startsWith('/api/marketing/telegram-webhook')
 
     if (!user && !isPublic) {
       const redirectUrl = request.nextUrl.clone()

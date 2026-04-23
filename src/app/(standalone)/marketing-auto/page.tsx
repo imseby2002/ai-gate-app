@@ -3692,7 +3692,7 @@ function Unit12CustomerService({
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
   const [telegramSetupLoading, setTelegramSetupLoading] = useState(false)
   const [telegramSetupResult, setTelegramSetupResult] = useState<{ ok: boolean; msg: string; webhookUrl?: string } | null>(null)
-  const [telegramDiag, setTelegramDiag] = useState<Record<string, unknown> | null>(null)
+  const [telegramDiag, setTelegramDiag] = useState<{ info?: Record<string, unknown>; me?: Record<string, unknown>; recentChats?: Array<{ chatId: number; name: string; username?: string }> } | null>(null)
   const [telegramDiagLoading, setTelegramDiagLoading] = useState(false)
   const [telegramTestChatId, setTelegramTestChatId] = useState('')
   const [telegramTestLoading, setTelegramTestLoading] = useState(false)
@@ -4018,13 +4018,24 @@ function Unit12CustomerService({
                             </>
                           )
                         })()}
+                        {telegramDiag.recentChats && telegramDiag.recentChats.length > 0 && (
+                          <div className="mt-1">
+                            <div className="text-gray-400 mb-0.5">最近對話（點選填入）：</div>
+                            {telegramDiag.recentChats.map(c => (
+                              <button key={c.chatId} onClick={() => setTelegramTestChatId(String(c.chatId))}
+                                className="mr-1 mb-1 text-[10px] px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-white">
+                                {c.name}{c.username ? ` @${c.username}` : ''} ({c.chatId})
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {!(telegramDiag.me as any)?.ok && <div className="text-red-400">❌ Bot Token 無效：{JSON.stringify((telegramDiag.me as any)?.description)}</div>}
                       </div>
                     )}
 
                     {/* Row 2: send test message */}
                     <div className="border-t border-blue-100 pt-2 space-y-1.5">
-                      <p className="text-[10px] text-gray-500">傳送測試訊息（需先知道 Chat ID，在 Bot 對話中輸入 /start 後，從 @userinfobot 取得）</p>
+                      <p className="text-[10px] text-gray-500">傳送測試訊息（先點「查看錯誤狀態」自動抓取 Chat ID）</p>
                       <div className="flex gap-2">
                         <input
                           value={telegramTestChatId}
