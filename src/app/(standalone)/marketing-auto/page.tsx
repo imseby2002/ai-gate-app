@@ -3692,6 +3692,11 @@ function Unit12CustomerService({
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
   const [telegramSetupLoading, setTelegramSetupLoading] = useState(false)
   const [telegramSetupResult, setTelegramSetupResult] = useState<{ ok: boolean; msg: string; webhookUrl?: string } | null>(null)
+  const [telegramDiag, setTelegramDiag] = useState<Record<string, unknown> | null>(null)
+  const [telegramDiagLoading, setTelegramDiagLoading] = useState(false)
+  const [telegramTestChatId, setTelegramTestChatId] = useState('')
+  const [telegramTestLoading, setTelegramTestLoading] = useState(false)
+  const [telegramTestResult, setTelegramTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -3745,6 +3750,38 @@ function Unit12CustomerService({
       setTelegramSetupResult({ ok: false, msg: String(e) })
     }
     setTelegramSetupLoading(false)
+  }
+
+  async function checkTelegramDiag() {
+    setTelegramDiagLoading(true)
+    setTelegramDiag(null)
+    try {
+      const res = await fetch('/api/marketing/telegram-test')
+      const data = await res.json()
+      setTelegramDiag(data)
+    } catch (e) {
+      setTelegramDiag({ error: String(e) })
+    }
+    setTelegramDiagLoading(false)
+  }
+
+  async function sendTelegramTestMsg() {
+    if (!telegramTestChatId.trim()) return
+    setTelegramTestLoading(true)
+    setTelegramTestResult(null)
+    try {
+      const res = await fetch('/api/marketing/telegram-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: telegramTestChatId.trim() }),
+      })
+      const data = await res.json()
+      const ok = data.result?.ok === true
+      setTelegramTestResult({ ok, msg: ok ? '✅ 測試訊息已送出' : `❌ ${JSON.stringify(data.result?.description ?? data)}` })
+    } catch (e) {
+      setTelegramTestResult({ ok: false, msg: String(e) })
+    }
+    setTelegramTestLoading(false)
   }
 
   function getCredentialFields(platformId: string): { key: string; label: string; placeholder: string; secret: boolean }[] {
@@ -3932,26 +3969,80 @@ function Unit12CustomerService({
                   )}
                 </p>
 
-                {/* Telegram — webhook registration button */}
+                {/* Telegram — diagnostic panel */}
                 {p.id === 'telegram' && platformConnected['telegram'] && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={registerTelegramWebhook}
-                        disabled={telegramSetupLoading}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 disabled:opacity-50">
+                  <div className="space-y-2 border border-blue-100 rounded-xl p-3 bg-blue-50/40">
+                    {/* Row 1: register + diagnose */}
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={registerTelegramWebhook} disabled={telegramSetupLoading}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 disabled:opacity-50">
                         {telegramSetupLoading ? '註冊中...' : '🔗 重新註冊 Webhook'}
                       </button>
-                      <span className="text-[10px] text-gray-400">若 Bot 沒回應，請點此重新綁定</span>
+                      <button onClick={checkTelegramDiag} disabled={telegramDiagLoading}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 disabled:opacity-50">
+                        {telegramDiagLoading ? '查詢中...' : '🔍 查看錯誤狀態'}
+                      </button>
                     </div>
+
+                    {/* Register result */}
                     {telegramSetupResult && (
                       <div className={`text-[10px] rounded-lg px-3 py-2 ${telegramSetupResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                        {telegramSetupResult.ok ? '✅ ' : '❌ '}{telegramSetupResult.msg}
-                        {telegramSetupResult.webhookUrl && (
-                          <div className="mt-1 font-mono break-all">{telegramSetupResult.webhookUrl}</div>
-                        )}
+                        {telegramSetupResult.msg}
+                        {telegramSetupResult.webhookUrl && <div className="mt-0.5 font-mono break-all opacity-70">{telegramSetupResult.webhookUrl}</div>}
                       </div>
                     )}
+
+                    {/* Diag result */}
+                    {telegramDiag && (
+                      <div className="text-[10px] rounded-lg px-3 py-2 bg-gray-800 text-gray-100 space-y-1 font-mono">
+                        {/* Bot info */}
+                        {(telegramDiag.me as any)?.ok && (
+                          <div>🤖 Bot: @{(telegramDiag.me as any).result?.username} ({(telegramDiag.me as any).result?.first_name})</div>
+                        )}
+                        {/* Webhook info */}
+                        {(telegramDiag.info as any)?.ok && (() => {
+                          const r = (telegramDiag.info as any).result
+                          return (
+                            <>
+                              <div>🔗 Webhook URL: <span className="break-all opacity-70">{r.url || '（未設定）'}</span></div>
+                              <div>📬 Pending updates: {r.pending_update_count ?? 0}</div>
+                              {r.last_error_message && (
+                                <div className="text-red-400">❌ 最後錯誤: {r.last_error_message}</div>
+                              )}
+                              {r.last_error_date && (
+                                <div className="text-red-300 opacity-70">   時間: {new Date(r.last_error_date * 1000).toLocaleString()}</div>
+                              )}
+                              {!r.last_error_message && r.url && (
+                                <div className="text-green-400">✅ Webhook 正常，無錯誤紀錄</div>
+                              )}
+                            </>
+                          )
+                        })()}
+                        {!(telegramDiag.me as any)?.ok && <div className="text-red-400">❌ Bot Token 無效：{JSON.stringify((telegramDiag.me as any)?.description)}</div>}
+                      </div>
+                    )}
+
+                    {/* Row 2: send test message */}
+                    <div className="border-t border-blue-100 pt-2 space-y-1.5">
+                      <p className="text-[10px] text-gray-500">傳送測試訊息（需先知道 Chat ID，在 Bot 對話中輸入 /start 後，從 @userinfobot 取得）</p>
+                      <div className="flex gap-2">
+                        <input
+                          value={telegramTestChatId}
+                          onChange={e => setTelegramTestChatId(e.target.value)}
+                          placeholder="Chat ID，例如 123456789"
+                          className="flex-1 text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                        <button onClick={sendTelegramTestMsg} disabled={telegramTestLoading || !telegramTestChatId.trim()}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-green-50 text-green-700 border border-green-200 disabled:opacity-50 whitespace-nowrap">
+                          {telegramTestLoading ? '送出中...' : '📨 送出'}
+                        </button>
+                      </div>
+                      {telegramTestResult && (
+                        <div className={`text-[10px] rounded-lg px-3 py-1.5 ${telegramTestResult.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                          {telegramTestResult.msg}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
