@@ -265,17 +265,47 @@ export async function POST(
 
   // ── Telegram ──────────────────────────────────────────────────────────────
   if (platform === 'telegram') {
-    const creds    = await loadCredentials(userId, 'telegram')
-    const botToken = creds.telegram_bot_token ?? ''
-    const body     = await req.json()
-    const message  = body?.message ?? body?.edited_message
+    const creds        = await loadCredentials(userId, 'telegram')
+    const botToken     = creds.telegram_bot_token ?? ''
+    const adminChatId  = creds.telegram_admin_chat_id ?? ''
+    const body         = await req.json()
+    const message      = body?.message ?? body?.edited_message
 
     if (message?.text && botToken) {
       const chatId: string | number = message.chat?.id
       const text: string = message.text
-      if (chatId && text && !text.startsWith('/')) {
+      const senderName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || '客戶'
+      const isAdmin = adminChatId && String(chatId) === String(adminChatId)
+
+      // ── Admin replying to a forwarded customer message ──────────────────
+      if (isAdmin && message.reply_to_message?.text) {
+        // Extract customer chat ID embedded in the forwarded message
+        const match = message.reply_to_message.text.match(/🆔 ChatID: (-?\d+)/)
+        if (match) {
+          const customerChatId = match[1]
+          await replyTelegram(customerChatId, text, botToken)
+        }
+        return NextResponse.json({ ok: true })
+      }
+
+      // ── Regular customer message ────────────────────────────────────────
+      if (chatId && text && !text.startsWith('/') && !isAdmin) {
+        // 1. AI auto-reply to customer
         const reply = await getAIReply(text, knowledge)
         await replyTelegram(chatId, reply, botToken)
+
+        // 2. Forward to admin if configured
+        if (adminChatId) {
+          const forwardMsg =
+            `💬 客戶訊息\n` +
+            `👤 ${senderName}\n` +
+            `🆔 ChatID: ${chatId}\n\n` +
+            `「${text}」\n\n` +
+            `🤖 AI 已回覆：\n${reply}\n\n` +
+            `─────────────\n` +
+            `↩️ 直接回覆此訊息可代替 AI 回覆客戶`
+          await replyTelegram(adminChatId, forwardMsg, botToken)
+        }
       }
     }
     return NextResponse.json({ ok: true })

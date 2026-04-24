@@ -3488,7 +3488,7 @@ const CS_PLATFORMS = [
     name: 'Telegram',
     color: '#2AABEE',
     envVars: ['TELEGRAM_BOT_TOKEN'],
-    note: '向 @BotFather 建立 Bot，取得 Bot Token 填入即可，無需設定 Webhook',
+    note: '向 @BotFather 建立 Bot，取得 Bot Token 填入。設定管理員 Chat ID 後，客戶訊息將同步轉發給管理員，管理員可直接在 Bot 對話中回覆客戶。',
     docUrl: 'https://core.telegram.org/bots/tutorial',
     showWebhook: false,
   },
@@ -3807,6 +3807,7 @@ function Unit12CustomerService({
       ],
       telegram: [
         { key: 'telegram_bot_token', label: 'Bot Token（從 @BotFather 取得）', placeholder: '123456789:AAF...', secret: true },
+        { key: 'telegram_admin_chat_id', label: '管理員 Chat ID（選填）', placeholder: '你的個人 Chat ID，從 @userinfobot 取得', secret: false },
       ],
       zalo: [
         { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
