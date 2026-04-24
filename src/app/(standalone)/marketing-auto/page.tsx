@@ -4634,7 +4634,7 @@ export default function MarketingAutoPage() {
     })
     const data = await res.json()
     setCreating(false)
-    if (data.id) { setCampaignId(data.id); loadCampaigns(); return data.id as string }
+    if (data.id) { setCampaignId(data.id); loadCampaigns(); if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', data.id); return data.id as string }
     return null
   }, [campaignTitle, loadCampaigns])
 
@@ -4750,7 +4750,7 @@ export default function MarketingAutoPage() {
 
             {showCampaigns && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg z-50 overflow-hidden max-h-60 overflow-y-auto">
-                <button onClick={() => { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false); if (typeof window !== 'undefined') localStorage.removeItem('aigate_last_campaign') }}
+                <button onClick={() => { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false) }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 text-left border-b"
                   style={{ color: 'var(--primary)' }}>
                   <Plus className="h-3.5 w-3.5" /> 新建專案
