@@ -3705,6 +3705,14 @@ function Unit12CustomerService({
   const [telegramTestLoading, setTelegramTestLoading] = useState(false)
   const [telegramTestResult, setTelegramTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  // WhatsApp Personal (Baileys Bridge) states
+  const [waQrData, setWaQrData] = useState<string | null>(null)  // base64 QR image
+  const [waStatus, setWaStatus] = useState<string>('not_started') // 'not_started'|'connecting'|'qr'|'connected'|'disconnected'
+  const [waPhone, setWaPhone] = useState<string | null>(null)
+  const [waLoading, setWaLoading] = useState(false)
+  const [waError, setWaError] = useState<string | null>(null)
+  const waPollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   useEffect(() => {
@@ -3805,6 +3813,75 @@ function Unit12CustomerService({
     setTelegramTestLoading(false)
   }
 
+  // ── WhatsApp Personal (Baileys) ────────────────────────────────────────────
+  async function startWaSession() {
+    setWaLoading(true)
+    setWaError(null)
+    setWaQrData(null)
+    try {
+      const r = await fetch('/api/marketing/wa-bridge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      })
+      const d = await r.json()
+      if (d.error) throw new Error(d.error)
+      setWaStatus(d.status ?? 'connecting')
+      // Start polling for QR / connected status
+      startWaPolling()
+    } catch (e: unknown) {
+      setWaError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setWaLoading(false)
+    }
+  }
+
+  function startWaPolling() {
+    if (waPollingRef.current) clearInterval(waPollingRef.current)
+    waPollingRef.current = setInterval(async () => {
+      try {
+        const r = await fetch('/api/marketing/wa-bridge?action=qr')
+        const d = await r.json()
+        setWaStatus(d.status ?? 'not_started')
+        if (d.qr) setWaQrData(d.qr)
+        if (d.phone) setWaPhone(d.phone)
+        if (d.status === 'connected') {
+          setWaQrData(null)
+          clearInterval(waPollingRef.current!)
+          waPollingRef.current = null
+          // Save connected status to credentials
+          await fetch('/api/social/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ platform: 'whatsapp_personal', credentials: { whatsapp_personal_phone: d.phone ?? 'connected', connected: 'true' } }),
+          })
+          setPlatformConnected(prev => ({ ...prev, whatsapp_personal: true }))
+        }
+        if (['disconnected', 'not_started'].includes(d.status)) {
+          clearInterval(waPollingRef.current!)
+          waPollingRef.current = null
+        }
+      } catch { /* ignore */ }
+    }, 3000)
+  }
+
+  async function disconnectWa() {
+    setWaLoading(true)
+    try {
+      await fetch('/api/marketing/wa-bridge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disconnect' }),
+      })
+      setWaStatus('not_started')
+      setWaQrData(null)
+      setWaPhone(null)
+      setPlatformConnected(prev => ({ ...prev, whatsapp_personal: false }))
+    } catch { /* ignore */ } finally {
+      setWaLoading(false)
+    }
+  }
+
   function getCredentialFields(platformId: string): { key: string; label: string; placeholder: string; secret: boolean }[] {
     const map: Record<string, { key: string; label: string; placeholder: string; secret: boolean }[]> = {
       line: [
@@ -3816,10 +3893,7 @@ function Unit12CustomerService({
         { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
         { key: 'whatsapp_verify_token', label: 'Verify Token（自訂任意字串）', placeholder: 'my_verify_token', secret: false },
       ],
-      whatsapp_personal: [
-        { key: 'whatsapp_personal_bridge_url', label: 'Bridge Server URL', placeholder: 'https://your-bridge.example.com', secret: false },
-        { key: 'whatsapp_personal_api_key', label: 'Bridge API Key', placeholder: 'your-api-key', secret: true },
-      ],
+      whatsapp_personal: [],  // QR-based auth, no manual fields needed
       telegram: [
         { key: 'telegram_bot_token', label: 'Bot Token（從 @BotFather 取得）', placeholder: '123456789:AAF...', secret: true },
         { key: 'telegram_admin_chat_id', label: '管理員 Chat ID（選填）', placeholder: '你的個人 Chat ID，從 @userinfobot 取得', secret: false },
@@ -3962,10 +4036,12 @@ function Unit12CustomerService({
                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${platformConnected[p.id] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {platformConnected[p.id] ? '已連線' : '未設定'}
                     </span>
-                    <button onClick={() => setEditingPlatform(editingPlatform === p.id ? null : p.id)}
-                      className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">
-                      設定
-                    </button>
+                    {p.id !== 'whatsapp_personal' && (
+                      <button onClick={() => setEditingPlatform(editingPlatform === p.id ? null : p.id)}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">
+                        設定
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -4103,19 +4179,56 @@ function Unit12CustomerService({
                   </div>
                 )}
 
-                {/* WhatsApp Personal — bridge setup guide */}
-                {p.id === 'whatsapp_personal' && editingPlatform === p.id && (
-                  <div className="border border-amber-200 bg-amber-50 rounded-xl p-3 text-xs text-amber-800 space-y-1.5">
-                    <div className="font-semibold flex items-center gap-1.5">⚠️ 個人版需自架 Bridge Server</div>
-                    <p>WhatsApp 個人帳號無官方 API，需要在你的伺服器（VPS / NAS）上架設 Baileys Bridge，步驟：</p>
-                    <ol className="list-decimal list-inside space-y-1 pl-1">
-                      <li>在你的伺服器執行：<code className="bg-amber-100 px-1 rounded">npx @adiwajshing/baileys-bridge</code></li>
-                      <li>掃描終端機顯示的 QR Code，完成個人帳號登入</li>
-                      <li>Bridge 啟動後，把 Bridge Server URL 及 API Key 填入下方</li>
-                      <li>Bridge 收到訊息後，會轉發到 AI GATE 並回傳 AI 回覆</li>
-                    </ol>
-                    <a href="https://github.com/WhiskeySockets/Baileys" target="_blank" rel="noopener noreferrer"
-                      className="inline-block text-amber-700 underline">Baileys GitHub ↗</a>
+                {/* WhatsApp Personal — QR scan UI */}
+                {p.id === 'whatsapp_personal' && (
+                  <div className="space-y-3">
+                    {/* Status bar */}
+                    <div className={`rounded-xl px-3 py-2 text-xs flex items-center justify-between gap-2 ${
+                      waStatus === 'connected' ? 'bg-green-50 text-green-700 border border-green-200' :
+                      waStatus === 'qr' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                      waStatus === 'connecting' || waStatus === 'reconnecting' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
+                      'bg-gray-50 text-gray-500 border border-gray-200'
+                    }`}>
+                      <span>
+                        {waStatus === 'connected' && waPhone && `✅ 已連線：+${waPhone}`}
+                        {waStatus === 'connected' && !waPhone && '✅ WhatsApp 已連線'}
+                        {waStatus === 'qr' && '📱 請用 WhatsApp 掃描下方 QR Code'}
+                        {waStatus === 'connecting' && '⏳ 連線中...'}
+                        {waStatus === 'reconnecting' && '🔄 重新連線中...'}
+                        {waStatus === 'not_started' && '未連線'}
+                        {waStatus === 'disconnected' && '❌ 已斷線，請重新連線'}
+                      </span>
+                      {waStatus === 'connected'
+                        ? <button onClick={disconnectWa} disabled={waLoading}
+                            className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200">
+                            {waLoading ? '...' : '斷線'}
+                          </button>
+                        : <button onClick={startWaSession} disabled={waLoading || waStatus === 'connecting' || waStatus === 'qr'}
+                            className="text-[10px] px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                            {waLoading ? '啟動中...' : waStatus === 'qr' ? '等待掃描...' : '📱 掃 QR 連線'}
+                          </button>
+                      }
+                    </div>
+
+                    {/* QR code */}
+                    {waQrData && waStatus === 'qr' && (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <img src={waQrData} alt="WhatsApp QR Code"
+                          className="w-48 h-48 rounded-xl border-4 border-green-200 shadow" />
+                        <p className="text-[10px] text-gray-500 text-center">
+                          打開 WhatsApp → 選「已連結的裝置」→ 掃描此 QR Code
+                        </p>
+                      </div>
+                    )}
+
+                    {waError && (
+                      <div className="text-[10px] text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                        ❌ {waError}
+                        {waError.includes('WHATSAPP_BRIDGE_URL') && (
+                          <div className="mt-1 text-red-500">請先在 Vercel 環境變數設定 WHATSAPP_BRIDGE_URL 和 WHATSAPP_BRIDGE_API_KEY</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -359,6 +359,29 @@ export async function POST(
     return new NextResponse('success')
   }
 
+  // ── WhatsApp Personal (Baileys Bridge) ───────────────────────────────────
+  if (platform === 'whatsapp-personal' || platform === 'whatsapp_personal') {
+    const body       = await req.json()
+    const text: string = body?.text ?? ''
+    const fromJid: string = body?.fromJid ?? (body?.from ? `${body.from}@s.whatsapp.net` : '')
+
+    if (text && fromJid) {
+      const reply = await getAIReply(text, knowledge)
+
+      // Reply via Bridge
+      const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
+      const bridgeKey = process.env.WHATSAPP_BRIDGE_API_KEY ?? ''
+      if (bridgeUrl && bridgeKey) {
+        await fetch(`${bridgeUrl}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': bridgeKey },
+          body: JSON.stringify({ userId, to: fromJid, text: reply }),
+        }).catch(() => {})
+      }
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   // ── LinkedIn ──────────────────────────────────────────────────────────────
   if (platform === 'linkedin') {
     return NextResponse.json({ ok: true })

@@ -1,0 +1,18 @@
+{
+  "name": "aigate-whatsapp-bridge",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Baileys WhatsApp Bridge for AI GATE",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "pm2": "pm2 start ecosystem.config.cjs --env production"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "express": "^4.18.2",
+    "qrcode": "^1.5.3",
+    "pino": "^8.19.0",
+    "pino-pretty": "^11.0.0"
+  }
+}
