@@ -3546,17 +3546,23 @@ function Unit12CustomerService({
   const [escalationThreshold, setEscalationThreshold] = useState<'medium' | 'high'>(savedData?.escalationThreshold ?? 'high')
   const [replyLanguage, setReplyLanguage] = useState(savedData?.replyLanguage ?? 'auto')
 
-  // Sync when savedData loads asynchronously from Supabase
-  useEffect(() => {
-    if (savedData?.knowledgeBase !== undefined) setKnowledgeBase(savedData.knowledgeBase)
-    if (savedData?.escalationThreshold) setEscalationThreshold(savedData.escalationThreshold)
-    if (savedData?.replyLanguage) setReplyLanguage(savedData.replyLanguage)
-    if (savedData?.dialogueFiles !== undefined) setDialogueFiles(savedData.dialogueFiles)
-  }, [savedData])
-  const [savingSettings, setSavingSettings] = useState(false)
-
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
+
+  // Sync when savedData loads asynchronously from Supabase
+  // Track last savedData ref to avoid overwriting local uploads with stale DB data
+  const lastSavedDataRef = useRef<Unit12Data | undefined>(undefined)
+  useEffect(() => {
+    if (!savedData || savedData === lastSavedDataRef.current) return
+    lastSavedDataRef.current = savedData
+    if (savedData.knowledgeBase !== undefined) setKnowledgeBase(savedData.knowledgeBase)
+    if (savedData.escalationThreshold) setEscalationThreshold(savedData.escalationThreshold)
+    if (savedData.replyLanguage) setReplyLanguage(savedData.replyLanguage)
+    // Only restore files from DB if local state is empty (don't overwrite user's current session files)
+    if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
+  }, [savedData])
+
+  const [savingSettings, setSavingSettings] = useState(false)
   const [uploadingDialogue, setUploadingDialogue] = useState(false)
   const dialogueInputRef = useRef<HTMLInputElement>(null)
 
@@ -3815,7 +3821,9 @@ function Unit12CustomerService({
 
   function saveSettings() {
     setSavingSettings(true)
-    const data: Unit12Data = { knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles }
+    // Use savedData.dialogueFiles as fallback if local state is empty (prevents accidental overwrite)
+    const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
+    const data: Unit12Data = { knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -4253,24 +4261,28 @@ function Unit12CustomerService({
                 : <><Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500">點擊上傳 · 最大 50MB</p></>
               }
             </div>
-            {dialogueFiles.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center">尚未上傳任何文件</p>
-            ) : (
-              <div className="space-y-1.5">
-                {dialogueFiles.map(f => (
-                  <div key={f.url} className="flex items-center gap-3 p-2.5 rounded-lg border bg-gray-50">
-                    <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{f.name}</p>
-                      <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? `已萃取 ${f.textContent.length.toLocaleString()} 字` : '無文字內容'}</p>
+            {(() => {
+              // Always show files from either local state or saved DB data
+              const displayFiles = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
+              return displayFiles.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center">尚未上傳任何文件</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {displayFiles.map(f => (
+                    <div key={f.url} className="flex items-center gap-3 p-2.5 rounded-lg border bg-gray-50">
+                      <FileText className="h-4 w-4 text-indigo-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{f.name}</p>
+                        <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? `已萃取 ${f.textContent.length.toLocaleString()} 字` : '無文字內容'}</p>
+                      </div>
+                      <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors" title="刪除此檔案">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                    <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Save */}
