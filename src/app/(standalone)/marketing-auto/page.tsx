@@ -4606,7 +4606,24 @@ export default function MarketingAutoPage() {
     setCampaigns(data.campaigns ?? [])
   }, [])
 
-  useEffect(() => { loadCampaigns() }, [loadCampaigns])
+  // Auto-restore last selected campaign on page load
+  useEffect(() => {
+    loadCampaigns()
+    const lastId = typeof window !== 'undefined' ? localStorage.getItem('aigate_last_campaign') : null
+    if (lastId) {
+      fetch(`/api/marketing/campaign/${lastId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d?.campaign) return
+          const c = d.campaign
+          setCampaignId(c.id)
+          setCampaignTitle(c.title ?? '未命名行銷專案')
+          setUnitStatuses(c.unit_statuses ?? {})
+          setUnitData(c.unit_data ?? {})
+        })
+        .catch(() => {})
+    }
+  }, [loadCampaigns])
 
   const createCampaign = useCallback(async (): Promise<string | null> => {
     setCreating(true)
@@ -4630,6 +4647,7 @@ export default function MarketingAutoPage() {
     setUnitStatuses(c.unit_statuses ?? {})
     setUnitData(c.unit_data ?? {})
     setShowCampaigns(false)
+    if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', id)
   }
 
   const ensureCampaign = useCallback(async (): Promise<string | null> => {
@@ -4732,7 +4750,7 @@ export default function MarketingAutoPage() {
 
             {showCampaigns && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg z-50 overflow-hidden max-h-60 overflow-y-auto">
-                <button onClick={() => { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false) }}
+                <button onClick={() => { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false); if (typeof window !== 'undefined') localStorage.removeItem('aigate_last_campaign') }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 text-left border-b"
                   style={{ color: 'var(--primary)' }}>
                   <Plus className="h-3.5 w-3.5" /> 新建專案
