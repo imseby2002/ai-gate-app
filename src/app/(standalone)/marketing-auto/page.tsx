@@ -3692,7 +3692,7 @@ function Unit12CustomerService({
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
   const [telegramSetupLoading, setTelegramSetupLoading] = useState(false)
   const [telegramSetupResult, setTelegramSetupResult] = useState<{ ok: boolean; msg: string; webhookUrl?: string } | null>(null)
-  const [telegramDiag, setTelegramDiag] = useState<{ info?: Record<string, unknown>; me?: Record<string, unknown>; recentChats?: Array<{ chatId: number; name: string; username?: string }>; endpointStatus?: number } | null>(null)
+  const [telegramDiag, setTelegramDiag] = useState<{ info?: Record<string, unknown>; me?: Record<string, unknown>; recentChats?: Array<{ chatId: number; name: string; username?: string }>; endpointStatus?: number; error?: string } | null>(null)
   const [telegramDiagLoading, setTelegramDiagLoading] = useState(false)
   const [telegramTestChatId, setTelegramTestChatId] = useState('')
   const [telegramTestLoading, setTelegramTestLoading] = useState(false)
