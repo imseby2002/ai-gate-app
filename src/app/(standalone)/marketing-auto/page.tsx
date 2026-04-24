@@ -4604,25 +4604,33 @@ export default function MarketingAutoPage() {
     if (!res.ok) return
     const data = await res.json()
     setCampaigns(data.campaigns ?? [])
+    return data.campaigns as Array<{ id: string }> ?? []
   }, [])
 
-  // Auto-restore last selected campaign on page load
+  // Auto-restore last used campaign on page load
   useEffect(() => {
-    loadCampaigns()
-    const lastId = typeof window !== 'undefined' ? localStorage.getItem('aigate_last_campaign') : null
-    if (lastId) {
-      fetch(`/api/marketing/campaign/${lastId}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-          if (!d?.campaign) return
-          const c = d.campaign
-          setCampaignId(c.id)
-          setCampaignTitle(c.title ?? '未命名行銷專案')
-          setUnitStatuses(c.unit_statuses ?? {})
-          setUnitData(c.unit_data ?? {})
-        })
-        .catch(() => {})
+    const run = async () => {
+      const list = await loadCampaigns()
+      if (!list?.length) return
+
+      // Prefer localStorage (last manually selected), fallback to most recently updated
+      const lastId = typeof window !== 'undefined'
+        ? (localStorage.getItem('aigate_last_campaign') ?? list[0].id)
+        : list[0].id
+
+      try {
+        const r = await fetch(`/api/marketing/campaign/${lastId}`)
+        if (!r.ok) return
+        const c = (await r.json()).campaign
+        if (!c) return
+        setCampaignId(c.id)
+        setCampaignTitle(c.title ?? '未命名行銷專案')
+        setUnitStatuses(c.unit_statuses ?? {})
+        setUnitData(c.unit_data ?? {})
+        if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', c.id)
+      } catch { /* ignore */ }
     }
+    run()
   }, [loadCampaigns])
 
   const createCampaign = useCallback(async (): Promise<string | null> => {
