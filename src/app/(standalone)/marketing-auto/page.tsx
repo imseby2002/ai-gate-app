@@ -3693,6 +3693,7 @@ function Unit12CustomerService({
   // Per-user credentials
   const [userId, setUserId] = useState<string | null>(null)
   const [platformCreds, setPlatformCreds] = useState<Record<string, Record<string, string>>>({})
+  const [platformPreview, setPlatformPreview] = useState<Record<string, Record<string, string>>>({})
   const [platformConnected, setPlatformConnected] = useState<Record<string, boolean>>({})
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null)
@@ -3711,10 +3712,24 @@ function Unit12CustomerService({
     fetch('/api/social/credentials').then(r => r.json()).then(d => {
       if (d.platforms) {
         const connected: Record<string, boolean> = {}
+        const previewData: Record<string, Record<string, string>> = {}
+        const valuesData: Record<string, Record<string, string>> = {}
         Object.entries(d.platforms).forEach(([k, v]) => {
           connected[k] = (v as any).is_connected
+          previewData[k] = (v as any).preview ?? {}
+          valuesData[k] = (v as any).values ?? {}
         })
         setPlatformConnected(connected)
+        // Pre-populate form with actual values for non-secret fields
+        setPlatformCreds(prev => {
+          const next = { ...prev }
+          Object.entries(valuesData).forEach(([platform, vals]) => {
+            next[platform] = { ...(next[platform] ?? {}), ...vals }
+          })
+          return next
+        })
+        // Store preview for secret field indicators
+        setPlatformPreview(previewData)
       }
     }).catch(() => {})
   }, [])
@@ -4024,10 +4039,17 @@ function Unit12CustomerService({
                               <div>🔗 Webhook URL: <span className="break-all opacity-70">{r.url || '（未設定）'}</span></div>
                               <div>📬 Pending updates: {r.pending_update_count ?? 0}</div>
                               {r.last_error_message && (
-                                <div className="text-red-400">❌ 最後錯誤: {r.last_error_message}</div>
-                              )}
-                              {r.last_error_date && (
-                                <div className="text-red-300 opacity-70">   時間: {new Date(r.last_error_date * 1000).toLocaleString()}</div>
+                                <>
+                                  <div className={telegramDiag?.endpointStatus === 200 ? 'text-yellow-400' : 'text-red-400'}>
+                                    {telegramDiag?.endpointStatus === 200 ? '⚠️' : '❌'} 最後錯誤: {r.last_error_message}
+                                  </div>
+                                  {r.last_error_date && (
+                                    <div className="text-gray-400 opacity-70">   時間: {new Date(r.last_error_date * 1000).toLocaleString()}</div>
+                                  )}
+                                  {telegramDiag?.endpointStatus === 200 && (
+                                    <div className="text-green-400">   ✅ 此為歷史錯誤，目前 Webhook 端點已正常（HTTP 200）</div>
+                                  )}
+                                </>
                               )}
                               {!r.last_error_message && r.url && (
                                 <div className="text-green-400">✅ Webhook 正常，無錯誤紀錄</div>
@@ -4093,21 +4115,29 @@ function Unit12CustomerService({
                 {/* Credential inputs (when editing) */}
                 {editingPlatform === p.id && (
                   <div className="space-y-2 border-t pt-3">
-                    {getCredentialFields(p.id).map(field => (
-                      <div key={field.key}>
-                        <label className="text-[10px] text-gray-500 block mb-1">{field.label}</label>
-                        <input
-                          type={field.secret ? 'password' : 'text'}
-                          placeholder={field.placeholder}
-                          value={platformCreds[p.id]?.[field.key] ?? ''}
-                          onChange={e => setPlatformCreds(prev => ({
-                            ...prev,
-                            [p.id]: { ...prev[p.id], [field.key]: e.target.value }
-                          }))}
-                          className="w-full text-xs border rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                        />
-                      </div>
-                    ))}
+                    {getCredentialFields(p.id).map(field => {
+                      const isSet = field.secret
+                        ? !!(platformPreview[p.id]?.[field.key])
+                        : false
+                      return (
+                        <div key={field.key}>
+                          <label className="text-[10px] text-gray-500 block mb-1">
+                            {field.label}
+                            {isSet && <span className="ml-1 text-green-500">✓ 已設定</span>}
+                          </label>
+                          <input
+                            type={field.secret ? 'password' : 'text'}
+                            placeholder={isSet ? '留空保留原值' : field.placeholder}
+                            value={platformCreds[p.id]?.[field.key] ?? ''}
+                            onChange={e => setPlatformCreds(prev => ({
+                              ...prev,
+                              [p.id]: { ...prev[p.id], [field.key]: e.target.value }
+                            }))}
+                            className="w-full text-xs border rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          />
+                        </div>
+                      )
+                    })}
                     <div className="flex gap-2 pt-1">
                       <button onClick={() => savePlatformCreds(p.id)} disabled={savingPlatform === p.id}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium text-white"

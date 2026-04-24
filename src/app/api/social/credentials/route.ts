@@ -1,10 +1,20 @@
-﻿/**
- * GET  /api/social/credentials        — 取得所有平台憑證 (credentials 欄位加密不回傳，只回傳 is_connected)
- * POST /api/social/credentials        — 儲存或更新平台憑證
+/**
+ * GET  /api/social/credentials        — 取得所有平台憑證
+ * POST /api/social/credentials        — 儲存或更新平台憑證（空白欄位保留原值）
  * DELETE /api/social/credentials?platform=xxx — 清除平台憑證
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+// Fields that are NOT sensitive and can be returned as plain text
+const NON_SECRET_FIELDS = new Set([
+  'whatsapp_phone_number_id',
+  'whatsapp_verify_token',
+  'telegram_admin_chat_id',
+  'wechat_app_id',
+  'zalo_oa_id',
+  'whatsapp_personal_bridge_url',
+])
 
 export async function GET() {
   const supabase = await createClient()
@@ -16,16 +26,29 @@ export async function GET() {
     .select('platform, is_connected, credentials')
     .eq('user_id', user.id)
 
-  // Mask sensitive values — only expose non-secret fields for display
-  const result: Record<string, { is_connected: boolean; preview: Record<string, string> }> = {}
+  const result: Record<string, {
+    is_connected: boolean
+    preview: Record<string, string>   // masked for display
+    values: Record<string, string>    // actual values for non-secret fields only
+  }> = {}
+
   for (const row of data ?? []) {
+    const creds = row.credentials as Record<string, string>
     const preview: Record<string, string> = {}
-    for (const [k, v] of Object.entries(row.credentials as Record<string, string>)) {
-      // show last 4 chars of secrets
-      const s = String(v)
-      preview[k] = s.length > 8 ? '••••' + s.slice(-4) : s ? '••••' : ''
+    const values: Record<string, string> = {}
+
+    for (const [k, v] of Object.entries(creds)) {
+      const s = String(v ?? '')
+      if (NON_SECRET_FIELDS.has(k)) {
+        preview[k] = s  // show actual value for non-secret
+        values[k] = s
+      } else {
+        preview[k] = s.length > 8 ? '••••' + s.slice(-4) : s ? '••••' : ''
+        // Don't include secrets in values
+      }
     }
-    result[row.platform] = { is_connected: row.is_connected, preview }
+
+    result[row.platform] = { is_connected: row.is_connected, preview, values }
   }
 
   return NextResponse.json({ platforms: result })
@@ -39,27 +62,42 @@ export async function POST(req: NextRequest) {
   const { platform, credentials } = await req.json()
   if (!platform || !credentials) return NextResponse.json({ error: 'platform and credentials required' }, { status: 400 })
 
-  // Detect if any credential field is non-empty to mark as connected
-  const is_connected = Object.values(credentials as Record<string, string>).some(v => String(v).trim() !== '')
+  // Merge with existing credentials — empty string fields keep the old value
+  const { data: existing } = await supabase
+    .from('social_platform_credentials')
+    .select('credentials')
+    .eq('user_id', user.id)
+    .eq('platform', platform)
+    .single()
+
+  const existingCreds = (existing?.credentials as Record<string, string>) ?? {}
+  const merged: Record<string, string> = { ...existingCreds }
+
+  for (const [k, v] of Object.entries(credentials as Record<string, string>)) {
+    if (String(v).trim() !== '') {
+      merged[k] = String(v).trim()  // only overwrite if new value is non-empty
+    }
+  }
+
+  const is_connected = Object.values(merged).some(v => String(v).trim() !== '')
 
   const { error } = await supabase
     .from('social_platform_credentials')
-    .upsert({ user_id: user.id, platform, credentials, is_connected }, { onConflict: 'user_id,platform' })
+    .upsert({ user_id: user.id, platform, credentials: merged, is_connected }, { onConflict: 'user_id,platform' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Auto-register Telegram webhook when bot token is saved
-  if (platform === 'telegram' && (credentials as Record<string, string>).telegram_bot_token) {
-    const botToken = (credentials as Record<string, string>).telegram_bot_token
+  if (platform === 'telegram' && merged.telegram_bot_token) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
     const webhookUrl = `${appUrl}/api/marketing/cs-webhook/telegram/${user.id}`
     try {
-      await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      await fetch(`https://api.telegram.org/bot${merged.telegram_bot_token}/setWebhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: webhookUrl }),
       })
-    } catch { /* ignore — user can set manually */ }
+    } catch { /* ignore */ }
   }
 
   return NextResponse.json({ ok: true })
