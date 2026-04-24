@@ -3885,7 +3885,7 @@ function Unit12CustomerService({
         }])
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs })
+        onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles })
       } else {
         setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
       }
