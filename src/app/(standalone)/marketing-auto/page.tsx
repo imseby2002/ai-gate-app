@@ -4068,6 +4068,13 @@ function Unit12CustomerService({
                             ))}
                           </div>
                         )}
+                        {/* Admin Chat ID status */}
+                        {(() => {
+                          const adminId = platformCreds['telegram']?.telegram_admin_chat_id
+                          return adminId
+                            ? <div className="text-blue-300">👤 管理員 Chat ID: <span className="text-white">{adminId}</span> ← 客戶訊息會轉發至此</div>
+                            : <div className="text-yellow-400">⚠️ 未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）</div>
+                        })()}
                         {!(telegramDiag.me as any)?.ok && <div className="text-red-400">❌ Bot Token 無效：{JSON.stringify((telegramDiag.me as any)?.description)}</div>}
                       </div>
                     )}
