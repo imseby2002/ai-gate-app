@@ -139,7 +139,7 @@ ${ANALYSIS_PROMPTS[t]}
 <metrics>{"opportunity":80,"competitors":8,"audience":"20萬+","score":75}</metrics>`,
             },
           ],
-          maxTokens: 1500,
+          maxOutputTokens: 1500,
         })
         results[t] = text
       } catch (e) {
