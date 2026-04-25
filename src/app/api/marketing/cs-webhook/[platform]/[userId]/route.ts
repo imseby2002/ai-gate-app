@@ -62,9 +62,12 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
       const unit12 = (camp.unit_data as Record<string, unknown>)?.[12] as Record<string, unknown> | undefined
       if (!unit12) continue
 
-      if (unit12.knowledgeBase) systemPrompt = String(unit12.knowledgeBase)
+      if (unit12.systemPrompt) systemPrompt = String(unit12.systemPrompt)
       if (unit12.escalationThreshold) escalationThreshold = unit12.escalationThreshold as 'medium' | 'high'
       if (unit12.replyLanguage) replyLanguage = String(unit12.replyLanguage)
+
+      // Direct text knowledge input
+      if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
 
       // Dialogue files (CS-specific)
       const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>

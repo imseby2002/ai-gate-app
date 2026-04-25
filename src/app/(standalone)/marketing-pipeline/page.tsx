@@ -295,7 +295,7 @@ export default function MarketingPipelinePage() {
         }),
       })
       if (!res.ok) return { ok: false, output: String(data.error ?? '文案生成失敗') }
-      const count = (data.copies as unknown[])?.length ?? 0
+      const count = data.results ? Object.keys(data.results as object).length : 0
       return { ok: true, output: `文案完成 · 生成 ${count} 份`, data }
     }
 
