@@ -1,10 +1,10 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
-
-export const maxDuration = 60
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
+
+export const maxDuration = 60
 
 type AnalysisType =
   | 'swot'
