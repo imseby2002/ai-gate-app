@@ -168,10 +168,12 @@ export default function MarketingPipelinePage() {
   const [currentIdx, setCurrentIdx] = useState(-1)
   const [runLog, setRunLog] = useState<string[]>([])
   const [waitingUnitId, setWaitingUnitId] = useState<number | null>(null)
+  const [telegramApprovalId, setTelegramApprovalId] = useState<string | null>(null)
 
   const confirmRef = useRef<(() => void) | null>(null)
   const abortRef = useRef(false)
   const logEndRef = useRef<HTMLDivElement>(null)
+  const pendingFeedbackRef = useRef<string | null>(null)
 
   // ── Auto-save config to localStorage on change ───────────────────────────
   useEffect(() => {
@@ -208,6 +210,19 @@ export default function MarketingPipelinePage() {
     } catch (_) { /* silent */ }
   }, [])
 
+  // Send with inline approval buttons — returns approvalId
+  const sendTelegramApproval = useCallback(async (msg: string, context?: object): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/marketing/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, withApprovalButtons: true, context }),
+      })
+      const data = await res.json()
+      return data.approvalId ?? null
+    } catch (_) { return null }
+  }, [])
+
   // ── Log helper ───────────────────────────────────────────────────────────
   const log = useCallback((msg: string) =>
     setRunLog(p => [...p, `[${new Date().toLocaleTimeString('zh-TW')}] ${msg}`])
@@ -217,15 +232,49 @@ export default function MarketingPipelinePage() {
     setStepRuns(p => p.map(s => s.unitId === unitId ? { ...s, status, output, ...(status === 'running' ? { startedAt: new Date().toISOString() } : status === 'done' || status === 'error' ? { doneAt: new Date().toISOString() } : {}) } : s))
   , [])
 
-  // ── Wait for confirmation ────────────────────────────────────────────────
-  const waitConfirm = useCallback((unitId: number): Promise<void> =>
+  // ── Wait for confirmation (browser button OR Telegram button) ───────────
+  const waitConfirm = useCallback((unitId: number, approvalId?: string): Promise<void> =>
     new Promise(resolve => {
       setWaitingUnitId(unitId)
-      confirmRef.current = () => { setWaitingUnitId(null); resolve() }
+      setTelegramApprovalId(approvalId ?? null)
+      confirmRef.current = () => {
+        setWaitingUnitId(null)
+        setTelegramApprovalId(null)
+        resolve()
+      }
     })
   , [])
 
   function handleConfirm() { confirmRef.current?.(); confirmRef.current = null }
+
+  // ── Poll Telegram for approval when waiting ───────────────────────────────
+  useEffect(() => {
+    if (!telegramApprovalId) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/marketing/telegram-poll', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approvalId: telegramApprovalId }),
+        })
+        const data = await res.json()
+        if (data.action === 'approved') {
+          confirmRef.current?.()
+          confirmRef.current = null
+        } else if (data.action === 'rejected') {
+          pendingFeedbackRef.current = '拒絕'
+          confirmRef.current?.()
+          confirmRef.current = null
+        } else if (data.action === 'feedback') {
+          if (data.feedback) pendingFeedbackRef.current = data.feedback
+          confirmRef.current?.()
+          confirmRef.current = null
+        }
+        // 'none' and 'awaiting_feedback' → keep polling
+      } catch (_) { /* silent */ }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [telegramApprovalId])
 
   // ── Safe JSON fetch ──────────────────────────────────────────────────────
   async function safeFetch(url: string, init: RequestInit): Promise<{ res: Response; data: Record<string, unknown> }> {
@@ -465,10 +514,13 @@ export default function MarketingPipelinePage() {
 
         if (stepCfg.notify) {
           updateStep(stepCfg.unitId, 'waiting', result.output)
-          const notifyMsg = `✅ AI GATE 流程更新\n\n步驟完成：${def.name}\n結果：${result.output}\n\n請返回 AI GATE 確認並點擊「繼續」繼續下一步。`
-          await sendTelegram(notifyMsg)
-          log(`🔔 已發送 Telegram 通知，等待確認…`)
-          await waitConfirm(stepCfg.unitId)
+          pendingFeedbackRef.current = null
+          const notifyMsg = `🤖 <b>AI GATE 流程確認</b>\n\n步驟完成：${def.name}\n結果：${result.output}\n\n請選擇操作：`
+          const approvalId = await sendTelegramApproval(notifyMsg, { unitId: stepCfg.unitId, stepName: def.name })
+          log(`🔔 已發送 Telegram 通知${approvalId ? '（含互動按鈕）' : ''}，等待確認…`)
+          await waitConfirm(stepCfg.unitId, approvalId ?? undefined)
+          const fb = pendingFeedbackRef.current
+          if (fb) log(`📱 Telegram 回饋：${fb}`)
           log(`→ 已確認，繼續執行`)
         }
 
@@ -483,7 +535,7 @@ export default function MarketingPipelinePage() {
     setIsRunning(false)
     setCurrentIdx(-1)
     log(`── 流程結束 ──`)
-  }, [config, campaignData, runUnit, saveUnit, sendTelegram, updateStep, waitConfirm, log])
+  }, [config, campaignData, runUnit, saveUnit, sendTelegram, sendTelegramApproval, updateStep, waitConfirm, log])
 
   function stopPipeline() { abortRef.current = true; setIsRunning(false); log('⏹ 已手動停止') }
 
@@ -1025,7 +1077,9 @@ export default function MarketingPipelinePage() {
                           {STEP_DEFS.find(d => d.unitId === waitingUnitId)?.name} 已完成
                         </div>
                         <div className="text-xs text-amber-600 mt-0.5">
-                          已發送 Telegram 通知。確認結果後點擊繼續。
+                          {telegramApprovalId
+                            ? '📱 已發送 Telegram 按鈕通知，可直接在手機點擊允許／修改／拒絕，或在此點擊繼續。'
+                            : '已發送 Telegram 通知。確認結果後點擊繼續。'}
                         </div>
                       </div>
                     </div>
