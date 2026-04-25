@@ -3448,6 +3448,7 @@ interface CsDialogueFile {
 }
 
 interface Unit12Data {
+  systemPrompt?: string
   knowledgeBase?: string
   escalationThreshold?: 'medium' | 'high'
   replyLanguage?: string
@@ -3542,6 +3543,7 @@ function Unit12CustomerService({
   const [tab, setTab] = useState<Cs12Tab>('platforms')
 
   // AI settings
+  const [systemPrompt, setSystemPrompt] = useState(savedData?.systemPrompt ?? '')
   const [knowledgeBase, setKnowledgeBase] = useState(savedData?.knowledgeBase ?? '')
   const [escalationThreshold, setEscalationThreshold] = useState<'medium' | 'high'>(savedData?.escalationThreshold ?? 'high')
   const [replyLanguage, setReplyLanguage] = useState(savedData?.replyLanguage ?? 'auto')
@@ -3555,6 +3557,7 @@ function Unit12CustomerService({
   useEffect(() => {
     if (!savedData || savedData === lastSavedDataRef.current) return
     lastSavedDataRef.current = savedData
+    if (savedData.systemPrompt !== undefined) setSystemPrompt(savedData.systemPrompt)
     if (savedData.knowledgeBase !== undefined) setKnowledgeBase(savedData.knowledgeBase)
     if (savedData.escalationThreshold) setEscalationThreshold(savedData.escalationThreshold)
     if (savedData.replyLanguage) setReplyLanguage(savedData.replyLanguage)
@@ -3582,7 +3585,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
       }
     } finally {
       setUploadingDialogue(false)
@@ -3592,7 +3595,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
   }
 
   // Test chat
@@ -3913,7 +3916,7 @@ function Unit12CustomerService({
     setSavingSettings(true)
     // Use savedData.dialogueFiles as fallback if local state is empty (prevents accidental overwrite)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -3935,7 +3938,8 @@ function Unit12CustomerService({
         .filter(f => f.textContent)
         .map(f => `【公司資料｜${f.name}】\n${f.textContent}`)
         .join('\n\n')
-      const mergedKnowledge = [dialogueTexts, faqTexts].filter(Boolean).join('\n\n')
+      const directText = knowledgeBase.trim() ? `【直接輸入知識】\n${knowledgeBase}` : ''
+      const mergedKnowledge = [dialogueTexts, directText, faqTexts].filter(Boolean).join('\n\n')
 
       const res = await fetch('/api/marketing/cs-chat', {
         method: 'POST',
@@ -3943,7 +3947,7 @@ function Unit12CustomerService({
         body: JSON.stringify({
           message: userMsg,
           history: testHistory.slice(-6),
-          systemPrompt: knowledgeBase,
+          systemPrompt,
           knowledgeBase: mergedKnowledge,
           escalationThreshold,
           language: replyLanguage,
@@ -3975,7 +3979,7 @@ function Unit12CustomerService({
         }])
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles })
       } else {
         setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
       }
@@ -4341,13 +4345,16 @@ function Unit12CustomerService({
           </div>
 
           {/* System Prompt */}
-          <div className="border rounded-xl p-4 space-y-2">
+          <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-2 bg-indigo-50/30">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm text-gray-700">系統提示詞（Prompt）</span>
-              <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm text-gray-700">系統提示詞（System Prompt）</span>
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">AI 角色設定</span>
+              </div>
+              <span className="text-xs text-gray-400">{systemPrompt.length} 字</span>
             </div>
-            <p className="text-xs text-gray-500">設定 AI 客服的角色與回答風格。知識庫內容（FAQ、文件）請到「知識庫」分頁設定。</p>
-            <textarea value={knowledgeBase} onChange={e => setKnowledgeBase(e.target.value)}
+            <p className="text-xs text-gray-500">定義 AI 客服的<strong>角色、語氣與行為準則</strong>。例如：「你是 XX 品牌的客服，請用親切語氣回覆」。<br />⚠️ 這裡<strong>不是</strong>放 FAQ 或產品資料，那些請到「知識庫」分頁設定。</p>
+            <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)}
               rows={6}
               placeholder="例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。"
               className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
@@ -4379,17 +4386,21 @@ function Unit12CustomerService({
           </div>
 
           {/* Direct text input */}
-          <div className="border rounded-xl p-4 space-y-2">
+          <div className="border-2 border-green-200 rounded-xl p-4 space-y-2 bg-green-50/30">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-600">直接輸入知識內容</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-600">直接輸入知識內容</span>
+                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">FAQ / 產品資料</span>
+              </div>
               <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
             </div>
+            <p className="text-xs text-gray-500">放 FAQ、產品規格、價格等<strong>具體資訊</strong>，AI 客服會從這裡查找答案。<br />這裡<strong>不是</strong> Prompt 設定，Prompt 請到「AI 設定」分頁設定。</p>
             <textarea
               value={knowledgeBase}
               onChange={e => setKnowledgeBase(e.target.value)}
               rows={8}
               placeholder="例：&#10;Q: 如何申請試用？&#10;A: 請至官網填寫申請表，我們會在 1 個工作天內回覆。&#10;&#10;Q: 收費方案為何？&#10;A: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。"
-              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono"
+              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-green-300 font-mono"
             />
           </div>
 

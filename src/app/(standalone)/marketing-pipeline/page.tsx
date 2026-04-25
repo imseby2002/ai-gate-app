@@ -136,6 +136,18 @@ const DEFAULT_CONFIG: PipelineConfig = {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+const LS_CONFIG_KEY = 'aigate_pipeline_config'
+const LS_CAMPAIGN_KEY = 'aigate_pipeline_campaignId'
+
+function loadConfigFromLS(): PipelineConfig {
+  try {
+    const raw = localStorage.getItem(LS_CONFIG_KEY)
+    if (!raw) return DEFAULT_CONFIG
+    const parsed = JSON.parse(raw) as Partial<PipelineConfig>
+    return { ...DEFAULT_CONFIG, ...parsed }
+  } catch { return DEFAULT_CONFIG }
+}
+
 export default function MarketingPipelinePage() {
   const supabase = createClient()
 
@@ -143,7 +155,10 @@ export default function MarketingPipelinePage() {
   const [campaignId, setCampaignId] = useState<string>('')
   const [campaignData, setCampaignData] = useState<Record<string, unknown>>({})
 
-  const [config, setConfig] = useState<PipelineConfig>(DEFAULT_CONFIG)
+  const [config, setConfig] = useState<PipelineConfig>(() => {
+    if (typeof window === 'undefined') return DEFAULT_CONFIG
+    return loadConfigFromLS()
+  })
   const [tab, setTab] = useState<'config' | 'run'>('config')
 
   // Run state
@@ -157,17 +172,36 @@ export default function MarketingPipelinePage() {
   const abortRef = useRef(false)
   const logEndRef = useRef<HTMLDivElement>(null)
 
+  // ── Auto-save config to localStorage on change ───────────────────────────
+  useEffect(() => {
+    try { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config)) } catch { /* ignore */ }
+  }, [config])
+
   // ── Load campaigns ───────────────────────────────────────────────────────
   useEffect(() => {
     supabase.from('marketing_campaigns').select('id, title, unit_data')
       .order('updated_at', { ascending: false })
       .limit(20)
-      .then(({ data }) => { if (data) setCampaigns(data as Campaign[]) })
+      .then(({ data }) => {
+        if (!data) return
+        setCampaigns(data as Campaign[])
+        // Restore last selected campaign
+        const lastId = localStorage.getItem(LS_CAMPAIGN_KEY)
+        if (lastId && data.find(c => c.id === lastId)) {
+          const c = data.find(c => c.id === lastId)!
+          setCampaignId(lastId)
+          setCampaignData(c.unit_data ?? {})
+        }
+      })
   }, [])
 
   const loadCampaign = useCallback((id: string) => {
     const c = campaigns.find(c => c.id === id)
-    if (c) { setCampaignId(id); setCampaignData(c.unit_data ?? {}) }
+    if (c) {
+      setCampaignId(id)
+      setCampaignData(c.unit_data ?? {})
+      try { localStorage.setItem(LS_CAMPAIGN_KEY, id) } catch { /* ignore */ }
+    }
   }, [campaigns])
 
   // Scroll log to bottom
@@ -220,6 +254,23 @@ export default function MarketingPipelinePage() {
 
   function handleConfirm() { confirmRef.current?.(); confirmRef.current = null }
 
+  // ── Safe JSON fetch ──────────────────────────────────────────────────────
+  async function safeFetch(url: string, init: RequestInit): Promise<{ res: Response; data: Record<string, unknown> }> {
+    try {
+      const res = await fetch(url, init)
+      let data: Record<string, unknown> = {}
+      try {
+        const text = await res.text()
+        data = text ? JSON.parse(text) : {}
+      } catch (parseErr) {
+        data = { error: String(parseErr) }
+      }
+      return { res, data }
+    } catch (networkErr) {
+      return { res: new Response(null, { status: 503 }), data: { error: String(networkErr) } }
+    }
+  }
+
   // ── Unit runners ─────────────────────────────────────────────────────────
   const runUnit = useCallback(async (unitId: number, ud: Record<string, unknown>): Promise<{ ok: boolean; output: string; data?: unknown }> => {
     const u1d = ud[1] as { summary?: string } | undefined
@@ -230,7 +281,7 @@ export default function MarketingPipelinePage() {
     const u6d = ud[6] as { images?: Array<{ url?: string }> } | undefined
 
     if (unitId === 1) {
-      const res = await fetch('/api/marketing/collect', {
+      const { res, data } = await safeFetch('/api/marketing/collect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -244,24 +295,22 @@ export default function MarketingPipelinePage() {
           alertRssUrls: config.u1_alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
         }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '蒐集失敗' }
-      return { ok: true, output: `蒐集完成 · ${data.summary?.slice(0, 100) ?? ''}…`, data }
+      if (!res.ok) return { ok: false, output: String(data.error ?? '蒐集失敗') }
+      return { ok: true, output: `蒐集完成 · ${String(data.summary ?? '').slice(0, 100)}…`, data }
     }
 
     if (unitId === 3) {
-      const res = await fetch('/api/marketing/analyze', {
+      const { res, data } = await safeFetch('/api/marketing/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ types: config.u3_types, collectedData: u1d?.summary, companyData: u2d }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '分析失敗' }
+      if (!res.ok) return { ok: false, output: String(data.error ?? '分析失敗') }
       return { ok: true, output: `分析完成 · 類型：${config.u3_types.join('、')}`, data }
     }
 
     if (unitId === 4) {
-      const res = await fetch('/api/marketing/copy', {
+      const { res, data } = await safeFetch('/api/marketing/copy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -272,14 +321,13 @@ export default function MarketingPipelinePage() {
           collectedSummary: u1d?.summary,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '文案生成失敗' }
-      const count = data.copies?.length ?? 0
+      if (!res.ok) return { ok: false, output: String(data.error ?? '文案生成失敗') }
+      const count = (data.copies as unknown[])?.length ?? 0
       return { ok: true, output: `文案完成 · 生成 ${count} 份`, data }
     }
 
     if (unitId === 5) {
-      const res = await fetch('/api/marketing/image-script', {
+      const { res, data } = await safeFetch('/api/marketing/image-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -291,9 +339,8 @@ export default function MarketingPipelinePage() {
           collectedSummary: u1d?.summary,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '圖片腳本失敗' }
-      return { ok: true, output: `圖片腳本完成 · ${data.scripts?.length ?? 0} 份`, data }
+      if (!res.ok) return { ok: false, output: String(data.error ?? '圖片腳本失敗') }
+      return { ok: true, output: `圖片腳本完成 · ${(data.scripts as unknown[])?.length ?? 0} 份`, data }
     }
 
     if (unitId === 6) {
@@ -303,19 +350,18 @@ export default function MarketingPipelinePage() {
       const images: { url: string; prompt: string }[] = []
       for (const prompt of toGenerate) {
         if (abortRef.current) break
-        const res = await fetch('/api/marketing/generate-image', {
+        const { res, data } = await safeFetch('/api/marketing/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, model: config.u6_model, size: config.u6_size, campaignId }),
         })
-        const data = await res.json()
-        if (res.ok && data.imageUrl) images.push({ url: data.imageUrl, prompt: prompt.slice(0, 60) })
+        if (res.ok && data.imageUrl) images.push({ url: String(data.imageUrl), prompt: prompt.slice(0, 60) })
       }
       return { ok: true, output: `圖片生成完成 · ${images.length} 張`, data: { images } }
     }
 
     if (unitId === 7) {
-      const res = await fetch('/api/marketing/video-script', {
+      const { res, data } = await safeFetch('/api/marketing/video-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -329,29 +375,26 @@ export default function MarketingPipelinePage() {
           collectedSummary: u1d?.summary,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '影片腳本失敗' }
-      return { ok: true, output: `影片腳本完成 · ${data.scripts?.length ?? 0} 份`, data }
+      if (!res.ok) return { ok: false, output: String(data.error ?? '影片腳本失敗') }
+      return { ok: true, output: `影片腳本完成 · ${(data.scripts as unknown[])?.length ?? 0} 份`, data }
     }
 
     if (unitId === 8) {
       const scripts = (ud[7] as { scripts?: string[] } | undefined)?.scripts ?? []
       if (scripts.length === 0) return { ok: false, output: '無影片腳本，請先執行單元 7' }
       const prompt = scripts[0].slice(0, 500)
-      const submitRes = await fetch('/api/marketing/generate-video', {
+      const { res: submitRes, data: submit } = await safeFetch('/api/marketing/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: config.u8_model, prompt }),
       })
-      const submit = await submitRes.json()
-      if (!submitRes.ok) return { ok: false, output: submit.error ?? '影片提交失敗' }
+      if (!submitRes.ok) return { ok: false, output: String(submit.error ?? '影片提交失敗') }
       const requestId = submit.requestId
       // Poll up to 10 min
       for (let i = 0; i < 75; i++) {
         if (abortRef.current) return { ok: false, output: '已中止' }
         await new Promise(r => setTimeout(r, 8000))
-        const pollRes = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=${config.u8_model}&campaignId=${campaignId}`)
-        const poll = await pollRes.json()
+        const { data: poll } = await safeFetch(`/api/marketing/generate-video?requestId=${requestId}&model=${config.u8_model}&campaignId=${campaignId}`, {})
         if (poll.status === 'completed' && poll.videoUrl) {
           return { ok: true, output: `影片生成完成`, data: { videos: [{ url: poll.videoUrl, model: config.u8_model }] } }
         }
@@ -364,13 +407,12 @@ export default function MarketingPipelinePage() {
       if (config.u9_platforms.length === 0) return { ok: false, output: '請選擇上傳平台' }
       const images = u6d?.images?.map(i => i.url).filter(Boolean) ?? []
       const copies = u4d?.copies ?? []
-      const res = await fetch('/api/marketing/upload', {
+      const { res, data } = await safeFetch('/api/marketing/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaignId, platforms: config.u9_platforms, copies, images }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '上傳失敗' }
+      if (!res.ok) return { ok: false, output: String(data.error ?? '上傳失敗') }
       return { ok: true, output: `上傳完成 · ${config.u9_platforms.join('、')}`, data }
     }
 
@@ -379,13 +421,12 @@ export default function MarketingPipelinePage() {
       if (phones.length === 0) return { ok: false, output: '請填入電話號碼清單' }
       const copies = u4d?.copies as Array<{ body?: string }> | undefined
       const script = copies?.[0]?.body ?? '您好，感謝您對我們產品的關注。'
-      const res = await fetch('/api/marketing/phone-call', {
+      const { res, data } = await safeFetch('/api/marketing/phone-call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'batch', phones, script, voiceId: config.u10_voiceId, birdCallerId: config.u10_callerId }),
       })
-      const data = await res.json()
-      if (!res.ok) return { ok: false, output: data.error ?? '撥打失敗' }
+      if (!res.ok) return { ok: false, output: String(data.error ?? '撥打失敗') }
       return { ok: true, output: `電話行銷完成 · ${data.success}/${data.total} 成功`, data }
     }
 
@@ -393,19 +434,17 @@ export default function MarketingPipelinePage() {
       if (!config.u11_avatarId || !config.u11_voiceId) return { ok: false, output: '請先設定 HeyGen Avatar & Voice ID' }
       const copies = u4d?.copies as Array<{ body?: string }> | undefined
       const script = copies?.[0]?.body?.slice(0, 500) ?? '您好，歡迎使用 AI GATE 行銷自動化！'
-      const submitRes = await fetch('/api/marketing/heygen-avatar', {
+      const { res: submitRes, data: submit } = await safeFetch('/api/marketing/heygen-avatar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarId: config.u11_avatarId, voiceId: config.u11_voiceId, script }),
       })
-      const submit = await submitRes.json()
-      if (!submitRes.ok) return { ok: false, output: submit.error ?? 'HeyGen 提交失敗' }
+      if (!submitRes.ok) return { ok: false, output: String(submit.error ?? 'HeyGen 提交失敗') }
       const videoId = submit.videoId
       for (let i = 0; i < 75; i++) {
         if (abortRef.current) return { ok: false, output: '已中止' }
         await new Promise(r => setTimeout(r, 8000))
-        const pollRes = await fetch(`/api/marketing/heygen-avatar?videoId=${videoId}`)
-        const poll = await pollRes.json()
+        const { data: poll } = await safeFetch(`/api/marketing/heygen-avatar?videoId=${videoId}`, {})
         if (poll.status === 'completed') return { ok: true, output: `主播影片完成`, data: { videos: [{ videoId, videoUrl: poll.videoUrl }] } }
         if (poll.status === 'failed') return { ok: false, output: '主播影片生成失敗' }
       }
