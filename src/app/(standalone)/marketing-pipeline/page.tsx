@@ -278,7 +278,7 @@ export default function MarketingPipelinePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ types: config.u3_types, collectedData: u1d?.summary, companyData: u2d }),
       })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '分析失敗') }
+      if (!res.ok) return { ok: false, output: data.error ? String(data.error) : `分析失敗（HTTP ${res.status}）` }
       return { ok: true, output: `分析完成 · 類型：${config.u3_types.join('、')}`, data }
     }
 

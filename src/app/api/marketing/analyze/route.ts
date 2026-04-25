@@ -1,19 +1,6 @@
-﻿/**
- * POST /api/marketing/analyze
- * 分析資料單元 — Gemini 1.5 Flash 多維度分析
- *
- * Body: {
- *   types: AnalysisType[]
- *   collectedData?: string      // 來自單元1
- *   companyData?: object        // 來自單元2
- *   // legacy compat
- *   companyName?: string
- *   companyInfo?: string
- *   topic?: string
- *   industry?: string
- * }
- */
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
@@ -88,6 +75,7 @@ const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const authUser = await getCronOrUserAuth(req)
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const supabase = await createClient()
@@ -128,49 +116,37 @@ export async function POST(req: NextRequest) {
 
   const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
 
-  // Run selected analyses in parallel (max 3 per call to avoid token overload)
+  // Run each analysis type independently in parallel for speed
   const results: Record<string, string> = {}
 
-  const chunks: AnalysisType[][] = []
-  for (let i = 0; i < selectedTypes.length; i += 2) {
-    chunks.push(selectedTypes.slice(i, i + 2))
-  }
+  const baseCtx = `【公司資料】\n${companyCtx}${topic ? `\n行銷主題：${topic}` : ''}${marketCtx}`
 
-  for (const chunk of chunks) {
-    const analysisSection = chunk
-      .map(t => ANALYSIS_PROMPTS[t])
-      .join('\n\n---\n\n')
+  await Promise.all(
+    selectedTypes.map(async (t) => {
+      try {
+        const { text } = await generateText({
+          model: google('gemini-2.0-flash'),
+          messages: [
+            {
+              role: 'user',
+              content: `你是資深行銷策略顧問，請用繁體中文、條列格式，精簡回答（每點1-2句）。
 
-    const { text } = await generateText({
-      model: google('gemini-1.5-flash'),
-      messages: [
-        {
-          role: 'user',
-          content: `你是一位資深行銷策略顧問，擅長市場分析與競品研究。請用繁體中文、條列清晰的格式回答。
+${baseCtx}
 
-【公司基本資料】
-${companyCtx}
-${topic ? `行銷主題：${topic}` : ''}
-${marketCtx}
+${ANALYSIS_PROMPTS[t]}
 
-【分析任務】
-請依序完成以下分析，每個分析請加上清楚的標題：
-
-${analysisSection}
-
-最後在全部分析完成後，輸出綜合關鍵指標（JSON 格式，放在 <metrics> 標籤內）：
-<metrics>
-{"opportunity": 80, "competitors": 8, "audience": "20萬+潛在客戶", "score": 75}
-</metrics>
-（opportunity: 市場機會指數 0-100, competitors: 主要競品數量, audience: 目標受眾規模描述, score: 整體競爭力評分 0-100）`,
-        },
-      ],
-      maxOutputTokens: 4000,
+最後附上關鍵指標 JSON（放在 <metrics> 標籤內）：
+<metrics>{"opportunity":80,"competitors":8,"audience":"20萬+","score":75}</metrics>`,
+            },
+          ],
+          maxTokens: 1500,
+        })
+        results[t] = text
+      } catch (e) {
+        results[t] = `分析失敗：${String(e)}`
+      }
     })
-
-    // Assign result to each type in chunk
-    chunk.forEach(t => { results[t] = text })
-  }
+  )
 
   // Extract metrics from last result
   const lastText = Object.values(results).pop() ?? ''
@@ -187,4 +163,8 @@ ${analysisSection}
   }
 
   return NextResponse.json({ results: cleanResults, metrics, types: selectedTypes })
+  } catch (err) {
+    console.error('[analyze]', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
 }
