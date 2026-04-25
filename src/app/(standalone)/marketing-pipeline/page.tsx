@@ -8,7 +8,6 @@ import {
   Loader2, Bell, BellOff, ChevronRight, Settings2,
   MessageSquare, Zap, ArrowLeft, Clock, Calendar,
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +42,7 @@ interface PipelineSchedule {
 }
 
 interface PipelineConfig {
+  activityName: string   // 流程名稱，獨立於行銷自動化活動
   steps: { unitId: number; enabled: boolean; notify: boolean }[]
   schedule: PipelineSchedule
   // Unit 1
@@ -73,12 +73,6 @@ interface PipelineConfig {
   u11_voiceId: string
 }
 
-interface Campaign {
-  id: string
-  title: string
-  unit_data: Record<string, unknown>
-}
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEP_DEFS: PipelineStepDef[] = [
@@ -106,6 +100,7 @@ const DEFAULT_SCHEDULE: PipelineSchedule = {
 }
 
 const DEFAULT_CONFIG: PipelineConfig = {
+  activityName: '自動化流程',
   steps: STEP_DEFS.map(s => ({ unitId: s.unitId, enabled: s.canAuto, notify: [4, 6, 8, 9, 10, 11].includes(s.unitId) })),
   schedule: DEFAULT_SCHEDULE,
   u1_types: ['web'],
@@ -137,7 +132,7 @@ const DEFAULT_CONFIG: PipelineConfig = {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 const LS_CONFIG_KEY = 'aigate_pipeline_config'
-const LS_CAMPAIGN_KEY = 'aigate_pipeline_campaignId'
+const LS_RESULTS_KEY = 'aigate_pipeline_results'
 
 function loadConfigFromLS(): PipelineConfig {
   try {
@@ -148,12 +143,18 @@ function loadConfigFromLS(): PipelineConfig {
   } catch { return DEFAULT_CONFIG }
 }
 
-export default function MarketingPipelinePage() {
-  const supabase = createClient()
+function loadResultsFromLS(): Record<string, unknown> {
+  try {
+    const raw = localStorage.getItem(LS_RESULTS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [campaignId, setCampaignId] = useState<string>('')
-  const [campaignData, setCampaignData] = useState<Record<string, unknown>>({})
+export default function MarketingPipelinePage() {
+  const [campaignData, setCampaignData] = useState<Record<string, unknown>>(() => {
+    if (typeof window === 'undefined') return {}
+    return loadResultsFromLS()
+  })
 
   const [config, setConfig] = useState<PipelineConfig>(() => {
     if (typeof window === 'undefined') return DEFAULT_CONFIG
@@ -177,33 +178,6 @@ export default function MarketingPipelinePage() {
     try { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config)) } catch { /* ignore */ }
   }, [config])
 
-  // ── Load campaigns ───────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase.from('marketing_campaigns').select('id, title, unit_data')
-      .order('updated_at', { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        if (!data) return
-        setCampaigns(data as Campaign[])
-        // Restore last selected campaign
-        const lastId = localStorage.getItem(LS_CAMPAIGN_KEY)
-        if (lastId && data.find(c => c.id === lastId)) {
-          const c = data.find(c => c.id === lastId)!
-          setCampaignId(lastId)
-          setCampaignData(c.unit_data ?? {})
-        }
-      })
-  }, [])
-
-  const loadCampaign = useCallback((id: string) => {
-    const c = campaigns.find(c => c.id === id)
-    if (c) {
-      setCampaignId(id)
-      setCampaignData(c.unit_data ?? {})
-      try { localStorage.setItem(LS_CAMPAIGN_KEY, id) } catch { /* ignore */ }
-    }
-  }, [campaigns])
-
   // Scroll log to bottom
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [runLog])
 
@@ -214,15 +188,14 @@ export default function MarketingPipelinePage() {
   const setStepNotify = (unitId: number, notify: boolean) =>
     setConfig(c => ({ ...c, steps: c.steps.map(s => s.unitId === unitId ? { ...s, notify } : s) }))
 
-  // ── Save unit data to DB ─────────────────────────────────────────────────
+  // ── Save unit data to localStorage ──────────────────────────────────────
   const saveUnit = useCallback(async (unitId: number, data: unknown) => {
-    if (!campaignId) return
-    // Re-read latest unit_data then merge
-    const { data: row } = await supabase.from('marketing_campaigns').select('unit_data').eq('id', campaignId).single()
-    const prev = (row?.unit_data ?? {}) as Record<string, unknown>
-    await supabase.from('marketing_campaigns').update({ unit_data: { ...prev, [unitId]: data } }).eq('id', campaignId)
-    setCampaignData(p => ({ ...p, [unitId]: data }))
-  }, [campaignId, supabase])
+    setCampaignData(prev => {
+      const next = { ...prev, [unitId]: data }
+      try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }, [])
 
   // ── Telegram notify ──────────────────────────────────────────────────────
   const sendTelegram = useCallback(async (msg: string) => {
@@ -353,7 +326,7 @@ export default function MarketingPipelinePage() {
         const { res, data } = await safeFetch('/api/marketing/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, model: config.u6_model, size: config.u6_size, campaignId }),
+          body: JSON.stringify({ prompt, model: config.u6_model, size: config.u6_size }),
         })
         if (res.ok && data.imageUrl) images.push({ url: String(data.imageUrl), prompt: prompt.slice(0, 60) })
       }
@@ -394,7 +367,7 @@ export default function MarketingPipelinePage() {
       for (let i = 0; i < 75; i++) {
         if (abortRef.current) return { ok: false, output: '已中止' }
         await new Promise(r => setTimeout(r, 8000))
-        const { data: poll } = await safeFetch(`/api/marketing/generate-video?requestId=${requestId}&model=${config.u8_model}&campaignId=${campaignId}`, {})
+        const { data: poll } = await safeFetch(`/api/marketing/generate-video?requestId=${requestId}&model=${config.u8_model}`, {})
         if (poll.status === 'completed' && poll.videoUrl) {
           return { ok: true, output: `影片生成完成`, data: { videos: [{ url: poll.videoUrl, model: config.u8_model }] } }
         }
@@ -410,7 +383,7 @@ export default function MarketingPipelinePage() {
       const { res, data } = await safeFetch('/api/marketing/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaignId, platforms: config.u9_platforms, copies, images }),
+        body: JSON.stringify({ platforms: config.u9_platforms, copies, images }),
       })
       if (!res.ok) return { ok: false, output: String(data.error ?? '上傳失敗') }
       return { ok: true, output: `上傳完成 · ${config.u9_platforms.join('、')}`, data }
@@ -452,11 +425,10 @@ export default function MarketingPipelinePage() {
     }
 
     return { ok: false, output: `Unit ${unitId} 不支援自動執行` }
-  }, [config, campaignId])
+  }, [config])
 
   // ── Start pipeline ───────────────────────────────────────────────────────
   const startPipeline = useCallback(async () => {
-    if (!campaignId) { alert('請先選擇活動'); return }
     abortRef.current = false
     const enabled = config.steps.filter(s => s.enabled && STEP_DEFS.find(d => d.unitId === s.unitId)?.canAuto)
     const initialRuns: StepRun[] = enabled.map(s => ({ unitId: s.unitId, status: 'pending', output: '' }))
@@ -511,7 +483,7 @@ export default function MarketingPipelinePage() {
     setIsRunning(false)
     setCurrentIdx(-1)
     log(`── 流程結束 ──`)
-  }, [campaignId, config, campaignData, runUnit, saveUnit, sendTelegram, updateStep, waitConfirm, log])
+  }, [config, campaignData, runUnit, saveUnit, sendTelegram, updateStep, waitConfirm, log])
 
   function stopPipeline() { abortRef.current = true; setIsRunning(false); log('⏹ 已手動停止') }
 
@@ -520,8 +492,6 @@ export default function MarketingPipelinePage() {
     const def = STEP_DEFS.find(d => d.unitId === s.unitId)
     return s.enabled && def?.canAuto
   })
-
-  const campaign = campaigns.find(c => c.id === campaignId)
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -540,18 +510,33 @@ export default function MarketingPipelinePage() {
           <p className="text-[10px] text-gray-400 mt-0.5">勾選步驟，一鍵全自動執行</p>
         </div>
 
-        {/* Campaign selector */}
-        <div className="p-3 border-b">
-          <label className="text-[10px] text-gray-500 block mb-1">活動</label>
-          <select value={campaignId} onChange={e => loadCampaign(e.target.value)}
-            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
-            <option value="">— 選擇活動 —</option>
-            {campaigns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-          </select>
-          {campaignId && (
-            <div className="text-[10px] text-gray-400 mt-1">
-              {Object.keys(campaignData).filter(k => !isNaN(Number(k))).length} 個單元已有資料
-            </div>
+        {/* Activity name */}
+        <div className="p-3 border-b space-y-1.5">
+          <label className="text-[10px] text-gray-500 block">流程名稱</label>
+          <input
+            type="text"
+            value={config.activityName}
+            onChange={e => setConfig(c => ({ ...c, activityName: e.target.value }))}
+            placeholder="例：喬民宿每週行銷"
+            className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+          />
+          <div className="text-[10px] text-gray-400">
+            {Object.keys(campaignData).filter(k => !isNaN(Number(k))).length > 0
+              ? `上次執行：${Object.keys(campaignData).filter(k => !isNaN(Number(k))).length} 個單元有資料`
+              : '尚無執行紀錄'}
+          </div>
+          {Object.keys(campaignData).filter(k => !isNaN(Number(k))).length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm('清除上次執行結果？')) {
+                  setCampaignData({})
+                  try { localStorage.removeItem(LS_RESULTS_KEY) } catch { /* ignore */ }
+                }
+              }}
+              className="text-[10px] text-red-400 hover:text-red-600"
+            >
+              清除上次結果
+            </button>
           )}
         </div>
 
@@ -619,7 +604,7 @@ export default function MarketingPipelinePage() {
             </button>
           </div>
           <div className="flex-1 text-xs text-gray-400">
-            {campaign ? `活動：${campaign.title}` : '請先選擇活動'}
+            {config.activityName || '自動化流程'}
             {enabledSteps.length > 0 && ` · ${enabledSteps.length} 個步驟已啟用`}
           </div>
           <div className="flex gap-2">
@@ -628,7 +613,7 @@ export default function MarketingPipelinePage() {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-red-500">
                   <Pause className="h-4 w-4" />停止
                 </button>
-              : <button onClick={startPipeline} disabled={!campaignId || enabledSteps.length === 0}
+              : <button onClick={startPipeline} disabled={enabledSteps.length === 0}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-40 shadow-sm"
                   style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
                   <Zap className="h-4 w-4" />開始自動執行
@@ -720,35 +705,10 @@ export default function MarketingPipelinePage() {
                   <code className="bg-amber-100 px-1 rounded ml-1">NEXT_PUBLIC_APP_URL</code>
                   <span className="ml-1">（Vercel Pro 支援每小時，Free 每日一次）</span>
                 </p>
-                {config.schedule.enabled && campaignId && (
-                  <button onClick={async () => {
-                    const { data: row } = await supabase.from('marketing_campaigns').select('unit_data').eq('id', campaignId).single()
-                    const prev = (row?.unit_data ?? {}) as Record<string, unknown>
-                    const scheduleToSave = {
-                      ...config.schedule,
-                      steps: config.steps,
-                      config: {
-                        u1_types: config.u1_types, u1_keywords: config.u1_keywords,
-                        u1_subOptions: config.u1_subOptions, u1_location: config.u1_location,
-                        u1_shopeeCountry: config.u1_shopeeCountry,
-                        u1_appIds: config.u1_appIds.split('\n').filter(Boolean),
-                        u1_alertRssUrls: config.u1_alertRssUrls.split('\n').filter(Boolean),
-                        u3_types: config.u3_types, u4_copyTypes: config.u4_copyTypes, u4_instructions: config.u4_instructions,
-                        u5_count: config.u5_count, u5_platforms: config.u5_platforms,
-                        u6_model: config.u6_model, u6_size: config.u6_size, u6_count: config.u6_count,
-                        u7_count: config.u7_count, u7_duration: config.u7_duration, u8_model: config.u8_model,
-                        u9_platforms: config.u9_platforms, u10_phones: config.u10_phones,
-                        u10_voiceId: config.u10_voiceId, u10_callerId: config.u10_callerId,
-                        u11_avatarId: config.u11_avatarId, u11_voiceId: config.u11_voiceId,
-                      },
-                    }
-                    await supabase.from('marketing_campaigns').update({ unit_data: { ...prev, _schedule: scheduleToSave } }).eq('id', campaignId)
-                    alert('排程已儲存！')
-                  }}
-                    className="w-full py-2 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2"
-                    style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
-                    <Calendar className="h-4 w-4" />儲存排程設定
-                  </button>
+                {config.schedule.enabled && (
+                  <div className="text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3" />排程設定已自動儲存，下次開啟即生效
+                  </div>
                 )}
               </div>
 
