@@ -95,7 +95,11 @@ export async function POST(req: NextRequest) {
     ? `\n\n📌 使用者特別規定：\n${userInstructions}`
     : ''
 
-  const typeSpecs = selectedTypes
+  const validTypes = selectedTypes.filter(t => !!COPY_TYPE_SPECS[t])
+  if (validTypes.length === 0) {
+    return NextResponse.json({ error: `文案類型無效：${selectedTypes.join(', ')}` }, { status: 400 })
+  }
+  const typeSpecs = validTypes
     .map(t => {
       const spec = COPY_TYPE_SPECS[t]
       return `【${spec.name}】\n字數：${spec.len}\n格式：${spec.style}`
@@ -104,10 +108,6 @@ export async function POST(req: NextRequest) {
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
-  }
-
-  if (selectedTypes.length === 0) {
-    return NextResponse.json({ error: '請先選擇至少一種文案類型' }, { status: 400 })
   }
 
   try {
@@ -144,7 +144,7 @@ ${typeSpecs}
 
     // Parse sections by type
     const results: Record<string, string> = {}
-    for (const t of selectedTypes) {
+    for (const t of validTypes) {
       const spec = COPY_TYPE_SPECS[t]
       const regex = new RegExp(`===【${spec.name}】===[\\s\\S]*?(?====【|$)`, 'g')
       const match = text.match(regex)
@@ -153,7 +153,7 @@ ${typeSpecs}
         : text
     }
 
-    return NextResponse.json({ results, types: selectedTypes, fullText: text })
+    return NextResponse.json({ results, types: validTypes, fullText: text })
   } catch (err) {
     console.error('[copy]', err)
     return NextResponse.json({ error: `文案生成失敗：${String(err)}` }, { status: 500 })
