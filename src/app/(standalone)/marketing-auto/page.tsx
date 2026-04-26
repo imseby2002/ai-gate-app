@@ -2395,6 +2395,26 @@ function Unit8VideoGenerate({
             ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />KLING 生成中…</>
             : <><Sparkles className="h-3.5 w-3.5" />生成影片</>}
         </button>
+        {(() => {
+          const manualVid = videos.find(v => v.scriptId === 0)
+          return manualVid ? (
+            <div className="rounded-xl overflow-hidden border bg-black mt-3">
+              <video src={manualVid.url} controls autoPlay className="w-full max-h-72" />
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
+                <span className="text-[10px] text-gray-400 flex-1">
+                  {VIDEO_MODELS.find(m => m.id === manualVid.model)?.name} · {new Date(manualVid.generatedAt).toLocaleString('zh-TW')}
+                </span>
+                <a href={manualVid.url} download="video.mp4" target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
+                  <Download className="h-3 w-3" /> 下載
+                </a>
+                <button onClick={() => removeVideo(manualVid.url)} className="p-1 rounded-lg text-gray-400 hover:text-red-400">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          ) : null
+        })()}
       </div>
 
       {/* Notice */}
