@@ -328,7 +328,20 @@ export default function MarketingPipelinePage() {
         body: JSON.stringify({ types: config.u3_types, collectedData: u1d?.summary, companyData: u2d }),
       })
       if (!res.ok) return { ok: false, output: data.error ? String(data.error) : `分析失敗（HTTP ${res.status}）` }
-      return { ok: true, output: `分析完成 · 類型：${config.u3_types.join('、')}`, data }
+      const analysisResults: Record<string, string> = data.results ?? {}
+      const TYPE_LABELS: Record<string, string> = {
+        swot: 'SWOT 分析', company: '公司分析', competitor_activity: '競品活動',
+        competitor_performance: '競品業績', content: '內容分析', marketing: '文案分析',
+      }
+      const analysisSummary = Object.entries(analysisResults)
+        .map(([t, text]) => {
+          const label = TYPE_LABELS[t] ?? t
+          const lines = text.replace(/<metrics>[\s\S]*?<\/metrics>/, '').trim().split('\n').filter(Boolean)
+          const snippet = lines.slice(0, 3).join(' ').replace(/\*\*/g, '').slice(0, 120)
+          return `【${label}】${snippet}…`
+        })
+        .join('\n')
+      return { ok: true, output: `分析完成 · 類型：${config.u3_types.join('、')}\n\n${analysisSummary}`, data }
     }
 
     if (unitId === 4) {
@@ -515,7 +528,17 @@ export default function MarketingPipelinePage() {
         if (stepCfg.notify) {
           updateStep(stepCfg.unitId, 'waiting', result.output)
           pendingFeedbackRef.current = null
-          const notifyMsg = `🤖 <b>AI GATE 流程確認</b>\n\n步驟完成：${def.name}\n結果：${result.output}\n\n請選擇操作：`
+          const outputLines = result.output.split('\n')
+          const outputTitle = outputLines[0]
+          const outputDetail = outputLines.slice(1).join('\n').trim()
+          const notifyMsg = [
+            `🤖 <b>AI GATE 流程確認</b>`,
+            ``,
+            `步驟完成：${def.name}`,
+            `結果：${outputTitle}`,
+            outputDetail ? `\n${outputDetail}` : '',
+            `\n請選擇操作：`,
+          ].join('\n')
           const approvalId = await sendTelegramApproval(notifyMsg, { unitId: stepCfg.unitId, stepName: def.name })
           log(`🔔 已發送 Telegram 通知${approvalId ? '（含互動按鈕）' : ''}，等待確認…`)
           await waitConfirm(stepCfg.unitId, approvalId ?? undefined)
