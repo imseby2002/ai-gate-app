@@ -108,26 +108,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ status: 'error', error: '未收到影片 URL' }, { status: 500 })
     }
 
-    // Upload to Supabase Storage
-    const vidRes = await fetch(tempVideoUrl)
-    if (!vidRes.ok) return NextResponse.json({ status: 'error', error: '無法下載影片' }, { status: 500 })
-
-    const vidBuffer = await vidRes.arrayBuffer()
-    const fileName = `${user.id}/video-${model}-${scriptId}-${Date.now()}.mp4`
-
-    const { error: uploadError } = await supabase.storage
-      .from('marketing-assets')
-      .upload(fileName, vidBuffer, { contentType: 'video/mp4', upsert: false })
-
-    if (uploadError) {
-      return NextResponse.json({ status: 'error', error: `Storage 上傳失敗：${uploadError.message}` }, { status: 500 })
-    }
-
-    const { data: { publicUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(fileName)
-
     return NextResponse.json({
       status: 'completed',
-      url: publicUrl,
+      url: tempVideoUrl,
       requestId,
       model,
       scriptId,
