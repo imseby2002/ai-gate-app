@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     selectedTypes.map(async (t) => {
       try {
         const { text } = await generateText({
-          model: google('gemini-2.0-flash'),
+          model: google('gemini-2.5-flash'),
           messages: [
             {
               role: 'user',
