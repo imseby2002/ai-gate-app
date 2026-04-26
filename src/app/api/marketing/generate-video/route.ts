@@ -97,14 +97,15 @@ export async function GET(req: NextRequest) {
   if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
 
   const endpoint = FAL_ENDPOINTS[model]
+  if (!endpoint) return NextResponse.json({ status: 'error', error: `不支援的模型：${model}` }, { status: 400 })
 
   // Check status
-  const statusRes = await fetch(
-    `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
-    { headers: { Authorization: `Key ${apiKey}` } }
-  )
+  const statusUrl = `https://queue.fal.run/${endpoint}/requests/${requestId}/status`
+  const statusRes = await fetch(statusUrl, { headers: { Authorization: `Key ${apiKey}` } })
   if (!statusRes.ok) {
-    return NextResponse.json({ status: 'error', error: '狀態查詢失敗' }, { status: 500 })
+    const errBody = await statusRes.json().catch(() => ({}))
+    const errMsg = errBody?.detail ?? errBody?.message ?? errBody?.error ?? `HTTP ${statusRes.status}`
+    return NextResponse.json({ status: 'error', error: `狀態查詢失敗：${errMsg}` }, { status: 500 })
   }
 
   const statusData = await statusRes.json()
