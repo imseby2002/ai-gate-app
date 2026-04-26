@@ -33,7 +33,10 @@ export async function POST(req: NextRequest) {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail ?? 'FLUX generation failed')
+      if (!res.ok) {
+        const d = data.detail
+        throw new Error(typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : JSON.stringify(data))
+      }
       imageUrl = data.images?.[0]?.url
 
     } else if (model === 'nano-banana') {
@@ -51,7 +54,10 @@ export async function POST(req: NextRequest) {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail ?? 'Generation failed')
+      if (!res.ok) {
+        const d = data.detail
+        throw new Error(typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : JSON.stringify(data))
+      }
       imageUrl = data.images?.[0]?.url
 
     } else {
