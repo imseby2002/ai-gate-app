@@ -1538,8 +1538,15 @@ function Unit6ImageGenerate({
     }
   }
 
-  const removeImage = (url: string) =>
+  const removeImage = (url: string) => {
     setImages(prev => { const next = prev.filter(i => i.url !== url); onDone({ images: next }); return next })
+    // 同步刪除 Supabase Storage（fire-and-forget）
+    fetch('/api/marketing/delete-asset', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    }).catch(() => {/* 靜默失敗，不影響 UI */})
+  }
 
   const modelInfo = IMAGE_MODELS.find(m => m.id === model)!
 
