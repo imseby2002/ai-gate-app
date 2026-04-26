@@ -20,10 +20,10 @@ const DALLE_SIZES: Record<string, string> = {
   '9:16': '1024x1792',
   '16:9': '1792x1024',
 }
-const FAL_SIZES: Record<string, string> = {
-  '1:1':  '1024x1024',
-  '9:16': '768x1344',
-  '16:9': '1344x768',
+const FAL_SIZES: Record<string, { width: number; height: number }> = {
+  '1:1':  { width: 1024, height: 1024 },
+  '9:16': { width: 768,  height: 1344 },
+  '16:9': { width: 1344, height: 768  },
 }
 
 export async function POST(req: NextRequest) {
@@ -84,14 +84,16 @@ export async function POST(req: NextRequest) {
       headers: { Authorization: `Key ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt: prompt.trim(),
-        image_size: FAL_SIZES[size] ?? '1024x1024',
+        image_size: FAL_SIZES[size] ?? { width: 1024, height: 1024 },
         num_inference_steps: 28,
         num_images: 1,
       }),
     })
     if (!falRes.ok) {
       const err = await falRes.json().catch(() => ({}))
-      return NextResponse.json({ error: err?.detail ?? 'FLUX 生成失敗' }, { status: 500 })
+      const d = err?.detail
+      const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : 'FLUX 生成失敗'
+      return NextResponse.json({ error: msg }, { status: 500 })
     }
     const falData = await falRes.json()
     tempUrl = falData?.images?.[0]?.url ?? ''
@@ -106,13 +108,15 @@ export async function POST(req: NextRequest) {
       headers: { Authorization: `Key ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt: prompt.trim(),
-        image_size: FAL_SIZES[size] ?? '1024x1024',
+        image_size: FAL_SIZES[size] ?? { width: 1024, height: 1024 },
         num_images: 1,
       }),
     })
     if (!falRes.ok) {
       const err = await falRes.json().catch(() => ({}))
-      return NextResponse.json({ error: err?.detail ?? 'Nano Banana 生成失敗' }, { status: 500 })
+      const d = err?.detail
+      const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : 'Nano Banana 生成失敗'
+      return NextResponse.json({ error: msg }, { status: 500 })
     }
     const falData = await falRes.json()
     tempUrl = falData?.images?.[0]?.url ?? ''
