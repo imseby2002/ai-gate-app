@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
     payload.image_url = imageUrl
   }
 
-  const res = await fetch(`https://queue.fal.run/${endpoint}`, {
+  const submitUrl = `https://queue.fal.run/${endpoint}`
+  const res = await fetch(submitUrl, {
     method: 'POST',
     headers: {
       Authorization: `Key ${apiKey}`,
@@ -65,14 +66,23 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(payload),
   })
 
+  const data = await res.json().catch(() => ({}))
+  console.log('[generate-video POST]', submitUrl, res.status, JSON.stringify(data))
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    return NextResponse.json({ error: err?.detail ?? '提交失敗' }, { status: 500 })
+    const d = data?.detail
+    const msg = typeof d === 'string' ? d : Array.isArray(d) ? d.map((e: {msg?: string}) => e.msg ?? JSON.stringify(e)).join('; ') : JSON.stringify(data)
+    return NextResponse.json({ error: `提交失敗 (${res.status})：${msg}` }, { status: 500 })
   }
 
-  const data = await res.json()
+  if (!data.request_id) {
+    return NextResponse.json({ error: `FAL 未回傳 request_id：${JSON.stringify(data)}` }, { status: 500 })
+  }
+
   return NextResponse.json({
     requestId: data.request_id,
+    statusUrl: data.status_url ?? '',
+    responseUrl: data.response_url ?? '',
     model,
     scriptId,
     endpoint,
@@ -99,16 +109,20 @@ export async function GET(req: NextRequest) {
   const endpoint = FAL_ENDPOINTS[model]
   if (!endpoint) return NextResponse.json({ status: 'error', error: `不支援的模型：${model}` }, { status: 400 })
 
+  if (!requestId || requestId === 'undefined') {
+    return NextResponse.json({ status: 'error', error: 'requestId 無效，請重新提交任務' }, { status: 400 })
+  }
+
   // Check status
   const statusUrl = `https://queue.fal.run/${endpoint}/requests/${requestId}/status`
   const statusRes = await fetch(statusUrl, { headers: { Authorization: `Key ${apiKey}` } })
+  const errBody = await statusRes.json().catch(() => ({}))
+  console.log('[generate-video GET status]', statusUrl, statusRes.status, JSON.stringify(errBody))
   if (!statusRes.ok) {
-    const errBody = await statusRes.json().catch(() => ({}))
     const errMsg = errBody?.detail ?? errBody?.message ?? errBody?.error ?? `HTTP ${statusRes.status}`
     return NextResponse.json({ status: 'error', error: `狀態查詢失敗：${errMsg}` }, { status: 500 })
   }
-
-  const statusData = await statusRes.json()
+  const statusData = errBody
   const falStatus: string = statusData.status ?? 'IN_QUEUE'
 
   // Still processing
