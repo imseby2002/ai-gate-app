@@ -272,11 +272,72 @@ export async function POST(
     const botToken     = creds.telegram_bot_token ?? ''
     const adminChatId  = creds.telegram_admin_chat_id ?? ''
     const body         = await req.json()
-    const message      = body?.message ?? body?.edited_message
 
+    // ── Pipeline approval: inline button callback_query ────────────────────
+    const cq = body?.callback_query
+    if (cq && botToken) {
+      const chatId  = String(cq.message?.chat?.id ?? '')
+      const cqId    = cq.id as string
+      const cqData  = cq.data as string
+      const msgId   = cq.message?.message_id as number | undefined
+
+      const ackText = cqData === 'approve' ? '✅ 已核准！' : cqData === 'reject' ? '❌ 已拒絕' : '請輸入修改意見'
+      await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callback_query_id: cqId, text: ackText }),
+      }).catch(() => {})
+
+      const supabase = getServiceClient()
+      const q = supabase
+        .from('telegram_approvals')
+        .select('id, status')
+        .eq('chat_id', chatId)
+        .in('status', ['pending', 'awaiting_feedback'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (msgId) q.eq('message_id', msgId)
+      const { data: approvals } = await q
+      const approval = approvals?.[0]
+
+      if (approval) {
+        if (cqData === 'approve') {
+          await supabase.from('telegram_approvals').update({ status: 'approved' }).eq('id', approval.id)
+        } else if (cqData === 'reject') {
+          await supabase.from('telegram_approvals').update({ status: 'rejected' }).eq('id', approval.id)
+        } else if (cqData === 'modify') {
+          await supabase.from('telegram_approvals').update({ status: 'awaiting_feedback' }).eq('id', approval.id)
+          await replyTelegram(chatId, '📝 請輸入您的修改意見：', botToken)
+        }
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Pipeline approval: text feedback (after tapping ✏️ modify) ─────────
+    const message      = body?.message ?? body?.edited_message
     if (message?.text && botToken) {
       const chatId: string | number = message.chat?.id
       const text: string = message.text
+      const supabase = getServiceClient()
+      const { data: awaitingApprovals } = await supabase
+        .from('telegram_approvals')
+        .select('id')
+        .eq('chat_id', String(chatId))
+        .eq('status', 'awaiting_feedback')
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (awaitingApprovals?.[0]) {
+        await supabase.from('telegram_approvals')
+          .update({ status: 'feedback', feedback: text })
+          .eq('id', awaitingApprovals[0].id)
+        await replyTelegram(chatId, `🔄 已收到修改意見！\n\n「${text}」\n\nAI 將依此重新生成，請返回 AI GATE 繼續流程。`, botToken)
+        return NextResponse.json({ ok: true })
+      }
+    }
+
+    if (message?.text && botToken) {
+      const chatId: string | number = message.chat?.id
+      const text: string            = message.text
       const senderName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || '客戶'
       const isAdmin = adminChatId && String(chatId) === String(adminChatId)
 
