@@ -69,6 +69,18 @@ export async function POST(req: NextRequest) {
     const cqMsgId     = cq.message?.message_id as number | undefined
     const fromUser    = cq.from?.username ?? cq.from?.first_name ?? 'unknown'
 
+    // Find matching telegram_approval (pipeline interactive flow)
+    const approvalQuery = supabase
+      .from('telegram_approvals')
+      .select('id, status')
+      .eq('chat_id', chatId)
+      .in('status', ['pending', 'awaiting_feedback'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+    if (cqMsgId) approvalQuery.eq('message_id', cqMsgId)
+    const { data: approvals } = await approvalQuery
+    const approval = approvals?.[0]
+
     // Find running campaign for this chat
     const { data: campaigns } = await supabase
       .from('marketing_campaigns')
@@ -82,6 +94,13 @@ export async function POST(req: NextRequest) {
 
     if (cqData === 'approve') {
       await answerCallback(cqId, '✅ 已核准！')
+
+      // Update telegram_approvals so the polling loop can resolve
+      if (approval) {
+        await supabase.from('telegram_approvals')
+          .update({ status: 'approved' })
+          .eq('id', approval.id)
+      }
 
       if (campaign) {
         const telegramSteps = [5, 7, 9, 11, 13]
@@ -104,6 +123,13 @@ export async function POST(req: NextRequest) {
 
     } else if (cqData === 'reject') {
       await answerCallback(cqId, '❌ 已拒絕')
+
+      // Update telegram_approvals so the polling loop can resolve
+      if (approval) {
+        await supabase.from('telegram_approvals')
+          .update({ status: 'rejected' })
+          .eq('id', approval.id)
+      }
 
       if (campaign) {
         const telegramSteps = [5, 7, 9, 11, 13]
@@ -133,7 +159,14 @@ export async function POST(req: NextRequest) {
     } else if (cqData === 'modify') {
       await answerCallback(cqId, '請輸入修改意見')
       await sendTelegramReply(chatId, '📝 請輸入您的修改意見：')
-      // Mark campaign step as awaiting_text_feedback so next message is treated as feedback
+
+      // Update telegram_approvals to awaiting_feedback
+      if (approval) {
+        await supabase.from('telegram_approvals')
+          .update({ status: 'awaiting_feedback' })
+          .eq('id', approval.id)
+      }
+
       if (campaign) {
         const telegramSteps = [5, 7, 9, 11, 13]
         const statuses: Record<string, string> = campaign.step_statuses ?? {}
@@ -171,6 +204,16 @@ export async function POST(req: NextRequest) {
   const telegramSteps = [5, 7, 9, 11, 13]
   const statuses: Record<string, string> = campaign.step_statuses ?? {}
 
+  // Find pending telegram_approval for this chat (for pipeline polling resolution)
+  const { data: pendingApprovals } = await supabase
+    .from('telegram_approvals')
+    .select('id, status')
+    .eq('chat_id', chatId)
+    .in('status', ['pending', 'awaiting_feedback'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const pendingApproval = pendingApprovals?.[0]
+
   // Check for awaiting_feedback state (user tapped ✏️ and is now typing)
   const awaitingStep = telegramSteps.find(s => statuses[String(s)] === 'awaiting_feedback')
   if (awaitingStep) {
@@ -190,6 +233,12 @@ export async function POST(req: NextRequest) {
       campaign_id: campaign.id, step_id: awaitingStep,
       telegram_user: fromUser, message_text: text, action: 'feedback',
     })
+    // Resolve the polling loop
+    if (pendingApproval) {
+      await supabase.from('telegram_approvals')
+        .update({ status: 'feedback', feedback: text })
+        .eq('id', pendingApproval.id)
+    }
     await sendTelegramReply(chatId, `🔄 已收到修改意見！\n\n「${text}」\n\nAI 將依此重新生成，請返回 AI GATE 繼續流程。`)
     return NextResponse.json({ ok: true })
   }
