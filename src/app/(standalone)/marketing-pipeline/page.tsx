@@ -528,13 +528,14 @@ export default function MarketingPipelinePage() {
         if (stepCfg.notify) {
           updateStep(stepCfg.unitId, 'waiting', result.output)
           pendingFeedbackRef.current = null
+          const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
           const outputLines = result.output.split('\n')
-          const outputTitle = outputLines[0]
-          const outputDetail = outputLines.slice(1).join('\n').trim()
+          const outputTitle = esc(outputLines[0])
+          const outputDetail = esc(outputLines.slice(1).join('\n').trim())
           const notifyMsg = [
             `🤖 <b>AI GATE 流程確認</b>`,
             ``,
-            `步驟完成：${def.name}`,
+            `步驟完成：${esc(def.name)}`,
             `結果：${outputTitle}`,
             outputDetail ? `\n${outputDetail}` : '',
             `\n請選擇操作：`,

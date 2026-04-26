@@ -22,7 +22,7 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 type CopyType =
   | 'facebook_post'
@@ -102,17 +102,26 @@ export async function POST(req: NextRequest) {
     })
     .join('\n\n')
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
+  }
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
-    system: `你是一位頂尖的多平台行銷文案撰寫人，擅長根據品牌特性與受眾習慣，撰寫各平台最佳化的行銷文案。
+  if (selectedTypes.length === 0) {
+    return NextResponse.json({ error: '請先選擇至少一種文案類型' }, { status: 400 })
+  }
+
+  try {
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-4-5'),
+      system: `你是一位頂尖的多平台行銷文案撰寫人，擅長根據品牌特性與受眾習慣，撰寫各平台最佳化的行銷文案。
 文案要：具感染力、清晰傳遞價值主張、符合各平台格式規範、促進轉換行動。
 輸出格式：每個文案類型用「===【類型名稱】===」作為分隔標題，直接輸出文案內容，不需其他說明。`,
-    messages: [
-      {
-        role: 'user',
-        content: `請根據以下品牌資料與分析，為各平台撰寫行銷文案：
+      messages: [
+        {
+          role: 'user',
+          content: `請根據以下品牌資料與分析，為各平台撰寫行銷文案：
 
 【品牌資料】
 ${companyCtx}
@@ -128,21 +137,25 @@ ${feedbackSection}
 ${typeSpecs}
 
 請確保各平台文案風格符合該平台用戶習慣，直接輸出可發布的文案。`,
-      },
-    ],
-    maxOutputTokens: 2000,
-  })
+        },
+      ],
+      maxOutputTokens: 2000,
+    })
 
-  // Parse sections by type
-  const results: Record<string, string> = {}
-  for (const t of selectedTypes) {
-    const spec = COPY_TYPE_SPECS[t]
-    const regex = new RegExp(`===【${spec.name}】===[\\s\\S]*?(?====【|$)`, 'g')
-    const match = text.match(regex)
-    results[t] = match
-      ? match[0].replace(`===【${spec.name}】===`, '').trim()
-      : text // fallback: return full text if can't parse
+    // Parse sections by type
+    const results: Record<string, string> = {}
+    for (const t of selectedTypes) {
+      const spec = COPY_TYPE_SPECS[t]
+      const regex = new RegExp(`===【${spec.name}】===[\\s\\S]*?(?====【|$)`, 'g')
+      const match = text.match(regex)
+      results[t] = match
+        ? match[0].replace(`===【${spec.name}】===`, '').trim()
+        : text
+    }
+
+    return NextResponse.json({ results, types: selectedTypes, fullText: text })
+  } catch (err) {
+    console.error('[copy]', err)
+    return NextResponse.json({ error: `文案生成失敗：${String(err)}` }, { status: 500 })
   }
-
-  return NextResponse.json({ results, types: selectedTypes, fullText: text })
 }
