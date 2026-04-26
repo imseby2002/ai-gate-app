@@ -9,9 +9,12 @@ export async function POST(req: NextRequest) {
   const { prompt, model, aspectRatio = '1:1' } = await req.json()
   if (!prompt) return NextResponse.json({ error: 'prompt required' }, { status: 400 })
 
-  const imageSizes: Record<string, string> = {
-    '1:1': '1024x1024', '16:9': '1344x768', '9:16': '768x1344',
-    '4:3': '1152x864', '3:4': '864x1152',
+  const imageSizes: Record<string, { width: number; height: number }> = {
+    '1:1':  { width: 1024, height: 1024 },
+    '16:9': { width: 1344, height: 768  },
+    '9:16': { width: 768,  height: 1344 },
+    '4:3':  { width: 1152, height: 864  },
+    '3:4':  { width: 864,  height: 1152 },
   }
 
   try {
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           prompt,
-          image_size: imageSizes[aspectRatio] ?? '1024x1024',
+          image_size: imageSizes[aspectRatio] ?? { width: 1024, height: 1024 },
           num_inference_steps: 28,
           num_images: 1,
         }),
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           prompt,
-          image_size: imageSizes[aspectRatio] ?? '1024x1024',
+          image_size: imageSizes[aspectRatio] ?? { width: 1024, height: 1024 },
           num_images: 1,
         }),
       })
