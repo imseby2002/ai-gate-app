@@ -328,7 +328,7 @@ export default function MarketingPipelinePage() {
         body: JSON.stringify({ types: config.u3_types, collectedData: u1d?.summary, companyData: u2d }),
       })
       if (!res.ok) return { ok: false, output: data.error ? String(data.error) : `分析失敗（HTTP ${res.status}）` }
-      const analysisResults: Record<string, string> = data.results ?? {}
+      const analysisResults = (data.results ?? {}) as Record<string, string>
       const TYPE_LABELS: Record<string, string> = {
         swot: 'SWOT 分析', company: '公司分析', competitor_activity: '競品活動',
         competitor_performance: '競品業績', content: '內容分析', marketing: '文案分析',
