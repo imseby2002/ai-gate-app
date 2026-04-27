@@ -199,7 +199,7 @@ export async function GET(req: NextRequest) {
       } else if (unitId === 7) {
         result = await callUnitApi('/api/marketing/video-script', {
           count:     cfg.u7_count ?? 2,
-          duration:  cfg.u7_duration ?? 30,
+          duration:  cfg.u7_duration ?? 10,
           videoTypes: ['brand_story'],
           platforms:  ['youtube'],
           companyData:      ud[2] ?? {},
