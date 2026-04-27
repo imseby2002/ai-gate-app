@@ -977,10 +977,12 @@ export default function MarketingPipelinePage() {
                     <label className="text-xs text-gray-500 block mb-1">時長（秒）</label>
                     <select value={config.u7_duration} onChange={e => setConfig(c => ({ ...c, u7_duration: Number(e.target.value) }))}
                       className="text-sm border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
+                      <option value={8}>8秒</option>
                       <option value={15}>15秒</option>
                       <option value={30}>30秒</option>
                       <option value={60}>60秒</option>
                       <option value={90}>90秒</option>
+                      <option value={120}>2分鐘</option>
                     </select>
                   </div>
                 </div>
