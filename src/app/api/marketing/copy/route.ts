@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
 export const maxDuration = 120
@@ -106,15 +106,15 @@ export async function POST(req: NextRequest) {
     })
     .join('\n\n')
 
-  if (!process.env.GOOGLE_AI_API_KEY) {
-    return NextResponse.json({ error: 'GOOGLE_AI_API_KEY 未設定' }, { status: 500 })
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
   }
 
   try {
-    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     const { text } = await generateText({
-      model: google('gemini-2.5-flash'),
+      model: anthropic('claude-sonnet-4-6'),
       system: `你是一位頂尖的多平台行銷文案撰寫人，擅長根據品牌特性與受眾習慣，撰寫各平台最佳化的行銷文案。
 文案要：具感染力、清晰傳遞價值主張、符合各平台格式規範、促進轉換行動。
 輸出格式：每個文案類型用「===【類型名稱】===」作為分隔標題，直接輸出文案內容，不需其他說明。`,
