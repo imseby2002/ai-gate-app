@@ -415,9 +415,9 @@ export default function MarketingPipelinePage() {
     }
 
     if (unitId === 8) {
-      const scripts = (ud[7] as { scripts?: string[] } | undefined)?.scripts ?? []
-      if (scripts.length === 0) return { ok: false, output: '無影片腳本，請先執行單元 7' }
-      const prompt = scripts[0].slice(0, 500)
+      const scriptObjs = (ud[7] as { scripts?: { id: number; content: string }[] } | undefined)?.scripts ?? []
+      if (scriptObjs.length === 0) return { ok: false, output: '無影片腳本，請先執行單元 7' }
+      const prompt = scriptObjs[0].content.slice(0, 500)
       const { res: submitRes, data: submit } = await safeFetch('/api/marketing/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
