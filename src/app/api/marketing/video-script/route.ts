@@ -4,7 +4,7 @@
  *
  * Body: {
  *   count: number                   // 要產出的影片數量 (1-5)
- *   duration: '15' | '30' | '60' | '90' | '120'
+ *   duration: '5' | '10' | '25' | '60'
  *   videoTypes: string[]            // 影片類型
  *   platforms: string[]             // 目標平台
  *   userInstructions?: string
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const {
     count = 1,
-    duration = '30',
+    duration = '10',
     videoTypes = ['short_video'],
     platforms = ['instagram_reels', 'tiktok'],
     userInstructions = '',

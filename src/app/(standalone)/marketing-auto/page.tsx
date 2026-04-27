@@ -1805,12 +1805,10 @@ const VIDEO_TYPES: { id: string; label: string; desc: string }[] = [
 ]
 
 const DURATION_OPTIONS = [
-  { value: '8',   label: '8秒',  hint: '超短影音' },
-  { value: '15',  label: '15秒', hint: 'Reels/Shorts' },
-  { value: '30',  label: '30秒', hint: '廣告/短影音' },
-  { value: '60',  label: '60秒', hint: 'IG/TikTok' },
-  { value: '90',  label: '90秒', hint: '教學/介紹' },
-  { value: '120', label: '2分鐘', hint: 'YouTube' },
+  { value: '5',  label: '5秒',  hint: 'KLING' },
+  { value: '10', label: '10秒', hint: 'KLING' },
+  { value: '25', label: '25秒', hint: 'Google VEO3' },
+  { value: '60', label: '60秒', hint: 'SORA' },
 ]
 
 function Unit7VideoScript({
@@ -1833,7 +1831,7 @@ function Unit7VideoScript({
   onDone: (data: Unit7Data) => void
 }) {
   const [count, setCount] = useState(savedData?.count ?? 1)
-  const [duration, setDuration] = useState(savedData?.duration ?? '30')
+  const [duration, setDuration] = useState(savedData?.duration ?? '10')
   const [videoTypes, setVideoTypes] = useState<string[]>(savedData?.videoTypes ?? ['short_video'])
   const [platforms, setPlatforms] = useState<string[]>(savedData?.platforms ?? ['instagram_reels', 'tiktok'])
   const [instructions, setInstructions] = useState(savedData?.userInstructions ?? '')
@@ -2061,7 +2059,7 @@ function Unit7VideoScript({
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
             <div className="text-xs text-blue-700 font-medium mb-1">💡 使用提示</div>
             <div className="text-xs text-blue-600">
-              腳本完成後，前往 <strong>單元8 影片產出</strong> 使用 KLING 或 VEO3 將腳本轉換為實際影片。
+              腳本完成後，前往 <strong>單元8 影片產出</strong> 使用 KLING（5/10秒）、Google VEO3（25秒）或 SORA（60秒）將腳本轉換為實際影片。
             </div>
           </div>
         </div>
@@ -2072,7 +2070,8 @@ function Unit7VideoScript({
 
 // ─── Unit 8: 影片產出 ─────────────────────────────────────────────────────────
 
-type VideoModel = 'kling-standard' | 'kling-pro' | 'kling-img2video'
+type VideoModel = 'kling-standard' | 'kling-pro' | 'kling-img2video' | 'veo3' | 'veo3-img2video' | 'sora' | 'sora-img2video'
+type VideoDuration = '5' | '10' | '25' | '60'
 
 interface GeneratedVideo {
   scriptId: number
@@ -2094,11 +2093,37 @@ interface Unit8Data {
   videos?: GeneratedVideo[]
 }
 
-const VIDEO_MODELS: { id: VideoModel; name: string; desc: string; badge: string }[] = [
-  { id: 'kling-standard',  name: 'KLING Standard', desc: '文字生成影片，標準品質，速度較快', badge: '推薦' },
-  { id: 'kling-pro',       name: 'KLING Pro',      desc: '文字生成影片，旗艦品質',          badge: 'Pro'  },
-  { id: 'kling-img2video', name: 'KLING 圖生影片', desc: '從單元6圖片生成動態影片',         badge: '圖轉影' },
+const VIDEO_MODEL_LABELS: Record<VideoModel, string> = {
+  'kling-standard':  'KLING Standard',
+  'kling-pro':       'KLING Pro',
+  'kling-img2video': 'KLING 圖生影片',
+  'veo3':            'Google VEO3',
+  'veo3-img2video':  'VEO3 圖生影片',
+  'sora':            'SORA',
+  'sora-img2video':  'SORA 圖生影片',
+}
+
+const DURATION_CARDS: { duration: VideoDuration; provider: string; badge: string; hint: string }[] = [
+  { duration: '5',  provider: 'KLING', badge: '5秒',  hint: '超短 · 快速' },
+  { duration: '10', provider: 'KLING', badge: '10秒', hint: '短影音' },
+  { duration: '25', provider: 'Google VEO3', badge: '25秒', hint: '中長影音' },
+  { duration: '60', provider: 'SORA',  badge: '60秒', hint: '長影片' },
 ]
+
+function resolveModel(duration: VideoDuration, klingQuality: 'standard' | 'pro', useImg2Video: boolean): VideoModel {
+  if (duration === '5' || duration === '10') {
+    if (useImg2Video) return 'kling-img2video'
+    return klingQuality === 'pro' ? 'kling-pro' : 'kling-standard'
+  }
+  if (duration === '25') return useImg2Video ? 'veo3-img2video' : 'veo3'
+  return useImg2Video ? 'sora-img2video' : 'sora'
+}
+
+function generatingLabel(model: VideoModel): string {
+  if (model.startsWith('kling')) return 'KLING 生成中…'
+  if (model.startsWith('veo3')) return 'VEO3 生成中…'
+  return 'SORA 生成中…'
+}
 
 const VIDEO_ASPECT_OPTIONS = [
   { value: '16:9', label: '16:9 橫式', hint: 'YouTube/FB' },
@@ -2132,8 +2157,10 @@ function Unit8VideoGenerate({
   const scripts = unit7Data?.scripts ?? []
   const generatedImages = unit6Data?.images ?? []
 
-  const [model, setModel] = useState<VideoModel>('kling-standard')
-  const [duration, setDuration] = useState<'5' | '10'>('5')
+  const [duration, setDuration] = useState<VideoDuration>('5')
+  const [klingQuality, setKlingQuality] = useState<'standard' | 'pro'>('standard')
+  const [useImg2Video, setUseImg2Video] = useState(false)
+  const model = resolveModel(duration, klingQuality, useImg2Video)
   const [aspectRatio, setAspectRatio] = useState('16:9')
   const [prompts, setPrompts] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {}
@@ -2232,24 +2259,56 @@ function Unit8VideoGenerate({
   return (
     <div className="space-y-6">
 
-      {/* Model selector */}
+      {/* Duration / Provider selector */}
       <div>
-        <label className="block text-sm font-semibold mb-3">選擇生成模型</label>
-        <div className="grid grid-cols-3 gap-3">
-          {VIDEO_MODELS.map(m => (
-            <button key={m.id} onClick={() => setModel(m.id)}
+        <label className="block text-sm font-semibold mb-3">選擇影片時長</label>
+        <div className="grid grid-cols-4 gap-3">
+          {DURATION_CARDS.map(card => (
+            <button key={card.duration} onClick={() => { setDuration(card.duration); setUseImg2Video(false) }}
               className="relative flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all"
-              style={model === m.id
+              style={duration === card.duration
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
                 : { borderColor: '#e5e7eb', background: 'white' }}>
-              <span className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
-                style={model === m.id ? { background: 'var(--primary)', color: 'white' } : { background: '#f3f4f6', color: '#6b7280' }}>
-                {m.badge}
+              <span className="text-base font-bold text-gray-800">{card.badge}</span>
+              <span className="text-[11px] font-semibold mt-1"
+                style={{ color: duration === card.duration ? 'var(--primary)' : '#6b7280' }}>
+                {card.provider}
               </span>
-              <span className="text-sm font-bold text-gray-800 pr-8">{m.name}</span>
-              <span className="text-[10px] text-gray-400 mt-1 leading-snug">{m.desc}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">{card.hint}</span>
             </button>
           ))}
+        </div>
+
+        {/* KLING quality sub-selector */}
+        {(duration === '5' || duration === '10') && !useImg2Video && (
+          <div className="mt-3 flex gap-2">
+            {(['standard', 'pro'] as const).map(q => (
+              <button key={q} onClick={() => setKlingQuality(q)}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={klingQuality === q
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : { background: 'white' }}>
+                {q === 'standard' ? 'Standard（較快）' : 'Pro（旗艦品質）'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Img2Video toggle */}
+        <div className="mt-3 flex items-center gap-2">
+          <button onClick={() => setUseImg2Video(v => !v)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+            style={useImg2Video
+              ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+              : { background: 'white' }}>
+            <ImageIcon className="h-3.5 w-3.5" />
+            圖片生成影片
+          </button>
+          <span className="text-[10px] text-gray-400">使用單元6圖片作為起始畫面</span>
+        </div>
+
+        <div className="mt-2 text-[10px] text-gray-400">
+          目前模型：<span className="font-semibold text-gray-600">{VIDEO_MODEL_LABELS[model]}</span>
         </div>
       </div>
 
@@ -2257,21 +2316,6 @@ function Unit8VideoGenerate({
       <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
         <div className="text-xs font-semibold text-gray-600">影片設定</div>
         <div className="flex flex-wrap gap-6">
-          {/* Duration */}
-          <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">影片時長</div>
-            <div className="flex gap-2">
-              {(['5', '10'] as const).map(d => (
-                <button key={d} onClick={() => setDuration(d)}
-                  className="px-4 py-2 rounded-lg border text-xs font-medium transition-all"
-                  style={duration === d
-                    ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
-                    : { background: 'white' }}>
-                  {d} 秒
-                </button>
-              ))}
-            </div>
-          </div>
           {/* Aspect ratio */}
           <div>
             <div className="text-xs font-medium text-gray-500 mb-2">畫面比例</div>
@@ -2292,7 +2336,7 @@ function Unit8VideoGenerate({
       </div>
 
       {/* Image selector (img2video) */}
-      {model === 'kling-img2video' && (
+      {useImg2Video && (
         <div className="p-4 rounded-xl border border-blue-100 bg-blue-50 space-y-2">
           <div className="text-xs font-semibold text-blue-800">選擇來源圖片（單元6 已生成）</div>
           {hasUnit6Images ? (
@@ -2353,14 +2397,14 @@ function Unit8VideoGenerate({
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
                     style={{ background: 'var(--primary)' }}>
                     {isProcessing
-                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />KLING 生成中…</>
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{generatingLabel(model)}</>
                       : <><Sparkles className="h-3.5 w-3.5" />{vid ? '重新生成' : '生成影片'}</>}
                   </button>
                   {vid && (
                     <div className="rounded-xl overflow-hidden border bg-black">
                       <video src={vid.url} controls className="w-full max-h-72" />
                       <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
-                        <span className="text-[10px] text-gray-400 flex-1">{VIDEO_MODELS.find(m => m.id === vid.model)?.name} · {new Date(vid.generatedAt).toLocaleString('zh-TW')}</span>
+                        <span className="text-[10px] text-gray-400 flex-1">{VIDEO_MODEL_LABELS[vid.model]} · {new Date(vid.generatedAt).toLocaleString('zh-TW')}</span>
                         <a href={vid.url} download={`video-${s.id}.mp4`} target="_blank" rel="noreferrer"
                           className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
                           <Download className="h-3 w-3" /> 下載
@@ -2400,7 +2444,7 @@ function Unit8VideoGenerate({
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
           style={{ background: 'var(--primary)' }}>
           {manualJob?.status === 'processing'
-            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />KLING 生成中…</>
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{generatingLabel(model)}</>
             : <><Sparkles className="h-3.5 w-3.5" />生成影片</>}
         </button>
         {(() => {
@@ -2410,7 +2454,7 @@ function Unit8VideoGenerate({
               <video src={manualVid.url} controls autoPlay className="w-full max-h-72" />
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
                 <span className="text-[10px] text-gray-400 flex-1">
-                  {VIDEO_MODELS.find(m => m.id === manualVid.model)?.name} · {new Date(manualVid.generatedAt).toLocaleString('zh-TW')}
+                  {VIDEO_MODEL_LABELS[manualVid.model]} · {new Date(manualVid.generatedAt).toLocaleString('zh-TW')}
                 </span>
                 <a href={manualVid.url} download="video.mp4" target="_blank" rel="noreferrer"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
