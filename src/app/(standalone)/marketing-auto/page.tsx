@@ -2133,7 +2133,7 @@ function Unit8VideoGenerate({
   const generatedImages = unit6Data?.images ?? []
 
   const [model, setModel] = useState<VideoModel>('kling-standard')
-  const [duration, setDuration] = useState<string>('8')
+  const [duration, setDuration] = useState<'5' | '10'>('5')
   const [aspectRatio, setAspectRatio] = useState('16:9')
   const [prompts, setPrompts] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {}
@@ -2260,14 +2260,14 @@ function Unit8VideoGenerate({
           {/* Duration */}
           <div>
             <div className="text-xs font-medium text-gray-500 mb-2">影片時長</div>
-            <div className="flex flex-wrap gap-2">
-              {([['8','8秒'],['15','15秒'],['30','30秒'],['60','60秒'],['90','90秒'],['120','2分鐘']] as const).map(([val, label]) => (
-                <button key={val} onClick={() => setDuration(val)}
-                  className="px-3 py-2 rounded-lg border text-xs font-medium transition-all"
-                  style={duration === val
+            <div className="flex gap-2">
+              {(['5', '10'] as const).map(d => (
+                <button key={d} onClick={() => setDuration(d)}
+                  className="px-4 py-2 rounded-lg border text-xs font-medium transition-all"
+                  style={duration === d
                     ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                     : { background: 'white' }}>
-                  {label}
+                  {d} 秒
                 </button>
               ))}
             </div>
