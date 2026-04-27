@@ -2758,7 +2758,16 @@ function Unit9Upload({
                     {r.platform} — {r.ok ? '發布成功' : '發布失敗'}
                   </div>
                   {r.postId && <div className="text-xs text-green-600 mt-0.5">Post ID: {r.postId}</div>}
-                  {r.error && <div className="text-xs text-red-600 mt-0.5">{r.error}</div>}
+                  {r.error && (
+                    <div className="text-xs text-red-600 mt-0.5">
+                      {r.error}
+                      {/expired|invalid.*token|token.*invalid|session.*expired/i.test(r.error) && (
+                        <a href="/settings" className="ml-2 underline font-semibold text-red-700 hover:text-red-900">
+                          → 前往設定更新 Token
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
