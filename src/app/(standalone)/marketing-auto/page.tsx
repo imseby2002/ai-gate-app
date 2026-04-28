@@ -2197,20 +2197,21 @@ function Unit8VideoGenerate({
     scripts.forEach(s => { init[s.id] = extractVideoPrompt(s.content) })
     return init
   })
+  // Track which prompts the user has manually edited
+  const [userEditedPrompts, setUserEditedPrompts] = useState<Set<number>>(new Set())
 
-  // Re-extract prompts when Unit 7 scripts are loaded/updated
+  // Re-extract prompts when Unit 7 scripts are loaded/updated (skip user-edited ones)
   useEffect(() => {
     setPrompts(prev => {
       const next = { ...prev }
       scripts.forEach(s => {
-        // Only fill if currently empty (don't overwrite user edits)
-        if (!next[s.id]?.trim()) {
+        if (!userEditedPrompts.has(s.id)) {
           next[s.id] = extractVideoPrompt(s.content)
         }
       })
       return next
     })
-  }, [scripts])
+  }, [scripts, userEditedPrompts])
   const [selectedImage, setSelectedImage] = useState<string>('')
   const [manualPrompt, setManualPrompt] = useState('')
 
@@ -2431,7 +2432,10 @@ function Unit8VideoGenerate({
                 <div className="p-4 space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">影片 Prompt <span className="text-gray-400 font-normal">（可編輯）</span></label>
-                    <textarea value={prompts[s.id] ?? ''} onChange={e => setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))}
+                    <textarea value={prompts[s.id] ?? ''} onChange={e => {
+                        setUserEditedPrompts(prev => new Set(prev).add(s.id))
+                        setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))
+                      }}
                       rows={3} className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none"
                       placeholder="描述影片畫面與動作…" />
                   </div>
