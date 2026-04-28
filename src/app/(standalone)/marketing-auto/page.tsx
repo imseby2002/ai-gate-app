@@ -2131,14 +2131,30 @@ const VIDEO_ASPECT_OPTIONS = [
   { value: '1:1',  label: '1:1 正方形', hint: 'IG/通用' },
 ]
 
-// Extract first prompt line from video script
+// Extract video prompt from script content
 function extractVideoPrompt(content: string): string {
-  const m = content.match(/開頭\s*Hook.*?畫面[：:]\s*(.+?)(?:\n|$)/i)
-    ?? content.match(/畫面[：:]\s*(.+?)(?:\n|$)/i)
-    ?? content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
-  if (m) return m[1].trim()
-  // fallback: first non-empty line
-  return content.split('\n').find(l => l.trim().length > 10)?.trim() ?? content.slice(0, 150)
+  if (!content?.trim()) return ''
+
+  // Try to extract 開頭Hook 畫面 description
+  const hookMatch = content.match(/開頭\s*Hook[^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
+  if (hookMatch?.[1]?.trim()) return hookMatch[1].trim()
+
+  // Try to collect all 畫面 descriptions from storyboard
+  const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
+  if (sceneMatches.length > 0) {
+    const scenes = sceneMatches.map(m => m[1].trim()).filter(Boolean).slice(0, 3)
+    if (scenes.join('').length > 10) return scenes.join('。')
+  }
+
+  // Try 影片標題
+  const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
+  if (titleMatch?.[1]?.trim()) return titleMatch[1].trim()
+
+  // Fallback: skip header line (===【影片N】===) and take first meaningful lines
+  const lines = content.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 10 && !l.startsWith('===') && !l.startsWith('#'))
+  return lines.slice(0, 2).join('。') || content.slice(0, 200)
 }
 
 function Unit8VideoGenerate({
@@ -2218,7 +2234,10 @@ function Unit8VideoGenerate({
 
   const submitJob = async (scriptId: number) => {
     const prompt = prompts[scriptId]?.trim()
-    if (!prompt) return
+    if (!prompt) {
+      setJobs(prev => ({ ...prev, [scriptId]: { scriptId, requestId: '', model, status: 'failed', error: '影片 Prompt 不可為空，請先完成單元 7 腳本或手動輸入描述' } }))
+      return
+    }
     const payload: Record<string, unknown> = { prompt, scriptId, model, duration, aspectRatio }
     if (model === 'kling-img2video' && selectedImage) payload.imageUrl = selectedImage
 
