@@ -2131,30 +2131,44 @@ const VIDEO_ASPECT_OPTIONS = [
   { value: '1:1',  label: '1:1 正方形', hint: 'IG/通用' },
 ]
 
+// Strip markdown bold/italic markers
+function stripMd(s: string): string {
+  return s.replace(/\*\*/g, '').replace(/\*/g, '').trim()
+}
+
 // Extract video prompt from script content
 function extractVideoPrompt(content: string): string {
   if (!content?.trim()) return ''
 
-  // Try to extract 開頭Hook 畫面 description
-  const hookMatch = content.match(/開頭\s*Hook[^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
-  if (hookMatch?.[1]?.trim()) return hookMatch[1].trim()
+  // 1. Extract storyboard time-coded segments: [0-3秒] / [0-3s] style
+  //    Grab the first line of each segment (visual description before | or newline)
+  const timeSegments = [...content.matchAll(/\[[\d\-~～~]+[秒sS]\][^]*?(?=\[[\d\-~～~]+[秒sS]\]|$)/g)]
+  if (timeSegments.length > 0) {
+    const descriptions = timeSegments.map(m => {
+      const line = m[0].split('\n').find(l => l.trim().length > 5) ?? ''
+      // Content after the time code, before first | or newline continuation
+      const cleaned = stripMd(line.replace(/^\[[\d\-~～~]+[秒sS]\]\s*/, '').split('|')[0])
+      return cleaned
+    }).filter(d => d.length > 5).slice(0, 4)
+    if (descriptions.join('').length > 15) return descriptions.join('。')
+  }
 
-  // Try to collect all 畫面 descriptions from storyboard
+  // 2. Collect all 畫面：descriptions and combine
   const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
   if (sceneMatches.length > 0) {
-    const scenes = sceneMatches.map(m => m[1].trim()).filter(Boolean).slice(0, 3)
+    const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean).slice(0, 4)
     if (scenes.join('').length > 10) return scenes.join('。')
   }
 
-  // Try 影片標題
+  // 3. 影片標題 as fallback
   const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
-  if (titleMatch?.[1]?.trim()) return titleMatch[1].trim()
+  if (titleMatch?.[1]?.trim()) return stripMd(titleMatch[1])
 
-  // Fallback: skip header line (===【影片N】===) and take first meaningful lines
+  // 4. Last resort: first meaningful non-header lines
   const lines = content.split('\n')
-    .map(l => l.trim())
-    .filter(l => l.length > 10 && !l.startsWith('===') && !l.startsWith('#'))
-  return lines.slice(0, 2).join('。') || content.slice(0, 200)
+    .map(l => stripMd(l))
+    .filter(l => l.length > 10 && !l.startsWith('===') && !l.startsWith('#') && !l.startsWith('['))
+  return lines.slice(0, 3).join('。') || stripMd(content.slice(0, 300))
 }
 
 function Unit8VideoGenerate({
@@ -2183,6 +2197,20 @@ function Unit8VideoGenerate({
     scripts.forEach(s => { init[s.id] = extractVideoPrompt(s.content) })
     return init
   })
+
+  // Re-extract prompts when Unit 7 scripts are loaded/updated
+  useEffect(() => {
+    setPrompts(prev => {
+      const next = { ...prev }
+      scripts.forEach(s => {
+        // Only fill if currently empty (don't overwrite user edits)
+        if (!next[s.id]?.trim()) {
+          next[s.id] = extractVideoPrompt(s.content)
+        }
+      })
+      return next
+    })
+  }, [scripts])
   const [selectedImage, setSelectedImage] = useState<string>('')
   const [manualPrompt, setManualPrompt] = useState('')
 
