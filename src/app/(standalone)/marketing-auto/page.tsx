@@ -1477,12 +1477,23 @@ function Unit6ImageGenerate({
     scripts.forEach(s => { init[s.id] = extractPrompt(s.content) })
     return init
   })
+  const [userEditedPrompts6, setUserEditedPrompts6] = useState<Set<number>>(new Set())
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [errors, setErrors] = useState<Record<number, string>>({})
   const [images, setImages] = useState<GeneratedImage[]>(savedData?.images ?? [])
   const [manualPrompt, setManualPrompt] = useState('')
   const [manualGenerating, setManualGenerating] = useState(false)
   const [manualError, setManualError] = useState('')
+
+  useEffect(() => {
+    setPrompts(prev => {
+      const next = { ...prev }
+      scripts.forEach(s => {
+        if (!userEditedPrompts6.has(s.id)) next[s.id] = extractPrompt(s.content)
+      })
+      return next
+    })
+  }, [scripts, userEditedPrompts6])
 
   const hasUnit5 = scripts.length > 0
 
@@ -1662,7 +1673,10 @@ function Unit6ImageGenerate({
                     </label>
                     <textarea
                       value={prompts[s.id] ?? ''}
-                      onChange={e => setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))}
+                      onChange={e => {
+                        setUserEditedPrompts6(prev => new Set(prev).add(s.id))
+                        setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))
+                      }}
                       rows={3}
                       className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
                       placeholder="輸入英文 Prompt…"
