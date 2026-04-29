@@ -42,7 +42,14 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
       body: params,
     })
     const data = await res.json()
-    if (!data.id) throw new Error(data.error?.message ?? 'Facebook 上傳失敗')
+    if (!data.id) {
+      const errCode = data.error?.code
+      const errMsg = data.error?.message ?? 'Facebook 上傳失敗'
+      if (errCode === 200) {
+        throw new Error(`${errMsg}（錯誤 #200：請確認 (1) 輸入的是「粉絲專頁 Access Token」，非個人帳號 Token；(2) Page ID 為粉絲專頁 ID，非個人 UID；(3) App 已申請 pages_manage_posts 權限）`)
+      }
+      throw new Error(errMsg)
+    }
     return { platform: 'Facebook', ok: true, postId: data.id }
   } catch (e) {
     return { platform: 'Facebook', ok: false, error: String(e) }
