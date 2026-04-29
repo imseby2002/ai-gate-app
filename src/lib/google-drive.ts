@@ -2,13 +2,16 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 
 export function getOAuthUrl(redirectUri: string, state?: string): string {
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  if (!clientId) throw new Error('GOOGLE_CLIENT_ID 未設定，請於 Google Cloud Console 建立 OAuth 2.0 用戶端 ID 並設定環境變數')
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID!,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'https://www.googleapis.com/auth/drive.readonly email profile',
     access_type: 'offline',
-    prompt: 'consent',
+    // select_account: 每次都讓用戶選擇 Google 帳號; consent: 確保取得 refresh_token
+    prompt: 'select_account consent',
     ...(state ? { state } : {}),
   })
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`

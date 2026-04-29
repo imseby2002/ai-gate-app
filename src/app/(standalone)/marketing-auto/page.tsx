@@ -5193,10 +5193,9 @@ export default function MarketingAutoPage() {
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
 
-  // Drive folder — shared across units, persisted per campaign
-  const [driveFolderId, setDriveFolderId] = useState('')
-  const [driveFolderName, setDriveFolderName] = useState('')
-  const [drivePickedImage, setDrivePickedImage] = useState<DrivePickedImage | null>(null)
+  // Drive folders — per unit (5, 6, 7), persisted per campaign as drive_folders JSON map
+  const [driveFolders, setDriveFolders] = useState<Record<number, { id: string; name: string }>>({})
+  const [driveImages, setDriveImages] = useState<Record<number, DrivePickedImage | null>>({})
 
   // Shared company data (Unit 2) — global, not per campaign
   const [companyData, setCompanyData] = useState<Unit2Data>({})
@@ -5277,9 +5276,8 @@ export default function MarketingAutoPage() {
     setCampaignTitle(c.title ?? '未命名行銷專案')
     setUnitStatuses(c.unit_statuses ?? {})
     setUnitData(c.unit_data ?? {})
-    setDriveFolderId(c.drive_folder_id ?? '')
-    setDriveFolderName(c.drive_folder_name ?? '')
-    setDrivePickedImage(null)
+    setDriveFolders(c.drive_folders ?? {})
+    setDriveImages({})
     setShowCampaigns(false)
     if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', id)
   }
@@ -5363,12 +5361,12 @@ export default function MarketingAutoPage() {
     if (cid) saveUnitResult(12, data, cid)
   }, [ensureCampaign, saveUnitResult])
 
-  const handleDriveFolderChange = useCallback(async (id: string, name: string) => {
-    setDriveFolderId(id)
-    setDriveFolderName(name)
+  const handleDriveFolderChange = useCallback(async (unitId: number, id: string, name: string) => {
+    const next = { ...driveFolders, [unitId]: { id, name } }
+    setDriveFolders(next)
     const cid = await ensureCampaign()
-    if (cid) await patchCampaign(cid, { drive_folder_id: id, drive_folder_name: name })
-  }, [ensureCampaign])
+    if (cid) await patchCampaign(cid, { drive_folders: next })
+  }, [ensureCampaign, driveFolders])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
 
@@ -5586,11 +5584,11 @@ export default function MarketingAutoPage() {
               unit2Data={companyData}
               unit3Data={unitData[3] as Unit3Data | undefined}
               unit4Data={unitData[4] as Unit4Data | undefined}
-              driveFolderId={driveFolderId}
-              driveFolderName={driveFolderName}
-              drivePickedImage={drivePickedImage}
-              onDriveFolderChange={handleDriveFolderChange}
-              onDriveImagePicked={setDrivePickedImage}
+              driveFolderId={driveFolders[5]?.id}
+              driveFolderName={driveFolders[5]?.name}
+              drivePickedImage={driveImages[5] ?? null}
+              onDriveFolderChange={(id, name) => handleDriveFolderChange(5, id, name)}
+              onDriveImagePicked={img => setDriveImages(prev => ({ ...prev, 5: img }))}
               onDone={handleUnit5Done}
             />
           )}
@@ -5599,11 +5597,11 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[6] as Unit6Data | undefined}
               unit5Data={unitData[5] as Unit5Data | undefined}
-              driveFolderId={driveFolderId}
-              driveFolderName={driveFolderName}
-              drivePickedImage={drivePickedImage}
-              onDriveFolderChange={handleDriveFolderChange}
-              onDriveImagePicked={setDrivePickedImage}
+              driveFolderId={driveFolders[6]?.id}
+              driveFolderName={driveFolders[6]?.name}
+              drivePickedImage={driveImages[6] ?? null}
+              onDriveFolderChange={(id, name) => handleDriveFolderChange(6, id, name)}
+              onDriveImagePicked={img => setDriveImages(prev => ({ ...prev, 6: img }))}
               onDone={handleUnit6Done}
             />
           )}
@@ -5617,11 +5615,11 @@ export default function MarketingAutoPage() {
               unit4Data={unitData[4] as Unit4Data | undefined}
               unit5Data={unitData[5] as Unit5Data | undefined}
               unit6Data={unitData[6] as Unit6Data | undefined}
-              driveFolderId={driveFolderId}
-              driveFolderName={driveFolderName}
-              drivePickedImage={drivePickedImage}
-              onDriveFolderChange={handleDriveFolderChange}
-              onDriveImagePicked={setDrivePickedImage}
+              driveFolderId={driveFolders[7]?.id}
+              driveFolderName={driveFolders[7]?.name}
+              drivePickedImage={driveImages[7] ?? null}
+              onDriveFolderChange={(id, name) => handleDriveFolderChange(7, id, name)}
+              onDriveImagePicked={img => setDriveImages(prev => ({ ...prev, 7: img }))}
               onDone={handleUnit7Done}
             />
           )}
@@ -5631,7 +5629,7 @@ export default function MarketingAutoPage() {
               savedData={unitData[8] as Unit8Data | undefined}
               unit6Data={unitData[6] as Unit6Data | undefined}
               unit7Data={unitData[7] as Unit7Data | undefined}
-              drivePickedImage={drivePickedImage}
+              drivePickedImage={driveImages[7] ?? driveImages[5] ?? null}
               onDone={handleUnit8Done}
             />
           )}

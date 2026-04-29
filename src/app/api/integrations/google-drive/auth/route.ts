@@ -8,6 +8,13 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/google-drive/callback`
-  const url = getOAuthUrl(redirectUri, user.id)
-  return NextResponse.redirect(url)
+  try {
+    const url = getOAuthUrl(redirectUri, user.id)
+    return NextResponse.redirect(url)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/settings?drive_error=${encodeURIComponent(msg)}`
+    )
+  }
 }
