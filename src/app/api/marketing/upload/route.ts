@@ -24,14 +24,25 @@ interface PlatformResult {
   error?: string
 }
 
-// Exchange any token (User / System User) for a Page Access Token automatically
+// Exchange System User / User token → Page Access Token via /me/accounts
 async function resolvePageToken(token: string, pageId: string): Promise<string> {
   try {
-    const res = await fetch(
+    // Method 1: direct field lookup
+    const r1 = await fetch(
       `https://graph.facebook.com/v19.0/${pageId}?fields=access_token&access_token=${token}`
     )
-    const data = await res.json()
-    return data.access_token ?? token
+    const d1 = await r1.json()
+    if (d1.access_token) return d1.access_token
+
+    // Method 2: list all managed pages and match by ID
+    const r2 = await fetch(
+      `https://graph.facebook.com/v19.0/me/accounts?access_token=${token}&limit=100`
+    )
+    const d2 = await r2.json()
+    const match = (d2.data ?? []).find((p: { id: string; access_token?: string }) => p.id === pageId)
+    if (match?.access_token) return match.access_token
+
+    return token
   } catch {
     return token
   }
@@ -45,6 +56,7 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
 
     // Auto-exchange System User token / User token → Page Access Token
     const pageToken = await resolvePageToken(token, page_id)
+    const resolvedToPageToken = pageToken !== token
 
     const firstImage = imageUrls[0]
     const params = new URLSearchParams({
@@ -61,7 +73,10 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
       const errCode = data.error?.code
       const errMsg = data.error?.message ?? 'Facebook 上傳失敗'
       if (errCode === 200) {
-        throw new Error(`${errMsg}（Token 無權限發文：請確認 Token 對應的 App 已申請 pages_manage_posts，且 App 為 Live 模式或帳號為測試人員）`)
+        const hint = resolvedToPageToken
+          ? 'App 未申請 pages_manage_posts 或為 Development 模式（請至 developers.facebook.com 確認 App 狀態）'
+          : 'Token 無法換成 Page Token：請在產生權杖時同時勾選 pages_manage_posts + pages_read_engagement + pages_show_list'
+        throw new Error(`${errMsg}（${hint}）`)
       }
       throw new Error(errMsg)
     }
