@@ -25,26 +25,29 @@ interface PlatformResult {
 }
 
 // Exchange System User / User token → Page Access Token via /me/accounts
-async function resolvePageToken(token: string, pageId: string): Promise<string> {
+async function resolvePageToken(token: string, pageId: string): Promise<{ pageToken: string; debug: string }> {
   try {
     // Method 1: direct field lookup
     const r1 = await fetch(
       `https://graph.facebook.com/v19.0/${pageId}?fields=access_token&access_token=${token}`
     )
     const d1 = await r1.json()
-    if (d1.access_token) return d1.access_token
+    if (d1.access_token) return { pageToken: d1.access_token, debug: 'method1_ok' }
+    const m1err = d1.error?.message ?? JSON.stringify(d1)
 
     // Method 2: list all managed pages and match by ID
     const r2 = await fetch(
       `https://graph.facebook.com/v19.0/me/accounts?access_token=${token}&limit=100`
     )
     const d2 = await r2.json()
-    const match = (d2.data ?? []).find((p: { id: string; access_token?: string }) => p.id === pageId)
-    if (match?.access_token) return match.access_token
+    const pages = d2.data ?? []
+    const match = pages.find((p: { id: string; access_token?: string }) => p.id === pageId)
+    if (match?.access_token) return { pageToken: match.access_token, debug: 'method2_ok' }
+    const m2ids = pages.map((p: { id: string }) => p.id).join(',') || 'empty'
 
-    return token
-  } catch {
-    return token
+    return { pageToken: token, debug: `exchange_failed: m1=${m1err}; m2_pages=[${m2ids}]` }
+  } catch (e) {
+    return { pageToken: token, debug: `exception: ${e}` }
   }
 }
 
@@ -55,7 +58,7 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
     if (!token || !page_id) return { platform: 'Facebook', ok: false, error: '未設定 Page Access Token 或 Page ID' }
 
     // Auto-exchange System User token / User token → Page Access Token
-    const pageToken = await resolvePageToken(token, page_id)
+    const { pageToken, debug } = await resolvePageToken(token, page_id)
     const resolvedToPageToken = pageToken !== token
 
     const firstImage = imageUrls[0]
@@ -74,11 +77,11 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
       const errMsg = data.error?.message ?? 'Facebook 上傳失敗'
       if (errCode === 200) {
         const hint = resolvedToPageToken
-          ? 'App 未申請 pages_manage_posts 或為 Development 模式（請至 developers.facebook.com 確認 App 狀態）'
-          : 'Token 無法換成 Page Token：請在產生權杖時同時勾選 pages_manage_posts + pages_read_engagement + pages_show_list'
+          ? 'App 未申請 pages_manage_posts 或為 Development 模式'
+          : `Token 無法換成 Page Token [${debug}]：請在產生權杖時同時勾選 pages_manage_posts + pages_read_engagement + pages_show_list`
         throw new Error(`${errMsg}（${hint}）`)
       }
-      throw new Error(errMsg)
+      throw new Error(`${errMsg} [tokenResolution: ${debug}]`)
     }
     return { platform: 'Facebook', ok: true, postId: data.id }
   } catch (e) {
