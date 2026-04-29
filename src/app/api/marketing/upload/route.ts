@@ -24,18 +24,33 @@ interface PlatformResult {
   error?: string
 }
 
+// Exchange any token (User / System User) for a Page Access Token automatically
+async function resolvePageToken(token: string, pageId: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v19.0/${pageId}?fields=access_token&access_token=${token}`
+    )
+    const data = await res.json()
+    return data.access_token ?? token
+  } catch {
+    return token
+  }
+}
+
 // ─── Facebook Graph API ────────────────────────────────────────────────────────
 async function uploadFacebook(creds: Record<string, string>, imageUrls: string[], copyText: string): Promise<PlatformResult> {
   try {
     const { page_access_token: token, page_id } = creds
     if (!token || !page_id) return { platform: 'Facebook', ok: false, error: '未設定 Page Access Token 或 Page ID' }
 
-    // Upload first image with caption (Facebook allows one image per post via this endpoint)
+    // Auto-exchange System User token / User token → Page Access Token
+    const pageToken = await resolvePageToken(token, page_id)
+
     const firstImage = imageUrls[0]
     const params = new URLSearchParams({
       url: firstImage,
       caption: copyText.slice(0, 2000),
-      access_token: token,
+      access_token: pageToken,
     })
     const res = await fetch(`https://graph.facebook.com/v19.0/${page_id}/photos`, {
       method: 'POST',
@@ -46,7 +61,7 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
       const errCode = data.error?.code
       const errMsg = data.error?.message ?? 'Facebook 上傳失敗'
       if (errCode === 200) {
-        throw new Error(`${errMsg}（錯誤 #200：請確認 (1) 輸入的是「粉絲專頁 Access Token」，非個人帳號 Token；(2) Page ID 為粉絲專頁 ID，非個人 UID；(3) App 已申請 pages_manage_posts 權限）`)
+        throw new Error(`${errMsg}（Token 無權限發文：請確認 Token 對應的 App 已申請 pages_manage_posts，且 App 為 Live 模式或帳號為測試人員）`)
       }
       throw new Error(errMsg)
     }
