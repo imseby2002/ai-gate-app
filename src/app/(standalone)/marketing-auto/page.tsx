@@ -1444,7 +1444,11 @@ const SIZE_OPTIONS = [
 
 // Extract AI prompt from script content
 function extractPrompt(content: string): string {
-  // Match label line, then grab content on same line OR next non-empty line
+  // 1. Content inside a code block after the label
+  const codeBlockMatch = content.match(/AI\s*生成\s*Prompt[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
+  if (codeBlockMatch) return codeBlockMatch[1].trim()
+
+  // 2. Same line after the label
   const patterns = [
     /AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
     /Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
@@ -1454,9 +1458,10 @@ function extractPrompt(content: string): string {
     if (m) {
       const same = m[1].replace(/\*+/g, '').trim()
       if (same.length > 3) return same
-      // Content was on next line — find the line after the match
+      // Content on next non-empty, non-fence line
       const matchEnd = (m.index ?? 0) + m[0].length
-      const nextLine = content.slice(matchEnd).split('\n').find(l => l.replace(/\*+/g, '').trim().length > 3)
+      const nextLine = content.slice(matchEnd).split('\n')
+        .find(l => l.trim().length > 3 && !l.trim().startsWith('`'))
       if (nextLine) return nextLine.replace(/\*+/g, '').trim()
     }
   }
