@@ -2136,39 +2136,10 @@ function stripMd(s: string): string {
   return s.replace(/\*\*/g, '').replace(/\*/g, '').trim()
 }
 
-// Extract video prompt from script content
+// Return full Unit 7 script content (strip markdown markers only)
 function extractVideoPrompt(content: string): string {
   if (!content?.trim()) return ''
-
-  // 1. Extract storyboard time-coded segments: [0-3秒] / [0-3s] style
-  //    Grab the first line of each segment (visual description before | or newline)
-  const timeSegments = [...content.matchAll(/\[[\d\-~～~]+[秒sS]\][^]*?(?=\[[\d\-~～~]+[秒sS]\]|$)/g)]
-  if (timeSegments.length > 0) {
-    const descriptions = timeSegments.map(m => {
-      const line = m[0].split('\n').find(l => l.trim().length > 5) ?? ''
-      // Content after the time code, before first | or newline continuation
-      const cleaned = stripMd(line.replace(/^\[[\d\-~～~]+[秒sS]\]\s*/, '').split('|')[0])
-      return cleaned
-    }).filter(d => d.length > 5).slice(0, 4)
-    if (descriptions.join('').length > 15) return descriptions.join('。')
-  }
-
-  // 2. Collect all 畫面：descriptions and combine
-  const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
-  if (sceneMatches.length > 0) {
-    const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean).slice(0, 4)
-    if (scenes.join('').length > 10) return scenes.join('。')
-  }
-
-  // 3. 影片標題 as fallback
-  const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
-  if (titleMatch?.[1]?.trim()) return stripMd(titleMatch[1])
-
-  // 4. Last resort: first meaningful non-header lines
-  const lines = content.split('\n')
-    .map(l => stripMd(l))
-    .filter(l => l.length > 10 && !l.startsWith('===') && !l.startsWith('#') && !l.startsWith('['))
-  return lines.slice(0, 3).join('。') || stripMd(content.slice(0, 300))
+  return stripMd(content)
 }
 
 function Unit8VideoGenerate({
