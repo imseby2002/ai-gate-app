@@ -11,6 +11,11 @@
  *   copyData?: object               // 來自單元4
  *   collectedSummary?: string       // 來自單元1
  *   feedback?: string               // 修改意見（重新生成時）
+ *   referenceImage?: {              // 參考圖片（選填）
+ *     base64: string
+ *     mimeType: string
+ *     name: string
+ *   }
  * }
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -34,6 +39,7 @@ export async function POST(req: NextRequest) {
     copyData,
     collectedSummary,
     feedback,
+    referenceImage,
   } = body
 
   const company = companyData ?? {}
@@ -83,15 +89,53 @@ export async function POST(req: NextRequest) {
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
-    system: `你是一位頂尖的視覺行銷設計顧問，擅長根據品牌特性與行銷文案，撰寫清晰可執行的圖片視覺腳本。
-每張圖片的腳本應包含：視覺場景、色調風格、主要元素、文字疊加、情感訴求、設計建議，以及 AI 圖片生成的英文 Prompt。
-輸出格式：每張圖片用「===【圖片 N】===」作為分隔標題，直接輸出腳本內容，不需其他說明。`,
-    messages: [
-      {
-        role: 'user',
-        content: `請根據以下品牌資料與行銷內容，為各平台產出 ${count} 張行銷圖片的視覺腳本：
+  const refImageNote = referenceImage
+    ? `\n\n【參考圖片說明】\n以上圖片為品牌實際場景照片，請仔細觀察圖片中的空間、物件、色調與氛圍，腳本的視覺場景和 AI Prompt 必須以此圖片的風格為基礎進行延伸創作，生成的圖片應與此參考圖片保持視覺連貫性。`
+    : ''
+
+  const userContent = referenceImage
+    ? [
+        {
+          type: 'image' as const,
+          image: referenceImage.base64,
+          mimeType: referenceImage.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        },
+        {
+          type: 'text' as const,
+          text: `請根據以下品牌資料與行銷內容，為各平台產出 ${count} 張行銷圖片的視覺腳本：
+
+【品牌資料】
+${companyCtx}
+
+【目標平台】
+${platformList || '社群媒體平台'}
+${marketCtx}
+
+【市場分析摘要】
+${analysisCtx || '（未提供）'}
+
+【參考文案】
+${copyCtx || '（未提供）'}
+${userRules}
+${refImageNote}
+${feedbackSection}
+
+【輸出要求】
+請產出 ${count} 張圖片腳本，每張腳本包含：
+
+1. 圖片主題：簡短標題（10字以內）
+2. 行銷目的：這張圖片要達成的目標（引起注意/建立信任/促進行動等）
+3. 視覺場景：描述畫面構圖、主要視覺元素、人物或物品配置（參考上方圖片風格）
+4. 色調風格：主色調、輔助色、整體風格（極簡/活潑/高端/溫馨等）
+5. 文字疊加：建議放在圖片上的標題文字與副文案（繁體中文）
+6. 情感訴求：圖片要傳達的核心情感或價值
+7. 適用平台：最適合發布此圖的平台及比例建議（如 1:1 Instagram、4:5 Facebook）
+8. AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖（須反映參考圖片的風格）
+
+請確保每張圖片腳本風格各異，涵蓋不同訴求角度（如：產品展示/生活情境/數據/人物故事/促銷活動等）。`,
+        },
+      ]
+    : `請根據以下品牌資料與行銷內容，為各平台產出 ${count} 張行銷圖片的視覺腳本：
 
 【品牌資料】
 ${companyCtx}
@@ -120,9 +164,14 @@ ${feedbackSection}
 7. 適用平台：最適合發布此圖的平台及比例建議（如 1:1 Instagram、4:5 Facebook）
 8. AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖
 
-請確保每張圖片腳本風格各異，涵蓋不同訴求角度（如：產品展示/生活情境/數據/人物故事/促銷活動等）。`,
-      },
-    ],
+請確保每張圖片腳本風格各異，涵蓋不同訴求角度（如：產品展示/生活情境/數據/人物故事/促銷活動等）。`
+
+  const { text } = await generateText({
+    model: anthropic('claude-sonnet-4-5'),
+    system: `你是一位頂尖的視覺行銷設計顧問，擅長根據品牌特性與行銷文案，撰寫清晰可執行的圖片視覺腳本。
+每張圖片的腳本應包含：視覺場景、色調風格、主要元素、文字疊加、情感訴求、設計建議，以及 AI 圖片生成的英文 Prompt。
+輸出格式：每張圖片用「===【圖片 N】===」作為分隔標題，直接輸出腳本內容，不需其他說明。`,
+    messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })
 

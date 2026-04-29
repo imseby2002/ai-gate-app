@@ -1,19 +1,20 @@
-﻿/**
+/**
  * POST /api/marketing/video-script
  * 影片腳本單元 — Claude Sonnet 生成分鏡影片腳本
  *
  * Body: {
- *   count: number                   // 要產出的影片數量 (1-5)
+ *   count: number
  *   duration: '5' | '10' | '25' | '60'
- *   videoTypes: string[]            // 影片類型
- *   platforms: string[]             // 目標平台
+ *   videoTypes: string[]
+ *   platforms: string[]
  *   userInstructions?: string
  *   companyData?: object
  *   analysisData?: object
  *   copyData?: object
- *   imageScripts?: object           // 來自單元5
+ *   imageScripts?: object
  *   collectedSummary?: string
  *   feedback?: string
+ *   referenceImage?: { base64: string; mimeType: string; name: string }
  * }
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
     imageScripts,
     collectedSummary,
     feedback,
+    referenceImage,
   } = body
 
   const company = companyData ?? {}
@@ -91,21 +93,13 @@ export async function POST(req: NextRequest) {
 
   const platformList = (platforms as string[]).map(p => platformNames[p] ?? p).join('、')
   const typeList = (videoTypes as string[]).map(t => videoTypeNames[t] ?? t).join('、')
-
   const feedbackSection = feedback ? `\n\n⚠️ 修改意見：${feedback}\n請根據以上意見調整腳本。` : ''
   const userRules = userInstructions ? `\n\n📌 使用者特別規定：\n${userInstructions}` : ''
+  const refImageNote = referenceImage
+    ? `\n\n【參考圖片說明】\n以上為品牌實際場景圖片，影片開場或主要畫面應以此圖片的空間、氛圍、色調為基礎進行延伸，確保視覺一致性。`
+    : ''
 
-  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
-    system: `你是一位頂尖的影片行銷導演，擅長為各社群平台撰寫高轉換率的影片分鏡腳本。
-你熟知短影音的黃金法則：前3秒必須抓住觀眾、節奏明快、視覺衝擊強、CTA清晰。
-輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。`,
-    messages: [
-      {
-        role: 'user',
-        content: `請根據以下品牌資料，產出 ${count} 個完整影片分鏡腳本：
+  const promptText = `請根據以下品牌資料，產出 ${count} 個完整影片分鏡腳本：
 
 【品牌資料】
 ${companyCtx}
@@ -120,6 +114,7 @@ ${copyCtx || '（未提供）'}
 【參考圖片腳本】
 ${imageCtx || '（未提供）'}
 ${userRules}
+${refImageNote}
 ${feedbackSection}
 
 【影片規格】
@@ -148,13 +143,30 @@ ${feedbackSection}
 9. 拍攝建議：燈光、鏡頭、道具等實務建議
 10. 後製重點：剪輯節奏、特效、貼圖建議
 
-請確保每個腳本節奏明快、符合平台演算法偏好，且視覺與文字都具有強烈的轉換力。`,
-      },
-    ],
+請確保每個腳本節奏明快、符合平台演算法偏好，且視覺與文字都具有強烈的轉換力。`
+
+  const userContent = referenceImage
+    ? [
+        {
+          type: 'image' as const,
+          image: referenceImage.base64,
+          mimeType: referenceImage.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        },
+        { type: 'text' as const, text: promptText },
+      ]
+    : promptText
+
+  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+
+  const { text } = await generateText({
+    model: anthropic('claude-sonnet-4-5'),
+    system: `你是一位頂尖的影片行銷導演，擅長為各社群平台撰寫高轉換率的影片分鏡腳本。
+你熟知短影音的黃金法則：前3秒必須抓住觀眾、節奏明快、視覺衝擊強、CTA清晰。
+輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。`,
+    messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })
 
-  // Parse sections
   const scripts: { id: number; content: string }[] = []
   for (let i = 1; i <= count; i++) {
     const regex = new RegExp(`===【影片 ${i}】===[\\s\\S]*?(?====【|$)`, 'g')

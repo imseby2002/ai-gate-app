@@ -10,8 +10,17 @@ import {
   Bell, ShoppingBag, Smartphone, TrendingUp,
   MoreHorizontal, Pencil, Trash2, Check
 } from 'lucide-react'
+import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface DrivePickedImage {
+  fileId: string
+  name: string
+  dataUrl: string    // for display
+  publicUrl: string  // for img2img / img2video APIs
+  mimeType: string
+}
 
 type UnitStatus = 'idle' | 'running' | 'done' | 'error'
 type CollectType =
@@ -1200,6 +1209,11 @@ function Unit5ImageScript({
   unit2Data,
   unit3Data,
   unit4Data,
+  driveFolderId,
+  driveFolderName,
+  drivePickedImage,
+  onDriveFolderChange,
+  onDriveImagePicked,
   onDone,
 }: {
   campaignId: string | null
@@ -1208,6 +1222,11 @@ function Unit5ImageScript({
   unit2Data?: Unit2Data
   unit3Data?: Unit3Data
   unit4Data?: Unit4Data
+  driveFolderId?: string
+  driveFolderName?: string
+  drivePickedImage?: DrivePickedImage | null
+  onDriveFolderChange: (id: string, name: string) => void
+  onDriveImagePicked: (img: DrivePickedImage | null) => void
   onDone: (data: Unit5Data) => void
 }) {
   const [count, setCount] = useState(savedData?.count ?? 3)
@@ -1215,6 +1234,7 @@ function Unit5ImageScript({
     savedData?.platforms ?? ['facebook_post', 'instagram_caption']
   )
   const [instructions, setInstructions] = useState(savedData?.userInstructions ?? '')
+  const [useRefImage, setUseRefImage] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
@@ -1226,6 +1246,9 @@ function Unit5ImageScript({
 
   const run = async (fb?: string) => {
     setRunning(true); setError('')
+    const refImg = useRefImage && drivePickedImage
+      ? { base64: drivePickedImage.dataUrl.split(',')[1], mimeType: drivePickedImage.mimeType, name: drivePickedImage.name }
+      : undefined
     try {
       const res = await fetch('/api/marketing/image-script', {
         method: 'POST',
@@ -1239,6 +1262,7 @@ function Unit5ImageScript({
           copyData: unit4Data ?? {},
           collectedSummary: unit1Data?.summary ?? '',
           feedback: fb ?? '',
+          referenceImage: refImg,
         }),
       })
       const data = await res.json()
@@ -1328,18 +1352,40 @@ function Unit5ImageScript({
           placeholder="例如：必須包含產品照片；風格要高端奢華；禁止使用紅色；圖片要帶有品牌 Logo 位置…" />
       </div>
 
+      {/* Drive reference image */}
+      <div className="p-4 rounded-xl border border-dashed border-gray-300 space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold">搭配參考圖片（選填）</label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={useRefImage} onChange={e => setUseRefImage(e.target.checked)}
+              className="w-4 h-4 rounded accent-blue-600" />
+            <span className="text-xs text-gray-600">啟用</span>
+          </label>
+        </div>
+        {useRefImage && (
+          <DriveImagePicker
+            folderId={driveFolderId}
+            folderName={driveFolderName}
+            onFolderChange={onDriveFolderChange}
+            onImagePicked={onDriveImagePicked}
+            pickedImage={drivePickedImage ?? null}
+            label="從 Google Drive 隨機取圖，腳本將配合此圖片生成"
+          />
+        )}
+      </div>
+
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{error}
         </div>
       )}
 
-      <button onClick={() => run()} disabled={running}
+      <button onClick={() => run()} disabled={running || (useRefImage && !drivePickedImage)}
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
         {running
           ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
-          : <><ImageIcon className="h-4 w-4" />產生圖片腳本</>}
+          : <><ImageIcon className="h-4 w-4" />{useRefImage && drivePickedImage ? '以參考圖片產生腳本' : '產生圖片腳本'}</>}
       </button>
 
       {/* Results */}
@@ -1372,6 +1418,18 @@ function Unit5ImageScript({
                   共 {result.scripts.length} 張
                 </span>
               </div>
+              {useRefImage && drivePickedImage && (
+                <div className="mb-3 flex items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={drivePickedImage.dataUrl} alt={drivePickedImage.name}
+                    className="w-24 h-24 object-cover rounded-lg border shrink-0" />
+                  <div className="text-xs text-gray-500">
+                    <div className="font-medium text-gray-700 mb-0.5">參考圖片</div>
+                    <div className="truncate">{drivePickedImage.name}</div>
+                    <div className="text-gray-400 mt-1">腳本已根據此圖片風格生成</div>
+                  </div>
+                </div>
+              )}
               <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[500px] overflow-y-auto">
                 {result.scripts.find(s => s.id === activeScript)?.content}
               </pre>
@@ -1444,11 +1502,11 @@ const SIZE_OPTIONS = [
 
 // Extract AI prompt from script content
 function extractPrompt(content: string): string {
+  if (!content?.trim()) return ''
   // 1. Content inside a code block after the label
   const codeBlockMatch = content.match(/AI\s*生成\s*Prompt[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
   if (codeBlockMatch) return codeBlockMatch[1].trim()
-
-  // 2. Same line after the label
+  // 2. Same line or next non-empty line after the label
   const patterns = [
     /AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
     /Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
@@ -1458,7 +1516,6 @@ function extractPrompt(content: string): string {
     if (m) {
       const same = m[1].replace(/\*+/g, '').trim()
       if (same.length > 3) return same
-      // Content on next non-empty, non-fence line
       const matchEnd = (m.index ?? 0) + m[0].length
       const nextLine = content.slice(matchEnd).split('\n')
         .find(l => l.trim().length > 3 && !l.trim().startsWith('`'))
@@ -1468,15 +1525,44 @@ function extractPrompt(content: string): string {
   return ''
 }
 
+// Builds a richer image gen prompt from a Unit 5 script:
+// AI Prompt (base) + 視覺場景 + 色調風格
+function buildImageGenPrompt(content: string): string {
+  if (!content?.trim()) return ''
+  const aiPrompt = extractPrompt(content)
+
+  const extractField = (label: string) => {
+    const re = new RegExp(`${label}[：:]\\**\\s*([\\s\\S]+?)(?=\\n\\s*\\d+[\\.、]|\\n===|$)`, 'i')
+    const m = content.match(re)
+    return m ? m[1].replace(/\*+/g, '').replace(/\n+/g, ' ').trim().slice(0, 120) : ''
+  }
+
+  const scene = extractField('視覺場景')
+  const style = extractField('色調風格')
+
+  const parts = [aiPrompt, scene, style].filter(s => s.length > 3)
+  return parts.join('. ')
+}
+
 function Unit6ImageGenerate({
   campaignId: _campaignId,
   savedData,
   unit5Data,
+  driveFolderId,
+  driveFolderName,
+  drivePickedImage,
+  onDriveFolderChange,
+  onDriveImagePicked,
   onDone,
 }: {
   campaignId: string | null
   savedData?: Unit6Data
   unit5Data?: Unit5Data
+  driveFolderId?: string
+  driveFolderName?: string
+  drivePickedImage?: DrivePickedImage | null
+  onDriveFolderChange: (id: string, name: string) => void
+  onDriveImagePicked: (img: DrivePickedImage | null) => void
   onDone: (data: Unit6Data) => void
 }) {
   const scripts = unit5Data?.scripts ?? []
@@ -1487,7 +1573,7 @@ function Unit6ImageGenerate({
   const [style, setStyle] = useState<'vivid' | 'natural'>('vivid')
   const [prompts, setPrompts] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {}
-    scripts.forEach(s => { init[s.id] = extractPrompt(s.content) })
+    scripts.forEach(s => { init[s.id] = buildImageGenPrompt(s.content) })
     return init
   })
   const [userEditedPrompts6, setUserEditedPrompts6] = useState<Set<number>>(new Set())
@@ -1502,7 +1588,7 @@ function Unit6ImageGenerate({
     setPrompts(prev => {
       const next = { ...prev }
       scripts.forEach(s => {
-        if (!userEditedPrompts6.has(s.id)) next[s.id] = extractPrompt(s.content)
+        if (!userEditedPrompts6.has(s.id)) next[s.id] = buildImageGenPrompt(s.content)
       })
       return next
     })
@@ -1510,8 +1596,11 @@ function Unit6ImageGenerate({
 
   const hasUnit5 = scripts.length > 0
 
+  const [useRefImg, setUseRefImg] = useState(false)
+
   const buildPayload = (prompt: string, scriptId: number) => ({
     prompt, scriptId, model, size, quality, style,
+    ...(useRefImg && drivePickedImage ? { imageUrl: drivePickedImage.publicUrl } : {}),
   })
 
   const generateOne = async (scriptId: number) => {
@@ -1655,6 +1744,39 @@ function Unit6ImageGenerate({
             </>
           )}
         </div>
+      </div>
+
+      {/* Reference image (img2img) */}
+      <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
+            <ImageIcon className="w-3.5 h-3.5" />
+            參考圖片（img2img）
+          </div>
+          <button onClick={() => setUseRefImg(v => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all"
+            style={useRefImg
+              ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+              : { background: 'white' }}>
+            {useRefImg ? '已啟用' : '使用參考圖片生成'}
+          </button>
+        </div>
+        {useRefImg && (
+          <DriveImagePicker
+            folderId={driveFolderId}
+            folderName={driveFolderName}
+            onFolderChange={onDriveFolderChange}
+            onImagePicked={onDriveImagePicked}
+            pickedImage={drivePickedImage ?? null}
+            label="圖片生成參考圖"
+          />
+        )}
+        {useRefImg && drivePickedImage && (
+          <p className="text-[10px] text-blue-600">已選擇參考圖片，所有圖片將以此圖風格生成（img2img）</p>
+        )}
+        {!useRefImg && (
+          <p className="text-[10px] text-blue-500">啟用後可從 Google Drive 選取圖片作為生成基礎，實現 img2img 效果</p>
+        )}
       </div>
 
       {/* Scripts from Unit 5 */}
@@ -1846,6 +1968,12 @@ function Unit7VideoScript({
   unit3Data,
   unit4Data,
   unit5Data,
+  unit6Data,
+  driveFolderId,
+  driveFolderName,
+  drivePickedImage,
+  onDriveFolderChange,
+  onDriveImagePicked,
   onDone,
 }: {
   campaignId: string | null
@@ -1855,6 +1983,12 @@ function Unit7VideoScript({
   unit3Data?: Unit3Data
   unit4Data?: Unit4Data
   unit5Data?: Unit5Data
+  unit6Data?: Unit6Data
+  driveFolderId?: string
+  driveFolderName?: string
+  drivePickedImage?: DrivePickedImage | null
+  onDriveFolderChange: (id: string, name: string) => void
+  onDriveImagePicked: (img: DrivePickedImage | null) => void
   onDone: (data: Unit7Data) => void
 }) {
   const [count, setCount] = useState(savedData?.count ?? 1)
@@ -1867,6 +2001,11 @@ function Unit7VideoScript({
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit7Data | null>(savedData?.scripts?.length ? savedData : null)
   const [activeScript, setActiveScript] = useState(1)
+  const [useRefImage, setUseRefImage] = useState(false)
+  const [refImageSource, setRefImageSource] = useState<'drive' | 'unit6'>('drive')
+  const [selectedUnit6ImageUrl, setSelectedUnit6ImageUrl] = useState('')
+
+  const unit6Images = unit6Data?.images ?? []
 
   const toggleType = (id: string) =>
     setVideoTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -1874,10 +2013,31 @@ function Unit7VideoScript({
   const togglePlatform = (id: string) =>
     setPlatforms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
+  const getRefImage = async (): Promise<{ base64: string; mimeType: string; name: string } | undefined> => {
+    if (!useRefImage) return undefined
+    if (refImageSource === 'drive' && drivePickedImage) {
+      return { base64: drivePickedImage.dataUrl.split(',')[1], mimeType: drivePickedImage.mimeType, name: drivePickedImage.name }
+    }
+    if (refImageSource === 'unit6' && selectedUnit6ImageUrl) {
+      try {
+        const r = await fetch(selectedUnit6ImageUrl)
+        const blob = await r.blob()
+        const base64 = await new Promise<string>(resolve => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1])
+          reader.readAsDataURL(blob)
+        })
+        return { base64, mimeType: blob.type || 'image/png', name: 'unit6-image.png' }
+      } catch { return undefined }
+    }
+    return undefined
+  }
+
   const run = async (fb?: string) => {
     if (videoTypes.length === 0) { setError('請至少選一種影片類型'); return }
     if (platforms.length === 0) { setError('請至少選一個平台'); return }
     setRunning(true); setError('')
+    const refImg = await getRefImage()
     try {
       const res = await fetch('/api/marketing/video-script', {
         method: 'POST',
@@ -1891,6 +2051,7 @@ function Unit7VideoScript({
           imageScripts: unit5Data ?? {},
           collectedSummary: unit1Data?.summary ?? '',
           feedback: fb ?? '',
+          ...(refImg ? { referenceImage: refImg } : {}),
         }),
       })
       const data = await res.json()
@@ -2005,6 +2166,80 @@ function Unit7VideoScript({
         </div>
       </div>
 
+      {/* Reference image */}
+      <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
+            <ImageIcon className="w-3.5 h-3.5" />
+            參考圖片（提供給 Claude Vision）
+          </div>
+          <button onClick={() => setUseRefImage(v => !v)}
+            className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all"
+            style={useRefImage
+              ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+              : { background: 'white' }}>
+            {useRefImage ? '已啟用' : '使用參考圖片'}
+          </button>
+        </div>
+        {!useRefImage && (
+          <p className="text-[10px] text-blue-500">啟用後 Claude 會根據圖片場景與風格生成更貼切的腳本</p>
+        )}
+        {useRefImage && (
+          <>
+            {/* Source toggle */}
+            <div className="flex gap-2">
+              <button onClick={() => setRefImageSource('drive')}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={refImageSource === 'drive'
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : { background: 'white' }}>
+                Google Drive
+              </button>
+              <button onClick={() => setRefImageSource('unit6')}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={refImageSource === 'unit6'
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : { background: 'white' }}>
+                單元6 生成圖片
+              </button>
+            </div>
+            {refImageSource === 'drive' && (
+              <DriveImagePicker
+                folderId={driveFolderId}
+                folderName={driveFolderName}
+                onFolderChange={onDriveFolderChange}
+                onImagePicked={onDriveImagePicked}
+                pickedImage={drivePickedImage ?? null}
+                label="影片腳本參考圖"
+              />
+            )}
+            {refImageSource === 'unit6' && (
+              unit6Images.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-blue-600">選擇一張單元6已生成的圖片作為參考</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {unit6Images.map(img => (
+                      <button key={img.url} onClick={() => setSelectedUnit6ImageUrl(img.url)}
+                        className="relative rounded-lg overflow-hidden border-2 transition-all"
+                        style={selectedUnit6ImageUrl === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
+                        <img src={img.url} alt="unit6" className="w-16 h-16 object-cover" />
+                        {selectedUnit6ImageUrl === img.url && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <CheckCircle2 className="h-5 w-5 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-blue-600">尚未在單元6生成圖片，請先完成單元6或改用 Drive 圖片。</p>
+              )
+            )}
+          </>
+        )}
+      </div>
+
       {/* Instructions */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">
@@ -2022,13 +2257,21 @@ function Unit7VideoScript({
         </div>
       )}
 
-      <button onClick={() => run()} disabled={running}
-        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
-        style={{ background: 'var(--primary)' }}>
-        {running
-          ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
-          : <><Film className="h-4 w-4" />產生影片腳本</>}
-      </button>
+      {(() => {
+        const refReady = !useRefImage
+          || (refImageSource === 'drive' && !!drivePickedImage)
+          || (refImageSource === 'unit6' && !!selectedUnit6ImageUrl)
+        const hasRef = useRefImage && refReady
+        return (
+          <button onClick={() => run()} disabled={running || !refReady}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+            style={{ background: 'var(--primary)' }}>
+            {running
+              ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
+              : <><Film className="h-4 w-4" />{hasRef ? '以參考圖片產生腳本' : '產生影片腳本'}</>}
+          </button>
+        )
+      })()}
 
       {/* Results */}
       {result && result.scripts && result.scripts.length > 0 && (
@@ -2174,12 +2417,14 @@ function Unit8VideoGenerate({
   savedData,
   unit6Data,
   unit7Data,
+  drivePickedImage,
   onDone,
 }: {
   campaignId: string | null
   savedData?: Unit8Data
   unit6Data?: Unit6Data
   unit7Data?: Unit7Data
+  drivePickedImage?: DrivePickedImage | null
   onDone: (data: Unit8Data) => void
 }) {
   const scripts = unit7Data?.scripts ?? []
@@ -2211,6 +2456,8 @@ function Unit8VideoGenerate({
     })
   }, [scripts, userEditedPrompts])
   const [selectedImage, setSelectedImage] = useState<string>('')
+  // 'unit6' | 'drive' | '' — source for img2video
+  const [img2VideoSource, setImg2VideoSource] = useState<'unit6' | 'drive'>('unit6')
   const [manualPrompt, setManualPrompt] = useState('')
 
   const [jobs, setJobs] = useState<Record<number, VideoJob>>({})
@@ -2259,6 +2506,13 @@ function Unit8VideoGenerate({
     return () => clearInterval(interval)
   }, [jobs, manualJob, pollJob])
 
+  const getImg2VideoUrl = () => {
+    if (!useImg2Video) return undefined
+    if (img2VideoSource === 'drive' && drivePickedImage) return drivePickedImage.publicUrl
+    if (img2VideoSource === 'unit6' && selectedImage) return selectedImage
+    return undefined
+  }
+
   const submitJob = async (scriptId: number) => {
     const prompt = prompts[scriptId]?.trim()
     if (!prompt) {
@@ -2266,7 +2520,8 @@ function Unit8VideoGenerate({
       return
     }
     const payload: Record<string, unknown> = { prompt, scriptId, model, duration, aspectRatio }
-    if (model === 'kling-img2video' && selectedImage) payload.imageUrl = selectedImage
+    const imgUrl = getImg2VideoUrl()
+    if (imgUrl) payload.imageUrl = imgUrl
 
     try {
       const res = await fetch('/api/marketing/generate-video', {
@@ -2285,7 +2540,8 @@ function Unit8VideoGenerate({
   const submitManual = async () => {
     if (!manualPrompt.trim()) return
     const payload: Record<string, unknown> = { prompt: manualPrompt.trim(), scriptId: 0, model, duration, aspectRatio }
-    if (model === 'kling-img2video' && selectedImage) payload.imageUrl = selectedImage
+    const imgUrl = getImg2VideoUrl()
+    if (imgUrl) payload.imageUrl = imgUrl
     try {
       const res = await fetch('/api/marketing/generate-video', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2383,28 +2639,57 @@ function Unit8VideoGenerate({
 
       {/* Image selector (img2video) */}
       {useImg2Video && (
-        <div className="p-4 rounded-xl border border-blue-100 bg-blue-50 space-y-2">
-          <div className="text-xs font-semibold text-blue-800">選擇來源圖片（單元6 已生成）</div>
-          {hasUnit6Images ? (
-            <div className="flex gap-2 flex-wrap">
-              {generatedImages.map(img => (
-                <button key={img.url} onClick={() => setSelectedImage(img.url)}
-                  className="relative rounded-lg overflow-hidden border-2 transition-all"
-                  style={selectedImage === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
-                  <img src={img.url} alt="圖片" className="w-16 h-16 object-cover" />
-                  {selectedImage === img.url && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <CheckCircle2 className="h-5 w-5 text-white" />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-blue-600">尚未在單元6生成圖片。請先完成單元6，或使用文字生成影片模式。</p>
+        <div className="p-4 rounded-xl border border-blue-100 bg-blue-50 space-y-3">
+          <div className="text-xs font-semibold text-blue-800">選擇來源圖片</div>
+          {/* Source toggle */}
+          <div className="flex gap-2">
+            <button onClick={() => setImg2VideoSource('unit6')}
+              className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+              style={img2VideoSource === 'unit6'
+                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                : { background: 'white' }}>
+              單元6 生成圖片
+            </button>
+            <button onClick={() => setImg2VideoSource('drive')}
+              className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+              style={img2VideoSource === 'drive'
+                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                : { background: 'white' }}>
+              Google Drive 圖片
+            </button>
+          </div>
+          {img2VideoSource === 'unit6' && (
+            hasUnit6Images ? (
+              <div className="flex gap-2 flex-wrap">
+                {generatedImages.map(img => (
+                  <button key={img.url} onClick={() => setSelectedImage(img.url)}
+                    className="relative rounded-lg overflow-hidden border-2 transition-all"
+                    style={selectedImage === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
+                    <img src={img.url} alt="圖片" className="w-16 h-16 object-cover" />
+                    {selectedImage === img.url && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <CheckCircle2 className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-blue-600">尚未在單元6生成圖片。請先完成單元6，或改用 Drive 圖片。</p>
+            )
           )}
-          {selectedImage && (
-            <p className="text-[10px] text-blue-500">已選擇圖片，將以此圖生成動態影片</p>
+          {img2VideoSource === 'drive' && (
+            drivePickedImage ? (
+              <div className="flex items-center gap-3">
+                <img src={drivePickedImage.dataUrl} alt={drivePickedImage.name} className="w-16 h-16 object-cover rounded-lg border" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-blue-800 truncate">{drivePickedImage.name}</p>
+                  <p className="text-[10px] text-blue-500 mt-0.5">已選擇 Drive 圖片，將以此圖生成影片</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-blue-600">尚未在單元5/6/7 選取 Google Drive 圖片，請先前往任一單元選取。</p>
+            )
           )}
         </div>
       )}
@@ -4879,6 +5164,10 @@ export default function MarketingAutoPage() {
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
 
+  // Drive folders — per unit (5, 6, 7), persisted per campaign as drive_folders JSON map
+  const [driveFolders, setDriveFolders] = useState<Record<number, { id: string; name: string }>>({})
+  const [driveImages, setDriveImages] = useState<Record<number, DrivePickedImage | null>>({})
+
   // Shared company data (Unit 2) — global, not per campaign
   const [companyData, setCompanyData] = useState<Unit2Data>({})
 
@@ -4958,6 +5247,8 @@ export default function MarketingAutoPage() {
     setCampaignTitle(c.title ?? '未命名行銷專案')
     setUnitStatuses(c.unit_statuses ?? {})
     setUnitData(c.unit_data ?? {})
+    setDriveFolders(c.drive_folders ?? {})
+    setDriveImages({})
     setShowCampaigns(false)
     if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', id)
   }
@@ -5040,6 +5331,13 @@ export default function MarketingAutoPage() {
     const cid = await ensureCampaign()
     if (cid) saveUnitResult(12, data, cid)
   }, [ensureCampaign, saveUnitResult])
+
+  const handleDriveFolderChange = useCallback(async (unitId: number, id: string, name: string) => {
+    const next = { ...driveFolders, [unitId]: { id, name } }
+    setDriveFolders(next)
+    const cid = await ensureCampaign()
+    if (cid) await patchCampaign(cid, { drive_folders: next })
+  }, [ensureCampaign, driveFolders])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
 
@@ -5257,6 +5555,11 @@ export default function MarketingAutoPage() {
               unit2Data={companyData}
               unit3Data={unitData[3] as Unit3Data | undefined}
               unit4Data={unitData[4] as Unit4Data | undefined}
+              driveFolderId={driveFolders[5]?.id}
+              driveFolderName={driveFolders[5]?.name}
+              drivePickedImage={driveImages[5] ?? null}
+              onDriveFolderChange={(id, name) => handleDriveFolderChange(5, id, name)}
+              onDriveImagePicked={img => setDriveImages(prev => ({ ...prev, 5: img }))}
               onDone={handleUnit5Done}
             />
           )}
@@ -5265,6 +5568,11 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[6] as Unit6Data | undefined}
               unit5Data={unitData[5] as Unit5Data | undefined}
+              driveFolderId={driveFolders[6]?.id}
+              driveFolderName={driveFolders[6]?.name}
+              drivePickedImage={driveImages[6] ?? null}
+              onDriveFolderChange={(id, name) => handleDriveFolderChange(6, id, name)}
+              onDriveImagePicked={img => setDriveImages(prev => ({ ...prev, 6: img }))}
               onDone={handleUnit6Done}
             />
           )}
@@ -5277,6 +5585,12 @@ export default function MarketingAutoPage() {
               unit3Data={unitData[3] as Unit3Data | undefined}
               unit4Data={unitData[4] as Unit4Data | undefined}
               unit5Data={unitData[5] as Unit5Data | undefined}
+              unit6Data={unitData[6] as Unit6Data | undefined}
+              driveFolderId={driveFolders[7]?.id}
+              driveFolderName={driveFolders[7]?.name}
+              drivePickedImage={driveImages[7] ?? null}
+              onDriveFolderChange={(id, name) => handleDriveFolderChange(7, id, name)}
+              onDriveImagePicked={img => setDriveImages(prev => ({ ...prev, 7: img }))}
               onDone={handleUnit7Done}
             />
           )}
@@ -5286,6 +5600,7 @@ export default function MarketingAutoPage() {
               savedData={unitData[8] as Unit8Data | undefined}
               unit6Data={unitData[6] as Unit6Data | undefined}
               unit7Data={unitData[7] as Unit7Data | undefined}
+              drivePickedImage={driveImages[7] ?? driveImages[5] ?? null}
               onDone={handleUnit8Done}
             />
           )}
