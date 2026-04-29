@@ -1519,6 +1519,25 @@ function extractPrompt(content: string): string {
   return ''
 }
 
+// Builds a richer image gen prompt from a Unit 5 script:
+// AI Prompt (base) + 視覺場景 + 色調風格
+function buildImageGenPrompt(content: string): string {
+  if (!content?.trim()) return ''
+  const aiPrompt = extractPrompt(content)
+
+  const extractField = (label: string) => {
+    const re = new RegExp(`${label}[：:]\\**\\s*([\\s\\S]+?)(?=\\n\\s*\\d+[\\.、]|\\n===|$)`, 'i')
+    const m = content.match(re)
+    return m ? m[1].replace(/\*+/g, '').replace(/\n+/g, ' ').trim().slice(0, 120) : ''
+  }
+
+  const scene = extractField('視覺場景')
+  const style = extractField('色調風格')
+
+  const parts = [aiPrompt, scene, style].filter(s => s.length > 3)
+  return parts.join('. ')
+}
+
 function Unit6ImageGenerate({
   campaignId: _campaignId,
   savedData,
@@ -1548,7 +1567,7 @@ function Unit6ImageGenerate({
   const [style, setStyle] = useState<'vivid' | 'natural'>('vivid')
   const [prompts, setPrompts] = useState<Record<number, string>>(() => {
     const init: Record<number, string> = {}
-    scripts.forEach(s => { init[s.id] = extractPrompt(s.content) })
+    scripts.forEach(s => { init[s.id] = buildImageGenPrompt(s.content) })
     return init
   })
   const [userEditedPrompts6, setUserEditedPrompts6] = useState<Set<number>>(new Set())
@@ -1563,7 +1582,7 @@ function Unit6ImageGenerate({
     setPrompts(prev => {
       const next = { ...prev }
       scripts.forEach(s => {
-        if (!userEditedPrompts6.has(s.id)) next[s.id] = extractPrompt(s.content)
+        if (!userEditedPrompts6.has(s.id)) next[s.id] = buildImageGenPrompt(s.content)
       })
       return next
     })
@@ -1943,6 +1962,7 @@ function Unit7VideoScript({
   unit3Data,
   unit4Data,
   unit5Data,
+  unit6Data,
   driveFolderId,
   driveFolderName,
   drivePickedImage,
@@ -1957,6 +1977,7 @@ function Unit7VideoScript({
   unit3Data?: Unit3Data
   unit4Data?: Unit4Data
   unit5Data?: Unit5Data
+  unit6Data?: Unit6Data
   driveFolderId?: string
   driveFolderName?: string
   drivePickedImage?: DrivePickedImage | null
@@ -1975,6 +1996,10 @@ function Unit7VideoScript({
   const [result, setResult] = useState<Unit7Data | null>(savedData?.scripts?.length ? savedData : null)
   const [activeScript, setActiveScript] = useState(1)
   const [useRefImage, setUseRefImage] = useState(false)
+  const [refImageSource, setRefImageSource] = useState<'drive' | 'unit6'>('drive')
+  const [selectedUnit6ImageUrl, setSelectedUnit6ImageUrl] = useState('')
+
+  const unit6Images = unit6Data?.images ?? []
 
   const toggleType = (id: string) =>
     setVideoTypes(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -1982,13 +2007,31 @@ function Unit7VideoScript({
   const togglePlatform = (id: string) =>
     setPlatforms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
+  const getRefImage = async (): Promise<{ base64: string; mimeType: string; name: string } | undefined> => {
+    if (!useRefImage) return undefined
+    if (refImageSource === 'drive' && drivePickedImage) {
+      return { base64: drivePickedImage.dataUrl.split(',')[1], mimeType: drivePickedImage.mimeType, name: drivePickedImage.name }
+    }
+    if (refImageSource === 'unit6' && selectedUnit6ImageUrl) {
+      try {
+        const r = await fetch(selectedUnit6ImageUrl)
+        const blob = await r.blob()
+        const base64 = await new Promise<string>(resolve => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1])
+          reader.readAsDataURL(blob)
+        })
+        return { base64, mimeType: blob.type || 'image/png', name: 'unit6-image.png' }
+      } catch { return undefined }
+    }
+    return undefined
+  }
+
   const run = async (fb?: string) => {
     if (videoTypes.length === 0) { setError('請至少選一種影片類型'); return }
     if (platforms.length === 0) { setError('請至少選一個平台'); return }
     setRunning(true); setError('')
-    const refImg = useRefImage && drivePickedImage
-      ? { base64: drivePickedImage.dataUrl.split(',')[1], mimeType: drivePickedImage.mimeType, name: drivePickedImage.name }
-      : undefined
+    const refImg = await getRefImage()
     try {
       const res = await fetch('/api/marketing/video-script', {
         method: 'POST',
@@ -2132,18 +2175,62 @@ function Unit7VideoScript({
             {useRefImage ? '已啟用' : '使用參考圖片'}
           </button>
         </div>
-        {useRefImage && (
-          <DriveImagePicker
-            folderId={driveFolderId}
-            folderName={driveFolderName}
-            onFolderChange={onDriveFolderChange}
-            onImagePicked={onDriveImagePicked}
-            pickedImage={drivePickedImage ?? null}
-            label="影片腳本參考圖"
-          />
-        )}
         {!useRefImage && (
           <p className="text-[10px] text-blue-500">啟用後 Claude 會根據圖片場景與風格生成更貼切的腳本</p>
+        )}
+        {useRefImage && (
+          <>
+            {/* Source toggle */}
+            <div className="flex gap-2">
+              <button onClick={() => setRefImageSource('drive')}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={refImageSource === 'drive'
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : { background: 'white' }}>
+                Google Drive
+              </button>
+              <button onClick={() => setRefImageSource('unit6')}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
+                style={refImageSource === 'unit6'
+                  ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
+                  : { background: 'white' }}>
+                單元6 生成圖片
+              </button>
+            </div>
+            {refImageSource === 'drive' && (
+              <DriveImagePicker
+                folderId={driveFolderId}
+                folderName={driveFolderName}
+                onFolderChange={onDriveFolderChange}
+                onImagePicked={onDriveImagePicked}
+                pickedImage={drivePickedImage ?? null}
+                label="影片腳本參考圖"
+              />
+            )}
+            {refImageSource === 'unit6' && (
+              unit6Images.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] text-blue-600">選擇一張單元6已生成的圖片作為參考</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {unit6Images.map(img => (
+                      <button key={img.url} onClick={() => setSelectedUnit6ImageUrl(img.url)}
+                        className="relative rounded-lg overflow-hidden border-2 transition-all"
+                        style={selectedUnit6ImageUrl === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
+                        <img src={img.url} alt="unit6" className="w-16 h-16 object-cover" />
+                        {selectedUnit6ImageUrl === img.url && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <CheckCircle2 className="h-5 w-5 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-blue-600">尚未在單元6生成圖片，請先完成單元6或改用 Drive 圖片。</p>
+              )
+            )}
+          </>
         )}
       </div>
 
@@ -2164,13 +2251,21 @@ function Unit7VideoScript({
         </div>
       )}
 
-      <button onClick={() => run()} disabled={running || (useRefImage && !drivePickedImage)}
-        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
-        style={{ background: 'var(--primary)' }}>
-        {running
-          ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
-          : <><Film className="h-4 w-4" />{useRefImage && drivePickedImage ? '以參考圖片產生腳本' : '產生影片腳本'}</>}
-      </button>
+      {(() => {
+        const refReady = !useRefImage
+          || (refImageSource === 'drive' && !!drivePickedImage)
+          || (refImageSource === 'unit6' && !!selectedUnit6ImageUrl)
+        const hasRef = useRefImage && refReady
+        return (
+          <button onClick={() => run()} disabled={running || !refReady}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+            style={{ background: 'var(--primary)' }}>
+            {running
+              ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
+              : <><Film className="h-4 w-4" />{hasRef ? '以參考圖片產生腳本' : '產生影片腳本'}</>}
+          </button>
+        )
+      })()}
 
       {/* Results */}
       {result && result.scripts && result.scripts.length > 0 && (
@@ -2305,35 +2400,41 @@ function stripMd(s: string): string {
   return s.replace(/\*\*/g, '').replace(/\*/g, '').trim()
 }
 
-// Extract video prompt from script content
+// Extract video prompt from script content — builds a comprehensive scene description
 function extractVideoPrompt(content: string): string {
   if (!content?.trim()) return ''
 
-  // 1. Extract storyboard time-coded segments: [0-3秒] / [0-3s] style
-  //    Grab the first line of each segment (visual description before | or newline)
-  const timeSegments = [...content.matchAll(/\[[\d\-~～~]+[秒sS]\][^]*?(?=\[[\d\-~～~]+[秒sS]\]|$)/g)]
-  if (timeSegments.length > 0) {
-    const descriptions = timeSegments.map(m => {
-      const line = m[0].split('\n').find(l => l.trim().length > 5) ?? ''
-      // Content after the time code, before first | or newline continuation
-      const cleaned = stripMd(line.replace(/^\[[\d\-~～~]+[秒sS]\]\s*/, '').split('|')[0])
-      return cleaned
-    }).filter(d => d.length > 5).slice(0, 4)
-    if (descriptions.join('').length > 15) return descriptions.join('。')
+  const parts: string[] = []
+
+  // 1. 開頭 Hook 畫面 (Hook visual - opening 3 sec)
+  const hookMatch = content.match(/開頭\s*Hook[^）\n]*[）\n][^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
+  if (hookMatch?.[1]) parts.push(stripMd(hookMatch[1]).slice(0, 100))
+
+  // 2. ALL time-coded storyboard segments: [0-3秒] visual | voiceover | effect
+  const timeSegments = [...content.matchAll(/\[[\d\-~～~]+[秒sS]\]\s*([^\n|]+)/g)]
+  const storyboardParts = timeSegments
+    .map(m => stripMd(m[1].split('|')[0]))
+    .filter(d => d.length > 5)
+  if (storyboardParts.length > 0) parts.push(...storyboardParts)
+
+  // 3. If no time segments, fall back to all 畫面: descriptions
+  if (storyboardParts.length === 0) {
+    const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
+    const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean)
+    if (scenes.length > 0) parts.push(...scenes)
   }
 
-  // 2. Collect all 畫面：descriptions and combine
-  const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
-  if (sceneMatches.length > 0) {
-    const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean).slice(0, 4)
-    if (scenes.join('').length > 10) return scenes.join('。')
-  }
+  // 4. 拍攝建議 for camera/lighting context (first line only)
+  const shootMatch = content.match(/拍攝建議[：:]\s*(.+?)(?:\n|$)/i)
+  if (shootMatch?.[1]) parts.push(stripMd(shootMatch[1]).slice(0, 80))
 
-  // 3. 影片標題 as fallback
+  if (parts.length > 0 && parts.join('').length > 15) return parts.join('。')
+
+  // 5. 影片標題 as fallback
   const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
   if (titleMatch?.[1]?.trim()) return stripMd(titleMatch[1])
 
-  // 4. Last resort: first meaningful non-header lines
+  // 6. Last resort: first meaningful non-header lines
   const lines = content.split('\n')
     .map(l => stripMd(l))
     .filter(l => l.length > 10 && !l.startsWith('===') && !l.startsWith('#') && !l.startsWith('['))
@@ -5515,6 +5616,7 @@ export default function MarketingAutoPage() {
               unit3Data={unitData[3] as Unit3Data | undefined}
               unit4Data={unitData[4] as Unit4Data | undefined}
               unit5Data={unitData[5] as Unit5Data | undefined}
+              unit6Data={unitData[6] as Unit6Data | undefined}
               driveFolderId={driveFolderId}
               driveFolderName={driveFolderName}
               drivePickedImage={drivePickedImage}
