@@ -62,14 +62,17 @@ async function uploadFacebook(creds: Record<string, string>, imageUrls: string[]
     const resolvedToPageToken = pageToken !== token
 
     const firstImage = imageUrls[0]
-    const params = new URLSearchParams({
-      url: firstImage,
-      caption: copyText.slice(0, 2000),
-      access_token: pageToken,
-    })
+    // Download image first, then upload as binary (avoids Facebook URL accessibility issues)
+    const imgRes = await fetch(firstImage)
+    const imgBuffer = await imgRes.arrayBuffer()
+    const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    const formData = new FormData()
+    formData.append('source', new Blob([imgBuffer], { type: contentType }), 'image.jpg')
+    formData.append('caption', copyText.slice(0, 2000))
+    formData.append('access_token', pageToken)
     const res = await fetch(`https://graph.facebook.com/v19.0/${page_id}/photos`, {
       method: 'POST',
-      body: params,
+      body: formData,
     })
     const data = await res.json()
     if (!data.id) {
