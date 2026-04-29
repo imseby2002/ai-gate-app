@@ -1444,13 +1444,19 @@ const SIZE_OPTIONS = [
 
 // Extract AI prompt from script content
 function extractPrompt(content: string): string {
-  const patterns = [
-    /AI\s*生成\s*Prompt[：:]\s*(.+?)(?:\n|$)/i,
-    /Prompt[：:]\s*(.+?)(?:\n|$)/i,
-  ]
-  for (const re of patterns) {
-    const m = content.match(re)
-    if (m) return m[1].trim()
+  if (!content?.trim()) return ''
+  // 1. Content inside a code block after the label
+  const codeBlockMatch = content.match(/AI\s*生成\s*Prompt[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
+  if (codeBlockMatch) return codeBlockMatch[1].trim()
+  // 2. Same line or next non-empty line after the label
+  const m = content.match(/AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i)
+  if (m) {
+    const same = m[1].replace(/\*+/g, '').trim()
+    if (same.length > 3) return same
+    const matchEnd = (m.index ?? 0) + m[0].length
+    const nextLine = content.slice(matchEnd).split('\n')
+      .find(l => l.trim().length > 3 && !l.trim().startsWith('`'))
+    if (nextLine) return nextLine.replace(/\*+/g, '').trim()
   }
   return ''
 }
@@ -1477,12 +1483,23 @@ function Unit6ImageGenerate({
     scripts.forEach(s => { init[s.id] = extractPrompt(s.content) })
     return init
   })
+  const [userEditedPrompts6, setUserEditedPrompts6] = useState<Set<number>>(new Set())
   const [generating, setGenerating] = useState<Record<number, boolean>>({})
   const [errors, setErrors] = useState<Record<number, string>>({})
   const [images, setImages] = useState<GeneratedImage[]>(savedData?.images ?? [])
   const [manualPrompt, setManualPrompt] = useState('')
   const [manualGenerating, setManualGenerating] = useState(false)
   const [manualError, setManualError] = useState('')
+
+  useEffect(() => {
+    setPrompts(prev => {
+      const next = { ...prev }
+      scripts.forEach(s => {
+        if (!userEditedPrompts6.has(s.id)) next[s.id] = extractPrompt(s.content)
+      })
+      return next
+    })
+  }, [scripts, userEditedPrompts6])
 
   const hasUnit5 = scripts.length > 0
 
@@ -1662,7 +1679,10 @@ function Unit6ImageGenerate({
                     </label>
                     <textarea
                       value={prompts[s.id] ?? ''}
-                      onChange={e => setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))}
+                      onChange={e => {
+                        setUserEditedPrompts6(prev => new Set(prev).add(s.id))
+                        setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))
+                      }}
                       rows={3}
                       className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
                       placeholder="輸入英文 Prompt…"
