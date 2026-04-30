@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ai-gate-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["D:\\Users\\calvin\\OneDrive - alumni.albany.edu\\PROGRAM\\AI GATE\\ai-gate-app\\node_modules\\next\\dist\\bin\\next.js", "dev", "--port", "3333"],
+      "port": 3333
+    }
+  ]
+}
