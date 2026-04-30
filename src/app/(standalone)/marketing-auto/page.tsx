@@ -5660,9 +5660,10 @@ export default function MarketingAutoPage() {
         </nav>
 
         <div className="p-3 border-t space-y-2">
-          <a href="/marketing-pipeline"
+          <a href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
             <Zap className="h-3.5 w-3.5" /> 自動化流程
+            {campaignId && <span className="ml-auto text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">串接中</span>}
           </a>
           <a href="/prospect-call"
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">

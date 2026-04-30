@@ -1,12 +1,13 @@
 ﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
   Film, Video, Upload, Phone, Mic, Headphones,
   Play, Pause, RotateCcw, CheckCircle2, AlertCircle,
   Loader2, Bell, BellOff, ChevronRight, Settings2,
-  MessageSquare, Zap, ArrowLeft, Clock, Calendar,
+  MessageSquare, Zap, ArrowLeft, Clock, Calendar, Link2,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -151,6 +152,8 @@ function loadResultsFromLS(): Record<string, unknown> {
 }
 
 export default function MarketingPipelinePage() {
+  const searchParams = useSearchParams()
+
   const [campaignData, setCampaignData] = useState<Record<string, unknown>>(() => {
     if (typeof window === 'undefined') return {}
     return loadResultsFromLS()
@@ -161,6 +164,10 @@ export default function MarketingPipelinePage() {
     return loadConfigFromLS()
   })
   const [tab, setTab] = useState<'config' | 'run'>('config')
+
+  // Source campaign (linked from marketing-auto)
+  const [sourceCampaign, setSourceCampaign] = useState<{ id: string; title: string; loadedUnits: number[] } | null>(null)
+  const [loadingCampaign, setLoadingCampaign] = useState(false)
 
   // Run state
   const [isRunning, setIsRunning] = useState(false)
@@ -179,6 +186,64 @@ export default function MarketingPipelinePage() {
   useEffect(() => {
     try { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config)) } catch { /* ignore */ }
   }, [config])
+
+  // ── Load from campaign when ?campaign=xxx is present ──────────────────────
+  useEffect(() => {
+    const campaignId = searchParams.get('campaign')
+    if (!campaignId) return
+
+    const load = async () => {
+      setLoadingCampaign(true)
+      try {
+        // Fetch campaign data + company data in parallel
+        const [campaignRes, companyRes] = await Promise.all([
+          fetch(`/api/marketing/campaign/${campaignId}`),
+          fetch('/api/marketing/company-data'),
+        ])
+        if (!campaignRes.ok) return
+
+        const { campaign } = await campaignRes.json()
+        const companyJson = companyRes.ok ? await companyRes.json() : {}
+
+        const unitData: Record<string, unknown> = { ...(campaign.unit_data ?? {}) }
+
+        // Inject company data as unit 2 (global, not per-campaign)
+        if (companyJson.data) unitData['2'] = companyJson.data
+
+        // Track which units have data
+        const loadedUnits = Object.keys(unitData)
+          .map(Number)
+          .filter(n => !isNaN(n) && unitData[String(n)])
+
+        // Update campaign data (merge into existing, campaign wins for non-null values)
+        setCampaignData(prev => {
+          const merged = { ...prev }
+          for (const [k, v] of Object.entries(unitData)) {
+            if (v != null) merged[k] = v
+          }
+          try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(merged)) } catch { /* ignore */ }
+          return merged
+        })
+
+        // Extract u9 platforms if unit 9 has data
+        const u9 = unitData['9'] as { lastUpload?: { platforms?: string[] } } | undefined
+        const u9Platforms = u9?.lastUpload?.platforms ?? []
+
+        // Update config: activity name + u9 platforms (only if not already set)
+        setConfig(prev => ({
+          ...prev,
+          activityName: campaign.title ?? prev.activityName,
+          ...(u9Platforms.length > 0 ? { u9_platforms: u9Platforms } : {}),
+        }))
+
+        setSourceCampaign({ id: campaignId, title: campaign.title ?? '未命名專案', loadedUnits })
+      } catch { /* ignore */ } finally {
+        setLoadingCampaign(false)
+      }
+    }
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Scroll log to bottom
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [runLog])
@@ -301,6 +366,24 @@ export default function MarketingPipelinePage() {
     const u4d = ud[4] as { copies?: unknown[] } | undefined
     const u5d = ud[5] as { scripts?: unknown[] } | undefined
     const u6d = ud[6] as { images?: Array<{ url?: string }> } | undefined
+
+    // ── If unit already has pre-loaded data from campaign, skip re-running ──
+    // Unit 2 is always from company-data (global), never re-run
+    // Units 1,3,4,5,6,7,8,9 can be skipped if data exists from campaign
+    if (ud[unitId] != null) {
+      const skipMsg: Record<number, string> = {
+        1: '已從行銷專案載入蒐集資料，略過重新蒐集',
+        3: '已從行銷專案載入分析結果，略過重新分析',
+        4: '已從行銷專案載入文案，略過重新生成',
+        5: '已從行銷專案載入圖片腳本，略過重新生成',
+        6: '已從行銷專案載入圖片，略過重新生成',
+        7: '已從行銷專案載入影片腳本，略過重新生成',
+        8: '已從行銷專案載入影片，略過重新生成',
+      }
+      if (skipMsg[unitId]) {
+        return { ok: true, output: skipMsg[unitId], data: ud[unitId] }
+      }
+    }
 
     if (unitId === 1) {
       const { res, data } = await safeFetch('/api/marketing/collect', {
@@ -586,6 +669,24 @@ export default function MarketingPipelinePage() {
           <p className="text-[10px] text-gray-400 mt-0.5">勾選步驟，一鍵全自動執行</p>
         </div>
 
+        {/* Source campaign banner */}
+        {loadingCampaign && (
+          <div className="px-3 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2 text-[10px] text-amber-600">
+            <Loader2 className="h-3 w-3 animate-spin" /> 載入專案資料中…
+          </div>
+        )}
+        {sourceCampaign && !loadingCampaign && (
+          <div className="px-3 py-2 bg-green-50 border-b border-green-100 space-y-0.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-green-700">
+              <Link2 className="h-3 w-3" /> 已串接行銷專案
+            </div>
+            <div className="text-[10px] text-green-600 font-medium truncate">《{sourceCampaign.title}》</div>
+            <div className="text-[10px] text-green-500">
+              已載入單元：{sourceCampaign.loadedUnits.sort((a,b)=>a-b).map(n => `U${n}`).join('、') || '無'}
+            </div>
+          </div>
+        )}
+
         {/* Activity name */}
         <div className="p-3 border-b space-y-1.5">
           <label className="text-[10px] text-gray-500 block">流程名稱</label>
@@ -598,20 +699,21 @@ export default function MarketingPipelinePage() {
           />
           <div className="text-[10px] text-gray-400">
             {Object.keys(campaignData).filter(k => !isNaN(Number(k))).length > 0
-              ? `上次執行：${Object.keys(campaignData).filter(k => !isNaN(Number(k))).length} 個單元有資料`
+              ? `已備資料：${Object.keys(campaignData).filter(k => !isNaN(Number(k))).length} 個單元`
               : '尚無執行紀錄'}
           </div>
           {Object.keys(campaignData).filter(k => !isNaN(Number(k))).length > 0 && (
             <button
               onClick={() => {
-                if (confirm('清除上次執行結果？')) {
+                if (confirm('清除所有已載入及執行結果？')) {
                   setCampaignData({})
+                  setSourceCampaign(null)
                   try { localStorage.removeItem(LS_RESULTS_KEY) } catch { /* ignore */ }
                 }
               }}
               className="text-[10px] text-red-400 hover:text-red-600"
             >
-              清除上次結果
+              清除資料
             </button>
           )}
         </div>
@@ -641,7 +743,11 @@ export default function MarketingPipelinePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-gray-700 truncate">{def.unitId}. {def.name}</div>
-                  <div className="text-[10px] text-gray-400 truncate">{def.desc}</div>
+                  <div className="text-[10px] text-gray-400 truncate">
+                    {campaignData[def.unitId] != null
+                      ? <span className="text-green-500">✓ 已預載資料</span>
+                      : def.desc}
+                  </div>
                 </div>
                 {def.canAuto && stepCfg.enabled && (
                   <button onClick={() => setStepNotify(def.unitId, !stepCfg.notify)}
