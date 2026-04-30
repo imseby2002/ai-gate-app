@@ -387,12 +387,12 @@ export default function ProspectCallPage() {
 
   // ── Org → rule assignment (first-match wins) ──────────────────────────────
 
-  const assignRules = (orgList: ProspectOrg[]): Map<string, string> => {
-    const map = new Map<string, string>() // orgId → ruleId
+  const assignRules = (orgList: ProspectOrg[]): Record<string, string> => {
+    const map: Record<string, string> = {} // orgId → ruleId
     for (const org of orgList) {
       for (const rule of config.routingRules) {
         if (matchRule(org, rule)) {
-          map.set(org.id, rule.id)
+          map[org.id] = rule.id
           break
         }
       }
@@ -504,13 +504,13 @@ export default function ProspectCallPage() {
 
   const byRule = config.routingRules
     .map(rule => {
-      const matched = selectedOrgs.filter(o => orgRuleMap.get(o.id) === rule.id)
+      const matched = selectedOrgs.filter(o => orgRuleMap[o.id] === rule.id)
       const script = config.voiceScripts.find(s => s.id === rule.scriptId)
       return { rule, matched, script }
     })
     .filter(x => x.matched.length > 0)
 
-  const unmapped = selectedOrgs.filter(o => !orgRuleMap.has(o.id))
+  const unmapped = selectedOrgs.filter(o => !orgRuleMap[o.id])
 
   const branchesWithCoords = branches.filter(b => b.lat && b.lng)
 
@@ -861,7 +861,7 @@ export default function ProspectCallPage() {
                     </thead>
                     <tbody>
                       {selectedOrgs.map(o => {
-                        const ruleId = orgRuleMap.get(o.id)
+                        const ruleId = orgRuleMap[o.id]
                         const ruleName = ruleId ? config.routingRules.find(r => r.id === ruleId)?.name : undefined
                         return (
                           <tr key={o.id} className="border-b last:border-0 hover:bg-gray-50">
