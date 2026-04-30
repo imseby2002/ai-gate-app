@@ -15,7 +15,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateText } from 'ai'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ async function aiParseOrgs(
   minEmployees: number,
 ): Promise<Omit<ProspectOrg, 'nearestBranch' | 'nearestBranchDistance' | 'selected' | 'filterReason'>[]> {
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const systemPrompt = `你是一個資料萃取助理。從原始蒐集文字中提取每個組織/公司的結構化資料，並依照篩選條件評估、分類。
 
@@ -130,14 +131,12 @@ ${rawText.slice(0, 12000)}
 
 請萃取所有組織，應用篩選條件，並回傳 JSON 陣列。`
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+  const { text } = await generateText({
+    model: anthropic('claude-sonnet-4-6'),
     system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+    prompt: userPrompt,
+    maxTokens: 4096,
   })
-
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
   // Extract JSON array from response
   const match = text.match(/\[[\s\S]*\]/)
   if (!match) throw new Error('AI 未回傳有效 JSON')
