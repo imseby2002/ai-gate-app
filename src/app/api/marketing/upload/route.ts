@@ -24,31 +24,67 @@ interface PlatformResult {
   error?: string
 }
 
+// Exchange System User / User token → Page Access Token via /me/accounts
+async function resolvePageToken(token: string, pageId: string): Promise<{ pageToken: string; debug: string }> {
+  try {
+    // Method 1: direct field lookup
+    const r1 = await fetch(
+      `https://graph.facebook.com/v19.0/${pageId}?fields=access_token&access_token=${token}`
+    )
+    const d1 = await r1.json()
+    if (d1.access_token) return { pageToken: d1.access_token, debug: 'method1_ok' }
+    const m1err = d1.error?.message ?? JSON.stringify(d1)
+
+    // Method 2: list all managed pages and match by ID
+    const r2 = await fetch(
+      `https://graph.facebook.com/v19.0/me/accounts?access_token=${token}&limit=100`
+    )
+    const d2 = await r2.json()
+    const pages = d2.data ?? []
+    const match = pages.find((p: { id: string; access_token?: string }) => p.id === pageId)
+    if (match?.access_token) return { pageToken: match.access_token, debug: 'method2_ok' }
+    const m2ids = pages.map((p: { id: string }) => p.id).join(',') || 'empty'
+
+    return { pageToken: token, debug: `exchange_failed: m1=${m1err}; m2_pages=[${m2ids}]` }
+  } catch (e) {
+    return { pageToken: token, debug: `exception: ${e}` }
+  }
+}
+
 // ─── Facebook Graph API ────────────────────────────────────────────────────────
 async function uploadFacebook(creds: Record<string, string>, imageUrls: string[], copyText: string): Promise<PlatformResult> {
   try {
     const { page_access_token: token, page_id } = creds
     if (!token || !page_id) return { platform: 'Facebook', ok: false, error: '未設定 Page Access Token 或 Page ID' }
 
-    // Upload first image with caption (Facebook allows one image per post via this endpoint)
+    // Auto-exchange System User token / User token → Page Access Token
+    const { pageToken, debug } = await resolvePageToken(token, page_id)
+    const resolvedToPageToken = pageToken !== token
+
     const firstImage = imageUrls[0]
-    const params = new URLSearchParams({
-      url: firstImage,
-      caption: copyText.slice(0, 2000),
-      access_token: token,
-    })
+    // Download image first, then upload as binary (avoids Facebook URL accessibility issues)
+    const imgRes = await fetch(firstImage)
+    const imgBuffer = await imgRes.arrayBuffer()
+    const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    const formData = new FormData()
+    formData.append('source', new Blob([imgBuffer], { type: contentType }), 'image.jpg')
+    formData.append('caption', copyText.slice(0, 2000))
+    formData.append('access_token', pageToken)
     const res = await fetch(`https://graph.facebook.com/v19.0/${page_id}/photos`, {
       method: 'POST',
-      body: params,
+      body: formData,
     })
     const data = await res.json()
     if (!data.id) {
       const errCode = data.error?.code
       const errMsg = data.error?.message ?? 'Facebook 上傳失敗'
       if (errCode === 200) {
-        throw new Error(`${errMsg}（原因：請確認 (1) 輸入的是「粉絲專頁 Access Token」，非個人帳號 Token；(2) Page ID 為粉絲專頁 ID，非個人 UID；(3) App 已申請 pages_manage_posts 權限）`)
+        const hint = resolvedToPageToken
+          ? 'App 未申請 pages_manage_posts 或為 Development 模式'
+          : `Token 無法換成 Page Token [${debug}]：請在產生權杖時同時勾選 pages_manage_posts + pages_read_engagement + pages_show_list`
+        throw new Error(`${errMsg}（${hint}）`)
       }
-      throw new Error(errMsg)
+      throw new Error(`${errMsg} [tokenResolution: ${debug}]`)
     }
     return { platform: 'Facebook', ok: true, postId: data.id }
   } catch (e) {

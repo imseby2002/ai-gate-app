@@ -1647,14 +1647,20 @@ function extractPrompt(content: string): string {
   const codeBlockMatch = content.match(/AI\s*生成\s*Prompt[：:][^\n]*\n```[^\n]*\n([\s\S]+?)```/i)
   if (codeBlockMatch) return codeBlockMatch[1].trim()
   // 2. Same line or next non-empty line after the label
-  const m = content.match(/AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i)
-  if (m) {
-    const same = m[1].replace(/\*+/g, '').trim()
-    if (same.length > 3) return same
-    const matchEnd = (m.index ?? 0) + m[0].length
-    const nextLine = content.slice(matchEnd).split('\n')
-      .find(l => l.trim().length > 3 && !l.trim().startsWith('`'))
-    if (nextLine) return nextLine.replace(/\*+/g, '').trim()
+  const patterns = [
+    /AI\s*生成\s*Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
+    /Prompt[：:]\**\s*(.+?)(?:\n|$)/i,
+  ]
+  for (const re of patterns) {
+    const m = content.match(re)
+    if (m) {
+      const same = m[1].replace(/\*+/g, '').trim()
+      if (same.length > 3) return same
+      const matchEnd = (m.index ?? 0) + m[0].length
+      const nextLine = content.slice(matchEnd).split('\n')
+        .find(l => l.trim().length > 3 && !l.trim().startsWith('`'))
+      if (nextLine) return nextLine.replace(/\*+/g, '').trim()
+    }
   }
   return ''
 }
@@ -2559,7 +2565,6 @@ function extractVideoPrompt(content: string): string {
   const timeLines = [...content.matchAll(/\[[\d:：\-–~～\s秒sS第場景幕段一二三四五六七八九十百]+\]\s*([^\n|]+)/g)]
   const timeParts = timeLines.map(m => stripMd(m[1].split('|')[0])).filter(d => d.length > 5)
   if (timeParts.length > 0) {
-    // Also prepend Hook visual if present
     const hookMatch = content.match(/開頭\s*Hook[^）\n]*[）\n][^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
     const hook = hookMatch?.[1] ? [stripMd(hookMatch[1]).slice(0, 100)] : []
     return [...hook, ...timeParts].join('。').slice(0, 2000)
