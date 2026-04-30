@@ -135,7 +135,7 @@ ${rawText.slice(0, 12000)}
     model: anthropic('claude-sonnet-4-6'),
     system: systemPrompt,
     prompt: userPrompt,
-    maxTokens: 4096,
+    maxOutputTokens: 4096,
   })
   // Extract JSON array from response
   const match = text.match(/\[[\s\S]*\]/)
