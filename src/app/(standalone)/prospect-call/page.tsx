@@ -2,15 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  Search, Building2, MapPin, Phone, Zap, Play, Loader2,
+  Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
-  Filter, Radio, Users, Map, Globe, Mic, Settings2, PhoneCall,
+  Filter, Users, Map, Globe, Mic, Settings2, PhoneCall, GripVertical,
 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type CollectSource = 'map' | 'facebook' | 'web'
 type StepStatus = 'idle' | 'running' | 'done' | 'error'
+type PhoneType = 'any' | 'mobile' | 'landline'
 
 interface Branch {
   id: string; name: string; address: string; phone?: string; lat?: number; lng?: number
@@ -20,8 +21,19 @@ interface VoiceScript {
   id: string; name: string; text: string; voiceId: string
 }
 
-interface CategoryMapping {
-  category: string; scriptId: string
+interface RuleCondition {
+  phoneType: PhoneType        // any / mobile(行動) / landline(座機)
+  aiCategory: string          // '' = 任何
+  minEmployees: number        // 0 = 不限
+  maxEmployees: number        // 0 = 不限
+  maxDistanceKm: number       // 0 = 不限
+}
+
+interface RoutingRule {
+  id: string
+  name: string
+  condition: RuleCondition
+  scriptId: string            // '' = 不撥打
 }
 
 interface ProspectOrg {
@@ -42,7 +54,7 @@ interface Config {
   maxDistanceKm: number
   birdCallerId: string
   voiceScripts: VoiceScript[]
-  categoryMappings: CategoryMapping[]
+  routingRules: RoutingRule[]
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -69,6 +81,14 @@ const ELEVEN_VOICES = [
   { id: 'cgSgspJ2msm6clMCkdW9', label: 'Jessica — 美式英語，女' },
 ]
 
+const EMPTY_CONDITION: RuleCondition = {
+  phoneType: 'any',
+  aiCategory: '',
+  minEmployees: 0,
+  maxEmployees: 0,
+  maxDistanceKm: 0,
+}
+
 const DEFAULT_CONFIG: Config = {
   keywords: '',
   location: '',
@@ -80,7 +100,54 @@ const DEFAULT_CONFIG: Config = {
   voiceScripts: [
     { id: 'script-1', name: '預設腳本', text: '您好，我們是...', voiceId: 'EXAVITQu4vr4xnSDxMaL' },
   ],
-  categoryMappings: [],
+  routingRules: [],
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Parse max employee count from hint like "50-100人" → 100 */
+function parseMaxEmployees(hint?: string): number | null {
+  if (!hint) return null
+  const nums = hint.match(/\d+/g)
+  if (!nums) return null
+  return Math.max(...nums.map(Number))
+}
+
+/** Taiwan mobile: +8869xxxxxxxx */
+function isMobile(phone?: string): boolean {
+  return !!phone?.match(/^\+8869/)
+}
+
+function matchRule(org: ProspectOrg, rule: RoutingRule): boolean {
+  const c = rule.condition
+  // phone type
+  if (c.phoneType === 'mobile' && !isMobile(org.phoneNormalized)) return false
+  if (c.phoneType === 'landline' && (isMobile(org.phoneNormalized) || !org.phoneNormalized)) return false
+  // ai category
+  if (c.aiCategory && org.aiCategory !== c.aiCategory) return false
+  // employees
+  if (c.minEmployees > 0 || c.maxEmployees > 0) {
+    const emp = parseMaxEmployees(org.employeeHint)
+    if (emp !== null) {
+      if (c.minEmployees > 0 && emp < c.minEmployees) return false
+      if (c.maxEmployees > 0 && emp > c.maxEmployees) return false
+    }
+  }
+  // distance
+  if (c.maxDistanceKm > 0 && org.nearestBranchDistance != null && org.nearestBranchDistance > c.maxDistanceKm) return false
+  return true
+}
+
+function conditionSummary(c: RuleCondition): string {
+  const parts: string[] = []
+  if (c.phoneType === 'mobile') parts.push('行動電話')
+  if (c.phoneType === 'landline') parts.push('座機')
+  if (c.aiCategory) parts.push(CATEGORIES.find(x => x.id === c.aiCategory)?.label ?? c.aiCategory)
+  if (c.minEmployees > 0 && c.maxEmployees > 0) parts.push(`${c.minEmployees}–${c.maxEmployees}人`)
+  else if (c.minEmployees > 0) parts.push(`≥${c.minEmployees}人`)
+  else if (c.maxEmployees > 0) parts.push(`≤${c.maxEmployees}人`)
+  if (c.maxDistanceKm > 0) parts.push(`≤${c.maxDistanceKm}km`)
+  return parts.length ? parts.join(' · ') : '（全部符合）'
 }
 
 // ─── Section wrapper ────────────────────────────────────────────────────────────
@@ -125,6 +192,137 @@ function StepBadge({ status, label }: { status: StepStatus; label: string }) {
   )
 }
 
+// ─── RoutingRuleEditor ──────────────────────────────────────────────────────────
+
+function RoutingRuleEditor({
+  rule,
+  voiceScripts,
+  onChange,
+  onRemove,
+  index,
+}: {
+  rule: RoutingRule
+  voiceScripts: VoiceScript[]
+  onChange: (patch: Partial<RoutingRule>) => void
+  onRemove: () => void
+  index: number
+}) {
+  const setC = (patch: Partial<RuleCondition>) =>
+    onChange({ condition: { ...rule.condition, ...patch } })
+
+  return (
+    <div className="rounded-xl border bg-gray-50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-white border-b">
+        <GripVertical className="h-4 w-4 text-gray-300 flex-shrink-0" />
+        <span className="text-[10px] font-bold text-gray-400 w-5">{index + 1}</span>
+        <input
+          value={rule.name}
+          onChange={e => onChange({ name: e.target.value })}
+          placeholder="規則名稱"
+          className="flex-1 h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+        />
+        <button type="button" onClick={onRemove}
+          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Conditions */}
+      <div className="p-3 grid grid-cols-2 gap-2">
+        {/* Phone type */}
+        <div className="col-span-2">
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">電話類型</label>
+          <div className="flex gap-1">
+            {([
+              { val: 'any', label: '任何' },
+              { val: 'mobile', label: '📱 行動電話' },
+              { val: 'landline', label: '☎️ 座機' },
+            ] as { val: PhoneType; label: string }[]).map(opt => (
+              <button
+                key={opt.val}
+                type="button"
+                onClick={() => setC({ phoneType: opt.val })}
+                className={`flex-1 py-1 rounded-md text-[11px] border transition-all ${
+                  rule.condition.phoneType === opt.val
+                    ? 'border-blue-400 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* AI Category */}
+        <div className="col-span-2">
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">AI 分類</label>
+          <select
+            value={rule.condition.aiCategory}
+            onChange={e => setC({ aiCategory: e.target.value })}
+            className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+          >
+            <option value="">— 任何分類 —</option>
+            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+          </select>
+        </div>
+
+        {/* Employee range */}
+        <div>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">最少人數（0=不限）</label>
+          <input
+            type="number" min={0}
+            value={rule.condition.minEmployees}
+            onChange={e => setC({ minEmployees: Number(e.target.value) })}
+            className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">最多人數（0=不限）</label>
+          <input
+            type="number" min={0}
+            value={rule.condition.maxEmployees}
+            onChange={e => setC({ maxEmployees: Number(e.target.value) })}
+            className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+          />
+        </div>
+
+        {/* Max distance */}
+        <div className="col-span-2">
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">距離上限 km（0=不限）</label>
+          <input
+            type="number" min={0} step={0.5}
+            value={rule.condition.maxDistanceKm}
+            onChange={e => setC({ maxDistanceKm: Number(e.target.value) })}
+            className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+          />
+        </div>
+
+        {/* Script */}
+        <div className="col-span-2 pt-1 border-t">
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">使用腳本</label>
+          <select
+            value={rule.scriptId}
+            onChange={e => onChange({ scriptId: e.target.value })}
+            className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+          >
+            <option value="">— 不撥打 —</option>
+            {voiceScripts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="px-3 pb-2">
+        <div className="text-[10px] text-gray-400 bg-white rounded px-2 py-1 border">
+          條件：{conditionSummary(rule.condition)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ProspectCallPage() {
@@ -136,7 +334,7 @@ export default function ProspectCallPage() {
   const [stepMsg, setStepMsg] = useState<Record<string, string>>({})
   const [orgs, setOrgs] = useState<ProspectOrg[]>([])
   const [callResults, setCallResults] = useState<Record<string, { ok: number; fail: number }>>({})
-  const [callingCategory, setCallingCategory] = useState<string | null>(null)
+  const [callingRule, setCallingRule] = useState<string | null>(null)
   const [error, setError] = useState('')
   const abortRef = useRef(false)
 
@@ -172,16 +370,34 @@ export default function ProspectCallPage() {
   const removeScript = (id: string) =>
     setC('voiceScripts', config.voiceScripts.filter(s => s.id !== id))
 
-  // ── Category mapping ──────────────────────────────────────────────────────
+  // ── Routing rules CRUD ────────────────────────────────────────────────────
 
-  const setMapping = (category: string, scriptId: string) => {
-    const rest = config.categoryMappings.filter(m => m.category !== category)
-    setC('categoryMappings', scriptId ? [...rest, { category, scriptId }] : rest)
-  }
+  const addRule = () => setC('routingRules', [...config.routingRules, {
+    id: `rule-${Date.now()}`,
+    name: `規則 ${config.routingRules.length + 1}`,
+    condition: { ...EMPTY_CONDITION },
+    scriptId: config.voiceScripts[0]?.id ?? '',
+  }])
 
-  const getMappedScript = (category: string) => {
-    const m = config.categoryMappings.find(x => x.category === category)
-    return m ? config.voiceScripts.find(s => s.id === m.scriptId) : null
+  const updateRule = (id: string, patch: Partial<RoutingRule>) =>
+    setC('routingRules', config.routingRules.map(r => r.id === id ? { ...r, ...patch } : r))
+
+  const removeRule = (id: string) =>
+    setC('routingRules', config.routingRules.filter(r => r.id !== id))
+
+  // ── Org → rule assignment (first-match wins) ──────────────────────────────
+
+  const assignRules = (orgList: ProspectOrg[]): Map<string, string> => {
+    const map = new Map<string, string>() // orgId → ruleId
+    for (const org of orgList) {
+      for (const rule of config.routingRules) {
+        if (matchRule(org, rule)) {
+          map.set(org.id, rule.id)
+          break
+        }
+      }
+    }
+    return map
   }
 
   // ── Run pipeline ──────────────────────────────────────────────────────────
@@ -194,7 +410,6 @@ export default function ProspectCallPage() {
     setStepMsg({})
 
     try {
-      // Step 1: Collect
       const sourceToTypes: Record<CollectSource, string> = {
         map: 'map', facebook: 'facebook', web: 'web',
       }
@@ -221,7 +436,6 @@ export default function ProspectCallPage() {
 
       if (abortRef.current) throw new Error('已中止')
 
-      // Step 2: Filter + distance + classify
       const filterRes = await fetch('/api/marketing/prospect-filter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -254,17 +468,10 @@ export default function ProspectCallPage() {
     }
   }
 
-  // ── Batch call by category ────────────────────────────────────────────────
+  // ── Batch call by rule ────────────────────────────────────────────────────
 
-  const batchCall = async (categoryId: string) => {
-    const script = getMappedScript(categoryId)
-    if (!script) return
-    const phones = orgs
-      .filter(o => o.selected && o.aiCategory === categoryId && o.phoneNormalized)
-      .map(o => o.phoneNormalized!)
-    if (phones.length === 0) return
-
-    setCallingCategory(categoryId)
+  const batchCall = async (ruleId: string, phones: string[], script: VoiceScript) => {
+    setCallingRule(ruleId)
     try {
       const res = await fetch('/api/marketing/phone-call', {
         method: 'POST',
@@ -281,23 +488,29 @@ export default function ProspectCallPage() {
       if (!res.ok) throw new Error(data.error)
       setCallResults(prev => ({
         ...prev,
-        [categoryId]: { ok: data.success ?? 0, fail: (data.total ?? 0) - (data.success ?? 0) },
+        [ruleId]: { ok: data.success ?? 0, fail: (data.total ?? 0) - (data.success ?? 0) },
       }))
     } catch (e) {
       setError(String(e))
     } finally {
-      setCallingCategory(null)
+      setCallingRule(null)
     }
   }
 
-  // ── Derived stats ─────────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────
 
   const selectedOrgs = orgs.filter(o => o.selected)
-  const byCategory = CATEGORIES.map(c => ({
-    ...c,
-    orgs: selectedOrgs.filter(o => o.aiCategory === c.id),
-    script: getMappedScript(c.id),
-  })).filter(c => c.orgs.length > 0)
+  const orgRuleMap = assignRules(selectedOrgs)
+
+  const byRule = config.routingRules
+    .map(rule => {
+      const matched = selectedOrgs.filter(o => orgRuleMap.get(o.id) === rule.id)
+      const script = config.voiceScripts.find(s => s.id === rule.scriptId)
+      return { rule, matched, script }
+    })
+    .filter(x => x.matched.length > 0)
+
+  const unmapped = selectedOrgs.filter(o => !orgRuleMap.has(o.id))
 
   const branchesWithCoords = branches.filter(b => b.lat && b.lng)
 
@@ -431,23 +644,38 @@ export default function ProspectCallPage() {
               </div>
             </Section>
 
-            {/* Step 5: Category → Script mapping */}
-            <Section title="Step 5 — 分類對應腳本" icon={Settings2}
+            {/* Step 5: Routing rules */}
+            <Section title="Step 5 — 撥打規則" icon={Settings2}
               open={openSections.mapping} onToggle={() => toggleSection('mapping')}>
-              <p className="text-xs text-gray-500">為每種組織類別指定要使用的語音腳本</p>
-              <div className="space-y-2">
-                {CATEGORIES.map(c => (
-                  <div key={c.id} className="flex items-center gap-2">
-                    <span className="text-sm w-24 flex-shrink-0">{c.emoji} {c.label}</span>
-                    <select
-                      value={config.categoryMappings.find(m => m.category === c.id)?.scriptId ?? ''}
-                      onChange={e => setMapping(c.id, e.target.value)}
-                      className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
-                      <option value="">— 不撥打 —</option>
-                      {config.voiceScripts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500">
+                  依序比對每條規則，<strong>第一個符合的規則</strong>勝出。可按電話類型、AI 分類、人數、距離等任意組合。
+                </p>
+                <p className="text-[10px] text-gray-400">
+                  未匹配任何規則的組織將歸入「未分配」群組，不會自動撥打。
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {config.routingRules.length === 0 && (
+                  <div className="text-xs text-gray-400 text-center py-4 border-2 border-dashed rounded-xl">
+                    尚未建立規則，點擊「新增規則」開始設定
                   </div>
+                )}
+                {config.routingRules.map((rule, idx) => (
+                  <RoutingRuleEditor
+                    key={rule.id}
+                    rule={rule}
+                    voiceScripts={config.voiceScripts}
+                    index={idx}
+                    onChange={patch => updateRule(rule.id, patch)}
+                    onRemove={() => removeRule(rule.id)}
+                  />
                 ))}
+                <button type="button" onClick={addRule}
+                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
+                  <Plus className="h-3.5 w-3.5" />新增規則
+                </button>
               </div>
             </Section>
 
@@ -474,7 +702,6 @@ export default function ProspectCallPage() {
                 {running ? <><Loader2 className="h-4 w-4 animate-spin" />執行中…</> : <><Play className="h-4 w-4" />執行 Pipeline</>}
               </button>
 
-              {/* Steps */}
               {(Object.keys(stepStatus).length > 0) && (
                 <div className="grid grid-cols-2 gap-2">
                   <StepBadge status={stepStatus.collect ?? 'idle'}
@@ -507,26 +734,26 @@ export default function ProspectCallPage() {
               </div>
             )}
 
-            {/* By-category call panels */}
-            {byCategory.length > 0 && (
+            {/* By-rule call panels */}
+            {byRule.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">分類撥打</h3>
-                {byCategory.map(c => {
-                  const phones = c.orgs.filter(o => o.phoneNormalized)
-                  const result = callResults[c.id]
-                  const isCalling = callingCategory === c.id
+                <h3 className="text-sm font-semibold text-gray-700">規則分組撥打</h3>
+                {byRule.map(({ rule, matched, script }) => {
+                  const phones = matched.filter(o => o.phoneNormalized).map(o => o.phoneNormalized!)
+                  const result = callResults[rule.id]
+                  const isCalling = callingRule === rule.id
                   return (
-                    <div key={c.id} className="p-4 rounded-xl border space-y-3">
+                    <div key={rule.id} className="p-4 rounded-xl border space-y-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{c.emoji}</span>
-                          <div>
-                            <div className="text-sm font-semibold">{c.label}</div>
-                            <div className="text-[10px] text-gray-400">{c.orgs.length} 家入選 · {phones.length} 支有效電話</div>
+                        <div>
+                          <div className="text-sm font-semibold">{rule.name}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            {conditionSummary(rule.condition)} · {matched.length} 家 · {phones.length} 支有效電話
                           </div>
                         </div>
-                        {c.script ? (
-                          <button type="button" onClick={() => batchCall(c.id)}
+                        {script ? (
+                          <button type="button"
+                            onClick={() => batchCall(rule.id, phones, script)}
                             disabled={isCalling || phones.length === 0}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
                             style={{ background: 'var(--primary)' }}>
@@ -536,9 +763,9 @@ export default function ProspectCallPage() {
                           <span className="text-[10px] text-gray-400 px-2">未指定腳本</span>
                         )}
                       </div>
-                      {c.script && (
+                      {script && (
                         <div className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">
-                          腳本：{c.script.name}
+                          腳本：{script.name}
                         </div>
                       )}
                       {result && (
@@ -547,17 +774,17 @@ export default function ProspectCallPage() {
                           {result.fail > 0 && <span className="text-red-500">✗ 失敗 {result.fail}</span>}
                         </div>
                       )}
-                      {/* Org list */}
                       <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {c.orgs.map(o => (
+                        {matched.map(o => (
                           <div key={o.id} className="flex items-start gap-2 text-[11px] py-1 border-t first:border-0">
                             <div className="flex-1 min-w-0">
                               <div className="font-medium truncate">{o.name}</div>
                               {o.address && <div className="text-gray-400 truncate">{o.address}</div>}
+                              {o.employeeHint && <div className="text-gray-400">{o.employeeHint}</div>}
                             </div>
-                            <div className="flex-shrink-0 text-right">
+                            <div className="flex-shrink-0 text-right space-y-0.5">
                               {o.phoneNormalized
-                                ? <div className="text-green-600">{o.phoneNormalized}</div>
+                                ? <div className="text-green-600">{isMobile(o.phoneNormalized) ? '📱' : '☎️'} {o.phoneNormalized}</div>
                                 : <div className="text-gray-300">無電話</div>
                               }
                               {o.nearestBranch && (
@@ -573,7 +800,30 @@ export default function ProspectCallPage() {
               </div>
             )}
 
-            {/* Filtered-out orgs (collapsed) */}
+            {/* Unmapped orgs */}
+            {unmapped.length > 0 && (
+              <details className="border rounded-xl">
+                <summary className="px-4 py-3 text-xs text-gray-500 cursor-pointer hover:bg-gray-50 select-none">
+                  未分配（無匹配規則）{unmapped.length} 家
+                </summary>
+                <div className="px-4 pb-3 space-y-1 max-h-48 overflow-y-auto">
+                  {unmapped.map(o => (
+                    <div key={o.id} className="flex items-start gap-2 py-1 border-t first:border-0 text-[11px]">
+                      <Users className="h-3 w-3 text-gray-300 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <div className="font-medium">{o.name}</div>
+                        <div className="text-gray-400">
+                          {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji} {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
+                          {o.phoneNormalized && ` · ${isMobile(o.phoneNormalized) ? '📱' : '☎️'} ${o.phoneNormalized}`}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+
+            {/* Filtered-out orgs */}
             {orgs.filter(o => !o.selected).length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-500 cursor-pointer hover:bg-gray-50 select-none">
@@ -593,7 +843,7 @@ export default function ProspectCallPage() {
               </details>
             )}
 
-            {/* All orgs table (selected) */}
+            {/* All selected orgs table */}
             {selectedOrgs.length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-600 font-medium cursor-pointer hover:bg-gray-50 select-none">
@@ -606,30 +856,35 @@ export default function ProspectCallPage() {
                         <th className="px-3 py-2 text-left font-medium">組織</th>
                         <th className="px-3 py-2 text-left font-medium">分類</th>
                         <th className="px-3 py-2 text-left font-medium">電話</th>
-                        <th className="px-3 py-2 text-left font-medium">最近門市</th>
+                        <th className="px-3 py-2 text-left font-medium">規則</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedOrgs.map(o => (
-                        <tr key={o.id} className="border-b last:border-0 hover:bg-gray-50">
-                          <td className="px-3 py-2">
-                            <div className="font-medium">{o.name}</div>
-                            {o.address && <div className="text-gray-400 truncate max-w-[150px]">{o.address}</div>}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji}{' '}
-                            {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
-                          </td>
-                          <td className="px-3 py-2 text-green-600 whitespace-nowrap">
-                            {o.phoneNormalized || <span className="text-gray-300">—</span>}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-gray-500">
-                            {o.nearestBranch
-                              ? `${o.nearestBranch} ${o.nearestBranchDistance}km`
-                              : '—'}
-                          </td>
-                        </tr>
-                      ))}
+                      {selectedOrgs.map(o => {
+                        const ruleId = orgRuleMap.get(o.id)
+                        const ruleName = ruleId ? config.routingRules.find(r => r.id === ruleId)?.name : undefined
+                        return (
+                          <tr key={o.id} className="border-b last:border-0 hover:bg-gray-50">
+                            <td className="px-3 py-2">
+                              <div className="font-medium">{o.name}</div>
+                              {o.address && <div className="text-gray-400 truncate max-w-[150px]">{o.address}</div>}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji}{' '}
+                              {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {o.phoneNormalized
+                                ? <span className="text-green-600">{isMobile(o.phoneNormalized) ? '📱' : '☎️'} {o.phoneNormalized}</span>
+                                : <span className="text-gray-300">—</span>
+                              }
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-gray-500">
+                              {ruleName ?? <span className="text-gray-300">未分配</span>}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
