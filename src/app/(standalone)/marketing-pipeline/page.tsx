@@ -997,15 +997,39 @@ export default function MarketingPipelinePage() {
               </ConfigSection>
 
               <ConfigSection title="單元 9 · 上傳平台" enabled={config.steps.find(s => s.unitId === 9)?.enabled ?? false}>
-                <div className="flex flex-wrap gap-2">
-                  {[['facebook','Facebook'],['instagram','Instagram'],['youtube','YouTube'],['line','LINE'],['twitter','X/Twitter']].map(([v, label]) => (
-                    <label key={v} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                      <input type="checkbox" className="rounded accent-amber-500"
-                        checked={config.u9_platforms.includes(v)}
-                        onChange={e => setConfig(c => ({ ...c, u9_platforms: e.target.checked ? [...c.u9_platforms, v] : c.u9_platforms.filter(p => p !== v) }))} />
-                      {label}
-                    </label>
-                  ))}
+                <div className="space-y-2">
+                  <div>
+                    <div className="text-[10px] font-semibold text-gray-400 mb-1">圖片平台</div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        ['Facebook','Facebook','📘'],['Instagram','Instagram','📸'],['Threads','Threads','🧵'],
+                        ['LINE VOOM','LINE VOOM','💚'],['Zalo','Zalo','🟦'],['LinkedIn','LinkedIn','💼'],['Twitter/X','Twitter/X','🐦'],
+                      ] as [string,string,string][]).map(([v,label,icon]) => (
+                        <label key={v} className="flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="checkbox" className="rounded accent-amber-500"
+                            checked={config.u9_platforms.includes(v)}
+                            onChange={e => setConfig(c => ({ ...c, u9_platforms: e.target.checked ? [...c.u9_platforms, v] : c.u9_platforms.filter(p => p !== v) }))} />
+                          {icon} {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-semibold text-gray-400 mb-1">影片平台</div>
+                    <div className="flex flex-wrap gap-2">
+                      {([
+                        ['FB Reels','FB Reels','🎬'],['IG Reels','IG Reels','🎥'],
+                        ['YouTube Shorts','YouTube Shorts','▶️'],['TikTok','TikTok','🎵'],
+                      ] as [string,string,string][]).map(([v,label,icon]) => (
+                        <label key={v} className="flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="checkbox" className="rounded accent-amber-500"
+                            checked={config.u9_platforms.includes(v)}
+                            onChange={e => setConfig(c => ({ ...c, u9_platforms: e.target.checked ? [...c.u9_platforms, v] : c.u9_platforms.filter(p => p !== v) }))} />
+                          {icon} {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </ConfigSection>
 
