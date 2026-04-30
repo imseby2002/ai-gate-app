@@ -2400,45 +2400,45 @@ function stripMd(s: string): string {
   return s.replace(/\*\*/g, '').replace(/\*/g, '').trim()
 }
 
-// Extract video prompt from script content — builds a comprehensive scene description
+// Extract video prompt from script content — uses full storyboard for comprehensive scene description
 function extractVideoPrompt(content: string): string {
   if (!content?.trim()) return ''
 
-  const parts: string[] = []
-
-  // 1. 開頭 Hook 畫面 (Hook visual - opening 3 sec)
-  const hookMatch = content.match(/開頭\s*Hook[^）\n]*[）\n][^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
-  if (hookMatch?.[1]) parts.push(stripMd(hookMatch[1]).slice(0, 100))
-
-  // 2. ALL time-coded storyboard segments: [0-3秒] visual | voiceover | effect
-  const timeSegments = [...content.matchAll(/\[[\d\-~～~]+[秒sS]\]\s*([^\n|]+)/g)]
-  const storyboardParts = timeSegments
-    .map(m => stripMd(m[1].split('|')[0]))
-    .filter(d => d.length > 5)
-  if (storyboardParts.length > 0) parts.push(...storyboardParts)
-
-  // 3. If no time segments, fall back to all 畫面: descriptions
-  if (storyboardParts.length === 0) {
-    const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
-    const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean)
-    if (scenes.length > 0) parts.push(...scenes)
+  // 1. Extract entire 分鏡腳本 section (preferred — gives model full visual context)
+  const storyboardMatch = content.match(/分鏡腳本[\s\S]*?\n([\s\S]+?)(?:===|$)/i)
+  if (storyboardMatch?.[1]) {
+    const storyboard = storyboardMatch[1]
+      .split('\n')
+      .map(l => stripMd(l).trim())
+      .filter(l => l.length > 3 && !l.match(/^={3,}/) && !l.match(/^\s*\|[-|]+\|?\s*$/))
+      .join('。')
+    if (storyboard.length > 30) return storyboard.slice(0, 2000)
   }
 
-  // 4. 拍攝建議 for camera/lighting context (first line only)
-  const shootMatch = content.match(/拍攝建議[：:]\s*(.+?)(?:\n|$)/i)
-  if (shootMatch?.[1]) parts.push(stripMd(shootMatch[1]).slice(0, 80))
+  // 2. All time-coded storyboard lines — broad regex covers [0-3秒] [0~3s] [00:00-00:03] [第1場] etc.
+  const timeLines = [...content.matchAll(/\[[\d:：\-–~～\s秒sS第場景幕段一二三四五六七八九十百]+\]\s*([^\n|]+)/g)]
+  const timeParts = timeLines.map(m => stripMd(m[1].split('|')[0])).filter(d => d.length > 5)
+  if (timeParts.length > 0) {
+    // Also prepend Hook visual if present
+    const hookMatch = content.match(/開頭\s*Hook[^）\n]*[）\n][^]*?畫面[：:]\s*(.+?)(?:\n|$)/i)
+    const hook = hookMatch?.[1] ? [stripMd(hookMatch[1]).slice(0, 100)] : []
+    return [...hook, ...timeParts].join('。').slice(0, 2000)
+  }
 
-  if (parts.length > 0 && parts.join('').length > 15) return parts.join('。')
+  // 3. All 畫面: descriptions
+  const sceneMatches = [...content.matchAll(/畫面[：:]\s*(.+?)(?:\n|$)/gi)]
+  const scenes = sceneMatches.map(m => stripMd(m[1])).filter(Boolean)
+  if (scenes.length > 0) return scenes.join('。').slice(0, 2000)
 
-  // 5. 影片標題 as fallback
+  // 4. 影片標題 fallback
   const titleMatch = content.match(/影片標題[：:]\s*(.+?)(?:\n|$)/i)
   if (titleMatch?.[1]?.trim()) return stripMd(titleMatch[1])
 
-  // 6. Last resort: first meaningful non-header lines
+  // 5. Last resort: first meaningful non-header lines
   const lines = content.split('\n')
     .map(l => stripMd(l))
     .filter(l => l.length > 10 && !l.startsWith('===') && !l.startsWith('#') && !l.startsWith('['))
-  return lines.slice(0, 3).join('。') || stripMd(content.slice(0, 300))
+  return lines.slice(0, 5).join('。') || stripMd(content.slice(0, 500))
 }
 
 function Unit8VideoGenerate({
