@@ -490,6 +490,16 @@ interface UploadedFile {
   textContent?: string
 }
 
+interface Branch {
+  id: string
+  name: string
+  address: string
+  phone?: string
+  lat?: number
+  lng?: number
+  notes?: string
+}
+
 interface Unit2Data {
   // Basic info
   companyName?: string
@@ -505,6 +515,8 @@ interface Unit2Data {
   // Brand
   brandTone?: string
   competitiveAdvantage?: string
+  // Branches
+  branches?: Branch[]
   // Files
   files?: UploadedFile[]
 }
@@ -586,13 +598,28 @@ function Unit2CompanyData({
 }) {
   const [form, setForm] = useState<Unit2Data>(savedData ?? {})
   const [files, setFiles] = useState<UploadedFile[]>(savedData?.files ?? [])
+  const [branches, setBranches] = useState<Branch[]>(savedData?.branches ?? [])
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null)
+  const [showBranchForm, setShowBranchForm] = useState(false)
 
   const set = (key: keyof Unit2Data, value: string) =>
     setForm(prev => ({ ...prev, [key]: value }))
+
+  const emptyBranch = (): Branch => ({ id: crypto.randomUUID(), name: '', address: '', phone: '' })
+
+  const saveBranch = (b: Branch) => {
+    setBranches(prev => prev.find(x => x.id === b.id)
+      ? prev.map(x => x.id === b.id ? b : x)
+      : [...prev, b])
+    setEditingBranch(null)
+    setShowBranchForm(false)
+  }
+
+  const deleteBranch = (id: string) => setBranches(prev => prev.filter(b => b.id !== id))
 
   const handleUpload = async (file: File, category: UploadedFile['category']) => {
     setUploading(true); setUploadError('')
@@ -617,7 +644,7 @@ function Unit2CompanyData({
 
   const handleSave = async () => {
     setSaving(true)
-    const data: Unit2Data = { ...form, files }
+    const data: Unit2Data = { ...form, files, branches }
     onSave(data)
     setSaving(false)
     setSaved(true)
@@ -701,6 +728,117 @@ function Unit2CompanyData({
         </div>
       </section>
 
+      {/* Branches */}
+      <section>
+        <div className="flex items-center justify-between pb-2 border-b mb-4">
+          <h3 className="text-sm font-bold text-gray-700">門市 / 分公司</h3>
+          <button type="button"
+            onClick={() => { setEditingBranch(emptyBranch()); setShowBranchForm(true) }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-gray-50 transition-colors">
+            <Plus className="h-3.5 w-3.5" />新增門市
+          </button>
+        </div>
+
+        {branches.length === 0 && !showBranchForm && (
+          <p className="text-xs text-gray-400 py-4 text-center">尚未新增任何門市，點擊「新增門市」開始建立</p>
+        )}
+
+        <div className="space-y-2">
+          {branches.map(b => (
+            <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl border bg-gray-50">
+              <Map className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-800">{b.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{b.address}</div>
+                {b.phone && <div className="text-xs text-gray-400">{b.phone}</div>}
+                {b.notes && <div className="text-xs text-gray-400 italic">{b.notes}</div>}
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                <button type="button" onClick={() => { setEditingBranch(b); setShowBranchForm(true) }}
+                  className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-700">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button type="button" onClick={() => deleteBranch(b.id)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {showBranchForm && editingBranch && (
+          <div className="mt-3 p-4 rounded-xl border-2 border-dashed space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1">門市名稱 *</label>
+                <input value={editingBranch.name}
+                  onChange={e => setEditingBranch(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                  placeholder="例如：台北信義門市"
+                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">電話</label>
+                <input value={editingBranch.phone ?? ''}
+                  onChange={e => setEditingBranch(prev => prev ? { ...prev, phone: e.target.value } : prev)}
+                  placeholder="例如：02-1234-5678"
+                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">地址 *</label>
+              <input value={editingBranch.address}
+                onChange={e => setEditingBranch(prev => prev ? { ...prev, address: e.target.value } : prev)}
+                placeholder="例如：台北市信義區信義路五段7號"
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1">緯度（選填）</label>
+                <input type="number" value={editingBranch.lat ?? ''}
+                  onChange={e => setEditingBranch(prev => prev ? { ...prev, lat: e.target.value ? Number(e.target.value) : undefined } : prev)}
+                  placeholder="25.033964"
+                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">經度（選填）</label>
+                <input type="number" value={editingBranch.lng ?? ''}
+                  onChange={e => setEditingBranch(prev => prev ? { ...prev, lng: e.target.value ? Number(e.target.value) : undefined } : prev)}
+                  placeholder="121.564468"
+                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">備註</label>
+              <input value={editingBranch.notes ?? ''}
+                onChange={e => setEditingBranch(prev => prev ? { ...prev, notes: e.target.value } : prev)}
+                placeholder="例如：週末延長營業"
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button type="button"
+                onClick={() => { if (editingBranch.name && editingBranch.address) saveBranch(editingBranch) }}
+                disabled={!editingBranch.name || !editingBranch.address}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40"
+                style={{ background: 'var(--primary)' }}>
+                <Check className="h-3.5 w-3.5" />儲存門市
+              </button>
+              <button type="button"
+                onClick={() => { setShowBranchForm(false); setEditingBranch(null) }}
+                className="px-4 py-2 rounded-lg text-sm border hover:bg-gray-50 transition-colors">
+                取消
+              </button>
+            </div>
+          </div>
+        )}
+
+        {branches.length > 0 && (
+          <p className="text-xs text-gray-400 mt-3">
+            共 {branches.length} 個門市。可輸入經緯度以啟用最近門市計算功能。
+          </p>
+        )}
+      </section>
+
       {/* Files */}
       <section>
         <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">素材上傳</h3>
@@ -739,7 +877,7 @@ function Unit2CompanyData({
       </div>
 
       {/* Stats preview */}
-      {(form.companyName || files.length > 0) && (
+      {(form.companyName || files.length > 0 || branches.length > 0) && (
         <div className="p-4 rounded-xl bg-gray-50 border">
           <div className="text-xs font-medium text-gray-500 mb-3">資料概覽</div>
           <div className="grid grid-cols-3 gap-3">
@@ -748,6 +886,8 @@ function Unit2CompanyData({
               { label: '產業', value: form.industry || '—' },
               { label: '品牌語調', value: form.brandTone || '—' },
               { label: '員工人數', value: form.employees || '—' },
+              { label: '門市數量', value: branches.length > 0 ? `${branches.length} 間` : '—' },
+              { label: '含經緯度', value: branches.filter(b => b.lat && b.lng).length > 0 ? `${branches.filter(b => b.lat && b.lng).length} 間` : '—' },
               { label: '上傳檔案', value: `${files.length} 份` },
               { label: '文字素材', value: `${files.filter(f => f.textContent).length} 份已萃取` },
             ].map(s => (
