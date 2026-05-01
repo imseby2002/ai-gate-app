@@ -3695,12 +3695,47 @@ function Unit10ProspectMarketing({
           {/* Group template mapping */}
           {uniqueGroups.length > 0 && (
             <div className="space-y-3">
-              <div className="text-sm font-semibold text-gray-700">各分組 Email 模板</div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-gray-700">各分組 Email 模板</div>
+                {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
+                  <button
+                    onClick={() => setGroupTemplates(prev => {
+                      const next = { ...prev }
+                      uniqueGroups.forEach(g => {
+                        next[g] = {
+                          subject: unit4Data.results!.email_subject ?? prev[g]?.subject ?? '',
+                          body: unit4Data.results!.email_body ?? prev[g]?.body ?? '',
+                        }
+                      })
+                      return next
+                    })}
+                    className="text-xs px-3 py-1.5 rounded-lg border text-indigo-600 border-indigo-300 hover:bg-indigo-50 transition-colors"
+                  >
+                    ⚡ 一鍵套用 Unit 4 至所有分組
+                  </button>
+                )}
+              </div>
               {uniqueGroups.map(g => (
                 <div key={g} className="border rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{g}</span>
-                    <span className="text-xs text-gray-400">{emailRecipients.filter(r => r.group === g).length} 個收件人</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{g}</span>
+                      <span className="text-xs text-gray-400">{emailRecipients.filter(r => r.group === g).length} 個收件人</span>
+                    </div>
+                    {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
+                      <button
+                        onClick={() => setGroupTemplates(prev => ({
+                          ...prev,
+                          [g]: {
+                            subject: unit4Data.results!.email_subject ?? prev[g]?.subject ?? '',
+                            body: unit4Data.results!.email_body ?? prev[g]?.body ?? '',
+                          },
+                        }))}
+                        className="text-[10px] text-indigo-600 hover:underline"
+                      >
+                        套用 Unit 4 腳本
+                      </button>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">主旨</label>
@@ -3712,16 +3747,7 @@ function Unit10ProspectMarketing({
                     />
                   </div>
                   <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs text-gray-500">內文</label>
-                      {unit4Data?.results?.email_body && (
-                        <button onClick={() => setGroupTemplates(prev => ({
-                          ...prev, [g]: { ...prev[g], body: unit4Data.results!.email_body! }
-                        }))} className="text-[10px] text-indigo-600 hover:underline">
-                          從 Unit 4 套用
-                        </button>
-                      )}
-                    </div>
+                    <label className="block text-xs text-gray-500 mb-1">內文</label>
                     <textarea
                       value={groupTemplates[g]?.body ?? ''}
                       onChange={e => setGroupTemplates(prev => ({ ...prev, [g]: { ...prev[g], body: e.target.value } }))}
