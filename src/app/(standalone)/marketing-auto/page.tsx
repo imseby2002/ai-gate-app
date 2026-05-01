@@ -3657,6 +3657,12 @@ interface AvatarVideo {
 
 interface Unit11Data {
   videos: AvatarVideo[]
+  avatarId?: string
+  avatarName?: string
+  voiceId?: string
+  voiceName?: string
+  ratio?: string
+  background?: string
 }
 
 const AVATAR_RATIOS = [
@@ -3695,8 +3701,8 @@ function Unit11AvatarMarketing({
   // Form
   const [selectedAvatar, setSelectedAvatar] = useState<HeyGenAvatar | null>(null)
   const [selectedVoice, setSelectedVoice] = useState<HeyGenVoice | null>(null)
-  const [ratio, setRatio] = useState('16:9')
-  const [background, setBackground] = useState('#FFFFFF')
+  const [ratio, setRatio] = useState(savedData?.ratio ?? '16:9')
+  const [background, setBackground] = useState(savedData?.background ?? '#FFFFFF')
   const [customBg, setCustomBg] = useState('')
 
   // Script comes from Unit 4 anchor_script — no local state needed
@@ -3707,6 +3713,30 @@ function Unit11AvatarMarketing({
   const [videos, setVideos] = useState<AvatarVideo[]>(savedData?.videos ?? [])
   const pollingRef = useRef<Record<string, ReturnType<typeof setInterval>>>({})
 
+  // ── Save settings helper ───────────────────────────────────────────────────
+  function saveSettings(overrides: Partial<{
+    avatar: HeyGenAvatar | null
+    voice: HeyGenVoice | null
+    ratio: string
+    background: string
+    videos: AvatarVideo[]
+  }> = {}) {
+    const av = overrides.avatar !== undefined ? overrides.avatar : selectedAvatar
+    const vc = overrides.voice !== undefined ? overrides.voice : selectedVoice
+    const r  = overrides.ratio      ?? ratio
+    const bg = overrides.background ?? (customBg || background)
+    const vs = overrides.videos     ?? videos
+    onDone({
+      videos: vs,
+      avatarId:   av?.id,
+      avatarName: av?.name,
+      voiceId:    vc?.id,
+      voiceName:  vc?.name,
+      ratio: r,
+      background: bg,
+    })
+  }
+
   // ── Load avatars & voices ──────────────────────────────────────────────────
   async function loadAssets() {
     setLoadingAssets(true)
@@ -3716,14 +3746,31 @@ function Unit11AvatarMarketing({
         fetch('/api/marketing/heygen-avatar?type=voices'),
       ])
       const [avatarJson, voiceJson] = await Promise.all([avatarRes.json(), voiceRes.json()])
-      setAvatars(avatarJson.avatars ?? [])
-      setVoices(voiceJson.voices ?? [])
+      const loadedAvatars: HeyGenAvatar[] = avatarJson.avatars ?? []
+      const loadedVoices: HeyGenVoice[]   = voiceJson.voices   ?? []
+      setAvatars(loadedAvatars)
+      setVoices(loadedVoices)
       setAssetsLoaded(true)
+      // Restore saved selection
+      if (savedData?.avatarId) {
+        const found = loadedAvatars.find(a => a.id === savedData.avatarId)
+        if (found) setSelectedAvatar(found)
+      }
+      if (savedData?.voiceId) {
+        const found = loadedVoices.find(v => v.id === savedData.voiceId)
+        if (found) setSelectedVoice(found)
+      }
     } catch (e) {
       console.error(e)
     }
     setLoadingAssets(false)
   }
+
+  // Auto-load on mount
+  useEffect(() => {
+    loadAssets()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Poll video status ──────────────────────────────────────────────────────
   function startPolling(videoId: string) {
@@ -3741,7 +3788,7 @@ function Unit11AvatarMarketing({
                 ? { ...v, status: data.status, videoUrl: data.videoUrl ?? v.videoUrl }
                 : v
             )
-            onDone({ videos: updated })
+            saveSettings({ videos: updated })
             return updated
           })
         }
@@ -3793,7 +3840,7 @@ function Unit11AvatarMarketing({
       }
       const updated = [newVideo, ...videos]
       setVideos(updated)
-      onDone({ videos: updated })
+      saveSettings({ videos: updated })
       startPolling(data.videoId)
     } catch (e) {
       setSubmitError(String(e))
@@ -3822,20 +3869,19 @@ function Unit11AvatarMarketing({
         </div>
       </div>
 
-      {/* Step 1: Load avatars */}
+      {/* Step 1: Loading state */}
       {!assetsLoaded ? (
         <div className="border rounded-xl p-5 space-y-3 bg-indigo-50 border-indigo-200">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-indigo-600" />
             <span className="font-medium text-indigo-800 text-sm">載入 HeyGen 主播資源</span>
           </div>
-          <p className="text-xs text-indigo-600">點擊下方按鈕從 HeyGen 載入可用的 Avatar 主播與聲音清單。</p>
           {loadingAssets
             ? <div className="flex items-center gap-2 text-sm text-indigo-600"><Loader2 className="h-4 w-4 animate-spin" />載入中…</div>
             : <button onClick={loadAssets}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                 style={{ background: 'var(--primary)' }}>
-                載入主播 &amp; 聲音清單
+                重新載入主播 &amp; 聲音清單
               </button>
           }
         </div>
@@ -3853,7 +3899,7 @@ function Unit11AvatarMarketing({
               </div>
               <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                 {avatars.map(av => (
-                  <button key={av.id} onClick={() => setSelectedAvatar(av)}
+                  <button key={av.id} onClick={() => { setSelectedAvatar(av); saveSettings({ avatar: av }) }}
                     className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
                       selectedAvatar?.id === av.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
                     }`}>
@@ -3880,7 +3926,7 @@ function Unit11AvatarMarketing({
                 <span className="text-xs text-gray-400">{voices.length} 個可用</span>
               </div>
               <select value={selectedVoice?.id ?? ''}
-                onChange={e => setSelectedVoice(voices.find(v => v.id === e.target.value) ?? null)}
+                onChange={e => { const vc = voices.find(v => v.id === e.target.value) ?? null; setSelectedVoice(vc); saveSettings({ voice: vc }) }}
                 className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                 <option value="">— 選擇聲音 —</option>
                 {voices.map(v => (
@@ -3899,7 +3945,7 @@ function Unit11AvatarMarketing({
               <span className="font-medium text-sm text-gray-700">影片格式 &amp; 背景</span>
               <div className="flex gap-2">
                 {AVATAR_RATIOS.map(r => (
-                  <button key={r.value} onClick={() => setRatio(r.value)}
+                  <button key={r.value} onClick={() => { setRatio(r.value); saveSettings({ ratio: r.value }) }}
                     className={`flex-1 text-center py-2 px-2 rounded-lg border text-xs transition-all ${
                       ratio === r.value ? 'border-indigo-400 bg-indigo-50 font-medium text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}>
@@ -3911,13 +3957,13 @@ function Unit11AvatarMarketing({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500">背景色：</span>
                 {BG_PRESETS.map(b => (
-                  <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg('') }}
+                  <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg(''); saveSettings({ background: b.value }) }}
                     title={b.label}
                     className={`w-6 h-6 rounded-full border-2 transition-all ${background === b.value && !customBg ? 'border-indigo-400 scale-110' : 'border-gray-200'}`}
                     style={{ background: b.value }} />
                 ))}
                 <input type="color" value={customBg || background}
-                  onChange={e => setCustomBg(e.target.value)}
+                  onChange={e => { setCustomBg(e.target.value); saveSettings({ background: e.target.value }) }}
                   className="w-6 h-6 rounded-full border border-gray-300 cursor-pointer"
                   title="自訂顏色" />
                 <div className="w-5 h-5 rounded border" style={{ background: bgFinal }} />
