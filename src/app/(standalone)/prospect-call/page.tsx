@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
-  Filter, Users, Map, Globe, Mic, Settings2, PhoneCall, GripVertical,
+  Filter, Users, Map, Globe, Mic, Settings2, PhoneCall, GripVertical, Mail,
 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -40,9 +40,17 @@ interface ProspectOrg {
   id: string; name: string; phone?: string; phoneNormalized?: string
   address?: string; lat?: number; lng?: number
   rawCategory?: string; aiCategory: string; employeeHint?: string
-  rating?: number; website?: string
+  rating?: number; website?: string; email?: string
   nearestBranch?: string; nearestBranchDistance?: number
   selected: boolean; filterReason?: string
+}
+
+interface EmailTemplate {
+  id: string
+  name: string
+  subject: string
+  body: string
+  forCategory: string   // '' = 全部
 }
 
 interface Config {
@@ -55,6 +63,9 @@ interface Config {
   birdCallerId: string
   voiceScripts: VoiceScript[]
   routingRules: RoutingRule[]
+  emailTemplates: EmailTemplate[]
+  fromName: string
+  fromEmail: string
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -101,6 +112,11 @@ const DEFAULT_CONFIG: Config = {
     { id: 'script-1', name: '預設腳本', text: '您好，我們是...', voiceId: 'EXAVITQu4vr4xnSDxMaL' },
   ],
   routingRules: [],
+  emailTemplates: [
+    { id: 'email-1', name: '預設模板', subject: '', body: '', forCategory: '' },
+  ],
+  fromName: '行銷團隊',
+  fromEmail: '',
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -326,9 +342,10 @@ function RoutingRuleEditor({
 // ─── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ProspectCallPage() {
+  const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG)
   const [branches, setBranches] = useState<Branch[]>([])
-  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true })
+  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailSettings: true })
   const [running, setRunning] = useState(false)
   const [stepStatus, setStepStatus] = useState<Record<string, StepStatus>>({})
   const [stepMsg, setStepMsg] = useState<Record<string, string>>({})
@@ -337,6 +354,10 @@ export default function ProspectCallPage() {
   const [callingRule, setCallingRule] = useState<string | null>(null)
   const [error, setError] = useState('')
   const abortRef = useRef(false)
+  // Email-specific state
+  const [orgEmails, setOrgEmails] = useState<Record<string, string>>({})  // orgId → email
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null)  // templateId being sent
+  const [emailResults, setEmailResults] = useState<Record<string, { ok: number; fail: number }>>({})
 
   const setC = <K extends keyof Config>(key: K, val: Config[K]) =>
     setConfig(prev => ({ ...prev, [key]: val }))
@@ -384,6 +405,59 @@ export default function ProspectCallPage() {
 
   const removeRule = (id: string) =>
     setC('routingRules', config.routingRules.filter(r => r.id !== id))
+
+  // ── Email templates CRUD ─────────────────────────────────────────────────
+
+  const addEmailTemplate = () => setC('emailTemplates', [...config.emailTemplates, {
+    id: `email-${Date.now()}`, name: `模板 ${config.emailTemplates.length + 1}`,
+    subject: '', body: '', forCategory: '',
+  }])
+
+  const updateEmailTemplate = (id: string, patch: Partial<EmailTemplate>) =>
+    setC('emailTemplates', config.emailTemplates.map(t => t.id === id ? { ...t, ...patch } : t))
+
+  const removeEmailTemplate = (id: string) =>
+    setC('emailTemplates', config.emailTemplates.filter(t => t.id !== id))
+
+  // ── Batch email send ──────────────────────────────────────────────────────
+
+  const batchEmail = async (template: EmailTemplate) => {
+    // Orgs matching this template's category ('' = all)
+    const targetOrgs = selectedOrgs.filter(o => {
+      const emailAddr = orgEmails[o.id] || o.email
+      if (!emailAddr) return false
+      if (template.forCategory && o.aiCategory !== template.forCategory) return false
+      return true
+    })
+    if (targetOrgs.length === 0) { setError('所選模板沒有符合條件且有 Email 的組織'); return }
+    setSendingEmail(template.id)
+    try {
+      const recipients = targetOrgs.map(o => ({
+        email: orgEmails[o.id] || o.email!,
+        group: o.aiCategory,
+        name: o.name,
+      }))
+      const res = await fetch('/api/marketing/email-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients,
+          groups: {},
+          defaultSubject: template.subject,
+          defaultBody: template.body,
+          fromName: config.fromName,
+          fromEmail: config.fromEmail,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setEmailResults(prev => ({ ...prev, [template.id]: { ok: data.success, fail: data.total - data.success } }))
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setSendingEmail(null)
+    }
+  }
 
   // ── Org → rule assignment (first-match wins) ──────────────────────────────
 
@@ -523,11 +597,25 @@ export default function ProspectCallPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <PhoneCall className="h-6 w-6 text-primary" />潛在客戶電話行銷
+            <Users className="h-6 w-6 text-primary" />潛在客戶行銷
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            自動蒐集組織 → AI 篩選 + 分類 → 距離計算 → 分批語音撥打
+            自動蒐集組織 → AI 篩選 + 分類 → 距離計算 → 電話撥打 / Email 寄送
           </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 border-b">
+          {([['phone', '📞 電話行銷'], ['email', '📧 Email 行銷']] as const).map(([tab, label]) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === tab
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              {label}
+            </button>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -611,6 +699,9 @@ export default function ProspectCallPage() {
               </div>
             </Section>
 
+            {/* ── Phone-only steps ── */}
+            {activeTab === 'phone' && <>
+
             {/* Step 4: Voice scripts */}
             <Section title="Step 4 — 語音腳本" icon={Mic}
               open={openSections.scripts} onToggle={() => toggleSection('scripts')}>
@@ -689,6 +780,76 @@ export default function ProspectCallPage() {
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
               </div>
             </Section>
+
+            </>}
+
+            {/* ── Email-only steps ── */}
+            {activeTab === 'email' && <>
+
+            {/* Step 4: Email templates */}
+            <Section title="Step 4 — Email 腳本模板" icon={Mail}
+              open={openSections.emailTemplates} onToggle={() => toggleSection('emailTemplates')}>
+              <p className="text-xs text-gray-500">可為不同行業建立不同模板，蒐集完成後依 AI 分類自動配對。</p>
+              <div className="space-y-3">
+                {config.emailTemplates.map(t => (
+                  <div key={t.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <input value={t.name} onChange={e => updateEmailTemplate(t.id, { name: e.target.value })}
+                        className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                        placeholder="模板名稱" />
+                      {config.emailTemplates.length > 1 && (
+                        <button type="button" onClick={() => removeEmailTemplate(t.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">適用行業分類（空白 = 全部）</label>
+                      <select value={t.forCategory} onChange={e => updateEmailTemplate(t.id, { forCategory: e.target.value })}
+                        className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
+                        <option value="">— 全部 —</option>
+                        {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+                      </select>
+                    </div>
+                    <input value={t.subject} onChange={e => updateEmailTemplate(t.id, { subject: e.target.value })}
+                      className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                      placeholder="Email 主旨" />
+                    <textarea value={t.body} onChange={e => updateEmailTemplate(t.id, { body: e.target.value })}
+                      rows={4} placeholder="Email 內文（支援換行）"
+                      className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white" />
+                  </div>
+                ))}
+                <button type="button" onClick={addEmailTemplate}
+                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+                  <Plus className="h-3.5 w-3.5" />新增模板
+                </button>
+              </div>
+            </Section>
+
+            {/* Step 5: Email sender settings */}
+            <Section title="Step 5 — 寄件設定" icon={Mail}
+              open={openSections.emailSettings} onToggle={() => toggleSection('emailSettings')}>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">寄件人名稱</label>
+                  <input value={config.fromName} onChange={e => setC('fromName', e.target.value)}
+                    placeholder="行銷團隊" className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">寄件人 Email（Resend 已驗證網域）</label>
+                  <input value={config.fromEmail} onChange={e => setC('fromEmail', e.target.value)}
+                    placeholder="marketing@yourdomain.com"
+                    className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                </div>
+                <div className="text-[10px] text-gray-400 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  需設定環境變數：<code className="font-mono">RESEND_API_KEY</code>
+                </div>
+              </div>
+            </Section>
+
+            </>}
+
           </div>
 
           {/* ── Right: Run + Results ── */}
@@ -734,8 +895,86 @@ export default function ProspectCallPage() {
               </div>
             )}
 
+            {/* ── Email right panel ── */}
+            {activeTab === 'email' && selectedOrgs.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">Email 寄送</h3>
+
+                {/* Email input table */}
+                <div className="border rounded-xl overflow-hidden">
+                  <div className="px-3 py-2 bg-gray-50 border-b text-xs text-gray-500 font-medium">
+                    輸入各組織 Email（可手動填寫）
+                  </div>
+                  <div className="max-h-56 overflow-y-auto">
+                    {selectedOrgs.map(o => (
+                      <div key={o.id} className="flex items-center gap-2 px-3 py-1.5 border-b last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium truncate">{o.name}</div>
+                          <div className="text-[10px] text-gray-400">
+                            {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji} {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
+                          </div>
+                        </div>
+                        <input
+                          value={orgEmails[o.id] ?? o.email ?? ''}
+                          onChange={e => setOrgEmails(prev => ({ ...prev, [o.id]: e.target.value }))}
+                          placeholder="email@example.com"
+                          className="w-44 h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Template send panels */}
+                {config.emailTemplates.map(t => {
+                  const targets = selectedOrgs.filter(o => {
+                    const addr = orgEmails[o.id] || o.email
+                    if (!addr) return false
+                    if (t.forCategory && o.aiCategory !== t.forCategory) return false
+                    return true
+                  })
+                  const result = emailResults[t.id]
+                  const isSending = sendingEmail === t.id
+                  return (
+                    <div key={t.id} className="p-4 rounded-xl border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-semibold">{t.name}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            {t.forCategory
+                              ? `${CATEGORIES.find(c => c.id === t.forCategory)?.emoji} ${CATEGORIES.find(c => c.id === t.forCategory)?.label}`
+                              : '全部分類'}
+                            {' · '}{targets.length} 個有 Email
+                          </div>
+                        </div>
+                        <button type="button"
+                          onClick={() => batchEmail(t)}
+                          disabled={isSending || targets.length === 0 || !t.subject || !t.body}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
+                          style={{ background: 'var(--primary)' }}>
+                          {isSending ? <><Loader2 className="h-3 w-3 animate-spin" />寄送中…</> : <><Mail className="h-3 w-3" />寄送 {targets.length} 封</>}
+                        </button>
+                      </div>
+                      {t.subject && (
+                        <div className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">
+                          主旨：{t.subject.slice(0, 60)}{t.subject.length > 60 ? '…' : ''}
+                        </div>
+                      )}
+                      {result && (
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-green-600">✓ 成功 {result.ok}</span>
+                          {result.fail > 0 && <span className="text-red-500">✗ 失敗 {result.fail}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ── Phone right panel ── */}
             {/* By-rule call panels */}
-            {byRule.length > 0 && (
+            {activeTab === 'phone' && byRule.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-700">規則分組撥打</h3>
                 {byRule.map(({ rule, matched, script }) => {
@@ -801,7 +1040,7 @@ export default function ProspectCallPage() {
             )}
 
             {/* Unmapped orgs */}
-            {unmapped.length > 0 && (
+            {activeTab === 'phone' && unmapped.length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-500 cursor-pointer hover:bg-gray-50 select-none">
                   未分配（無匹配規則）{unmapped.length} 家
@@ -824,7 +1063,7 @@ export default function ProspectCallPage() {
             )}
 
             {/* Filtered-out orgs */}
-            {orgs.filter(o => !o.selected).length > 0 && (
+            {activeTab === 'phone' && orgs.filter(o => !o.selected).length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-500 cursor-pointer hover:bg-gray-50 select-none">
                   淘汰組織 {orgs.filter(o => !o.selected).length} 家（點擊展開）
@@ -844,7 +1083,7 @@ export default function ProspectCallPage() {
             )}
 
             {/* All selected orgs table */}
-            {selectedOrgs.length > 0 && (
+            {activeTab === 'phone' && selectedOrgs.length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-600 font-medium cursor-pointer hover:bg-gray-50 select-none">
                   入選完整列表 {selectedOrgs.length} 家
