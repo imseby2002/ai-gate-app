@@ -387,17 +387,34 @@ export default function MarketingPipelinePage() {
     }
 
     if (unitId === 9) {
-      const platforms = u9d?.lastUpload?.platforms ?? u9d?.platforms ?? []
-      if (platforms.length === 0) return { ok: false, output: '無上傳平台設定，請在行銷自動化中設定 Unit 9 平台' }
+      const allPlatforms = u9d?.lastUpload?.platforms ?? u9d?.platforms ?? []
+      if (allPlatforms.length === 0) return { ok: false, output: '無上傳平台設定，請在行銷自動化中設定 Unit 9 平台' }
+
+      const VIDEO_PLATFORMS = ['FB Reels', 'IG Reels', 'YouTube Shorts', 'TikTok']
+      const imagePlatforms = allPlatforms.filter((p: string) => !VIDEO_PLATFORMS.includes(p))
+      const videoPlatforms = allPlatforms.filter((p: string) => VIDEO_PLATFORMS.includes(p))
+
       const images = u6d?.images?.map(i => i.url).filter(Boolean) ?? []
       const copies = u4d?.results ? Object.values(u4d.results) : []
-      const { res, data } = await safeFetch('/api/marketing/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platforms, copies, images }),
-      })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '上傳失敗') }
-      return { ok: true, output: `上傳完成 · ${platforms.join('、')}`, data }
+
+      // Upload images + text to image platforms
+      const uploadResults: string[] = []
+      if (imagePlatforms.length > 0) {
+        const { res, data } = await safeFetch('/api/marketing/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platforms: imagePlatforms, copies, images }),
+        })
+        if (!res.ok) return { ok: false, output: String(data.error ?? '上傳失敗') }
+        uploadResults.push(imagePlatforms.join('、'))
+      }
+
+      // Video platforms: will be uploaded by Unit 11 after video is generated
+      if (videoPlatforms.length > 0) {
+        uploadResults.push(`${videoPlatforms.join('、')}（等待主播影片生成後上傳）`)
+      }
+
+      return { ok: true, output: `上傳完成 · ${uploadResults.join(' | ')}`, data: { imagePlatforms, videoPlatforms, copies, images } }
     }
 
     if (unitId === 10) {
@@ -417,19 +434,54 @@ export default function MarketingPipelinePage() {
       const avatarId = u11d?.avatarId
       const voiceId  = u11d?.voiceId
       if (!avatarId || !voiceId) return { ok: false, output: '無主播設定，請在行銷自動化中設定 Unit 11 Avatar & Voice ID' }
+
+      // Script: prefer Unit 4 anchor_script, fallback to first copy
       const anchorScript = (u4d?.results as Record<string, string> | undefined)?.anchor_script
       const script = anchorScript ?? (u4d?.results ? Object.values(u4d.results)[0] : undefined) ?? '您好，歡迎使用 AI GATE 行銷自動化！'
+
       const { res: submitRes, data: submit } = await safeFetch('/api/marketing/heygen-avatar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarId, voiceId, script: script.slice(0, 500) }),
       })
       if (!submitRes.ok) return { ok: false, output: String(submit.error ?? 'HeyGen 提交失敗') }
+
       for (let i = 0; i < 75; i++) {
         if (abortRef.current) return { ok: false, output: '已中止' }
         await new Promise(r => setTimeout(r, 8000))
         const { data: poll } = await safeFetch(`/api/marketing/heygen-avatar?videoId=${submit.videoId}`, {})
-        if (poll.status === 'completed') return { ok: true, output: '主播影片完成', data: { videos: [{ videoId: submit.videoId, videoUrl: poll.videoUrl }] } }
+
+        if (poll.status === 'completed') {
+          const videoUrl = String(poll.videoUrl ?? '')
+
+          // Auto-upload to video platforms configured in Unit 9
+          const u9Result = ud[9] as { videoPlatforms?: string[]; copies?: string[] } | undefined
+          const videoPlatforms = u9Result?.videoPlatforms ?? []
+          let uploadNote = ''
+
+          if (videoPlatforms.length > 0 && videoUrl) {
+            const caption = anchorScript ?? (u4d?.results ? Object.values(u4d.results)[0] : '') ?? ''
+            const { res: upRes, data: upData } = await safeFetch('/api/marketing/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                platforms: videoPlatforms,
+                copies: caption ? [caption] : [],
+                videos: [{ url: videoUrl }],
+              }),
+            })
+            uploadNote = upRes.ok
+              ? ` · 已上傳至 ${videoPlatforms.join('、')}`
+              : ` · 上傳失敗：${String(upData.error ?? '').slice(0, 60)}`
+          }
+
+          return {
+            ok: true,
+            output: `主播影片完成${uploadNote}`,
+            data: { videos: [{ videoId: submit.videoId, videoUrl }] },
+          }
+        }
+
         if (poll.status === 'failed') return { ok: false, output: '主播影片生成失敗' }
       }
       return { ok: false, output: 'HeyGen 逾時' }
