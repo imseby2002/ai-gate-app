@@ -3397,6 +3397,14 @@ interface EmailRecord {
   error?: string
 }
 
+interface EmailCategory {
+  id: string
+  name: string          // 分類名稱，e.g. "美妝博主"
+  desc: string          // AI 分類依據，e.g. "個人美妝博主，以社交媒體影響力為主"
+  subject: string
+  body: string
+}
+
 interface Unit10Data {
   lastBatch?: {
     total: number
@@ -3465,7 +3473,9 @@ function Unit10ProspectMarketing({
   const [classifying, setClassifying] = useState(false)
   const [fromName, setFromName] = useState('行銷團隊')
   const [fromEmail, setFromEmail] = useState('')
-  const [groupTemplates, setGroupTemplates] = useState<Record<string, { subject: string; body: string }>>({})
+  const [emailCategories, setEmailCategories] = useState<EmailCategory[]>([
+    { id: 'cat-1', name: '一般客戶', desc: '一般潛在客戶或不明身份', subject: '', body: '' },
+  ])
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
   const [emailResults, setEmailResults] = useState<EmailRecord[]>(savedData?.lastEmailBatch?.results ?? [])
@@ -3478,43 +3488,50 @@ function Unit10ProspectMarketing({
     setPhones(parsePhones(val))
   }
 
+  // ── Email category CRUD ─────────────────────────────────────────────────────
+  const addEmailCategory = () => setEmailCategories(prev => [...prev, {
+    id: `cat-${Date.now()}`, name: `分類 ${prev.length + 1}`, desc: '', subject: '', body: '',
+  }])
+  const updateEmailCategory = (id: string, patch: Partial<EmailCategory>) =>
+    setEmailCategories(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
+  const removeEmailCategory = (id: string) =>
+    setEmailCategories(prev => prev.length > 1 ? prev.filter(c => c.id !== id) : prev)
+
   // ── Email helpers ───────────────────────────────────────────────────────────
   const parseEmails = (raw: string) => {
     return raw.split('\n').map(line => {
-      const [email, group] = line.split('|').map(s => s.trim())
+      const trimmed = line.trim()
+      if (!trimmed) return null
+      const [email] = trimmed.split(/[\s|,]/)
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
-      return { email, group: group || '一般' }
+      // Default to first category
+      return { email, group: emailCategories[0]?.name ?? '一般' }
     }).filter(Boolean) as { email: string; group: string }[]
   }
 
   const handleEmailInput = (val: string) => {
     setEmailInput(val)
-    const parsed = parseEmails(val)
-    setEmailRecipients(parsed)
-    // Auto-init group templates for newly detected groups
-    const groups = [...new Set(parsed.map(r => r.group))]
-    setGroupTemplates(prev => {
-      const next = { ...prev }
-      groups.forEach(g => {
-        if (!next[g]) next[g] = {
-          subject: unit4Data?.results?.email_subject ?? '',
-          body: unit4Data?.results?.email_body ?? '',
-        }
-      })
-      return next
-    })
+    setEmailRecipients(parseEmails(val))
   }
 
   const classifyEmails = async () => {
     if (emailRecipients.length === 0) return
+    if (emailCategories.length === 0) { setSendError('請先定義至少一個分類'); return }
     setClassifying(true)
     try {
+      const categoryList = emailCategories
+        .map(c => `"${c.name}"${c.desc ? `（${c.desc}）` : ''}`)
+        .join('、')
       const res = await fetch('/api/marketing/copy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           copyTypes: ['line_message'],
-          userInstructions: `請分析以下 Email 清單，根據 domain 或命名推斷每個收件人的屬性，回傳 JSON 陣列，格式：[{"email":"xxx","group":"VIP"|"潛在客戶"|"一般客戶"|"企業"}]。只回傳 JSON，不要其他說明。\n\n${emailRecipients.map(r => r.email).join('\n')}`,
+          userInstructions: `請分析以下 Email 清單，根據 domain、命名或其他線索，將每個收件人歸類至以下分類之一：${categoryList}。
+回傳 JSON 陣列，格式：[{"email":"xxx","group":"分類名稱"}]。group 值必須完全符合上面定義的分類名稱。只回傳 JSON。
+
+Email 清單：
+${emailRecipients.map(r => r.email).join('\n')}`,
           companyData: {},
           collectedSummary: '',
         }),
@@ -3533,20 +3550,21 @@ function Unit10ProspectMarketing({
     finally { setClassifying(false) }
   }
 
-  const uniqueGroups = [...new Set(emailRecipients.map(r => r.group))]
-
   const sendEmails = async () => {
     if (emailRecipients.length === 0) { setSendError('請輸入收件人清單'); return }
-    const hasTemplate = uniqueGroups.some(g => groupTemplates[g]?.subject && groupTemplates[g]?.body)
-    if (!hasTemplate) { setSendError('請為至少一個分組設定主旨與內文'); return }
+    const hasTemplate = emailCategories.some(c => c.subject && c.body)
+    if (!hasTemplate) { setSendError('請為至少一個分類設定主旨與內文'); return }
     setSending(true); setSendError(''); setEmailResults([])
     try {
+      // Build groups map from emailCategories
+      const groups: Record<string, { subject: string; body: string }> = {}
+      emailCategories.forEach(c => { if (c.subject || c.body) groups[c.name] = { subject: c.subject, body: c.body } })
       const res = await fetch('/api/marketing/email-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recipients: emailRecipients,
-          groups: groupTemplates,
+          groups,
           defaultSubject: unit4Data?.results?.email_subject ?? '行銷訊息',
           defaultBody: unit4Data?.results?.email_body ?? '',
           fromName,
@@ -3660,115 +3678,136 @@ function Unit10ProspectMarketing({
             </div>
           </div>
 
-          {/* Email list */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-semibold">
-                收件人清單
-                <span className="ml-2 text-xs font-normal text-gray-400">已識別 {emailRecipients.length} 個</span>
-              </label>
+          {/* ── Step A: 定義分類 + 腳本 ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">Step 1 — 定義分類與腳本</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">先定義你要哪些分類（例如：美妝博主、美妝工廠），再為每個分類設定 Email 腳本</div>
+              </div>
+              {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
+                <button
+                  onClick={() => setEmailCategories(prev => prev.map(c => ({
+                    ...c,
+                    subject: unit4Data.results!.email_subject ?? c.subject,
+                    body: unit4Data.results!.email_body ?? c.body,
+                  })))}
+                  className="text-xs px-3 py-1.5 rounded-lg border text-indigo-600 border-indigo-300 hover:bg-indigo-50 flex-shrink-0"
+                >
+                  ⚡ 套用 Unit 4 至所有分類
+                </button>
+              )}
+            </div>
+
+            {emailCategories.map((cat, idx) => (
+              <div key={cat.id} className="border rounded-xl p-4 space-y-3 bg-gray-50">
+                {/* Header */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-gray-400 w-5">{idx + 1}</span>
+                  <input
+                    value={cat.name}
+                    onChange={e => updateEmailCategory(cat.id, { name: e.target.value })}
+                    placeholder="分類名稱（例如：美妝博主）"
+                    className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
+                  />
+                  {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
+                    <button
+                      onClick={() => updateEmailCategory(cat.id, {
+                        subject: unit4Data.results!.email_subject ?? cat.subject,
+                        body: unit4Data.results!.email_body ?? cat.body,
+                      })}
+                      className="text-[10px] text-indigo-600 hover:underline flex-shrink-0"
+                    >
+                      套用 Unit 4
+                    </button>
+                  )}
+                  {emailCategories.length > 1 && (
+                    <button onClick={() => removeEmailCategory(cat.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {/* AI 分類依據 */}
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">AI 分類依據（描述這類收件人的特徵）</label>
+                  <input
+                    value={cat.desc}
+                    onChange={e => updateEmailCategory(cat.id, { desc: e.target.value })}
+                    placeholder="例如：個人美妝博主，以社交媒體影響力為主的個人"
+                    className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                  />
+                </div>
+                {/* Subject */}
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">Email 主旨</label>
+                  <input
+                    value={cat.subject}
+                    onChange={e => updateEmailCategory(cat.id, { subject: e.target.value })}
+                    placeholder="Email 主旨…"
+                    className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                  />
+                </div>
+                {/* Body */}
+                <div>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">Email 內文</label>
+                  <textarea
+                    value={cat.body}
+                    onChange={e => updateEmailCategory(cat.id, { body: e.target.value })}
+                    rows={4}
+                    placeholder="Email 內文…"
+                    className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white"
+                  />
+                </div>
+                {/* Matched count */}
+                {emailRecipients.length > 0 && (
+                  <div className="text-[10px] text-gray-400">
+                    已分類至此：{emailRecipients.filter(r => r.group === cat.name).length} 個收件人
+                  </div>
+                )}
+              </div>
+            ))}
+            <button onClick={addEmailCategory}
+              className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+              <Plus className="h-3.5 w-3.5" />新增分類
+            </button>
+          </div>
+
+          {/* ── Step B: 收件人清單 ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold">Step 2 — 輸入收件人 Email</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">每行一個 Email，AI 會依上方分類定義自動歸類</div>
+              </div>
               <button onClick={classifyEmails} disabled={classifying || emailRecipients.length === 0}
-                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
                 style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
                 {classifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 {classifying ? 'AI 分類中…' : 'AI 自動分類'}
               </button>
             </div>
-            <textarea value={emailInput} onChange={e => handleEmailInput(e.target.value)} rows={6}
+            <textarea value={emailInput} onChange={e => handleEmailInput(e.target.value)} rows={5}
               className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
-              placeholder={'user@example.com\nvip@company.com | VIP\nlead@startup.com | 潛在客戶'} />
-            <p className="text-[10px] text-gray-400 mt-1">每行一個 Email，可加「 | 分組名稱」；AI 分類可自動推斷分組</p>
+              placeholder={'user@example.com\nvip@company.com\nlead@factory.com'} />
+            <p className="text-[10px] text-gray-400">已識別 {emailRecipients.length} 個有效 Email</p>
           </div>
 
           {/* Parsed preview */}
           {emailRecipients.length > 0 && (
-            <div className="max-h-40 overflow-y-auto space-y-1">
+            <div className="max-h-40 overflow-y-auto space-y-1 border rounded-xl p-2">
               {emailRecipients.map((r, i) => (
-                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border text-xs">
-                  <span className="font-mono flex-1">{r.email}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{r.group}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Group template mapping */}
-          {uniqueGroups.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-gray-700">各分組 Email 模板</div>
-                {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
-                  <button
-                    onClick={() => setGroupTemplates(prev => {
-                      const next = { ...prev }
-                      uniqueGroups.forEach(g => {
-                        next[g] = {
-                          subject: unit4Data.results!.email_subject ?? prev[g]?.subject ?? '',
-                          body: unit4Data.results!.email_body ?? prev[g]?.body ?? '',
-                        }
-                      })
-                      return next
-                    })}
-                    className="text-xs px-3 py-1.5 rounded-lg border text-indigo-600 border-indigo-300 hover:bg-indigo-50 transition-colors"
+                <div key={i} className="flex items-center gap-2 px-2 py-1 rounded-lg text-xs">
+                  <span className="font-mono flex-1 text-gray-700">{r.email}</span>
+                  <select
+                    value={r.group}
+                    onChange={e => setEmailRecipients(prev => prev.map((x, j) => j === i ? { ...x, group: e.target.value } : x))}
+                    className="h-6 px-1.5 rounded border text-[10px] outline-none focus:ring-1 bg-indigo-50 text-indigo-700"
                   >
-                    ⚡ 一鍵套用 Unit 4 至所有分組
-                  </button>
-                )}
-              </div>
-              {uniqueGroups.map(g => (
-                <div key={g} className="border rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{g}</span>
-                      <span className="text-xs text-gray-400">{emailRecipients.filter(r => r.group === g).length} 個收件人</span>
-                    </div>
-                    {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
-                      <button
-                        onClick={() => setGroupTemplates(prev => ({
-                          ...prev,
-                          [g]: {
-                            subject: unit4Data.results!.email_subject ?? prev[g]?.subject ?? '',
-                            body: unit4Data.results!.email_body ?? prev[g]?.body ?? '',
-                          },
-                        }))}
-                        className="text-[10px] text-indigo-600 hover:underline"
-                      >
-                        套用 Unit 4 腳本
-                      </button>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">主旨</label>
-                    <input
-                      value={groupTemplates[g]?.subject ?? ''}
-                      onChange={e => setGroupTemplates(prev => ({ ...prev, [g]: { ...prev[g], subject: e.target.value } }))}
-                      className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-                      placeholder="Email 主旨…"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">內文</label>
-                    <textarea
-                      value={groupTemplates[g]?.body ?? ''}
-                      onChange={e => setGroupTemplates(prev => ({ ...prev, [g]: { ...prev[g], body: e.target.value } }))}
-                      rows={5}
-                      className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
-                      placeholder="Email 內文…"
-                    />
-                  </div>
+                    {emailCategories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Unit 4 template hint */}
-          {unit4Data?.results?.email_subject && (
-            <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 space-y-1">
-              <div className="font-semibold">Unit 4 已有 Email 文案：</div>
-              <div>主旨：{unit4Data.results.email_subject.slice(0, 60)}</div>
-              {unit4Data.results.email_body && (
-                <div>內文：{unit4Data.results.email_body.slice(0, 80)}…</div>
-              )}
             </div>
           )}
 

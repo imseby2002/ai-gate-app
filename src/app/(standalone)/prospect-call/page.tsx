@@ -27,6 +27,7 @@ interface RuleCondition {
   minEmployees: number        // 0 = 不限
   maxEmployees: number        // 0 = 不限
   maxDistanceKm: number       // 0 = 不限
+  customTag: string           // '' = 不限；關鍵字出現在名稱或原始分類即符合
 }
 
 interface RoutingRule {
@@ -98,6 +99,7 @@ const EMPTY_CONDITION: RuleCondition = {
   minEmployees: 0,
   maxEmployees: 0,
   maxDistanceKm: 0,
+  customTag: '',
 }
 
 const DEFAULT_CONFIG: Config = {
@@ -151,6 +153,12 @@ function matchRule(org: ProspectOrg, rule: RoutingRule): boolean {
   }
   // distance
   if (c.maxDistanceKm > 0 && org.nearestBranchDistance != null && org.nearestBranchDistance > c.maxDistanceKm) return false
+  // custom keyword (search in org name + rawCategory)
+  if (c.customTag.trim()) {
+    const tag = c.customTag.trim().toLowerCase()
+    const hay = `${org.name} ${org.rawCategory ?? ''}`.toLowerCase()
+    if (!hay.includes(tag)) return false
+  }
   return true
 }
 
@@ -163,6 +171,7 @@ function conditionSummary(c: RuleCondition): string {
   else if (c.minEmployees > 0) parts.push(`≥${c.minEmployees}人`)
   else if (c.maxEmployees > 0) parts.push(`≤${c.maxEmployees}人`)
   if (c.maxDistanceKm > 0) parts.push(`≤${c.maxDistanceKm}km`)
+  if (c.customTag.trim()) parts.push(`關鍵字：${c.customTag.trim()}`)
   return parts.length ? parts.join(' · ') : '（全部符合）'
 }
 
@@ -311,6 +320,17 @@ function RoutingRuleEditor({
             type="number" min={0} step={0.5}
             value={rule.condition.maxDistanceKm}
             onChange={e => setC({ maxDistanceKm: Number(e.target.value) })}
+            className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
+          />
+        </div>
+
+        {/* Custom tag */}
+        <div className="col-span-2">
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">自訂關鍵字（名稱或原始分類含此字即符合）</label>
+          <input
+            value={rule.condition.customTag}
+            onChange={e => setC({ customTag: e.target.value })}
+            placeholder="例如：美妝、博主、工廠、連鎖…（空白=不限）"
             className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
           />
         </div>
