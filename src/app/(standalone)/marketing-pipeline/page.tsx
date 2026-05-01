@@ -59,7 +59,6 @@ const STEP_DEFS: PipelineStepDef[] = [
   { unitId: 9,  name: '上傳平台',  icon: Upload,     desc: '自動上傳各平台',         canAuto: true  },
   { unitId: 10, name: '電話行銷',  icon: Phone,      desc: '批次語音電話',           canAuto: true  },
   { unitId: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 主播影片',        canAuto: true  },
-  { unitId: 12, name: '客服系統',  icon: Headphones, desc: '設定後自動運行',          canAuto: false },
 ]
 
 const DEFAULT_SCHEDULE: PipelineSchedule = {
