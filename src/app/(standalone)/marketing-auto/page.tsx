@@ -1153,10 +1153,10 @@ function Unit4Copy({
   const [anchorDuration, setAnchorDuration] = useState(savedData?.anchorDuration ?? 60)
   const [anchorStyle, setAnchorStyle] = useState(savedData?.anchorStyle ?? '專業親切')
 
-  // Persist anchor settings immediately when they change (don't wait for run())
-  const anchorInitRef = useRef(false)
+  // Persist types + anchor settings immediately when they change (don't wait for run())
+  const unit4InitRef = useRef(false)
   useEffect(() => {
-    if (!anchorInitRef.current) { anchorInitRef.current = true; return }
+    if (!unit4InitRef.current) { unit4InitRef.current = true; return }
     onDone({
       types: selectedTypes,
       results: result?.results,
@@ -1165,7 +1165,7 @@ function Unit4Copy({
       anchorStyle,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorDuration, anchorStyle])
+  }, [selectedTypes, anchorDuration, anchorStyle])
 
   useEffect(() => {
     if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
