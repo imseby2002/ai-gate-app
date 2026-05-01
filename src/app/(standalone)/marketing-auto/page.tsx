@@ -54,7 +54,7 @@ const UNITS: UnitDef[] = [
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: true  },
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: true  },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: true  },
-  { id: 10, name: '電話行銷',  icon: Phone,      desc: 'VBEE / ElevenLabs + Plivo',   implemented: true  },
+  { id: 10, name: '潛在客戶行銷', icon: Phone,   desc: '電話 / Email 批次行銷',         implemented: true  },
   { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: true  },
   { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: true  },
 ]
@@ -3380,10 +3380,18 @@ function Unit9Upload({
   )
 }
 
-// ─── Unit 10: 電話行銷 ────────────────────────────────────────────────────────
+// ─── Unit 10: 潛在客戶行銷 ──────────────────────────────────────────────────
 
 interface CallRecord {
   phone: string
+  ok: boolean
+  id?: string
+  error?: string
+}
+
+interface EmailRecord {
+  email: string
+  group: string
   ok: boolean
   id?: string
   error?: string
@@ -3397,6 +3405,15 @@ interface Unit10Data {
     audioUrl?: string
     calledAt: string
   }
+  lastEmailBatch?: {
+    total: number
+    success: number
+    results: EmailRecord[]
+    sentAt: string
+  }
+  phones?: string[]
+  voiceId?: string
+  callerId?: string
 }
 
 const ELEVEN_VOICES = [
@@ -3408,7 +3425,7 @@ const ELEVEN_VOICES = [
   { id: 'cgSgspJ2msm6clMCkdW9', label: 'Jessica — 美式英語，女' },
 ]
 
-function Unit10PhoneMarketing({
+function Unit10ProspectMarketing({
   campaignId: _campaignId,
   savedData,
   unit2Data,
@@ -3421,6 +3438,9 @@ function Unit10PhoneMarketing({
   unit4Data?: Unit4Data
   onDone: (data: Unit10Data) => void
 }) {
+  const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
+
+  // ── Phone tab state ──────────────────────────────────────────────────────
   const [script, setScript] = useState('')
   const [generatingScript, setGeneratingScript] = useState(false)
   const [scriptLang, setScriptLang] = useState('繁體中文')
@@ -3439,12 +3459,106 @@ function Unit10PhoneMarketing({
   const [callError, setCallError] = useState('')
   const [results, setResults] = useState<CallRecord[]>(savedData?.lastBatch?.results ?? [])
 
+  // ── Email tab state ──────────────────────────────────────────────────────
+  const [emailInput, setEmailInput] = useState('')
+  const [emailRecipients, setEmailRecipients] = useState<{ email: string; group: string }[]>([])
+  const [classifying, setClassifying] = useState(false)
+  const [fromName, setFromName] = useState('行銷團隊')
+  const [fromEmail, setFromEmail] = useState('')
+  const [groupTemplates, setGroupTemplates] = useState<Record<string, { subject: string; body: string }>>({})
+  const [sending, setSending] = useState(false)
+  const [sendError, setSendError] = useState('')
+  const [emailResults, setEmailResults] = useState<EmailRecord[]>(savedData?.lastEmailBatch?.results ?? [])
+
   const parsePhones = (raw: string): string[] =>
     raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
 
   const handlePhoneInput = (val: string) => {
     setPhoneInput(val)
     setPhones(parsePhones(val))
+  }
+
+  // ── Email helpers ───────────────────────────────────────────────────────────
+  const parseEmails = (raw: string) => {
+    return raw.split('\n').map(line => {
+      const [email, group] = line.split('|').map(s => s.trim())
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
+      return { email, group: group || '一般' }
+    }).filter(Boolean) as { email: string; group: string }[]
+  }
+
+  const handleEmailInput = (val: string) => {
+    setEmailInput(val)
+    const parsed = parseEmails(val)
+    setEmailRecipients(parsed)
+    // Auto-init group templates for newly detected groups
+    const groups = [...new Set(parsed.map(r => r.group))]
+    setGroupTemplates(prev => {
+      const next = { ...prev }
+      groups.forEach(g => {
+        if (!next[g]) next[g] = {
+          subject: unit4Data?.results?.email_subject ?? '',
+          body: unit4Data?.results?.email_body ?? '',
+        }
+      })
+      return next
+    })
+  }
+
+  const classifyEmails = async () => {
+    if (emailRecipients.length === 0) return
+    setClassifying(true)
+    try {
+      const res = await fetch('/api/marketing/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          copyTypes: ['line_message'],
+          userInstructions: `請分析以下 Email 清單，根據 domain 或命名推斷每個收件人的屬性，回傳 JSON 陣列，格式：[{"email":"xxx","group":"VIP"|"潛在客戶"|"一般客戶"|"企業"}]。只回傳 JSON，不要其他說明。\n\n${emailRecipients.map(r => r.email).join('\n')}`,
+          companyData: {},
+          collectedSummary: '',
+        }),
+      })
+      const data = await res.json()
+      const raw: string = data?.results?.line_message ?? ''
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (match) {
+        const classified: { email: string; group: string }[] = JSON.parse(match[0])
+        setEmailRecipients(prev => prev.map(r => {
+          const found = classified.find(c => c.email === r.email)
+          return found ? { ...r, group: found.group } : r
+        }))
+      }
+    } catch { /* silent */ }
+    finally { setClassifying(false) }
+  }
+
+  const uniqueGroups = [...new Set(emailRecipients.map(r => r.group))]
+
+  const sendEmails = async () => {
+    if (emailRecipients.length === 0) { setSendError('請輸入收件人清單'); return }
+    const hasTemplate = uniqueGroups.some(g => groupTemplates[g]?.subject && groupTemplates[g]?.body)
+    if (!hasTemplate) { setSendError('請為至少一個分組設定主旨與內文'); return }
+    setSending(true); setSendError(''); setEmailResults([])
+    try {
+      const res = await fetch('/api/marketing/email-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: emailRecipients,
+          groups: groupTemplates,
+          defaultSubject: unit4Data?.results?.email_subject ?? '行銷訊息',
+          defaultBody: unit4Data?.results?.email_body ?? '',
+          fromName,
+          fromEmail,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? '寄送失敗')
+      setEmailResults(data.results)
+      onDone({ ...savedData, lastEmailBatch: { total: data.total, success: data.success, results: data.results, sentAt: new Date().toISOString() } })
+    } catch (e) { setSendError(String(e)) }
+    finally { setSending(false) }
   }
 
   const generateScript = async () => {
@@ -3505,7 +3619,186 @@ function Unit10PhoneMarketing({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b">
+        {([['phone', '📞 電話行銷'], ['email', '📧 Email 行銷']] as const).map(([tab, label]) => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Email tab ── */}
+      {activeTab === 'email' && (
+        <div className="space-y-5">
+
+          {/* Provider bar */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700 w-fit">
+            ✉️ 寄送服務：Resend
+          </div>
+
+          {/* From settings */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">寄件人名稱</label>
+              <input value={fromName} onChange={e => setFromName(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+                placeholder="行銷團隊" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">寄件人 Email（需在 Resend 驗證）</label>
+              <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
+                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+                placeholder="marketing@yourdomain.com" />
+            </div>
+          </div>
+
+          {/* Email list */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-semibold">
+                收件人清單
+                <span className="ml-2 text-xs font-normal text-gray-400">已識別 {emailRecipients.length} 個</span>
+              </label>
+              <button onClick={classifyEmails} disabled={classifying || emailRecipients.length === 0}
+                className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
+                style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
+                {classifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {classifying ? 'AI 分類中…' : 'AI 自動分類'}
+              </button>
+            </div>
+            <textarea value={emailInput} onChange={e => handleEmailInput(e.target.value)} rows={6}
+              className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
+              placeholder={'user@example.com\nvip@company.com | VIP\nlead@startup.com | 潛在客戶'} />
+            <p className="text-[10px] text-gray-400 mt-1">每行一個 Email，可加「 | 分組名稱」；AI 分類可自動推斷分組</p>
+          </div>
+
+          {/* Parsed preview */}
+          {emailRecipients.length > 0 && (
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {emailRecipients.map((r, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border text-xs">
+                  <span className="font-mono flex-1">{r.email}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{r.group}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Group template mapping */}
+          {uniqueGroups.length > 0 && (
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-gray-700">各分組 Email 模板</div>
+              {uniqueGroups.map(g => (
+                <div key={g} className="border rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{g}</span>
+                    <span className="text-xs text-gray-400">{emailRecipients.filter(r => r.group === g).length} 個收件人</span>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">主旨</label>
+                    <input
+                      value={groupTemplates[g]?.subject ?? ''}
+                      onChange={e => setGroupTemplates(prev => ({ ...prev, [g]: { ...prev[g], subject: e.target.value } }))}
+                      className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+                      placeholder="Email 主旨…"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs text-gray-500">內文</label>
+                      {unit4Data?.results?.email_body && (
+                        <button onClick={() => setGroupTemplates(prev => ({
+                          ...prev, [g]: { ...prev[g], body: unit4Data.results!.email_body! }
+                        }))} className="text-[10px] text-indigo-600 hover:underline">
+                          從 Unit 4 套用
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={groupTemplates[g]?.body ?? ''}
+                      onChange={e => setGroupTemplates(prev => ({ ...prev, [g]: { ...prev[g], body: e.target.value } }))}
+                      rows={5}
+                      className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+                      placeholder="Email 內文…"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Unit 4 template hint */}
+          {unit4Data?.results?.email_subject && (
+            <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 space-y-1">
+              <div className="font-semibold">Unit 4 已有 Email 文案：</div>
+              <div>主旨：{unit4Data.results.email_subject.slice(0, 60)}</div>
+              {unit4Data.results.email_body && (
+                <div>內文：{unit4Data.results.email_body.slice(0, 80)}…</div>
+              )}
+            </div>
+          )}
+
+          {sendError && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{sendError}
+            </div>
+          )}
+
+          <button onClick={sendEmails} disabled={sending || emailRecipients.length === 0}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+            style={{ background: 'var(--primary)' }}>
+            {sending
+              ? <><Loader2 className="h-4 w-4 animate-spin" />寄送中…（{emailRecipients.length} 封）</>
+              : <>✉️ 開始寄送 {emailRecipients.length} 封 Email</>}
+          </button>
+
+          {/* Email results */}
+          {emailResults.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-700">寄送結果</span>
+                <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                  {emailResults.filter(r => r.ok).length}/{emailResults.length} 成功
+                </span>
+              </div>
+              <div className="max-h-52 overflow-y-auto space-y-1.5">
+                {emailResults.map((r, i) => (
+                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-xs ${r.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    {r.ok
+                      ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                      : <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />}
+                    <span className="font-mono flex-1">{r.email}</span>
+                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">{r.group}</span>
+                    {r.ok
+                      ? <span className="text-green-700">已寄出</span>
+                      : <span className="text-red-600 truncate max-w-[180px]">{r.error}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Env notice */}
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700">
+            <div className="font-semibold mb-1">需在 Vercel 設定環境變數：</div>
+            <div className="flex gap-2 flex-wrap">
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded">RESEND_API_KEY</code>
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded">RESEND_FROM_EMAIL</code>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Phone tab ── */}
+      {activeTab === 'phone' && <div className="space-y-6">
 
       {/* Provider info bar */}
       <div className="flex gap-3 flex-wrap">
@@ -3637,6 +3930,8 @@ function Unit10PhoneMarketing({
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">BIRD_WORKSPACE_ID</code>
         </div>
       </div>
+      </div>}
+
     </div>
   )
 }
@@ -5855,7 +6150,7 @@ export default function MarketingAutoPage() {
             />
           )}
           {activeUnit === 10 && (
-            <Unit10PhoneMarketing
+            <Unit10ProspectMarketing
               campaignId={campaignId}
               savedData={unitData[10] as Unit10Data | undefined}
               unit2Data={companyData}

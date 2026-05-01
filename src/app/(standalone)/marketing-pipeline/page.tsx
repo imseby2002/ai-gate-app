@@ -57,7 +57,7 @@ const STEP_DEFS: PipelineStepDef[] = [
   { unitId: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',          canAuto: true  },
   { unitId: 8,  name: '影片產出',  icon: Video,      desc: 'AI 影片生成',           canAuto: true  },
   { unitId: 9,  name: '上傳平台',  icon: Upload,     desc: '自動上傳各平台',         canAuto: true  },
-  { unitId: 10, name: '電話行銷',  icon: Phone,      desc: '批次語音電話',           canAuto: true  },
+  { unitId: 10, name: '潛在客戶行銷', icon: Phone,   desc: '電話 / Email 批次行銷',  canAuto: true  },
   { unitId: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 主播影片',        canAuto: true  },
 ]
 
@@ -417,16 +417,40 @@ export default function MarketingPipelinePage() {
     }
 
     if (unitId === 10) {
-      const phones = u10d?.phones ?? []
-      if (phones.length === 0) return { ok: false, output: '無電話名單，請在行銷自動化中設定 Unit 10' }
-      const script = u4d?.results?.line_message ?? u4d?.results?.facebook_post ?? '您好，感謝您對我們的關注。'
-      const { res, data } = await safeFetch('/api/marketing/phone-call', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'batch', phones, script, voiceId: u10d?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL', birdCallerId: u10d?.callerId }),
-      })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '撥打失敗') }
-      return { ok: true, output: `電話行銷完成 · ${data.success}/${data.total} 成功`, data }
+      const outputs: string[] = []
+
+      // Phone marketing
+      const phones = (u10d as { phones?: string[] } | undefined)?.phones ?? []
+      if (phones.length > 0) {
+        const script = u4d?.results?.line_message ?? u4d?.results?.facebook_post ?? '您好，感謝您對我們的關注。'
+        const { res, data } = await safeFetch('/api/marketing/phone-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'batch', phones, script, voiceId: (u10d as { voiceId?: string } | undefined)?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL', birdCallerId: (u10d as { callerId?: string } | undefined)?.callerId }),
+        })
+        if (res.ok) outputs.push(`電話：${data.success}/${data.total} 成功`)
+        else outputs.push(`電話失敗：${data.error}`)
+      }
+
+      // Email marketing
+      const emailBatch = (u10d as { lastEmailBatch?: { results: { email: string; group: string }[] } } | undefined)?.lastEmailBatch
+      const emailRecipients = emailBatch?.results?.map((r) => ({ email: r.email, group: r.group })) ?? []
+      if (emailRecipients.length > 0) {
+        const { res, data } = await safeFetch('/api/marketing/email-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipients: emailRecipients,
+            defaultSubject: u4d?.results?.email_subject ?? '行銷訊息',
+            defaultBody: u4d?.results?.email_body ?? '',
+          }),
+        })
+        if (res.ok) outputs.push(`Email：${data.success}/${data.total} 成功`)
+        else outputs.push(`Email 失敗：${data.error}`)
+      }
+
+      if (outputs.length === 0) return { ok: false, output: '無電話或 Email 名單，請在行銷自動化中設定 Unit 10' }
+      return { ok: true, output: `潛在客戶行銷完成 · ${outputs.join(' | ')}` }
     }
 
     if (unitId === 11) {
