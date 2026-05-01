@@ -29,39 +29,71 @@ export async function POST(req: NextRequest) {
     .single()
 
   const unitData = (campaign?.unit_data ?? {}) as Record<string, unknown>
-  const companyData  = (unitData[2] as { name?: string; industry?: string; products?: string }) ?? {}
-  const analysisData = (unitData[3] as { summary?: string }) ?? {}
-  const copyData     = (unitData[4] as { copies?: Array<{ title?: string; body?: string }> }) ?? {}
 
-  const copySample = copyData.copies?.slice(0, 2)
-    .map((c, i) => `【文案${i+1}】\n${c.title ?? ''}\n${c.body ?? ''}`)
-    .join('\n\n') ?? ''
+  // Unit 2: company data
+  const companyRaw = (unitData[2] as Record<string, string> | null) ?? {}
+  const companyName    = companyRaw.companyName ?? companyRaw.name ?? '未知'
+  const companyIndustry = companyRaw.industry ?? '未知'
+  const companyProducts = companyRaw.products ?? companyRaw['主要產品/服務'] ?? '未知'
+  const companyAudience = companyRaw.targetAudience ?? ''
+  const companyTone    = companyRaw.brandTone ?? ''
+
+  // Unit 3: analysis summary
+  const analysisRaw = (unitData[3] as { summary?: string; results?: Record<string, string> } | null) ?? {}
+  const analysisSummary = analysisRaw.summary
+    ?? (analysisRaw.results ? Object.values(analysisRaw.results).join('\n').slice(0, 2000) : '無')
+
+  // Unit 1: collected market research
+  const unit1Raw = (unitData[1] as { summary?: string; collectedSummary?: string } | null) ?? {}
+  const collectedSummary = unit1Raw.summary ?? unit1Raw.collectedSummary ?? ''
+
+  // Unit 4: copy results — { results: Record<string, string>, types: string[] }
+  const copyRaw = (unitData[4] as { results?: Record<string, string>; types?: string[] } | null) ?? {}
+  const copyResults = copyRaw.results ?? {}
+
+  // Prefer anchor_script if available, otherwise sample other copy types
+  let copySample = ''
+  if (copyResults.anchor_script) {
+    copySample = `【Unit 4 主播文案（請以此為基礎延伸）】\n${copyResults.anchor_script}`
+  } else {
+    const sampleKeys = (copyRaw.types ?? Object.keys(copyResults)).slice(0, 2)
+    copySample = sampleKeys
+      .map(k => copyResults[k] ? `【${k}】\n${copyResults[k]}` : '')
+      .filter(Boolean)
+      .join('\n\n')
+  }
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
+    model: anthropic('claude-sonnet-4-6'),
     messages: [{
       role: 'user',
       content: `你是一位專業的行銷主播腳本撰寫師。請為以下品牌撰寫 ${count} 份 AI 虛擬主播（HeyGen）口播腳本。
 
-品牌資訊：
-- 公司名稱：${companyData.name ?? '未知'}
-- 行業：${companyData.industry ?? '未知'}
-- 產品/服務：${companyData.products ?? '未知'}
+【品牌資訊】
+- 公司名稱：${companyName}
+- 行業：${companyIndustry}
+- 產品/服務：${companyProducts}
+${companyAudience ? `- 目標客群：${companyAudience}` : ''}
+${companyTone ? `- 品牌語調：${companyTone}` : ''}
 
-市場分析摘要：
-${analysisData.summary ?? '無'}
+【市場調查摘要（Unit 1）】
+${collectedSummary || '無'}
 
-現有行銷文案（參考）：
+【市場分析摘要（Unit 3）】
+${analysisSummary}
+
+【現有行銷文案（Unit 4，請參考語氣與重點）】
 ${copySample || '無'}
 
-腳本要求：
-- 每份腳本約 ${duration} 秒口播（中文約 ${Math.round(duration * 4.5)} 字，英文約 ${Math.round(duration * 2.5)} 字）
+【腳本要求】
+- 每份腳本約 ${duration} 秒口播（中文約 ${Math.round(duration * 4.5)} 字）
 - 風格：${style}
-- 語氣自然流暢，適合真人主播朗讀
-- 開場有吸引力，結尾有行動呼籲（CTA）
-- 避免生硬的廣告語氣
+- 語氣口語自然流暢，適合真人或AI虛擬主播朗讀
+- 結構：開場招呼 → 引入主題 → 3-5個核心重點（自然過渡） → 行動呼籲（CTA） → 結語
+- 全程使用口語，避免書面語，多用短句，易於斷句停頓
+- 開場有吸引力，結尾有明確行動呼籲
 
 請嚴格按照以下格式輸出（不要有其他說明文字）：
 
