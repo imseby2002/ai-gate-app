@@ -1153,6 +1153,20 @@ function Unit4Copy({
   const [anchorDuration, setAnchorDuration] = useState(savedData?.anchorDuration ?? 60)
   const [anchorStyle, setAnchorStyle] = useState(savedData?.anchorStyle ?? '專業親切')
 
+  // Persist anchor settings immediately when they change (don't wait for run())
+  const anchorInitRef = useRef(false)
+  useEffect(() => {
+    if (!anchorInitRef.current) { anchorInitRef.current = true; return }
+    onDone({
+      types: selectedTypes,
+      results: result?.results,
+      userInstructions: instructions,
+      anchorDuration,
+      anchorStyle,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anchorDuration, anchorStyle])
+
   useEffect(() => {
     if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
   }, [result, activeTab])
@@ -3713,29 +3727,21 @@ function Unit11AvatarMarketing({
   const [videos, setVideos] = useState<AvatarVideo[]>(savedData?.videos ?? [])
   const pollingRef = useRef<Record<string, ReturnType<typeof setInterval>>>({})
 
-  // ── Save settings helper ───────────────────────────────────────────────────
-  function saveSettings(overrides: Partial<{
-    avatar: HeyGenAvatar | null
-    voice: HeyGenVoice | null
-    ratio: string
-    background: string
-    videos: AvatarVideo[]
-  }> = {}) {
-    const av = overrides.avatar !== undefined ? overrides.avatar : selectedAvatar
-    const vc = overrides.voice !== undefined ? overrides.voice : selectedVoice
-    const r  = overrides.ratio      ?? ratio
-    const bg = overrides.background ?? (customBg || background)
-    const vs = overrides.videos     ?? videos
+  // ── Persist settings via effect (avoids stale closure) ───────────────────
+  const settingsInitRef = useRef(false)
+  useEffect(() => {
+    if (!settingsInitRef.current) { settingsInitRef.current = true; return }
     onDone({
-      videos: vs,
-      avatarId:   av?.id,
-      avatarName: av?.name,
-      voiceId:    vc?.id,
-      voiceName:  vc?.name,
-      ratio: r,
-      background: bg,
+      videos,
+      avatarId:   selectedAvatar?.id,
+      avatarName: selectedAvatar?.name,
+      voiceId:    selectedVoice?.id,
+      voiceName:  selectedVoice?.name,
+      ratio,
+      background: customBg || background,
     })
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAvatar, selectedVoice, ratio, background, customBg, videos])
 
   // ── Load avatars & voices ──────────────────────────────────────────────────
   async function loadAssets() {
@@ -3782,15 +3788,11 @@ function Unit11AvatarMarketing({
         if (data.status === 'completed' || data.status === 'failed') {
           clearInterval(pollingRef.current[videoId])
           delete pollingRef.current[videoId]
-          setVideos(prev => {
-            const updated = prev.map(v =>
-              v.videoId === videoId
-                ? { ...v, status: data.status, videoUrl: data.videoUrl ?? v.videoUrl }
-                : v
-            )
-            saveSettings({ videos: updated })
-            return updated
-          })
+          setVideos(prev => prev.map(v =>
+            v.videoId === videoId
+              ? { ...v, status: data.status, videoUrl: data.videoUrl ?? v.videoUrl }
+              : v
+          ))
         }
       } catch (_) {}
     }, 8000)
@@ -3838,9 +3840,7 @@ function Unit11AvatarMarketing({
         status: 'processing',
         createdAt: new Date().toISOString(),
       }
-      const updated = [newVideo, ...videos]
-      setVideos(updated)
-      saveSettings({ videos: updated })
+      setVideos(prev => [newVideo, ...prev])
       startPolling(data.videoId)
     } catch (e) {
       setSubmitError(String(e))
@@ -3899,7 +3899,7 @@ function Unit11AvatarMarketing({
               </div>
               <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                 {avatars.map(av => (
-                  <button key={av.id} onClick={() => { setSelectedAvatar(av); saveSettings({ avatar: av }) }}
+                  <button key={av.id} onClick={() => setSelectedAvatar(av)}
                     className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
                       selectedAvatar?.id === av.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
                     }`}>
@@ -3926,7 +3926,7 @@ function Unit11AvatarMarketing({
                 <span className="text-xs text-gray-400">{voices.length} 個可用</span>
               </div>
               <select value={selectedVoice?.id ?? ''}
-                onChange={e => { const vc = voices.find(v => v.id === e.target.value) ?? null; setSelectedVoice(vc); saveSettings({ voice: vc }) }}
+                onChange={e => setSelectedVoice(voices.find(v => v.id === e.target.value) ?? null)}
                 className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                 <option value="">— 選擇聲音 —</option>
                 {voices.map(v => (
@@ -3945,7 +3945,7 @@ function Unit11AvatarMarketing({
               <span className="font-medium text-sm text-gray-700">影片格式 &amp; 背景</span>
               <div className="flex gap-2">
                 {AVATAR_RATIOS.map(r => (
-                  <button key={r.value} onClick={() => { setRatio(r.value); saveSettings({ ratio: r.value }) }}
+                  <button key={r.value} onClick={() => setRatio(r.value)}
                     className={`flex-1 text-center py-2 px-2 rounded-lg border text-xs transition-all ${
                       ratio === r.value ? 'border-indigo-400 bg-indigo-50 font-medium text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}>
@@ -3957,13 +3957,13 @@ function Unit11AvatarMarketing({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500">背景色：</span>
                 {BG_PRESETS.map(b => (
-                  <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg(''); saveSettings({ background: b.value }) }}
+                  <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg('') }}
                     title={b.label}
                     className={`w-6 h-6 rounded-full border-2 transition-all ${background === b.value && !customBg ? 'border-indigo-400 scale-110' : 'border-gray-200'}`}
                     style={{ background: b.value }} />
                 ))}
                 <input type="color" value={customBg || background}
-                  onChange={e => { setCustomBg(e.target.value); saveSettings({ background: e.target.value }) }}
+                  onChange={e => setCustomBg(e.target.value)}
                   className="w-6 h-6 rounded-full border border-gray-300 cursor-pointer"
                   title="自訂顏色" />
                 <div className="w-5 h-5 rounded border" style={{ background: bgFinal }} />
