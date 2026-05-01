@@ -3406,22 +3406,24 @@ interface EmailCategory {
 }
 
 interface Unit10Data {
-  lastBatch?: {
-    total: number
-    success: number
-    results: CallRecord[]
-    audioUrl?: string
-    calledAt: string
-  }
-  lastEmailBatch?: {
-    total: number
-    success: number
-    results: EmailRecord[]
-    sentAt: string
-  }
-  phones?: string[]
+  // Phone
+  script?: string
   voiceId?: string
-  callerId?: string
+  birdCallerId?: string
+  phoneInput?: string
+  lastBatch?: {
+    total: number; success: number; results: CallRecord[]
+    audioUrl?: string; calledAt: string
+  }
+  // Email
+  emailCategories?: EmailCategory[]
+  emailInput?: string
+  emailRecipients?: { email: string; group: string }[]
+  fromName?: string
+  fromEmail?: string
+  lastEmailBatch?: {
+    total: number; success: number; results: EmailRecord[]; sentAt: string
+  }
 }
 
 const ELEVEN_VOICES = [
@@ -3449,15 +3451,18 @@ function Unit10ProspectMarketing({
   const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
 
   // ── Phone tab state ──────────────────────────────────────────────────────
-  const [script, setScript] = useState('')
+  const [script, setScript] = useState(savedData?.script ?? '')
   const [generatingScript, setGeneratingScript] = useState(false)
   const [scriptLang, setScriptLang] = useState('繁體中文')
 
-  const [voiceId, setVoiceId] = useState('EXAVITQu4vr4xnSDxMaL')
-  const [birdCallerId, setBirdCallerId] = useState('')
+  const [voiceId, setVoiceId] = useState(savedData?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL')
+  const [birdCallerId, setBirdCallerId] = useState(savedData?.birdCallerId ?? '')
 
-  const [phoneInput, setPhoneInput] = useState('')
-  const [phones, setPhones] = useState<string[]>([])
+  const [phoneInput, setPhoneInput] = useState(savedData?.phoneInput ?? '')
+  const [phones, setPhones] = useState<string[]>(() => {
+    const raw = savedData?.phoneInput ?? ''
+    return raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
+  })
 
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -3468,17 +3473,31 @@ function Unit10ProspectMarketing({
   const [results, setResults] = useState<CallRecord[]>(savedData?.lastBatch?.results ?? [])
 
   // ── Email tab state ──────────────────────────────────────────────────────
-  const [emailInput, setEmailInput] = useState('')
-  const [emailRecipients, setEmailRecipients] = useState<{ email: string; group: string }[]>([])
+  const [emailInput, setEmailInput] = useState(savedData?.emailInput ?? '')
+  const [emailRecipients, setEmailRecipients] = useState<{ email: string; group: string }[]>(savedData?.emailRecipients ?? [])
   const [classifying, setClassifying] = useState(false)
-  const [fromName, setFromName] = useState('行銷團隊')
-  const [fromEmail, setFromEmail] = useState('')
-  const [emailCategories, setEmailCategories] = useState<EmailCategory[]>([
-    { id: 'cat-1', name: '一般客戶', desc: '一般潛在客戶或不明身份', subject: '', body: '' },
-  ])
+  const [fromName, setFromName] = useState(savedData?.fromName ?? '行銷團隊')
+  const [fromEmail, setFromEmail] = useState(savedData?.fromEmail ?? '')
+  const [emailCategories, setEmailCategories] = useState<EmailCategory[]>(
+    savedData?.emailCategories ?? [
+      { id: 'cat-1', name: '一般客戶', desc: '一般潛在客戶或不明身份', subject: '', body: '' },
+    ]
+  )
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
   const [emailResults, setEmailResults] = useState<EmailRecord[]>(savedData?.lastEmailBatch?.results ?? [])
+
+  // ── Persistence: auto-save on change ─────────────────────────────────────
+  const unit10InitRef = useRef(false)
+  useEffect(() => {
+    if (!unit10InitRef.current) { unit10InitRef.current = true; return }
+    onDone({
+      ...savedData,
+      script, voiceId, birdCallerId, phoneInput,
+      emailCategories, emailInput, emailRecipients, fromName, fromEmail,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [script, voiceId, birdCallerId, phoneInput, emailCategories, emailInput, emailRecipients, fromName, fromEmail])
 
   const parsePhones = (raw: string): string[] =>
     raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
