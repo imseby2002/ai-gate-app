@@ -19,48 +19,79 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { campaignId, count = 1, duration = 60, style = '專業親切' } = await req.json()
-  if (!campaignId) return NextResponse.json({ error: '缺少 campaignId' }, { status: 400 })
+  const body = await req.json()
+  const {
+    campaignId,
+    count = 1,
+    duration = 60,
+    style = '專業親切',
+    // Inline data — passed directly from Unit 4 (no Supabase lookup needed)
+    companyData:       inlineCompany,
+    analysisData:      inlineAnalysis,
+    collectedSummary:  inlineCollected,
+    existingCopies:    inlineCopies,
+  } = body
 
-  const { data: campaign } = await supabase
-    .from('marketing_campaigns')
-    .select('unit_data')
-    .eq('id', campaignId)
-    .single()
+  let companyName      = '未知'
+  let companyIndustry  = '未知'
+  let companyProducts  = '未知'
+  let companyAudience  = ''
+  let companyTone      = ''
+  let analysisSummary  = '無'
+  let collectedSummary = ''
+  let copySample       = ''
 
-  const unitData = (campaign?.unit_data ?? {}) as Record<string, unknown>
+  if (inlineCompany) {
+    // Use data passed directly from Unit 4
+    companyName     = inlineCompany.companyName ?? inlineCompany.name ?? '未知'
+    companyIndustry = inlineCompany.industry ?? '未知'
+    companyProducts = inlineCompany.products ?? '未知'
+    companyAudience = inlineCompany.targetAudience ?? ''
+    companyTone     = inlineCompany.brandTone ?? ''
+    if (inlineAnalysis?.results) {
+      analysisSummary = Object.values(inlineAnalysis.results as Record<string, string>).join('\n').slice(0, 2000)
+    } else if (inlineAnalysis?.summary) {
+      analysisSummary = inlineAnalysis.summary
+    }
+    collectedSummary = inlineCollected ?? ''
+    if (inlineCopies && typeof inlineCopies === 'object') {
+      const keys = Object.keys(inlineCopies).slice(0, 2)
+      copySample = keys.map((k: string) => inlineCopies[k] ? `【${k}】\n${inlineCopies[k]}` : '').filter(Boolean).join('\n\n')
+    }
+  } else if (campaignId) {
+    // Fall back to Supabase lookup
+    const { data: campaign } = await supabase
+      .from('marketing_campaigns')
+      .select('unit_data')
+      .eq('id', campaignId)
+      .single()
 
-  // Unit 2: company data
-  const companyRaw = (unitData[2] as Record<string, string> | null) ?? {}
-  const companyName    = companyRaw.companyName ?? companyRaw.name ?? '未知'
-  const companyIndustry = companyRaw.industry ?? '未知'
-  const companyProducts = companyRaw.products ?? companyRaw['主要產品/服務'] ?? '未知'
-  const companyAudience = companyRaw.targetAudience ?? ''
-  const companyTone    = companyRaw.brandTone ?? ''
+    const unitData = (campaign?.unit_data ?? {}) as Record<string, unknown>
 
-  // Unit 3: analysis summary
-  const analysisRaw = (unitData[3] as { summary?: string; results?: Record<string, string> } | null) ?? {}
-  const analysisSummary = analysisRaw.summary
-    ?? (analysisRaw.results ? Object.values(analysisRaw.results).join('\n').slice(0, 2000) : '無')
+    const companyRaw = (unitData[2] as Record<string, string> | null) ?? {}
+    companyName     = companyRaw.companyName ?? companyRaw.name ?? '未知'
+    companyIndustry = companyRaw.industry ?? '未知'
+    companyProducts = companyRaw.products ?? companyRaw['主要產品/服務'] ?? '未知'
+    companyAudience = companyRaw.targetAudience ?? ''
+    companyTone     = companyRaw.brandTone ?? ''
 
-  // Unit 1: collected market research
-  const unit1Raw = (unitData[1] as { summary?: string; collectedSummary?: string } | null) ?? {}
-  const collectedSummary = unit1Raw.summary ?? unit1Raw.collectedSummary ?? ''
+    const analysisRaw = (unitData[3] as { summary?: string; results?: Record<string, string> } | null) ?? {}
+    analysisSummary = analysisRaw.summary
+      ?? (analysisRaw.results ? Object.values(analysisRaw.results).join('\n').slice(0, 2000) : '無')
 
-  // Unit 4: copy results — { results: Record<string, string>, types: string[] }
-  const copyRaw = (unitData[4] as { results?: Record<string, string>; types?: string[] } | null) ?? {}
-  const copyResults = copyRaw.results ?? {}
+    const unit1Raw = (unitData[1] as { summary?: string; collectedSummary?: string } | null) ?? {}
+    collectedSummary = unit1Raw.summary ?? unit1Raw.collectedSummary ?? ''
 
-  // Prefer anchor_script if available, otherwise sample other copy types
-  let copySample = ''
-  if (copyResults.anchor_script) {
-    copySample = `【Unit 4 主播文案（請以此為基礎延伸）】\n${copyResults.anchor_script}`
+    const copyRaw = (unitData[4] as { results?: Record<string, string>; types?: string[] } | null) ?? {}
+    const copyResults = copyRaw.results ?? {}
+    if (copyResults.anchor_script) {
+      copySample = `【Unit 4 主播文案（請以此為基礎延伸）】\n${copyResults.anchor_script}`
+    } else {
+      const sampleKeys = (copyRaw.types ?? Object.keys(copyResults)).slice(0, 2)
+      copySample = sampleKeys.map(k => copyResults[k] ? `【${k}】\n${copyResults[k]}` : '').filter(Boolean).join('\n\n')
+    }
   } else {
-    const sampleKeys = (copyRaw.types ?? Object.keys(copyResults)).slice(0, 2)
-    copySample = sampleKeys
-      .map(k => copyResults[k] ? `【${k}】\n${copyResults[k]}` : '')
-      .filter(Boolean)
-      .join('\n\n')
+    return NextResponse.json({ error: '請提供 campaignId 或 companyData' }, { status: 400 })
   }
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })

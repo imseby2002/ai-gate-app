@@ -435,9 +435,28 @@ export default function MarketingPipelinePage() {
       const voiceId  = u11d?.voiceId
       if (!avatarId || !voiceId) return { ok: false, output: '無主播設定，請在行銷自動化中設定 Unit 11 Avatar & Voice ID' }
 
-      // Script: prefer Unit 4 anchor_script, fallback to first copy
-      const anchorScript = (u4d?.results as Record<string, string> | undefined)?.anchor_script
-      const script = anchorScript ?? (u4d?.results ? Object.values(u4d.results)[0] : undefined) ?? '您好，歡迎使用 AI GATE 行銷自動化！'
+      // Script: use Unit 4 anchor_script; if missing, auto-generate using Unit 4's duration settings
+      let anchorScript = (u4d?.results as Record<string, string> | undefined)?.anchor_script ?? ''
+      if (!anchorScript) {
+        const duration = (ud[4] as { anchorDuration?: number } | undefined)?.anchorDuration ?? 60
+        const style    = (ud[4] as { anchorStyle?: string } | undefined)?.anchorStyle ?? '專業親切'
+        const genRes = await safeFetch('/api/marketing/avatar-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            count: 1,
+            duration,
+            style,
+            companyData: u2d ?? {},
+            analysisData: u3d ?? {},
+            collectedSummary: u1d?.summary ?? '',
+            existingCopies: u4d?.results ?? {},
+          }),
+        })
+        anchorScript = (genRes.data.scripts as string[] | undefined)?.[0] ?? ''
+        if (!anchorScript) return { ok: false, output: `主播腳本自動生成失敗：${String(genRes.data.error ?? '未知錯誤')}` }
+      }
+      const script = anchorScript
 
       const { res: submitRes, data: submit } = await safeFetch('/api/marketing/heygen-avatar', {
         method: 'POST',

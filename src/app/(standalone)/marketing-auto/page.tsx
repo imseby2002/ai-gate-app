@@ -1104,6 +1104,8 @@ interface Unit4Data {
   results?: Record<string, string>
   userInstructions?: string
   feedback?: string
+  anchorDuration?: number   // seconds for anchor_script generation
+  anchorStyle?: string
 }
 
 const COPY_TYPE_DEFS: { id: CopyType; label: string; group: string }[] = [
@@ -1147,6 +1149,10 @@ function Unit4Copy({
   const [activeTab, setActiveTab] = useState<CopyType | ''>('')
   const [editedCopy, setEditedCopy] = useState<Record<string, string>>({})
 
+  // Anchor script settings (only relevant when anchor_script is selected)
+  const [anchorDuration, setAnchorDuration] = useState(savedData?.anchorDuration ?? 60)
+  const [anchorStyle, setAnchorStyle] = useState(savedData?.anchorStyle ?? '專業親切')
+
   useEffect(() => {
     if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
   }, [result, activeTab])
@@ -1158,27 +1164,61 @@ function Unit4Copy({
     if (selectedTypes.length === 0) { setError('請至少選一種文案類型'); return }
     setRunning(true); setError('')
     try {
-      const res = await fetch('/api/marketing/copy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          copyTypes: selectedTypes,
-          userInstructions: instructions,
-          companyData: unit2Data ?? {},
-          analysisData: unit3Data ?? {},
-          collectedSummary: unit1Data?.summary ?? '',
-          feedback: fb ?? '',
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const regularTypes = selectedTypes.filter(t => t !== 'anchor_script')
+      const needAnchor   = selectedTypes.includes('anchor_script')
+      let results: Record<string, string> = {}
+
+      // Generate regular copy types
+      if (regularTypes.length > 0) {
+        const res = await fetch('/api/marketing/copy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            copyTypes: regularTypes,
+            userInstructions: instructions,
+            companyData: unit2Data ?? {},
+            analysisData: unit3Data ?? {},
+            collectedSummary: unit1Data?.summary ?? '',
+            feedback: fb ?? '',
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        results = { ...data.results }
+      }
+
+      // Generate anchor script separately (duration-based, uses avatar-script API)
+      if (needAnchor) {
+        const res = await fetch('/api/marketing/avatar-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            count: 1,
+            duration: anchorDuration,
+            style: anchorStyle,
+            companyData: unit2Data ?? {},
+            analysisData: unit3Data ?? {},
+            collectedSummary: unit1Data?.summary ?? '',
+            existingCopies: results,
+          }),
+        })
+        const data = await res.json()
+        if (data.scripts?.[0]) {
+          results['anchor_script'] = data.scripts[0]
+        } else if (data.error) {
+          throw new Error(`主播文案生成失敗：${data.error}`)
+        }
+      }
+
       const out: Unit4Data = {
         types: selectedTypes,
-        results: data.results,
+        results,
         userInstructions: instructions,
+        anchorDuration: needAnchor ? anchorDuration : undefined,
+        anchorStyle:    needAnchor ? anchorStyle    : undefined,
       }
       setResult(out)
-      setEditedCopy(data.results ?? {})
+      setEditedCopy(results)
       setActiveTab(selectedTypes[0])
       setFeedback('')
       onDone(out)
@@ -1235,6 +1275,40 @@ function Unit4Copy({
           </div>
         ))}
       </div>
+
+      {/* Anchor script settings — show when anchor_script is selected */}
+      {selectedTypes.includes('anchor_script') && (
+        <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-3 bg-indigo-50">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4 text-indigo-600" />
+            <span className="font-semibold text-sm text-indigo-800">🎙️ 主播口播腳本設定</span>
+            <span className="text-[10px] text-indigo-500 ml-1">（此腳本將直接用於 Unit 11 主播影片生成）</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-indigo-700 block mb-1">影片時長</label>
+              <select value={anchorDuration} onChange={e => setAnchorDuration(Number(e.target.value))}
+                className="w-full text-sm border border-indigo-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                {[15,30,60,90,120,180,300].map(s => (
+                  <option key={s} value={s}>{s} 秒（約 {Math.round(s * 4.5)} 字）</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-indigo-700 block mb-1">口播風格</label>
+              <select value={anchorStyle} onChange={e => setAnchorStyle(e.target.value)}
+                className="w-full text-sm border border-indigo-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                {['專業親切','熱情活力','沉穩信任','輕鬆幽默','商務正式'].map(s => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <p className="text-[10px] text-indigo-600">
+            生成後 Unit 11 主播行銷會自動使用此腳本，無需重新輸入。
+          </p>
+        </div>
+      )}
 
       {/* User instructions */}
       <div>
@@ -3621,17 +3695,11 @@ function Unit11AvatarMarketing({
   // Form
   const [selectedAvatar, setSelectedAvatar] = useState<HeyGenAvatar | null>(null)
   const [selectedVoice, setSelectedVoice] = useState<HeyGenVoice | null>(null)
-  const [script, setScript] = useState('')
   const [ratio, setRatio] = useState('16:9')
   const [background, setBackground] = useState('#FFFFFF')
   const [customBg, setCustomBg] = useState('')
 
-  // Script AI gen
-  const [genCount, setGenCount] = useState(1)
-  const [genDuration, setGenDuration] = useState(60)
-  const [genStyle, setGenStyle] = useState('專業親切')
-  const [generatingScript, setGeneratingScript] = useState(false)
-  const [scriptOptions, setScriptOptions] = useState<string[]>([])
+  // Script comes from Unit 4 anchor_script — no local state needed
 
   // Video submission / polling
   const [submitting, setSubmitting] = useState(false)
@@ -3691,35 +3759,12 @@ function Unit11AvatarMarketing({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── AI generate script ────────────────────────────────────────────────────
-  async function generateScript() {
-    if (!campaignId) { setSubmitError('請先建立活動'); return }
-    setGeneratingScript(true)
-    setScriptOptions([])
-    try {
-      const res = await fetch('/api/marketing/avatar-script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaignId, count: genCount, duration: genDuration, style: genStyle }),
-      })
-      const data = await res.json()
-      if (data.scripts?.length) {
-        setScriptOptions(data.scripts)
-        setScript(data.scripts[0])
-      } else {
-        setSubmitError(data.error ?? 'AI 生成失敗')
-      }
-    } catch (e) {
-      setSubmitError(String(e))
-    }
-    setGeneratingScript(false)
-  }
-
   // ── Submit video generation ───────────────────────────────────────────────
   async function submitVideo() {
+    const anchorScript = unit4Data?.results?.anchor_script ?? ''
     if (!selectedAvatar) { setSubmitError('請選擇主播 Avatar'); return }
     if (!selectedVoice)  { setSubmitError('請選擇聲音'); return }
-    if (!script.trim())  { setSubmitError('請輸入腳本'); return }
+    if (!anchorScript)   { setSubmitError('請先在 Unit 4 文案產出中勾選「🎙️ 主播口播腳本」並生成'); return }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -3729,7 +3774,7 @@ function Unit11AvatarMarketing({
         body: JSON.stringify({
           avatarId: selectedAvatar.id,
           voiceId: selectedVoice.id,
-          script,
+          script: anchorScript,
           ratio,
           background: customBg || background,
         }),
@@ -3739,7 +3784,7 @@ function Unit11AvatarMarketing({
 
       const newVideo: AvatarVideo = {
         videoId: data.videoId,
-        script: script.slice(0, 80) + (script.length > 80 ? '…' : ''),
+        script: anchorScript.slice(0, 80) + (anchorScript.length > 80 ? '…' : ''),
         avatarName: selectedAvatar.name,
         voiceName: selectedVoice.name,
         ratio,
@@ -3881,86 +3926,37 @@ function Unit11AvatarMarketing({
             </div>
           </div>
 
-          {/* Right: Script panel */}
+          {/* Right: Script preview from Unit 4 */}
           <div className="space-y-4">
-            {/* AI script generator */}
-            <div className="border rounded-xl p-4 space-y-3">
+            <div className="border-2 rounded-xl p-4 space-y-3 border-indigo-200 bg-indigo-50">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                <span className="font-medium text-sm text-gray-700">AI 腳本生成</span>
+                <Mic className="h-4 w-4 text-indigo-600" />
+                <span className="font-semibold text-sm text-indigo-800">主播口播腳本</span>
+                {unit4Data?.anchorDuration && (
+                  <span className="text-[10px] bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full">
+                    {unit4Data.anchorDuration}秒 · {unit4Data.anchorStyle ?? ''}
+                  </span>
+                )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">份數</label>
-                  <input type="number" min={1} max={5} value={genCount}
-                    onChange={e => setGenCount(Number(e.target.value))}
-                    className="w-full text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">時長（秒）</label>
-                  <input type="number" min={15} max={300} step={15} value={genDuration}
-                    onChange={e => setGenDuration(Number(e.target.value))}
-                    className="w-full text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">風格</label>
-                  <select value={genStyle} onChange={e => setGenStyle(e.target.value)}
-                    className="w-full text-sm border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
-                    <option>專業親切</option>
-                    <option>熱情活力</option>
-                    <option>沉穩信任</option>
-                    <option>輕鬆幽默</option>
-                    <option>商務正式</option>
-                  </select>
-                </div>
-              </div>
-              <button onClick={generateScript} disabled={generatingScript || !campaignId}
-                className="w-full py-2 rounded-lg text-sm font-medium text-white flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                {generatingScript ? <><Loader2 className="h-4 w-4 animate-spin" />AI 生成中…</> : <><Wand2 className="h-4 w-4" />AI 生成腳本</>}
-              </button>
-
-              {/* Script options */}
-              {scriptOptions.length > 1 && (
-                <div className="space-y-2">
-                  <div className="text-[10px] text-gray-500">點擊選用：</div>
-                  {scriptOptions.map((s, i) => (
-                    <button key={i} onClick={() => setScript(s)}
-                      className={`w-full text-left text-xs p-2 rounded-lg border transition-all ${script === s ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <span className="font-medium text-gray-600">腳本 {i+1}：</span>
-                      {s.slice(0, 60)}…
-                    </button>
-                  ))}
+              {unit4Data?.results?.anchor_script ? (
+                <>
+                  <div className="text-[10px] text-indigo-500 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3 w-3" />
+                    來自 Unit 4 文案產出（{unit4Data.results.anchor_script.length} 字）
+                    · 如需修改請返回 Unit 4 重新生成
+                  </div>
+                  <div className="bg-white border border-indigo-100 rounded-lg px-3 py-2.5 text-sm text-gray-700 leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
+                    {unit4Data.results.anchor_script}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-6 space-y-2">
+                  <div className="text-sm text-indigo-700 font-medium">尚無主播腳本</div>
+                  <div className="text-xs text-indigo-500">
+                    請前往 <span className="font-semibold">Unit 4 文案產出</span> → 勾選「🎙️ 主播口播腳本」→ 設定秒數 → 產生文案
+                  </div>
                 </div>
               )}
-            </div>
-
-            {/* Script editor */}
-            <div className="border rounded-xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-sm text-gray-700">主播腳本</span>
-                <div className="flex items-center gap-2">
-                  {unit4Data?.results?.anchor_script && (
-                    <button
-                      type="button"
-                      onClick={() => setScript(unit4Data.results!.anchor_script)}
-                      className="text-xs px-2 py-1 rounded-lg border border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-1"
-                    >
-                      🎙️ 載入 Unit 4 主播文案
-                    </button>
-                  )}
-                  <span className="text-xs text-gray-400">{script.length} 字</span>
-                </div>
-              </div>
-              {unit4Data?.results?.anchor_script && !script && (
-                <div className="text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2 border border-indigo-100">
-                  Unit 4 已生成主播口播腳本，點擊上方按鈕載入。
-                </div>
-              )}
-              <textarea value={script} onChange={e => setScript(e.target.value)}
-                rows={8}
-                placeholder="輸入主播要朗讀的腳本…&#10;&#10;例：大家好！我是 AI Gate 的智能助理，今天要向您介紹我們最新的 AI 行銷解決方案…"
-                className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
 
             {/* Submit button */}
