@@ -1097,6 +1097,7 @@ type CopyType =
   | 'facebook_post' | 'instagram_caption' | 'threads_post' | 'line_message'
   | 'twitter_post'  | 'linkedin_post'     | 'youtube_description'
   | 'ad_headline'   | 'email_subject'     | 'email_body'   | 'press_release'
+  | 'anchor_script'
 
 interface Unit4Data {
   types?: CopyType[]
@@ -1117,6 +1118,7 @@ const COPY_TYPE_DEFS: { id: CopyType; label: string; group: string }[] = [
   { id: 'email_subject',       label: 'Email 主旨',       group: '電郵' },
   { id: 'email_body',          label: 'Email 內文',       group: '電郵' },
   { id: 'press_release',       label: '新聞稿',           group: '其他' },
+  { id: 'anchor_script',       label: '🎙️ 主播口播腳本',  group: '主播' },
 ]
 
 function Unit4Copy({
@@ -3220,6 +3222,7 @@ function Unit9Upload({
             const labels: Record<string, string> = {
               facebook_post: 'FB', instagram_caption: 'IG', threads_post: 'Threads',
               line_message: 'LINE', twitter_post: 'Twitter', linkedin_post: 'LinkedIn',
+              anchor_script: '🎙️主播',
             }
             return (
               <button key={k} onClick={() => setCopyText(v as string)}
@@ -3936,8 +3939,24 @@ function Unit11AvatarMarketing({
             <div className="border rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-sm text-gray-700">主播腳本</span>
-                <span className="text-xs text-gray-400">{script.length} 字</span>
+                <div className="flex items-center gap-2">
+                  {unit4Data?.results?.anchor_script && (
+                    <button
+                      type="button"
+                      onClick={() => setScript(unit4Data.results!.anchor_script)}
+                      className="text-xs px-2 py-1 rounded-lg border border-indigo-300 text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-1"
+                    >
+                      🎙️ 載入 Unit 4 主播文案
+                    </button>
+                  )}
+                  <span className="text-xs text-gray-400">{script.length} 字</span>
+                </div>
               </div>
+              {unit4Data?.results?.anchor_script && !script && (
+                <div className="text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2 border border-indigo-100">
+                  Unit 4 已生成主播口播腳本，點擊上方按鈕載入。
+                </div>
+              )}
               <textarea value={script} onChange={e => setScript(e.target.value)}
                 rows={8}
                 placeholder="輸入主播要朗讀的腳本…&#10;&#10;例：大家好！我是 AI Gate 的智能助理，今天要向您介紹我們最新的 AI 行銷解決方案…"

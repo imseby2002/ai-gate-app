@@ -36,6 +36,7 @@ type CopyType =
   | 'email_subject'
   | 'email_body'
   | 'press_release'
+  | 'anchor_script'
 
 const COPY_TYPE_SPECS: Record<CopyType, { name: string; len: string; style: string }> = {
   facebook_post:      { name: 'Facebook 貼文',     len: '200-400字',    style: '可長篇，含標題+內文+CTA+3-5個hashtag' },
@@ -49,6 +50,7 @@ const COPY_TYPE_SPECS: Record<CopyType, { name: string; len: string; style: stri
   email_subject:      { name: 'Email 主旨',        len: '30-50字',      style: '產出3組不同風格主旨，提升開信率' },
   email_body:         { name: 'Email 內文',        len: '300-500字',    style: '結構化：開頭問候→痛點引導→解決方案→CTA→結尾' },
   press_release:      { name: '新聞稿',            len: '400-600字',    style: '正式新聞稿格式：標題+導言+內文+公司簡介+聯絡資訊' },
+  anchor_script:      { name: '主播口播腳本',      len: '300-800字',    style: '口語化、自然流暢，適合真人或AI虛擬主播朗讀。結構：開場白（打招呼+引入主題）→核心訊息（3-5個重點，每點自然過渡）→行動呼籲→結語。全程使用口語，避免書面語，多用短句，易於斷句停頓。' },
 }
 
 export async function POST(req: NextRequest) {
