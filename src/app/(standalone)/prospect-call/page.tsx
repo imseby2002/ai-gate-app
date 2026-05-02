@@ -652,7 +652,7 @@ export default function ProspectCallPage() {
       })
       const collectData = await collectRes.json()
       if (!collectRes.ok) throw new Error(collectData.error || '蒐集失敗')
-      const rawText: string = collectData.result || collectData.summary || ''
+      const rawText: string = collectData.raw || collectData.result || collectData.summary || ''
       setStepStatus(p => ({ ...p, collect: 'done', filter: 'running' }))
       setStepMsg(p => ({ ...p, collect: `已蒐集 ${rawText.length} 字元` }))
 

@@ -237,7 +237,8 @@ export async function GET(req: NextRequest) {
 
         let prospectResult: { ok: boolean; data: unknown; error?: string } = { ok: false, data: null, error: '蒐集失敗' }
         if (collectResult.ok) {
-          const rawText = (collectResult.data as Record<string, string>)?.result
+          const rawText = (collectResult.data as Record<string, string>)?.raw
+            || (collectResult.data as Record<string, string>)?.result
             || (collectResult.data as Record<string, string>)?.summary || ''
           prospectResult = await callUnitApi('/api/marketing/prospect-filter', {
             rawText,

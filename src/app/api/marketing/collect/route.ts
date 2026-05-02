@@ -72,12 +72,14 @@ async function mapSearch(
   const allPlaces: Array<{
     name: string; address?: string
     phone?: string; phone_1?: string; phone_2?: string
+    international_phone_format?: string; phone_number?: string
     full_address?: string
     website?: string; site?: string
     category?: string; type?: string
     rating?: number; reviews?: number; reviews_count?: number
     latitude?: number; longitude?: number
     working_hours?: Record<string, string>
+    [key: string]: unknown
   }> = []
   const seen = new Set<string>()
 
@@ -96,6 +98,16 @@ async function mapSearch(
         if (res.ok) {
           const data = await res.json()
           const places = (data.data ?? []).flat() as typeof allPlaces
+          // DEBUG: log first result's keys to identify actual field names
+          if (places.length > 0 && allPlaces.length === 0) {
+            console.log('[Outscraper debug] first place keys:', Object.keys(places[0]))
+            console.log('[Outscraper debug] phone fields:', {
+              phone: places[0].phone, phone_1: places[0].phone_1, phone_2: places[0].phone_2,
+              international_phone_format: places[0].international_phone_format,
+              phone_number: places[0].phone_number,
+              name: places[0].name,
+            })
+          }
           for (const p of places) {
             const key2 = `${p.name}|${p.address ?? p.full_address ?? ''}`
             if (!seen.has(key2)) {
@@ -110,7 +122,7 @@ async function mapSearch(
     }
 
     const lines = allPlaces.slice(0, limit).map(p => {
-      const phone = p.phone || p.phone_1 || p.phone_2
+      const phone = p.phone || p.phone_1 || p.phone_2 || p.international_phone_format || p.phone_number
       const address = p.address || p.full_address
       const website = p.website || p.site
       const category = p.category || p.type
