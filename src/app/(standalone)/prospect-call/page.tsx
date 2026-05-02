@@ -724,7 +724,9 @@ export default function ProspectCallPage() {
             }))
             totalCalled += phones.length
           }
-        } catch { /* 繼續下一條規則 */ }
+        } catch (e) {
+          setError(String(e))  // 顯示錯誤（如 Bird Caller ID 未填、API Key 未設）
+        }
       }
 
       setStepStatus(p => ({ ...p, call: 'done', done: 'done' }))
@@ -1135,11 +1137,76 @@ export default function ProspectCallPage() {
             {/* Step 6: Call config */}
             <Section title="Step 6 — 撥話設定" icon={Phone}
               open={openSections.call} onToggle={() => toggleSection('call')}>
-              <div>
-                <label className="block text-xs font-medium mb-1">Bird 顯示號碼（Caller ID）</label>
-                <input value={config.birdCallerId} onChange={e => setC('birdCallerId', e.target.value)}
-                  placeholder="+886xxxxxxxxx"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+              <div className="space-y-4">
+                {/* Caller ID */}
+                <div>
+                  <label className="block text-xs font-medium mb-1">
+                    Bird 顯示號碼（Caller ID）
+                    <span className="ml-1 text-[10px] text-gray-400 font-normal">— 接收方看到的來電號碼（你的公司號碼）</span>
+                  </label>
+                  <input value={config.birdCallerId} onChange={e => setC('birdCallerId', e.target.value)}
+                    placeholder="+886xxxxxxxxx 或 +84xxxxxxxxx"
+                    className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                  {!config.birdCallerId.trim() && (
+                    <p className="text-[10px] text-amber-500 mt-1">⚠️ 未填寫則無法撥打，請填入 Bird 帳號中已驗證的號碼</p>
+                  )}
+                </div>
+
+                {/* 待撥清單預覽 */}
+                {selectedOrgs.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium mb-2 text-gray-700">
+                      待撥清單（共 {selectedOrgs.filter(o => o.phoneNormalized).length} 支有效號碼）
+                      <span className="ml-1 text-[10px] text-gray-400 font-normal">— 來自篩選結果</span>
+                    </p>
+                    {config.routingRules.length === 0 ? (
+                      <p className="text-[10px] text-gray-400">請先在 Step 5 建立撥打規則</p>
+                    ) : (
+                      <div className="space-y-2 max-h-52 overflow-y-auto">
+                        {config.routingRules.map(rule => {
+                          const matched = selectedOrgs.filter(o => orgRuleMap[o.id] === rule.id)
+                          const hasPhone = matched.filter(o => o.phoneNormalized)
+                          const noPhone = matched.filter(o => !o.phoneNormalized)
+                          if (matched.length === 0) return null
+                          return (
+                            <div key={rule.id} className="rounded-lg border bg-gray-50 p-2 text-[11px]">
+                              <div className="font-medium text-gray-700 mb-1">
+                                {rule.name}
+                                <span className="ml-1 text-gray-400">· {hasPhone.length} 支可撥 / {noPhone.length} 支無號碼</span>
+                              </div>
+                              {hasPhone.slice(0, 5).map(o => (
+                                <div key={o.id} className="flex items-center gap-1.5 py-0.5 border-t border-gray-100 first:border-0">
+                                  <Phone className="h-2.5 w-2.5 text-green-500 flex-shrink-0" />
+                                  <span className="text-green-700 font-mono">{o.phoneNormalized}</span>
+                                  <span className="text-gray-400 truncate">{o.name}</span>
+                                </div>
+                              ))}
+                              {hasPhone.length > 5 && (
+                                <p className="text-gray-400 text-[10px] mt-0.5">…還有 {hasPhone.length - 5} 支</p>
+                              )}
+                              {noPhone.length > 0 && (
+                                <div className="mt-1 text-gray-400">
+                                  無號碼：{noPhone.map(o => o.name).join('、').slice(0, 60)}{noPhone.length > 3 ? '…' : ''}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {unmapped.length > 0 && (
+                          <div className="rounded-lg border bg-amber-50 p-2 text-[11px] text-amber-700">
+                            未分配（無匹配規則）{unmapped.length} 家 — 不會被撥打
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {selectedOrgs.length === 0 && orgs.length > 0 && (
+                  <p className="text-[10px] text-gray-400">篩選後無入選組織，無待撥號碼</p>
+                )}
+                {orgs.length === 0 && (
+                  <p className="text-[10px] text-gray-400">執行 Pipeline 後，待撥清單將顯示於此</p>
+                )}
               </div>
             </Section>
 
