@@ -683,8 +683,52 @@ export default function ProspectCallPage() {
       const result: ProspectOrg[] = filterData.orgs || []
       setOrgs(result)
       const selected = result.filter(o => o.selected)
-      setStepStatus(p => ({ ...p, filter: 'done', done: 'done' }))
+      setStepStatus(p => ({ ...p, filter: 'done', call: 'running' }))
       setStepMsg(p => ({ ...p, filter: `入選 ${selected.length} / ${result.length} 家` }))
+
+      // ── 自動依規則撥打 ──────────────────────────────────────────────────────
+      // 計算每個 org 對應的規則（inline，不依賴 React state）
+      const orgRuleMapLocal: Record<string, string> = {}
+      for (const org of selected) {
+        for (const rule of config.routingRules) {
+          if (matchRule(org, rule)) { orgRuleMapLocal[org.id] = rule.id; break }
+        }
+      }
+
+      let totalCalled = 0
+      for (const rule of config.routingRules) {
+        if (!rule.scriptId) continue
+        const script = config.voiceScripts.find(s => s.id === rule.scriptId)
+        if (!script) continue
+        const phones = selected
+          .filter(o => orgRuleMapLocal[o.id] === rule.id && o.phoneNormalized)
+          .map(o => o.phoneNormalized!)
+        if (phones.length === 0) continue
+        try {
+          const res = await fetch('/api/marketing/phone-call', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'batch',
+              script: script.text,
+              phones,
+              voiceId: script.voiceId,
+              birdCallerId: config.birdCallerId,
+            }),
+          })
+          const data = await res.json()
+          if (res.ok) {
+            setCallResults(prev => ({
+              ...prev,
+              [rule.id]: { ok: data.success ?? 0, fail: (data.total ?? 0) - (data.success ?? 0) },
+            }))
+            totalCalled += phones.length
+          }
+        } catch { /* 繼續下一條規則 */ }
+      }
+
+      setStepStatus(p => ({ ...p, call: 'done', done: 'done' }))
+      setStepMsg(p => ({ ...p, call: `撥出 ${totalCalled} 支` }))
 
     } catch (e) {
       const msg = String(e)
@@ -1231,11 +1275,13 @@ export default function ProspectCallPage() {
               </button>
 
               {(Object.keys(stepStatus).length > 0) && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <StepBadge status={stepStatus.collect ?? 'idle'}
                     label={`蒐集${stepMsg.collect ? ` · ${stepMsg.collect}` : ''}`} />
                   <StepBadge status={stepStatus.filter ?? 'idle'}
                     label={`分析${stepMsg.filter ? ` · ${stepMsg.filter}` : ''}`} />
+                  <StepBadge status={stepStatus.call ?? 'idle'}
+                    label={`撥打${stepMsg.call ? ` · ${stepMsg.call}` : ''}`} />
                 </div>
               )}
 
