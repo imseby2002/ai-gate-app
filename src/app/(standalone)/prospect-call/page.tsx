@@ -174,6 +174,12 @@ function isMobile(phone?: string): boolean {
   return !!phone?.match(/^\+8869/)
 }
 
+// 這些詞視為 catch-all，不做關鍵字篩選（讓規則成為預設/兜底規則）
+const CATCHALL_TAGS = ['其他', '其它', 'other', 'all', '全部', '預設', 'default', '其余', '剩余', '剩餘']
+function isCatchAll(tag: string): boolean {
+  return CATCHALL_TAGS.includes(tag.trim().toLowerCase())
+}
+
 function matchRule(org: ProspectOrg, rule: RoutingRule): boolean {
   const c = rule.condition
   // phone type
@@ -192,7 +198,8 @@ function matchRule(org: ProspectOrg, rule: RoutingRule): boolean {
   // distance
   if (c.maxDistanceKm > 0 && org.nearestBranchDistance != null && org.nearestBranchDistance > c.maxDistanceKm) return false
   // custom keyword (search in org name + rawCategory)
-  if (c.customTag.trim()) {
+  // 若填「其他/other/all/全部/預設」視為 catch-all，不做關鍵字篩選
+  if (c.customTag.trim() && !isCatchAll(c.customTag)) {
     const tag = c.customTag.trim().toLowerCase()
     const hay = `${org.name} ${org.rawCategory ?? ''}`.toLowerCase()
     if (!hay.includes(tag)) return false
@@ -209,7 +216,9 @@ function conditionSummary(c: RuleCondition): string {
   else if (c.minEmployees > 0) parts.push(`≥${c.minEmployees}人`)
   else if (c.maxEmployees > 0) parts.push(`≤${c.maxEmployees}人`)
   if (c.maxDistanceKm > 0) parts.push(`≤${c.maxDistanceKm}km`)
-  if (c.customTag.trim()) parts.push(`關鍵字：${c.customTag.trim()}`)
+  if (c.customTag.trim()) {
+    parts.push(isCatchAll(c.customTag) ? '其他（全部符合）' : `關鍵字：${c.customTag.trim()}`)
+  }
   return parts.length ? parts.join(' · ') : '（全部符合）'
 }
 
@@ -368,7 +377,7 @@ function RoutingRuleEditor({
           <input
             value={rule.condition.customTag}
             onChange={e => setC({ customTag: e.target.value })}
-            placeholder="例如：美妝、博主、工廠、連鎖…（空白=不限）"
+            placeholder="例如：美妝、工廠…（空白或填「其他」=全部符合，可做兜底規則）"
             className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
           />
         </div>
