@@ -51,7 +51,16 @@ interface EmailTemplate {
   name: string
   subject: string
   body: string
-  forCategory: string   // '' = 全部
+}
+
+interface EmailRule {
+  id: string
+  name: string         // 自訂分類名稱
+  desc: string         // AI 分類依據描述
+  templateId: string   // 套用哪個模板
+  customTag: string    // 關鍵字篩選（名稱或原始分類含此字）
+  minEmployees: number
+  maxEmployees: number
 }
 
 interface Config {
@@ -65,6 +74,7 @@ interface Config {
   voiceScripts: VoiceScript[]
   routingRules: RoutingRule[]
   emailTemplates: EmailTemplate[]
+  emailRules: EmailRule[]
   fromName: string
   fromEmail: string
 }
@@ -115,7 +125,10 @@ const DEFAULT_CONFIG: Config = {
   ],
   routingRules: [],
   emailTemplates: [
-    { id: 'email-1', name: '預設模板', subject: '', body: '', forCategory: '' },
+    { id: 'email-1', name: '預設模板', subject: '', body: '' },
+  ],
+  emailRules: [
+    { id: 'erule-1', name: '一般客戶', desc: '一般潛在客戶或不明身份', templateId: 'email-1', customTag: '', minEmployees: 0, maxEmployees: 0 },
   ],
   fromName: '行銷團隊',
   fromEmail: '',
@@ -365,7 +378,7 @@ export default function ProspectCallPage() {
   const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG)
   const [branches, setBranches] = useState<Branch[]>([])
-  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailSettings: true })
+  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailRules: true, emailSettings: true })
   const [running, setRunning] = useState(false)
   const [stepStatus, setStepStatus] = useState<Record<string, StepStatus>>({})
   const [stepMsg, setStepMsg] = useState<Record<string, string>>({})
@@ -430,7 +443,7 @@ export default function ProspectCallPage() {
 
   const addEmailTemplate = () => setC('emailTemplates', [...config.emailTemplates, {
     id: `email-${Date.now()}`, name: `模板 ${config.emailTemplates.length + 1}`,
-    subject: '', body: '', forCategory: '',
+    subject: '', body: '',
   }])
 
   const updateEmailTemplate = (id: string, patch: Partial<EmailTemplate>) =>
@@ -439,22 +452,64 @@ export default function ProspectCallPage() {
   const removeEmailTemplate = (id: string) =>
     setC('emailTemplates', config.emailTemplates.filter(t => t.id !== id))
 
+  // ── Email rules CRUD ─────────────────────────────────────────────────────
+
+  const addEmailRule = () => setC('emailRules', [...(config.emailRules ?? []), {
+    id: `erule-${Date.now()}`,
+    name: `分類 ${(config.emailRules ?? []).length + 1}`,
+    desc: '',
+    templateId: config.emailTemplates[0]?.id ?? '',
+    customTag: '',
+    minEmployees: 0,
+    maxEmployees: 0,
+  }])
+
+  const updateEmailRule = (id: string, patch: Partial<EmailRule>) =>
+    setC('emailRules', (config.emailRules ?? []).map(r => r.id === id ? { ...r, ...patch } : r))
+
+  const removeEmailRule = (id: string) =>
+    setC('emailRules', (config.emailRules ?? []).filter(r => r.id !== id))
+
   // ── Batch email send ──────────────────────────────────────────────────────
 
-  const batchEmail = async (template: EmailTemplate) => {
-    // Orgs matching this template's category ('' = all)
+  /** Match org against an EmailRule (first-match logic) */
+  const matchEmailRule = (org: ProspectOrg, rule: EmailRule): boolean => {
+    if (rule.customTag.trim()) {
+      const tag = rule.customTag.trim().toLowerCase()
+      const hay = `${org.name} ${org.rawCategory ?? ''}`.toLowerCase()
+      if (!hay.includes(tag)) return false
+    }
+    if (rule.minEmployees > 0) {
+      const emp = parseMaxEmployees(org.employeeHint)
+      if (emp === null || emp < rule.minEmployees) return false
+    }
+    if (rule.maxEmployees > 0) {
+      const emp = parseMaxEmployees(org.employeeHint)
+      if (emp === null || emp > rule.maxEmployees) return false
+    }
+    return true
+  }
+
+  /** Returns the first matching email rule for an org */
+  const assignEmailRule = (org: ProspectOrg): EmailRule | undefined => {
+    for (const rule of (config.emailRules ?? [])) {
+      if (matchEmailRule(org, rule)) return rule
+    }
+    return undefined
+  }
+
+  const batchEmail = async (rule: EmailRule, template: EmailTemplate) => {
     const targetOrgs = selectedOrgs.filter(o => {
       const emailAddr = orgEmails[o.id] || o.email
       if (!emailAddr) return false
-      if (template.forCategory && o.aiCategory !== template.forCategory) return false
-      return true
+      return matchEmailRule(o, rule)
     })
-    if (targetOrgs.length === 0) { setError('所選模板沒有符合條件且有 Email 的組織'); return }
-    setSendingEmail(template.id)
+    if (targetOrgs.length === 0) { setError('所選規則沒有符合條件且有 Email 的組織'); return }
+    setSendingEmail(rule.id)
     try {
       const recipients = targetOrgs.map(o => ({
         email: orgEmails[o.id] || o.email!,
-        group: o.aiCategory,
+        group: rule.name,
         name: o.name,
       }))
       const res = await fetch('/api/marketing/email-send', {
@@ -471,7 +526,7 @@ export default function ProspectCallPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setEmailResults(prev => ({ ...prev, [template.id]: { ok: data.success, fail: data.total - data.success } }))
+      setEmailResults(prev => ({ ...prev, [rule.id]: { ok: data.success, fail: data.total - data.success } }))
     } catch (e) {
       setError(String(e))
     } finally {
@@ -809,13 +864,13 @@ export default function ProspectCallPage() {
             {/* Step 4: Email templates */}
             <Section title="Step 4 — Email 腳本模板" icon={Mail}
               open={openSections.emailTemplates} onToggle={() => toggleSection('emailTemplates')}>
-              <p className="text-xs text-gray-500">可為不同行業建立不同模板，蒐集完成後依 AI 分類自動配對。</p>
+              <p className="text-xs text-gray-500">定義 Email 內容模板，在發送規則中選用。</p>
               <div className="space-y-3">
                 {config.emailTemplates.map(t => (
                   <div key={t.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
                     <div className="flex items-center gap-2">
                       <input value={t.name} onChange={e => updateEmailTemplate(t.id, { name: e.target.value })}
-                        className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                        className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
                         placeholder="模板名稱" />
                       {config.emailTemplates.length > 1 && (
                         <button type="button" onClick={() => removeEmailTemplate(t.id)}
@@ -823,14 +878,6 @@ export default function ProspectCallPage() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500 block mb-0.5">適用行業分類（空白 = 全部）</label>
-                      <select value={t.forCategory} onChange={e => updateEmailTemplate(t.id, { forCategory: e.target.value })}
-                        className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
-                        <option value="">— 全部 —</option>
-                        {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
-                      </select>
                     </div>
                     <input value={t.subject} onChange={e => updateEmailTemplate(t.id, { subject: e.target.value })}
                       className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
@@ -847,8 +894,65 @@ export default function ProspectCallPage() {
               </div>
             </Section>
 
-            {/* Step 5: Email sender settings */}
-            <Section title="Step 5 — 寄件設定" icon={Mail}
+            {/* Step 5: Email sending rules */}
+            <Section title="Step 5 — 發送規則" icon={Settings2}
+              open={openSections.emailRules} onToggle={() => toggleSection('emailRules')}>
+              <p className="text-xs text-gray-500">自訂分類名稱與條件，指定套用哪個模板。依序比對，第一個符合的規則生效。</p>
+              <div className="space-y-3">
+                {(config.emailRules ?? []).map((rule, idx) => (
+                  <div key={rule.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 w-5">{idx + 1}</span>
+                      <input value={rule.name} onChange={e => updateEmailRule(rule.id, { name: e.target.value })}
+                        className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
+                        placeholder="分類名稱（例如：美妝博主）" />
+                      {(config.emailRules ?? []).length > 1 && (
+                        <button type="button" onClick={() => removeEmailRule(rule.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">自訂關鍵字（名稱或原始分類含此字即符合）</label>
+                      <input value={rule.customTag} onChange={e => updateEmailRule(rule.id, { customTag: e.target.value })}
+                        className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                        placeholder="例如：美妝、工廠、博主（空白不限）" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">最低員工數（0=不限）</label>
+                        <input type="number" min={0} value={rule.minEmployees}
+                          onChange={e => updateEmailRule(rule.id, { minEmployees: Number(e.target.value) })}
+                          className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">最高員工數（0=不限）</label>
+                        <input type="number" min={0} value={rule.maxEmployees}
+                          onChange={e => updateEmailRule(rule.id, { maxEmployees: Number(e.target.value) })}
+                          className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">套用模板</label>
+                      <select value={rule.templateId} onChange={e => updateEmailRule(rule.id, { templateId: e.target.value })}
+                        className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
+                        {config.emailTemplates.map(t => (
+                          <option key={t.id} value={t.id}>{t.name || `模板 ${config.emailTemplates.indexOf(t) + 1}`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={addEmailRule}
+                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+                  <Plus className="h-3.5 w-3.5" />新增規則
+                </button>
+              </div>
+            </Section>
+
+            {/* Step 6: Email sender settings */}
+            <Section title="Step 6 — 寄件設定" icon={Mail}
               open={openSections.emailSettings} onToggle={() => toggleSection('emailSettings')}>
               <div className="space-y-3">
                 <div>
@@ -945,39 +1049,36 @@ export default function ProspectCallPage() {
                   </div>
                 </div>
 
-                {/* Template send panels */}
-                {config.emailTemplates.map(t => {
+                {/* Rule-based send panels */}
+                {(config.emailRules ?? []).map(rule => {
+                  const tpl = config.emailTemplates.find(t => t.id === rule.templateId)
                   const targets = selectedOrgs.filter(o => {
                     const addr = orgEmails[o.id] || o.email
                     if (!addr) return false
-                    if (t.forCategory && o.aiCategory !== t.forCategory) return false
-                    return true
+                    return matchEmailRule(o, rule)
                   })
-                  const result = emailResults[t.id]
-                  const isSending = sendingEmail === t.id
+                  const result = emailResults[rule.id]
+                  const isSending = sendingEmail === rule.id
                   return (
-                    <div key={t.id} className="p-4 rounded-xl border space-y-2">
+                    <div key={rule.id} className="p-4 rounded-xl border space-y-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-sm font-semibold">{t.name}</div>
+                          <div className="text-sm font-semibold">{rule.name}</div>
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            {t.forCategory
-                              ? `${CATEGORIES.find(c => c.id === t.forCategory)?.emoji} ${CATEGORIES.find(c => c.id === t.forCategory)?.label}`
-                              : '全部分類'}
-                            {' · '}{targets.length} 個有 Email
+                            模板：{tpl?.name ?? '未設定'}{' · '}{targets.length} 個有 Email
                           </div>
                         </div>
                         <button type="button"
-                          onClick={() => batchEmail(t)}
-                          disabled={isSending || targets.length === 0 || !t.subject || !t.body}
+                          onClick={() => tpl && batchEmail(rule, tpl)}
+                          disabled={isSending || targets.length === 0 || !tpl?.subject || !tpl?.body}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
                           style={{ background: 'var(--primary)' }}>
                           {isSending ? <><Loader2 className="h-3 w-3 animate-spin" />寄送中…</> : <><Mail className="h-3 w-3" />寄送 {targets.length} 封</>}
                         </button>
                       </div>
-                      {t.subject && (
+                      {tpl?.subject && (
                         <div className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">
-                          主旨：{t.subject.slice(0, 60)}{t.subject.length > 60 ? '…' : ''}
+                          主旨：{tpl.subject.slice(0, 60)}{tpl.subject.length > 60 ? '…' : ''}
                         </div>
                       )}
                       {result && (
