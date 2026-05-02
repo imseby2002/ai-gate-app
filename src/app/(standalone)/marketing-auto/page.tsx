@@ -4560,6 +4560,8 @@ interface Unit12Data {
   replyLanguage?: string
   logs?: CsLogEntry[]
   dialogueFiles?: CsDialogueFile[]
+  bookingFlowEnabled?: boolean
+  paymentInfo?: string
 }
 
 const CS_PLATFORMS = [
@@ -4654,6 +4656,8 @@ function Unit12CustomerService({
   const [knowledgeBase, setKnowledgeBase] = useState(savedData?.knowledgeBase ?? '')
   const [escalationThreshold, setEscalationThreshold] = useState<'medium' | 'high'>(savedData?.escalationThreshold ?? 'high')
   const [replyLanguage, setReplyLanguage] = useState(savedData?.replyLanguage ?? 'auto')
+  const [bookingFlowEnabled, setBookingFlowEnabled] = useState(savedData?.bookingFlowEnabled ?? false)
+  const [paymentInfo, setPaymentInfo] = useState(savedData?.paymentInfo ?? '')
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -4668,6 +4672,8 @@ function Unit12CustomerService({
     if (savedData.knowledgeBase !== undefined) setKnowledgeBase(savedData.knowledgeBase)
     if (savedData.escalationThreshold) setEscalationThreshold(savedData.escalationThreshold)
     if (savedData.replyLanguage) setReplyLanguage(savedData.replyLanguage)
+    if (savedData.bookingFlowEnabled !== undefined) setBookingFlowEnabled(savedData.bookingFlowEnabled)
+    if (savedData.paymentInfo !== undefined) setPaymentInfo(savedData.paymentInfo)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -4692,7 +4698,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo })
       }
     } finally {
       setUploadingDialogue(false)
@@ -4702,7 +4708,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo })
   }
 
   // Test chat
@@ -5146,7 +5152,7 @@ function Unit12CustomerService({
     setSavingSettings(true)
     // Use savedData.dialogueFiles as fallback if local state is empty (prevents accidental overwrite)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -5209,7 +5215,7 @@ function Unit12CustomerService({
         }])
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo })
       } else {
         setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
       }
@@ -5588,6 +5594,47 @@ function Unit12CustomerService({
               rows={6}
               placeholder="例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。"
               className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+
+          {/* Booking flow toggle */}
+          <div className="border-2 border-emerald-200 rounded-xl p-4 space-y-3 bg-emerald-50/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-sm text-gray-700">逐步預訂引導流程</div>
+                <div className="text-xs text-gray-500 mt-0.5">開啟後 AI 將像真人一樣，每次只問一個問題，逐步收集預訂所需資訊</div>
+              </div>
+              <button
+                onClick={() => setBookingFlowEnabled(v => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${bookingFlowEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${bookingFlowEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+            {bookingFlowEnabled && (
+              <div className="space-y-2">
+                <div className="bg-emerald-100 rounded-lg p-3 text-xs text-emerald-800 space-y-1">
+                  <div className="font-medium">AI 引導流程（依序詢問）：</div>
+                  <ol className="list-decimal list-inside space-y-0.5 text-emerald-700">
+                    <li>行程類型（例：賞鯨、繞島）</li>
+                    <li>出發日期與時段</li>
+                    <li>人數</li>
+                    <li>每位乘客姓名、生日、身分證（團體保險用）</li>
+                    <li>聯絡電話</li>
+                    <li>確認付款資訊</li>
+                  </ol>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">付款說明（顯示給客戶）</div>
+                  <textarea
+                    value={paymentInfo}
+                    onChange={e => setPaymentInfo(e.target.value)}
+                    rows={3}
+                    placeholder="例：請匯款至玉山銀行 123-456789 戶名：OO 旅遊有限公司，匯款後請傳送收據截圖確認。"
+                    className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <button onClick={saveSettings} disabled={savingSettings}

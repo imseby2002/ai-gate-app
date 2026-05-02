@@ -31,12 +31,38 @@ async function loadCredentials(userId: string, platform: string): Promise<Record
   return (data?.credentials as Record<string, string>) ?? {}
 }
 
+// ── Conversation history ───────────────────────────────────────────────────────
+type HistoryMsg = { role: 'user' | 'assistant'; content: string }
+
+async function loadHistory(userId: string, customerId: string): Promise<HistoryMsg[]> {
+  const supabase = getServiceClient()
+  const { data } = await supabase
+    .from('cs_conversations')
+    .select('history')
+    .eq('user_id', userId)
+    .eq('customer_id', customerId)
+    .single()
+  return (data?.history as HistoryMsg[]) ?? []
+}
+
+async function saveHistory(userId: string, customerId: string, history: HistoryMsg[]) {
+  const supabase = getServiceClient()
+  await supabase
+    .from('cs_conversations')
+    .upsert(
+      { user_id: userId, customer_id: customerId, history: history.slice(-20), updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,customer_id' }
+    )
+}
+
 // ── Load CS knowledge base (unit_data[12]) + company data ────────────────────
 interface CsKnowledge {
   systemPrompt: string
   knowledgeBase: string
   escalationThreshold: 'medium' | 'high'
   replyLanguage: string
+  bookingFlowEnabled: boolean
+  paymentInfo: string
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -54,6 +80,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let systemPrompt = ''
   let escalationThreshold: 'medium' | 'high' = 'high'
   let replyLanguage = 'auto'
+  let bookingFlowEnabled = false
+  let paymentInfo = ''
   const knowledgeParts: string[] = []
 
   // Find first campaign that has unit_data[12] with content
@@ -65,6 +93,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
       if (unit12.systemPrompt) systemPrompt = String(unit12.systemPrompt)
       if (unit12.escalationThreshold) escalationThreshold = unit12.escalationThreshold as 'medium' | 'high'
       if (unit12.replyLanguage) replyLanguage = String(unit12.replyLanguage)
+      if (unit12.bookingFlowEnabled) bookingFlowEnabled = Boolean(unit12.bookingFlowEnabled)
+      if (unit12.paymentInfo) paymentInfo = String(unit12.paymentInfo)
 
       // Direct text knowledge input
       if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
@@ -79,6 +109,23 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
 
       if (systemPrompt || knowledgeParts.length > 0) break
     }
+  }
+
+  // Load pricing data from cs_data_sources
+  const { data: pricingSources } = await supabase
+    .from('cs_data_sources')
+    .select('name, config')
+    .eq('user_id', userId)
+    .eq('type', 'json_pricing')
+    .eq('enabled', true)
+
+  if (pricingSources?.length) {
+    const pricingLines: string[] = []
+    for (const src of pricingSources) {
+      const cfg = src.config as Record<string, unknown>
+      pricingLines.push(`【定價資料：${src.name}】\n${JSON.stringify(cfg, null, 2)}`)
+    }
+    if (pricingLines.length) knowledgeParts.push(pricingLines.join('\n\n'))
   }
 
   // Load company data as fallback knowledge
@@ -108,14 +155,42 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     knowledgeBase: knowledgeParts.join('\n\n').slice(0, 8000),
     escalationThreshold,
     replyLanguage,
+    bookingFlowEnabled,
+    paymentInfo,
   }
+}
+
+// ── Build booking flow system prompt ─────────────────────────────────────────
+function buildBookingSystemPrompt(paymentInfo: string): string {
+  const paymentSection = paymentInfo.trim()
+    ? `\n\n【付款說明】\n${paymentInfo}`
+    : ''
+  return `你是一個專業的預訂助理。你的任務是透過對話，一步一步向客戶收集完整的預訂資訊。
+
+【重要規則】
+- 每次只問一個問題，等待客戶回答後再問下一個
+- 根據客戶的回答自然地銜接下一個問題
+- 語氣親切自然，像真人客服一樣
+- 禁止使用 Markdown 語法
+
+【需要收集的資訊（依序）】
+1. 行程類型（例：賞鯨行程、繞島行程等）
+2. 出發日期
+3. 出發時段（上午/下午班次）
+4. 總人數
+5. 每位乘客的姓名、生日（民國）、身分證字號（用於團體保險）
+6. 聯絡電話
+7. 確認並顯示付款資訊${paymentSection}
+
+【收集完畢後】
+整理所有資訊，向客戶確認一次，並告知付款方式完成預訂。`
 }
 
 // ── AI reply (直接呼叫 Gemini / Claude，不經過 cs-chat 路由) ─────────────────
 async function getAIReply(
   message: string,
   knowledge: CsKnowledge,
-  history: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  history: HistoryMsg[] = []
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -124,9 +199,14 @@ async function getAIReply(
       ? '請使用與客戶相同的語言回覆。'
       : `請使用 ${knowledge.replyLanguage} 回覆。`
 
-    const baseInstructions = knowledge.systemPrompt?.trim()
-      ? knowledge.systemPrompt.trim()
-      : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。'
+    let baseInstructions: string
+    if (knowledge.bookingFlowEnabled) {
+      baseInstructions = buildBookingSystemPrompt(knowledge.paymentInfo)
+    } else {
+      baseInstructions = knowledge.systemPrompt?.trim()
+        ? knowledge.systemPrompt.trim()
+        : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。'
+    }
 
     const systemPrompt = `${baseInstructions}
 
@@ -137,7 +217,7 @@ async function getAIReply(
 - 不確定的資訊請誠實說明，勿猜測${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}`
 
     const messages = [
-      ...history.slice(-6),
+      ...history.slice(-10),
       { role: 'user' as const, content: message },
     ]
 
@@ -240,8 +320,11 @@ export async function POST(
       if (event.type !== 'message' || event.message?.type !== 'text') continue
       const text: string = event.message.text
       const replyToken: string = event.replyToken
-      const reply = await getAIReply(text, knowledge)
+      const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
+      const history = await loadHistory(userId, customerId)
+      const reply = await getAIReply(text, knowledge, history)
       if (token && replyToken) await replyLine(replyToken, reply, token)
+      await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
     return NextResponse.json({ ok: true })
   }
@@ -260,8 +343,10 @@ export async function POST(
       if (msg.type !== 'text') continue
       const text: string = msg.text?.body ?? ''
       const to: string   = msg.from
-      const reply = await getAIReply(text, knowledge)
+      const history = await loadHistory(userId, to)
+      const reply = await getAIReply(text, knowledge, history)
       if (token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
+      await saveHistory(userId, to, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
     return NextResponse.json({ ok: true })
   }
@@ -354,9 +439,13 @@ export async function POST(
 
       // ── Regular customer message ────────────────────────────────────────
       if (chatId && text && !text.startsWith('/') && !isAdmin) {
+        const customerId = String(chatId)
+        const history = await loadHistory(userId, customerId)
+
         // 1. AI auto-reply to customer
-        const reply = await getAIReply(text, knowledge)
+        const reply = await getAIReply(text, knowledge, history)
         await replyTelegram(chatId, reply, botToken)
+        await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
 
         // 2. Forward to admin if configured
         if (adminChatId) {
@@ -384,15 +473,17 @@ export async function POST(
     if (event === 'user_send_text') {
       const text: string     = body?.message?.text ?? ''
       const senderId: string = body?.sender?.id ?? ''
-      if (text) {
-        const reply = await getAIReply(text, knowledge)
-        if (oaToken && senderId) {
+      if (text && senderId) {
+        const history = await loadHistory(userId, senderId)
+        const reply = await getAIReply(text, knowledge, history)
+        if (oaToken) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', access_token: oaToken },
             body: JSON.stringify({ recipient: { user_id: senderId }, message: { text: reply } }),
           })
         }
+        await saveHistory(userId, senderId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
       }
     }
     return NextResponse.json({ ok: true })
@@ -410,7 +501,9 @@ export async function POST(
     const to   = toMatch?.[1] ?? ''
 
     if (text && from && to) {
-      const reply = await getAIReply(text, knowledge)
+      const history = await loadHistory(userId, from)
+      const reply = await getAIReply(text, knowledge, history)
+      await saveHistory(userId, from, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
       const xmlReply = `<xml>
 <ToUserName><![CDATA[${from}]]></ToUserName>
 <FromUserName><![CDATA[${to}]]></FromUserName>
@@ -430,7 +523,8 @@ export async function POST(
     const fromJid: string = body?.fromJid ?? (body?.from ? `${body.from}@s.whatsapp.net` : '')
 
     if (text && fromJid) {
-      const reply = await getAIReply(text, knowledge)
+      const history = await loadHistory(userId, fromJid)
+      const reply = await getAIReply(text, knowledge, history)
 
       // Reply via Bridge
       const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
@@ -442,6 +536,7 @@ export async function POST(
           body: JSON.stringify({ userId, to: fromJid, text: reply }),
         }).catch(() => {})
       }
+      await saveHistory(userId, fromJid, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
     return NextResponse.json({ ok: true })
   }
