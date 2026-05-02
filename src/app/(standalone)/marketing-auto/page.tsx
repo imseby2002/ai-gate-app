@@ -54,9 +54,13 @@ const UNITS: UnitDef[] = [
   { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: true  },
   { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: true  },
   { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: true  },
-  { id: 10, name: '潛在客戶行銷', icon: Phone,   desc: '電話 / Email 批次行銷',         implemented: true  },
   { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: true  },
-  { id: 12, name: '客服系統',  icon: Headphones, desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: true  },
+]
+
+// 獨立工具（共用公司資料，但不屬於自動化流程）
+const SIDE_TOOLS: (UnitDef & { href: string | null })[] = [
+  { id: 10, name: '潛在客戶行銷', icon: Phone,      desc: '電話 / Email 批次行銷',        implemented: true, href: '/prospect-call' },
+  { id: 12, name: '客服系統',    icon: Headphones,  desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: true, href: null },
 ]
 
 interface CollectSubOption { id: string; label: string }
@@ -6018,7 +6022,7 @@ export default function MarketingAutoPage() {
     if (cid) await patchCampaign(cid, { drive_folders: next })
   }, [ensureCampaign, driveFolders])
 
-  const currentUnit = UNITS.find(u => u.id === activeUnit) ?? UNITS[0]
+  const currentUnit = UNITS.find(u => u.id === activeUnit) ?? SIDE_TOOLS.find(t => t.id === activeUnit) ?? UNITS[0]
 
   return (
     <div className="flex h-[calc(100vh-53px)] overflow-hidden">
@@ -6164,18 +6168,32 @@ export default function MarketingAutoPage() {
           })}
         </nav>
 
-        <div className="p-3 border-t space-y-2">
+        <div className="p-3 border-t space-y-1">
+          <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase tracking-wide">其他工具</div>
           <a href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
             <Zap className="h-3.5 w-3.5" /> 自動化流程
             {campaignId && <span className="ml-auto text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">串接中</span>}
           </a>
-          <a href="/prospect-call"
-            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
-            <Phone className="h-3.5 w-3.5" /> 潛在客戶行銷
-          </a>
+          {SIDE_TOOLS.map(tool => {
+            const Icon = tool.icon
+            const isActive = activeUnit === tool.id
+            return tool.href ? (
+              <a key={tool.id} href={tool.href}
+                className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
+                <Icon className="h-3.5 w-3.5" /> {tool.name}
+              </a>
+            ) : (
+              <button key={tool.id} onClick={() => setActiveUnit(tool.id)}
+                className={`w-full flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-left ${
+                  isActive ? 'bg-blue-50 text-blue-600' : 'text-blue-600 hover:bg-blue-50'
+                }`}>
+                <Icon className="h-3.5 w-3.5" /> {tool.name}
+              </button>
+            )
+          })}
           <a href="/settings"
-            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2">
+            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1.5">
             <Settings className="h-3.5 w-3.5" /> 平台連結設定
           </a>
         </div>
@@ -6189,7 +6207,7 @@ export default function MarketingAutoPage() {
             <currentUnit.icon className="h-5 w-5" style={{ color: 'var(--primary)' }} />
           </div>
           <div>
-            <h1 className="font-bold text-base text-gray-900">{currentUnit.id}. {currentUnit.name}</h1>
+            <h1 className="font-bold text-base text-gray-900">{UNITS.find(u => u.id === activeUnit) ? `${currentUnit.id}. ` : ''}{currentUnit.name}</h1>
             <p className="text-xs text-gray-400">{currentUnit.desc}</p>
           </div>
           <div className="ml-auto">
