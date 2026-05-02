@@ -178,6 +178,20 @@ function formatPricingForAI(name: string, cfg: PricingConfig): string {
     lines.push('\n' + cfg.customContent)
   }
 
+  // Fallback: if none of the structured formatters matched, dump raw JSON for AI to interpret
+  const hasStructuredOutput = lines.length > 2
+  if (!hasStructuredOutput) {
+    const displayData = { ...cfg } as Record<string, unknown>
+    delete displayData['triggerKeywords']
+    delete displayData['productType']
+    delete displayData['currency']
+    lines.push('\n定價資料（JSON）：')
+    lines.push('```json')
+    lines.push(JSON.stringify(displayData, null, 2))
+    lines.push('```')
+    lines.push(`\n貨幣單位：${cur}`)
+  }
+
   if (cfg.cancellationPolicy) {
     lines.push(`\n取消政策：${cfg.cancellationPolicy}`)
   }
