@@ -34,6 +34,7 @@ export interface ProspectOrg {
   name: string
   phone?: string
   phoneNormalized?: string
+  email?: string
   address?: string
   lat?: number
   lng?: number
@@ -108,9 +109,13 @@ async function aiParseChunk(
 只回傳純 JSON 陣列，不加任何說明文字或 markdown。
 
 格式：
-[{"name":"","phone":"","address":"","lat":null,"lng":null,"rawCategory":"","aiCategory":"restaurant","employeeHint":"","rating":null,"website":"","passFilter":true,"filterReason":""}]
+[{"name":"","phone":"","email":"","address":"","lat":null,"lng":null,"rawCategory":"","aiCategory":"restaurant","employeeHint":"","rating":null,"website":"","passFilter":true,"filterReason":""}]
 
-aiCategory 只能是：factory|hotel|restaurant|financial|retail|healthcare|education|realestate|logistics|other`
+說明：
+- phone：電話號碼（含國碼更佳，如 +84...）
+- email：電子郵件（若文字中有出現，如 xxx@xxx.com，務必萃取）
+- website：官方網址
+- aiCategory 只能是：factory|hotel|restaurant|financial|retail|healthcare|education|realestate|logistics|other`
 
   const userPrompt = `原始資料：
 ${chunk}
@@ -155,7 +160,7 @@ async function aiParseOrgs(
     chunks.push(rawText.slice(i, i + CHUNK_SIZE))
   }
 
-  type ParsedOrg = { name: string; phone?: string; address?: string; lat?: number | null; lng?: number | null; rawCategory?: string; aiCategory: string; employeeHint?: string; rating?: number | null; website?: string; passFilter: boolean; filterReason?: string }
+  type ParsedOrg = { name: string; phone?: string; email?: string; address?: string; lat?: number | null; lng?: number | null; rawCategory?: string; aiCategory: string; employeeHint?: string; rating?: number | null; website?: string; passFilter: boolean; filterReason?: string }
   const allParsed: ParsedOrg[] = []
   for (const chunk of chunks) {
     const parsed = await aiParseChunk(anthropic, chunk, filterCriteria, minEmployees)
@@ -177,6 +182,7 @@ async function aiParseOrgs(
     name: o.name,
     phone: o.phone || undefined,
     phoneNormalized: normalizePhone(o.phone),
+    email: o.email?.trim() || undefined,
     address: o.address || undefined,
     lat: typeof o.lat === 'number' ? o.lat : undefined,
     lng: typeof o.lng === 'number' ? o.lng : undefined,

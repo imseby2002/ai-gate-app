@@ -1381,9 +1381,19 @@ export default function ProspectCallPage() {
                 <h3 className="text-sm font-semibold text-gray-700">Email 寄送</h3>
 
                 {/* Email input table */}
+                {selectedOrgs.filter(o => o.email || (orgEmails[o.id] ?? '')).length === 0 && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-700 space-y-1">
+                    <p className="font-medium">⚠️ 未自動抓到任何 Email</p>
+                    <p>Google 地圖不提供 Email 資料。建議在 Step 1 蒐集管道加選 <strong>Facebook</strong> 或 <strong>網頁</strong>，系統會嘗試從廠商資料中萃取 Email。</p>
+                    <p>您也可以在下方表格手動填入各組織的 Email。</p>
+                  </div>
+                )}
                 <div className="border rounded-xl overflow-hidden">
-                  <div className="px-3 py-2 bg-gray-50 border-b text-xs text-gray-500 font-medium">
-                    輸入各組織 Email（可手動填寫）
+                  <div className="px-3 py-2 bg-gray-50 border-b text-xs text-gray-500 font-medium flex items-center justify-between">
+                    <span>各組織 Email</span>
+                    <span className="text-gray-400">
+                      {selectedOrgs.filter(o => o.email || orgEmails[o.id]).length}/{selectedOrgs.length} 筆已填
+                    </span>
                   </div>
                   <div className="max-h-56 overflow-y-auto">
                     {selectedOrgs.map(o => (
