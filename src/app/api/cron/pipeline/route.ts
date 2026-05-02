@@ -249,12 +249,53 @@ export async function GET(req: NextRequest) {
         }
 
         if (prospectResult.ok && prospectResult.data) {
-          const orgs = (prospectResult.data as Record<string, unknown>).orgs as Array<{ selected?: boolean }> ?? []
+          const orgs = (prospectResult.data as Record<string, unknown>).orgs as Array<{
+            selected?: boolean; email?: string; name?: string; aiCategory?: string
+          }> ?? []
           const selected = orgs.filter(o => o.selected)
           const prospectSummary = { orgs, total: orgs.length, selected: selected.length, runAt: new Date().toISOString() }
           ud = { ...ud, _prospectResult: prospectSummary }
           result = { ok: true, data: prospectSummary }
-          log.push(`✓ 潛在客戶行銷完成：蒐集 ${orgs.length} 家，入選 ${selected.length} 家`)
+          const schedMode = (sched as Record<string, unknown>).mode as string ?? 'both'
+          log.push(`✓ 潛在客戶行銷完成：蒐集 ${orgs.length} 家，入選 ${selected.length} 家（模式：${schedMode}）`)
+
+          // ── Auto email send if mode is email/both ────────────────────────
+          if ((schedMode === 'email' || schedMode === 'both') && selected.length > 0) {
+            const emailCfg = pcfg as Record<string, unknown>
+            const emailRules = (emailCfg.emailRules as Array<{ name: string; templateId: string; customTag?: string; minEmployees?: number; maxEmployees?: number }>) ?? []
+            const emailTemplates = (emailCfg.emailTemplates as Array<{ id: string; subject: string; body: string }>) ?? []
+            // Build groups map: { [groupName]: { subject, body } }
+            const groups: Record<string, { subject: string; body: string }> = {}
+            for (const rule of emailRules) {
+              const tpl = emailTemplates.find(t => t.id === rule.templateId)
+              if (tpl) groups[rule.name] = { subject: tpl.subject, body: tpl.body }
+            }
+            // Assign each selected org to a group (first matching rule)
+            const recipients = selected
+              .filter(o => o.email)
+              .map(o => {
+                const matchedRule = emailRules.find(r => {
+                  if (r.customTag?.trim() && !`${o.name ?? ''} ${o.aiCategory ?? ''}`.toLowerCase().includes(r.customTag.toLowerCase())) return false
+                  return true
+                })
+                return { email: o.email as string, name: o.name, group: matchedRule?.name ?? '一般客戶' }
+              })
+            if (recipients.length > 0) {
+              const sendResult = await callUnitApi('/api/marketing/email-send', {
+                recipients,
+                groups,
+                defaultSubject: '行銷訊息',
+                defaultBody: '',
+                fromName:  emailCfg.fromName  ?? 'AI Gate 行銷',
+                fromEmail: emailCfg.fromEmail ?? '',
+              }, cronSecret ?? '', baseUrl)
+              log.push(sendResult.ok
+                ? `✉️ Email 自動寄送完成：${recipients.length} 封`
+                : `⚠️ Email 寄送失敗：${sendResult.error}`)
+            } else {
+              log.push('⏭ Email 模式：入選廠商無 Email，跳過寄送')
+            }
+          }
         } else {
           result = { ok: false, data: null, error: prospectResult.error ?? '篩選失敗' }
         }

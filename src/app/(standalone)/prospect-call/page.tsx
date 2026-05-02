@@ -14,6 +14,7 @@ type CollectSource = 'map' | 'facebook' | 'instagram' | 'tiktok' | 'youtube' | '
 
 interface ProspectSchedule {
   enabled: boolean
+  mode: 'phone' | 'email' | 'both'   // 執行模式
   frequency: 'daily' | 'weekly' | 'monthly'
   hour: number
   minute: number
@@ -25,6 +26,7 @@ interface ProspectSchedule {
 
 const DEFAULT_SCHEDULE: ProspectSchedule = {
   enabled: false,
+  mode: 'both',
   frequency: 'daily',
   hour: 8,
   minute: 0,
@@ -780,6 +782,31 @@ export default function ProspectCallPage() {
 
             {schedule.enabled && (
               <div className="border rounded-xl p-5 space-y-4">
+                {/* Mode */}
+                <div>
+                  <label className="block text-xs font-medium mb-2">執行模式</label>
+                  <div className="flex gap-2">
+                    {([
+                      { val: 'phone', label: '📞 電話行銷' },
+                      { val: 'email', label: '📧 Email行銷' },
+                      { val: 'both',  label: '🔀 兩者都執行' },
+                    ] as const).map(opt => (
+                      <button key={opt.val} type="button" onClick={() => setSched('mode', opt.val)}
+                        className="flex-1 py-2 rounded-lg text-sm border transition-all font-medium"
+                        style={schedule.mode === opt.val
+                          ? { borderColor: 'var(--primary)', color: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }
+                          : { borderColor: '#e5e7eb', color: '#6b7280' }}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    {schedule.mode === 'phone' && '系統完成蒐集篩選後，將以 Telegram 通知您進行電話撥打'}
+                    {schedule.mode === 'email' && '系統完成蒐集篩選後，自動依規則批次寄送 Email'}
+                    {schedule.mode === 'both'  && '系統完成蒐集篩選後，自動寄送 Email 並以 Telegram 通知您撥打電話'}
+                  </p>
+                </div>
+
                 {/* Frequency */}
                 <div>
                   <label className="block text-xs font-medium mb-2">執行頻率</label>
