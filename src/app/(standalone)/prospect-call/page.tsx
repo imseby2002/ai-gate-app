@@ -5,11 +5,32 @@ import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
   Filter, Users, Map, Globe, Mic, Settings2, PhoneCall, GripVertical, Mail,
+  Clock, Save, CalendarClock,
 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type CollectSource = 'map' | 'facebook' | 'instagram' | 'tiktok' | 'youtube' | 'threads' | 'amazon' | 'shopee' | 'ios_android' | 'web'
+
+interface ProspectSchedule {
+  enabled: boolean
+  frequency: 'daily' | 'weekly' | 'monthly'
+  hour: number
+  minute: number
+  weekday: number      // 0=日 1=一…6=六 (weekly用)
+  monthDay: number     // 1-31 (monthly用)
+  nextRunAt?: string
+  lastRunAt?: string
+}
+
+const DEFAULT_SCHEDULE: ProspectSchedule = {
+  enabled: false,
+  frequency: 'daily',
+  hour: 8,
+  minute: 0,
+  weekday: 1,
+  monthDay: 1,
+}
 type StepStatus = 'idle' | 'running' | 'done' | 'error'
 type PhoneType = 'any' | 'mobile' | 'landline'
 
@@ -378,7 +399,11 @@ export default function ProspectCallPage() {
   const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG)
   const [branches, setBranches] = useState<Branch[]>([])
-  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailRules: true, emailSettings: true })
+  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailRules: true, emailSettings: true, schedule: false })
+  const [schedule, setSchedule] = useState<ProspectSchedule>(DEFAULT_SCHEDULE)
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [scheduleSaved, setScheduleSaved] = useState(false)
+  const [scheduleLastResult, setScheduleLastResult] = useState<{ total: number; selected: number; runAt: string } | null>(null)
   const [running, setRunning] = useState(false)
   const [stepStatus, setStepStatus] = useState<Record<string, StepStatus>>({})
   const [stepMsg, setStepMsg] = useState<Record<string, string>>({})
@@ -402,6 +427,41 @@ export default function ProspectCallPage() {
       .then(d => { if (d.data?.branches) setBranches(d.data.branches) })
       .catch(() => { })
   }, [])
+
+  // Load schedule from server
+  useEffect(() => {
+    fetch('/api/marketing/prospect-schedule')
+      .then(r => r.json())
+      .then(d => {
+        if (d.data) {
+          if (d.data.schedule && Object.keys(d.data.schedule).length > 0)
+            setSchedule({ ...DEFAULT_SCHEDULE, ...d.data.schedule })
+          if (d.data.config && Object.keys(d.data.config).length > 0)
+            setConfig(prev => ({ ...prev, ...d.data.config }))
+          if (d.data.last_result)
+            setScheduleLastResult(d.data.last_result)
+        }
+      })
+      .catch(() => { })
+  }, [])
+
+  const saveSchedule = async () => {
+    setScheduleSaving(true)
+    try {
+      await fetch('/api/marketing/prospect-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config, schedule }),
+      })
+      setScheduleSaved(true)
+      setTimeout(() => setScheduleSaved(false), 2000)
+    } catch { /* skip */ } finally {
+      setScheduleSaving(false)
+    }
+  }
+
+  const setSched = <K extends keyof ProspectSchedule>(key: K, val: ProspectSchedule[K]) =>
+    setSchedule(prev => ({ ...prev, [key]: val }))
 
   const toggleSection = (k: keyof typeof openSections) =>
     setOpenSections(prev => ({ ...prev, [k]: !prev[k] }))
@@ -989,6 +1049,146 @@ export default function ProspectCallPage() {
             </Section>
 
             </>}
+
+            {/* ⏱ 定時執行 */}
+            <Section title="⏱ 定時執行" icon={CalendarClock}
+              open={openSections.schedule} onToggle={() => toggleSection('schedule')}>
+
+              {/* Enable toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-medium">啟用定時執行</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">系統每小時自動檢查，依設定時間觸發蒐集 + 篩選</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSched('enabled', !schedule.enabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    schedule.enabled ? 'bg-primary' : 'bg-gray-200'
+                  }`}
+                  style={schedule.enabled ? { background: 'var(--primary)' } : {}}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    schedule.enabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
+              {schedule.enabled && <>
+                {/* Frequency */}
+                <div>
+                  <label className="block text-xs font-medium mb-1">執行頻率</label>
+                  <div className="flex gap-1">
+                    {([
+                      { val: 'daily', label: '每天' },
+                      { val: 'weekly', label: '每週' },
+                      { val: 'monthly', label: '每月' },
+                    ] as const).map(opt => (
+                      <button key={opt.val} type="button"
+                        onClick={() => setSched('frequency', opt.val)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs border transition-all ${
+                          schedule.frequency === opt.val
+                            ? 'border-primary text-primary font-medium'
+                            : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                        }`}
+                        style={schedule.frequency === opt.val ? { borderColor: 'var(--primary)', color: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' } : {}}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Weekday (weekly only) */}
+                {schedule.frequency === 'weekly' && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1">執行星期</label>
+                    <div className="flex gap-1">
+                      {['日','一','二','三','四','五','六'].map((d, i) => (
+                        <button key={i} type="button"
+                          onClick={() => setSched('weekday', i)}
+                          className={`flex-1 py-1.5 rounded-lg text-xs border transition-all ${
+                            schedule.weekday === i
+                              ? 'border-primary font-medium'
+                              : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                          }`}
+                          style={schedule.weekday === i ? { borderColor: 'var(--primary)', color: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' } : {}}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Month day (monthly only) */}
+                {schedule.frequency === 'monthly' && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1">每月幾號</label>
+                    <input type="number" min={1} max={28}
+                      value={schedule.monthDay}
+                      onChange={e => setSched('monthDay', Number(e.target.value))}
+                      className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                    <p className="text-[10px] text-gray-400 mt-1">最大 28（避免月份天數問題）</p>
+                  </div>
+                )}
+
+                {/* Time */}
+                <div>
+                  <label className="block text-xs font-medium mb-1">執行時間</label>
+                  <div className="flex gap-2 items-center">
+                    <select value={schedule.hour}
+                      onChange={e => setSched('hour', Number(e.target.value))}
+                      className="flex-1 h-9 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>{String(i).padStart(2, '0')} 時</option>
+                      ))}
+                    </select>
+                    <select value={schedule.minute}
+                      onChange={e => setSched('minute', Number(e.target.value))}
+                      className="flex-1 h-9 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+                      {[0, 15, 30, 45].map(m => (
+                        <option key={m} value={m}>{String(m).padStart(2, '0')} 分</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Status info */}
+                {(schedule.nextRunAt || schedule.lastRunAt) && (
+                  <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 space-y-0.5 text-[11px]">
+                    {schedule.lastRunAt && (
+                      <div className="text-gray-500">
+                        上次執行：<span className="font-medium">{new Date(schedule.lastRunAt).toLocaleString('zh-TW')}</span>
+                      </div>
+                    )}
+                    {schedule.nextRunAt && (
+                      <div className="text-blue-700">
+                        下次執行：<span className="font-medium">{new Date(schedule.nextRunAt).toLocaleString('zh-TW')}</span>
+                      </div>
+                    )}
+                    {scheduleLastResult && (
+                      <div className="text-gray-500 pt-0.5 border-t border-blue-100 mt-1">
+                        上次結果：蒐集 {scheduleLastResult.total} 家 → 入選 <span className="text-green-600 font-medium">{scheduleLastResult.selected}</span> 家
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>}
+
+              {/* Save button */}
+              <button type="button" onClick={saveSchedule} disabled={scheduleSaving}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+                style={{ background: 'var(--primary)' }}>
+                {scheduleSaving
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</>
+                  : scheduleSaved
+                    ? <><CheckCircle2 className="h-4 w-4" />已儲存</>
+                    : <><Save className="h-4 w-4" />儲存排程設定</>
+                }
+              </button>
+
+              <p className="text-[10px] text-gray-400 text-center">
+                儲存後系統將依設定自動執行，結果可透過 Telegram 通知查看
+              </p>
+            </Section>
 
           </div>
 
