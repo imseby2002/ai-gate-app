@@ -121,16 +121,39 @@ async function mapSearch(
       }
     }
 
+    // ── Per-org email discovery via Tavily ────────────────────────────────────
+    const emailRegex = /[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}/g
+    const orgEmailMap: Record<string, string> = {}
+    const placesToSearch = allPlaces.slice(0, Math.min(limit, 30))
+    // 批次搜尋，最多 10 家（避免 API 過多）
+    for (const p of placesToSearch.slice(0, 10)) {
+      try {
+        const website = p.website || p.site
+        const q = website
+          ? `"${p.name}" email contact ${website}`
+          : `"${p.name}" ${location} email contact`
+        const result = await tavilySearch(q, 3)
+        const emails = result.match(emailRegex)
+        const valid = emails?.find(e =>
+          !e.includes('example') && !e.includes('noreply') &&
+          !e.includes('sentry') && !e.includes('wix') && e.length < 60
+        )
+        if (valid) orgEmailMap[p.name] = valid
+      } catch { /* skip */ }
+    }
+
     const lines = allPlaces.slice(0, limit).map(p => {
       const phone = p.phone || p.phone_1 || p.phone_2 || p.international_phone_format || p.phone_number
       const address = p.address || p.full_address
       const website = p.website || p.site
       const category = p.category || p.type
       const reviewCount = p.reviews ?? p.reviews_count
+      const email = orgEmailMap[p.name]
       const lineParts: string[] = [`🏢 ${p.name}`]
       if (subOptions.includes('info')) {
         if (address)  lineParts.push(`📍 ${address}`)
         if (phone)    lineParts.push(`📞 ${phone}`)
+        if (email)    lineParts.push(`📧 ${email}`)
         if (website)  lineParts.push(`🌐 ${website}`)
         if (category) lineParts.push(`🏷️ ${category}`)
         if (p.rating != null) lineParts.push(`⭐ ${p.rating} (${reviewCount ?? 0} 則評論)`)
