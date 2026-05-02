@@ -93,6 +93,7 @@ interface Config {
   collectLimit: number        // 蒐集筆數上限
   filterCriteria: string
   minEmployees: number
+  distanceEnabled: boolean    // 距離篩選開關
   maxDistanceKm: number
   birdCallerId: string
   voiceScripts: VoiceScript[]
@@ -143,6 +144,7 @@ const DEFAULT_CONFIG: Config = {
   collectLimit: 50,
   filterCriteria: '',
   minEmployees: 0,
+  distanceEnabled: false,
   maxDistanceKm: 5,
   birdCallerId: '',
   voiceScripts: [
@@ -674,7 +676,7 @@ export default function ProspectCallPage() {
           rawText,
           filterCriteria: config.filterCriteria,
           minEmployees: config.minEmployees,
-          maxDistanceKm: config.maxDistanceKm,
+          maxDistanceKm: config.distanceEnabled ? config.maxDistanceKm : 0,
           branches,
         }),
       })
@@ -1044,6 +1046,26 @@ export default function ProspectCallPage() {
             {/* Step 3: Distance */}
             <Section title="Step 3 — 距離設定" icon={MapPin}
               open={openSections.distance} onToggle={() => toggleSection('distance')}>
+              {/* Toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium">啟用距離篩選</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">關閉時不依距離淘汰，仍顯示最近門市距離</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setC('distanceEnabled', !config.distanceEnabled)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                    config.distanceEnabled ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                    config.distanceEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+
+              {/* 門市狀態 */}
               <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
                 <Building2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                 {branches.length === 0
@@ -1051,16 +1073,20 @@ export default function ProspectCallPage() {
                   : <span>已載入 <strong>{branches.length}</strong> 個門市，其中 <strong>{branchesWithCoords.length}</strong> 個有經緯度可計算距離。</span>
                 }
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1">距離上限（km）</label>
-                <input type="number" min={0} step={0.5} value={config.maxDistanceKm}
-                  onChange={e => setC('maxDistanceKm', Number(e.target.value))}
-                  placeholder="0 = 不限距離"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-                <p className="text-[10px] text-gray-400 mt-1">
-                  設為 0 或門市無經緯度時不淘汰；仍會顯示最近門市距離（若有座標）。
-                </p>
-              </div>
+
+              {/* 距離輸入（僅啟用時顯示） */}
+              {config.distanceEnabled && (
+                <div>
+                  <label className="block text-xs font-medium mb-1">距離上限（km）</label>
+                  <input type="number" min={0.5} step={0.5} value={config.maxDistanceKm}
+                    onChange={e => setC('maxDistanceKm', Number(e.target.value))}
+                    placeholder="例如：5"
+                    className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    超過此距離的組織將被淘汰（需門市有設定經緯度）。
+                  </p>
+                </div>
+              )}
             </Section>
 
             {/* ── Phone-only steps ── */}
