@@ -89,6 +89,58 @@ function normalizePhone(raw: string | undefined): string | undefined {
 
 // ─── AI parse + filter + classify ─────────────────────────────────────────────
 
+// 單批次 AI 解析（每批最多 CHUNK_SIZE 字元）
+const CHUNK_SIZE = 10000
+
+async function aiParseChunk(
+  anthropic: ReturnType<typeof createAnthropic>,
+  chunk: string,
+  filterCriteria: string,
+  minEmployees: number,
+): Promise<Array<{
+  name: string; phone?: string; address?: string
+  lat?: number | null; lng?: number | null
+  rawCategory?: string; aiCategory: string
+  employeeHint?: string; rating?: number | null; website?: string
+  passFilter: boolean; filterReason?: string
+}>> {
+  const systemPrompt = `你是資料萃取助理。從原始文字中提取組織/公司資料並分類。
+只回傳純 JSON 陣列，不加任何說明文字或 markdown。
+
+格式：
+[{"name":"","phone":"","address":"","lat":null,"lng":null,"rawCategory":"","aiCategory":"restaurant","employeeHint":"","rating":null,"website":"","passFilter":true,"filterReason":""}]
+
+aiCategory 只能是：factory|hotel|restaurant|financial|retail|healthcare|education|realestate|logistics|other`
+
+  const userPrompt = `原始資料：
+${chunk}
+
+篩選條件：${filterCriteria || '無特殊條件'}
+最低員工：${minEmployees > 0 ? `${minEmployees}人以上` : '不限'}
+
+萃取所有組織，回傳 JSON 陣列。`
+
+  const { text } = await generateText({
+    model: anthropic('claude-sonnet-4-6'),
+    system: systemPrompt,
+    prompt: userPrompt,
+    maxOutputTokens: 8192,
+  })
+
+  // 嘗試提取 JSON 陣列（支援 markdown code block）
+  const clean = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+  const match = clean.match(/\[[\s\S]*\]/)
+  if (!match) return []
+
+  try {
+    return JSON.parse(match[0])
+  } catch {
+    // 嘗試修復截斷的 JSON（移除最後一個不完整的物件）
+    const partial = match[0].replace(/,\s*\{[^}]*$/, ']')
+    try { return JSON.parse(partial) } catch { return [] }
+  }
+}
+
 async function aiParseOrgs(
   rawText: string,
   filterCriteria: string,
@@ -97,74 +149,30 @@ async function aiParseOrgs(
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
-  const systemPrompt = `你是一個資料萃取助理。從原始蒐集文字中提取每個組織/公司的結構化資料，並依照篩選條件評估、分類。
-
-請回傳純 JSON，格式如下（陣列，每個元素是一個組織）：
-[
-  {
-    "name": "公司名稱",
-    "phone": "原始電話號碼（若有）",
-    "address": "地址（若有）",
-    "lat": 緯度數字或null,
-    "lng": 經度數字或null,
-    "rawCategory": "原始分類（若有）",
-    "aiCategory": "factory|hotel|restaurant|financial|retail|healthcare|education|realestate|logistics|other",
-    "employeeHint": "員工人數估計（若有，如：50-100人）",
-    "rating": 評分數字或null,
-    "website": "網址（若有）",
-    "passFilter": true 或 false,
-    "filterReason": "若 passFilter=false，說明原因"
+  // 分批處理：每批 CHUNK_SIZE 字元，避免 AI 輸出超過 token 上限
+  const chunks: string[] = []
+  for (let i = 0; i < rawText.length; i += CHUNK_SIZE) {
+    chunks.push(rawText.slice(i, i + CHUNK_SIZE))
   }
-]
 
-分類標準：
-- factory: 製造業、工廠、生產、加工
-- hotel: 飯店、民宿、旅館、住宿
-- restaurant: 餐廳、食品、飲料、小吃
-- financial: 銀行、保險、投資、金融、證券
-- retail: 零售、商店、電商、賣場
-- healthcare: 醫院、診所、藥局、醫療
-- education: 學校、補習班、教育、訓練
-- realestate: 房地產、仲介、建設
-- logistics: 物流、運輸、倉儲
-- other: 其他
+  type ParsedOrg = { name: string; phone?: string; address?: string; lat?: number | null; lng?: number | null; rawCategory?: string; aiCategory: string; employeeHint?: string; rating?: number | null; website?: string; passFilter: boolean; filterReason?: string }
+  const allParsed: ParsedOrg[] = []
+  for (const chunk of chunks) {
+    const parsed = await aiParseChunk(anthropic, chunk, filterCriteria, minEmployees)
+    allParsed.push(...parsed)
+  }
 
-只回傳 JSON 陣列，不加任何說明文字。`
-
-  const userPrompt = `原始資料：
-${rawText.slice(0, 12000)}
-
-篩選條件：${filterCriteria || '無特殊條件'}
-最低員工人數：${minEmployees > 0 ? `${minEmployees}人以上` : '不限'}
-
-請萃取所有組織，應用篩選條件，並回傳 JSON 陣列。`
-
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
-    system: systemPrompt,
-    prompt: userPrompt,
-    maxOutputTokens: 4096,
+  // 去重（同名組織只保留第一筆）
+  const seen = new Set<string>()
+  const deduped = allParsed.filter(o => {
+    if (seen.has(o.name)) return false
+    seen.add(o.name)
+    return true
   })
-  // Extract JSON array from response
-  const match = text.match(/\[[\s\S]*\]/)
-  if (!match) throw new Error('AI 未回傳有效 JSON')
 
-  const parsed = JSON.parse(match[0]) as Array<{
-    name: string
-    phone?: string
-    address?: string
-    lat?: number | null
-    lng?: number | null
-    rawCategory?: string
-    aiCategory: string
-    employeeHint?: string
-    rating?: number | null
-    website?: string
-    passFilter: boolean
-    filterReason?: string
-  }>
+  if (deduped.length === 0) throw new Error('AI 未能從原始資料中萃取任何組織，請確認蒐集資料格式')
 
-  return parsed.map((o, i) => ({
+  return deduped.map((o, i) => ({
     id: `org-${Date.now()}-${i}`,
     name: o.name,
     phone: o.phone || undefined,
