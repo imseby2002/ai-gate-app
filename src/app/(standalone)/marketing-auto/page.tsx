@@ -4619,7 +4619,7 @@ const CS_PLATFORMS = [
   },
 ]
 
-type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'test' | 'logs'
+type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'pricing' | 'test' | 'logs'
 
 interface CsDataSource {
   id: string
@@ -4722,11 +4722,132 @@ function Unit12CustomerService({
   })
   const [savingDs, setSavingDs] = useState(false)
 
+  // Pricing configs
+  const [pricingConfigs, setPricingConfigs] = useState<Array<{ id: string; name: string; enabled: boolean; config: Record<string, unknown> }>>([])
+  const [editingPc, setEditingPc] = useState<{ id: string; name: string; jsonText: string } | null>(null)
+  const [savingPc, setSavingPc] = useState(false)
+  const [pcJsonError, setPcJsonError] = useState('')
+
+  const PRICING_TEMPLATES: Record<string, object> = {
+    tour: {
+      productType: 'tour',
+      triggerKeywords: ['賞鯨', '行程', '出海'],
+      currency: 'TWD',
+      schedules: [
+        { id: 'A', name: 'A班 08:00' },
+        { id: 'B', name: 'B班 10:30' },
+        { id: 'C', name: 'C班 13:00' },
+        { id: 'D', name: 'D班 15:30' },
+      ],
+      segments: [
+        { label: '成人（12歲以上）', key: 'adult', weekdayPrice: 800, weekendPrice: 1000 },
+        { label: '兒童（3-11歲）', key: 'child', weekdayPrice: 500, weekendPrice: 600 },
+        { label: '嬰兒（0-2歲）', key: 'infant', weekdayPrice: 0, weekendPrice: 0 },
+      ],
+      packages: [
+        { name: '四人家庭套餐', price: 2600, description: '2大2小' },
+      ],
+      groupDiscounts: [
+        { minPeople: 10, discountPercent: 10, note: '10人以上團體' },
+      ],
+      cancellationPolicy: '出發前 24 小時取消，否則收取全額費用',
+      notes: ['颱風警報取消全額退款', '集合地點請洽客服確認'],
+    },
+    accommodation: {
+      productType: 'accommodation',
+      triggerKeywords: ['訂房', '住宿', '房間', '入住', '一晚'],
+      currency: 'TWD',
+      rooms: [
+        {
+          name: '401高地景觀房',
+          capacity: 4,
+          weekdayPrice: 2800,
+          weekendPrice: 3500,
+          holidayPrice: 4200,
+          extraPersonFee: 500,
+        },
+      ],
+      cancellationPolicy: '入住前 48 小時取消，否則收取一晚費用',
+      notes: ['含早餐', '最晚入住時間 22:00', 'Check-out 11:00'],
+    },
+    custom: {
+      productType: 'custom',
+      triggerKeywords: ['產品名稱', '關鍵字'],
+      currency: 'TWD',
+      customContent: '請在此填入自訂定價說明\n例：單次體驗 $500，月票 $1,500',
+      cancellationPolicy: '',
+      notes: [],
+    },
+  }
+
   useEffect(() => {
     fetch('/api/marketing/cs-datasource').then(r => r.json()).then(d => {
-      if (d.sources) setDataSources(d.sources)
+      if (d.sources) {
+        setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing'))
+        setPricingConfigs(d.sources.filter((s: { type: string }) => s.type === 'json_pricing'))
+      }
     }).catch(() => {})
   }, [])
+
+  function openAddPc(templateKey?: string) {
+    const template = templateKey ? PRICING_TEMPLATES[templateKey] : PRICING_TEMPLATES.tour
+    setEditingPc({ id: '', name: '', jsonText: JSON.stringify(template, null, 2) })
+    setPcJsonError('')
+  }
+
+  function openEditPc(pc: { id: string; name: string; config: Record<string, unknown> }) {
+    setEditingPc({ id: pc.id, name: pc.name, jsonText: JSON.stringify(pc.config, null, 2) })
+    setPcJsonError('')
+  }
+
+  async function savePc() {
+    if (!editingPc) return
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(editingPc.jsonText)
+      setPcJsonError('')
+    } catch (e) {
+      setPcJsonError(`JSON 格式錯誤：${String(e)}`)
+      return
+    }
+    setSavingPc(true)
+    try {
+      if (editingPc.id) {
+        const r = await fetch(`/api/marketing/cs-datasource/${editingPc.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editingPc.name, config: parsed, enabled: true }),
+        })
+        const d = await r.json()
+        if (d.source) setPricingConfigs(prev => prev.map(p => p.id === editingPc.id ? d.source : p))
+      } else {
+        const r = await fetch('/api/marketing/cs-datasource', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: editingPc.name, config: parsed, type: 'json_pricing' }),
+        })
+        const d = await r.json()
+        if (d.source) setPricingConfigs(prev => [...prev, d.source])
+      }
+      setEditingPc(null)
+    } catch {}
+    setSavingPc(false)
+  }
+
+  async function deletePc(id: string) {
+    await fetch(`/api/marketing/cs-datasource/${id}`, { method: 'DELETE' })
+    setPricingConfigs(prev => prev.filter(p => p.id !== id))
+  }
+
+  async function togglePc(pc: { id: string; name: string; enabled: boolean; config: Record<string, unknown> }) {
+    const r = await fetch(`/api/marketing/cs-datasource/${pc.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: pc.name, config: pc.config, enabled: !pc.enabled }),
+    })
+    const d = await r.json()
+    if (d.source) setPricingConfigs(prev => prev.map(p => p.id === pc.id ? d.source : p))
+  }
 
   function openAddDs() {
     setEditingDs({ id: '', name: '', enabled: true, config: { apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [], triggerMode: 'keyword' } })
@@ -5115,8 +5236,8 @@ function Unit12CustomerService({
           <p className="text-xs text-gray-500 mt-0.5">Gemini Flash 意圖分類 · Claude Sonnet 高風險升級</p>
         </div>
         <div className="flex gap-1.5">
-          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'test', 'logs'] as Cs12Tab[]).map(t => {
-            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '知識庫', 'data-sources': '資料來源', test: '測試', logs: '記錄' }
+          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs'] as Cs12Tab[]).map(t => {
+            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '知識庫', 'data-sources': '資料來源', pricing: '定價計算機', test: '測試', logs: '記錄' }
             return (
               <button key={t} onClick={() => setTab(t)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -5703,6 +5824,137 @@ function Unit12CustomerService({
             <div>• 「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。</div>
             <div>• 「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。</div>
             <div>• 回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Pricing Calculator ─────────────────────────────────────────── */}
+      {tab === 'pricing' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-700">定價計算機</div>
+              <div className="text-xs text-gray-400 mt-0.5">AI 查詢定價時精確套用數字，不會自行估算</div>
+            </div>
+            {!editingPc && (
+              <div className="flex gap-1.5">
+                {[
+                  { key: 'tour', label: '+ 行程' },
+                  { key: 'accommodation', label: '+ 住宿' },
+                  { key: 'custom', label: '+ 自訂' },
+                ].map(({ key, label }) => (
+                  <button key={key} onClick={() => openAddPc(key)}
+                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
+                    style={{ background: 'var(--primary)' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {pricingConfigs.length === 0 && !editingPc && (
+            <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
+              <div className="mb-2">尚無定價設定</div>
+              <div className="text-xs">選擇上方按鈕新增行程或住宿定價</div>
+            </div>
+          )}
+
+          {pricingConfigs.length > 0 && !editingPc && (
+            <div className="space-y-2">
+              {pricingConfigs.map((pc) => {
+                const cfg = pc.config as { productType?: string; triggerKeywords?: string[] }
+                const typeLabel = cfg.productType === 'tour' ? '行程' : cfg.productType === 'accommodation' ? '住宿' : '自訂'
+                return (
+                  <div key={pc.id} className="border rounded-xl p-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+                        <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{typeLabel}</span>
+                        <span className="truncate">{pc.name}</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+                        觸發詞：{(cfg.triggerKeywords ?? []).join('、') || '（未設定）'}
+                      </div>
+                    </div>
+                    <button onClick={() => togglePc(pc)}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${pc.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {pc.enabled ? '啟用' : '停用'}
+                    </button>
+                    <button onClick={() => openEditPc(pc)}
+                      className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                    <button onClick={() => deletePc(pc.id)}
+                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {editingPc !== null && (
+            <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
+              <div className="font-medium text-sm text-gray-700">{editingPc.id ? '編輯定價設定' : '新增定價設定'}</div>
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">名稱</label>
+                <input
+                  type="text"
+                  placeholder="例：賞鯨行程定價、民宿訂房定價"
+                  value={editingPc.name}
+                  onChange={e => setEditingPc(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] text-gray-500">定價 JSON（直接修改數字即可）</label>
+                  <div className="flex gap-1">
+                    {(['tour', 'accommodation', 'custom'] as const).map(k => (
+                      <button key={k} onClick={() => setEditingPc(prev => prev ? { ...prev, jsonText: JSON.stringify(PRICING_TEMPLATES[k], null, 2) } : prev)}
+                        className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
+                        {k === 'tour' ? '載入行程模板' : k === 'accommodation' ? '載入住宿模板' : '載入自訂模板'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  value={editingPc.jsonText}
+                  onChange={e => { setEditingPc(prev => prev ? { ...prev, jsonText: e.target.value } : prev); setPcJsonError('') }}
+                  rows={18}
+                  spellCheck={false}
+                  className={`w-full text-xs border rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 ${pcJsonError ? 'border-red-400' : ''}`}
+                />
+                {pcJsonError && <div className="text-[10px] text-red-500 mt-1">{pcJsonError}</div>}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
+                <div className="font-medium">JSON 欄位說明</div>
+                <div>• <code>triggerKeywords</code>：客戶訊息含這些詞時觸發，例：["賞鯨","行程"]</div>
+                <div>• <code>weekdayPrice</code> / <code>weekendPrice</code>：平日 / 假日價格（數字，不含逗號）</div>
+                <div>• <code>packages</code>：套餐方案，AI 會優先推薦</div>
+                <div>• <code>groupDiscounts</code>：團體折扣規則</div>
+                <div>• <code>cancellationPolicy</code>：取消政策說明</div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={savePc} disabled={savingPc || !editingPc.name.trim()}
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-70"
+                  style={{ background: 'var(--primary)' }}>
+                  {savingPc ? '儲存中…' : '儲存'}
+                </button>
+                <button onClick={() => { setEditingPc(null); setPcJsonError('') }}
+                  className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
+            <div className="font-medium">使用說明</div>
+            <div>• 日後新增產品：點「+ 自訂」按鈕，填入觸發詞和價格說明即可。</div>
+            <div>• AI 收到含觸發詞的訊息時，會自動帶入定價表並逐步計算，不會自行估算。</div>
+            <div>• 賞鯨 / 住宿同時設定不會衝突，AI 會根據訊息內容選擇對應的定價表。</div>
           </div>
         </div>
       )}

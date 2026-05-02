@@ -96,6 +96,108 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
   }
 }
 
+// ── JSON Pricing Calculator ───────────────────────────────────────────────────
+
+interface PricingSegment {
+  label: string
+  key: string
+  weekdayPrice: number
+  weekendPrice: number
+}
+
+interface PricingRoom {
+  name: string
+  capacity: number
+  weekdayPrice: number
+  weekendPrice: number
+  holidayPrice?: number
+  extraPersonFee?: number
+}
+
+interface PricingConfig {
+  productType: 'tour' | 'accommodation' | 'custom'
+  triggerKeywords: string[]
+  currency?: string
+  schedules?: Array<{ id: string; name: string }>
+  segments?: PricingSegment[]
+  packages?: Array<{ name: string; price: number; description?: string }>
+  groupDiscounts?: Array<{ minPeople: number; discountPercent: number; note?: string }>
+  rooms?: PricingRoom[]
+  cancellationPolicy?: string
+  notes?: string[]
+  customContent?: string
+}
+
+function formatPricingForAI(name: string, cfg: PricingConfig): string {
+  const cur = cfg.currency ?? 'TWD'
+  const lines: string[] = [
+    `【定價計算機：${name}】`,
+    `以下為精確定價資料，計算時請逐步列式、每個數字必須照表使用，禁止估算。`,
+  ]
+
+  if (cfg.productType === 'tour') {
+    if (cfg.schedules?.length) {
+      lines.push('\n可選班次：')
+      cfg.schedules.forEach(s => lines.push(`  ${s.name}`))
+    }
+    if (cfg.segments?.length) {
+      lines.push(`\n票價（${cur}）：`)
+      lines.push('  ▸ 平日（週一至週四）：')
+      cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekdayPrice.toLocaleString()}`))
+      lines.push('  ▸ 假日（週五至週日、例假日）：')
+      cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekendPrice.toLocaleString()}`))
+    }
+    if (cfg.packages?.length) {
+      lines.push('\n套餐方案：')
+      cfg.packages.forEach(p =>
+        lines.push(`  • ${p.name}：$${p.price.toLocaleString()}${p.description ? `（${p.description}）` : ''}`)
+      )
+    }
+    if (cfg.groupDiscounts?.length) {
+      lines.push('\n團體折扣：')
+      cfg.groupDiscounts.forEach(g =>
+        lines.push(`  • ${g.minPeople} 人（含）以上：${100 - g.discountPercent}折${g.note ? `（${g.note}）` : ''}`)
+      )
+    }
+  }
+
+  if (cfg.productType === 'accommodation') {
+    if (cfg.rooms?.length) {
+      lines.push(`\n房型與定價（${cur}）：`)
+      cfg.rooms.forEach(r => {
+        lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
+        lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
+        lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
+        if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
+        if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
+      })
+    }
+  }
+
+  if (cfg.productType === 'custom' && cfg.customContent) {
+    lines.push('\n' + cfg.customContent)
+  }
+
+  if (cfg.cancellationPolicy) {
+    lines.push(`\n取消政策：${cfg.cancellationPolicy}`)
+  }
+
+  if (cfg.notes?.length) {
+    lines.push('\n注意事項：')
+    cfg.notes.forEach(n => lines.push(`  • ${n}`))
+  }
+
+  return lines.join('\n')
+}
+
+function queryJsonPricing(name: string, config: PricingConfig, message: string): string | null {
+  const triggered = (config.triggerKeywords ?? []).some(kw =>
+    kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase())
+  )
+  if (!triggered) return null
+  return formatPricingForAI(name, config)
+}
+
 export async function POST(req: NextRequest) {
   try {
     return await handlePost(req)
@@ -137,13 +239,19 @@ async function handlePost(req: NextRequest) {
   const sheetResults: string[] = []
   if (sources?.length) {
     await Promise.all(sources.map(async (src) => {
-      const result = await queryGoogleSheet(src.config as SheetConfig, message)
+      let result: string | null = null
+      if (src.type === 'json_pricing') {
+        result = queryJsonPricing(src.name, src.config as PricingConfig, message)
+      } else {
+        result = await queryGoogleSheet(src.config as SheetConfig, message)
+      }
       if (result) sheetResults.push(result)
     }))
   }
 
+  const hasPricing = sources?.some(s => s.type === 'json_pricing' && sheetResults.some(r => r.includes(s.name)))
   const externalDataSection = sheetResults.length > 0
-    ? `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。`
+    ? `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
     : ''
 
   // ── Intent classification ─────────────────────────────────────────────────
