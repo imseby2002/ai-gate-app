@@ -65,16 +65,24 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number): numb
 
 function normalizePhone(raw: string | undefined): string | undefined {
   if (!raw) return undefined
-  // strip formatting
-  let p = raw.replace(/[\s\-().+]/g, '')
+  // keep leading + before stripping
+  const hasPlus = raw.trimStart().startsWith('+')
+  let p = raw.replace(/[\s\-().]/g, '').replace(/^\+/, '')
   if (!p || p.length < 7) return undefined
+
+  // already has country code (e.g. 84xxxxxxxxx for Vietnam, 886xxxxxxxx for Taiwan)
+  if (hasPlus && /^\d{10,15}$/.test(p)) return `+${p}`
 
   // Taiwan mobile: 09xxxxxxxx → +8869xxxxxxxx
   if (/^09\d{8}$/.test(p)) return `+886${p.slice(1)}`
-  // Taiwan landline with area code: 0x-xxxxxxx
+  // Taiwan landline: 0x-xxxxxxx
   if (/^0\d{1,3}\d{6,8}$/.test(p)) return `+886${p.slice(1)}`
-  // already has country code
-  if (/^\+?\d{10,15}$/.test(p)) return p.startsWith('+') ? p : `+${p}`
+
+  // Vietnam: 0xxxxxxxxx (10 digits) → +840xxxxxxxxx or strip leading 0 → +84xxxxxxxxx
+  if (/^0\d{9}$/.test(p)) return `+84${p.slice(1)}`
+
+  // Generic: if looks like a valid international number (10-15 digits)
+  if (/^\d{10,15}$/.test(p)) return `+${p}`
 
   return undefined
 }

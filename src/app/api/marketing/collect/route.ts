@@ -49,6 +49,15 @@ async function tavilySearch(query: string, limit = 6): Promise<string> {
 }
 
 // ── 1. 地圖搜尋 (Outscraper) ──────────────────────────────────────────────────
+
+/** 將關鍵字字串拆成多個關鍵字（逗號 / 換行分隔） */
+function splitKeywords(keywords: string): string[] {
+  return keywords
+    .split(/[,\n;]+/)
+    .map(k => k.trim())
+    .filter(Boolean)
+}
+
 async function mapSearch(
   keywords: string,
   location: string,
@@ -57,71 +66,99 @@ async function mapSearch(
 ): Promise<string> {
   const key = process.env.OUTSCRAPER_API_KEY
   if (!key) return '⚠️ OUTSCRAPER_API_KEY 未設定'
-  const query = `${keywords} ${location}`.trim()
+
+  // 拆成多個關鍵字，各自查詢後合併（去重）
+  const kwList = splitKeywords(keywords)
+  const allPlaces: Array<{
+    name: string; address?: string
+    phone?: string; phone_1?: string; phone_2?: string
+    full_address?: string
+    website?: string; site?: string
+    category?: string; type?: string
+    rating?: number; reviews?: number; reviews_count?: number
+    latitude?: number; longitude?: number
+    working_hours?: Record<string, string>
+  }> = []
+  const seen = new Set<string>()
+
   const sections: string[] = []
 
   // Basic info + coordinates + hours via maps/search-v3
   if (subOptions.includes('info') || subOptions.includes('coordinates') || subOptions.includes('hours')) {
-    try {
-      const url = new URL('https://api.app.outscraper.com/maps/search-v3')
-      url.searchParams.set('query', query)
-      url.searchParams.set('limit', String(limit))
-      url.searchParams.set('async', 'false')
-      const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
-      if (res.ok) {
-        const data = await res.json()
-        const places = (data.data ?? []).flat() as Array<{
-          name: string; address?: string; phone?: string; website?: string
-          category?: string; rating?: number; reviews?: number
-          latitude?: number; longitude?: number
-          working_hours?: Record<string, string>
-        }>
-        const lines = places.slice(0, limit).map(p => {
-          const parts: string[] = [`🏢 ${p.name}`]
-          if (subOptions.includes('info')) {
-            if (p.address) parts.push(`📍 ${p.address}`)
-            if (p.phone) parts.push(`📞 ${p.phone}`)
-            if (p.website) parts.push(`🌐 ${p.website}`)
-            if (p.category) parts.push(`🏷️ ${p.category}`)
-            if (p.rating != null) parts.push(`⭐ ${p.rating} (${p.reviews ?? 0} 則評論)`)
+    for (const kw of kwList) {
+      const query = `${kw} ${location}`.trim()
+      try {
+        const url = new URL('https://api.app.outscraper.com/maps/search-v3')
+        url.searchParams.set('query', query)
+        url.searchParams.set('limit', String(Math.min(limit, 100)))
+        url.searchParams.set('async', 'false')
+        const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
+        if (res.ok) {
+          const data = await res.json()
+          const places = (data.data ?? []).flat() as typeof allPlaces
+          for (const p of places) {
+            const key2 = `${p.name}|${p.address ?? p.full_address ?? ''}`
+            if (!seen.has(key2)) {
+              seen.add(key2)
+              allPlaces.push(p)
+            }
           }
-          if (subOptions.includes('coordinates') && p.latitude != null) {
-            parts.push(`📐 ${p.latitude}, ${p.longitude}`)
-          }
-          if (subOptions.includes('hours') && p.working_hours) {
-            const h = Object.entries(p.working_hours).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' / ')
-            parts.push(`🕐 ${h}`)
-          }
-          return parts.join('\n')
-        })
-        if (lines.length) sections.push(`🗺️ 地圖組織資訊：\n\n${lines.join('\n\n---\n\n')}`)
+        }
+      } catch (e) {
+        sections.push(`⚠️ 地圖搜尋「${kw}」失敗：${String(e)}`)
       }
-    } catch (e) {
-      sections.push(`⚠️ 地圖搜尋失敗：${String(e)}`)
     }
+
+    const lines = allPlaces.slice(0, limit).map(p => {
+      const phone = p.phone || p.phone_1 || p.phone_2
+      const address = p.address || p.full_address
+      const website = p.website || p.site
+      const category = p.category || p.type
+      const reviewCount = p.reviews ?? p.reviews_count
+      const lineParts: string[] = [`🏢 ${p.name}`]
+      if (subOptions.includes('info')) {
+        if (address)  lineParts.push(`📍 ${address}`)
+        if (phone)    lineParts.push(`📞 ${phone}`)
+        if (website)  lineParts.push(`🌐 ${website}`)
+        if (category) lineParts.push(`🏷️ ${category}`)
+        if (p.rating != null) lineParts.push(`⭐ ${p.rating} (${reviewCount ?? 0} 則評論)`)
+      }
+      if (subOptions.includes('coordinates') && p.latitude != null) {
+        lineParts.push(`📐 ${p.latitude}, ${p.longitude}`)
+      }
+      if (subOptions.includes('hours') && p.working_hours) {
+        const h = Object.entries(p.working_hours).slice(0, 3).map(([k, v]) => `${k}: ${v}`).join(' / ')
+        lineParts.push(`🕐 ${h}`)
+      }
+      return lineParts.join('\n')
+    })
+    if (lines.length) sections.push(`🗺️ 地圖組織資訊（共 ${lines.length} 筆）：\n\n${lines.join('\n\n---\n\n')}`)
   }
 
   // MAP 評論 via reviews-v3
   if (subOptions.includes('reviews')) {
-    try {
-      const url = new URL('https://api.app.outscraper.com/maps/reviews-v3')
-      url.searchParams.set('query', query)
-      url.searchParams.set('limit', String(limit))
-      url.searchParams.set('sort', 'newest')
-      url.searchParams.set('async', 'false')
-      const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
-      if (res.ok) {
-        const data = await res.json()
-        const reviews = (data.data ?? []).flat() as Array<{
-          author_title?: string; review_text?: string; review_rating?: number; owner_answer?: string
-        }>
-        const lines = reviews.filter(r => r.review_text).slice(0, limit).map(r =>
-          `⭐ ${r.review_rating ?? '-'} — ${r.author_title ?? '匿名'}\n「${r.review_text?.slice(0, 300) ?? ''}」`
-        )
-        if (lines.length) sections.push(`📝 MAP 評論：\n\n${lines.join('\n\n---\n\n')}`)
+    for (const kw of kwList) {
+      const query = `${kw} ${location}`.trim()
+      try {
+        const url = new URL('https://api.app.outscraper.com/maps/reviews-v3')
+        url.searchParams.set('query', query)
+        url.searchParams.set('limit', String(Math.min(limit, 100)))
+        url.searchParams.set('sort', 'newest')
+        url.searchParams.set('async', 'false')
+        const res = await fetch(url.toString(), { headers: { 'X-API-KEY': key } })
+        if (res.ok) {
+          const data = await res.json()
+          const reviews = (data.data ?? []).flat() as Array<{
+            author_title?: string; review_text?: string; review_rating?: number; owner_answer?: string
+          }>
+          const lines = reviews.filter(r => r.review_text).slice(0, limit).map(r =>
+            `⭐ ${r.review_rating ?? '-'} — ${r.author_title ?? '匿名'}\n「${r.review_text?.slice(0, 300) ?? ''}」`
+          )
+          if (lines.length) sections.push(`📝 MAP 評論（${kw}）：\n\n${lines.join('\n\n---\n\n')}`)
+        }
+      } catch (e) {
+        sections.push(`⚠️ MAP 評論「${kw}」失敗：${String(e)}`)
       }
-    } catch (e) {
-      sections.push(`⚠️ MAP 評論取得失敗：${String(e)}`)
     }
   }
 

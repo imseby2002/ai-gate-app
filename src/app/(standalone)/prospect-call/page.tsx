@@ -90,6 +90,7 @@ interface Config {
   keywords: string
   location: string
   sources: CollectSource[]
+  collectLimit: number        // 蒐集筆數上限
   filterCriteria: string
   minEmployees: number
   maxDistanceKm: number
@@ -139,6 +140,7 @@ const DEFAULT_CONFIG: Config = {
   keywords: '',
   location: '',
   sources: ['map'],
+  collectLimit: 50,
   filterCriteria: '',
   minEmployees: 0,
   maxDistanceKm: 5,
@@ -645,7 +647,7 @@ export default function ProspectCallPage() {
           types, subOptions,
           keywords: config.keywords,
           location: config.location,
-          limit: 20,
+          limit: config.collectLimit,
         }),
       })
       const collectData = await collectRes.json()
@@ -918,15 +920,25 @@ export default function ProspectCallPage() {
               open={openSections.collect} onToggle={() => toggleSection('collect')}>
               <div>
                 <label className="block text-xs font-medium mb-1">搜尋關鍵字 *</label>
-                <input value={config.keywords} onChange={e => setC('keywords', e.target.value)}
-                  placeholder="例如：台南工廠、苗栗民宿"
-                  className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                <textarea value={config.keywords} onChange={e => setC('keywords', e.target.value)}
+                  rows={3} placeholder={"每行或逗號分隔一個關鍵字，各自獨立搜尋\n例如：\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea"}
+                  className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none" />
+                <p className="text-xs text-gray-400 mt-0.5">多個關鍵字會分別搜尋，結果合併去重</p>
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1">地區（選填）</label>
                 <input value={config.location} onChange={e => setC('location', e.target.value)}
                   placeholder="例如：台南市、新竹縣"
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium mb-1">每個關鍵字最多筆數</label>
+                  <input type="number" min={10} max={500} step={10} value={config.collectLimit}
+                    onChange={e => setC('collectLimit', Number(e.target.value))}
+                    className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                  <p className="text-xs text-gray-400 mt-0.5">多個關鍵字會分別搜尋並合併，總筆數 = 筆數 × 關鍵字數</p>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium mb-2">蒐集管道</label>
