@@ -235,7 +235,7 @@ export async function GET(req: NextRequest) {
           limit: 20,
         }, cronSecret ?? '', baseUrl)
 
-        let prospectResult = { ok: false, data: null as unknown, error: '蒐集失敗' }
+        let prospectResult: { ok: boolean; data: unknown; error?: string } = { ok: false, data: null, error: '蒐集失敗' }
         if (collectResult.ok) {
           const rawText = (collectResult.data as Record<string, string>)?.result
             || (collectResult.data as Record<string, string>)?.summary || ''
