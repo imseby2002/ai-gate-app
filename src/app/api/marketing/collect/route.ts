@@ -146,6 +146,14 @@ async function socialSearch(
   const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
 
   for (const sub of subOptions) {
+    if (sub === 'vendor_info') {
+      try {
+        const query = `${keywords} ${p.name} 廠商 品牌 聯絡 電話 email 官網`
+        const result = await tavilySearch(query, perQ)
+        parts.push(`${p.emoji} ${p.name} 廠商資料：\n${result}`)
+      } catch { /* skip */ }
+      continue
+    }
     const isComment = sub === 'comments'
     const query = isComment
       ? `site:${p.site} ${keywords} review comment 評論`
@@ -166,6 +174,13 @@ async function youtubeSearch(keywords: string, subOptions: string[], limit: numb
   const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
 
   for (const sub of subOptions) {
+    if (sub === 'vendor_info') {
+      try {
+        const result = await tavilySearch(`${keywords} YouTube 頻道 廠商 品牌 聯絡 電話 email 官網`, perQ)
+        parts.push(`🎬 YouTube 廠商資料：\n${result}`)
+      } catch { /* skip */ }
+      continue
+    }
     if (sub === 'comments') {
       const result = await tavilySearch(`site:youtube.com ${keywords} review comment`, perQ)
       parts.push(`🎬 YouTube 評論：\n${result}`)
@@ -214,6 +229,11 @@ async function amazonSearch(keywords: string, subOptions: string[], limit: numbe
   const parts: string[] = []
   const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
   for (const sub of subOptions) {
+    if (sub === 'vendor_info') {
+      const result = await tavilySearch(`Amazon ${keywords} seller vendor brand 廠商 聯絡 電話 email 官網`, perQ)
+      parts.push(`📦 Amazon 廠商資料：\n${result}`)
+      continue
+    }
     const q = sub === 'reviews'
       ? `site:amazon.com ${keywords} customer review stars`
       : `site:amazon.com ${keywords} product`
@@ -248,6 +268,11 @@ async function shopeeSearch(
   const parts: string[] = []
   const perQ = Math.max(3, Math.ceil(limit / Math.max(subOptions.length, 1)))
   for (const sub of subOptions) {
+    if (sub === 'vendor_info') {
+      const result = await tavilySearch(`Shopee ${domain} ${keywords} 賣家 店家 廠商 聯絡 電話 email 官網`, perQ)
+      parts.push(`🛒 Shopee 廠商資料：\n${result}`)
+      continue
+    }
     const q = sub === 'reviews'
       ? `site:${domain} ${keywords} 評價 review`
       : `site:${domain} ${keywords} 產品`
@@ -259,8 +284,22 @@ async function shopeeSearch(
 }
 
 // ── 9. iOS / Android ──────────────────────────────────────────────────────────
-async function appReviews(appIds: string[], keywords: string, limit: number): Promise<string> {
+async function appReviews(appIds: string[], keywords: string, subOptions: string[], limit: number): Promise<string> {
   const parts: string[] = []
+
+  if (subOptions.includes('vendor_info')) {
+    try {
+      const q = appIds.length > 0
+        ? `App Store Google Play ${keywords} developer company 開發商 廠商 聯絡 電話 email 官網`
+        : `${keywords} app 開發商 廠商 聯絡 電話 email 官網`
+      const result = await tavilySearch(q, Math.ceil(limit / 2))
+      parts.push(`📲 iOS/Android 廠商資料：\n${result}`)
+    } catch { /* skip */ }
+  }
+
+  if (!subOptions.includes('reviews') && subOptions.length > 0 && !subOptions.includes('vendor_info')) {
+    return parts.join('\n\n') || '⚠️ 無 App 評論資料'
+  }
 
   // App Store (iTunes RSS, free)
   for (const appId of appIds.slice(0, 3)) {
@@ -386,7 +425,8 @@ export async function POST(req: NextRequest) {
     tasks.push(shopeeSearch(kw, shopeeCountry, sub, limit).then(r => ['🛒 Shopee', r]))
   }
   if (selectedTypes.includes('ios_android')) {
-    tasks.push(appReviews(appIds, kw, limit).then(r => ['📱 iOS/Android', r]))
+    const sub = getSub('ios_android', ['reviews'])
+    tasks.push(appReviews(appIds, kw, sub, limit).then(r => ['📱 iOS/Android', r]))
   }
   if (selectedTypes.includes('news')) {
     tasks.push(googleAlertsRss(alertRssUrls).then(r => ['🔔 新聞 (Google Alerts)', r]))

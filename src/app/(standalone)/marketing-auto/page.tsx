@@ -92,49 +92,55 @@ const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
     id: 'tiktok', label: 'TikTok', emoji: '📱',
     desc: '影音搜尋 / 評論',
     subOptions: [
-      { id: 'videos',   label: '影音搜尋' },
-      { id: 'comments', label: '評論' },
+      { id: 'videos',      label: '影音搜尋' },
+      { id: 'comments',    label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
     id: 'facebook', label: 'Facebook', emoji: '👥',
     desc: '內文 / 評論',
     subOptions: [
-      { id: 'posts',    label: '內文' },
-      { id: 'comments', label: '評論' },
+      { id: 'posts',       label: '內文' },
+      { id: 'comments',    label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
     id: 'instagram', label: 'Instagram', emoji: '📸',
     desc: '內文 / 評論',
     subOptions: [
-      { id: 'posts',    label: '內文' },
-      { id: 'comments', label: '評論' },
+      { id: 'posts',       label: '內文' },
+      { id: 'comments',    label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
     id: 'threads', label: 'Threads', emoji: '🧵',
     desc: '內文 / 評論',
     subOptions: [
-      { id: 'posts',    label: '內文' },
-      { id: 'comments', label: '評論' },
+      { id: 'posts',       label: '內文' },
+      { id: 'comments',    label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
     id: 'youtube', label: 'YouTube', emoji: '🎬',
     desc: '短影音 / 長影音 / 評論',
     subOptions: [
-      { id: 'shorts',   label: '短影音' },
-      { id: 'videos',   label: '長影音' },
-      { id: 'comments', label: '評論' },
+      { id: 'shorts',      label: '短影音' },
+      { id: 'videos',      label: '長影音' },
+      { id: 'comments',    label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
     id: 'amazon', label: 'Amazon', emoji: '📦',
     desc: '產品 / 評論',
     subOptions: [
-      { id: 'products', label: '產品' },
-      { id: 'reviews',  label: '評論' },
+      { id: 'products',    label: '產品' },
+      { id: 'reviews',     label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
@@ -142,8 +148,9 @@ const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
     desc: '產品 / 評論 (可選國家)',
     needsCountry: true,
     subOptions: [
-      { id: 'products', label: '產品' },
-      { id: 'reviews',  label: '評論' },
+      { id: 'products',    label: '產品' },
+      { id: 'reviews',     label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
@@ -151,7 +158,8 @@ const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
     desc: 'App Store / Google Play 評論',
     needsAppIds: true,
     subOptions: [
-      { id: 'reviews', label: '評論' },
+      { id: 'reviews',     label: '評論' },
+      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
     ],
   },
   {
