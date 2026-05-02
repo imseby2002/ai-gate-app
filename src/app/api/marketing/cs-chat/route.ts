@@ -17,12 +17,31 @@ interface SheetConfig {
   keyColumn: string
   returnColumns: string[]
   triggerKeywords: string[]
+  triggerMode?: 'keyword' | 'numeric' | 'both'
 }
 
+// Matches numbers with 8+ digits, not starting with 0, not preceded by +
+const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
+
 async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
-  const triggered = config.triggerKeywords.some(kw =>
-    kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase())
-  )
+  const triggerMode = config.triggerMode ?? 'keyword'
+  let triggered = false
+  let exactKey: string | null = null
+
+  if (triggerMode === 'keyword' || triggerMode === 'both') {
+    if (config.triggerKeywords.some(kw => kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase()))) {
+      triggered = true
+    }
+  }
+
+  if (triggerMode === 'numeric' || triggerMode === 'both') {
+    const numMatch = message.match(NUMERIC_ORDER_RE)
+    if (numMatch) {
+      triggered = true
+      exactKey = numMatch[0]
+    }
+  }
+
   if (!triggered) return null
 
   try {
@@ -38,7 +57,27 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const headers = rows[0]
     const dataRows = rows.slice(1)
 
-    // Pick only key column + return columns (or all if not specified)
+    const keyColIdx = headers.findIndex(h => h.trim() === (config.keyColumn ?? '').trim())
+
+    // Numeric trigger: exact single-row lookup
+    if (exactKey && keyColIdx >= 0) {
+      const matchedRow = dataRows.find(row => (row[keyColIdx] ?? '').trim() === exactKey!.trim())
+      if (!matchedRow) {
+        return `【外部資料表：${config.sheetName}】\n查無符合訂單號碼「${exactKey}」的資料，請確認訂單號碼是否正確。`
+      }
+
+      const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
+      const colIdxs = wantedCols.length > 1
+        ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
+        : headers.map((_, i) => i)
+
+      const pickedHeaders = colIdxs.map(i => headers[i])
+      const pickedValues = colIdxs.map(i => matchedRow[i] ?? '')
+      const result = pickedHeaders.map((h, i) => `${h}：${pickedValues[i]}`).join('\n')
+      return `【外部資料表：${config.sheetName}】\n找到訂單「${exactKey}」的資料：\n${result}`
+    }
+
+    // Keyword trigger: return full filtered table
     const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
     const colIdxs = wantedCols.length > 0
       ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)

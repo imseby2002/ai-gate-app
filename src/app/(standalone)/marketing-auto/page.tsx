@@ -4632,6 +4632,7 @@ interface CsDataSource {
     keyColumn: string
     returnColumns: string[]
     triggerKeywords: string[]
+    triggerMode?: 'keyword' | 'numeric' | 'both'
   }
 }
 
@@ -4717,7 +4718,7 @@ function Unit12CustomerService({
   const [dsLoading, setDsLoading] = useState(false)
   const [editingDs, setEditingDs] = useState<CsDataSource | null>(null)
   const [editingDsForm, setEditingDsForm] = useState<CsDataSource['config'] & { name: string }>({
-    name: '', apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [],
+    name: '', apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [], triggerMode: 'keyword',
   })
   const [savingDs, setSavingDs] = useState(false)
 
@@ -4728,8 +4729,8 @@ function Unit12CustomerService({
   }, [])
 
   function openAddDs() {
-    setEditingDs({ id: '', name: '', enabled: true, config: { apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [] } })
-    setEditingDsForm({ name: '', apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [] })
+    setEditingDs({ id: '', name: '', enabled: true, config: { apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [], triggerMode: 'keyword' } })
+    setEditingDsForm({ name: '', apiKey: '', spreadsheetId: '', sheetName: '', keyColumn: '', returnColumns: [], triggerKeywords: [], triggerMode: 'keyword' })
   }
 
   function openEditDs(src: CsDataSource) {
@@ -4742,6 +4743,7 @@ function Unit12CustomerService({
       keyColumn: src.config.keyColumn,
       returnColumns: src.config.returnColumns ?? [],
       triggerKeywords: src.config.triggerKeywords ?? [],
+      triggerMode: src.config.triggerMode ?? 'keyword',
     })
   }
 
@@ -4755,6 +4757,7 @@ function Unit12CustomerService({
         keyColumn: editingDsForm.keyColumn,
         returnColumns: editingDsForm.returnColumns,
         triggerKeywords: editingDsForm.triggerKeywords,
+        triggerMode: editingDsForm.triggerMode ?? 'keyword',
       }
       if (editingDs?.id) {
         const r = await fetch(`/api/marketing/cs-datasource/${editingDs.id}`, {
@@ -5635,23 +5638,44 @@ function Unit12CustomerService({
                 <label className="text-[10px] text-gray-500 block mb-1">回傳欄位（逗號分隔，留空回傳所有欄位）</label>
                 <input
                   type="text"
-                  placeholder="例：密碼,到期日"
+                  placeholder="例：房號,大門密碼,房門密碼"
                   value={editingDsForm.returnColumns.join(',')}
                   onChange={e => setEditingDsForm(prev => ({ ...prev, returnColumns: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 />
+                <div className="text-[10px] text-gray-400 mt-0.5">依序填入多個欄位，例：房號,大門密碼,房門密碼</div>
               </div>
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）</label>
-                <input
-                  type="text"
-                  placeholder="例：訂單,密碼,查詢"
-                  value={editingDsForm.triggerKeywords.join(',')}
-                  onChange={e => setEditingDsForm(prev => ({ ...prev, triggerKeywords: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                <label className="text-[10px] text-gray-500 block mb-1">觸發方式</label>
+                <select
+                  value={editingDsForm.triggerMode ?? 'keyword'}
+                  onChange={e => setEditingDsForm(prev => ({ ...prev, triggerMode: e.target.value as 'keyword' | 'numeric' | 'both' }))}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                />
+                >
+                  <option value="keyword">關鍵字觸發（客戶訊息含特定詞）</option>
+                  <option value="numeric">數字觸發（客戶輸入8位以上訂單號，自動精確比對）</option>
+                  <option value="both">兩者皆可</option>
+                </select>
+                {editingDsForm.triggerMode === 'numeric' && (
+                  <div className="text-[10px] text-indigo-600 mt-1 bg-indigo-50 px-2 py-1 rounded">
+                    偵測 8 位以上純數字（非 0 開頭、非 + 開頭），精確比對「查詢欄位」後只回覆對應那筆資料。
+                  </div>
+                )}
               </div>
+
+              {(editingDsForm.triggerMode === 'keyword' || editingDsForm.triggerMode === 'both' || !editingDsForm.triggerMode) && (
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）</label>
+                  <input
+                    type="text"
+                    placeholder="例：訂單,密碼,查詢"
+                    value={editingDsForm.triggerKeywords.join(',')}
+                    onChange={e => setEditingDsForm(prev => ({ ...prev, triggerKeywords: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                </div>
+              )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
                 <div className="font-medium">如何取得 Spreadsheet ID：</div>
@@ -5676,8 +5700,9 @@ function Unit12CustomerService({
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
             <div className="font-medium">使用說明</div>
             <div>• 每位使用者可新增多個資料來源，各自填入自己的 Google API Key 與試算表。</div>
-            <div>• 客戶訊息包含「觸發關鍵字」時，AI 自動查詢該試算表並附上結果。</div>
-            <div>• 例：客戶輸入「訂單 A001 密碼」→ AI 查詢訂單 A001 欄位 → 回覆對應密碼。</div>
+            <div>• 「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。</div>
+            <div>• 「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。</div>
+            <div>• 回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。</div>
           </div>
         </div>
       )}
