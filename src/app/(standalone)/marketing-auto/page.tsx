@@ -6172,7 +6172,7 @@ export default function MarketingAutoPage() {
           </a>
           <a href="/prospect-call"
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
-            <Phone className="h-3.5 w-3.5" /> 潛在客戶電話行銷
+            <Phone className="h-3.5 w-3.5" /> 潛在客戶行銷
           </a>
           <a href="/settings"
             className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2">
