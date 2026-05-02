@@ -1,9 +1,15 @@
 /**
  * GET  /api/marketing/prospect-schedule  — 讀取排程設定
  * POST /api/marketing/prospect-schedule  — 儲存排程設定
+ *
+ * 直接沿用 marketing_campaigns 表：
+ * 每個 user 有一筆 title='__prospect__' 的特殊 campaign，
+ * 排程存在 unit_data._schedule，設定存在 unit_data._prospectConfig
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+
+const PROSPECT_TITLE = '__prospect__'
 
 export async function GET() {
   const supabase = await createClient()
@@ -11,13 +17,23 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data, error } = await supabase
-    .from('prospect_schedules')
-    .select('config, schedule, last_result, updated_at')
+    .from('marketing_campaigns')
+    .select('id, unit_data, updated_at')
     .eq('user_id', user.id)
+    .eq('title', PROSPECT_TITLE)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+
+  const unitData = (data?.unit_data ?? {}) as Record<string, unknown>
+  return NextResponse.json({
+    data: {
+      schedule:    unitData._schedule    ?? null,
+      config:      unitData._prospectConfig ?? null,
+      last_result: unitData._prospectResult ?? null,
+      updated_at:  data?.updated_at ?? null,
+    }
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -25,21 +41,39 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
-  const { config, schedule } = body
+  const { config, schedule } = await req.json()
 
-  // Compute nextRunAt if schedule changed
+  // Compute nextRunAt
   let scheduleToSave = { ...schedule }
   if (schedule?.enabled) {
     scheduleToSave.nextRunAt = computeNextRun(schedule).toISOString()
   }
 
-  const { error } = await supabase
-    .from('prospect_schedules')
-    .upsert(
-      { user_id: user.id, config, schedule: scheduleToSave },
-      { onConflict: 'user_id' }
-    )
+  // Upsert by title
+  const { data: existing } = await supabase
+    .from('marketing_campaigns')
+    .select('id, unit_data')
+    .eq('user_id', user.id)
+    .eq('title', PROSPECT_TITLE)
+    .maybeSingle()
+
+  const unitData = {
+    ...((existing?.unit_data ?? {}) as Record<string, unknown>),
+    _schedule:       scheduleToSave,
+    _prospectConfig: config,
+  }
+
+  let error
+  if (existing?.id) {
+    ;({ error } = await supabase
+      .from('marketing_campaigns')
+      .update({ unit_data: unitData })
+      .eq('id', existing.id))
+  } else {
+    ;({ error } = await supabase
+      .from('marketing_campaigns')
+      .insert({ user_id: user.id, title: PROSPECT_TITLE, unit_data: unitData }))
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, nextRunAt: scheduleToSave.nextRunAt })
@@ -47,10 +81,8 @@ export async function POST(req: NextRequest) {
 
 function computeNextRun(s: {
   frequency: 'daily' | 'weekly' | 'monthly'
-  hour: number
-  minute: number
-  weekday?: number
-  monthDay?: number
+  hour: number; minute: number
+  weekday?: number; monthDay?: number
 }): Date {
   const now = new Date()
   const next = new Date(now)

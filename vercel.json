@@ -3,10 +3,6 @@
   "crons": [
     {
       "path": "/api/cron/pipeline",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/prospect",
       "schedule": "0 * * * *"
     }
   ]

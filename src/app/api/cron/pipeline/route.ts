@@ -207,8 +207,59 @@ export async function GET(req: NextRequest) {
           copyData:         ud[4] ?? {},
           collectedSummary: (ud[1] as { summary?: string } | undefined)?.summary ?? '',
         }, cronSecret ?? '', baseUrl)
+      } else if (unitId === 10) {
+        // 潛在客戶行銷：從 _prospectConfig 讀取設定執行 collect + filter
+        const pcfg = (ud['_prospectConfig'] ?? cfg) as Record<string, unknown>
+        const sources = (pcfg.sources as string[]) ?? ['map']
+        const sourceToTypes: Record<string, string> = {
+          map: 'map', facebook: 'facebook', instagram: 'instagram',
+          tiktok: 'tiktok', youtube: 'youtube', threads: 'threads',
+          amazon: 'amazon', shopee: 'shopee', ios_android: 'ios_android', web: 'web',
+        }
+        const types = sources.map((s: string) => sourceToTypes[s]).filter(Boolean)
+        const subOptions: Record<string, string[]> = {}
+        if (sources.includes('map'))         subOptions.map         = ['info', 'coordinates']
+        if (sources.includes('facebook'))    subOptions.facebook    = ['vendor_info', 'posts']
+        if (sources.includes('instagram'))   subOptions.instagram   = ['vendor_info', 'posts']
+        if (sources.includes('tiktok'))      subOptions.tiktok      = ['vendor_info', 'videos']
+        if (sources.includes('youtube'))     subOptions.youtube     = ['vendor_info', 'videos']
+        if (sources.includes('threads'))     subOptions.threads     = ['vendor_info', 'posts']
+        if (sources.includes('amazon'))      subOptions.amazon      = ['vendor_info', 'products']
+        if (sources.includes('shopee'))      subOptions.shopee      = ['vendor_info', 'products']
+        if (sources.includes('ios_android')) subOptions.ios_android = ['vendor_info', 'reviews']
+
+        const collectResult = await callUnitApi('/api/marketing/collect', {
+          types, subOptions,
+          keywords: pcfg.keywords ?? campaign.title,
+          location: pcfg.location ?? '',
+          limit: 20,
+        }, cronSecret ?? '', baseUrl)
+
+        let prospectResult = { ok: false, data: null as unknown, error: '蒐集失敗' }
+        if (collectResult.ok) {
+          const rawText = (collectResult.data as Record<string, string>)?.result
+            || (collectResult.data as Record<string, string>)?.summary || ''
+          prospectResult = await callUnitApi('/api/marketing/prospect-filter', {
+            rawText,
+            filterCriteria: pcfg.filterCriteria ?? '',
+            minEmployees:   pcfg.minEmployees ?? 0,
+            maxDistanceKm:  pcfg.maxDistanceKm ?? 0,
+            branches: [],
+          }, cronSecret ?? '', baseUrl)
+        }
+
+        if (prospectResult.ok && prospectResult.data) {
+          const orgs = (prospectResult.data as Record<string, unknown>).orgs as Array<{ selected?: boolean }> ?? []
+          const selected = orgs.filter(o => o.selected)
+          const prospectSummary = { orgs, total: orgs.length, selected: selected.length, runAt: new Date().toISOString() }
+          ud = { ...ud, _prospectResult: prospectSummary }
+          result = { ok: true, data: prospectSummary }
+          log.push(`✓ 潛在客戶行銷完成：蒐集 ${orgs.length} 家，入選 ${selected.length} 家`)
+        } else {
+          result = { ok: false, data: null, error: prospectResult.error ?? '篩選失敗' }
+        }
       } else {
-        // Units 6,8,9,10,11 need user interaction or long async — skip in cron
+        // Units 6,8,9,11 need user interaction or long async — skip in cron
         log.push(`⏭ 跳過 Unit ${unitId}（需人工確認或長時非同步）`)
         continue
       }
