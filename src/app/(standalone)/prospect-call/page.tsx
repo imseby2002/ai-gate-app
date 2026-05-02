@@ -9,7 +9,7 @@ import {
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type CollectSource = 'map' | 'facebook' | 'web'
+type CollectSource = 'map' | 'facebook' | 'instagram' | 'tiktok' | 'youtube' | 'threads' | 'amazon' | 'shopee' | 'ios_android' | 'web'
 type StepStatus = 'idle' | 'running' | 'done' | 'error'
 type PhoneType = 'any' | 'mobile' | 'landline'
 
@@ -560,12 +560,21 @@ export default function ProspectCallPage() {
 
     try {
       const sourceToTypes: Record<CollectSource, string> = {
-        map: 'map', facebook: 'facebook', web: 'web',
+        map: 'map', facebook: 'facebook', instagram: 'instagram',
+        tiktok: 'tiktok', youtube: 'youtube', threads: 'threads',
+        amazon: 'amazon', shopee: 'shopee', ios_android: 'ios_android', web: 'web',
       }
       const types = config.sources.map(s => sourceToTypes[s])
       const subOptions: Record<string, string[]> = {}
-      if (config.sources.includes('map')) subOptions.map = ['info', 'coordinates']
-      if (config.sources.includes('facebook')) subOptions.facebook = ['posts']
+      if (config.sources.includes('map'))        subOptions.map        = ['info', 'coordinates']
+      if (config.sources.includes('facebook'))   subOptions.facebook   = ['vendor_info', 'posts']
+      if (config.sources.includes('instagram'))  subOptions.instagram  = ['vendor_info', 'posts']
+      if (config.sources.includes('tiktok'))     subOptions.tiktok     = ['vendor_info', 'videos']
+      if (config.sources.includes('youtube'))    subOptions.youtube    = ['vendor_info', 'videos']
+      if (config.sources.includes('threads'))    subOptions.threads    = ['vendor_info', 'posts']
+      if (config.sources.includes('amazon'))     subOptions.amazon     = ['vendor_info', 'products']
+      if (config.sources.includes('shopee'))     subOptions.shopee     = ['vendor_info', 'products']
+      if (config.sources.includes('ios_android')) subOptions.ios_android = ['vendor_info', 'reviews']
 
       const collectRes = await fetch('/api/marketing/collect', {
         method: 'POST',
@@ -717,16 +726,23 @@ export default function ProspectCallPage() {
                 <label className="block text-xs font-medium mb-2">蒐集管道</label>
                 <div className="flex flex-wrap gap-2">
                   {([
-                    { id: 'map' as CollectSource, label: '地圖', icon: Map },
-                    { id: 'facebook' as CollectSource, label: 'Facebook', icon: Globe },
-                    { id: 'web' as CollectSource, label: '網頁', icon: Search },
+                    { id: 'map'        as CollectSource, label: '🗺️ 地圖' },
+                    { id: 'facebook'   as CollectSource, label: '👥 Facebook' },
+                    { id: 'instagram'  as CollectSource, label: '📸 Instagram' },
+                    { id: 'tiktok'     as CollectSource, label: '📱 TikTok' },
+                    { id: 'youtube'    as CollectSource, label: '🎬 YouTube' },
+                    { id: 'threads'    as CollectSource, label: '🧵 Threads' },
+                    { id: 'amazon'     as CollectSource, label: '📦 Amazon' },
+                    { id: 'shopee'     as CollectSource, label: '🛒 Shopee' },
+                    { id: 'ios_android' as CollectSource, label: '📲 iOS/Android' },
+                    { id: 'web'        as CollectSource, label: '🌐 網頁' },
                   ]).map(s => (
                     <button key={s.id} type="button" onClick={() => toggleSource(s.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all"
+                      className="px-3 py-1.5 rounded-lg text-xs border transition-all"
                       style={config.sources.includes(s.id)
                         ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                         : {}}>
-                      <s.icon className="h-3 w-3" />{s.label}
+                      {s.label}
                     </button>
                   ))}
                 </div>
