@@ -376,13 +376,16 @@ async function handlePost(req: NextRequest) {
         ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
         : `你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。`)
 
+  const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+
 const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
-- 不確定的資訊請誠實說明，勿猜測${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}`
+- 不確定的資訊請誠實說明，勿猜測
+- 目前台灣時間：${taiwanTime}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({

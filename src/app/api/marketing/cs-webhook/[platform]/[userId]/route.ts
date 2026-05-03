@@ -164,6 +164,139 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   }
 }
 
+// ── Google Sheets + JSON Pricing query ───────────────────────────────────────
+
+interface SheetConfig {
+  apiKey: string
+  spreadsheetId: string
+  sheetName: string
+  keyColumn: string
+  returnColumns: string[]
+  triggerKeywords: string[]
+  triggerMode?: 'keyword' | 'numeric' | 'both'
+}
+
+interface PricingConfig {
+  productType: 'tour' | 'accommodation' | 'custom'
+  triggerKeywords: string[]
+  currency?: string
+  schedules?: Array<{ id: string; name: string }>
+  segments?: Array<{ label: string; key: string; weekdayPrice: number; weekendPrice: number }>
+  packages?: Array<{ name: string; price: number; description?: string }>
+  groupDiscounts?: Array<{ minPeople: number; discountPercent: number; note?: string }>
+  rooms?: Array<{ name: string; capacity: number; weekdayPrice: number; weekendPrice: number; holidayPrice?: number; extraPersonFee?: number }>
+  cancellationPolicy?: string
+  notes?: string[]
+  customContent?: string
+}
+
+const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
+
+async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
+  const triggerMode = config.triggerMode ?? 'keyword'
+  let triggered = false
+  let exactKey: string | null = null
+
+  if (triggerMode === 'keyword' || triggerMode === 'both') {
+    if (config.triggerKeywords.some(kw => kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase()))) {
+      triggered = true
+    }
+  }
+  if (triggerMode === 'numeric' || triggerMode === 'both') {
+    const numMatch = message.match(NUMERIC_ORDER_RE)
+    if (numMatch) { triggered = true; exactKey = numMatch[0] }
+  }
+  if (!triggered) return null
+
+  try {
+    const range = encodeURIComponent(`${config.sheetName}!A:Z`)
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}?key=${config.apiKey}`
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const json = await res.json()
+    const rows: string[][] = json.values ?? []
+    if (rows.length < 2) return null
+    const headers = rows[0]
+    const dataRows = rows.slice(1)
+    const keyColIdx = headers.findIndex(h => h.trim() === (config.keyColumn ?? '').trim())
+
+    if (exactKey && keyColIdx >= 0) {
+      const matchedRow = dataRows.find(row => (row[keyColIdx] ?? '').trim() === exactKey!.trim())
+      if (!matchedRow) return `【外部資料表：${config.sheetName}】\n查無符合號碼「${exactKey}」的資料，請確認是否正確。`
+      const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
+      const colIdxs = wantedCols.length > 1
+        ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
+        : headers.map((_, i) => i)
+      const result = colIdxs.map(i => `${headers[i]}：${matchedRow[i] ?? ''}`).join('\n')
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}`
+    }
+
+    const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
+    const colIdxs = wantedCols.length > 0
+      ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
+      : headers.map((_, i) => i)
+    const pickedHeaders = colIdxs.map(i => headers[i])
+    const table = [pickedHeaders, ...dataRows.map(row => colIdxs.map(i => row[i] ?? ''))].map(r => r.join(' | ')).join('\n')
+    return `【外部資料表：${config.sheetName}】\n${table}`
+  } catch { return null }
+}
+
+function formatPricingForAI(name: string, cfg: PricingConfig): string {
+  const cur = cfg.currency ?? 'TWD'
+  const lines = [`【定價計算機：${name}】`, `計算時請逐步列式、每個數字必須照表使用，禁止估算。`]
+  if (cfg.productType === 'tour') {
+    if (cfg.schedules?.length) { lines.push('\n可選班次：'); cfg.schedules.forEach(s => lines.push(`  ${s.name}`)) }
+    if (cfg.segments?.length) {
+      lines.push(`\n票價（${cur}）：`)
+      lines.push('  ▸ 平日（週一至週四）：'); cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekdayPrice.toLocaleString()}`))
+      lines.push('  ▸ 假日（週五至週日、例假日）：'); cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekendPrice.toLocaleString()}`))
+    }
+    if (cfg.packages?.length) { lines.push('\n套餐方案：'); cfg.packages.forEach(p => lines.push(`  • ${p.name}：$${p.price.toLocaleString()}${p.description ? `（${p.description}）` : ''}`)) }
+    if (cfg.groupDiscounts?.length) { lines.push('\n團體折扣：'); cfg.groupDiscounts.forEach(g => lines.push(`  • ${g.minPeople}人以上：${100 - g.discountPercent}折${g.note ? `（${g.note}）` : ''}`)) }
+  }
+  if (cfg.productType === 'accommodation' && cfg.rooms?.length) {
+    lines.push(`\n房型與定價（${cur}）：`)
+    cfg.rooms.forEach(r => {
+      lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
+      lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
+      lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
+      if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
+      if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
+    })
+  }
+  if (cfg.productType === 'custom' && cfg.customContent) lines.push('\n' + cfg.customContent)
+  if (cfg.cancellationPolicy) lines.push(`\n取消政策：${cfg.cancellationPolicy}`)
+  if (cfg.notes?.length) { lines.push('\n注意事項：'); cfg.notes.forEach(n => lines.push(`  • ${n}`)) }
+  return lines.join('\n')
+}
+
+function queryJsonPricing(name: string, config: PricingConfig, message: string): string | null {
+  const triggered = (config.triggerKeywords ?? []).some(kw => kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase()))
+  if (!triggered) return null
+  return formatPricingForAI(name, config)
+}
+
+async function queryDataSources(userId: string, message: string): Promise<string> {
+  const supabase = getServiceClient()
+  const { data: sources } = await supabase
+    .from('cs_data_sources')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('enabled', true)
+
+  if (!sources?.length) return ''
+  const results: string[] = []
+  await Promise.all(sources.map(async (src) => {
+    let result: string | null = null
+    if (src.type === 'json_pricing') result = queryJsonPricing(src.name, src.config as PricingConfig, message)
+    else result = await queryGoogleSheet(src.config as SheetConfig, message)
+    if (result) results.push(result)
+  }))
+  if (!results.length) return ''
+  const hasPricing = sources.some(s => s.type === 'json_pricing' && results.some(r => r.includes(s.name)))
+  return `\n\n【外部資料查詢結果】\n${results.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
+}
+
 // ── Build booking flow system prompt ─────────────────────────────────────────
 interface BookingFlowDef {
   id: string
@@ -226,7 +359,8 @@ ${flowSection}
 async function getAIReply(
   message: string,
   knowledge: CsKnowledge,
-  history: HistoryMsg[] = []
+  history: HistoryMsg[] = [],
+  userId = ''
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -241,13 +375,17 @@ async function getAIReply(
           ? buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows)
           : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。')
 
+    const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+    const externalDataSection = userId ? await queryDataSources(userId, message) : ''
+
     const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
-- 不確定的資訊請誠實說明，勿猜測${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}`
+- 不確定的資訊請誠實說明，勿猜測
+- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${externalDataSection}`
 
     const messages = [
       ...history.slice(-10),
@@ -355,7 +493,7 @@ export async function POST(
       const replyToken: string = event.replyToken
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
       const history = await loadHistory(userId, customerId)
-      const reply = await getAIReply(text, knowledge, history)
+      const reply = await getAIReply(text, knowledge, history, userId)
       if (token && replyToken) await replyLine(replyToken, reply, token)
       await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
@@ -377,7 +515,7 @@ export async function POST(
       const text: string = msg.text?.body ?? ''
       const to: string   = msg.from
       const history = await loadHistory(userId, to)
-      const reply = await getAIReply(text, knowledge, history)
+      const reply = await getAIReply(text, knowledge, history, userId)
       if (token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
       await saveHistory(userId, to, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
@@ -476,7 +614,7 @@ export async function POST(
         const history = await loadHistory(userId, customerId)
 
         // 1. AI auto-reply to customer
-        const reply = await getAIReply(text, knowledge, history)
+        const reply = await getAIReply(text, knowledge, history, userId)
         await replyTelegram(chatId, reply, botToken)
         await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
 
@@ -508,7 +646,7 @@ export async function POST(
       const senderId: string = body?.sender?.id ?? ''
       if (text && senderId) {
         const history = await loadHistory(userId, senderId)
-        const reply = await getAIReply(text, knowledge, history)
+        const reply = await getAIReply(text, knowledge, history, userId)
         if (oaToken) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
@@ -535,7 +673,7 @@ export async function POST(
 
     if (text && from && to) {
       const history = await loadHistory(userId, from)
-      const reply = await getAIReply(text, knowledge, history)
+      const reply = await getAIReply(text, knowledge, history, userId)
       await saveHistory(userId, from, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
       const xmlReply = `<xml>
 <ToUserName><![CDATA[${from}]]></ToUserName>
@@ -557,7 +695,7 @@ export async function POST(
 
     if (text && fromJid) {
       const history = await loadHistory(userId, fromJid)
-      const reply = await getAIReply(text, knowledge, history)
+      const reply = await getAIReply(text, knowledge, history, userId)
 
       // Reply via Bridge
       const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
