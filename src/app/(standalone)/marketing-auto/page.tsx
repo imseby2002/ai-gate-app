@@ -4561,6 +4561,9 @@ type BookingStep =
   | 'timeslot'      // 出發/入住 時段/班次
   | 'headcount'     // 人數（大人/小孩/嬰兒）
   | 'passenger_id'  // 乘客資料（姓名+生日+身分證，逐人，團保用）
+  | 'booker_name'   // 訂房/訂位人姓名
+  | 'quote'         // 報價（AI 自動套定價計算機計算並告知）
+  | 'email'         // 電子郵件
   | 'plate'         // 車牌號碼
   | 'phone'         // 聯絡電話
   | 'special_req'   // 特殊需求
@@ -4573,6 +4576,9 @@ const BOOKING_STEP_LABELS: Record<BookingStep, string> = {
   timeslot:      '時段/班次',
   headcount:     '人數（大人/小孩/嬰兒）',
   passenger_id:  '乘客資料（姓名+生日+身分證，逐人收集）',
+  booker_name:   '訂房/訂位人姓名',
+  quote:         '報價（AI 套定價計算機計算總價並告知客人）',
+  email:         '電子郵件',
   plate:         '車牌號碼',
   phone:         '聯絡電話',
   special_req:   '特殊需求',
