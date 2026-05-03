@@ -4588,6 +4588,7 @@ interface BookingFlowDef {
   id: string
   name: string
   triggerKeywords: string   // 逗號分隔
+  dataHint: string          // 對應知識庫/定價模組的關鍵字，例如「賞鯨」「海景大床房」
   steps: BookingStep[]
   paymentInfo: string
 }
@@ -4597,6 +4598,7 @@ const DEFAULT_FLOWS: BookingFlowDef[] = [
     id: 'tour',
     name: '行程預訂（賞鯨/出海）',
     triggerKeywords: '賞鯨,繞島,登島,出海,行程',
+    dataHint: '賞鯨',
     steps: ['product', 'date_depart', 'timeslot', 'headcount', 'passenger_id', 'phone'],
     paymentInfo: '',
   },
@@ -5691,7 +5693,7 @@ function Unit12CustomerService({
                 ))}
 
                 <button
-                  onClick={() => setEditingFlow({ id: `flow_${Date.now()}`, name: '', triggerKeywords: '', steps: ['date_depart', 'timeslot', 'headcount', 'phone'], paymentInfo: '' })}
+                  onClick={() => setEditingFlow({ id: `flow_${Date.now()}`, name: '', triggerKeywords: '', dataHint: '', steps: ['date_depart', 'timeslot', 'headcount', 'phone'], paymentInfo: '' })}
                   className="w-full py-2 rounded-xl text-xs font-medium border-2 border-dashed border-emerald-300 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5"
                 >
                   <Plus className="h-3.5 w-3.5" /> 新增預訂類型
@@ -5735,6 +5737,15 @@ function Unit12CustomerService({
                   <p className="text-[10px] text-gray-400">客人說到這些字詞時，AI 自動啟動此流程</p>
                   <input value={editingFlow.triggerKeywords} onChange={e => setEditingFlow(f => f ? { ...f, triggerKeywords: e.target.value } : f)}
                     placeholder="例：賞鯨,出海,繞島,訂票"
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                {/* Data hint */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">關聯資料關鍵字</label>
+                  <p className="text-[10px] text-gray-400">告訴 AI 要從知識庫和定價計算機中找哪一類資料。<br />例：賞鯨行程 → 填「賞鯨」；訂房 → 填「房型」或房間名稱</p>
+                  <input value={editingFlow.dataHint ?? ''} onChange={e => setEditingFlow(f => f ? { ...f, dataHint: e.target.value } : f)}
+                    placeholder="例：賞鯨、海景大床房、停車"
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                 </div>
 

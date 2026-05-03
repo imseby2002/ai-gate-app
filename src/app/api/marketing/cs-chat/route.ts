@@ -216,31 +216,36 @@ interface BookingFlowDef {
   id: string
   name: string
   triggerKeywords: string
+  dataHint?: string   // 對應知識庫/定價模組的關鍵字，例如「賞鯨」「海景大床房」
   steps: string[]
   paymentInfo: string
 }
 
-const STEP_LABELS: Record<string, string> = {
-  product:       '行程/產品/房型 選擇（列出可選方案讓客人選）',
-  date_depart:   '出發日期',
-  date_checkin:  '入住日期',
-  date_checkout: '退房日期',
-  timeslot:      '出發/入住 時段或班次',
-  headcount:     '人數（大人/小孩/嬰兒各幾位）',
-  passenger_id:  '每位乘客的姓名、生日（民國）、身分證字號（逐人詢問，用於團體保險）',
-  booker_name:   '訂房/訂位人姓名',
-  quote:         '報價（根據已收集的日期、人數、方案，套用定價計算機計算總價，逐步列式後告知客人）',
-  email:         '電子郵件',
-  plate:         '車牌號碼',
-  phone:         '聯絡電話',
-  special_req:   '特殊需求',
+function buildStepLabels(dataHint?: string): Record<string, string> {
+  const hint = dataHint?.trim()
+  return {
+    product:       hint ? `介紹「${hint}」相關方案/選項（從知識庫中「${hint}」資料取得，列出可選方案讓客人選）` : '行程/產品/房型 選擇（列出可選方案讓客人選）',
+    date_depart:   '出發日期',
+    date_checkin:  '入住日期',
+    date_checkout: '退房日期',
+    timeslot:      '出發/入住 時段或班次',
+    headcount:     '人數（大人/小孩/嬰兒各幾位）',
+    passenger_id:  '每位乘客的姓名、生日（民國）、身分證字號（逐人詢問，用於團體保險）',
+    booker_name:   '訂房/訂位人姓名',
+    quote:         hint ? `報價（從定價計算機中找「${hint}」相關定價，根據已知日期/人數/方案逐步計算總價並告知客人）` : '報價（根據已收集的日期、人數、方案，套用定價計算機計算總價，逐步列式後告知客人）',
+    email:         '電子郵件',
+    plate:         '車牌號碼',
+    phone:         '聯絡電話',
+    special_req:   '特殊需求',
+  }
 }
 
 function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
   const flowSection = flows.length > 0
     ? flows.map(f => {
         const keywords = f.triggerKeywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
-        const stepList = f.steps.map((s, i) => `  ${i + 1}. ${STEP_LABELS[s] ?? s}`).join('\n')
+        const stepLabels = buildStepLabels(f.dataHint)
+        const stepList = f.steps.map((s, i) => `  ${i + 1}. ${stepLabels[s] ?? s}`).join('\n')
         const payment = (f.paymentInfo || defaultPaymentInfo).trim()
         return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}${payment ? `\n付款說明：${payment}` : ''}`
       }).join('\n\n')
