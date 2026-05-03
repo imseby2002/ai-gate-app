@@ -5685,7 +5685,7 @@ function Unit12CustomerService({
 
           {/* File upload */}
           <div className="border rounded-xl p-4 space-y-3">
-            <span className="text-xs font-medium text-gray-600">上傳文件（PDF / DOCX / XLSX / TXT）</span>
+            <span className="text-xs font-medium text-gray-600">上傳文件（PDF / DOCX / XLSX / CSV / TXT）</span>
             <div
               onClick={() => !uploadingDialogue && dialogueInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${uploadingDialogue ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50'}`}
@@ -5694,7 +5694,7 @@ function Unit12CustomerService({
                 ref={dialogueInputRef}
                 type="file"
                 className="hidden"
-                accept=".pdf,.docx,.xlsx,.txt"
+                accept=".pdf,.docx,.xlsx,.xls,.csv,.txt"
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleDialogueUpload(f); e.target.value = '' }}
               />
               {uploadingDialogue
