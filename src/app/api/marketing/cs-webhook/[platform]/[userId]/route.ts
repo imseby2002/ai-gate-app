@@ -276,7 +276,7 @@ function queryJsonPricing(name: string, config: PricingConfig, message: string):
   return formatPricingForAI(name, config)
 }
 
-async function queryDataSources(userId: string, message: string): Promise<string> {
+async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false): Promise<string> {
   const supabase = getServiceClient()
   const { data: sources } = await supabase
     .from('cs_data_sources')
@@ -288,8 +288,14 @@ async function queryDataSources(userId: string, message: string): Promise<string
   const results: string[] = []
   await Promise.all(sources.map(async (src) => {
     let result: string | null = null
-    if (src.type === 'json_pricing') result = queryJsonPricing(src.name, src.config as PricingConfig, message)
-    else result = await queryGoogleSheet(src.config as SheetConfig, message)
+    if (src.type === 'json_pricing') {
+      // 預訂流程開啟時直接注入所有定價模組，不依賴訊息關鍵字觸發
+      result = bookingFlowEnabled
+        ? formatPricingForAI(src.name, src.config as PricingConfig)
+        : queryJsonPricing(src.name, src.config as PricingConfig, message)
+    } else {
+      result = await queryGoogleSheet(src.config as SheetConfig, message)
+    }
     if (result) results.push(result)
   }))
   if (!results.length) return ''
@@ -384,7 +390,7 @@ async function getAIReply(
           : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。')
 
     const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
-    const externalDataSection = userId ? await queryDataSources(userId, message) : ''
+    const externalDataSection = userId ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled) : ''
 
     const systemPrompt = `${baseInstructions}
 

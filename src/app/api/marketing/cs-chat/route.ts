@@ -323,7 +323,10 @@ async function handlePost(req: NextRequest) {
     await Promise.all(sources.map(async (src) => {
       let result: string | null = null
       if (src.type === 'json_pricing') {
-        result = queryJsonPricing(src.name, src.config as PricingConfig, message)
+        // 預訂流程開啟時直接注入所有定價模組，不依賴訊息關鍵字觸發
+        result = bookingFlowEnabled
+          ? formatPricingForAI(src.name, src.config as PricingConfig)
+          : queryJsonPricing(src.name, src.config as PricingConfig, message)
       } else {
         result = await queryGoogleSheet(src.config as SheetConfig, message)
       }
