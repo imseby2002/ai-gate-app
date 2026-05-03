@@ -5188,6 +5188,8 @@ function Unit12CustomerService({
           escalationThreshold,
           language: replyLanguage,
           campaignId,
+          bookingFlowEnabled,
+          paymentInfo,
         }),
       })
       const raw = await res.text()

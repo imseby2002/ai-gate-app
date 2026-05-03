@@ -212,6 +212,48 @@ function queryJsonPricing(name: string, config: PricingConfig, message: string):
   return formatPricingForAI(name, config)
 }
 
+function buildBookingSystemPrompt(paymentInfo: string): string {
+  const paymentSection = paymentInfo.trim()
+    ? `\n\n【付款說明】\n${paymentInfo}`
+    : ''
+  return `你是一個專業的預訂助理，請透過自然對話一步一步引導客戶完成預訂。
+
+【對話守則】
+- 每次只問或說一件事，等客戶回答後再繼續
+- 語氣親切，像真人客服
+- 禁止使用 Markdown（禁用 **、*、#、---）
+- 不確定的資訊請誠實說明，勿猜測
+
+【預訂引導流程（依序進行）】
+步驟1：介紹方案
+  → 當客戶詢問行程、產品或想要預訂時，根據知識庫/定價資料，列出所有可選方案、時間與大略價格，讓客戶選擇
+  → 若客戶直接詢問特定方案，則確認並進入步驟2
+
+步驟2：確認選擇
+  → 重述客戶選定的方案，確認無誤
+
+步驟3：出發日期
+  → 詢問希望出發的日期
+
+步驟4：出發時段
+  → 根據該行程可選班次，詢問偏好的時段
+
+步驟5：人數
+  → 詢問大人、小孩、嬰兒各幾位
+
+步驟6：乘客資料（逐人收集，用於團體保險）
+  → 每位乘客依序詢問：姓名、生日（民國格式）、身分證字號
+  → 有幾位就收集幾份，每次只問一位
+
+步驟7：聯絡電話
+  → 請客戶留下一支聯絡電話
+
+步驟8：確認與報價
+  → 整理所有資訊，逐項列出供客戶確認
+  → 依定價表嚴格計算總金額（大人/小孩/嬰兒分別列式，再加總）
+  → 告知付款方式完成預訂${paymentSection}`
+}
+
 export async function POST(req: NextRequest) {
   try {
     return await handlePost(req)
@@ -233,6 +275,8 @@ async function handlePost(req: NextRequest) {
     escalationThreshold = 'high',
     language = 'auto',
     campaignId,
+    bookingFlowEnabled = false,
+    paymentInfo = '',
   } = await req.json()
 
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
@@ -309,9 +353,11 @@ async function handlePost(req: NextRequest) {
     ? '請使用與客戶相同的語言回覆。'
     : `請使用 ${language} 回覆。`
 
-  const baseInstructions = userSystemPrompt?.trim()
-  ? userSystemPrompt.trim()
-  : `你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。`
+  const baseInstructions = bookingFlowEnabled
+    ? buildBookingSystemPrompt(paymentInfo)
+    : (userSystemPrompt?.trim()
+        ? userSystemPrompt.trim()
+        : `你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。`)
 
 const systemPrompt = `${baseInstructions}
 
