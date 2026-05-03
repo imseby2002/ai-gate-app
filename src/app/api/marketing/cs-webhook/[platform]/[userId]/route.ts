@@ -63,6 +63,7 @@ interface CsKnowledge {
   replyLanguage: string
   bookingFlowEnabled: boolean
   paymentInfo: string
+  bookingFlows: BookingFlowDef[]
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -82,6 +83,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let replyLanguage = 'auto'
   let bookingFlowEnabled = false
   let paymentInfo = ''
+  let bookingFlows: BookingFlowDef[] = []
   const knowledgeParts: string[] = []
 
   // Find first campaign that has unit_data[12] with content
@@ -95,6 +97,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
       if (unit12.replyLanguage) replyLanguage = String(unit12.replyLanguage)
       if (unit12.bookingFlowEnabled) bookingFlowEnabled = Boolean(unit12.bookingFlowEnabled)
       if (unit12.paymentInfo) paymentInfo = String(unit12.paymentInfo)
+      if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
 
       // Direct text knowledge input
       if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
@@ -157,45 +160,66 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     replyLanguage,
     bookingFlowEnabled,
     paymentInfo,
+    bookingFlows,
   }
 }
 
 // ── Build booking flow system prompt ─────────────────────────────────────────
-function buildBookingSystemPrompt(paymentInfo: string): string {
-  const paymentSection = paymentInfo.trim()
-    ? `\n\n【付款說明】\n${paymentInfo}`
-    : ''
+interface BookingFlowDef {
+  id: string
+  name: string
+  triggerKeywords: string
+  steps: string[]
+  paymentInfo: string
+}
+
+const STEP_LABELS: Record<string, string> = {
+  product:       '行程/產品/房型 選擇（列出可選方案讓客人選）',
+  date_depart:   '出發日期',
+  date_checkin:  '入住日期',
+  date_checkout: '退房日期',
+  timeslot:      '出發/入住 時段或班次',
+  headcount:     '人數（大人/小孩/嬰兒各幾位）',
+  passenger_id:  '每位乘客的姓名、生日（民國）、身分證字號（逐人詢問，用於團體保險）',
+  plate:         '車牌號碼',
+  phone:         '聯絡電話',
+  special_req:   '特殊需求',
+}
+
+function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
+  const flowSection = flows.length > 0
+    ? flows.map(f => {
+        const keywords = f.triggerKeywords.split(',').map((k: string) => k.trim()).filter(Boolean).join('、')
+        const stepList = f.steps.map((s, i) => `  ${i + 1}. ${STEP_LABELS[s] ?? s}`).join('\n')
+        const payment = (f.paymentInfo || defaultPaymentInfo).trim()
+        return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}${payment ? `\n付款說明：${payment}` : ''}`
+      }).join('\n\n')
+    : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話${defaultPaymentInfo ? `\n付款說明：${defaultPaymentInfo}` : ''}`
+
   return `你是一個專業的客服兼預訂助理，同時扮演兩個角色：
 
 角色A：產品顧問
-  → 客人詢問任何問題（行程介紹、價格、時間、差異比較、注意事項等），都要完整且自然地回答
-  → 不要因為「要收集預訂資料」就跳過問題
+  → 客人詢問任何問題（介紹、價格、時間、差異、注意事項等），完整自然地回答
+  → 不可因為「要收集資料」而跳過問題
 
 角色B：預訂收集者
-  → 當客人表示要預訂（例：「我要訂」「幫我訂」「可以買票嗎」「好我要這個」），才切換到收集模式
-  → 收集模式下，根據對話歷史判斷哪些資料已經提到過，只詢問還缺少的部分
-  → 每次只問一件事，等回答後再問下一件
+  → 當客人表示要預訂或購買時，根據說到的關鍵字判斷是哪種流程，然後照該流程依序收集資料
+  → 根據對話歷史判斷哪些已有，只問缺的
+  → 每次只問一件事，等回答後再繼續
 
-【收集順序（切換到收集模式後依序）】
-1. 確認選定的行程/方案（若對話中已提到則直接確認）
-2. 出發日期
-3. 出發時段（根據可選班次讓客人選）
-4. 人數（大人/小孩/嬰兒各幾位）
-5. 每位乘客的姓名、生日（民國格式）、身分證字號（用於團體保險，逐人詢問）
-6. 聯絡電話
-7. 整理所有資訊讓客人確認，計算總金額，告知付款方式
+${flowSection}
 
-【判斷規則】
-- 客人問「介紹」「差別」「有什麼」「幾點」「多少錢」→ 角色A，直接回答問題
-- 客人說「我要」「幫我訂」「好」「可以」「就這個」→ 角色B，開始或繼續收集
-- 兩者混合（邊問邊訂）→ 先回答問題，再接著問下一個收集項目
+【通用判斷規則】
+- 問「介紹」「差別」「有什麼」「幾點」「多少錢」→ 角色A 直接回答
+- 說「我要訂」「幫我訂」「好」「可以」「就這個」→ 角色B 開始收集
+- 混合情境 → 先回答問題，再接著問下一個收集項目
 - 收集途中客人又問問題 → 先回答，再繼續未完成的收集
+- 收集完畢 → 整理所有資訊讓客人確認，計算總金額，告知付款方式
 
 【格式守則】
 - 禁止使用 Markdown（禁用 **、*、#、---）
 - 語氣親切自然，像真人客服
-- 不確定的資訊請誠實說明，勿猜測
-- 計算總價時逐步列式，嚴格使用定價表數字${paymentSection}`
+- 計算總價時逐步列式，嚴格使用定價表數字`
 }
 
 // ── AI reply (直接呼叫 Gemini / Claude，不經過 cs-chat 路由) ─────────────────
@@ -213,7 +237,7 @@ async function getAIReply(
 
     let baseInstructions: string
     if (knowledge.bookingFlowEnabled) {
-      baseInstructions = buildBookingSystemPrompt(knowledge.paymentInfo)
+      baseInstructions = buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows)
     } else {
       baseInstructions = knowledge.systemPrompt?.trim()
         ? knowledge.systemPrompt.trim()

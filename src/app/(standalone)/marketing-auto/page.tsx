@@ -4553,6 +4553,49 @@ interface CsDialogueFile {
   textContent: string
 }
 
+type BookingStep =
+  | 'product'       // 行程/產品/房型 選擇
+  | 'date_depart'   // 出發日期
+  | 'date_checkin'  // 入住日期
+  | 'date_checkout' // 退房日期
+  | 'timeslot'      // 出發/入住 時段/班次
+  | 'headcount'     // 人數（大人/小孩/嬰兒）
+  | 'passenger_id'  // 乘客資料（姓名+生日+身分證，逐人，團保用）
+  | 'plate'         // 車牌號碼
+  | 'phone'         // 聯絡電話
+  | 'special_req'   // 特殊需求
+
+const BOOKING_STEP_LABELS: Record<BookingStep, string> = {
+  product:       '行程/產品/房型 選擇',
+  date_depart:   '出發日期',
+  date_checkin:  '入住日期',
+  date_checkout: '退房日期',
+  timeslot:      '時段/班次',
+  headcount:     '人數（大人/小孩/嬰兒）',
+  passenger_id:  '乘客資料（姓名+生日+身分證，逐人收集）',
+  plate:         '車牌號碼',
+  phone:         '聯絡電話',
+  special_req:   '特殊需求',
+}
+
+interface BookingFlowDef {
+  id: string
+  name: string
+  triggerKeywords: string   // 逗號分隔
+  steps: BookingStep[]
+  paymentInfo: string
+}
+
+const DEFAULT_FLOWS: BookingFlowDef[] = [
+  {
+    id: 'tour',
+    name: '行程預訂（賞鯨/出海）',
+    triggerKeywords: '賞鯨,繞島,登島,出海,行程',
+    steps: ['product', 'date_depart', 'timeslot', 'headcount', 'passenger_id', 'phone'],
+    paymentInfo: '',
+  },
+]
+
 interface Unit12Data {
   systemPrompt?: string
   knowledgeBase?: string
@@ -4562,6 +4605,7 @@ interface Unit12Data {
   dialogueFiles?: CsDialogueFile[]
   bookingFlowEnabled?: boolean
   paymentInfo?: string
+  bookingFlows?: BookingFlowDef[]
 }
 
 const CS_PLATFORMS = [
@@ -4658,6 +4702,8 @@ function Unit12CustomerService({
   const [replyLanguage, setReplyLanguage] = useState(savedData?.replyLanguage ?? 'auto')
   const [bookingFlowEnabled, setBookingFlowEnabled] = useState(savedData?.bookingFlowEnabled ?? false)
   const [paymentInfo, setPaymentInfo] = useState(savedData?.paymentInfo ?? '')
+  const [bookingFlows, setBookingFlows] = useState<BookingFlowDef[]>(savedData?.bookingFlows ?? DEFAULT_FLOWS)
+  const [editingFlow, setEditingFlow] = useState<BookingFlowDef | null>(null)
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -4674,6 +4720,7 @@ function Unit12CustomerService({
     if (savedData.replyLanguage) setReplyLanguage(savedData.replyLanguage)
     if (savedData.bookingFlowEnabled !== undefined) setBookingFlowEnabled(savedData.bookingFlowEnabled)
     if (savedData.paymentInfo !== undefined) setPaymentInfo(savedData.paymentInfo)
+    if (savedData.bookingFlows?.length) setBookingFlows(savedData.bookingFlows)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -4698,7 +4745,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows })
       }
     } finally {
       setUploadingDialogue(false)
@@ -5152,7 +5199,7 @@ function Unit12CustomerService({
     setSavingSettings(true)
     // Use savedData.dialogueFiles as fallback if local state is empty (prevents accidental overwrite)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -5190,6 +5237,7 @@ function Unit12CustomerService({
           campaignId,
           bookingFlowEnabled,
           paymentInfo,
+          bookingFlows,
         }),
       })
       const raw = await res.text()
@@ -5217,7 +5265,7 @@ function Unit12CustomerService({
         }])
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows })
       } else {
         setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
       }
@@ -5598,12 +5646,12 @@ function Unit12CustomerService({
               className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
 
-          {/* Booking flow toggle */}
+          {/* Booking flow toggle + multi-flow config */}
           <div className="border-2 border-emerald-200 rounded-xl p-4 space-y-3 bg-emerald-50/30">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-sm text-gray-700">逐步預訂引導流程</div>
-                <div className="text-xs text-gray-500 mt-0.5">開啟後 AI 將像真人一樣，每次只問一個問題，逐步收集預訂所需資訊</div>
+                <div className="font-medium text-sm text-gray-700">預訂引導流程</div>
+                <div className="text-xs text-gray-500 mt-0.5">開啟後 AI 依客人意圖自動觸發對應流程，逐步收集預訂資料</div>
               </div>
               <button
                 onClick={() => setBookingFlowEnabled(v => !v)}
@@ -5612,32 +5660,143 @@ function Unit12CustomerService({
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${bookingFlowEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
+
             {bookingFlowEnabled && (
-              <div className="space-y-2">
-                <div className="bg-emerald-100 rounded-lg p-3 text-xs text-emerald-800 space-y-1">
-                  <div className="font-medium">AI 引導流程（依序詢問）：</div>
-                  <ol className="list-decimal list-inside space-y-0.5 text-emerald-700">
-                    <li>行程類型（例：賞鯨、繞島）</li>
-                    <li>出發日期與時段</li>
-                    <li>人數</li>
-                    <li>每位乘客姓名、生日、身分證（團體保險用）</li>
-                    <li>聯絡電話</li>
-                    <li>確認付款資訊</li>
-                  </ol>
-                </div>
+              <div className="space-y-3">
+                {/* Flow list */}
+                {bookingFlows.map((flow, fi) => (
+                  <div key={flow.id} className="bg-white border border-emerald-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-700">{flow.name || `流程 ${fi + 1}`}</span>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => setEditingFlow({ ...flow })}
+                          className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                        <button onClick={() => setBookingFlows(prev => prev.filter((_, i) => i !== fi))}
+                          className="text-[10px] px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-gray-500">
+                      觸發關鍵字：<span className="text-emerald-700 font-medium">{flow.triggerKeywords || '(未設定)'}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500">
+                      收集步驟：{flow.steps.map(s => BOOKING_STEP_LABELS[s]).join(' → ')}
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  onClick={() => setEditingFlow({ id: `flow_${Date.now()}`, name: '', triggerKeywords: '', steps: ['date_depart', 'timeslot', 'headcount', 'phone'], paymentInfo: '' })}
+                  className="w-full py-2 rounded-xl text-xs font-medium border-2 border-dashed border-emerald-300 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="h-3.5 w-3.5" /> 新增預訂類型
+                </button>
+
+                {/* Global payment info */}
                 <div>
-                  <div className="text-xs font-medium text-gray-600 mb-1">付款說明（顯示給客戶）</div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">預設付款說明（各流程未設定時使用）</div>
                   <textarea
                     value={paymentInfo}
                     onChange={e => setPaymentInfo(e.target.value)}
-                    rows={3}
-                    placeholder="例：請匯款至玉山銀行 123-456789 戶名：OO 旅遊有限公司，匯款後請傳送收據截圖確認。"
+                    rows={2}
+                    placeholder="例：請匯款至玉山銀行 123-456789 戶名：OO 公司，匯款後傳收據截圖確認。"
                     className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
                   />
                 </div>
               </div>
             )}
           </div>
+
+          {/* Flow editor modal */}
+          {editingFlow && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditingFlow(null) }}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-gray-800">設定預訂流程</h3>
+                  <button onClick={() => setEditingFlow(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">流程名稱</label>
+                  <input value={editingFlow.name} onChange={e => setEditingFlow(f => f ? { ...f, name: e.target.value } : f)}
+                    placeholder="例：賞鯨行程預訂、訂房、停車"
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                {/* Trigger keywords */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">觸發關鍵字（逗號分隔）</label>
+                  <p className="text-[10px] text-gray-400">客人說到這些字詞時，AI 自動啟動此流程</p>
+                  <input value={editingFlow.triggerKeywords} onChange={e => setEditingFlow(f => f ? { ...f, triggerKeywords: e.target.value } : f)}
+                    placeholder="例：賞鯨,出海,繞島,訂票"
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                {/* Steps */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-600">收集步驟（勾選 + 拖排順序）</label>
+                  <p className="text-[10px] text-gray-400">AI 依序詢問已勾選的步驟</p>
+                  <div className="space-y-1.5">
+                    {(Object.keys(BOOKING_STEP_LABELS) as BookingStep[]).map(step => {
+                      const checked = editingFlow.steps.includes(step)
+                      const idx = editingFlow.steps.indexOf(step)
+                      return (
+                        <div key={step} className={`flex items-center gap-2.5 p-2.5 rounded-lg border ${checked ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200'}`}>
+                          <input type="checkbox" checked={checked} onChange={e => {
+                            setEditingFlow(f => {
+                              if (!f) return f
+                              const steps = e.target.checked
+                                ? [...f.steps, step]
+                                : f.steps.filter(s => s !== step)
+                              return { ...f, steps }
+                            })
+                          }} className="w-3.5 h-3.5 accent-emerald-500" />
+                          <span className="flex-1 text-xs text-gray-700">{BOOKING_STEP_LABELS[step]}</span>
+                          {checked && (
+                            <div className="flex gap-1">
+                              <button disabled={idx === 0} onClick={() => setEditingFlow(f => {
+                                if (!f) return f
+                                const s = [...f.steps]; [s[idx - 1], s[idx]] = [s[idx], s[idx - 1]]; return { ...f, steps: s }
+                              })} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">↑</button>
+                              <button disabled={idx === editingFlow.steps.length - 1} onClick={() => setEditingFlow(f => {
+                                if (!f) return f
+                                const s = [...f.steps]; [s[idx], s[idx + 1]] = [s[idx + 1], s[idx]]; return { ...f, steps: s }
+                              })} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">↓</button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Payment info per flow */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">付款說明（此流程專用，留空則用預設）</label>
+                  <textarea value={editingFlow.paymentInfo} onChange={e => setEditingFlow(f => f ? { ...f, paymentInfo: e.target.value } : f)}
+                    rows={2}
+                    placeholder="例：請轉帳至 ..."
+                    className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setEditingFlow(null)}
+                    className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+                  <button onClick={() => {
+                    if (!editingFlow) return
+                    setBookingFlows(prev => {
+                      const idx = prev.findIndex(f => f.id === editingFlow.id)
+                      return idx >= 0 ? prev.map((f, i) => i === idx ? editingFlow : f) : [...prev, editingFlow]
+                    })
+                    setEditingFlow(null)
+                  }} className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
+                    style={{ background: 'var(--primary)' }}>
+                    儲存此流程
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <button onClick={saveSettings} disabled={savingSettings}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
