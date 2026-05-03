@@ -235,14 +235,11 @@ async function getAIReply(
       ? '請使用與客戶相同的語言回覆。'
       : `請使用 ${knowledge.replyLanguage} 回覆。`
 
-    let baseInstructions: string
-    if (knowledge.bookingFlowEnabled) {
-      baseInstructions = buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows)
-    } else {
-      baseInstructions = knowledge.systemPrompt?.trim()
-        ? knowledge.systemPrompt.trim()
-        : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。'
-    }
+    const baseInstructions = knowledge.systemPrompt?.trim()
+      ? knowledge.systemPrompt.trim()
+      : (knowledge.bookingFlowEnabled
+          ? buildBookingSystemPrompt(knowledge.paymentInfo, knowledge.bookingFlows)
+          : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。')
 
     const systemPrompt = `${baseInstructions}
 

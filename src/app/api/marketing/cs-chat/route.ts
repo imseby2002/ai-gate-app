@@ -369,10 +369,11 @@ async function handlePost(req: NextRequest) {
     ? '請使用與客戶相同的語言回覆。'
     : `請使用 ${language} 回覆。`
 
-  const baseInstructions = bookingFlowEnabled
-    ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
-    : (userSystemPrompt?.trim()
-        ? userSystemPrompt.trim()
+  // 優先順序：使用者自訂 system prompt > bookingFlows 自動產生 > 預設客服
+  const baseInstructions = userSystemPrompt?.trim()
+    ? userSystemPrompt.trim()
+    : (bookingFlowEnabled
+        ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
         : `你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。`)
 
 const systemPrompt = `${baseInstructions}
