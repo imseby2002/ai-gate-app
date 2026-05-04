@@ -58,16 +58,41 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    // Admin route protection
-    if (pathname.startsWith('/admin') && user) {
+    // Admin + module route protection (single profile fetch covers both)
+    const needsProfileCheck =
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/marketing-auto') ||
+      pathname.startsWith('/prospect-call') ||
+      pathname.startsWith('/resume')
+
+    if (needsProfileCheck && user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_type')
+        .select('user_type, enabled_modules')
         .eq('id', user.id)
         .single()
 
-      if (profile?.user_type !== 'admin') {
+      // Admin guard
+      if (pathname.startsWith('/admin') && profile?.user_type !== 'admin') {
         return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+
+      // Module guard — admin bypasses
+      if (profile && profile.user_type !== 'admin') {
+        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
+        const ROUTE_MODULES: Record<string, string[]> = {
+          '/marketing-auto': ['marketing', 'cs'],
+          '/prospect-call':  ['leads'],
+          '/resume':         ['resume'],
+        }
+        for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
+          if (pathname.startsWith(route)) {
+            const hasAccess = modules.some(m => enabled.includes(m))
+            if (!hasAccess) {
+              return NextResponse.redirect(new URL('/dashboard?blocked=' + modules[0], request.url))
+            }
+          }
+        }
       }
     }
 

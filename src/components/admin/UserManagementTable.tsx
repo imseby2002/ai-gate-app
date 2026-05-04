@@ -2,8 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Shield, User, DollarSign } from 'lucide-react'
-import { formatCost, formatDateTime } from '@/lib/utils/format'
+import { Search, ChevronDown, ChevronUp } from 'lucide-react'
+import { formatCost } from '@/lib/utils/format'
+
+const ALL_MODULES = [
+  { id: 'chat',      label: 'AI 對話' },
+  { id: 'marketing', label: '行銷自動化' },
+  { id: 'cs',        label: '客服系統' },
+  { id: 'leads',     label: '潛在客戶' },
+  { id: 'resume',    label: '履歷優化' },
+] as const
+
+type ModuleId = typeof ALL_MODULES[number]['id']
 
 interface UserRow {
   id: string
@@ -15,6 +25,7 @@ interface UserRow {
   created_at: string
   monthly_cost: number
   monthly_messages: number
+  enabled_modules: string[] | null
   subscriptions: Array<{ plan_id: string; status: string }> | null
 }
 
@@ -26,6 +37,8 @@ export function UserManagementTable({ users }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'employee' | 'external' | 'admin'>('all')
+  const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
 
   const filtered = users.filter(u => {
     const matchSearch = !search ||
@@ -35,28 +48,29 @@ export function UserManagementTable({ users }: Props) {
     return matchSearch && matchFilter
   })
 
-  const handleToggleActive = async (userId: string, isActive: boolean) => {
+  const patch = async (userId: string, body: Record<string, unknown>) => {
     await fetch('/api/admin/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, is_active: !isActive }),
+      body: JSON.stringify({ userId, ...body }),
     })
     router.refresh()
   }
 
-  const handleChangeType = async (userId: string, userType: string) => {
-    await fetch('/api/admin/users', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, user_type: userType }),
-    })
-    router.refresh()
+  const handleToggleModule = async (user: UserRow, moduleId: ModuleId) => {
+    const current = user.enabled_modules ?? ALL_MODULES.map(m => m.id)
+    const next = current.includes(moduleId)
+      ? current.filter(m => m !== moduleId)
+      : [...current, moduleId]
+    setSaving(user.id + moduleId)
+    await patch(user.id, { enabled_modules: next })
+    setSaving(null)
   }
 
   const TYPE_COLORS: Record<string, string> = {
     employee: 'bg-green-100 text-green-700',
     external: 'bg-blue-100 text-blue-700',
-    admin: 'bg-purple-100 text-purple-700',
+    admin:    'bg-purple-100 text-purple-700',
   }
 
   return (
@@ -100,45 +114,85 @@ export function UserManagementTable({ users }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(user => (
-              <tr key={user.id} className="border-b last:border-0 hover:bg-gray-50">
-                <td className="px-5 py-3">
-                  <div className="font-medium">{user.full_name ?? '—'}</div>
-                  <div className="text-xs text-gray-400">{user.email}</div>
-                  {user.department && <div className="text-xs text-gray-400">{user.department}</div>}
-                </td>
-                <td className="px-5 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[user.user_type]}`}>
-                    {user.user_type === 'employee' ? '員工' : user.user_type === 'admin' ? '管理員' : '外部'}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-right font-medium">{formatCost(user.monthly_cost)}</td>
-                <td className="px-5 py-3 text-right">{user.monthly_messages}</td>
-                <td className="px-5 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {user.is_active ? '正常' : '停用'}
-                  </span>
-                </td>
-                <td className="px-5 py-3">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleToggleActive(user.id, user.is_active)}
-                      className="text-xs px-2.5 py-1 rounded-md border hover:bg-gray-100 transition-colors"
-                    >
-                      {user.is_active ? '停用' : '啟用'}
-                    </button>
-                    {user.user_type !== 'admin' && (
-                      <button
-                        onClick={() => handleChangeType(user.id, 'admin')}
-                        className="text-xs px-2.5 py-1 rounded-md border border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
-                      >
-                        設為管理員
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(user => {
+              const mods = user.enabled_modules ?? ALL_MODULES.map(m => m.id)
+              const isExpanded = expandedUser === user.id
+              return (
+                <>
+                  <tr key={user.id} className="border-b hover:bg-gray-50">
+                    <td className="px-5 py-3">
+                      <div className="font-medium">{user.full_name ?? '—'}</div>
+                      <div className="text-xs text-gray-400">{user.email}</div>
+                      {user.department && <div className="text-xs text-gray-400">{user.department}</div>}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[user.user_type]}`}>
+                        {user.user_type === 'employee' ? '員工' : user.user_type === 'admin' ? '管理員' : '外部'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-right font-medium">{formatCost(user.monthly_cost)}</td>
+                    <td className="px-5 py-3 text-right">{user.monthly_messages}</td>
+                    <td className="px-5 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {user.is_active ? '正常' : '停用'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex gap-2 items-center">
+                        <button
+                          onClick={() => patch(user.id, { is_active: !user.is_active })}
+                          className="text-xs px-2.5 py-1 rounded-md border hover:bg-gray-100 transition-colors"
+                        >
+                          {user.is_active ? '停用' : '啟用'}
+                        </button>
+                        {user.user_type !== 'admin' && (
+                          <button
+                            onClick={() => patch(user.id, { user_type: 'admin' })}
+                            className="text-xs px-2.5 py-1 rounded-md border border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
+                          >
+                            設管理員
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setExpandedUser(isExpanded ? null : user.id)}
+                          className="text-xs px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-1"
+                        >
+                          模組
+                          {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr key={user.id + '_modules'} className="border-b bg-indigo-50/40">
+                      <td colSpan={6} className="px-5 py-3">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-xs text-gray-500 font-medium mr-1">可用模組：</span>
+                          {ALL_MODULES.map(m => {
+                            const enabled = mods.includes(m.id)
+                            const isSaving = saving === user.id + m.id
+                            return (
+                              <button
+                                key={m.id}
+                                onClick={() => handleToggleModule(user, m.id)}
+                                disabled={isSaving}
+                                className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
+                                  enabled
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'bg-white text-gray-400 border-gray-300'
+                                } ${isSaving ? 'opacity-50' : ''}`}
+                              >
+                                {m.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )
+            })}
           </tbody>
         </table>
       </div>
