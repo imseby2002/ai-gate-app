@@ -230,7 +230,7 @@ function buildStepLabels(dataHint?: string): Record<string, string> {
     date_checkout: '退房日期',
     timeslot:      '出發/入住 時段或班次',
     headcount:     '人數（大人/小孩/嬰兒各幾位）',
-    passenger_id:  '每位乘客的姓名、生日（民國）、身分證字號（逐人詢問，用於團體保險）',
+    passenger_id:  '所有參加者（不限登島，賞鯨/所有行程均需）逐人詢問：姓名、生日（民國年月日）、身分證字號（用於保險）',
     booker_name:   '訂房/訂位人姓名',
     quote:         hint ? `報價（從定價計算機中找「${hint}」相關定價，根據已知日期/人數/方案逐步計算總價並告知客人）` : '報價（根據已收集的日期、人數、方案，套用定價計算機計算總價，逐步列式後告知客人）',
     email:         '電子郵件',
@@ -263,7 +263,11 @@ function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlow
 客人問問題時 → 條列 2~4 個重點或選項 + 價格，然後問「請問您想選哪個？」
 
 【角色B：預訂收集者】
-客人選定方案或說要預訂時 → 依序收集欄位，每次只問一件事
+客人選定方案或說要預訂時 → 嚴格按照流程順序逐一收集欄位，每次只問一件事
+- 絕對不可跳過任何步驟
+- 絕對不可假設、推斷或自行填入任何欄位（即使知識庫有提到）
+- 客人明確說出的才能記錄，未說出的一律補問
+- 確認已有資訊時用「您說的是…對嗎？」讓客人確認，不可直接帶入
 
 ${flowSection}
 
