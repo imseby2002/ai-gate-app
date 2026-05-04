@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot, BarChart3, Settings, Shield,
-  Plus, ChevronLeft, ChevronRight, Image, Video, Zap, FileText, Megaphone
+  Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
+  FileText, Megaphone, Headphones, Phone
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -13,29 +14,39 @@ import { useState } from 'react'
 
 interface SidebarProps {
   userType?: string
+  enabledModules?: string[]
   conversations?: Array<{ id: string; title: string; updated_at: string }>
 }
 
-export function Sidebar({ userType, conversations = [] }: SidebarProps) {
+export function Sidebar({ userType, enabledModules, conversations = [] }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const t = useTranslations('Sidebar')
+  const isAdmin = userType === 'admin'
+  const mods = enabledModules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
 
   const NAV_ITEMS = [
-    { labelKey: 'newChat',    href: '/chat',        icon: MessageSquare },
-    { labelKey: 'assistants', href: '/assistants',  icon: Bot },
-    { labelKey: 'imageGen',   href: '/image-gen',   icon: Image },
-    { labelKey: 'videoGen',   href: '/video-gen',   icon: Video },
-    { labelKey: 'resume',        href: '/resume',          icon: FileText },
-    { labelKey: 'marketingAuto', href: '/marketing-auto',  icon: Megaphone },
-    { labelKey: 'usage',         href: '/usage',           icon: BarChart3 },
-    { labelKey: 'settings',   href: '/settings',    icon: Settings },
-    { labelKey: 'admin',      href: '/admin',       icon: Shield, adminOnly: true },
+    // chat module
+    { labelKey: 'newChat',    href: '/chat',        icon: MessageSquare, module: 'chat' },
+    { labelKey: 'assistants', href: '/assistants',  icon: Bot,           module: 'chat' },
+    { labelKey: 'imageGen',   href: '/image-gen',   icon: Image,         module: 'chat' },
+    { labelKey: 'videoGen',   href: '/video-gen',   icon: Video,         module: 'chat' },
+    // other modules
+    { labelKey: 'resume',        href: '/resume',          icon: FileText,   module: 'resume' },
+    { labelKey: 'marketingAuto', href: '/marketing-auto',  icon: Megaphone,  module: 'marketing' },
+    { labelKey: 'cs',            href: '/marketing-auto?module=cs', icon: Headphones, module: 'cs' },
+    { labelKey: 'leads',         href: '/prospect-call',   icon: Phone,      module: 'leads' },
+    // always visible
+    { labelKey: 'usage',    href: '/usage',    icon: BarChart3, module: null },
+    { labelKey: 'settings', href: '/settings', icon: Settings,  module: null },
+    { labelKey: 'admin',    href: '/admin',    icon: Shield,    module: null, adminOnly: true },
   ] as const
 
-  const visibleItems = NAV_ITEMS.filter(item =>
-    !('adminOnly' in item) || userType === 'admin'
-  )
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if ('adminOnly' in item && item.adminOnly && !isAdmin) return false
+    if (item.module === null) return true
+    return isAdmin || mods.includes(item.module)
+  })
 
   return (
     <aside className={cn(
@@ -62,22 +73,25 @@ export function Sidebar({ userType, conversations = [] }: SidebarProps) {
       </div>
 
       {/* New Chat Button */}
-      <div className="px-3 py-3">
-        <Link href="/chat">
-          <Button className={cn('w-full', collapsed && 'px-0')} size="sm">
-            <Plus className="h-4 w-4" />
-            {!collapsed && t('newChat')}
-          </Button>
-        </Link>
-      </div>
+      {(isAdmin || mods.includes('chat')) && (
+        <div className="px-3 py-3">
+          <Link href="/chat">
+            <Button className={cn('w-full', collapsed && 'px-0')} size="sm">
+              <Plus className="h-4 w-4" />
+              {!collapsed && t('newChat')}
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Nav Items */}
-      <nav className="flex-1 px-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-2 space-y-1 overflow-y-auto pt-2">
         {visibleItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const basePath = item.href.split('?')[0]
+          const isActive = pathname === basePath || pathname.startsWith(basePath + '/')
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.labelKey} href={item.href}>
               <div className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer',
                 isActive

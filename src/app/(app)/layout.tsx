@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         userType={profile.user_type}
+        enabledModules={profile.enabled_modules ?? undefined}
         conversations={conversations ?? []}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
