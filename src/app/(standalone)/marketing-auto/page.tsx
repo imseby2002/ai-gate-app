@@ -6214,7 +6214,7 @@ function Unit12CustomerService({
                         : 'bg-gray-100 text-gray-800 rounded-tl-sm'
                     }`}
                       style={msg.role === 'user' ? { background: 'var(--primary)' } : {}}>
-                      {msg.content}
+                      <span className="whitespace-pre-wrap">{msg.content}</span>
                     </div>
                     {msg.role === 'assistant' && msg.meta && (
                       <div className="flex items-center gap-1.5 px-1">
