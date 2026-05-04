@@ -22,11 +22,11 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, config } = body
+  const { name, config, type = 'google_sheets' } = body
 
   const { data, error } = await supabase
     .from('cs_data_sources')
-    .insert({ user_id: user.id, name, type: 'google_sheets', config, enabled: true })
+    .insert({ user_id: user.id, name, type, config, enabled: true })
     .select()
     .single()
 
