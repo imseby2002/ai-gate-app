@@ -27,7 +27,6 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
 
   const NAV_ITEMS = [
     // chat module
-    { labelKey: 'newChat',    href: '/chat',        icon: MessageSquare, module: 'chat' },
     { labelKey: 'assistants', href: '/assistants',  icon: Bot,           module: 'chat' },
     { labelKey: 'imageGen',   href: '/image-gen',   icon: Image,         module: 'chat' },
     { labelKey: 'videoGen',   href: '/video-gen',   icon: Video,         module: 'chat' },
