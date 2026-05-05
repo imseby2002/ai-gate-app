@@ -4951,14 +4951,16 @@ function Unit12CustomerService({
     },
   }
 
+  const ind = industry ?? 'homestay'
+
   useEffect(() => {
-    fetch('/api/marketing/cs-datasource').then(r => r.json()).then(d => {
+    fetch(`/api/marketing/cs-datasource?industry=${ind}`).then(r => r.json()).then(d => {
       if (d.sources) {
         setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing'))
         setPricingConfigs(d.sources.filter((s: { type: string }) => s.type === 'json_pricing'))
       }
     }).catch(() => {})
-  }, [])
+  }, [ind])
 
   function openAddPc(templateKey?: string) {
     const template = templateKey ? PRICING_TEMPLATES[templateKey] : PRICING_TEMPLATES.tour
@@ -4995,7 +4997,7 @@ function Unit12CustomerService({
         const r = await fetch('/api/marketing/cs-datasource', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingPc.name, config: parsed, type: 'json_pricing' }),
+          body: JSON.stringify({ name: editingPc.name, config: parsed, type: 'json_pricing', industry: ind }),
         })
         const d = await r.json()
         if (d.source) setPricingConfigs(prev => [...prev, d.source])
@@ -5063,7 +5065,7 @@ function Unit12CustomerService({
         const r = await fetch('/api/marketing/cs-datasource', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingDsForm.name, config }),
+          body: JSON.stringify({ name: editingDsForm.name, config, industry: ind }),
         })
         const d = await r.json()
         if (d.source) setDataSources(prev => [...prev, d.source])
@@ -6633,16 +6635,45 @@ export default function MarketingAutoPage() {
   }, [])
 
   // Auto-restore last used campaign on page load
+  // CS mode: each industry gets its own isolated campaign
   useEffect(() => {
+    if (csMode === null) return // wait for URL detection
     const run = async () => {
+      // CS mode: use industry-specific storage key to isolate configs
+      const storageKey = (csMode && csIndustry)
+        ? `aigate_cs_campaign_${csIndustry}`
+        : 'aigate_last_campaign'
+
+      const savedId = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null
+
+      if (savedId) {
+        // Try to load the saved campaign for this industry
+        try {
+          const r = await fetch(`/api/marketing/campaign/${savedId}`)
+          if (r.ok) {
+            const c = (await r.json()).campaign
+            if (c) {
+              setCampaignId(c.id)
+              setCampaignTitle(c.title ?? '未命名行銷專案')
+              setUnitStatuses(c.unit_statuses ?? {})
+              setUnitData(c.unit_data ?? {})
+              return
+            }
+          }
+        } catch { /* ignore, fall through */ }
+      }
+
+      // No saved campaign for this industry — load list and pick appropriately
       const list = await loadCampaigns()
       if (!list?.length) return
 
-      // Prefer localStorage (last manually selected), fallback to most recently updated
-      const lastId = typeof window !== 'undefined'
-        ? (localStorage.getItem('aigate_last_campaign') ?? list[0].id)
-        : list[0].id
+      if (csMode && csIndustry) {
+        // In CS mode: don't auto-load a random campaign; start fresh for this industry
+        return
+      }
 
+      // Normal marketing mode: restore last used
+      const lastId = list[0].id
       try {
         const r = await fetch(`/api/marketing/campaign/${lastId}`)
         if (!r.ok) return
@@ -6656,20 +6687,34 @@ export default function MarketingAutoPage() {
       } catch { /* ignore */ }
     }
     run()
-  }, [loadCampaigns])
+  }, [loadCampaigns, csMode, csIndustry])
 
   const createCampaign = useCallback(async (): Promise<string | null> => {
     setCreating(true)
+    // In CS mode, auto-name by industry and tag with industry field
+    const isCs = csMode && csIndustry
+    const industryLabel = csIndustry ? (CS_INDUSTRY_TEMPLATES[csIndustry]?.label ?? csIndustry) : ''
+    const title = isCs ? `${industryLabel} 客服設定` : campaignTitle
     const res = await fetch('/api/marketing/campaign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: campaignTitle }),
+      body: JSON.stringify({ title, ...(isCs ? { industry: csIndustry } : {}) }),
     })
     const data = await res.json()
     setCreating(false)
-    if (data.id) { setCampaignId(data.id); loadCampaigns(); if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', data.id); return data.id as string }
+    if (data.id) {
+      setCampaignId(data.id)
+      if (isCs) {
+        setCampaignTitle(title)
+        if (typeof window !== 'undefined') localStorage.setItem(`aigate_cs_campaign_${csIndustry}`, data.id)
+      } else {
+        loadCampaigns()
+        if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', data.id)
+      }
+      return data.id as string
+    }
     return null
-  }, [campaignTitle, loadCampaigns])
+  }, [campaignTitle, csMode, csIndustry, loadCampaigns])
 
   const loadCampaign = async (id: string) => {
     const res = await fetch(`/api/marketing/campaign/${id}`)
@@ -6682,7 +6727,8 @@ export default function MarketingAutoPage() {
     setDriveFolders(c.drive_folders ?? {})
     setDriveImages({})
     setShowCampaigns(false)
-    if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', id)
+    const storageKey = (csMode && csIndustry) ? `aigate_cs_campaign_${csIndustry}` : 'aigate_last_campaign'
+    if (typeof window !== 'undefined') localStorage.setItem(storageKey, id)
   }
 
   const ensureCampaign = useCallback(async (): Promise<string | null> => {
