@@ -10,12 +10,30 @@
     "ctaLogin": "員工登入",
     "integratedServices": "整合以下 AI 服務",
     "features": {
-      "routing": { "title": "智能模型路由", "desc": "日常對話用 DeepSeek，財務推理用 R1，法條查詢用 Perplexity，系統自動選擇" },
-      "assistant": { "title": "自訂 AI 助理", "desc": "上傳 PDF、Word、Excel 等文件，建立專屬業務知識庫的 AI 助理" },
-      "usage": { "title": "用量與費用追蹤", "desc": "即時追蹤每個模型的 Token 使用量與費用，清楚掌握 AI 支出" },
-      "image": { "title": "圖片生成與 OCR", "desc": "FLUX、Nano Banana 生成圖片，Gemini Vision 處理 OCR 文字辨識" },
-      "video": { "title": "影片生成", "desc": "使用 VEO3 或 Kling 從文字描述生成高品質影片內容" },
-      "employee": { "title": "員工免費使用", "desc": "員工帳號免費，外部用戶付費制，管理員後台統一管理所有用戶" }
+      "routing": {
+        "title": "智能模型路由",
+        "desc": "日常對話用 DeepSeek，財務推理用 R1，法條查詢用 Perplexity，系統自動選擇"
+      },
+      "assistant": {
+        "title": "自訂 AI 助理",
+        "desc": "上傳 PDF、Word、Excel 等文件，建立專屬業務知識庫的 AI 助理"
+      },
+      "usage": {
+        "title": "用量與費用追蹤",
+        "desc": "即時追蹤每個模型的 Token 使用量與費用，清楚掌握 AI 支出"
+      },
+      "image": {
+        "title": "圖片生成與 OCR",
+        "desc": "FLUX、Nano Banana 生成圖片，Gemini Vision 處理 OCR 文字辨識"
+      },
+      "video": {
+        "title": "影片生成",
+        "desc": "使用 VEO3 或 Kling 從文字描述生成高品質影片內容"
+      },
+      "employee": {
+        "title": "員工免費使用",
+        "desc": "員工帳號免費，外部用戶付費制，管理員後台統一管理所有用戶"
+      }
     }
   },
   "Login": {
@@ -58,7 +76,7 @@
     "assistants": "AI 助理",
     "imageGen": "圖片生成",
     "videoGen": "影片生成",
-    "resume": "履歷優化器",
+    "resume": "打工人專用頁",
     "marketingAuto": "自動化行銷",
     "cs": "客服系統",
     "leads": "潛在客戶行銷",
