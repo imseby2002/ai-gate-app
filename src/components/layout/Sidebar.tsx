@@ -55,12 +55,16 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-4 border-b">
         {!collapsed && (
-          <div className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
             <Zap className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg">AI GATE</span>
-          </div>
+          </Link>
         )}
-        {collapsed && <Zap className="h-6 w-6 text-primary mx-auto" />}
+        {collapsed && (
+          <Link href="/dashboard" className="hover:opacity-70 transition-opacity mx-auto">
+            <Zap className="h-6 w-6 text-primary" />
+          </Link>
+        )}
         <Button
           variant="ghost"
           size="icon"

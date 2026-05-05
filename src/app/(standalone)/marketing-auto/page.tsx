@@ -6353,7 +6353,13 @@ export default function MarketingAutoPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
 
-  const [activeUnit, setActiveUnit] = useState(1)
+  const [activeUnit, setActiveUnit] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search)
+      if (p.get('module') === 'cs') return 12
+    }
+    return 1
+  })
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
 

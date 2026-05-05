@@ -807,7 +807,7 @@ export default function WorkerToolsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Zap className="h-6 w-6" style={{ color: 'var(--primary)' }} />
-            打工人專用頁
+            打工人專用
           </h1>
           {!selectedTool && <p className="text-gray-500 text-sm mt-1">AI 全方位職場助理 — 求職 × 日常 × 進階場景</p>}
           {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
