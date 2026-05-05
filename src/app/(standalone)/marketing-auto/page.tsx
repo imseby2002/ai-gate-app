@@ -6539,6 +6539,21 @@ export default function MarketingAutoPage() {
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? SIDE_TOOLS.find(t => t.id === activeUnit) ?? UNITS[0]
 
+  // CS-only mode: no sidebar, full-width customer service
+  const csMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('module') === 'cs'
+  if (csMode) {
+    return (
+      <div className="h-[calc(100vh-53px)] overflow-y-auto bg-white">
+        <Unit12CustomerService
+          campaignId={campaignId}
+          savedData={unitData[12] as Unit12Data | undefined}
+          unit2Data={companyData}
+          onDone={handleUnit12Done}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-[calc(100vh-53px)] overflow-hidden">
 
