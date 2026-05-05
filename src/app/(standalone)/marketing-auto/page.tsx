@@ -4689,15 +4689,84 @@ interface CsDataSource {
   }
 }
 
+// ─── Industry Templates ───────────────────────────────────────────
+const CS_INDUSTRY_TEMPLATES: Record<string, {
+  label: string
+  emoji: string
+  systemPrompt: string
+  bookingFlowEnabled: boolean
+  bookingFlows: BookingFlowDef[]
+}> = {
+  homestay: {
+    label: '民宿 / 旅遊',
+    emoji: '🏡',
+    systemPrompt: '你是一位親切專業的民宿客服助理。請用溫暖友善的語氣回應客人的問題，協助房型查詢、預訂流程、退訂政策說明與行程安排建議。若客人問到無法確定的問題，請主動告知將轉交人工客服處理。',
+    bookingFlowEnabled: true,
+    bookingFlows: [
+      { id: 'room', name: '房間預訂', triggerKeywords: '預訂,訂房,入住,房型,空房', dataHint: '房型', steps: ['product', 'date_checkin', 'date_checkout', 'headcount', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
+      { id: 'tour', name: '行程安排', triggerKeywords: '行程,旅遊,景點,推薦,玩', dataHint: '行程', steps: ['date_checkin', 'headcount', 'phone'], paymentInfo: '' },
+    ],
+  },
+  ecommerce: {
+    label: '電商 / 零售',
+    emoji: '🛍️',
+    systemPrompt: '你是一位專業的電商客服助理。請協助客人查詢訂單狀態、處理退換貨申請、追蹤物流進度，以及解答商品相關問題與促銷活動資訊。請保持禮貌專業的語氣，若涉及退款或複雜問題，請協助轉接人工客服。',
+    bookingFlowEnabled: false,
+    bookingFlows: [
+      { id: 'order', name: '訂單查詢', triggerKeywords: '訂單,查詢,物流,進度,到貨', dataHint: '訂單', steps: ['booker_name', 'phone', 'email'], paymentInfo: '' },
+      { id: 'return', name: '退換貨申請', triggerKeywords: '退貨,換貨,退款,瑕疵,問題', dataHint: '退換貨', steps: ['product', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
+    ],
+  },
+  restaurant: {
+    label: '餐廳 / 餐飲',
+    emoji: '🍽️',
+    systemPrompt: '你是一位熱情的餐廳客服助理。請協助客人線上訂位、查詢菜單與價格、了解外送時間與範圍、介紹優惠活動，以及安排包廂服務。請用熱情親切的語氣服務每一位客人，讓他們感受到賓至如歸的溫暖。',
+    bookingFlowEnabled: true,
+    bookingFlows: [
+      { id: 'reservation', name: '訂位', triggerKeywords: '訂位,用餐,包廂,座位,預約', dataHint: '訂位', steps: ['date_depart', 'timeslot', 'headcount', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
+      { id: 'delivery', name: '外送查詢', triggerKeywords: '外送,外帶,送餐,配送', dataHint: '外送', steps: ['booker_name', 'phone', 'special_req'], paymentInfo: '' },
+    ],
+  },
+  clinic: {
+    label: '診所 / 醫美',
+    emoji: '🏥',
+    systemPrompt: '你是一位專業細心的診所客服助理。請協助患者預約掛號、了解療程項目與費用、查詢術後照護須知，以及回答一般性診所相關問題。請以專業、關懷的語氣回應，涉及醫療建議的問題請建議諮詢醫師。',
+    bookingFlowEnabled: true,
+    bookingFlows: [
+      { id: 'appointment', name: '預約掛號', triggerKeywords: '預約,掛號,看診,療程,諮詢', dataHint: '預約', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
+    ],
+  },
+  beauty: {
+    label: '美容 / 美髮 / SPA',
+    emoji: '💆',
+    systemPrompt: '你是一位貼心的美容美髮客服助理。請協助客人預約服務、查詢價目表、了解設計師專長，以及提供護理保養建議。請用溫柔親切的語氣服務客人，讓每位客人都能找到最適合的服務。',
+    bookingFlowEnabled: true,
+    bookingFlows: [
+      { id: 'booking', name: '服務預約', triggerKeywords: '預約,剪髮,染髮,護髮,美甲,SPA,按摩', dataHint: '服務', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
+    ],
+  },
+  education: {
+    label: '教育 / 補習班',
+    emoji: '📚',
+    systemPrompt: '你是一位耐心專業的教育機構客服助理。請協助家長與學生了解課程內容、預約試聽、查詢學費方案，以及介紹師資陣容。請用正向積極的語氣解答問題，幫助每個人找到最適合的學習方案。',
+    bookingFlowEnabled: true,
+    bookingFlows: [
+      { id: 'trial', name: '試聽預約', triggerKeywords: '試聽,體驗,報名,課程,諮詢', dataHint: '課程', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
+    ],
+  },
+}
+
 function Unit12CustomerService({
   campaignId,
   savedData,
   unit2Data,
+  industry,
   onDone,
 }: {
   campaignId: string | null
   savedData?: Unit12Data
   unit2Data?: Unit2Data
+  industry?: string
   onDone: (data: Unit12Data) => void
 }) {
   const [tab, setTab] = useState<Cs12Tab>('platforms')
@@ -5578,6 +5647,59 @@ function Unit12CustomerService({
       {tab === 'ai-settings' && (
         <div className="space-y-4">
 
+          {/* Industry template banner */}
+          {industry && CS_INDUSTRY_TEMPLATES[industry] && (
+            <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{CS_INDUSTRY_TEMPLATES[industry].emoji}</span>
+                  <div>
+                    <div className="font-semibold text-sm text-violet-800">{CS_INDUSTRY_TEMPLATES[industry].label} 模板</div>
+                    <div className="text-xs text-violet-500">套用預設系統提示詞與引導流程</div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const tpl = CS_INDUSTRY_TEMPLATES[industry]
+                    setSystemPrompt(tpl.systemPrompt)
+                    setBookingFlowEnabled(tpl.bookingFlowEnabled)
+                    setBookingFlows(tpl.bookingFlows)
+                  }}
+                  className="px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors"
+                >
+                  套用模板
+                </button>
+              </div>
+              {!systemPrompt && (
+                <div className="text-xs text-violet-600 bg-violet-100 rounded-lg px-3 py-2">
+                  💡 尚未設定系統提示詞，點「套用模板」快速啟動
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Industry template selector (no industry in URL) */}
+          {!industry && !systemPrompt && (
+            <div className="border border-dashed border-gray-300 rounded-xl p-4 space-y-2">
+              <div className="text-sm font-medium text-gray-700">快速套用行業模板</div>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(CS_INDUSTRY_TEMPLATES).map(([id, tpl]) => (
+                  <button key={id}
+                    onClick={() => {
+                      setSystemPrompt(tpl.systemPrompt)
+                      setBookingFlowEnabled(tpl.bookingFlowEnabled)
+                      setBookingFlows(tpl.bookingFlows)
+                    }}
+                    className="flex items-center gap-1.5 px-2 py-2 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 border border-gray-200 text-xs text-gray-700 transition-colors text-left"
+                  >
+                    <span>{tpl.emoji}</span>
+                    <span className="truncate">{tpl.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Routing info */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
             <div className="font-medium text-sm text-indigo-800 flex items-center gap-2">
@@ -6353,13 +6475,18 @@ export default function MarketingAutoPage() {
   const [renameValue, setRenameValue] = useState('')
 
   const [csMode, setCsMode] = useState<boolean | null>(null)
+  const [csIndustry, setCsIndustry] = useState<string | null>(null)
   const [activeUnit, setActiveUnit] = useState(1)
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
     const isCs = p.get('module') === 'cs'
     setCsMode(isCs)
-    if (isCs) setActiveUnit(12)
+    if (isCs) {
+      setActiveUnit(12)
+      const ind = p.get('industry')
+      if (ind) setCsIndustry(ind)
+    }
   }, [])
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
@@ -6551,6 +6678,7 @@ export default function MarketingAutoPage() {
           campaignId={campaignId}
           savedData={unitData[12] as Unit12Data | undefined}
           unit2Data={companyData}
+          industry={csIndustry ?? undefined}
           onDone={handleUnit12Done}
         />
       </div>
@@ -6875,6 +7003,7 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[12] as Unit12Data | undefined}
               unit2Data={companyData}
+              industry={csIndustry ?? undefined}
               onDone={handleUnit12Done}
             />
           )}
