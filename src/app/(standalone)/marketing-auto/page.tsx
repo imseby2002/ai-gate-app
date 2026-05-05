@@ -6352,13 +6352,15 @@ export default function MarketingAutoPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
 
-  const [activeUnit, setActiveUnit] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const p = new URLSearchParams(window.location.search)
-      if (p.get('module') === 'cs') return 12
-    }
-    return 1
-  })
+  const [csMode, setCsMode] = useState<boolean | null>(null)
+  const [activeUnit, setActiveUnit] = useState(1)
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    const isCs = p.get('module') === 'cs'
+    setCsMode(isCs)
+    if (isCs) setActiveUnit(12)
+  }, [])
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
 
@@ -6540,7 +6542,8 @@ export default function MarketingAutoPage() {
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? SIDE_TOOLS.find(t => t.id === activeUnit) ?? UNITS[0]
 
   // CS-only mode: no sidebar, full-width customer service
-  const csMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('module') === 'cs'
+  // null = still detecting (avoid SSR flash), true = cs mode, false = full page
+  if (csMode === null) return <div className="h-[calc(100vh-53px)] bg-white" />
   if (csMode) {
     return (
       <div className="h-[calc(100vh-53px)] overflow-y-auto bg-white">
