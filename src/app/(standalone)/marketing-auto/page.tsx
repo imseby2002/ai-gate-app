@@ -4690,69 +4690,116 @@ interface CsDataSource {
 }
 
 // ─── Industry Templates ───────────────────────────────────────────
-const CS_INDUSTRY_TEMPLATES: Record<string, {
+interface IndustryTemplate {
   label: string
   emoji: string
   systemPrompt: string
+  knowledgeBase: string
   bookingFlowEnabled: boolean
   bookingFlows: BookingFlowDef[]
-}> = {
+  recommendedSheets: Array<{
+    name: string
+    description: string
+    keyColumn: string
+    returnColumnsExample: string
+    triggerKeywords: string
+    triggerMode: 'keyword' | 'numeric' | 'both'
+  }>
+  pricingButtons: Array<{ key: string; label: string }>
+}
+
+const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
   homestay: {
     label: '民宿 / 旅遊',
     emoji: '🏡',
-    systemPrompt: '你是一位親切專業的民宿客服助理。請用溫暖友善的語氣回應客人的問題，協助房型查詢、預訂流程、退訂政策說明與行程安排建議。若客人問到無法確定的問題，請主動告知將轉交人工客服處理。',
+    systemPrompt: '你是【民宿名稱】的親切專業客服助理。請用溫暖友善的語氣回應客人問題，協助房型查詢、預訂流程、退訂政策說明與周邊行程安排建議。\n\n【核心任務】\n1. 房型查詢：介紹各房型特色、容納人數、價格（平假日）\n2. 訂房引導：依序收集入住/退房日期、人數、姓名、電話\n3. 退訂政策：入住 48 小時前可免費取消，逾時收一晚費用\n4. 行程推薦：根據客人需求推薦周邊景點與活動\n\n若客人詢問無法確定的問題，請主動說「我幫您轉接人工客服確認」。',
+    knowledgeBase: '【房型資訊】\n- 海景雙人房：2人，平日 2,800，假日 3,500\n- 山景家庭房：4人，平日 4,200，假日 5,500，含早餐\n- 豪華套房：2人，平日 4,800，假日 6,000\n\n【入住須知】\nCheck-in：15:00 後　Check-out：11:00 前\n停車：免費，限一台\n寵物：不可攜帶\n\n【退訂政策】\n- 入住 48 小時前取消：全額退款\n- 48 小時內取消：收取一晚費用\n- 當日取消：不退款\n\n【周邊景點】\n車程 10 分鐘：老街、夜市\n車程 20 分鐘：國家公園、瀑布步道',
     bookingFlowEnabled: true,
     bookingFlows: [
-      { id: 'room', name: '房間預訂', triggerKeywords: '預訂,訂房,入住,房型,空房', dataHint: '房型', steps: ['product', 'date_checkin', 'date_checkout', 'headcount', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
-      { id: 'tour', name: '行程安排', triggerKeywords: '行程,旅遊,景點,推薦,玩', dataHint: '行程', steps: ['date_checkin', 'headcount', 'phone'], paymentInfo: '' },
+      { id: 'room', name: '訂房', triggerKeywords: '預訂,訂房,入住,房型,空房,有沒有房', dataHint: '房型定價', steps: ['product', 'date_checkin', 'date_checkout', 'headcount', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
+      { id: 'tour', name: '行程諮詢', triggerKeywords: '行程,景點,推薦,附近,玩什麼', dataHint: '行程', steps: ['date_checkin', 'headcount', 'phone'], paymentInfo: '' },
     ],
+    recommendedSheets: [
+      { name: '訂單密碼表', description: '客人輸入訂單號自動回覆房號、密碼', keyColumn: '訂單編號', returnColumnsExample: '房號,大門密碼,房間密碼,入住日,退房日', triggerKeywords: '訂單,密碼,房號', triggerMode: 'numeric' },
+      { name: '民宿訂房定價', description: '各房型平假日定價，AI自動計算報價', keyColumn: '房型名稱', returnColumnsExample: '房型,可住人數,平日價,假日價,連假價,備註', triggerKeywords: '訂房,住宿,房型,價格,多少錢', triggerMode: 'keyword' },
+    ],
+    pricingButtons: [{ key: 'accommodation', label: '+ 訂房定價' }, { key: 'tour', label: '+ 行程定價' }, { key: 'custom', label: '+ 自訂' }],
   },
   ecommerce: {
     label: '電商 / 零售',
     emoji: '🛍️',
-    systemPrompt: '你是一位專業的電商客服助理。請協助客人查詢訂單狀態、處理退換貨申請、追蹤物流進度，以及解答商品相關問題與促銷活動資訊。請保持禮貌專業的語氣，若涉及退款或複雜問題，請協助轉接人工客服。',
+    systemPrompt: '你是【品牌名稱】的專業電商客服助理。請協助客人查詢訂單狀態、處理退換貨申請、追蹤物流進度，以及解答商品問題與促銷資訊。\n\n【核心任務】\n1. 訂單查詢：請客人提供訂單號，自動查詢狀態\n2. 退換貨：說明退換貨流程（7天鑑賞期），收集客人資料\n3. 商品問題：說明商品規格、材質、尺寸\n4. 物流追蹤：提供預計到貨時間與物流單號\n\n若客人情緒激動，請先表達理解與歉意，再轉接人工處理。',
+    knowledgeBase: '【退換貨政策】\n收到商品 7 天內可申請退換貨（商品須未使用、含原包裝）\n退款時間：審核通過後 5-7 個工作天\n\n【物流說明】\n台灣本島：下單後 1-3 個工作天出貨\n離島地區：額外 1-2 個工作天\n\n【促銷活動】\n滿 $1,000 免運費\n首購優惠碼：WELCOME88（折扣 88 元）\n\n【商品保固】\n電子商品：1年保固\n服飾：無品質瑕疵不退（非人為損壞）',
     bookingFlowEnabled: false,
     bookingFlows: [
-      { id: 'order', name: '訂單查詢', triggerKeywords: '訂單,查詢,物流,進度,到貨', dataHint: '訂單', steps: ['booker_name', 'phone', 'email'], paymentInfo: '' },
-      { id: 'return', name: '退換貨申請', triggerKeywords: '退貨,換貨,退款,瑕疵,問題', dataHint: '退換貨', steps: ['product', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
+      { id: 'return', name: '退換貨申請', triggerKeywords: '退貨,換貨,退款,瑕疵,壞掉,不喜歡', dataHint: '退換貨', steps: ['product', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
     ],
+    recommendedSheets: [
+      { name: '訂單查詢表', description: '客人輸入訂單號自動回覆訂單狀態', keyColumn: '訂單編號', returnColumnsExample: '訂單編號,商品名稱,數量,金額,物流單號,配送狀態,預計到貨日', triggerKeywords: '訂單,查詢,到貨,物流', triggerMode: 'numeric' },
+      { name: '商品目錄', description: '客人詢問商品資訊時自動查找', keyColumn: '商品名稱', returnColumnsExample: '商品名稱,規格,售價,庫存狀態,材質說明,尺寸對照', triggerKeywords: '商品,規格,尺寸,材質,多少錢', triggerMode: 'keyword' },
+    ],
+    pricingButtons: [{ key: 'custom', label: '+ 商品定價' }, { key: 'custom', label: '+ 運費方案' }],
   },
   restaurant: {
     label: '餐廳 / 餐飲',
     emoji: '🍽️',
-    systemPrompt: '你是一位熱情的餐廳客服助理。請協助客人線上訂位、查詢菜單與價格、了解外送時間與範圍、介紹優惠活動，以及安排包廂服務。請用熱情親切的語氣服務每一位客人，讓他們感受到賓至如歸的溫暖。',
+    systemPrompt: '你是【餐廳名稱】的熱情客服助理。請協助客人線上訂位、查詢菜單與價格、了解外送時間與範圍，以及安排包廂服務。\n\n【核心任務】\n1. 訂位：確認日期、時段、人數，收集姓名電話\n2. 菜單查詢：介紹招牌菜、套餐內容與價格\n3. 外送服務：說明外送範圍、最低消費、預計時間\n4. 包廂預訂：說明包廂規格、最低消費、預約流程\n\n請用熱情親切的語氣，讓每位客人感受到賓至如歸。',
+    knowledgeBase: '【訂位說明】\n用餐時段：11:30-14:00（午餐）、17:30-21:00（晚餐）\n包廂：可容納 8-20 人，需預訂，最低消費 $3,000\n訂位需提前 1 天，當日訂位請來電確認\n\n【套餐資訊】\n商業午餐套餐（平日限定）：$350/人，含主菜+湯+飲料\n家庭套餐：$1,200/4人，含 6 道菜\n\n【外送說明】\n外送範圍：3 公里內\n最低消費：$500\n外送費：$60（滿 $800 免外送費）\n預計時間：30-45 分鐘\n\n【過敏原說明】\n含麩質、蛋、奶製品，請有過敏需求提前告知',
     bookingFlowEnabled: true,
     bookingFlows: [
-      { id: 'reservation', name: '訂位', triggerKeywords: '訂位,用餐,包廂,座位,預約', dataHint: '訂位', steps: ['date_depart', 'timeslot', 'headcount', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
-      { id: 'delivery', name: '外送查詢', triggerKeywords: '外送,外帶,送餐,配送', dataHint: '外送', steps: ['booker_name', 'phone', 'special_req'], paymentInfo: '' },
+      { id: 'reservation', name: '訂位', triggerKeywords: '訂位,用餐,訂桌,包廂,座位,預約', dataHint: '訂位', steps: ['date_depart', 'timeslot', 'headcount', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
+      { id: 'delivery', name: '外送點餐', triggerKeywords: '外送,外帶,訂餐,送餐,點餐', dataHint: '外送', steps: ['booker_name', 'phone', 'special_req'], paymentInfo: '' },
     ],
+    recommendedSheets: [
+      { name: '菜單/套餐定價', description: '客人詢問菜單或套餐時自動查詢', keyColumn: '套餐名稱', returnColumnsExample: '套餐名稱,內容描述,價格,適合人數,備註', triggerKeywords: '菜單,套餐,價格,多少錢,有什麼', triggerMode: 'keyword' },
+      { name: '訂位可用時段', description: '客人詢問可訂時段時查詢', keyColumn: '日期', returnColumnsExample: '日期,午餐可訂時段,晚餐可訂時段,包廂是否可用', triggerKeywords: '訂位,時段,包廂,有沒有位', triggerMode: 'keyword' },
+    ],
+    pricingButtons: [{ key: 'custom', label: '+ 套餐定價' }, { key: 'custom', label: '+ 包廂費用' }, { key: 'custom', label: '+ 自訂' }],
   },
   clinic: {
     label: '診所 / 醫美',
     emoji: '🏥',
-    systemPrompt: '你是一位專業細心的診所客服助理。請協助患者預約掛號、了解療程項目與費用、查詢術後照護須知，以及回答一般性診所相關問題。請以專業、關懷的語氣回應，涉及醫療建議的問題請建議諮詢醫師。',
+    systemPrompt: '你是【診所名稱】的專業客服助理。請協助患者預約掛號、了解療程項目與費用、查詢術後照護，以及回答診所相關問題。\n\n【核心任務】\n1. 療程查詢：介紹各療程項目、效果說明、適合對象\n2. 費用查詢：說明自費項目費用（健保項目請現場確認）\n3. 預約引導：收集療程、醫師偏好、日期時段、姓名電話\n4. 術後照護：說明術後注意事項與回診時間\n\n⚠️ 涉及具體醫療診斷或治療建議，請務必引導「建議到診所與醫師當面諮詢」。',
+    knowledgeBase: '【主要療程】\n- 玻尿酸注射：$6,000 起/次，效果 6-12 個月\n- 肉毒桿菌：$3,000 起（依部位），效果 4-6 個月\n- 淨膚雷射：$2,500/次，建議每月 1 次\n- 醫美諮詢：免費，需事先預約\n\n【掛號須知】\n看診時段：週一~週五 10:00-19:00，週六 10:00-17:00\n初診請提前 15 分鐘到院填寫資料\n\n【術後照護】\n注射後 24 小時勿揉壓部位\n注射後 1 週回診確認效果\n有任何不適請立即聯繫診所\n\n【費用說明】\n醫美療程為自費項目，無法使用健保',
     bookingFlowEnabled: true,
     bookingFlows: [
-      { id: 'appointment', name: '預約掛號', triggerKeywords: '預約,掛號,看診,療程,諮詢', dataHint: '預約', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
+      { id: 'appointment', name: '預約掛號', triggerKeywords: '預約,掛號,看診,療程,諮詢,想做', dataHint: '療程', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
     ],
+    recommendedSheets: [
+      { name: '療程項目費用表', description: '客人詢問療程費用時自動查詢', keyColumn: '療程名稱', returnColumnsExample: '療程名稱,療程說明,費用,療程時間(分鐘),效果持續,適合對象', triggerKeywords: '療程,費用,多少錢,效果,玻尿酸,肉毒', triggerMode: 'keyword' },
+      { name: '醫師/諮詢師排班', description: '客人詢問特定醫師可預約時段', keyColumn: '醫師姓名', returnColumnsExample: '醫師姓名,專長,週一,週二,週三,週四,週五,週六', triggerKeywords: '醫師,排班,什麼時候有,預約', triggerMode: 'keyword' },
+    ],
+    pricingButtons: [{ key: 'custom', label: '+ 療程定價' }, { key: 'custom', label: '+ 套療方案' }],
   },
   beauty: {
     label: '美容 / 美髮 / SPA',
     emoji: '💆',
-    systemPrompt: '你是一位貼心的美容美髮客服助理。請協助客人預約服務、查詢價目表、了解設計師專長，以及提供護理保養建議。請用溫柔親切的語氣服務客人，讓每位客人都能找到最適合的服務。',
+    systemPrompt: '你是【店家名稱】的貼心客服助理。請協助客人預約服務、查詢價目表、了解設計師專長，以及提供護理保養建議。\n\n【核心任務】\n1. 服務查詢：介紹各項服務項目與價格（依髮長計費）\n2. 設計師推薦：根據客人需求推薦合適設計師\n3. 預約引導：收集服務項目、設計師、日期時段、姓名電話\n4. 護理建議：提供燙染後護理、日常保養建議\n\n請用溫柔親切的語氣，讓每位客人都感到被重視。',
+    knowledgeBase: '【服務價目】\n剪髮：短髮 $300，中長髮 $350，長髮 $400\n染髮：短髮 $1,800 起，長髮 $2,500 起（依色系調整）\n燙髮：短髮 $2,000 起，長髮 $3,000 起\n護髮：$800-1,500（依長度）\n\n【設計師介紹】\n小美設計師：擅長自然染、修護燙，客人評價★★★★★\n阿傑設計師：擅長造型剪、韓系風格，客人評價★★★★\n\n【預約說明】\n建議提前 3 天預約\n如需更改請提前 1 天告知\n\n【注意事項】\n燙染後 3 天勿洗頭\n懷孕或過敏體質請事先告知設計師',
     bookingFlowEnabled: true,
     bookingFlows: [
-      { id: 'booking', name: '服務預約', triggerKeywords: '預約,剪髮,染髮,護髮,美甲,SPA,按摩', dataHint: '服務', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
+      { id: 'booking', name: '服務預約', triggerKeywords: '預約,剪髮,染髮,護髮,燙髮,美甲,SPA,按摩', dataHint: '服務', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
     ],
+    recommendedSheets: [
+      { name: '服務項目價目表', description: '客人詢問服務價格時自動查詢', keyColumn: '服務名稱', returnColumnsExample: '服務名稱,短髮價,中長髮價,長髮價,超長髮價,所需時間,備註', triggerKeywords: '價格,多少錢,費用,剪染燙護', triggerMode: 'keyword' },
+      { name: '設計師排班表', description: '客人詢問設計師可預約時段', keyColumn: '設計師姓名', returnColumnsExample: '設計師,專長,週一,週二,週三,週四,週五,週六,週日', triggerKeywords: '設計師,排班,什麼時候有,誰', triggerMode: 'keyword' },
+    ],
+    pricingButtons: [{ key: 'custom', label: '+ 服務定價' }, { key: 'custom', label: '+ 組合優惠' }],
   },
   education: {
     label: '教育 / 補習班',
     emoji: '📚',
-    systemPrompt: '你是一位耐心專業的教育機構客服助理。請協助家長與學生了解課程內容、預約試聽、查詢學費方案，以及介紹師資陣容。請用正向積極的語氣解答問題，幫助每個人找到最適合的學習方案。',
+    systemPrompt: '你是【機構名稱】的專業客服助理。請協助家長與學生了解課程內容、預約試聽、查詢學費方案，以及介紹師資陣容。\n\n【核心任務】\n1. 課程查詢：介紹各年級/程度課程內容與特色\n2. 學費說明：提供月繳/季繳/年繳方案，計算優惠\n3. 試聽預約：收集課程、學生年級、日期時段、家長聯絡資料\n4. 師資介紹：根據學生需求推薦合適老師\n\n請用正向積極的語氣，讓家長與學生對學習充滿信心。',
+    knowledgeBase: '【課程項目】\n數學班：國小/國中/高中，各年級分班教學\n英文班：基礎/進階/會話/作文，週 2 堂\n理化班：國中/高中，小班制 8 人\n\n【學費方案】\n月繳：$3,600/月（週 2 堂）\n季繳：$10,000/季（省 $800）\n年繳：$36,000/年（省 $7,200，最優惠）\n\n【試聽說明】\n免費試聽 1 堂，需事先預約\n試聽後 3 天內報名享 9 折優惠\n\n【師資特色】\n師大/師院畢業，平均教學年資 5 年以上\n小班制（最多 10 人），確保學習品質',
     bookingFlowEnabled: true,
     bookingFlows: [
-      { id: 'trial', name: '試聽預約', triggerKeywords: '試聽,體驗,報名,課程,諮詢', dataHint: '課程', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
+      { id: 'trial', name: '免費試聽預約', triggerKeywords: '試聽,體驗課,報名,想學,課程,補習', dataHint: '課程', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
     ],
+    recommendedSheets: [
+      { name: '課程/學費方案', description: '客人詢問課程費用時自動查詢', keyColumn: '課程名稱', returnColumnsExample: '課程名稱,適合年級,師資,月繳,季繳,年繳,每週堂數,備註', triggerKeywords: '課程,學費,多少錢,費用,報名', triggerMode: 'keyword' },
+      { name: '試聽可用時段', description: '客人詢問試聽時段時自動查詢', keyColumn: '課程', returnColumnsExample: '課程,日期,時段,老師,剩餘名額', triggerKeywords: '試聽,什麼時候,時段,有沒有', triggerMode: 'keyword' },
+    ],
+    pricingButtons: [{ key: 'custom', label: '+ 學費方案' }, { key: 'custom', label: '+ 課程定價' }],
   },
 }
 
@@ -5662,6 +5709,7 @@ function Unit12CustomerService({
                   onClick={() => {
                     const tpl = CS_INDUSTRY_TEMPLATES[industry]
                     setSystemPrompt(tpl.systemPrompt)
+                    if (!knowledgeBase) setKnowledgeBase(tpl.knowledgeBase)
                     setBookingFlowEnabled(tpl.bookingFlowEnabled)
                     setBookingFlows(tpl.bookingFlows)
                   }}
@@ -5687,6 +5735,7 @@ function Unit12CustomerService({
                   <button key={id}
                     onClick={() => {
                       setSystemPrompt(tpl.systemPrompt)
+                      if (!knowledgeBase) setKnowledgeBase(tpl.knowledgeBase)
                       setBookingFlowEnabled(tpl.bookingFlowEnabled)
                       setBookingFlows(tpl.bookingFlows)
                     }}
@@ -6047,6 +6096,33 @@ function Unit12CustomerService({
             </button>
           </div>
 
+          {/* Industry recommended sheets guide */}
+          {industry && CS_INDUSTRY_TEMPLATES[industry] && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">{CS_INDUSTRY_TEMPLATES[industry].emoji}</span>
+                <div className="font-medium text-sm text-blue-800">建議設定的 Google Sheets（{CS_INDUSTRY_TEMPLATES[industry].label}）</div>
+              </div>
+              <div className="space-y-2">
+                {CS_INDUSTRY_TEMPLATES[industry].recommendedSheets.map((sheet, i) => (
+                  <div key={i} className="bg-white rounded-lg border border-blue-100 p-3 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">表格 {i + 1}</span>
+                      <span className="text-xs font-semibold text-gray-800">{sheet.name}</span>
+                      <span className="text-[10px] text-gray-400">{sheet.description}</span>
+                    </div>
+                    <div className="text-[10px] text-gray-500 space-y-0.5">
+                      <div>查詢欄位：<span className="text-gray-700 font-medium">{sheet.keyColumn}</span></div>
+                      <div>回傳欄位範例：<span className="text-gray-600">{sheet.returnColumnsExample}</span></div>
+                      <div>觸發詞：<span className="text-blue-600">{sheet.triggerKeywords}</span>　觸發模式：<span className="font-medium">{sheet.triggerMode === 'numeric' ? '數字觸發' : sheet.triggerMode === 'both' ? '關鍵字+數字' : '關鍵字觸發'}</span></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] text-blue-600">💡 依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID</div>
+            </div>
+          )}
+
           {dsLoading && <div className="text-xs text-gray-400 text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />載入中…</div>}
 
           {dataSources.length === 0 && !dsLoading && !editingDs && (
@@ -6083,11 +6159,23 @@ function Unit12CustomerService({
               <div className="font-medium text-sm text-gray-700">{editingDs.id ? '編輯資料來源' : '新增資料來源'}</div>
 
               {[
-                { key: 'name', label: '名稱', placeholder: '例：訂單密碼表', secret: false },
+                { key: 'name', label: '名稱', placeholder:
+                    industry === 'ecommerce' ? '例：訂單查詢表、商品目錄' :
+                    industry === 'restaurant' ? '例：菜單定價、訂位時段表' :
+                    industry === 'clinic' ? '例：療程費用表、醫師排班' :
+                    industry === 'beauty' ? '例：服務價目表、設計師排班' :
+                    industry === 'education' ? '例：課程學費表、試聽時段' :
+                    '例：訂單密碼表、房型定價', secret: false },
                 { key: 'apiKey', label: 'Google Sheets API Key', placeholder: 'AIzaSy...', secret: true },
                 { key: 'spreadsheetId', label: 'Spreadsheet ID', placeholder: '1BxiMVs0...（網址列中間那段）', secret: false },
                 { key: 'sheetName', label: '工作表名稱（Sheet Name）', placeholder: '工作表1 或 Sheet1', secret: false },
-                { key: 'keyColumn', label: '查詢欄位名稱（標題列的欄名）', placeholder: '例：訂單編號', secret: false },
+                { key: 'keyColumn', label: '查詢欄位名稱（標題列的欄名）', placeholder:
+                    industry === 'ecommerce' ? '例：訂單編號、商品名稱' :
+                    industry === 'restaurant' ? '例：套餐名稱、日期' :
+                    industry === 'clinic' ? '例：療程名稱、醫師姓名' :
+                    industry === 'beauty' ? '例：服務名稱、設計師姓名' :
+                    industry === 'education' ? '例：課程名稱' :
+                    '例：訂單編號、房型名稱', secret: false },
               ].map(({ key, label, placeholder, secret }) => (
                 <div key={key}>
                   <label className="text-[10px] text-gray-500 block mb-1">{label}</label>
@@ -6105,7 +6193,14 @@ function Unit12CustomerService({
                 <label className="text-[10px] text-gray-500 block mb-1">回傳欄位（逗號分隔，留空回傳所有欄位）</label>
                 <input
                   type="text"
-                  placeholder="例：房號,大門密碼,房門密碼"
+                  placeholder={
+                    industry === 'ecommerce' ? '例：訂單編號,商品名稱,物流單號,配送狀態,預計到貨日' :
+                    industry === 'restaurant' ? '例：套餐名稱,內容,價格,適合人數' :
+                    industry === 'clinic' ? '例：療程名稱,費用,療程時間,效果持續' :
+                    industry === 'beauty' ? '例：服務名稱,短髮價,長髮價,所需時間' :
+                    industry === 'education' ? '例：課程名稱,適合年級,月繳,季繳,年繳' :
+                    '例：房號,大門密碼,房間密碼'
+                  }
                   value={editingDsForm.returnColumns.join(',')}
                   onChange={e => setEditingDsForm(prev => ({ ...prev, returnColumns: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
@@ -6183,13 +6278,12 @@ function Unit12CustomerService({
               <div className="text-xs text-gray-400 mt-0.5">AI 查詢定價時精確套用數字，不會自行估算</div>
             </div>
             {!editingPc && (
-              <div className="flex gap-1.5">
-                {[
-                  { key: 'tour', label: '+ 行程' },
-                  { key: 'accommodation', label: '+ 住宿' },
-                  { key: 'custom', label: '+ 自訂' },
-                ].map(({ key, label }) => (
-                  <button key={key} onClick={() => openAddPc(key)}
+              <div className="flex gap-1.5 flex-wrap">
+                {(industry && CS_INDUSTRY_TEMPLATES[industry]
+                  ? CS_INDUSTRY_TEMPLATES[industry].pricingButtons
+                  : [{ key: 'tour', label: '+ 行程' }, { key: 'accommodation', label: '+ 住宿' }, { key: 'custom', label: '+ 自訂' }]
+                ).map(({ key, label }, idx) => (
+                  <button key={idx} onClick={() => openAddPc(key)}
                     className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
                     style={{ background: 'var(--primary)' }}>
                     {label}
@@ -6244,7 +6338,14 @@ function Unit12CustomerService({
                 <label className="text-[10px] text-gray-500 block mb-1">名稱</label>
                 <input
                   type="text"
-                  placeholder="例：賞鯨行程定價、民宿訂房定價"
+                  placeholder={
+                    industry === 'ecommerce' ? '例：商品定價、運費方案' :
+                    industry === 'restaurant' ? '例：套餐定價、包廂費用' :
+                    industry === 'clinic' ? '例：療程費用表、套療方案' :
+                    industry === 'beauty' ? '例：服務價目表、組合優惠' :
+                    industry === 'education' ? '例：學費方案、課程定價' :
+                    '例：訂房定價、行程定價'
+                  }
                   value={editingPc.name}
                   onChange={e => setEditingPc(prev => prev ? { ...prev, name: e.target.value } : prev)}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
