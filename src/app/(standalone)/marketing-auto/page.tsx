@@ -4604,6 +4604,32 @@ const DEFAULT_FLOWS: BookingFlowDef[] = [
   },
 ]
 
+interface CsTicket {
+  id: string
+  subject: string
+  description: string
+  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  platform: string
+  from_name?: string
+  intent?: string
+  created_at: string
+  updated_at: string
+}
+
+interface CsInboxMessage {
+  id: string
+  platform: string
+  from_id: string
+  from_name?: string
+  message: string
+  reply?: string
+  intent?: string
+  risk?: string
+  latency_ms?: number
+  created_at: string
+}
+
 interface Unit12Data {
   systemPrompt?: string
   knowledgeBase?: string
@@ -4614,6 +4640,8 @@ interface Unit12Data {
   bookingFlowEnabled?: boolean
   paymentInfo?: string
   bookingFlows?: BookingFlowDef[]
+  vipList?: string        // 換行分隔的 VIP 名單
+  autoCloseMinutes?: number
 }
 
 const CS_PLATFORMS = [
@@ -4673,7 +4701,7 @@ const CS_PLATFORMS = [
   },
 ]
 
-type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'pricing' | 'test' | 'logs'
+type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'pricing' | 'test' | 'logs' | 'tickets' | 'inbox'
 
 interface CsDataSource {
   id: string
@@ -4823,6 +4851,9 @@ function Unit12CustomerService({
   const [paymentInfo, setPaymentInfo] = useState(savedData?.paymentInfo ?? '')
   const [bookingFlows, setBookingFlows] = useState<BookingFlowDef[]>(savedData?.bookingFlows ?? DEFAULT_FLOWS)
   const [editingFlow, setEditingFlow] = useState<BookingFlowDef | null>(null)
+  // VIP 識別 + 自動結案
+  const [vipList, setVipList] = useState(savedData?.vipList ?? '')
+  const [autoCloseMinutes, setAutoCloseMinutes] = useState(savedData?.autoCloseMinutes ?? 0)
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -4840,6 +4871,8 @@ function Unit12CustomerService({
     if (savedData.bookingFlowEnabled !== undefined) setBookingFlowEnabled(savedData.bookingFlowEnabled)
     if (savedData.paymentInfo !== undefined) setPaymentInfo(savedData.paymentInfo)
     if (savedData.bookingFlows?.length) setBookingFlows(savedData.bookingFlows)
+    if (savedData.vipList !== undefined) setVipList(savedData.vipList)
+    if (savedData.autoCloseMinutes !== undefined) setAutoCloseMinutes(savedData.autoCloseMinutes)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -4894,6 +4927,19 @@ function Unit12CustomerService({
 
   // 自動滿意度問卷 / 結案
   const [caseClosed, setCaseClosed] = useState(false)
+  const [autoCloseSecondsLeft, setAutoCloseSecondsLeft] = useState<number | null>(null)
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 工單系統
+  const [tickets, setTickets] = useState<CsTicket[]>([])
+  const [ticketsLoading, setTicketsLoading] = useState(false)
+  const [creatingTicket, setCreatingTicket] = useState(false)
+  const [ticketFilter, setTicketFilter] = useState<string>('all')
+
+  // 統一收件匣
+  const [inboxMessages, setInboxMessages] = useState<CsInboxMessage[]>([])
+  const [inboxLoading, setInboxLoading] = useState(false)
+  const [inboxPlatformFilter, setInboxPlatformFilter] = useState<string>('all')
 
   // Logs
   const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
@@ -5331,9 +5377,8 @@ function Unit12CustomerService({
 
   function saveSettings() {
     setSavingSettings(true)
-    // Use savedData.dialogueFiles as fallback if local state is empty (prevents accidental overwrite)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -5394,7 +5439,6 @@ function Unit12CustomerService({
         }
         const msgMeta = { intent: data.intent, risk: data.risk, provider: data.provider }
         if (draftMode) {
-          // 智慧草稿：不直接送出，等人工確認
           setDraftText(data.reply)
           setDraftMeta(msgMeta)
           setDraftUserMsg(userMsg)
@@ -5408,7 +5452,9 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes })
+        // 保存到統一收件匣
+        saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
         setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
       }
@@ -5461,6 +5507,7 @@ function Unit12CustomerService({
     const surveyMsg = '感謝您的聯繫！請問本次問題有解決您的疑慮嗎？\n\n1️⃣ 已解決，非常滿意\n2️⃣ 已解決，尚可\n3️⃣ 未解決，需進一步協助\n\n如有其他問題，歡迎隨時聯繫我們 🙏'
     setTestHistory(prev => [...prev, { role: 'assistant', content: surveyMsg }])
     setCaseClosed(true)
+    startAutoCloseTimer()
   }
 
   // 流失預警偵測
@@ -5486,6 +5533,109 @@ function Unit12CustomerService({
     education: ['我想了解英文課程', '有試聽課程嗎？', '學費方案有哪些？', '老師的教學方式是什麼？', '孩子幾歲可以開始學？', 'What courses do you offer for beginners?'],
   }
 
+  // VIP 識別
+  const vipNames = vipList.split('\n').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const isVipMessage = (text: string) => vipNames.some(v => text.toLowerCase().includes(v))
+
+  // 載入 tickets
+  async function loadTickets() {
+    setTicketsLoading(true)
+    try {
+      const res = await fetch(`/api/marketing/cs-tickets?industry=${ind}`)
+      const d = await res.json()
+      if (d.tickets) setTickets(d.tickets)
+    } finally {
+      setTicketsLoading(false)
+    }
+  }
+
+  // 建立工單 from current test conversation
+  async function createTicketFromConversation() {
+    if (!testHistory.length) return
+    setCreatingTicket(true)
+    const lastUserMsg = [...testHistory].reverse().find(m => m.role === 'user')
+    const lastAiMsg = [...testHistory].reverse().find(m => m.role === 'assistant')
+    const subject = lastUserMsg?.content?.slice(0, 50) ?? '客服工單'
+    const description = testHistory.map(m => `${m.role === 'user' ? '客戶' : 'AI'}：${m.content}`).join('\n')
+    const highRiskMsg = [...testHistory].reverse().find(m => m.role === 'assistant' && m.meta?.risk === 'high')
+    const priority = highRiskMsg ? 'high' : 'medium'
+    const intent = lastAiMsg?.meta?.intent
+    try {
+      const res = await fetch('/api/marketing/cs-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry: ind, subject, description, priority, intent, messages: testHistory, campaign_id: campaignId }),
+      })
+      const d = await res.json()
+      if (d.ticket) {
+        setTickets(prev => [d.ticket, ...prev])
+        setTab('tickets')
+      }
+    } finally {
+      setCreatingTicket(false)
+    }
+  }
+
+  // 載入收件匣
+  async function loadInbox() {
+    setInboxLoading(true)
+    try {
+      const url = inboxPlatformFilter !== 'all'
+        ? `/api/marketing/cs-messages?industry=${ind}&platform=${inboxPlatformFilter}`
+        : `/api/marketing/cs-messages?industry=${ind}`
+      const res = await fetch(url)
+      const d = await res.json()
+      if (d.messages) setInboxMessages(d.messages)
+    } finally {
+      setInboxLoading(false)
+    }
+  }
+
+  // 儲存測試對話到收件匣
+  async function saveTestMessageToInbox(userMsg: string, reply: string, intent: string, risk: string, latencyMs: number) {
+    try {
+      await fetch('/api/marketing/cs-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry: ind, platform: 'test', from_id: 'test_user', from_name: '測試用戶', message: userMsg, reply, intent, risk, latency_ms: latencyMs, campaign_id: campaignId }),
+      })
+    } catch { /* silent */ }
+  }
+
+  // 自動結案倒數
+  function startAutoCloseTimer() {
+    if (!autoCloseMinutes || autoCloseMinutes <= 0) return
+    const totalSec = autoCloseMinutes * 60
+    setAutoCloseSecondsLeft(totalSec)
+    if (autoCloseTimerRef.current) clearInterval(autoCloseTimerRef.current)
+    autoCloseTimerRef.current = setInterval(() => {
+      setAutoCloseSecondsLeft(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(autoCloseTimerRef.current!)
+          return null
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const ticketStatusColor = (s: string) =>
+    s === 'open' ? 'text-blue-600 bg-blue-50' :
+    s === 'in_progress' ? 'text-amber-600 bg-amber-50' :
+    s === 'resolved' ? 'text-green-600 bg-green-50' :
+    'text-gray-500 bg-gray-100'
+  const ticketStatusLabel = (s: string) =>
+    s === 'open' ? '待處理' : s === 'in_progress' ? '處理中' : s === 'resolved' ? '已解決' : '已結案'
+  const ticketPriorityColor = (p: string) =>
+    p === 'urgent' ? 'text-red-600 bg-red-50' :
+    p === 'high' ? 'text-orange-600 bg-orange-50' :
+    p === 'medium' ? 'text-indigo-600 bg-indigo-50' :
+    'text-gray-500 bg-gray-100'
+  const ticketPriorityLabel = (p: string) =>
+    p === 'urgent' ? '緊急' : p === 'high' ? '高' : p === 'medium' ? '中' : '低'
+  const platformEmoji = (p: string) =>
+    p === 'line' ? '💬' : p === 'whatsapp' ? '📱' : p === 'telegram' ? '✈️' : p === 'test' ? '🧪' : '💌'
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -5497,16 +5647,30 @@ function Unit12CustomerService({
           </h2>
           <p className="text-xs text-gray-500 mt-0.5">Gemini Flash 意圖分類 · Claude Sonnet 高風險升級</p>
         </div>
-        <div className="flex gap-1.5">
-          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs'] as Cs12Tab[]).map(t => {
-            const labels: Record<Cs12Tab, string> = { platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '知識庫', 'data-sources': '資料來源', pricing: '定價計算機', test: '測試', logs: '記錄' }
+        <div className="flex flex-wrap gap-1.5">
+          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(t => {
+            const labels: Record<Cs12Tab, string> = {
+              platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '知識庫',
+              'data-sources': '資料來源', pricing: '定價計算機', test: '測試', logs: '記錄',
+              tickets: `工單${tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length > 0 ? ` (${tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length})` : ''}`,
+              inbox: '收件匣',
+            }
+            const isNew = (t === 'tickets' || t === 'inbox') && tab !== t
             return (
-              <button key={t} onClick={() => setTab(t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              <button key={t}
+                onClick={() => {
+                  setTab(t)
+                  if (t === 'tickets') loadTickets()
+                  if (t === 'inbox') loadInbox()
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative ${
                   tab === t ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
                 style={tab === t ? { background: 'var(--primary)' } : {}}>
                 {labels[t]}
+                {isNew && t === 'inbox' && inboxMessages.length === 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+                )}
               </button>
             )
           })}
@@ -6068,6 +6232,43 @@ function Unit12CustomerService({
             </div>
           )}
 
+          {/* ── VIP 識別 ── */}
+          <div className="border rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-semibold text-gray-800">VIP 客戶名單</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">已上線</span>
+            </div>
+            <p className="text-xs text-gray-500">每行一個關鍵字（客戶名稱、Line 暱稱、手機號後4碼等）。對話中偵測到時，自動顯示「VIP 優先處理」標示。</p>
+            <textarea
+              value={vipList}
+              onChange={e => setVipList(e.target.value)}
+              rows={4}
+              placeholder={'王小明\n0912\nVIP001\nJohn Wang'}
+              className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none font-mono"
+            />
+          </div>
+
+          {/* ── 自動結案 ── */}
+          <div className="border rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <ClockIcon className="h-4 w-4 text-indigo-500" />
+              <span className="text-sm font-semibold text-gray-800">自動結案</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">已上線</span>
+            </div>
+            <p className="text-xs text-gray-500">按下「結案」後，若客戶在指定時間內無回應，系統自動關閉工單。設為 0 表示不自動結案。</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={0} max={120}
+                value={autoCloseMinutes}
+                onChange={e => setAutoCloseMinutes(Number(e.target.value))}
+                className="w-24 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+              <span className="text-sm text-gray-500">分鐘後自動結案</span>
+              {autoCloseMinutes > 0 && <span className="text-xs text-green-600">✓ 已啟用</span>}
+            </div>
+          </div>
+
           <button onClick={saveSettings} disabled={savingSettings}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
             style={{ background: 'var(--primary)' }}>
@@ -6526,6 +6727,14 @@ function Unit12CustomerService({
                     摘要
                   </button>
                 )}
+                {/* 建立工單 */}
+                {testHistory.length > 0 && (
+                  <button onClick={createTicketFromConversation} disabled={creatingTicket}
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-orange-600 hover:border-orange-300 disabled:opacity-50">
+                    {creatingTicket ? <Loader2 className="h-3 w-3 animate-spin" /> : <ClipboardList className="h-3 w-3" />}
+                    建立工單
+                  </button>
+                )}
                 {/* 結案 */}
                 {testHistory.length > 0 && !caseClosed && (
                   <button onClick={closeCase}
@@ -6553,9 +6762,17 @@ function Unit12CustomerService({
               )}
               {testHistory.map((msg, i) => {
                 const churn = msg.role === 'assistant' && isChurnWarning(msg.meta)
+                const isVip = msg.role === 'user' && vipNames.length > 0 && isVipMessage(msg.content)
                 return (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[75%] space-y-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                      {/* VIP 識別 */}
+                      {isVip && (
+                        <div className="flex items-center gap-1 text-[10px] text-amber-600 font-medium px-1">
+                          <Star className="h-3 w-3" />
+                          VIP 客戶 — 優先處理
+                        </div>
+                      )}
                       {/* 流失預警 */}
                       {churn && (
                         <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium px-1">
@@ -6652,6 +6869,22 @@ function Unit12CustomerService({
               </button>
             </div>
           </div>
+
+          {/* 自動結案倒數 */}
+          {caseClosed && autoCloseSecondsLeft !== null && (
+            <div className="border border-green-200 rounded-xl bg-green-50 px-4 py-2.5 flex items-center gap-2">
+              <ClockIcon className="h-4 w-4 text-green-600" />
+              <span className="text-xs text-green-700 font-medium">自動結案倒數</span>
+              <span className="text-xs text-green-600 ml-auto">
+                {Math.floor(autoCloseSecondsLeft / 60)}:{String(autoCloseSecondsLeft % 60).padStart(2, '0')} 後自動關閉工單
+              </span>
+            </div>
+          )}
+          {caseClosed && autoCloseSecondsLeft === null && autoCloseMinutes > 0 && (
+            <div className="border border-gray-200 rounded-xl bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center">
+              工單已自動結案
+            </div>
+          )}
 
           {/* 對話摘要結果 */}
           {summary && (
@@ -6761,6 +6994,58 @@ function Unit12CustomerService({
                     </div>
                   </div>
                 )}
+
+                {/* 情緒趨勢圖 */}
+                {(() => {
+                  // Group logs by date (last 7 days)
+                  const dayMap: Record<string, { high: number; medium: number; low: number; total: number }> = {}
+                  const now = new Date()
+                  for (let i = 6; i >= 0; i--) {
+                    const d = new Date(now); d.setDate(d.getDate() - i)
+                    const key = d.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+                    dayMap[key] = { high: 0, medium: 0, low: 0, total: 0 }
+                  }
+                  logs.forEach(l => {
+                    const key = new Date(l.ts).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+                    if (dayMap[key]) {
+                      dayMap[key].total++
+                      if (l.risk === 'high') dayMap[key].high++
+                      else if (l.risk === 'medium') dayMap[key].medium++
+                      else dayMap[key].low++
+                    }
+                  })
+                  const days = Object.entries(dayMap)
+                  const maxTotal = Math.max(...days.map(([, v]) => v.total), 1)
+                  return (
+                    <div className="bg-white border rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <BarChart3 className="h-3.5 w-3.5 text-gray-500" />
+                        <span className="text-xs font-semibold text-gray-700">情緒趨勢（近 7 天）</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 ml-auto">已上線</span>
+                      </div>
+                      <div className="flex items-end gap-1.5 h-20">
+                        {days.map(([date, v]) => (
+                          <div key={date} className="flex-1 flex flex-col items-center gap-0.5">
+                            <div className="w-full flex flex-col justify-end gap-0" style={{ height: '60px' }}>
+                              {v.total > 0 ? (
+                                <div className="w-full rounded-sm overflow-hidden flex flex-col justify-end gap-px"
+                                  style={{ height: `${Math.round((v.total / maxTotal) * 60)}px` }}>
+                                  {v.high > 0 && <div className="bg-red-400 w-full" style={{ height: `${Math.round((v.high/v.total)*100)}%`, minHeight: '2px' }} />}
+                                  {v.medium > 0 && <div className="bg-amber-400 w-full" style={{ height: `${Math.round((v.medium/v.total)*100)}%`, minHeight: '2px' }} />}
+                                  {v.low > 0 && <div className="bg-green-400 w-full" style={{ height: `${Math.round((v.low/v.total)*100)}%`, minHeight: '2px' }} />}
+                                </div>
+                              ) : (
+                                <div className="w-full bg-gray-100 rounded-sm" style={{ height: '4px' }} />
+                              )}
+                            </div>
+                            <span className="text-[9px] text-gray-400">{date}</span>
+                            {v.total > 0 && <span className="text-[9px] text-gray-500 font-medium">{v.total}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })()}
@@ -6794,6 +7079,148 @@ function Unit12CustomerService({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Tickets ──────────────────────────────────────────────────────── */}
+      {tab === 'tickets' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-semibold text-gray-800">工單系統</span>
+            <div className="flex gap-1.5 ml-auto flex-wrap">
+              {['all', 'open', 'in_progress', 'resolved', 'closed'].map(s => (
+                <button key={s} onClick={() => setTicketFilter(s)}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all ${
+                    ticketFilter === s ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                  style={ticketFilter === s ? { background: 'var(--primary)' } : {}}>
+                  {s === 'all' ? '全部' : ticketStatusLabel(s)}
+                  {s !== 'all' && ` (${tickets.filter(t => t.status === s).length})`}
+                </button>
+              ))}
+              <button onClick={loadTickets} disabled={ticketsLoading}
+                className="text-[10px] px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                {ticketsLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-xs text-orange-700 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            切換到「測試」Tab，與 AI 對話後點「建立工單」即可轉入工單系統
+          </div>
+
+          {ticketsLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+          ) : tickets.length === 0 ? (
+            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">尚無工單</div>
+          ) : (
+            <div className="space-y-2">
+              {tickets
+                .filter(t => ticketFilter === 'all' || t.status === ticketFilter)
+                .map(ticket => (
+                  <div key={ticket.id} className="border rounded-xl p-3 bg-white space-y-2 hover:shadow-sm transition-shadow">
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ticketStatusColor(ticket.status)}`}>
+                        {ticketStatusLabel(ticket.status)}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ticketPriorityColor(ticket.priority)}`}>
+                        {ticketPriorityLabel(ticket.priority)}優先
+                      </span>
+                      <span className="text-[10px] text-gray-500">{platformEmoji(ticket.platform)} {ticket.platform}</span>
+                      {ticket.intent && <span className="text-[10px] text-gray-400">{ticket.intent}</span>}
+                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(ticket.created_at).toLocaleString('zh-TW')}</span>
+                    </div>
+                    <div className="text-xs font-semibold text-gray-800">{ticket.subject}</div>
+                    <div className="text-[11px] text-gray-500 line-clamp-2">{ticket.description.slice(0, 120)}{ticket.description.length > 120 ? '…' : ''}</div>
+                    <div className="flex gap-1.5 pt-1 flex-wrap">
+                      {(['open', 'in_progress', 'resolved', 'closed'] as const).filter(s => s !== ticket.status).map(s => (
+                        <button key={s} onClick={async () => {
+                          const res = await fetch(`/api/marketing/cs-tickets/${ticket.id}`, {
+                            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: s }),
+                          })
+                          const d = await res.json()
+                          if (d.ticket) setTickets(prev => prev.map(t => t.id === ticket.id ? d.ticket : t))
+                        }}
+                          className="text-[10px] px-2 py-0.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                          → {ticketStatusLabel(s)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Inbox ────────────────────────────────────────────────────────── */}
+      {tab === 'inbox' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-semibold text-gray-800">統一收件匣</span>
+            <div className="flex gap-1.5 ml-auto flex-wrap">
+              {['all', 'line', 'whatsapp', 'telegram', 'test'].map(p => (
+                <button key={p} onClick={() => { setInboxPlatformFilter(p); }}
+                  className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all ${
+                    inboxPlatformFilter === p ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                  style={inboxPlatformFilter === p ? { background: 'var(--primary)' } : {}}>
+                  {p === 'all' ? '全部' : `${platformEmoji(p)} ${p.toUpperCase()}`}
+                </button>
+              ))}
+              <button onClick={loadInbox} disabled={inboxLoading}
+                className="text-[10px] px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                {inboxLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
+            <div className="font-medium">來源說明</div>
+            <div>• 🧪 測試：透過「測試」Tab 的對話自動儲存</div>
+            <div>• 💬 LINE / 📱 WhatsApp / ✈️ Telegram：實際平台 Webhook 訊息（需先在「平台」Tab 設定）</div>
+          </div>
+
+          {inboxLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+          ) : inboxMessages.length === 0 ? (
+            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">
+              <div className="mb-2">尚無訊息記錄</div>
+              <div className="text-[11px]">先在「測試」Tab 發送幾則訊息，即可在此查看</div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {inboxMessages
+                .filter(m => inboxPlatformFilter === 'all' || m.platform === inboxPlatformFilter)
+                .map(msg => (
+                  <div key={msg.id} className="border rounded-xl p-3 bg-white space-y-1.5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium text-gray-700">
+                        {platformEmoji(msg.platform)} {msg.from_name ?? msg.from_id}
+                      </span>
+                      {msg.risk && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.risk)}`}>
+                          {msg.risk === 'high' ? '高風險' : msg.risk === 'medium' ? '中風險' : '低風險'}
+                        </span>
+                      )}
+                      {msg.intent && <span className="text-[10px] text-gray-400">{msg.intent}</span>}
+                      {msg.latency_ms && <span className="text-[10px] text-gray-300">{msg.latency_ms}ms</span>}
+                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(msg.created_at).toLocaleString('zh-TW')}</span>
+                    </div>
+                    <div className="text-xs text-gray-700">
+                      <span className="font-medium text-gray-500">客戶：</span>{msg.message}
+                    </div>
+                    {msg.reply && (
+                      <div className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
+                        <span className="font-medium text-indigo-500">AI：</span>{msg.reply.slice(0, 120)}{msg.reply.length > 120 ? '…' : ''}
+                      </div>
+                    )}
+                  </div>
+                ))}
             </div>
           )}
         </div>
