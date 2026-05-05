@@ -62,6 +62,7 @@ export async function middleware(request: NextRequest) {
     const needsProfileCheck =
       pathname.startsWith('/admin') ||
       pathname.startsWith('/marketing-auto') ||
+      pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
       pathname.startsWith('/resume')
 
@@ -82,6 +83,7 @@ export async function middleware(request: NextRequest) {
         const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing-auto': ['marketing', 'cs'],
+          '/cs':             ['cs'],
           '/prospect-call':  ['leads'],
           '/resume':         ['resume'],
         }

@@ -33,7 +33,7 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
     // other modules
     { labelKey: 'resume',        href: '/resume',          icon: FileText,   module: 'resume' },
     { labelKey: 'marketingAuto', href: '/marketing-auto',  icon: Megaphone,  module: 'marketing' },
-    { labelKey: 'cs',            href: '/marketing-auto?module=cs', icon: Headphones, module: 'cs' },
+    { labelKey: 'cs',            href: '/cs', icon: Headphones, module: 'cs' },
     { labelKey: 'leads',         href: '/prospect-call',   icon: Phone,      module: 'leads' },
     // always visible
     { labelKey: 'usage',    href: '/usage',    icon: BarChart3, module: null },
