@@ -8,7 +8,8 @@ import {
   XCircle, RefreshCw, Globe, Map, Star, Target, Newspaper, Settings,
   FileText, X, Download, Sparkles, Wand2, Volume2, PhoneCall, PhoneOff, Zap,
   Bell, ShoppingBag, Smartphone, TrendingUp,
-  MoreHorizontal, Pencil, Trash2, Check
+  MoreHorizontal, Pencil, Trash2, Check, AlertTriangle, ClipboardList,
+  PieChart, Clock as ClockIcon, ThumbsUp, MessageSquare as MessageSquareIcon,
 } from 'lucide-react'
 import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 
@@ -4881,6 +4882,19 @@ function Unit12CustomerService({
   const [testHistory, setTestHistory] = useState<{ role: 'user' | 'assistant'; content: string; meta?: { intent?: string; risk?: string; provider?: string } }[]>([])
   const [testLoading, setTestLoading] = useState(false)
 
+  // 對話摘要
+  const [summarizing, setSummarizing] = useState(false)
+  const [summary, setSummary] = useState('')
+
+  // 智慧草稿
+  const [draftMode, setDraftMode] = useState(false)
+  const [draftText, setDraftText] = useState('')
+  const [draftMeta, setDraftMeta] = useState<{ intent?: string; risk?: string; provider?: string } | null>(null)
+  const [draftUserMsg, setDraftUserMsg] = useState('')
+
+  // 自動滿意度問卷 / 結案
+  const [caseClosed, setCaseClosed] = useState(false)
+
   // Logs
   const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
 
@@ -5378,11 +5392,20 @@ function Unit12CustomerService({
           latencyMs: data.latencyMs,
           ts: new Date().toISOString(),
         }
-        setTestHistory(prev => [...prev, {
-          role: 'assistant',
-          content: data.reply,
-          meta: { intent: data.intent, risk: data.risk, provider: data.provider },
-        }])
+        const msgMeta = { intent: data.intent, risk: data.risk, provider: data.provider }
+        if (draftMode) {
+          // 智慧草稿：不直接送出，等人工確認
+          setDraftText(data.reply)
+          setDraftMeta(msgMeta)
+          setDraftUserMsg(userMsg)
+          setTestHistory(prev => [...prev, { role: 'user', content: userMsg }])
+        } else {
+          setTestHistory(prev => [...prev, {
+            role: 'assistant',
+            content: data.reply,
+            meta: msgMeta,
+          }])
+        }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
         onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows })
@@ -5395,10 +5418,73 @@ function Unit12CustomerService({
     setTestLoading(false)
   }
 
+  // 對話摘要
+  async function summarizeConversation() {
+    if (!testHistory.length) return
+    setSummarizing(true)
+    setSummary('')
+    try {
+      const res = await fetch('/api/marketing/cs-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: testHistory }),
+      })
+      const d = await res.json()
+      if (d.summary) setSummary(d.summary)
+    } finally {
+      setSummarizing(false)
+    }
+  }
+
+  // 採用草稿送出
+  function adoptDraft() {
+    if (!draftText) return
+    setTestHistory(prev => [...prev, {
+      role: 'assistant',
+      content: draftText,
+      meta: draftMeta ?? undefined,
+    }])
+    setDraftText('')
+    setDraftMeta(null)
+    setDraftUserMsg('')
+  }
+
+  // 捨棄草稿
+  function discardDraft() {
+    setDraftText('')
+    setDraftMeta(null)
+    setDraftUserMsg('')
+  }
+
+  // 自動滿意度問卷 / 結案
+  function closeCase() {
+    const surveyMsg = '感謝您的聯繫！請問本次問題有解決您的疑慮嗎？\n\n1️⃣ 已解決，非常滿意\n2️⃣ 已解決，尚可\n3️⃣ 未解決，需進一步協助\n\n如有其他問題，歡迎隨時聯繫我們 🙏'
+    setTestHistory(prev => [...prev, { role: 'assistant', content: surveyMsg }])
+    setCaseClosed(true)
+  }
+
+  // 流失預警偵測
+  const isChurnWarning = (meta?: { intent?: string; risk?: string }) => {
+    if (!meta) return false
+    const churnKeywords = ['取消', '退訂', '不用了', '不想', '考慮', '流失', '解約', '退出', '不再']
+    const intentStr = (meta.intent ?? '').toLowerCase()
+    return meta.risk === 'high' || churnKeywords.some(k => intentStr.includes(k))
+  }
+
   const riskColor = (r: string) =>
     r === 'high' ? 'text-red-600 bg-red-50' :
     r === 'medium' ? 'text-amber-600 bg-amber-50' :
     'text-green-600 bg-green-50'
+
+  // 行業測試語句
+  const INDUSTRY_TEST_PHRASES: Record<string, string[]> = {
+    homestay: ['有哪些房型？', '這週末還有空房嗎？', '可以加床嗎？幾人入住？', '退訂政策是什麼？', '附近有什麼景點推薦？', 'Do you have rooms available this weekend?'],
+    ecommerce: ['我的訂單還沒到', '我想退換貨', '促銷活動什麼時候結束？', '這個商品還有庫存嗎？', '物流追蹤號碼是多少？', '운송 중인 주문을 추적하려면 어떻게 해야 합니까?'],
+    restaurant: ['我想訂位，4人，週五晚上', '你們有素食餐點嗎？', '外送範圍和時間？', '包廂需要預約嗎？', '今日特餐是什麼？', 'Can I make a reservation for 2 people tonight?'],
+    clinic: ['我想預約下週的療程', '這個療程需要多久恢復？', '費用大概多少？', '術後有什麼注意事項？', '醫師的資歷是什麼？', 'What are the side effects of this treatment?'],
+    beauty: ['我想預約洗剪吹', '請問哪位設計師有空？', '燙髮大概多少錢？', '需要提前多久預約？', '你們有護髮療程嗎？', 'Can I book a hair treatment for tomorrow?'],
+    education: ['我想了解英文課程', '有試聽課程嗎？', '學費方案有哪些？', '老師的教學方式是什麼？', '孩子幾歲可以開始學？', 'What courses do you offer for beginners?'],
+  }
 
   return (
     <div className="space-y-5">
@@ -6417,13 +6503,45 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="border rounded-xl overflow-hidden">
             {/* Chat header */}
-            <div className="bg-gray-50 border-b px-4 py-2.5 flex items-center gap-2">
+            <div className="bg-gray-50 border-b px-4 py-2.5 flex items-center gap-2 flex-wrap">
               <div className="w-2 h-2 rounded-full bg-green-400" />
               <span className="text-xs font-medium text-gray-700">客服測試對話</span>
-              <span className="text-[10px] text-gray-400 ml-auto">Gemini + Claude 路由</span>
-              {testHistory.length > 0 && (
-                <button onClick={() => setTestHistory([])} className="text-[10px] text-gray-400 hover:text-gray-600 ml-1">清除</button>
-              )}
+              <span className="text-[10px] text-gray-400">Gemini + Claude 路由</span>
+
+              <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                {/* 智慧草稿 toggle */}
+                <button
+                  onClick={() => setDraftMode(v => !v)}
+                  className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border transition-all ${
+                    draftMode ? 'bg-violet-50 border-violet-300 text-violet-700 font-medium' : 'border-gray-200 text-gray-400 hover:text-gray-600'
+                  }`}>
+                  <Wand2 className="h-3 w-3" />
+                  草稿模式{draftMode ? '開' : '關'}
+                </button>
+                {/* 對話摘要 */}
+                {testHistory.length > 1 && (
+                  <button onClick={summarizeConversation} disabled={summarizing}
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-50">
+                    {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <ClipboardList className="h-3 w-3" />}
+                    摘要
+                  </button>
+                )}
+                {/* 結案 */}
+                {testHistory.length > 0 && !caseClosed && (
+                  <button onClick={closeCase}
+                    className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300">
+                    <ThumbsUp className="h-3 w-3" />
+                    結案
+                  </button>
+                )}
+                {/* 清除 */}
+                {testHistory.length > 0 && (
+                  <button onClick={() => { setTestHistory([]); setSummary(''); setCaseClosed(false); setDraftText(''); setDraftMeta(null) }}
+                    className="text-[10px] text-gray-400 hover:text-gray-600">
+                    清除
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -6433,41 +6551,89 @@ function Unit12CustomerService({
                   在下方輸入框模擬客戶訊息，測試 AI 客服回覆。
                 </div>
               )}
-              {testHistory.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] space-y-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                    <div className={`px-3 py-2 rounded-2xl text-sm ${
-                      msg.role === 'user'
-                        ? 'text-white rounded-tr-sm'
-                        : 'bg-gray-100 text-gray-800 rounded-tl-sm'
-                    }`}
-                      style={msg.role === 'user' ? { background: 'var(--primary)' } : {}}>
-                      <span className="whitespace-pre-wrap">{msg.content}</span>
-                    </div>
-                    {msg.role === 'assistant' && msg.meta && (
-                      <div className="flex items-center gap-1.5 px-1">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.meta.risk ?? 'low')}`}>
-                          {msg.meta.risk === 'high' ? '高風險' : msg.meta.risk === 'medium' ? '中風險' : '低風險'}
-                        </span>
-                        <span className="text-[10px] text-gray-400">{msg.meta.intent}</span>
-                        <span className="text-[10px] text-gray-300">·</span>
-                        <span className={`text-[10px] font-medium ${msg.meta.provider === 'Claude' ? 'text-orange-500' : 'text-blue-500'}`}>
-                          {msg.meta.provider}
-                        </span>
+              {testHistory.map((msg, i) => {
+                const churn = msg.role === 'assistant' && isChurnWarning(msg.meta)
+                return (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[75%] space-y-1 ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                      {/* 流失預警 */}
+                      {churn && (
+                        <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium px-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          流失預警：客戶可能考慮取消或離開
+                        </div>
+                      )}
+                      <div className={`px-3 py-2 rounded-2xl text-sm ${
+                        msg.role === 'user'
+                          ? 'text-white rounded-tr-sm'
+                          : churn
+                            ? 'bg-red-50 border border-red-200 text-gray-800 rounded-tl-sm'
+                            : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+                      }`}
+                        style={msg.role === 'user' ? { background: 'var(--primary)' } : {}}>
+                        <span className="whitespace-pre-wrap">{msg.content}</span>
                       </div>
-                    )}
+                      {msg.role === 'assistant' && msg.meta && (
+                        <div className="flex items-center gap-1.5 px-1">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.meta.risk ?? 'low')}`}>
+                            {msg.meta.risk === 'high' ? '高風險' : msg.meta.risk === 'medium' ? '中風險' : '低風險'}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{msg.meta.intent}</span>
+                          <span className="text-[10px] text-gray-300">·</span>
+                          <span className={`text-[10px] font-medium ${msg.meta.provider === 'Claude' ? 'text-orange-500' : 'text-blue-500'}`}>
+                            {msg.meta.provider}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
               {testLoading && (
                 <div className="flex justify-start">
                   <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 flex items-center gap-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
-                    <span className="text-xs text-gray-400">AI 思考中…</span>
+                    <span className="text-xs text-gray-400">{draftMode ? 'AI 生成草稿中…' : 'AI 思考中…'}</span>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* 智慧草稿 panel */}
+            {draftMode && draftText && (
+              <div className="border-t bg-violet-50 px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-3.5 w-3.5 text-violet-600" />
+                  <span className="text-xs font-medium text-violet-700">智慧草稿</span>
+                  {draftMeta && (
+                    <>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(draftMeta.risk ?? 'low')}`}>
+                        {draftMeta.risk === 'high' ? '高風險' : draftMeta.risk === 'medium' ? '中風險' : '低風險'}
+                      </span>
+                      <span className="text-[10px] text-gray-500">{draftMeta.intent}</span>
+                    </>
+                  )}
+                  <span className="text-[10px] text-gray-400 ml-auto">針對「{draftUserMsg}」的草稿回覆</span>
+                </div>
+                <textarea
+                  value={draftText}
+                  onChange={e => setDraftText(e.target.value)}
+                  rows={4}
+                  className="w-full text-sm border border-violet-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-violet-400 resize-none"
+                />
+                <div className="flex gap-2">
+                  <button onClick={adoptDraft}
+                    className="px-4 py-1.5 rounded-lg text-xs font-medium text-white"
+                    style={{ background: 'var(--primary)' }}>
+                    採用送出
+                  </button>
+                  <button onClick={discardDraft}
+                    className="px-4 py-1.5 rounded-lg text-xs bg-gray-200 text-gray-600">
+                    捨棄
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Input */}
             <div className="border-t px-3 py-2.5 flex gap-2 bg-gray-50">
@@ -6475,7 +6641,7 @@ function Unit12CustomerService({
                 value={testInput}
                 onChange={e => setTestInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTestMessage() } }}
-                placeholder="輸入客戶訊息… (Enter 送出)"
+                placeholder={draftMode ? '輸入客戶訊息… AI 將生成可編輯草稿' : '輸入客戶訊息… (Enter 送出)'}
                 className="flex-1 text-sm border rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 disabled={testLoading}
               />
@@ -6487,19 +6653,23 @@ function Unit12CustomerService({
             </div>
           </div>
 
+          {/* 對話摘要結果 */}
+          {summary && (
+            <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-indigo-600" />
+                <span className="text-xs font-semibold text-indigo-700">對話摘要</span>
+                <button onClick={() => setSummary('')} className="ml-auto text-[10px] text-gray-400 hover:text-gray-600">✕</button>
+              </div>
+              <pre className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-sans">{summary}</pre>
+            </div>
+          )}
+
           {/* Quick test phrases */}
           <div className="space-y-2">
             <div className="text-xs text-gray-500 font-medium">快速測試語句：</div>
             <div className="flex flex-wrap gap-2">
-              {[
-                '你們的產品怎麼收費？',
-                '我想退款，已付款 3 天了',
-                '帳號無法登入',
-                '你們有提供試用嗎？',
-                '我要投訴你們的服務！',
-                'I would like to know more about your services',
-                'Tôi muốn hỏi về sản phẩm của bạn',
-              ].map(phrase => (
+              {(INDUSTRY_TEST_PHRASES[ind] ?? INDUSTRY_TEST_PHRASES.homestay).map(phrase => (
                 <button key={phrase} onClick={() => { setTestInput(phrase); }}
                   className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors">
                   {phrase}
@@ -6512,7 +6682,89 @@ function Unit12CustomerService({
 
       {/* ── Tab: Logs ───────────────────────────────────────────────────────── */}
       {tab === 'logs' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* ── 客服績效報表 ── */}
+          {logs.length > 0 && (() => {
+            const total = logs.length
+            const highRisk = logs.filter(l => l.risk === 'high').length
+            const medRisk = logs.filter(l => l.risk === 'medium').length
+            const lowRisk = logs.filter(l => l.risk === 'low').length
+            const avgLatency = Math.round(logs.reduce((s, l) => s + (l.latencyMs ?? 0), 0) / total)
+            const claudeCount = logs.filter(l => l.provider === 'Claude').length
+            const geminiCount = logs.filter(l => l.provider === 'Gemini').length
+
+            // 熱點問題統計
+            const intentMap: Record<string, number> = {}
+            logs.forEach(l => {
+              if (l.intent) intentMap[l.intent] = (intentMap[l.intent] ?? 0) + 1
+            })
+            const topIntents = Object.entries(intentMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
+
+            return (
+              <div className="space-y-3">
+                {/* 績效卡片 */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="bg-white border rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-gray-800">{total}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">總對話數</div>
+                  </div>
+                  <div className="bg-white border rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-gray-800">{avgLatency}<span className="text-xs text-gray-400 ml-0.5">ms</span></div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">平均回應速度</div>
+                  </div>
+                  <div className="bg-white border rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-red-500">{highRisk}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">高風險對話</div>
+                  </div>
+                  <div className="bg-white border rounded-xl p-3 text-center">
+                    <div className="text-lg font-bold text-orange-500">{claudeCount}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">Claude 升級處理</div>
+                  </div>
+                </div>
+
+                {/* 風險分佈 */}
+                <div className="bg-white border rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <PieChart className="h-3.5 w-3.5 text-gray-500" />
+                    <span className="text-xs font-semibold text-gray-700">風險分佈</span>
+                  </div>
+                  <div className="flex gap-1 h-2 rounded-full overflow-hidden">
+                    {highRisk > 0 && <div className="bg-red-400 transition-all" style={{ width: `${(highRisk/total)*100}%` }} />}
+                    {medRisk > 0 && <div className="bg-amber-400 transition-all" style={{ width: `${(medRisk/total)*100}%` }} />}
+                    {lowRisk > 0 && <div className="bg-green-400 transition-all" style={{ width: `${(lowRisk/total)*100}%` }} />}
+                  </div>
+                  <div className="flex gap-4 text-[10px] text-gray-500">
+                    <span><span className="inline-block w-2 h-2 rounded-full bg-red-400 mr-1" />高風險 {highRisk}</span>
+                    <span><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1" />中風險 {medRisk}</span>
+                    <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1" />低風險 {lowRisk}</span>
+                    <span className="ml-auto"><span className="text-orange-500 font-medium">Claude</span> {claudeCount} · <span className="text-blue-500 font-medium">Gemini</span> {geminiCount}</span>
+                  </div>
+                </div>
+
+                {/* 熱點問題統計 */}
+                {topIntents.length > 0 && (
+                  <div className="bg-white border rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-3.5 w-3.5 text-gray-500" />
+                      <span className="text-xs font-semibold text-gray-700">熱點問題 TOP 5</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {topIntents.map(([intent, count]) => (
+                        <div key={intent} className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-600 flex-1 truncate">{intent}</span>
+                          <div className="flex items-center gap-1">
+                            <div className="h-1.5 rounded-full bg-indigo-200" style={{ width: `${Math.max(12, (count/total)*80)}px` }} />
+                            <span className="text-[10px] text-gray-400 w-5 text-right">{count}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-gray-700">對話記錄</span>
             <span className="text-xs text-gray-400">{logs.length} 筆</span>

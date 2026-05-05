@@ -81,18 +81,18 @@ const FEATURE_GROUPS = [
     features: [
       { icon: Sparkles, label: '意圖識別', desc: '自動判斷用戶目的（退款/查詢/投訴/購買），分流更精準', status: 'live' },
       { icon: Languages, label: '多語言自動偵測', desc: '自動偵測客戶語言並切換回覆（中/英/越/日/韓等）', status: 'live' },
-      { icon: FileText, label: '智慧草稿', desc: 'AI 根據對話生成回覆建議，客服一鍵採用或微調', status: 'soon' },
-      { icon: MessageSquare, label: '對話摘要', desc: '長對話自動濃縮，交接時不用從頭看', status: 'soon' },
+      { icon: FileText, label: '智慧草稿', desc: 'AI 根據對話生成回覆建議，客服一鍵採用或微調', status: 'live' },
+      { icon: MessageSquare, label: '對話摘要', desc: '長對話自動濃縮，交接時不用從頭看', status: 'live' },
     ],
   },
   {
     group: '📊 數據與報表',
     color: 'text-blue-700',
     features: [
-      { icon: BarChart3, label: '客服績效報表', desc: '回應速度、解決率、滿意度自動統計', status: 'soon' },
+      { icon: BarChart3, label: '客服績效報表', desc: '回應速度、解決率、滿意度自動統計', status: 'live' },
       { icon: TrendingUp, label: '情緒趨勢圖', desc: '某時段、某產品的負面情緒爆發點視覺化', status: 'soon' },
-      { icon: Search, label: '熱點問題統計', desc: '每週最多人問什麼，反映產品缺陷或服務痛點', status: 'soon' },
-      { icon: Star, label: '自動滿意度問卷', desc: '問題解決後自動發問卷，無回應自動結案', status: 'soon' },
+      { icon: Search, label: '熱點問題統計', desc: '每週最多人問什麼，反映產品缺陷或服務痛點', status: 'live' },
+      { icon: Star, label: '自動滿意度問卷', desc: '問題解決後自動發問卷，無回應自動結案', status: 'live' },
     ],
   },
   {
@@ -100,7 +100,7 @@ const FEATURE_GROUPS = [
     color: 'text-emerald-700',
     features: [
       { icon: Users, label: 'VIP 識別', desc: '串接 CRM，高價值客戶自動優先排隊、升級處理', status: 'soon' },
-      { icon: AlertTriangle, label: '流失預警', desc: '偵測「考慮取消」「不想用了」語意，主動介入挽留', status: 'soon' },
+      { icon: AlertTriangle, label: '流失預警', desc: '偵測「考慮取消」「不想用了」語意，主動介入挽留', status: 'live' },
       { icon: ShoppingCart, label: '訂單查詢串接', desc: '用戶輸入訂單號直接查狀態，不用轉人工', status: 'soon' },
       { icon: Ticket, label: '工單系統', desc: '複雜問題轉工單追蹤，不怕漏接', status: 'soon' },
     ],
