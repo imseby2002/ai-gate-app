@@ -4720,8 +4720,7 @@ const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       { id: 'tour', name: '行程諮詢', triggerKeywords: '行程,景點,推薦,附近,玩什麼', dataHint: '行程', steps: ['date_checkin', 'headcount', 'phone'], paymentInfo: '' },
     ],
     recommendedSheets: [
-      { name: '訂單密碼表', description: '客人輸入訂單號自動回覆房號、密碼', keyColumn: '訂單編號', returnColumnsExample: '房號,大門密碼,房間密碼,入住日,退房日', triggerKeywords: '訂單,密碼,房號', triggerMode: 'numeric' },
-      { name: '民宿訂房定價', description: '各房型平假日定價，AI自動計算報價', keyColumn: '房型名稱', returnColumnsExample: '房型,可住人數,平日價,假日價,連假價,備註', triggerKeywords: '訂房,住宿,房型,價格,多少錢', triggerMode: 'keyword' },
+      { name: '訂單密碼表', description: '客人輸入訂單號自動回覆房號、密碼（不含定價）', keyColumn: '訂單編號', returnColumnsExample: '房號,大門密碼,房間密碼,入住日,退房日', triggerKeywords: '訂單,密碼,房號', triggerMode: 'numeric' },
     ],
     pricingButtons: [{ key: 'accommodation', label: '+ 訂房定價' }, { key: 'tour', label: '+ 行程定價' }, { key: 'custom', label: '+ 自訂' }],
   },
@@ -4735,8 +4734,8 @@ const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       { id: 'return', name: '退換貨申請', triggerKeywords: '退貨,換貨,退款,瑕疵,壞掉,不喜歡', dataHint: '退換貨', steps: ['product', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
     ],
     recommendedSheets: [
-      { name: '訂單查詢表', description: '客人輸入訂單號自動回覆訂單狀態', keyColumn: '訂單編號', returnColumnsExample: '訂單編號,商品名稱,數量,金額,物流單號,配送狀態,預計到貨日', triggerKeywords: '訂單,查詢,到貨,物流', triggerMode: 'numeric' },
-      { name: '商品目錄', description: '客人詢問商品資訊時自動查找', keyColumn: '商品名稱', returnColumnsExample: '商品名稱,規格,售價,庫存狀態,材質說明,尺寸對照', triggerKeywords: '商品,規格,尺寸,材質,多少錢', triggerMode: 'keyword' },
+      { name: '訂單查詢表', description: '客人輸入訂單號自動回覆物流狀態（不含定價）', keyColumn: '訂單編號', returnColumnsExample: '訂單編號,商品名稱,數量,物流單號,配送狀態,預計到貨日', triggerKeywords: '訂單,查詢,到貨,物流,進度', triggerMode: 'numeric' },
+      { name: '商品規格目錄', description: '客人詢問商品材質/尺寸/規格，不含價格（價格用定價計算機）', keyColumn: '商品名稱', returnColumnsExample: '商品名稱,規格,材質說明,尺寸對照,庫存狀態,注意事項', triggerKeywords: '規格,尺寸,材質,怎麼選', triggerMode: 'keyword' },
     ],
     pricingButtons: [{ key: 'custom', label: '+ 商品定價' }, { key: 'custom', label: '+ 運費方案' }],
   },
@@ -4751,8 +4750,7 @@ const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       { id: 'delivery', name: '外送點餐', triggerKeywords: '外送,外帶,訂餐,送餐,點餐', dataHint: '外送', steps: ['booker_name', 'phone', 'special_req'], paymentInfo: '' },
     ],
     recommendedSheets: [
-      { name: '菜單/套餐定價', description: '客人詢問菜單或套餐時自動查詢', keyColumn: '套餐名稱', returnColumnsExample: '套餐名稱,內容描述,價格,適合人數,備註', triggerKeywords: '菜單,套餐,價格,多少錢,有什麼', triggerMode: 'keyword' },
-      { name: '訂位可用時段', description: '客人詢問可訂時段時查詢', keyColumn: '日期', returnColumnsExample: '日期,午餐可訂時段,晚餐可訂時段,包廂是否可用', triggerKeywords: '訂位,時段,包廂,有沒有位', triggerMode: 'keyword' },
+      { name: '訂位可用時段', description: '客人詢問今日/特定日期是否有位可訂', keyColumn: '日期', returnColumnsExample: '日期,午餐可訂時段,晚餐可訂時段,包廂是否可用,備註', triggerKeywords: '訂位,有沒有位,時段,包廂,今天', triggerMode: 'keyword' },
     ],
     pricingButtons: [{ key: 'custom', label: '+ 套餐定價' }, { key: 'custom', label: '+ 包廂費用' }, { key: 'custom', label: '+ 自訂' }],
   },
@@ -4766,10 +4764,9 @@ const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       { id: 'appointment', name: '預約掛號', triggerKeywords: '預約,掛號,看診,療程,諮詢,想做', dataHint: '療程', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
     ],
     recommendedSheets: [
-      { name: '療程項目費用表', description: '客人詢問療程費用時自動查詢', keyColumn: '療程名稱', returnColumnsExample: '療程名稱,療程說明,費用,療程時間(分鐘),效果持續,適合對象', triggerKeywords: '療程,費用,多少錢,效果,玻尿酸,肉毒', triggerMode: 'keyword' },
-      { name: '醫師/諮詢師排班', description: '客人詢問特定醫師可預約時段', keyColumn: '醫師姓名', returnColumnsExample: '醫師姓名,專長,週一,週二,週三,週四,週五,週六', triggerKeywords: '醫師,排班,什麼時候有,預約', triggerMode: 'keyword' },
+      { name: '醫師/諮詢師排班', description: '客人詢問特定醫師何時有空可預約（不含費用）', keyColumn: '醫師姓名', returnColumnsExample: '醫師姓名,專長,週一,週二,週三,週四,週五,週六', triggerKeywords: '醫師,排班,什麼時候有,誰', triggerMode: 'keyword' },
     ],
-    pricingButtons: [{ key: 'custom', label: '+ 療程定價' }, { key: 'custom', label: '+ 套療方案' }],
+    pricingButtons: [{ key: 'custom', label: '+ 療程費用' }, { key: 'custom', label: '+ 套療方案' }],
   },
   beauty: {
     label: '美容 / 美髮 / SPA',
@@ -4781,8 +4778,7 @@ const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       { id: 'booking', name: '服務預約', triggerKeywords: '預約,剪髮,染髮,護髮,燙髮,美甲,SPA,按摩', dataHint: '服務', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'special_req'], paymentInfo: '' },
     ],
     recommendedSheets: [
-      { name: '服務項目價目表', description: '客人詢問服務價格時自動查詢', keyColumn: '服務名稱', returnColumnsExample: '服務名稱,短髮價,中長髮價,長髮價,超長髮價,所需時間,備註', triggerKeywords: '價格,多少錢,費用,剪染燙護', triggerMode: 'keyword' },
-      { name: '設計師排班表', description: '客人詢問設計師可預約時段', keyColumn: '設計師姓名', returnColumnsExample: '設計師,專長,週一,週二,週三,週四,週五,週六,週日', triggerKeywords: '設計師,排班,什麼時候有,誰', triggerMode: 'keyword' },
+      { name: '設計師排班表', description: '客人指定設計師時查詢可預約時段（不含服務定價）', keyColumn: '設計師姓名', returnColumnsExample: '設計師,專長,週一,週二,週三,週四,週五,週六,週日', triggerKeywords: '設計師,排班,什麼時候有,誰', triggerMode: 'keyword' },
     ],
     pricingButtons: [{ key: 'custom', label: '+ 服務定價' }, { key: 'custom', label: '+ 組合優惠' }],
   },
@@ -4796,8 +4792,7 @@ const CS_INDUSTRY_TEMPLATES: Record<string, IndustryTemplate> = {
       { id: 'trial', name: '免費試聽預約', triggerKeywords: '試聽,體驗課,報名,想學,課程,補習', dataHint: '課程', steps: ['product', 'date_depart', 'timeslot', 'booker_name', 'phone', 'email', 'special_req'], paymentInfo: '' },
     ],
     recommendedSheets: [
-      { name: '課程/學費方案', description: '客人詢問課程費用時自動查詢', keyColumn: '課程名稱', returnColumnsExample: '課程名稱,適合年級,師資,月繳,季繳,年繳,每週堂數,備註', triggerKeywords: '課程,學費,多少錢,費用,報名', triggerMode: 'keyword' },
-      { name: '試聽可用時段', description: '客人詢問試聽時段時自動查詢', keyColumn: '課程', returnColumnsExample: '課程,日期,時段,老師,剩餘名額', triggerKeywords: '試聽,什麼時候,時段,有沒有', triggerMode: 'keyword' },
+      { name: '試聽可用時段', description: '客人詢問試聽時段時查詢剩餘名額（不含學費）', keyColumn: '課程', returnColumnsExample: '課程,日期,時段,老師,剩餘名額', triggerKeywords: '試聽,什麼時候,有沒有,名額', triggerMode: 'keyword' },
     ],
     pricingButtons: [{ key: 'custom', label: '+ 學費方案' }, { key: 'custom', label: '+ 課程定價' }],
   },
@@ -6119,15 +6114,24 @@ function Unit12CustomerService({
                   </div>
                 ))}
               </div>
-              <div className="text-[10px] text-blue-600">💡 依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID</div>
+              <div className="text-[10px] text-blue-600 space-y-0.5">
+                <div>💡 <strong>定價查詢</strong>請到「定價計算機」分頁設定 — 這裡只放需要即時查詢的非定價資料（訂單、排班、時段）</div>
+                <div>👉 依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID</div>
+              </div>
             </div>
           )}
 
           {dsLoading && <div className="text-xs text-gray-400 text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />載入中…</div>}
 
           {dataSources.length === 0 && !dsLoading && !editingDs && (
-            <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
-              尚無資料來源。點擊「新增」設定 Google Sheets 查詢。
+            <div className="border-2 border-dashed rounded-xl p-6 text-center space-y-2">
+              <div className="text-sm text-gray-400">尚無資料來源。點擊「新增」設定 Google Sheets 查詢。</div>
+              <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3 text-left space-y-1">
+                <div className="font-medium text-gray-600">📌 工具分工說明</div>
+                <div>• <span className="font-medium">Google Sheets（此頁）</span>：訂單查詢、排班、可用時段等即時動態資料</div>
+                <div>• <span className="font-medium">定價計算機</span>：房型/療程/套餐等定價計算，AI 自動套公式報價</div>
+                <div>• <span className="font-medium">知識庫</span>：FAQ、政策說明、靜態產品介紹</div>
+              </div>
             </div>
           )}
 
