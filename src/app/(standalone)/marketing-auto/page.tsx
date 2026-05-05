@@ -60,7 +60,6 @@ const UNITS: UnitDef[] = [
 // 獨立工具（共用公司資料，但不屬於自動化流程）
 const SIDE_TOOLS: (UnitDef & { href: string | null })[] = [
   { id: 10, name: '潛在客戶行銷', icon: Phone,      desc: '電話 / Email 批次行銷',        implemented: true, href: '/prospect-call' },
-  { id: 12, name: '客服系統',    icon: Headphones,  desc: 'LINE/WhatsApp/Zalo 智能客服',  implemented: true, href: null },
 ]
 
 interface CollectSubOption { id: string; label: string }
@@ -6708,8 +6707,11 @@ export default function MarketingAutoPage() {
               </button>
             )
           })}
+        </div>
+
+        <div className="p-3 border-t">
           <a href="/settings"
-            className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1.5">
+            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <Settings className="h-3.5 w-3.5" /> 平台連結設定
           </a>
         </div>
