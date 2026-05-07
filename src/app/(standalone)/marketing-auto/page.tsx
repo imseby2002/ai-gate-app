@@ -58,10 +58,7 @@ const UNITS: UnitDef[] = [
   { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: true  },
 ]
 
-// 獨立工具（共用公司資料，但不屬於自動化流程）
-const SIDE_TOOLS: (UnitDef & { href: string | null })[] = [
-  { id: 10, name: '潛在客戶行銷', icon: Phone,      desc: '電話 / Email 批次行銷',        implemented: true, href: '/prospect-call' },
-]
+const SIDE_TOOLS: (UnitDef & { href: string | null })[] = []
 
 interface CollectSubOption { id: string; label: string }
 interface CollectTypeDef {
