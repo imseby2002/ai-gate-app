@@ -21,10 +21,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Get recent conversations for sidebar
   const { data: conversations } = await supabase
     .from('conversations')
-    .select('id, title, updated_at')
+    .select('id, title, updated_at, pinned')
     .eq('user_id', user.id)
+    .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false })
-    .limit(10)
+    .limit(20)
 
   // Get credit balance for external users
   let creditBalance: number | undefined

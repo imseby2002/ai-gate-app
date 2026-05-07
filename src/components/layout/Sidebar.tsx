@@ -11,11 +11,12 @@ import {
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { ConversationItem } from './ConversationItem'
 
 interface SidebarProps {
   userType?: string
   enabledModules?: string[]
-  conversations?: Array<{ id: string; title: string; updated_at: string }>
+  conversations?: Array<{ id: string; title: string; updated_at: string; pinned: boolean }>
 }
 
 export function Sidebar({ userType, enabledModules, conversations = [] }: SidebarProps) {
@@ -115,15 +116,8 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
             <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               {t('recentChats')}
             </p>
-            {conversations.slice(0, 8).map(conv => (
-              <Link key={conv.id} href={`/chat/${conv.id}`}>
-                <div className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer truncate',
-                  pathname === `/chat/${conv.id}` && 'bg-accent text-foreground'
-                )}>
-                  {conv.title}
-                </div>
-              </Link>
+            {conversations.map(conv => (
+              <ConversationItem key={conv.id} conv={conv} />
             ))}
           </div>
         )}
