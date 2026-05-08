@@ -22,7 +22,10 @@ export function ConversationItem({ conv }: { conv: Conversation }) {
   const [renaming, setRenaming] = useState(false)
   const [title, setTitle] = useState(conv.title)
   const [pinned, setPinned] = useState(conv.pinned)
+  const [deleted, setDeleted] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  if (deleted) return null
 
   async function handleRename() {
     setMenuOpen(false)
@@ -56,6 +59,7 @@ export function ConversationItem({ conv }: { conv: Conversation }) {
 
   async function handleDelete() {
     setMenuOpen(false)
+    setDeleted(true)
     await fetch(`/api/conversations/${conv.id}`, { method: 'DELETE' })
     if (isActive) router.push('/chat')
     router.refresh()
