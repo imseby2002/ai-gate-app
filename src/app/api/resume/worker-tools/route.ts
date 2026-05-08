@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
+import { createClient } from '@/lib/supabase/server'
 
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`))
@@ -84,6 +85,10 @@ ${i.jobContent || '（請輸入工作內容）'}
 }
 
 export async function POST(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { toolId, inputs } = await request.json() as { toolId: string; inputs: Record<string, string> }
 
   const buildPrompt = SYSTEM_PROMPTS[toolId]

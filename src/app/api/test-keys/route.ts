@@ -169,7 +169,14 @@ async function testYouTube(): Promise<string> {
   } catch (e) { return `❌ ${String(e)}` }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
+  if (profile?.user_type !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  void req
   const [anthropic, googleAI, openai, openrouter, deepseek, elevenlabs, falAI, tavily, outscraper, heygen, youtube] =
     await Promise.all([
       testAnthropic(),

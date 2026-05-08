@@ -36,13 +36,18 @@ async function extractPdf(arrayBuffer: ArrayBuffer): Promise<string> {
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const body = await req.json()
   const { fileId } = body as { fileId: string }
   if (!fileId) return NextResponse.json({ error: 'fileId required' }, { status: 400 })
 
-  const supabase = await createAdminClient()
+  const supabase2 = await createAdminClient()
 
-  const { data: file } = await supabase
+  const { data: file } = await supabase2
     .from('assistant_files')
     .select('*')
     .eq('id', fileId)
@@ -50,13 +55,13 @@ export async function POST(req: NextRequest) {
 
   if (!file) return NextResponse.json({ error: 'File not found' }, { status: 404 })
 
-  await supabase
+  await supabase2
     .from('assistant_files')
     .update({ processing_status: 'processing' })
     .eq('id', fileId)
 
   try {
-    const { data: fileData, error: downloadError } = await supabase.storage
+    const { data: fileData, error: downloadError } = await supabase2.storage
       .from('assistant-files')
       .download(file.storage_path)
 
@@ -84,7 +89,7 @@ export async function POST(req: NextRequest) {
       extractedText = `[圖片檔案：${file.file_name}，請在對話中使用視覺模型分析]`
     }
 
-    await supabase
+    await supabase2
       .from('assistant_files')
       .update({
         extracted_text: extractedText.slice(0, 500_000),
@@ -95,7 +100,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, chars: extractedText.length })
   } catch (error) {
-    await supabase
+    await supabase2
       .from('assistant_files')
       .update({ processing_status: 'failed' })
       .eq('id', fileId)

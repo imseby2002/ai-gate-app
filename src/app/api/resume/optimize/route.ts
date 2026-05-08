@@ -1,7 +1,8 @@
-﻿import { NextRequest } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, streamText } from 'ai'
+import { createClient } from '@/lib/supabase/server'
 
 // ── SSE helper ───────────────────────────────────────────────────
 function sse(controller: ReadableStreamDefaultController, payload: object) {
@@ -121,6 +122,10 @@ ${experience || '（未提供）'}
 
 // ── Main handler ─────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   let jd = ''
   let experience = ''
   let imageBase64: string | undefined
