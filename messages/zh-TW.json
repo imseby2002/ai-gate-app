@@ -73,6 +73,7 @@
   },
   "Sidebar": {
     "newChat": "新對話",
+    "dashboard": "儀表板",
     "assistants": "AI 助理",
     "imageGen": "圖片生成",
     "videoGen": "影片生成",

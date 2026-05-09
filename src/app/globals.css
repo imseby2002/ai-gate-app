@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&display=swap');
 
 @theme inline {
   --color-background: var(--background);
@@ -78,7 +79,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Custom scrollbar */
@@ -86,3 +87,43 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* Gradient text utility */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, oklch(0.55 0.22 290) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover lift */
+.card-lift {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-lift:hover {
+  box-shadow: 0 8px 30px -8px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+/* Sidebar gradient header */
+.sidebar-logo-area {
+  background: linear-gradient(145deg, oklch(0.98 0.005 262) 0%, oklch(0.96 0.01 262) 100%);
+}
+.dark .sidebar-logo-area {
+  background: linear-gradient(145deg, oklch(0.18 0.01 262) 0%, oklch(0.16 0.005 262) 100%);
+}
+
+/* Smooth page transitions */
+main > * {
+  animation: fade-up 0.25s ease both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Code block in chat */
+.chat-code-block {
+  font-family: 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  font-size: 0.78rem;
+}

@@ -4,6 +4,7 @@ import { User, Bot, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils/cn'
 import { formatCost, formatTokens } from '@/lib/utils/format'
+import { MarkdownContent } from './MarkdownContent'
 import type { Message } from '@/types/database'
 
 interface MessageBubbleProps {
@@ -27,58 +28,57 @@ export function MessageBubble({ message, isStreaming, streamingContent }: Messag
     <div className={cn('flex gap-3 group', isUser && 'flex-row-reverse')}>
       {/* Avatar */}
       <div className={cn(
-        'flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center',
-        isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
+        'flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium shadow-sm',
+        isUser
+          ? 'bg-gradient-to-br from-primary to-violet-600 text-white'
+          : 'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 text-slate-600 dark:text-slate-300'
       )}>
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
       </div>
 
       {/* Bubble */}
-      <div className={cn('max-w-[75%] space-y-1', isUser && 'items-end')}>
+      <div className={cn('max-w-[78%] space-y-1', isUser ? 'items-end flex flex-col' : '')}>
         <div className={cn(
-          'rounded-2xl px-4 py-3 text-sm leading-relaxed',
+          'rounded-2xl px-4 py-3 shadow-sm',
           isUser
-            ? 'bg-primary text-primary-foreground rounded-tr-sm'
-            : 'bg-muted rounded-tl-sm'
+            ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-tr-md'
+            : 'bg-card border border-border/50 rounded-tl-md'
         )}>
-          {/* Render content - basic markdown-like formatting */}
-          <div className="whitespace-pre-wrap">
-            {content}
-          </div>
+          {isUser ? (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+          ) : (
+            <MarkdownContent content={content} />
+          )}
           {isStreaming && (
-            <span className="inline-block h-4 w-0.5 bg-current animate-pulse ml-0.5" />
+            <span className="inline-block h-4 w-0.5 bg-current animate-pulse ml-0.5 align-middle" />
           )}
         </div>
 
         {/* Meta info for assistant messages */}
-        {!isUser && !isStreaming && (message.model_id || message.cost_usd > 0) && (
-          <div className="flex items-center gap-3 px-1 text-xs text-muted-foreground">
+        {!isUser && !isStreaming && (message.model_id || (message.cost_usd ?? 0) > 0) && (
+          <div className="flex items-center gap-3 px-1 text-xs text-muted-foreground/70">
             {message.modelDisplayName && (
-              <span>{message.modelDisplayName}</span>
+              <span className="font-medium">{message.modelDisplayName}</span>
             )}
-            {message.input_tokens > 0 && (
-              <span>{formatTokens(message.input_tokens + message.output_tokens)} tokens</span>
+            {(message.input_tokens ?? 0) > 0 && (
+              <span>{formatTokens((message.input_tokens ?? 0) + (message.output_tokens ?? 0))} tokens</span>
             )}
-            {message.cost_usd > 0 && (
-              <span>{formatCost(message.cost_usd)}</span>
+            {(message.cost_usd ?? 0) > 0 && (
+              <span>{formatCost(message.cost_usd ?? 0)}</span>
             )}
             <button
               onClick={handleCopy}
-              className="opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+              className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity ml-auto p-0.5 rounded"
+              title="複製"
             >
-              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
             </button>
           </div>
         )}
 
         {/* Image attachments */}
         {message.image_urls?.map((url, i) => (
-          <img
-            key={i}
-            src={url}
-            alt="生成圖片"
-            className="rounded-lg max-w-sm mt-2"
-          />
+          <img key={i} src={url} alt="生成圖片" className="rounded-xl max-w-sm mt-2 shadow-sm" />
         ))}
       </div>
     </div>

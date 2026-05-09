@@ -73,6 +73,7 @@
   },
   "Sidebar": {
     "newChat": "New Chat",
+    "dashboard": "Dashboard",
     "assistants": "AI Assistants",
     "imageGen": "Image Gen",
     "videoGen": "Video Gen",

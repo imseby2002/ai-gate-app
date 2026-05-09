@@ -208,25 +208,56 @@ export function ChatInterface({
 
   const textModels = models.filter(m => m.modality === 'text' || m.modality === 'multimodal')
 
+  const SUGGESTIONS = assistant ? [] : [
+    '幫我分析這份資料的趨勢',
+    '寫一封專業的英文商業信件',
+    '解釋量子計算的基本原理',
+    '幫我規劃本週的工作計畫',
+  ]
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-slate-50/30 dark:bg-background">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-5">
         {messages.length === 0 && !streaming && (
-          <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-            <div className="text-5xl">{assistant?.avatar_emoji ?? '🤖'}</div>
-            <h2 className="text-xl font-semibold">
-              {assistant ? assistant.name : 'AI GATE'}
-            </h2>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              {assistant?.description ?? '選擇一個 AI 助理或直接開始對話。系統會自動為您選擇最合適的模型。'}
-            </p>
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-6 py-12">
+            <div className="relative">
+              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-4xl shadow-xl shadow-primary/20">
+                {assistant?.avatar_emoji ?? '🤖'}
+              </div>
+              <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-emerald-400 border-2 border-background flex items-center justify-center">
+                <span className="text-white text-[10px] font-bold">AI</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">
+                {assistant ? assistant.name : 'AI GATE 助手'}
+              </h2>
+              <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
+                {assistant?.description ?? '直接輸入問題開始對話，系統會自動選擇最適合的 AI 模型回答您。'}
+              </p>
+            </div>
+            {SUGGESTIONS.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                {SUGGESTIONS.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setInput(s)}
+                    className="px-3 py-1.5 rounded-full text-xs bg-card border hover:border-primary/50 hover:text-primary transition-colors shadow-sm"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {messages.map(msg => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
+
+
 
         {streaming && (
           <MessageBubble
@@ -251,26 +282,26 @@ export function ChatInterface({
       </div>
 
       {/* Input Area */}
-      <div className="border-t bg-background px-4 py-3 space-y-2">
+      <div className="border-t bg-card/80 backdrop-blur-sm px-4 md:px-8 py-3">
         {/* Image Preview */}
         {imagePreview && (
-          <div className="relative inline-block">
-            <img src={imagePreview} alt="附件" className="h-20 rounded-lg border" />
+          <div className="relative inline-block mb-2">
+            <img src={imagePreview} alt="附件" className="h-20 rounded-xl border shadow-sm" />
             <button
               onClick={() => setImagePreview(null)}
-              className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+              className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-sm"
             >
               <X className="h-3 w-3" />
             </button>
           </div>
         )}
 
-        {/* Top bar: model selector */}
-        <div className="flex items-center gap-2">
+        {/* Model selector + assistant tag */}
+        <div className="flex items-center gap-2 mb-2">
           <ModelSelector models={textModels} value={modelOverride} onChange={setModelOverride} />
           {assistant && (
-            <span className="text-xs text-muted-foreground">
-              使用助理：{assistant.avatar_emoji} {assistant.name}
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+              {assistant.avatar_emoji} {assistant.name}
             </span>
           )}
         </div>
@@ -283,8 +314,8 @@ export function ChatInterface({
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="輸入訊息… (Shift+Enter 換行)"
-              className="min-h-[44px] max-h-40 pr-10 resize-none"
+              placeholder="輸入訊息… (Enter 送出，Shift+Enter 換行)"
+              className="min-h-[44px] max-h-40 resize-none rounded-xl bg-background border-border/70 focus:border-primary/50 transition-colors pr-2"
               rows={1}
             />
           </div>
@@ -301,6 +332,7 @@ export function ChatInterface({
             size="icon"
             onClick={() => fileInputRef.current?.click()}
             title="附加圖片"
+            className="rounded-xl h-11 w-11 flex-shrink-0 border-border/70"
           >
             <Image className="h-4 w-4" />
           </Button>
@@ -308,6 +340,7 @@ export function ChatInterface({
             onClick={sendMessage}
             disabled={isLoading || (!input.trim() && !imagePreview)}
             size="icon"
+            className="rounded-xl h-11 w-11 flex-shrink-0 shadow-sm"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />

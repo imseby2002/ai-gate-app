@@ -2,9 +2,23 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
-import { MessageSquare, Bot, BarChart3, TrendingUp, Lock } from 'lucide-react'
+import {
+  MessageSquare, Bot, BarChart3, TrendingUp, Lock,
+  ArrowRight, Sparkles, ChevronRight, Zap,
+} from 'lucide-react'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { MODULES } from '@/lib/modules'
+import { cn } from '@/lib/utils/cn'
+
+function getInitials(name: string): string {
+  return name.split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('') || '?'
+}
+
+const STAT_STYLES = [
+  { iconBg: 'bg-blue-50 dark:bg-blue-950/50', iconColor: 'text-blue-600 dark:text-blue-400', border: 'border-blue-100 dark:border-blue-900' },
+  { iconBg: 'bg-emerald-50 dark:bg-emerald-950/50', iconColor: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-100 dark:border-emerald-900' },
+  { iconBg: 'bg-violet-50 dark:bg-violet-950/50', iconColor: 'text-violet-600 dark:text-violet-400', border: 'border-violet-100 dark:border-violet-900' },
+]
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ blocked?: string }> }) {
   const supabase = await createClient()
@@ -19,7 +33,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const enabledModules: string[] = profile?.enabled_modules ?? MODULES.map(m => m.id)
   const isAdmin = profile?.user_type === 'admin'
 
-  // Usage stats last 7 days
   const { data: usageData } = await supabase
     .from('usage_daily')
     .select('model_id, message_count, total_cost_usd, input_tokens, output_tokens')
@@ -35,109 +48,181 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
 
+  const displayName = profile?.full_name ?? profile?.email ?? ''
+  const initials = getInitials(displayName)
+
+  const stats = [
+    { label: t('weeklyMessages'), value: totalMessages.toString(), icon: MessageSquare, sublabel: '過去 7 天對話數' },
+    { label: t('weeklyTokens'),   value: formatTokens(totalTokens), icon: TrendingUp, sublabel: '輸入＋輸出 tokens' },
+    { label: t('weeklyCost'),     value: formatCost(totalCost),     icon: BarChart3, sublabel: '估算費用' },
+  ]
+
   return (
-    <div className="h-full overflow-y-auto px-6 py-6 space-y-6">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-bold">
-          {t('welcome', { name: profile?.full_name ?? profile?.email })}
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">{t('subtitle')}</p>
-      </div>
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background">
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
 
-      {/* Blocked notice */}
-      {sp.blocked && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-          <Lock className="h-4 w-4 shrink-0" />
-          此功能模組尚未開放，請聯繫管理員。
-        </div>
-      )}
+        {/* ── Hero ── */}
+        <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/5 via-blue-50/80 to-violet-50/60 dark:from-primary/10 dark:via-slate-900/80 dark:to-violet-950/30 p-8">
+          {/* Decorative blob */}
+          <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-violet-400/10 blur-3xl" />
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: t('weeklyMessages'), value: totalMessages.toString(), icon: MessageSquare },
-          { label: t('weeklyTokens'),   value: formatTokens(totalTokens), icon: TrendingUp },
-          { label: t('weeklyCost'),     value: formatCost(totalCost),     icon: BarChart3 },
-        ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-2xl border p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500">{stat.label}</span>
-              <stat.icon className="h-4 w-4 text-gray-400" />
+          <div className="relative flex items-center gap-5">
+            <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary/30 select-none">
+              {initials}
             </div>
-            <div className="text-2xl font-bold">{stat.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Module tiles */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">功能模組</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {MODULES.map(mod => {
-            const accessible = isAdmin || enabledModules.includes(mod.id)
-            return (
-              <div key={mod.id} className={`relative rounded-2xl border overflow-hidden shadow-sm transition-all ${accessible ? 'hover:shadow-md hover:-translate-y-0.5' : 'opacity-50'}`}>
-                <div className={`h-1.5 bg-gradient-to-r ${mod.color}`} />
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="text-3xl">{mod.emoji}</span>
-                    {!accessible && <Lock className="h-4 w-4 text-gray-400 mt-1" />}
-                  </div>
-                  <div className="font-semibold text-gray-900">{mod.label}</div>
-                  <div className="text-xs text-gray-500 mt-1 mb-4">{mod.desc}</div>
-                  {accessible ? (
-                    <Link
-                      href={mod.href}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90"
-                      style={{ background: `var(--primary)` }}
-                    >
-                      進入
-                    </Link>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400">
-                      未開放
-                    </span>
-                  )}
-                </div>
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <Sparkles className="h-4 w-4 text-primary/70" />
+                <span className="text-xs font-medium text-primary/70 uppercase tracking-wide">AI GATE</span>
               </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* My Assistants */}
-      {(isAdmin || enabledModules.includes('chat')) && (
-        <div className="bg-white rounded-2xl border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-gray-400" />
-              <h2 className="font-semibold">{t('myAssistants')}</h2>
-              <span className="text-sm text-gray-500">({assistantCount ?? 0})</span>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                {t('welcome', { name: profile?.full_name ?? profile?.email })}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">{t('subtitle')}</p>
             </div>
-            <Link href="/assistants" className="text-sm font-medium" style={{ color: 'var(--primary)' }}>
-              {t('manage')}
-            </Link>
           </div>
-          {(assistantCount ?? 0) === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <Bot className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">{t('noAssistants')}</p>
+
+          {(isAdmin || enabledModules.includes('chat')) && (
+            <div className="relative mt-6 flex items-center gap-3">
               <Link
-                href="/assistants/new"
-                className="inline-block mt-3 text-sm font-medium px-4 py-2 rounded-lg text-white"
-                style={{ background: 'var(--primary)' }}
+                href="/chat"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
               >
-                {t('createFirst')}
+                <Zap className="h-4 w-4" />
+                開始新對話
+              </Link>
+              <Link
+                href="/assistants"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/70 dark:bg-white/10 border border-white/50 text-sm font-medium hover:bg-white/90 dark:hover:bg-white/15 transition-colors"
+              >
+                <Bot className="h-4 w-4" />
+                我的助理
               </Link>
             </div>
-          ) : (
-            <Link href="/assistants" className="text-sm text-gray-500 hover:text-gray-800">
-              {t('viewAll')}
-            </Link>
           )}
         </div>
-      )}
+
+        {/* ── Blocked notice ── */}
+        {sp.blocked && (
+          <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            <Lock className="h-4 w-4 shrink-0" />
+            此功能模組尚未開放，請聯繫管理員。
+          </div>
+        )}
+
+        {/* ── Stats ── */}
+        <div>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-0.5">本週使用統計</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {stats.map((stat, i) => {
+              const style = STAT_STYLES[i]
+              return (
+                <div key={stat.label} className="card-lift bg-card rounded-2xl border p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center', style.iconBg)}>
+                      <stat.icon className={cn('h-4 w-4', style.iconColor)} />
+                    </div>
+                    <span className="text-sm text-muted-foreground font-medium">{stat.label}</span>
+                  </div>
+                  <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
+                  <div className="text-xs text-muted-foreground/60 mt-1">{stat.sublabel}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Modules ── */}
+        <div>
+          <div className="flex items-center justify-between mb-4 px-0.5">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">功能模組</h2>
+            <span className="text-xs text-muted-foreground">{MODULES.filter(m => isAdmin || enabledModules.includes(m.id)).length} / {MODULES.length} 已開放</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {MODULES.map(mod => {
+              const accessible = isAdmin || enabledModules.includes(mod.id)
+              return (
+                <div
+                  key={mod.id}
+                  className={cn(
+                    'card-lift relative rounded-2xl border overflow-hidden bg-card shadow-sm',
+                    !accessible && 'opacity-55 pointer-events-none'
+                  )}
+                >
+                  <div className={cn('h-1 w-full bg-gradient-to-r', mod.color)} />
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <span className="text-3xl leading-none">{mod.emoji}</span>
+                      {!accessible && <Lock className="h-3.5 w-3.5 text-muted-foreground/50 mt-1" />}
+                    </div>
+                    <div className="font-semibold text-sm text-foreground">{mod.label}</div>
+                    <div className="text-xs text-muted-foreground mt-1 mb-5 leading-relaxed">{mod.desc}</div>
+                    {accessible ? (
+                      <Link
+                        href={mod.href}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                      >
+                        開始使用 <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-muted text-muted-foreground">
+                        <Lock className="h-3 w-3" /> 未開放
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── My Assistants ── */}
+        {(isAdmin || enabledModules.includes('chat')) && (
+          <div className="bg-card rounded-2xl border p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-sm">{t('myAssistants')}</h2>
+                  <p className="text-xs text-muted-foreground">{assistantCount ?? 0} 個助理</p>
+                </div>
+              </div>
+              <Link
+                href="/assistants"
+                className="flex items-center gap-1 text-xs font-medium text-primary hover:opacity-70 transition-opacity"
+              >
+                {t('manage')} <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {(assistantCount ?? 0) === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
+                <Bot className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">{t('noAssistants')}</p>
+                <Link
+                  href="/assistants/new"
+                  className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {t('createFirst')}
+                </Link>
+              </div>
+            ) : (
+              <Link
+                href="/assistants"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+              >
+                <span>{t('viewAll')}</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            )}
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }
