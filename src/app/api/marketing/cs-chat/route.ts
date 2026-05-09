@@ -57,24 +57,28 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const headers = rows[0]
     const dataRows = rows.slice(1)
 
-    const keyColIdx = headers.findIndex(h => h.trim() === (config.keyColumn ?? '').trim())
+    // 支援多欄位查詢（逗號分隔），OR 邏輯
+    const keyColumnNames = (config.keyColumn ?? '').split(',').map(c => c.trim()).filter(Boolean)
+    const keyColIdxs = keyColumnNames.map(c => headers.findIndex(h => h.trim() === c)).filter(i => i >= 0)
 
-    // Numeric trigger: exact single-row lookup
-    if (exactKey && keyColIdx >= 0) {
-      const matchedRow = dataRows.find(row => (row[keyColIdx] ?? '').trim() === exactKey!.trim())
+    // Numeric trigger: exact single-row lookup (OR across key columns)
+    if (exactKey && keyColIdxs.length > 0) {
+      const matchedRow = dataRows.find(row =>
+        keyColIdxs.some(idx => (row[idx] ?? '').trim() === exactKey!.trim())
+      )
       if (!matchedRow) {
-        return `【外部資料表：${config.sheetName}】\n查無符合訂單號碼「${exactKey}」的資料，請確認訂單號碼是否正確。`
+        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
       }
 
-      const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
-      const colIdxs = wantedCols.length > 1
+      const wantedCols = [...keyColumnNames, ...(config.returnColumns ?? [])].filter(Boolean)
+      const colIdxs = wantedCols.length > keyColumnNames.length
         ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
         : headers.map((_, i) => i)
 
       const pickedHeaders = colIdxs.map(i => headers[i])
       const pickedValues = colIdxs.map(i => matchedRow[i] ?? '')
       const result = pickedHeaders.map((h, i) => `${h}：${pickedValues[i]}`).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到訂單「${exactKey}」的資料：\n${result}`
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}`
     }
 
     // Keyword trigger: return full filtered table
