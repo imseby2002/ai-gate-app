@@ -6608,11 +6608,11 @@ function Unit12CustomerService({
             <div>• 回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。</div>
           </div>
 
-          {/* ── 早餐直送設定 ── */}
+          {/* ── 民宿購物設定 ── */}
           <div className="border-t pt-5 space-y-3">
             <div>
-              <div className="text-sm font-medium text-gray-700">🍱 早餐直送設定</div>
-              <div className="text-xs text-gray-400 mt-0.5">客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets</div>
+              <div className="text-sm font-medium text-gray-700">🍱 民宿購物設定</div>
+              <div className="text-xs text-gray-400 mt-0.5">客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets（舉例：早餐預訂、備品補充、活動報名）</div>
             </div>
 
             <div>
@@ -6629,7 +6629,7 @@ function Unit12CustomerService({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">訂餐截止時間</label>
+                <label className="text-[10px] text-gray-500 block mb-1">截止時間</label>
                 <input
                   type="text"
                   placeholder="22:00"
@@ -6662,7 +6662,7 @@ function Unit12CustomerService({
             </div>
 
             <div>
-              <label className="text-[10px] text-gray-500 block mb-1">早餐菜單（每行一個選項）</label>
+              <label className="text-[10px] text-gray-500 block mb-1">物品選單（每行一個選項）</label>
               <textarea
                 rows={6}
                 placeholder={'SET A 薯餅起司堡\nSET B (全素)綜合蔬食總匯\nSET C 厚切牛肉起司堡\nSET D (奶蛋素)松露薯泥堡\nSET E 中華拼盤'}
