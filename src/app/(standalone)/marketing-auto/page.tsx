@@ -6531,22 +6531,22 @@ function Unit12CustomerService({
               ))}
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">回傳欄位（逗號分隔，留空回傳所有欄位）</label>
-                <input
-                  type="text"
+                <label className="text-[10px] text-gray-500 block mb-1">回傳欄位（每行一個，留空回傳所有欄位）</label>
+                <textarea
+                  rows={4}
                   placeholder={
-                    industry === 'ecommerce' ? '例：訂單編號,商品名稱,物流單號,配送狀態,預計到貨日' :
-                    industry === 'restaurant' ? '例：套餐名稱,內容,價格,適合人數' :
-                    industry === 'clinic' ? '例：療程名稱,費用,療程時間,效果持續' :
-                    industry === 'beauty' ? '例：服務名稱,短髮價,長髮價,所需時間' :
-                    industry === 'education' ? '例：課程名稱,適合年級,月繳,季繳,年繳' :
-                    '例：房號,大門密碼,房間密碼'
+                    industry === 'ecommerce' ? '訂單編號\n商品名稱\n物流單號\n配送狀態\n預計到貨日' :
+                    industry === 'restaurant' ? '套餐名稱\n內容\n價格\n適合人數' :
+                    industry === 'clinic' ? '療程名稱\n費用\n療程時間\n效果持續' :
+                    industry === 'beauty' ? '服務名稱\n短髮價\n長髮價\n所需時間' :
+                    industry === 'education' ? '課程名稱\n適合年級\n月繳\n季繳\n年繳' :
+                    '房號\n大門密碼\n房間密碼'
                   }
-                  value={editingDsForm.returnColumns.join(',')}
-                  onChange={e => setEditingDsForm(prev => ({ ...prev, returnColumns: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
-                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  value={editingDsForm.returnColumns.join('\n')}
+                  onChange={e => setEditingDsForm(prev => ({ ...prev, returnColumns: e.target.value.split('\n').map(s => s.trim()).filter(Boolean) }))}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
                 />
-                <div className="text-[10px] text-gray-400 mt-0.5">依序填入多個欄位，例：房號,大門密碼,房門密碼</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">每行填一個欄位名稱（需與 Google Sheets 標題列完全一致）</div>
               </div>
 
               <div>
