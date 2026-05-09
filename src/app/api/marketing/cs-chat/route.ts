@@ -351,6 +351,27 @@ async function handlePost(req: NextRequest) {
     .eq('user_id', user.id)
     .eq('enabled', true)
 
+  // 取出早餐設定
+  const breakfastSource = sources?.find(s => s.type === 'breakfast_webhook')
+  const breakfastCfg = breakfastSource?.config as {
+    webhookUrl: string; cutoffTime: string; deliveryTime: string
+    rooms: string[]; menu: string[]
+  } | undefined
+
+  // 偵測前端送來的確認封包，POST 到 Apps Script
+  if (breakfastCfg?.webhookUrl) {
+    const confirmMatch = message.match(/^##BREAKFAST_ORDER##(.+)$/)
+    if (confirmMatch) {
+      try {
+        await fetch(breakfastCfg.webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: confirmMatch[1],
+        })
+      } catch { /* 不中斷主流程 */ }
+    }
+  }
+
   const sheetResults: string[] = []
   if (sources?.length) {
     await Promise.all(sources.map(async (src) => {
@@ -360,6 +381,8 @@ async function handlePost(req: NextRequest) {
         result = bookingFlowEnabled
           ? formatPricingForAI(src.name, src.config as PricingConfig)
           : queryJsonPricing(src.name, src.config as PricingConfig, message)
+      } else if (src.type === 'breakfast_webhook') {
+        return // 早餐設定單獨處理
       } else {
         result = await queryGoogleSheet(src.config as SheetConfig, message)
       }
@@ -422,6 +445,31 @@ async function handlePost(req: NextRequest) {
 
   const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
 
+  // ── Breakfast ordering section ────────────────────────────────────────────
+  const breakfastSection = breakfastCfg
+    ? `\n\n【早餐點餐助理模式】
+早餐截止時間：每日 ${breakfastCfg.cutoffTime} 前
+早餐送達時間：隔日 ${breakfastCfg.deliveryTime}
+可用房間：${breakfastCfg.rooms.join('、')}
+
+菜單選項：
+${breakfastCfg.menu.map((item, i) => `  ${i + 1}. ${item}`).join('\n')}
+
+當客人詢問早餐相關事項或想點餐時，啟動以下流程（每次只問一個問題）：
+1. 詢問是哪個房間（若客人有多個房間，詢問此次要為哪個房間點餐）
+2. 展示菜單，請客人選擇品項與份數
+3. 確認客人選完後，詢問「是否還有其他房間要點？」
+4. 所有房間確認完畢，向客人整理所有訂單並確認
+5. 客人確認後，輸出以下格式（這行會被系統攔截，不顯示給客人）：
+##BREAKFAST_ORDER##{"date":"隔天日期YYYY-MM-DD","orders":[{"room":"房間號","items":[{"name":"品項名","qty":數量}]}]}
+
+重要規則：
+- 確認截止時間前才可接受點餐，超過 ${breakfastCfg.cutoffTime} 請告知已截止
+- 每個房間分開記錄
+- 份數必須讓客人明確說出，不可假設
+- 輸出 ##BREAKFAST_ORDER## 時不要有任何其他文字在同一行`
+    : ''
+
 const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
@@ -429,7 +477,7 @@ const systemPrompt = `${baseInstructions}
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}`
+- 目前台灣時間：${taiwanTime}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({

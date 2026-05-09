@@ -4956,6 +4956,17 @@ function Unit12CustomerService({
   const [savingPc, setSavingPc] = useState(false)
   const [pcJsonError, setPcJsonError] = useState('')
 
+  // Breakfast webhook config
+  const [breakfastCfgId, setBreakfastCfgId] = useState<string | null>(null)
+  const [breakfastForm, setBreakfastForm] = useState({
+    webhookUrl: '',
+    cutoffTime: '22:00',
+    deliveryTime: '07:50',
+    rooms: '',   // 每行一間，例：201 龜山加大床房
+    menu: '',    // 每行一個選項，例：SET A 薯餅起司堡
+  })
+  const [savingBreakfast, setSavingBreakfast] = useState(false)
+
   const PRICING_TEMPLATES: Record<string, object> = {
     tour: {
       productType: 'tour',
@@ -5013,8 +5024,19 @@ function Unit12CustomerService({
   useEffect(() => {
     fetch(`/api/marketing/cs-datasource?industry=${ind}`).then(r => r.json()).then(d => {
       if (d.sources) {
-        setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing'))
+        setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook'))
         setPricingConfigs(d.sources.filter((s: { type: string }) => s.type === 'json_pricing'))
+        const bk = d.sources.find((s: { type: string }) => s.type === 'breakfast_webhook')
+        if (bk) {
+          setBreakfastCfgId(bk.id)
+          setBreakfastForm({
+            webhookUrl:   bk.config.webhookUrl   ?? '',
+            cutoffTime:   bk.config.cutoffTime   ?? '22:00',
+            deliveryTime: bk.config.deliveryTime ?? '07:50',
+            rooms: (bk.config.rooms ?? []).join('\n'),
+            menu:  (bk.config.menu  ?? []).join('\n'),
+          })
+        }
       }
     }).catch(() => {})
   }, [ind])
@@ -5139,6 +5161,35 @@ function Unit12CustomerService({
       setDataSources(prev => prev.filter(s => s.id !== id))
     } catch {}
     setDsLoading(false)
+  }
+
+  async function saveBreakfast() {
+    setSavingBreakfast(true)
+    try {
+      const config = {
+        webhookUrl:   breakfastForm.webhookUrl.trim(),
+        cutoffTime:   breakfastForm.cutoffTime.trim(),
+        deliveryTime: breakfastForm.deliveryTime.trim(),
+        rooms: breakfastForm.rooms.split('\n').map(s => s.trim()).filter(Boolean),
+        menu:  breakfastForm.menu.split('\n').map(s => s.trim()).filter(Boolean),
+      }
+      if (breakfastCfgId) {
+        await fetch(`/api/marketing/cs-datasource/${breakfastCfgId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: '早餐直送設定', config, enabled: true }),
+        })
+      } else {
+        const r = await fetch('/api/marketing/cs-datasource', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: '早餐直送設定', type: 'breakfast_webhook', config, industry: ind }),
+        })
+        const d = await r.json()
+        if (d.source) setBreakfastCfgId(d.source.id)
+      }
+    } catch {}
+    setSavingBreakfast(false)
   }
 
   async function toggleDs(src: CsDataSource) {
@@ -6555,6 +6606,91 @@ function Unit12CustomerService({
             <div>• 「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。</div>
             <div>• 「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。</div>
             <div>• 回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。</div>
+          </div>
+
+          {/* ── 早餐直送設定 ── */}
+          <div className="border-t pt-5 space-y-3">
+            <div>
+              <div className="text-sm font-medium text-gray-700">🍱 早餐直送設定</div>
+              <div className="text-xs text-gray-400 mt-0.5">客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets</div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">Apps Script Web App 網址 <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                placeholder="https://script.google.com/macros/s/XXXXX/exec"
+                value={breakfastForm.webhookUrl}
+                onChange={e => setBreakfastForm(p => ({ ...p, webhookUrl: e.target.value }))}
+                className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+              <div className="text-[10px] text-gray-400 mt-0.5">部署 Apps Script 為 Web App 後取得的 /exec 網址</div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">訂餐截止時間</label>
+                <input
+                  type="text"
+                  placeholder="22:00"
+                  value={breakfastForm.cutoffTime}
+                  onChange={e => setBreakfastForm(p => ({ ...p, cutoffTime: e.target.value }))}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">預計送達時間</label>
+                <input
+                  type="text"
+                  placeholder="07:50"
+                  value={breakfastForm.deliveryTime}
+                  onChange={e => setBreakfastForm(p => ({ ...p, deliveryTime: e.target.value }))}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">房間列表（每行一間，格式：房號 房型名稱）</label>
+              <textarea
+                rows={5}
+                placeholder={'201 龜山加大床房\n202 蘭博雙人房\n301 海景加大床房\n302 山景雙人房\n401 露臺雙人房'}
+                value={breakfastForm.rooms}
+                onChange={e => setBreakfastForm(p => ({ ...p, rooms: e.target.value }))}
+                className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">早餐菜單（每行一個選項）</label>
+              <textarea
+                rows={6}
+                placeholder={'SET A 薯餅起司堡\nSET B (全素)綜合蔬食總匯\nSET C 厚切牛肉起司堡\nSET D (奶蛋素)松露薯泥堡\nSET E 中華拼盤'}
+                value={breakfastForm.menu}
+                onChange={e => setBreakfastForm(p => ({ ...p, menu: e.target.value }))}
+                className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
+              />
+              <div className="text-[10px] text-gray-400 mt-0.5">AI 點餐時會直接列出這些選項給客人選擇</div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
+              <div className="font-medium">設定完成後 AI 的點餐流程：</div>
+              <div>1. 客人說「我要訂早餐」→ AI 說明麥當勞餐券 vs 早餐直送</div>
+              <div>2. 客人選擇直送 → AI 確認房號 → 列出上方菜單</div>
+              <div>3. 客人選好 → AI 確認訂單 → 客人回「確認」</div>
+              <div>4. 系統自動 POST 到 Apps Script → Script 推 LINE 群組 + 存 Sheets</div>
+            </div>
+
+            <button
+              onClick={saveBreakfast}
+              disabled={savingBreakfast || !breakfastForm.webhookUrl.trim()}
+              className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50 flex items-center gap-1.5"
+              style={{ background: 'var(--primary)' }}
+            >
+              {savingBreakfast
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />儲存中…</>
+                : <><CheckCircle2 className="h-3.5 w-3.5" />儲存早餐設定</>}
+            </button>
           </div>
         </div>
       )}
