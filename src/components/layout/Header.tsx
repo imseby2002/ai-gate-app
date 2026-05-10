@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { LogOut, Settings, CreditCard, ChevronDown } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import type { Profile } from '@/types/database'
@@ -101,12 +100,29 @@ export function Header({ profile, creditBalance, locale }: HeaderProps) {
                 </div>
                 <div className="p-1.5 space-y-0.5">
                   <button
+                    onClick={() => { router.push('/usage'); setMenuOpen(false) }}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-accent transition-colors"
+                  >
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    用量統計
+                  </button>
+                  <button
                     onClick={() => { router.push('/settings'); setMenuOpen(false) }}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-accent transition-colors"
                   >
                     <Settings className="h-4 w-4 text-muted-foreground" />
                     {t('settings')}
                   </button>
+                  {profile.user_type === 'admin' && (
+                    <button
+                      onClick={() => { router.push('/admin'); setMenuOpen(false) }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <Shield className="h-4 w-4 text-violet-500" />
+                      <span className="text-violet-600 dark:text-violet-400">後台管理</span>
+                    </button>
+                  )}
+                  <div className="my-1 border-t border-border/50" />
                   <button
                     onClick={handleSignOut}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-destructive/10 text-destructive transition-colors"

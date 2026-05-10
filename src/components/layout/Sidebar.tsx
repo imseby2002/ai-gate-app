@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
-  MessageSquare, Bot, BarChart3, Settings, Shield,
+  MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
   FileText, Megaphone, Headphones, Phone, LayoutDashboard,
 } from 'lucide-react'
@@ -33,11 +33,6 @@ const TOOL_NAV = [
   { labelKey: 'leads',         href: '/prospect-call',   icon: Phone,      module: 'leads' },
 ] as const
 
-const SYSTEM_NAV = [
-  { labelKey: 'usage',    href: '/usage',    icon: BarChart3, module: null, adminOnly: false },
-  { labelKey: 'settings', href: '/settings', icon: Settings,  module: null, adminOnly: false },
-  { labelKey: 'admin',    href: '/admin',    icon: Shield,    module: null, adminOnly: true  },
-] as const
 
 export function Sidebar({ userType, enabledModules, conversations = [] }: SidebarProps) {
   const pathname = usePathname()
@@ -178,10 +173,6 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
         )}
       </nav>
 
-      {/* System Nav (bottom) */}
-      <div className="border-t px-2 py-2 space-y-0.5">
-        {SYSTEM_NAV.map(item => renderNavItem({ ...item }))}
-      </div>
     </aside>
   )
 }

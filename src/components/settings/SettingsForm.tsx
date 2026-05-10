@@ -130,9 +130,9 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
   return (
     <div className="max-w-2xl space-y-6">
       {/* Profile */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
-          <User className="h-5 w-5 text-gray-400" />
+          <User className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">{t('profile')}</h2>
         </div>
 
@@ -143,7 +143,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
               type="email"
               value={profile?.email ?? ''}
               disabled
-              className="w-full h-10 px-3 rounded-lg border text-sm bg-gray-50 text-gray-500"
+              className="w-full h-10 px-3 rounded-lg border text-sm bg-muted text-muted-foreground"
             />
           </div>
           <div>
@@ -152,7 +152,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
             />
           </div>
           <div>
@@ -161,7 +161,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
               type="text"
               value={department}
               onChange={e => setDepartment(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
               placeholder={t('departmentPlaceholder')}
             />
           </div>
@@ -181,9 +181,9 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
       </div>
 
       {/* Credit Balance & Top-up */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-5">
-          <Wallet className="h-5 w-5 text-gray-400" />
+          <Wallet className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">{t('credits')}</h2>
         </div>
 
@@ -195,12 +195,12 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         )}
 
         {/* Balance */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 border mb-5">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-muted/40 border mb-5">
           <div>
-            <div className="text-sm text-gray-500">{t('currentBalance')}</div>
+            <div className="text-sm text-muted-foreground">{t('currentBalance')}</div>
             <div className="text-2xl font-bold mt-0.5">
               ${creditBalance.toFixed(2)}
-              <span className="text-base font-normal text-gray-400 ml-1">USD</span>
+              <span className="text-base font-normal text-muted-foreground/60 ml-1">USD</span>
             </div>
           </div>
           <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'color-mix(in oklch, var(--primary) 15%, transparent)' }}>
@@ -209,7 +209,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         </div>
 
         {/* Packages */}
-        <div className="mb-3 text-sm font-medium text-gray-600">{t('topupPackages')}</div>
+        <div className="mb-3 text-sm font-medium text-foreground/70">{t('topupPackages')}</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {CREDIT_PACKAGES.map(pkg => (
             <div
@@ -229,7 +229,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
                 </span>
               )}
               <div className="font-bold text-lg">{pkg.label}</div>
-              <div className="text-sm text-gray-500">{pkg.desc}</div>
+              <div className="text-sm text-muted-foreground">{pkg.desc}</div>
               <button
                 onClick={() => handleTopup(pkg.id as PackageId)}
                 disabled={topupLoading !== null}
@@ -244,11 +244,11 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-xs text-gray-400">{t('ecpayNote')}</p>
+        <p className="mt-3 text-xs text-muted-foreground/60">{t('ecpayNote')}</p>
       </div>
 
       {/* Telegram Integration */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-blue-400" />
@@ -263,7 +263,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
             申請 Bot Token <ExternalLink className="h-3 w-3" />
           </a>
         </div>
-        <p className="text-xs text-gray-500 mb-5">
+        <p className="text-xs text-muted-foreground mb-5">
           設定後，自動化行銷流程將透過您的 Telegram Bot 發送審核通知，並接收您的核准或修改回覆。
         </p>
 
@@ -279,13 +279,13 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
                 type={showToken ? 'text' : 'password'}
                 value={tgBotToken}
                 onChange={e => setTgBotToken(e.target.value)}
-                className="w-full h-10 px-3 pr-10 rounded-lg border text-sm outline-none focus:ring-2 font-mono"
+                className="w-full h-10 px-3 pr-10 rounded-lg border text-sm outline-none focus:ring-2 font-mono bg-background"
                 placeholder="xxxxxxxxxx:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
               />
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -302,10 +302,10 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
               type="text"
               value={tgChatId}
               onChange={e => setTgChatId(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+              className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
               placeholder="@username 或 -100xxxxxxxxxx（群組）"
             />
-            <p className="text-xs text-gray-400 mt-1.5">
+            <p className="text-xs text-muted-foreground/70 mt-1.5">
               個人 Chat ID 可傳訊給 <a href="https://t.me/userinfobot" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@userinfobot</a> 查詢；群組請將 Bot 加入後取得群組 ID。
             </p>
           </div>
@@ -338,7 +338,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
               type="button"
               onClick={handleTestTelegram}
               disabled={testingTg || !tgBotToken.trim() || !tgChatId.trim()}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border hover:bg-accent disabled:opacity-50 transition-colors"
             >
               {testingTg && <Loader2 className="h-4 w-4 animate-spin" />}
               {testingTg ? '傳送中…' : '傳送測試訊息'}
@@ -349,30 +349,30 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
       </div>
 
       {/* Social Platform Connections */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <Share2 className="h-5 w-5 text-gray-400" />
           <h2 className="font-semibold">社群平台連結</h2>
         </div>
-        <p className="text-xs text-gray-500 mb-5">
+        <p className="text-xs text-muted-foreground mb-5">
           設定後，行銷自動化流程將自動上傳圖片與影片至對應平台。各平台 Token 請至官方開發者後台取得。
         </p>
         <SocialPlatformSettings />
       </div>
 
       {/* Account Info */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-3">
-          <Shield className="h-5 w-5 text-gray-400" />
+          <Shield className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">{t('accountInfo')}</h2>
         </div>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between py-2 border-b">
-            <span className="text-gray-500">{t('accountType')}</span>
+            <span className="text-muted-foreground">{t('accountType')}</span>
             <span className="font-medium">{userTypeLabel}</span>
           </div>
           <div className="flex justify-between py-2">
-            <span className="text-gray-500">{t('accountStatus')}</span>
+            <span className="text-muted-foreground">{t('accountStatus')}</span>
             <span className={`font-medium ${profile?.is_active ? 'text-green-600' : 'text-red-600'}`}>
               {profile?.is_active ? t('active') : t('inactive')}
             </span>
