@@ -4704,15 +4704,9 @@ interface CsDataSource {
   id: string
   name: string
   enabled: boolean
-  config: {
-    apiKey: string
-    spreadsheetId: string
-    sheetName: string
-    keyColumn: string
-    returnColumns: string[]
-    triggerKeywords: string[]
-    triggerMode?: 'keyword' | 'numeric' | 'both'
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  config: Record<string, any>
+  type?: string
 }
 
 // ─── Industry Templates ───────────────────────────────────────────
