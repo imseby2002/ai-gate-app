@@ -121,7 +121,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
       {/* Avatar + Name */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
         <h2 className="font-semibold text-lg">基本設定</h2>
 
         {/* Emoji picker */}
@@ -148,7 +148,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+            className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
             placeholder="例如：財務分析助理、法務審查助理"
           />
         </div>
@@ -159,7 +159,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
             type="text"
             value={description}
             onChange={e => setDescription(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+            className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
             placeholder="簡短說明這個助理的用途"
           />
         </div>
@@ -169,7 +169,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
           <select
             value={defaultModel}
             onChange={e => setDefaultModel(e.target.value)}
-            className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
+            className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-background"
           >
             <option value="">自動路由（推薦）</option>
             {textModels.map(m => (
@@ -180,18 +180,18 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
       </div>
 
       {/* System Prompt */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
         <h2 className="font-semibold text-lg">系統提示詞</h2>
         <textarea
           value={systemPrompt}
           onChange={e => setSystemPrompt(e.target.value)}
-          className="w-full min-h-32 px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+          className="w-full min-h-32 px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none bg-background"
           placeholder="設定助理的角色、行為與回答風格...&#10;例如：你是一位專業的財務分析師，專注於分析財務報表並提供投資建議。請使用繁體中文回答，並引用具體數據支持你的分析。"
         />
       </div>
 
       {/* Files */}
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-4">
+      <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
         <h2 className="font-semibold text-lg">知識庫文件</h2>
         {!isEdit && (
           <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -203,15 +203,15 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-              isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              isDragActive ? 'border-primary/60 bg-primary/5' : 'border-border hover:border-border/80 hover:bg-muted/20'
             }`}
           >
             <input {...getInputProps()} />
-            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-600">
+            <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium text-foreground/70">
               {isDragActive ? '放開以上傳...' : '拖放或點擊上傳文件'}
             </p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               支援 {ALLOWED_EXTENSIONS.join(', ')} · 最大 50MB
             </p>
           </div>
@@ -221,11 +221,11 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
         {(existingFiles.length > 0 || uploadingFiles.length > 0) && (
           <div className="space-y-2">
             {existingFiles.map(file => (
-              <div key={file.id} className="flex items-center gap-3 p-3 rounded-lg border bg-gray-50">
-                <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <div key={file.id} className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{file.file_name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {file.file_size_bytes ? formatFileSize(file.file_size_bytes) : ''} · {file.processing_status === 'done' ? '已處理' : file.processing_status === 'failed' ? '處理失敗' : '處理中'}
                   </p>
                 </div>
@@ -233,7 +233,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
                 <button
                   type="button"
                   onClick={() => handleDeleteFile(file.id)}
-                  className="text-gray-400 hover:text-red-500 transition-colors"
+                  className="text-muted-foreground hover:text-destructive transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -262,15 +262,14 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-6 py-2.5 rounded-xl text-sm font-medium border hover:bg-gray-50 transition-colors"
+          className="px-6 py-2.5 rounded-xl text-sm font-medium border hover:bg-accent transition-colors"
         >
           取消
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-          style={{ background: 'var(--primary)' }}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {saving ? '儲存中...' : isEdit ? '更新助理' : '建立助理'}

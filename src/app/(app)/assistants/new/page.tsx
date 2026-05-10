@@ -14,10 +14,10 @@ export default async function NewAssistantPage() {
     .order('sort_order')
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6">
-      <div className="mb-6">
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6">
+      <div className="max-w-2xl mx-auto mb-6">
         <h1 className="text-2xl font-bold">建立 AI 助理</h1>
-        <p className="text-gray-500 text-sm mt-1">設定助理的角色與知識庫</p>
+        <p className="text-muted-foreground text-sm mt-1">設定助理的角色與知識庫</p>
       </div>
       <AssistantForm models={models ?? []} />
     </div>

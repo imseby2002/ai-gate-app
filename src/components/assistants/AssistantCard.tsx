@@ -32,7 +32,7 @@ export function AssistantCard({ assistant }: Props) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
       <div className="p-5">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
@@ -41,7 +41,7 @@ export function AssistantCard({ assistant }: Props) {
             <div className="min-w-0">
               <h3 className="font-semibold truncate">{assistant.name}</h3>
               {assistant.description && (
-                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{assistant.description}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{assistant.description}</p>
               )}
             </div>
           </div>
@@ -49,7 +49,7 @@ export function AssistantCard({ assistant }: Props) {
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            className="flex-shrink-0 ml-2 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+            className="flex-shrink-0 ml-2 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
             title="刪除助理"
           >
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -58,16 +58,16 @@ export function AssistantCard({ assistant }: Props) {
 
         {/* File list - always visible */}
         <div className="mb-4">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
             <FileText className="h-3.5 w-3.5" />
             <span>知識庫文件 ({doneFiles.length}/{files.length})</span>
           </div>
           {files.length === 0 ? (
-            <p className="text-xs text-gray-400 italic pl-5">尚未上傳文件</p>
+            <p className="text-xs text-muted-foreground/60 italic pl-5">尚未上傳文件</p>
           ) : (
             <div className="space-y-1">
               {files.map(f => (
-                <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-gray-50 text-xs text-gray-600">
+                <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/30 text-xs text-foreground/70">
                   {statusIcon(f.processing_status)}
                   <span className="truncate flex-1">{f.file_name}</span>
                 </div>
@@ -76,21 +76,20 @@ export function AssistantCard({ assistant }: Props) {
           )}
         </div>
 
-        <p className="text-xs text-gray-400 mb-4">更新於 {formatDateTime(assistant.updated_at)}</p>
+        <p className="text-xs text-muted-foreground/60 mb-4">更新於 {formatDateTime(assistant.updated_at)}</p>
 
         {/* Actions */}
         <div className="flex gap-2">
           <Link
             href={`/chat?assistantId=${assistant.id}`}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-white"
-            style={{ background: 'var(--primary)' }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             開始對話
           </Link>
           <Link
             href={`/assistants/${assistant.id}`}
-            className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium border hover:bg-gray-50"
+            className="flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium border hover:bg-accent"
           >
             編輯
           </Link>

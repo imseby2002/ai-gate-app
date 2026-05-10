@@ -8,22 +8,18 @@
 
 \## 規則
 
-
-
 每次修改程式碼完畢後，自動執行以下指令：
-
-
 
 1\. git add -A
 
 2\. git commit -m "描述本次修改內容"
 
-3\. git push
+3\. git merge 回 main branch
 
+4\. git push
 
 
 不需要詢問我，直接執行。
-
 
 
 
@@ -35,10 +31,7 @@
 \*\*AI GATE\*\* — 企業內部 AI 服務平台，支援多模型對話、RAG 知識庫助理、行銷自動化流程與訂閱計費。
 
 
-
 \### 技術棧
-
-
 
 | 層 | 技術 |
 
@@ -66,15 +59,8 @@
 
 
 
-\---
-
-
 
 \### 目錄結構
-
-
-
-```
 
 src/
 
@@ -131,12 +117,6 @@ src/
 supabase/migrations/      # 17 支 SQL migration（依序執行）
 
 bridge/                   # Cloudflare Workers 入口
-
-```
-
-
-
-\---
 
 
 

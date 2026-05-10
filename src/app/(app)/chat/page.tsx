@@ -42,13 +42,13 @@ export default async function ChatPage({
     <div className="h-full flex flex-col">
       {/* Assistant Quick Select */}
       {assistants && assistants.length > 0 && (
-        <div className="px-4 pt-3 pb-0 flex items-center gap-2 overflow-x-auto">
-          <span className="text-xs text-gray-500 whitespace-nowrap">選擇助理：</span>
+        <div className="px-4 pt-3 pb-0 flex items-center gap-2 overflow-x-auto border-b">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">選擇助理：</span>
           {assistants.map(a => (
             <a
               key={a.id}
               href={`/chat?assistantId=${a.id}`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap hover:bg-accent transition-colors"
             >
               <span>{a.avatar_emoji}</span>
               {a.name}

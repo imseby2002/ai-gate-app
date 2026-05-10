@@ -40,13 +40,13 @@ export default function ImageGenPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6 space-y-6">
-      <div>
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6 space-y-6">
+      <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold">圖片生成</h1>
-        <p className="text-gray-500 text-sm mt-1">使用 FLUX 或 Nano Banana 從文字生成圖片</p>
+        <p className="text-muted-foreground text-sm mt-1">使用 FLUX 或 Nano Banana 從文字生成圖片</p>
       </div>
 
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-5">
+      <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-6 shadow-sm space-y-5">
         {/* Model Selection */}
         <div>
           <label className="block text-sm font-medium mb-2">選擇模型</label>
@@ -63,7 +63,7 @@ export default function ImageGenPage() {
                 } : {}}
               >
                 <div className="font-medium text-sm">{m.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{m.desc}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{m.desc}</div>
                 <div className="text-xs font-medium mt-1" style={{ color: 'var(--primary)' }}>{m.cost}</div>
               </button>
             ))}
@@ -99,7 +99,7 @@ export default function ImageGenPage() {
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+            className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none bg-background"
             placeholder="描述你想生成的圖片...&#10;例如：A professional business team meeting in a modern office, photorealistic, 8k"
           />
         </div>
@@ -111,8 +111,7 @@ export default function ImageGenPage() {
         <button
           onClick={handleGenerate}
           disabled={loading || !prompt.trim()}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
-          style={{ background: 'var(--primary)' }}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
           {loading ? '生成中...' : '生成圖片'}
@@ -121,7 +120,7 @@ export default function ImageGenPage() {
 
       {/* Generated Images */}
       {images.length > 0 && (
-        <div>
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-semibold mb-3">生成結果</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {images.map((url, i) => (

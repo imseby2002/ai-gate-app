@@ -47,13 +47,13 @@ export default function VideoGenPage() {
   const estimatedCost = selectedModel ? `~$${(duration * parseFloat(selectedModel.cost.split('$')[1])).toFixed(2)}` : ''
 
   return (
-    <div className="h-full overflow-y-auto px-6 py-6 space-y-6">
-      <div>
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6 space-y-6">
+      <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold">影片生成</h1>
-        <p className="text-gray-500 text-sm mt-1">使用 VEO3 或 Kling 從文字生成影片</p>
+        <p className="text-muted-foreground text-sm mt-1">使用 VEO3 或 Kling 從文字生成影片</p>
       </div>
 
-      <div className="bg-white rounded-2xl border p-6 shadow-sm space-y-5">
+      <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-6 shadow-sm space-y-5">
         {/* Model Selection */}
         <div>
           <label className="block text-sm font-medium mb-2">選擇模型</label>
@@ -70,7 +70,7 @@ export default function VideoGenPage() {
                 } : {}}
               >
                 <div className="font-medium text-sm">{m.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{m.desc}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{m.desc}</div>
                 <div className="text-xs font-medium mt-1" style={{ color: 'var(--primary)' }}>{m.cost}</div>
               </button>
             ))}
@@ -97,8 +97,8 @@ export default function VideoGenPage() {
               </button>
             ))}
             {estimatedCost && (
-              <span className="ml-auto self-center text-sm text-gray-500">
-                預估費用：<span className="font-medium text-gray-800">{estimatedCost}</span>
+              <span className="ml-auto self-center text-sm text-muted-foreground">
+                預估費用：<span className="font-medium text-foreground">{estimatedCost}</span>
               </span>
             )}
           </div>
@@ -111,7 +111,7 @@ export default function VideoGenPage() {
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             rows={3}
-            className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
+            className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none bg-background"
             placeholder="描述影片內容...&#10;例如：A cinematic drone shot flying over a futuristic city at sunset, 4K quality"
           />
         </div>
@@ -123,8 +123,7 @@ export default function VideoGenPage() {
         <button
           onClick={handleGenerate}
           disabled={loading || !prompt.trim()}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-          style={{ background: 'var(--primary)' }}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
           {loading ? '生成中（可能需要數分鐘）...' : '生成影片'}
@@ -132,11 +131,11 @@ export default function VideoGenPage() {
       </div>
 
       {videos.length > 0 && (
-        <div>
+        <div className="max-w-3xl mx-auto">
           <h2 className="font-semibold mb-3">生成結果</h2>
           <div className="space-y-4">
             {videos.map((url, i) => (
-              <div key={i} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <div key={i} className="bg-card rounded-xl border shadow-sm overflow-hidden">
                 <video src={url} controls className="w-full max-h-96" />
               </div>
             ))}
