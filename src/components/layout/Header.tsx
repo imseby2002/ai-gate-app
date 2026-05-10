@@ -53,7 +53,7 @@ export function Header({ profile, creditBalance, locale }: HeaderProps) {
   }[profile.user_type]
 
   return (
-    <header className="flex items-center justify-between px-5 py-2.5 border-b bg-card/80 backdrop-blur-sm">
+    <header className="relative z-20 flex items-center justify-between px-5 py-2.5 border-b bg-card/80 backdrop-blur-sm">
       <div />
 
       <div className="flex items-center gap-3">
