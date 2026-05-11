@@ -22,7 +22,7 @@ import { generateText } from 'ai'
 
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
-  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors'
+  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors' | 'trend'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -433,6 +433,91 @@ async function googleAlertsRss(rssUrls: string[]): Promise<string> {
   return results.join('\n\n---\n\n') || '無 Alerts 資料'
 }
 
+// ── 11. 社群熱點：Reddit + HN + Polymarket（全免費，無需 API key）────────────────
+
+async function trendResearch(keywords: string, subOptions: string[]): Promise<string> {
+  const thirtyDaysAgo = Math.floor((Date.now() - 30 * 86400000) / 1000)
+  const parts: string[] = []
+  const ua = 'Mozilla/5.0 (compatible; AIGate/1.0)'
+
+  // ─ Reddit ──────────────────────────────────────────────────────────────────
+  if (subOptions.includes('reddit')) {
+    try {
+      const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(keywords)}&sort=top&t=month&limit=10&type=link`
+      const res = await fetch(url, { headers: { 'User-Agent': ua } })
+      if (res.ok) {
+        const data = await res.json()
+        const posts = (data?.data?.children ?? []) as Array<{
+          data: { title: string; subreddit: string; score: number; num_comments: number; url: string; selftext?: string }
+        }>
+        if (posts.length > 0) {
+          const lines = posts.slice(0, 8).map(p => {
+            const d = p.data
+            return `▶ [r/${d.subreddit}] ${d.title}\n  👍 ${d.score.toLocaleString()} · 💬 ${d.num_comments} comments\n  ${d.url}`
+          })
+          parts.push(`🔴 Reddit 近30天熱門討論（依投票數排序）：\n\n${lines.join('\n\n')}`)
+        } else {
+          parts.push('🔴 Reddit：無相關討論')
+        }
+      }
+    } catch (e) {
+      parts.push(`🔴 Reddit 查詢失敗：${String(e)}`)
+    }
+  }
+
+  // ─ Hacker News ─────────────────────────────────────────────────────────────
+  if (subOptions.includes('hackernews')) {
+    try {
+      const url = `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(keywords)}&tags=story&numericFilters=created_at_i%3E${thirtyDaysAgo}&hitsPerPage=8&attributesToRetrieve=title,url,points,num_comments,created_at`
+      const res = await fetch(url)
+      if (res.ok) {
+        const data = await res.json()
+        const hits = (data?.hits ?? []) as Array<{
+          title: string; url?: string; points: number; num_comments: number; created_at: string
+        }>
+        if (hits.length > 0) {
+          const lines = hits.map(h =>
+            `▶ ${h.title}\n  👍 ${h.points ?? 0} pts · 💬 ${h.num_comments ?? 0} comments · ${h.created_at?.slice(0, 10) ?? ''}\n  ${h.url ?? '(ask/show HN)'}`
+          )
+          parts.push(`🟠 Hacker News 近30天熱門：\n\n${lines.join('\n\n')}`)
+        } else {
+          parts.push('🟠 Hacker News：無相關貼文')
+        }
+      }
+    } catch (e) {
+      parts.push(`🟠 Hacker News 查詢失敗：${String(e)}`)
+    }
+  }
+
+  // ─ Polymarket ──────────────────────────────────────────────────────────────
+  if (subOptions.includes('polymarket')) {
+    try {
+      const url = `https://gamma-api.polymarket.com/markets?search=${encodeURIComponent(keywords)}&limit=5&order=volume&ascending=false&active=true`
+      const res = await fetch(url, { headers: { 'User-Agent': ua } })
+      if (res.ok) {
+        const markets = await res.json() as Array<{
+          question: string; volume?: number; liquidity?: number
+          outcomes?: string[]; outcomePrices?: string[]; endDate?: string
+        }>
+        if (markets.length > 0) {
+          const lines = markets.map(m => {
+            const vol = m.volume ? `$${Number(m.volume).toLocaleString()}` : '-'
+            const outcomes = (m.outcomes ?? []).map((o, i) => `${o}: ${(Number(m.outcomePrices?.[i] ?? 0) * 100).toFixed(0)}%`).join(' / ')
+            return `▶ ${m.question}\n  💰 成交量：${vol} · ${outcomes || ''}\n  📅 截止：${m.endDate?.slice(0, 10) ?? '不限'}`
+          })
+          parts.push(`📈 Polymarket 市場預測（真實資金押注）：\n\n${lines.join('\n\n')}`)
+        } else {
+          parts.push('📈 Polymarket：無相關預測市場')
+        }
+      }
+    } catch (e) {
+      parts.push(`📈 Polymarket 查詢失敗：${String(e)}`)
+    }
+  }
+
+  return parts.join('\n\n') || '⚠️ 無社群熱點資料'
+}
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const user = await getCronOrUserAuth(req)
@@ -510,6 +595,10 @@ export async function POST(req: NextRequest) {
   if (selectedTypes.includes('competitors')) {
     const q = industry ? `${kw} ${industry} 競爭對手 競品` : `${kw} 競爭對手 競品分析`
     tasks.push(tavilySearch(q, limit).then(r => ['🎯 競爭對手', r]))
+  }
+  if (selectedTypes.includes('trend')) {
+    const sub = getSub('trend', ['reddit', 'hackernews', 'polymarket'])
+    tasks.push(trendResearch(kw, sub).then(r => ['🔥 社群熱點 (近30天)', r]))
   }
 
   const results = await Promise.allSettled(tasks)

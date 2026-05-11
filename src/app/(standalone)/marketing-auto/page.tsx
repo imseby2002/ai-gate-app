@@ -26,7 +26,7 @@ interface DrivePickedImage {
 type UnitStatus = 'idle' | 'running' | 'done' | 'error'
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
-  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors'
+  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors' | 'trend'
 
 interface Campaign {
   id: string
@@ -174,6 +174,15 @@ const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
     id: 'competitors', label: '競爭對手', emoji: '🎯',
     desc: 'Tavily 競品分析',
     subOptions: [],
+  },
+  {
+    id: 'trend', label: '社群熱點', emoji: '🔥',
+    desc: 'Reddit · HN · Polymarket 近30天',
+    subOptions: [
+      { id: 'reddit',     label: 'Reddit 熱門討論' },
+      { id: 'hackernews', label: 'Hacker News' },
+      { id: 'polymarket', label: 'Polymarket 市場預測' },
+    ],
   },
 ]
 
