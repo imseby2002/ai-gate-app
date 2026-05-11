@@ -475,11 +475,10 @@ ${breakfastCfg.menu.map((item, i) => `  ${i + 1}. ${item}`).join('\n')}
     : ''
 
   // ── Image marker extraction ────────────────────────────────────────────────
-  // KB can contain lines: [圖片] https://example.com/image.jpg
-  // AI is instructed to output [IMG:URL] at end of reply when relevant
-  const kbHasImages = knowledgeBase && /\[圖片\]/i.test(knowledgeBase)
-  const imageInstruction = kbHasImages
-    ? '\n- 若回覆的主題在知識庫中有對應的 [圖片] 標記，請在所有文字之後，每張圖片單獨一行輸出：[IMG:完整URL]（例如 [IMG:https://example.com/photo.jpg]）'
+  // [圖片] markers can appear in knowledge base OR in the user's custom system prompt
+  const hasImages = /\[圖片\]\s*https?:\/\//i.test(knowledgeBase + (userSystemPrompt ?? ''))
+  const imageInstruction = hasImages
+    ? '\n- 流程或知識庫中有 [圖片] 標記時，在回覆所有文字之後，每個圖片URL單獨一行輸出：[IMG:完整URL]（例如 [IMG:https://example.com/photo.jpg]）。只在該流程被觸發時輸出對應圖片。'
     : ''
 
 const systemPrompt = `${baseInstructions}
