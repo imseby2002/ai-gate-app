@@ -26,7 +26,8 @@ interface DrivePickedImage {
 type UnitStatus = 'idle' | 'running' | 'done' | 'error'
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
-  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors' | 'trend'
+  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors'
+  | 'trend' | 'dcard' | 'booking'
 
 interface Campaign {
   id: string
@@ -182,6 +183,19 @@ const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
       { id: 'reddit',     label: 'Reddit 熱門討論' },
       { id: 'hackernews', label: 'Hacker News' },
       { id: 'polymarket', label: 'Polymarket 市場預測' },
+    ],
+  },
+  {
+    id: 'dcard', label: 'Dcard', emoji: '💚',
+    desc: '台灣最大論壇，旅遊/生活版',
+    subOptions: [],
+  },
+  {
+    id: 'booking', label: '訂房平台評論', emoji: '🏨',
+    desc: 'Booking.com + Airbnb 住客評論',
+    subOptions: [
+      { id: 'booking', label: 'Booking.com 評論' },
+      { id: 'airbnb',  label: 'Airbnb 評論' },
     ],
   },
 ]

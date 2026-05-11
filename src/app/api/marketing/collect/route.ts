@@ -433,7 +433,83 @@ async function googleAlertsRss(rssUrls: string[]): Promise<string> {
   return results.join('\n\n---\n\n') || '無 Alerts 資料'
 }
 
-// ── 11. 社群熱點：Reddit + HN + Polymarket（全免費，無需 API key）────────────────
+// ── 11. Dcard（公開 API，免費）────────────────────────────────────────────────────
+
+async function dcardSearch(keywords: string, limit: number): Promise<string> {
+  const parts: string[] = []
+  const ua = 'Mozilla/5.0 (compatible; AIGate/1.0)'
+
+  try {
+    const url = `https://www.dcard.tw/service/api/v2/search/posts?query=${encodeURIComponent(keywords)}&limit=${Math.min(limit, 30)}`
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': ua,
+        'Referer': 'https://www.dcard.tw/',
+        'Accept': 'application/json',
+      },
+    })
+    if (res.ok) {
+      const posts = await res.json() as Array<{
+        id: number; title: string; excerpt?: string
+        likeCount: number; commentCount: number
+        forumName: string; forumAlias?: string; createdAt: string
+      }>
+      if (posts.length > 0) {
+        const lines = posts.slice(0, limit).map(p =>
+          `▶ [${p.forumName}] ${p.title}\n  ❤️ ${p.likeCount} · 💬 ${p.commentCount} · ${p.createdAt?.slice(0, 10) ?? ''}\n  ${p.excerpt ? p.excerpt.slice(0, 120) + '…' : ''}\n  🔗 https://www.dcard.tw/f/${p.forumAlias ?? 'all'}/p/${p.id}`
+        )
+        parts.push(`💚 Dcard 熱門討論（${posts.length} 則）：\n\n${lines.join('\n\n---\n\n')}`)
+      } else {
+        parts.push('💚 Dcard：無相關文章')
+      }
+    } else {
+      parts.push(`💚 Dcard API 回應異常 (${res.status})`)
+    }
+  } catch (e) {
+    parts.push(`💚 Dcard 查詢失敗：${String(e)}`)
+  }
+
+  return parts.join('\n\n') || '⚠️ 無 Dcard 資料'
+}
+
+// ── 12. Booking.com + Airbnb 評論（Tavily site search）─────────────────────────
+
+async function bookingAirbnbSearch(keywords: string, subOptions: string[], limit: number): Promise<string> {
+  const parts: string[] = []
+  const perQ = Math.max(3, Math.ceil(limit / 2))
+
+  if (subOptions.includes('booking')) {
+    try {
+      const q = `site:booking.com ${keywords} 評論 台灣`
+      const result = await tavilySearch(q, perQ)
+      parts.push(`🏨 Booking.com 評論：\n${result}`)
+    } catch { /* skip */ }
+
+    try {
+      const q2 = `booking.com "${keywords}" guest reviews what guests loved`
+      const result2 = await tavilySearch(q2, perQ)
+      parts.push(`🏨 Booking.com 英文評論：\n${result2}`)
+    } catch { /* skip */ }
+  }
+
+  if (subOptions.includes('airbnb')) {
+    try {
+      const q = `site:airbnb.com ${keywords} 台灣 reviews`
+      const result = await tavilySearch(q, perQ)
+      parts.push(`🏠 Airbnb 評論：\n${result}`)
+    } catch { /* skip */ }
+
+    try {
+      const q2 = `airbnb "${keywords}" guest review "loved" OR "great" OR "perfect"`
+      const result2 = await tavilySearch(q2, perQ)
+      parts.push(`🏠 Airbnb 英文評論：\n${result2}`)
+    } catch { /* skip */ }
+  }
+
+  return parts.join('\n\n') || '⚠️ 無訂房平台評論資料'
+}
+
+// ── 13. 社群熱點：Reddit + HN + Polymarket（全免費，無需 API key）────────────────
 
 async function trendResearch(keywords: string, subOptions: string[]): Promise<string> {
   const thirtyDaysAgo = Math.floor((Date.now() - 30 * 86400000) / 1000)
@@ -599,6 +675,13 @@ export async function POST(req: NextRequest) {
   if (selectedTypes.includes('trend')) {
     const sub = getSub('trend', ['reddit', 'hackernews', 'polymarket'])
     tasks.push(trendResearch(kw, sub).then(r => ['🔥 社群熱點 (近30天)', r]))
+  }
+  if (selectedTypes.includes('dcard')) {
+    tasks.push(dcardSearch(kw, limit).then(r => ['💚 Dcard', r]))
+  }
+  if (selectedTypes.includes('booking')) {
+    const sub = getSub('booking', ['booking', 'airbnb'])
+    tasks.push(bookingAirbnbSearch(kw, sub, limit).then(r => ['🏨 訂房平台評論', r]))
   }
 
   const results = await Promise.allSettled(tasks)
