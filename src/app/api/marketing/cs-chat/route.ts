@@ -474,6 +474,14 @@ ${breakfastCfg.menu.map((item, i) => `  ${i + 1}. ${item}`).join('\n')}
 - 輸出 ##BREAKFAST_ORDER## 時不要有任何其他文字在同一行`
     : ''
 
+  // ── Image marker extraction ────────────────────────────────────────────────
+  // KB can contain lines: [圖片] https://example.com/image.jpg
+  // AI is instructed to output [IMG:URL] at end of reply when relevant
+  const kbHasImages = knowledgeBase && /\[圖片\]/i.test(knowledgeBase)
+  const imageInstruction = kbHasImages
+    ? '\n- 若回覆的主題在知識庫中有對應的 [圖片] 標記，請在所有文字之後，每張圖片單獨一行輸出：[IMG:完整URL]（例如 [IMG:https://example.com/photo.jpg]）'
+    : ''
+
 const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
@@ -481,7 +489,7 @@ const systemPrompt = `${baseInstructions}
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
+- 目前台灣時間：${taiwanTime}${imageInstruction}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
@@ -529,6 +537,16 @@ const systemPrompt = `${baseInstructions}
 
   const latencyMs = Date.now() - t0
 
+  // ── Extract [IMG:URL] markers from reply ──────────────────────────────────
+  const imgRegex = /\[IMG:(https?:\/\/[^\]]+)\]/gi
+  const images: string[] = []
+  let imgMatch: RegExpExecArray | null
+  while ((imgMatch = imgRegex.exec(reply)) !== null) {
+    images.push(imgMatch[1].trim())
+  }
+  // Strip [IMG:...] lines from text shown to user
+  reply = reply.replace(/\[IMG:https?:\/\/[^\]]+\]\s*/gi, '').trim()
+
   if (campaignId) {
     await supabase.from('marketing_campaigns').select('id').eq('id', campaignId).single().then(async ({ data }) => {
       if (!data) return
@@ -544,5 +562,5 @@ const systemPrompt = `${baseInstructions}
     })
   }
 
-  return NextResponse.json({ reply, intent, risk, provider, latencyMs, summary })
+  return NextResponse.json({ reply, intent, risk, provider, latencyMs, summary, images })
 }

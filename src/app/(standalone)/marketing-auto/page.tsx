@@ -4903,7 +4903,7 @@ function Unit12CustomerService({
 
   // Test chat
   const [testInput, setTestInput] = useState('')
-  const [testHistory, setTestHistory] = useState<{ role: 'user' | 'assistant'; content: string; meta?: { intent?: string; risk?: string; provider?: string } }[]>([])
+  const [testHistory, setTestHistory] = useState<{ role: 'user' | 'assistant'; content: string; images?: string[]; meta?: { intent?: string; risk?: string; provider?: string } }[]>([])
   const [testLoading, setTestLoading] = useState(false)
 
   // 對話摘要
@@ -5503,6 +5503,7 @@ function Unit12CustomerService({
           ts: new Date().toISOString(),
         }
         const msgMeta = { intent: data.intent, risk: data.risk, provider: data.provider }
+        const replyImages: string[] = data.images ?? []
         if (draftMode) {
           setDraftText(data.reply)
           setDraftMeta(msgMeta)
@@ -5512,6 +5513,7 @@ function Unit12CustomerService({
           setTestHistory(prev => [...prev, {
             role: 'assistant',
             content: data.reply,
+            images: replyImages,
             meta: msgMeta,
           }])
         }
@@ -7002,6 +7004,21 @@ function Unit12CustomerService({
                         style={msg.role === 'user' ? { background: 'var(--primary)' } : {}}>
                         <span className="whitespace-pre-wrap">{msg.content}</span>
                       </div>
+                      {msg.images && msg.images.length > 0 && (
+                        <div className="flex flex-col gap-1.5 mt-1">
+                          {msg.images.map((imgUrl, idx) => (
+                            <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={imgUrl}
+                                alt={`圖片 ${idx + 1}`}
+                                className="max-w-full rounded-xl border border-gray-200 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
+                                style={{ maxHeight: 200 }}
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                       {msg.role === 'assistant' && msg.meta && (
                         <div className="flex items-center gap-1.5 px-1">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.meta.risk ?? 'low')}`}>
