@@ -62,18 +62,20 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const headers = rows[0]
     const dataRows = rows.slice(1)
 
+    // Normalize cell values: convert to string, strip thousand-separator commas
+    // Google Sheets API may return numbers as "202,202,202" or plain "202202202"
+    const cellStr = (v: unknown): string => String(v ?? '').replace(/,/g, '').trim()
+
     // 支援多欄位查詢（逗號分隔），OR 邏輯
     const keyColumnNames = (config.keyColumn ?? '').split(',').map(c => c.trim()).filter(Boolean)
     const keyColIdxs = keyColumnNames.map(c => headers.findIndex(h => h.trim() === c)).filter(i => i >= 0)
 
-    // Numeric trigger: exact single-row lookup (OR across key columns)
-    // If keyColIdxs is empty it means the keyColumn name doesn't match any header —
+    // If keyColIdxs is empty, keyColumn name doesn't match any header —
     // fall back to scanning ALL columns so we still find the number
     if (exactKey && keyColIdxs.length === 0) {
-      // scan every column for exact match
       const allIdxs = headers.map((_, i) => i)
       const matchedRow = dataRows.find(row =>
-        allIdxs.some(idx => (row[idx] ?? '').toString().trim() === exactKey!.trim())
+        allIdxs.some(idx => cellStr(row[idx]) === exactKey!.trim())
       )
       if (!matchedRow) {
         return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
@@ -84,7 +86,7 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
 
     if (exactKey && keyColIdxs.length > 0) {
       const matchedRow = dataRows.find(row =>
-        keyColIdxs.some(idx => (row[idx] ?? '').trim() === exactKey!.trim())
+        keyColIdxs.some(idx => cellStr(row[idx]) === exactKey!.trim())
       )
       if (!matchedRow) {
         return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
@@ -508,7 +510,7 @@ const systemPrompt = `${baseInstructions}
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${imageInstruction}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
+- 目前台灣時間：${taiwanTime}（系統已提供，禁止詢問客戶現在幾點或現在是否超過某時間，請自行根據上方時間判斷）${imageInstruction}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
