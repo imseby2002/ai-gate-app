@@ -22,7 +22,7 @@ import { generateText } from 'ai'
 
 type CollectType =
   | 'map' | 'tiktok' | 'facebook' | 'instagram' | 'threads' | 'youtube'
-  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors' | 'trend'
+  | 'amazon' | 'shopee' | 'ios_android' | 'news' | 'web' | 'competitors' | 'trend' | 'dcard' | 'booking'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
