@@ -314,7 +314,28 @@ export default function MarketingPipelinePage() {
         }),
       })
       if (!res.ok) return { ok: false, output: String(data.error ?? `分析失敗（HTTP ${res.status}）`) }
-      return { ok: true, output: `分析完成`, data }
+
+      // Run consumer simulation alongside analysis
+      let simulation = null
+      try {
+        const { res: simRes, data: simData } = await safeFetch('/api/marketing/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            companyData: u2d,
+            collectedData: u1d?.summary ?? '',
+            analysisData: data,
+            personaCount: 10,
+          }),
+        })
+        if (simRes.ok) simulation = simData
+      } catch { /* simulation failure is non-fatal */ }
+
+      return {
+        ok: true,
+        output: `分析完成${simulation ? ' · 消費者模擬完成' : ''}`,
+        data: { ...data, simulation },
+      }
     }
 
     if (unitId === 4) {

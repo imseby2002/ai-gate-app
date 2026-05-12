@@ -12,6 +12,8 @@ import {
   PieChart, Clock as ClockIcon, ThumbsUp, MessageSquare as MessageSquareIcon,
 } from 'lucide-react'
 import DriveImagePicker from '@/components/marketing/DriveImagePicker'
+import { SimulationPanel } from '@/components/marketing/SimulationPanel'
+import type { SimulationResult } from '@/app/api/marketing/simulate/route'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -943,6 +945,7 @@ interface Unit3Data {
   types?: AnalysisType[]
   results?: Record<string, string>
   metrics?: { opportunity: number; competitors: number; audience: string; score: number }
+  simulation?: SimulationResult
 }
 
 const ANALYSIS_TYPE_DEFS: { id: AnalysisType; label: string; desc: string }[] = [
@@ -975,6 +978,11 @@ function Unit3Analyze({
   const [result, setResult] = useState<Unit3Data | null>(savedData?.results ? savedData : null)
   const [activeTab, setActiveTab] = useState<string>('')
 
+  // Simulation state
+  const [simRunning, setSimRunning] = useState(false)
+  const [simError, setSimError] = useState('')
+  const [simResult, setSimResult] = useState<SimulationResult | null>(savedData?.simulation ?? null)
+
   useEffect(() => {
     if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
   }, [result, activeTab])
@@ -997,7 +1005,7 @@ function Unit3Analyze({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const out: Unit3Data = { types: selectedTypes, results: data.results, metrics: data.metrics }
+      const out: Unit3Data = { types: selectedTypes, results: data.results, metrics: data.metrics, simulation: simResult ?? undefined }
       setResult(out)
       setActiveTab(selectedTypes[0])
       onDone(out)
@@ -1005,6 +1013,36 @@ function Unit3Analyze({
       setError(String(e))
     } finally {
       setRunning(false)
+    }
+  }
+
+  const runSimulation = async (scenario?: string) => {
+    setSimRunning(true); setSimError('')
+    try {
+      const res = await fetch('/api/marketing/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyData: unit2Data ?? {},
+          collectedData: unit1Data?.summary ?? '',
+          analysisData: result ?? {},
+          personaCount: 10,
+          scenario: scenario ?? '',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const sim = data as SimulationResult
+      setSimResult(sim)
+      // Persist simulation result alongside analysis data
+      if (result) {
+        const updated: Unit3Data = { ...result, simulation: sim }
+        onDone(updated)
+      }
+    } catch (e) {
+      setSimError(String(e))
+    } finally {
+      setSimRunning(false)
     }
   }
 
@@ -1119,6 +1157,49 @@ function Unit3Analyze({
           )}
         </div>
       )}
+
+      {/* ── 消費者模擬 ── */}
+      <div className="border-t pt-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+                <Zap className="h-3 w-3 text-amber-600" />
+              </span>
+              行銷消費者模擬
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5 ml-7">
+              模擬不同消費族群反應、陣營對撞、公關危機偵測
+            </p>
+          </div>
+          {!simResult && (
+            <button
+              onClick={() => runSimulation()}
+              disabled={simRunning}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all bg-amber-500 hover:bg-amber-600"
+            >
+              {simRunning
+                ? <><Loader2 className="h-4 w-4 animate-spin" />模擬中…</>
+                : <><BarChart3 className="h-4 w-4" />執行消費者模擬</>
+              }
+            </button>
+          )}
+        </div>
+
+        {simError && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />{simError}
+          </div>
+        )}
+
+        {simResult && (
+          <SimulationPanel
+            result={simResult}
+            onRerun={runSimulation}
+            isRunning={simRunning}
+          />
+        )}
+      </div>
     </div>
   )
 }
