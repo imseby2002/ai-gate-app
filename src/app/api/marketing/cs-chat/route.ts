@@ -26,7 +26,10 @@ const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
   const triggerMode = config.triggerMode ?? 'keyword'
   let triggered = false
-  let exactKey: string | null = null
+
+  // Always extract numeric key so precise row lookup works even in keyword mode
+  const numMatch = message.match(NUMERIC_ORDER_RE)
+  const exactKey: string | null = numMatch ? numMatch[0] : null
 
   if (triggerMode === 'keyword' || triggerMode === 'both') {
     if (config.triggerKeywords.some(kw => kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase()))) {
@@ -35,11 +38,13 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
   }
 
   if (triggerMode === 'numeric' || triggerMode === 'both') {
-    const numMatch = message.match(NUMERIC_ORDER_RE)
-    if (numMatch) {
-      triggered = true
-      exactKey = numMatch[0]
-    }
+    if (exactKey) triggered = true
+  }
+
+  // Fallback: if the entire message IS the order number (user pasted it alone),
+  // always trigger regardless of triggerMode — avoids [密碼] placeholder replies
+  if (!triggered && exactKey && message.trim() === exactKey) {
+    triggered = true
   }
 
   if (!triggered) return null
@@ -62,6 +67,21 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const keyColIdxs = keyColumnNames.map(c => headers.findIndex(h => h.trim() === c)).filter(i => i >= 0)
 
     // Numeric trigger: exact single-row lookup (OR across key columns)
+    // If keyColIdxs is empty it means the keyColumn name doesn't match any header —
+    // fall back to scanning ALL columns so we still find the number
+    if (exactKey && keyColIdxs.length === 0) {
+      // scan every column for exact match
+      const allIdxs = headers.map((_, i) => i)
+      const matchedRow = dataRows.find(row =>
+        allIdxs.some(idx => (row[idx] ?? '').toString().trim() === exactKey!.trim())
+      )
+      if (!matchedRow) {
+        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
+      }
+      const result = headers.map((h, i) => `${h}：${matchedRow[i] ?? ''}`).filter(l => l.split('：')[1]).join('\n')
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}`
+    }
+
     if (exactKey && keyColIdxs.length > 0) {
       const matchedRow = dataRows.find(row =>
         keyColIdxs.some(idx => (row[idx] ?? '').trim() === exactKey!.trim())
