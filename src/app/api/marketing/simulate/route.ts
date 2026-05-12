@@ -100,6 +100,9 @@ export async function POST(req: NextRequest) {
 
     const { object } = await generateObject({
       model: google('gemini-2.5-flash'),
+      providerOptions: {
+        google: { thinkingConfig: { thinkingBudget: 0 } },
+      },
       schema: SimulationSchema,
       prompt: `你是一個專業行銷消費者模擬引擎（參考 OASIS 多智能體社會模擬系統）。
 

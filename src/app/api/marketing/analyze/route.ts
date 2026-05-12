@@ -126,6 +126,9 @@ export async function POST(req: NextRequest) {
       try {
         const { text } = await generateText({
           model: google('gemini-2.5-flash'),
+          providerOptions: {
+            google: { thinkingConfig: { thinkingBudget: 0 } },
+          },
           messages: [
             {
               role: 'user',
