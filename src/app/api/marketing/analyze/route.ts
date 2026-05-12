@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
     types = ['swot', 'marketing'],
     collectedData,
     companyData,
+    extraContext,
     // legacy
     companyName: legacyName,
     companyInfo: legacyInfo,
@@ -114,12 +115,16 @@ export async function POST(req: NextRequest) {
     ? `\n\n市場蒐集資料（摘要）：\n${String(collectedData).slice(0, 6000)}`
     : ''
 
+  const extraCtx = extraContext
+    ? `\n\n【補充參考資料】\n${String(extraContext).slice(0, 8000)}`
+    : ''
+
   const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
 
   // Run each analysis type independently in parallel for speed
   const results: Record<string, string> = {}
 
-  const baseCtx = `【公司資料】\n${companyCtx}${topic ? `\n行銷主題：${topic}` : ''}${marketCtx}`
+  const baseCtx = `【公司資料】\n${companyCtx}${topic ? `\n行銷主題：${topic}` : ''}${marketCtx}${extraCtx}`
 
   await Promise.all(
     selectedTypes.map(async (t) => {

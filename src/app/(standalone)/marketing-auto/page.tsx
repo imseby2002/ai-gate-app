@@ -977,6 +977,8 @@ function Unit3Analyze({
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit3Data | null>(savedData?.results ? savedData : null)
   const [activeTab, setActiveTab] = useState<string>('')
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; textContent: string }[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
 
   // Simulation state
   const [simRunning, setSimRunning] = useState(false)
@@ -990,10 +992,33 @@ function Unit3Analyze({
   const toggleType = (t: AnalysisType) =>
     setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    setUploadingFile(true)
+    for (const file of files) {
+      try {
+        const form = new FormData()
+        form.append('file', file)
+        form.append('category', 'document')
+        const res = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
+        const data = await res.json()
+        if (data.textContent) {
+          setUploadedFiles(prev => [...prev, { name: file.name, textContent: data.textContent }])
+        }
+      } catch { /* silent */ }
+    }
+    setUploadingFile(false)
+    e.target.value = ''
+  }
+
   const run = async () => {
     if (selectedTypes.length === 0) { setError('請至少選一種分析類型'); return }
     setRunning(true); setError('')
     try {
+      const extraContext = uploadedFiles.length
+        ? uploadedFiles.map(f => `【${f.name}】\n${f.textContent}`).join('\n\n')
+        : undefined
       const res = await fetch('/api/marketing/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1001,6 +1026,7 @@ function Unit3Analyze({
           types: selectedTypes,
           collectedData: unit1Data?.summary ?? '',
           companyData: unit2Data ?? {},
+          extraContext,
         }),
       })
       const data = await res.json()
@@ -1061,6 +1087,36 @@ function Unit3Analyze({
           {hasUnit2 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
           單元2 公司資料 {hasUnit2 ? `(${unit2Data?.companyName})` : '尚未填寫'}
         </div>
+      </div>
+
+      {/* File upload for extra context */}
+      <div className="p-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold">補充參考資料（選填）</div>
+            <div className="text-xs text-gray-400 mt-0.5">上傳企劃案、新聞文章、競品報告等，AI 分析時會一併參考</div>
+          </div>
+          <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer transition-opacity ${uploadingFile ? 'opacity-50 pointer-events-none' : ''}`}
+            style={{ background: 'var(--primary)' }}>
+            {uploadingFile
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中…</>
+              : <><Upload className="h-3.5 w-3.5" />選擇檔案</>}
+            <input type="file" className="hidden" multiple
+              accept=".pdf,.docx,.xlsx,.xls,.csv,.txt"
+              onChange={handleFileUpload} />
+          </label>
+        </div>
+        {uploadedFiles.length > 0 && (
+          <div className="space-y-1.5">
+            {uploadedFiles.map((f, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border text-xs">
+                <span className="text-gray-700 truncate max-w-[80%]">{f.name}</span>
+                <button type="button" onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}
+                  className="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0">✕</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Analysis type selector */}
