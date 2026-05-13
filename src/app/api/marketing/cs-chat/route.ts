@@ -53,7 +53,10 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const range = encodeURIComponent(`${config.sheetName}!A:Z`)
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}?key=${config.apiKey}`
     const res = await fetch(url)
-    if (!res.ok) return null
+    if (!res.ok) {
+      const errText = await res.text().catch(() => `HTTP ${res.status}`)
+      return `【外部資料表：${config.sheetName}】\nAPI 連線失敗（${res.status}）：${errText.slice(0, 200)}`
+    }
 
     const json = await res.json()
     const rows: string[][] = json.values ?? []
@@ -117,8 +120,8 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
       .join('\n')
 
     return `【外部資料表：${config.sheetName}】\n${table}`
-  } catch {
-    return null
+  } catch (e) {
+    return `【外部資料表：${config.sheetName}】\n連線異常：${String(e).slice(0, 200)}`
   }
 }
 
@@ -417,9 +420,17 @@ async function handlePost(req: NextRequest) {
   }
 
   const hasPricing = sources?.some(s => s.type === 'json_pricing' && sheetResults.some(r => r.includes(s.name)))
+
+  // Detect numeric order number in message for fabrication-prevention guard
+  const detectedOrderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
+  const hasSheetSources = sources?.some(s => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.enabled)
+  const noSheetResultGuard = detectedOrderNum && hasSheetSources && sheetResults.length === 0
+    ? `\n\n【安全規則】偵測到訂單號「${detectedOrderNum}」，但外部資料表查無任何結果（可能是API設定錯誤或工作表連線失敗）。請直接告知客戶「查無此號碼的相關資料，請確認號碼是否正確，或聯繫工作人員」，絕對禁止捏造任何密碼、房號或訂單資訊。`
+    : ''
+
   const externalDataSection = sheetResults.length > 0
     ? `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
-    : ''
+    : noSheetResultGuard
 
   // ── Intent classification ─────────────────────────────────────────────────
   const knowledgeSection = knowledgeBase
