@@ -73,34 +73,28 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const keyColumnNames = (config.keyColumn ?? '').split(',').map(c => c.trim()).filter(Boolean)
     const keyColIdxs = keyColumnNames.map(c => headers.findIndex(h => h.trim() === c)).filter(i => i >= 0)
 
-    // If keyColIdxs is empty, keyColumn name doesn't match any header —
-    // fall back to scanning ALL columns so we still find the number
-    if (exactKey && keyColIdxs.length === 0) {
-      const allIdxs = headers.map((_, i) => i)
-      const matchedRow = dataRows.find(row =>
-        allIdxs.some(idx => cellStr(row[idx]) === exactKey!.trim())
-      )
-      if (!matchedRow) {
-        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
-      }
-      const result = headers.map((h, i) => `${h}：${matchedRow[i] ?? ''}`).filter(l => {
-        const val = l.split('：').slice(1).join('：').trim()
-        return val !== ''
-      }).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單所有欄位，請直接引用，禁止修改或捏造任何數值）`
-    }
+    if (exactKey) {
+      // Helper: find row by scanning given column indices
+      const findRow = (idxs: number[]) =>
+        dataRows.find(row => idxs.some(idx => cellStr(row[idx]) === exactKey!.trim()))
 
-    if (exactKey && keyColIdxs.length > 0) {
-      const matchedRow = dataRows.find(row =>
-        keyColIdxs.some(idx => cellStr(row[idx]) === exactKey!.trim())
-      )
-      if (!matchedRow) {
-        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
+      // Primary search: key column(s) if configured and found in headers
+      const primaryIdxs = keyColIdxs.length > 0 ? keyColIdxs : headers.map((_, i) => i)
+      let matchedRow = findRow(primaryIdxs)
+
+      // Secondary fallback: scan ALL columns (handles header name mismatch)
+      if (!matchedRow && keyColIdxs.length > 0) {
+        matchedRow = findRow(headers.map((_, i) => i))
       }
 
-      // Always show ALL columns for exact-key match — prevents AI from fabricating
-      // missing fields when returnColumns names don't match sheet headers exactly.
-      const result = headers.map((h, i) => `${h}：${matchedRow[i] ?? ''}`).filter(l => {
+      const debugInfo = `（資料表欄位：${headers.join('、')}，共 ${dataRows.length} 筆資料，查詢欄位設定：${config.keyColumn}${keyColIdxs.length === 0 ? '【⚠️ 找不到此欄位，已改為全欄掃描】' : ''}）`
+
+      if (!matchedRow) {
+        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。\n${debugInfo}`
+      }
+
+      // Always return ALL columns — prevents AI from fabricating missing fields
+      const result = headers.map((h, i) => `${h}：${matchedRow![i] ?? ''}`).filter(l => {
         const val = l.split('：').slice(1).join('：').trim()
         return val !== ''
       }).join('\n')
