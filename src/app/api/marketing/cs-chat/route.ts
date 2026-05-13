@@ -83,8 +83,11 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
       if (!matchedRow) {
         return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
       }
-      const result = headers.map((h, i) => `${h}：${matchedRow[i] ?? ''}`).filter(l => l.split('：')[1]).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}`
+      const result = headers.map((h, i) => `${h}：${matchedRow[i] ?? ''}`).filter(l => {
+        const val = l.split('：').slice(1).join('：').trim()
+        return val !== ''
+      }).join('\n')
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單所有欄位，請直接引用，禁止修改或捏造任何數值）`
     }
 
     if (exactKey && keyColIdxs.length > 0) {
@@ -95,15 +98,13 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
         return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
       }
 
-      const wantedCols = [...keyColumnNames, ...(config.returnColumns ?? [])].filter(Boolean)
-      const colIdxs = wantedCols.length > keyColumnNames.length
-        ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
-        : headers.map((_, i) => i)
-
-      const pickedHeaders = colIdxs.map(i => headers[i])
-      const pickedValues = colIdxs.map(i => matchedRow[i] ?? '')
-      const result = pickedHeaders.map((h, i) => `${h}：${pickedValues[i]}`).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}`
+      // Always show ALL columns for exact-key match — prevents AI from fabricating
+      // missing fields when returnColumns names don't match sheet headers exactly.
+      const result = headers.map((h, i) => `${h}：${matchedRow[i] ?? ''}`).filter(l => {
+        const val = l.split('：').slice(1).join('：').trim()
+        return val !== ''
+      }).join('\n')
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單所有欄位，請直接引用，禁止修改或捏造任何數值）`
     }
 
     // Keyword trigger: return full filtered table
@@ -521,7 +522,10 @@ const systemPrompt = `${baseInstructions}
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}（系統已提供，禁止詢問客戶現在幾點或現在是否超過某時間，請自行根據上方時間判斷）${imageInstruction}${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
+- 目前台灣時間：${taiwanTime}（系統已提供，禁止詢問客戶現在幾點或現在是否超過某時間，請自行根據上方時間判斷）${imageInstruction}
+
+【資料安全鐵則——絕對不可違反】
+密碼、房號、訂單號、金額等具體數值，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
