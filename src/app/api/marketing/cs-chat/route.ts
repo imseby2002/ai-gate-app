@@ -422,16 +422,27 @@ async function handlePost(req: NextRequest) {
 
   const hasPricing = sources?.some(s => s.type === 'json_pricing' && sheetResults.some(r => r.includes(s.name)))
 
-  // Detect numeric order number in message for fabrication-prevention guard
+  // Detect numeric order number and sensitive-data intent
   const detectedOrderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
   const hasSheetSources = sources?.some(s => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.enabled)
-  const noSheetResultGuard = detectedOrderNum && hasSheetSources && sheetResults.length === 0
-    ? `\n\n【安全規則】偵測到訂單號「${detectedOrderNum}」，但外部資料表查無任何結果（可能是API設定錯誤或工作表連線失敗）。請直接告知客戶「查無此號碼的相關資料，請確認號碼是否正確，或聯繫工作人員」，絕對禁止捏造任何密碼、房號或訂單資訊。`
-    : ''
+  const hasNumericSheetSources = sources?.some(s =>
+    s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.enabled &&
+    (s.config as SheetConfig).triggerMode === 'numeric'
+  )
 
-  const externalDataSection = sheetResults.length > 0
-    ? `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
-    : noSheetResultGuard
+  // Keywords that suggest the user wants check-in/password info but hasn't given an order number
+  const SENSITIVE_INTENT_KEYWORDS = ['入住', '密碼', '房號', '開門', 'check in', 'checkin', '鑰匙', '門鎖', '訂單', '查詢']
+  const hasSensitiveIntent = SENSITIVE_INTENT_KEYWORDS.some(kw => message.toLowerCase().includes(kw.toLowerCase()))
+
+  let externalDataSection = ''
+  if (sheetResults.length > 0) {
+    externalDataSection = `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
+  } else if (hasNumericSheetSources && hasSensitiveIntent && !detectedOrderNum) {
+    // User wants check-in/password info but provided no order number — must ask first
+    externalDataSection = `\n\n【系統指令】客人詢問入住/密碼/訂單相關資訊，但訊息中未包含訂單號碼。請先詢問客人的訂單號碼，不得回覆任何密碼、房號或具體數字，等取得訂單號後系統會自動查詢。`
+  } else if (detectedOrderNum && hasSheetSources && sheetResults.length === 0) {
+    externalDataSection = `\n\n【系統指令】偵測到訂單號「${detectedOrderNum}」但外部資料表查無結果（API設定錯誤或號碼不存在）。請告知客戶查無此號碼，請確認號碼是否正確或聯繫工作人員，禁止捏造任何密碼或房號。`
+  }
 
   // ── Intent classification ─────────────────────────────────────────────────
   const knowledgeSection = knowledgeBase
