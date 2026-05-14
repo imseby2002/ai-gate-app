@@ -488,6 +488,10 @@ async function handlePost(req: NextRequest) {
     ? '請使用與客戶相同的語言回覆。'
     : `請使用 ${language} 回覆。`
 
+  const langEnforcement = language !== 'auto' && language !== '繁體中文' && language !== 'zh-TW'
+    ? `\n\n【語言強制規定——最高優先級】你的整個回覆必須完全使用 ${language}，包括從知識庫、定價資料、系統指令中擷取的所有內容，都必須翻譯成 ${language} 後再輸出。房型名稱（蘭博房、山景房等）可保留中文名稱，其餘全部使用 ${language}。嚴禁在回覆中夾雜任何中文字。`
+    : ''
+
   // 優先順序：使用者自訂 system prompt > bookingFlows 自動產生 > 預設客服
   const baseInstructions = userSystemPrompt?.trim()
     ? userSystemPrompt.trim()
@@ -541,7 +545,7 @@ const systemPrompt = `${baseInstructions}
 - 目前台灣時間：${taiwanTime}（系統已提供，禁止詢問客戶現在幾點或現在是否超過某時間，請自行根據上方時間判斷）${imageInstruction}
 
 【資料安全鐵則——絕對不可違反】
-密碼、房號、訂單號、金額等具體數值，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}`
+密碼、房號、訂單號、金額等具體數值，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}${langEnforcement}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
