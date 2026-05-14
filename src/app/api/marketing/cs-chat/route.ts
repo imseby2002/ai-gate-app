@@ -527,7 +527,9 @@ ${breakfastCfg.menu.map((item, i) => `  ${i + 1}. ${item}`).join('\n')}
 const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
-- 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
+- 禁止使用任何 Markdown 語法，包含 **粗體**、*斜體*、*列點、- 列點、# 標題、--- 分隔線
+- 禁止輸出任何內部思考、推理過程（THOUGHT、think、思考等區塊），直接給出最終回覆
+- 計算步驟用純文字逐行呈現，例如「成人 2 位 × $800 = $1,600」，不用符號列點
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
@@ -581,6 +583,23 @@ const systemPrompt = `${baseInstructions}
   }
 
   const latencyMs = Date.now() - t0
+
+  // ── Strip internal reasoning blocks leaked by the model ───────────────────
+  // Remove THOUGHT / thinking blocks that some models output before the reply
+  reply = reply
+    .replace(/^THOUGHT[\s\S]*?\n\n(?=\S)/i, '')   // THOUGHT...blank line...reply
+    .replace(/^<think>[\s\S]*?<\/think>\s*/i, '')  // <think>...</think>
+    .replace(/^\*\*思考\*\*[\s\S]*?\n\n(?=\S)/i, '') // **思考**...
+    .trim()
+
+  // Strip Markdown formatting the model may output despite instructions
+  reply = reply
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // bold
+    .replace(/\*(.+?)\*/g, '$1')       // italic
+    .replace(/^[\*\-] /gm, '')         // bullet points (* or -)
+    .replace(/^#{1,6} /gm, '')         // headings
+    .replace(/---+/g, '')              // horizontal rules
+    .trim()
 
   // ── Extract [IMG:URL] markers from reply ──────────────────────────────────
   const imgRegex = /\[IMG:(https?:\/\/[^\]]+)\]/gi
