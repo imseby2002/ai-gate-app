@@ -136,6 +136,8 @@ interface PricingRoom {
   weekendPrice: number
   holidayPrice?: number
   extraPersonFee?: number
+  extraBedNote?: string
+  description?: string  // bed type / room features shown to AI
 }
 
 interface PricingConfig {
@@ -190,10 +192,13 @@ function formatPricingForAI(name: string, cfg: PricingConfig): string {
       lines.push(`\n房型與定價（${cur}）：`)
       cfg.rooms.forEach(r => {
         lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
+        if (r.description) lines.push(`      床型：${r.description}`)
         lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
         lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
         if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
         if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
+        if (r.extraBedNote) lines.push(`      加床說明：${r.extraBedNote}`)
+        if (!r.extraBedNote && !r.extraPersonFee && r.capacity <= 2) lines.push(`      不可加床`)
       })
     }
   }
