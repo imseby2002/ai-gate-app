@@ -1,16 +1,22 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getLocale } from 'next-intl/server'
 import { Zap } from 'lucide-react'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+
+export const dynamic = 'force-dynamic'
 
 export default async function StandaloneLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const locale = await getLocale()
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
-      <header className="border-b bg-card px-6 py-3 flex items-center gap-3 shrink-0">
+      <header className="border-b bg-card px-6 py-3 flex items-center justify-between shrink-0">
         <a href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <Zap className="h-5 w-5 text-primary" />
           <div className="leading-none">
@@ -18,6 +24,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
             <span className="block text-xs text-muted-foreground mt-0.5">← 返回主選單</span>
           </div>
         </a>
+        <LanguageSwitcher currentLocale={locale} />
       </header>
 
       {/* Page content */}
