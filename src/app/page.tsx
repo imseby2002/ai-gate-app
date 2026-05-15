@@ -4,6 +4,8 @@ import { getTranslations } from 'next-intl/server'
 import { getLocale } from 'next-intl/server'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
+export const dynamic = 'force-dynamic'
+
 export default async function LandingPage() {
   const t = await getTranslations('Landing')
   const locale = await getLocale()

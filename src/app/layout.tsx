@@ -3,6 +3,8 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import "./globals.css";
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "AI GATE - Enterprise AI Platform",
   description: "Multi-model AI assistant platform supporting DeepSeek, Gemini, Claude, Perplexity and more",
