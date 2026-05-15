@@ -149,7 +149,7 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
           <>
             {!collapsed && (
               <div className="pt-3 pb-1 px-3">
-                <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">工具</p>
+                <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">{t('tools')}</p>
               </div>
             )}
             {collapsed && <div className="my-2 border-t border-border/50" />}

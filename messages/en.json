@@ -84,7 +84,8 @@
     "admin": "Admin Panel",
     "recentChats": "Recent Chats",
     "cs": "Customer Service",
-    "leads": "Lead Marketing"
+    "leads": "Lead Marketing",
+    "tools": "Tools"
   },
   "Header": {
     "balance": "Balance",
@@ -106,6 +107,25 @@
     "noAssistants": "No assistants created yet",
     "createFirst": "Create Your First Assistant",
     "viewAll": "View all assistants →",
+    "weeklyStatTitle": "Weekly Statistics",
+    "sublabelMessages": "Last 7 days",
+    "sublabelTokens": "Input + Output tokens",
+    "sublabelCost": "Estimated cost",
+    "startChat": "New Chat",
+    "myAssistantBtn": "My Assistants",
+    "moduleBlocked": "This module is not enabled. Please contact your admin.",
+    "modulesTitle": "Modules",
+    "modulesAvailable": "{count} / {total} available",
+    "startUsing": "Get Started",
+    "locked": "Locked",
+    "assistantCount": "{count} assistants",
+    "modules": {
+      "chat": { "label": "AI Chat", "desc": "Text chat, image gen, video gen, RAG assistant" },
+      "marketing": { "label": "Marketing Auto", "desc": "Content creation, images, videos, workflow automation" },
+      "cs": { "label": "Customer Service", "desc": "LINE / WhatsApp / Telegram smart CS" },
+      "leads": { "label": "Lead Marketing", "desc": "Marketing call scripts, lead analysis" },
+      "resume": { "label": "Resume Tools", "desc": "AI resume polish & job matching" }
+    },
     "routes": {
       "daily": "Daily Chat",
       "finance": "Financial Reasoning",

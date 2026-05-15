@@ -84,7 +84,8 @@
     "admin": "Bảng quản trị",
     "recentChats": "Cuộc trò chuyện gần đây",
     "cs": "Dịch vụ Khách hàng",
-    "leads": "Tiếp thị Khách hàng"
+    "leads": "Tiếp thị Khách hàng",
+    "tools": "Công cụ"
   },
   "Header": {
     "balance": "Số dư",
@@ -106,6 +107,25 @@
     "noAssistants": "Chưa tạo trợ lý nào",
     "createFirst": "Tạo trợ lý đầu tiên",
     "viewAll": "Xem tất cả trợ lý →",
+    "weeklyStatTitle": "Thống kê tuần này",
+    "sublabelMessages": "7 ngày qua",
+    "sublabelTokens": "Token đầu vào + đầu ra",
+    "sublabelCost": "Chi phí ước tính",
+    "startChat": "Cuộc trò chuyện mới",
+    "myAssistantBtn": "Trợ lý của tôi",
+    "moduleBlocked": "Mô-đun này chưa được bật. Vui lòng liên hệ quản trị viên.",
+    "modulesTitle": "Mô-đun",
+    "modulesAvailable": "{count} / {total} khả dụng",
+    "startUsing": "Bắt đầu",
+    "locked": "Bị khóa",
+    "assistantCount": "{count} trợ lý",
+    "modules": {
+      "chat": { "label": "AI Chat", "desc": "Trò chuyện, tạo ảnh, tạo video, trợ lý RAG" },
+      "marketing": { "label": "Marketing Tự Động", "desc": "Tạo nội dung, hình ảnh, video, tự động hóa quy trình" },
+      "cs": { "label": "Dịch vụ Khách hàng", "desc": "LINE / WhatsApp / Telegram chăm sóc khách hàng" },
+      "leads": { "label": "Tiếp thị Khách hàng", "desc": "Kịch bản cuộc gọi marketing, phân tích khách hàng tiềm năng" },
+      "resume": { "label": "Công cụ CV", "desc": "Chỉnh sửa CV bằng AI & ghép việc làm" }
+    },
     "routes": {
       "daily": "Trò chuyện hàng ngày",
       "finance": "Lý luận tài chính",

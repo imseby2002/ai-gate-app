@@ -84,7 +84,8 @@
     "usage": "用量統計",
     "settings": "設定",
     "admin": "後台管理",
-    "recentChats": "最近對話"
+    "recentChats": "最近對話",
+    "tools": "工具"
   },
   "Header": {
     "balance": "餘額",
@@ -106,6 +107,25 @@
     "noAssistants": "尚未建立任何助理",
     "createFirst": "建立第一個助理",
     "viewAll": "查看所有助理 →",
+    "weeklyStatTitle": "本週使用統計",
+    "sublabelMessages": "過去 7 天對話數",
+    "sublabelTokens": "輸入＋輸出 tokens",
+    "sublabelCost": "估算費用",
+    "startChat": "開始新對話",
+    "myAssistantBtn": "我的助理",
+    "moduleBlocked": "此功能模組尚未開放，請聯繫管理員。",
+    "modulesTitle": "功能模組",
+    "modulesAvailable": "{count} / {total} 已開放",
+    "startUsing": "開始使用",
+    "locked": "未開放",
+    "assistantCount": "{count} 個助理",
+    "modules": {
+      "chat": { "label": "AI 對話", "desc": "文字對話、畫圖、影片生成、RAG 助理" },
+      "marketing": { "label": "行銷自動化", "desc": "內容生成、圖片影片、流程自動化" },
+      "cs": { "label": "客服系統", "desc": "LINE / WhatsApp / Telegram 智能客服" },
+      "leads": { "label": "潛在客戶", "desc": "行銷電話腳本、潛客分析" },
+      "resume": { "label": "履歷優化", "desc": "AI 履歷潤稿與職缺媒合" }
+    },
     "routes": {
       "daily": "日常對話",
       "finance": "財務推理",

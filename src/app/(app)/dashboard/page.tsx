@@ -52,9 +52,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const initials = getInitials(displayName)
 
   const stats = [
-    { label: t('weeklyMessages'), value: totalMessages.toString(), icon: MessageSquare, sublabel: '過去 7 天對話數' },
-    { label: t('weeklyTokens'),   value: formatTokens(totalTokens), icon: TrendingUp, sublabel: '輸入＋輸出 tokens' },
-    { label: t('weeklyCost'),     value: formatCost(totalCost),     icon: BarChart3, sublabel: '估算費用' },
+    { label: t('weeklyMessages'), value: totalMessages.toString(), icon: MessageSquare, sublabel: t('sublabelMessages') },
+    { label: t('weeklyTokens'),   value: formatTokens(totalTokens), icon: TrendingUp, sublabel: t('sublabelTokens') },
+    { label: t('weeklyCost'),     value: formatCost(totalCost),     icon: BarChart3, sublabel: t('sublabelCost') },
   ]
 
   return (
@@ -90,14 +90,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
               >
                 <Zap className="h-4 w-4" />
-                開始新對話
+                {t('startChat')}
               </Link>
               <Link
                 href="/assistants"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/70 dark:bg-white/10 border border-white/50 text-sm font-medium hover:bg-white/90 dark:hover:bg-white/15 transition-colors"
               >
                 <Bot className="h-4 w-4" />
-                我的助理
+                {t('myAssistantBtn')}
               </Link>
             </div>
           )}
@@ -107,13 +107,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {sp.blocked && (
           <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 shrink-0" />
-            此功能模組尚未開放，請聯繫管理員。
+            {t('moduleBlocked')}
           </div>
         )}
 
         {/* ── Stats ── */}
         <div>
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-0.5">本週使用統計</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-0.5">{t('weeklyStatTitle')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {stats.map((stat, i) => {
               const style = STAT_STYLES[i]
@@ -136,8 +136,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* ── Modules ── */}
         <div>
           <div className="flex items-center justify-between mb-4 px-0.5">
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">功能模組</h2>
-            <span className="text-xs text-muted-foreground">{MODULES.filter(m => isAdmin || enabledModules.includes(m.id)).length} / {MODULES.length} 已開放</span>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('modulesTitle')}</h2>
+            <span className="text-xs text-muted-foreground">{t('modulesAvailable', { count: MODULES.filter(m => isAdmin || enabledModules.includes(m.id)).length, total: MODULES.length })}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {MODULES.map(mod => {
@@ -156,18 +156,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       <span className="text-3xl leading-none">{mod.emoji}</span>
                       {!accessible && <Lock className="h-3.5 w-3.5 text-muted-foreground/50 mt-1" />}
                     </div>
-                    <div className="font-semibold text-sm text-foreground">{mod.label}</div>
-                    <div className="text-xs text-muted-foreground mt-1 mb-5 leading-relaxed">{mod.desc}</div>
+                    <div className="font-semibold text-sm text-foreground">{t(`modules.${mod.id}.label` as Parameters<typeof t>[0])}</div>
+                    <div className="text-xs text-muted-foreground mt-1 mb-5 leading-relaxed">{t(`modules.${mod.id}.desc` as Parameters<typeof t>[0])}</div>
                     {accessible ? (
                       <Link
                         href={mod.href}
                         className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
                       >
-                        開始使用 <ArrowRight className="h-3 w-3" />
+                        {t('startUsing')} <ArrowRight className="h-3 w-3" />
                       </Link>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-muted text-muted-foreground">
-                        <Lock className="h-3 w-3" /> 未開放
+                        <Lock className="h-3 w-3" /> {t('locked')}
                       </span>
                     )}
                   </div>
@@ -187,7 +187,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 </div>
                 <div>
                   <h2 className="font-semibold text-sm">{t('myAssistants')}</h2>
-                  <p className="text-xs text-muted-foreground">{assistantCount ?? 0} 個助理</p>
+                  <p className="text-xs text-muted-foreground">{t('assistantCount', { count: assistantCount ?? 0 })}</p>
                 </div>
               </div>
               <Link
