@@ -55,7 +55,10 @@
       "Bash(gh run *)",
       "Bash(gh secret *)",
       "mcp__6fcd7e27-a4b8-4a49-b6a3-1b03887c7e69__list_projects",
-      "mcp__6fcd7e27-a4b8-4a49-b6a3-1b03887c7e69__execute_sql"
+      "mcp__6fcd7e27-a4b8-4a49-b6a3-1b03887c7e69__execute_sql",
+      "PowerShell(@\\('en','vi','zh-TW'\\) | ForEach-Object { $f = \"d:\\\\Users\\\\calvin\\\\OneDrive - alumni.albany.edu\\\\PROGRAM\\\\AI GATE\\\\ai-gate-app\\\\messages\\\\$_.json\"; \"$_`: $\\(\\(Get-Content $f | Measure-Object -Line\\).Lines\\) lines\" })",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration"
     ]
   }
 }

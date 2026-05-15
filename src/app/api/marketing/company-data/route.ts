@@ -12,11 +12,11 @@ export async function GET() {
 
   const { data } = await supabase
     .from('company_data')
-    .select('data')
+    .select('data, compiled_md')
     .eq('user_id', user.id)
     .single()
 
-  return NextResponse.json({ data: data?.data ?? {} })
+  return NextResponse.json({ data: data?.data ?? {}, compiled_md: data?.compiled_md ?? null })
 }
 
 export async function PUT(req: NextRequest) {

@@ -50,7 +50,6 @@ interface UnitDef {
 
 const UNITS: UnitDef[] = [
   { id: 1,  name: '蒐集資訊',  icon: Search,     desc: '新聞、網頁、地圖、評論',         implemented: true  },
-  { id: 2,  name: '公司資料',  icon: Building2,  desc: '基本資料、素材上傳',             implemented: true  },
   { id: 3,  name: '分析資料',  icon: BarChart3,  desc: '市場、競爭對手、影片/文案分析',   implemented: true  },
   { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: true  },
   { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: true  },
@@ -7672,6 +7671,7 @@ export default function MarketingAutoPage() {
 
   // Shared company data (Unit 2) — global, not per campaign
   const [companyData, setCompanyData] = useState<Unit2Data>({})
+  const [compiledCompanyMd, setCompiledCompanyMd] = useState<string | null>(null)
 
   const dropRef = useRef<HTMLDivElement>(null)
 
@@ -7690,7 +7690,10 @@ export default function MarketingAutoPage() {
   useEffect(() => {
     fetch('/api/marketing/company-data')
       .then(r => r.json())
-      .then(d => { if (d.data) setCompanyData(d.data) })
+      .then(d => {
+        if (d.data) setCompanyData(d.data)
+        if (d.compiled_md) setCompiledCompanyMd(d.compiled_md)
+      })
       .catch(() => {})
   }, [])
 
@@ -8081,7 +8084,11 @@ export default function MarketingAutoPage() {
           })}
         </div>
 
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-1">
+          <a href="/settings#company"
+            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
+            <Building2 className="h-3.5 w-3.5" /> 公司資料設定
+          </a>
           <a href="/settings"
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <Settings className="h-3.5 w-3.5" /> 平台連結設定
@@ -8111,13 +8118,6 @@ export default function MarketingAutoPage() {
               campaignId={campaignId}
               savedData={unitData[1] as Unit1Data | undefined}
               onDone={handleUnit1Done}
-            />
-          )}
-          {activeUnit === 2 && (
-            <Unit2CompanyData
-              campaignId={campaignId}
-              savedData={companyData}
-              onSave={handleUnit2Save}
             />
           )}
           {activeUnit === 3 && (
@@ -8233,7 +8233,7 @@ export default function MarketingAutoPage() {
               onDone={handleUnit12Done}
             />
           )}
-          {activeUnit !== 1 && activeUnit !== 2 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && activeUnit !== 12 && <ComingSoon unit={currentUnit} />}
+          {activeUnit !== 1 && activeUnit !== 3 && activeUnit !== 4 && activeUnit !== 5 && activeUnit !== 6 && activeUnit !== 7 && activeUnit !== 8 && activeUnit !== 9 && activeUnit !== 10 && activeUnit !== 11 && activeUnit !== 12 && <ComingSoon unit={currentUnit} />}
         </div>
       </main>
     </div>
