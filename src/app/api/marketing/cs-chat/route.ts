@@ -394,19 +394,21 @@ async function handlePost(req: NextRequest) {
     const assistantTexts = allMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
 
     // Step completion detectors
+    // DATE_RE matches: "7月8日" / "7/8" / "2026/7/8" / "7-8" / "2026-7-8"
+    const DATE_RE = /[0-9]{1,2}\s*月|[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}|(?<![0-9])[0-9]{1,2}[\/\-][0-9]{1,2}(?![0-9])/
     const stepDetectors: Record<string, (u: string) => boolean> = {
       headcount:     u => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(u),
       passenger_id:  u => /[A-Za-z][0-9]{9}/.test(u),
       phone:         u => /0[0-9]{8,9}/.test(u),
-      date_depart:   u => /[0-9]{1,2}\s*月/.test(u),
-      date_checkin:  u => /[0-9]{1,2}\s*月/.test(u),
-      date_checkout: u => /[0-9]{1,2}\s*月/.test(u) && allMessages.filter(m => m.role === 'user').length > 2,
+      date_depart:   u => DATE_RE.test(u),
+      date_checkin:  u => DATE_RE.test(u),
+      date_checkout: u => DATE_RE.test(u) && allMessages.filter(m => m.role === 'user').length > 2,
       timeslot:      u => /[0-9]{1,2}[:：點時]/.test(u),
       booker_name:   u => u.trim().length >= 2 && /[一-鿿]/.test(u),
       email:         u => /@/.test(u),
       plate:         u => /[A-Z0-9]{4,8}/.test(u),
       special_req:   () => true, // optional, always passes
-      quote:         (_u) => /[0-9,，]+\s*(元|元整|$)/.test(assistantTexts),
+      quote:         (_u) => /\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts),
       product:       () => allMessages.filter(m => m.role === 'user').length > 1,
     }
 
