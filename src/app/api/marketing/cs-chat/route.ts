@@ -366,6 +366,60 @@ async function handlePost(req: NextRequest) {
 
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
 
+  // ── Server-side booking completion detection ──────────────────────────────
+  // Detects if all defined steps have been answered in the conversation history
+  // and injects an explicit confirmation instruction so AI doesn't have to guess.
+  let bookingCompletionInstruction = ''
+  if (bookingFlowEnabled && bookingFlows.length > 0) {
+    const allMessages = [
+      ...(history as { role: string; content: string }[]),
+      { role: 'user', content: message },
+    ]
+    const userTexts = allMessages.filter(m => m.role === 'user').map(m => m.content).join('\n')
+    const assistantTexts = allMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
+
+    // Step completion detectors
+    const stepDetectors: Record<string, (u: string) => boolean> = {
+      headcount:     u => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(u),
+      passenger_id:  u => /[A-Za-z][0-9]{9}/.test(u),
+      phone:         u => /0[0-9]{8,9}/.test(u),
+      date_depart:   u => /[0-9]{1,2}\s*月/.test(u),
+      date_checkin:  u => /[0-9]{1,2}\s*月/.test(u),
+      date_checkout: u => /[0-9]{1,2}\s*月/.test(u) && allMessages.filter(m => m.role === 'user').length > 2,
+      timeslot:      u => /[0-9]{1,2}[:：點時]/.test(u),
+      booker_name:   u => u.trim().length >= 2 && /[一-鿿]/.test(u),
+      email:         u => /@/.test(u),
+      plate:         u => /[A-Z0-9]{4,8}/.test(u),
+      special_req:   () => true, // optional, always passes
+      quote:         (_u) => /[0-9,，]+\s*(元|元整|$)/.test(assistantTexts),
+      product:       () => allMessages.filter(m => m.role === 'user').length > 1,
+    }
+
+    for (const flow of bookingFlows as BookingFlowDef[]) {
+      const keywords = flow.triggerKeywords.split(',').map((k: string) => k.trim())
+      const flowTriggered = keywords.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
+      if (!flowTriggered) continue
+
+      const allStepsDone = flow.steps.every((step: string) => {
+        const detector = stepDetectors[step]
+        return detector ? detector(userTexts) : true
+      })
+
+      if (allStepsDone) {
+        const payment = (flow.paymentInfo || paymentInfo || '').trim()
+        bookingCompletionInstruction = `\n\n【系統偵測：所有預訂步驟已完成——立即執行以下指令】
+你的下一則回覆必須且只包含以下內容，不可省略任何一項：
+第一行：「好的！以下是您的預訂確認：」
+接著逐行列出所有已收集的資料（行程、日期、時段、人數、乘客姓名/身分證/生日、聯絡電話等，每項一行）
+接著計算並顯示總金額
+接著輸出以下付款資訊（逐行原文輸出，禁止修改或省略）：
+${payment || '（付款方式請聯繫工作人員確認）'}
+最後一行：「以上資訊是否正確？」`
+        break
+      }
+    }
+  }
+
   const t0 = Date.now()
   const geminiKey = process.env.GOOGLE_AI_API_KEY
   if (!geminiKey) return NextResponse.json({ error: 'GOOGLE_AI_API_KEY 未設定' }, { status: 500 })
@@ -566,7 +620,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}${langEnforcement}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
