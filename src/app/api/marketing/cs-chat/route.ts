@@ -274,23 +274,18 @@ function buildStepLabels(dataHint?: string): Record<string, string> {
   }
 }
 
-function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
-  // Build per-flow payment blocks to embed directly in 情境5
-  const flowPayments: Record<string, string> = {}
+function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
+  // Payment info is intentionally NOT embedded here — it is injected only via
+  // bookingCompletionInstruction after server-side step completion is confirmed,
+  // preventing the AI from revealing account details before all steps are done.
   const flowSection = flows.length > 0
     ? flows.map(f => {
         const keywords = f.triggerKeywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
         const stepLabels = buildStepLabels(f.dataHint)
         const stepList = f.steps.map((s, i) => `  ${i + 1}. ${stepLabels[s] ?? s}`).join('\n')
-        const payment = (f.paymentInfo || defaultPaymentInfo).trim()
-        if (payment) flowPayments[f.name] = payment
         return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}`
       }).join('\n\n')
     : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話`
-
-  const paymentBlock = Object.keys(flowPayments).length > 0
-    ? Object.entries(flowPayments).map(([name, info]) => `  ${name}：${info}`).join('\n')
-    : (defaultPaymentInfo.trim() || '（未設定，告知客人聯繫工作人員確認）')
 
   return `你是專業客服兼預訂助理。嚴格遵守以下所有規則，不得自行發揮。
 
@@ -334,9 +329,8 @@ quote（報價）：自行從定價表計算，告知總金額，客人確認才
 步驟判斷：在心中逐一核對清單，確認每個步驟都已收到回答 → 才進行以下流程：
 第一行：「好的！以下是您的預訂確認：」
 接著逐行列出所有已收集欄位與數值
-接著顯示總金額算式
-接著輸出以下付款資訊（原文照抄，一字不差）：
-${paymentBlock}
+接著顯示總金額
+接著輸出【系統提供的付款資訊】（等待系統在本則訊息末尾附上，禁止自行填寫或捏造任何帳號）
 最後問：「以上資訊是否正確？」
 注意：付款帳號只在此步驟輸出一次，後續對話不再重複
 
