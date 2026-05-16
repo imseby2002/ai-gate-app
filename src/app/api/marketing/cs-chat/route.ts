@@ -573,7 +573,8 @@ const systemPrompt = `${baseInstructions}
 - 目前台灣時間：${taiwanTime}（系統已提供，禁止詢問客戶現在幾點或現在是否超過某時間，請自行根據上方時間判斷）${imageInstruction}
 
 【資料安全鐵則——絕對不可違反】
-密碼、房號、訂單號、金額等具體數值，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}${langEnforcement}`
+密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}${langEnforcement}${bookingFlowEnabled && paymentInfo?.trim() ? `\n\n【★ 付款帳號（訂單完成時必須完整輸出此區塊）★】\n${paymentInfo.trim()}` : ''}${bookingFlowEnabled && bookingFlows?.length > 0 && bookingFlows.some((f: BookingFlowDef) => f.paymentInfo?.trim()) ? `\n\n【★ 各流程付款帳號（訂單完成時必須完整輸出）★】\n${bookingFlows.filter((f: BookingFlowDef) => f.paymentInfo?.trim()).map((f: BookingFlowDef) => `${f.name}：${f.paymentInfo.trim()}`).join('\n')}` : ''}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
