@@ -320,7 +320,12 @@ ${flowSection}
 錯誤做法：長篇回答，忘記繼續收集
 
 情境5：所有欄位收集完畢
-正確做法：整理確認清單，計算總金額，告知付款方式
+正確做法：
+1. 逐行列出確認清單（所有已收集欄位與數值）
+2. 計算並顯示總金額（逐步列式）
+3. 主動提供付款帳號與方式（從下方【付款說明】或【知識庫參考資料】中找出帳號、戶名、銀行等資訊，完整告知客人，禁止只說「請轉帳」卻不給具體帳號）
+4. 每則回覆結尾改為「以上資訊是否正確？」（確認用，不再問新問題）
+禁止：未提供帳號就結束對話；若知識庫確實無付款資訊，才說「付款方式請聯繫工作人員確認」
 
 【回覆範例（情境1）】
 客人說：「請問你們有賞鯨行程」
@@ -413,7 +418,28 @@ async function handlePost(req: NextRequest) {
       } else if (src.type === 'breakfast_webhook') {
         return // 早餐設定單獨處理
       } else {
-        result = await queryGoogleSheet(src.config as SheetConfig, message)
+        const sheetCfg = src.config as SheetConfig
+        // 預訂流程啟用時，若資料來源名稱含付款相關關鍵字，直接注入不需觸發
+        const PAYMENT_KEYWORDS = ['帳號', '付款', '匯款', '銀行', '轉帳', 'payment', 'account']
+        const isPaymentSource = PAYMENT_KEYWORDS.some(kw => src.name?.toLowerCase().includes(kw.toLowerCase()))
+        if (bookingFlowEnabled && isPaymentSource) {
+          // Fetch all rows from this sheet and inject as knowledge
+          try {
+            const range = encodeURIComponent(`${sheetCfg.sheetName}!A:Z`)
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetCfg.spreadsheetId}/values/${range}?key=${sheetCfg.apiKey}`
+            const res = await fetch(url)
+            if (res.ok) {
+              const json = await res.json()
+              const rows: string[][] = json.values ?? []
+              if (rows.length >= 1) {
+                const table = rows.map(r => r.join(' | ')).join('\n')
+                result = `【付款資訊：${src.name}】\n${table}`
+              }
+            }
+          } catch { /* 忽略錯誤 */ }
+        } else {
+          result = await queryGoogleSheet(sheetCfg, message)
+        }
       }
       if (result) sheetResults.push(result)
     }))
