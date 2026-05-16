@@ -7165,17 +7165,25 @@ function Unit12CustomerService({
                       </div>
                       {msg.images && msg.images.length > 0 && (
                         <div className="flex flex-col gap-1.5 mt-1">
-                          {msg.images.map((imgUrl, idx) => (
-                            <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={imgUrl}
-                                alt={`圖片 ${idx + 1}`}
-                                className="max-w-full rounded-xl border border-gray-200 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
-                                style={{ maxHeight: 200 }}
-                              />
-                            </a>
-                          ))}
+                          {msg.images.map((imgUrl, idx) => {
+                            const isImage = /\.(jpe?g|png|gif|webp|svg|bmp|tiff?)(\?.*)?$/i.test(imgUrl)
+                            return isImage ? (
+                              <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={imgUrl}
+                                  alt={`圖片 ${idx + 1}`}
+                                  className="max-w-full rounded-xl border border-gray-200 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
+                                  style={{ maxHeight: 200 }}
+                                />
+                              </a>
+                            ) : (
+                              <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-blue-600 underline hover:text-blue-800 break-all">
+                                🔗 {imgUrl}
+                              </a>
+                            )
+                          })}
                         </div>
                       )}
                       {msg.role === 'assistant' && msg.meta && (

@@ -610,7 +610,7 @@ ${breakfastCfg.menu.map((item, i) => `  ${i + 1}. ${item}`).join('\n')}
   // [圖片] markers can appear in knowledge base OR in the user's custom system prompt
   const hasImages = /\[圖片\]\s*https?:\/\//i.test(knowledgeBase + (userSystemPrompt ?? ''))
   const imageInstruction = hasImages
-    ? '\n- 流程或知識庫中有 [圖片] 標記時，在回覆所有文字之後，每個圖片URL單獨一行輸出：[IMG:完整URL]（例如 [IMG:https://example.com/photo.jpg]）。只在該流程被觸發時輸出對應圖片。'
+    ? '\n- 流程或知識庫中有 [圖片] 標記時，在回覆文字中先說「詳細圖片介紹請參考：」，接著在文字之後單獨一行輸出：[IMG:完整URL]。若URL不是圖片檔（如網頁連結），在回覆文字中直接說「詳細介紹請參考：[URL]」，不輸出[IMG:]標記。只在相關流程觸發時輸出。'
     : ''
 
 const systemPrompt = `${baseInstructions}
