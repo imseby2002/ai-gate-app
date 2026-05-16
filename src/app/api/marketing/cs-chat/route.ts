@@ -679,13 +679,30 @@ const systemPrompt = `${baseInstructions}
   const latencyMs = Date.now() - t0
 
   // ── Strip internal reasoning blocks leaked by the model ───────────────────
+  // Step 1: remove known tagged thinking blocks
   reply = reply
     .replace(/^THOUGHT[\s\S]*?\n\n(?=\S)/i, '')
     .replace(/^<think>[\s\S]*?<\/think>\s*/i, '')
     .replace(/^\*\*思考\*\*[\s\S]*?\n\n(?=\S)/i, '')
-    // Strip English reasoning preambles (e.g. "Based on this, I should...\nLet's structure...")
-    .replace(/^(Based on|Let me|I need to|I should|I'll|The user|Looking at|Since|Given|Okay|Alright|Now)[^\n]*(\n[^\n]+)*?\n\n(?=[^\s])/i, '')
-    .trim()
+
+  // Step 2: strip leading non-Chinese reasoning paragraphs.
+  // Gemini sometimes outputs English analysis/planning before the actual Chinese customer reply.
+  // Scan paragraph-by-paragraph and discard everything before the first Chinese-starting paragraph.
+  // Only applies when Chinese paragraphs exist (preserves full English responses for non-Chinese customers).
+  {
+    const paragraphs = reply.split(/\n\n+/)
+    // Matches paragraph starts that are clearly customer-facing Chinese content
+    const CUSTOMER_RESPONSE_START = /^[一-鿿㐀-䶿！-￮　-〿]|^好的|^您好|^謝謝|^感謝|^請問|^抱歉|^很抱歉|^非常感謝/
+    const firstRespIdx = paragraphs.findIndex(p => CUSTOMER_RESPONSE_START.test(p.trimStart()))
+    // firstRespIdx === -1: no Chinese → keep all (English response)
+    // firstRespIdx === 0: already starts with Chinese → nothing to strip
+    // firstRespIdx > 0: leading non-Chinese paragraphs → discard them
+    if (firstRespIdx > 0) {
+      reply = paragraphs.slice(firstRespIdx).join('\n\n')
+    }
+  }
+
+  reply = reply.trim()
 
   // Strip Markdown formatting the model may output despite instructions
   reply = reply
