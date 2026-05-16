@@ -548,6 +548,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   try {
     const { text: classifyText } = await generateText({
       model: google('gemini-2.5-flash'),
+      providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
       messages: [{ role: 'user', content: classifyPrompt }],
     })
     const parsed = JSON.parse(classifyText.replace(/```json\n?|```/g, '').trim())
@@ -663,6 +664,9 @@ const systemPrompt = `${baseInstructions}
     try {
       const { text } = await generateText({
         model: google('gemini-2.5-flash'),
+        providerOptions: {
+          google: { thinkingConfig: { thinkingBudget: 0 } },
+        },
         system: systemPrompt,
         messages: msgHistory,
       })
@@ -675,11 +679,12 @@ const systemPrompt = `${baseInstructions}
   const latencyMs = Date.now() - t0
 
   // ── Strip internal reasoning blocks leaked by the model ───────────────────
-  // Remove THOUGHT / thinking blocks that some models output before the reply
   reply = reply
-    .replace(/^THOUGHT[\s\S]*?\n\n(?=\S)/i, '')   // THOUGHT...blank line...reply
-    .replace(/^<think>[\s\S]*?<\/think>\s*/i, '')  // <think>...</think>
-    .replace(/^\*\*思考\*\*[\s\S]*?\n\n(?=\S)/i, '') // **思考**...
+    .replace(/^THOUGHT[\s\S]*?\n\n(?=\S)/i, '')
+    .replace(/^<think>[\s\S]*?<\/think>\s*/i, '')
+    .replace(/^\*\*思考\*\*[\s\S]*?\n\n(?=\S)/i, '')
+    // Strip English reasoning preambles (e.g. "Based on this, I should...\nLet's structure...")
+    .replace(/^(Based on|Let me|I need to|I should|I'll|The user|Looking at|Since|Given|Okay|Alright|Now)[^\n]*(\n[^\n]+)*?\n\n(?=[^\s])/i, '')
     .trim()
 
   // Strip Markdown formatting the model may output despite instructions
