@@ -28,7 +28,7 @@ const MAIN_NAV = [
 
 const TOOL_NAV = [
   { labelKey: 'resume',        href: '/resume',          icon: FileText,   module: 'resume' },
-  { labelKey: 'marketingAuto', href: '/marketing-auto',  icon: Megaphone,  module: 'marketing' },
+  { labelKey: 'marketing',     href: '/marketing',        icon: Megaphone,  module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones, module: 'cs' },
   { labelKey: 'leads',         href: '/prospect-call',   icon: Phone,      module: 'leads' },
 ] as const
