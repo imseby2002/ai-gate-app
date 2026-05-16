@@ -548,7 +548,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   try {
     const { text: classifyText } = await generateText({
       model: google('gemini-2.5-flash'),
-      providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+      providerOptions: { google: { thinkingConfig: { thinkingBudget: 512 } } },
       messages: [{ role: 'user', content: classifyPrompt }],
     })
     const parsed = JSON.parse(classifyText.replace(/```json\n?|```/g, '').trim())
@@ -665,7 +665,7 @@ const systemPrompt = `${baseInstructions}
       const { text } = await generateText({
         model: google('gemini-2.5-flash'),
         providerOptions: {
-          google: { thinkingConfig: { thinkingBudget: 0 } },
+          google: { thinkingConfig: { thinkingBudget: 2048 } },
         },
         system: systemPrompt,
         messages: msgHistory,
