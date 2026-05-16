@@ -270,15 +270,22 @@ function buildStepLabels(dataHint?: string): Record<string, string> {
 }
 
 function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
+  // Build per-flow payment blocks to embed directly in 情境5
+  const flowPayments: Record<string, string> = {}
   const flowSection = flows.length > 0
     ? flows.map(f => {
         const keywords = f.triggerKeywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
         const stepLabels = buildStepLabels(f.dataHint)
         const stepList = f.steps.map((s, i) => `  ${i + 1}. ${stepLabels[s] ?? s}`).join('\n')
         const payment = (f.paymentInfo || defaultPaymentInfo).trim()
-        return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}${payment ? `\n付款說明：${payment}` : ''}`
+        if (payment) flowPayments[f.name] = payment
+        return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}`
       }).join('\n\n')
-    : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話${defaultPaymentInfo ? `\n付款說明：${defaultPaymentInfo}` : ''}`
+    : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話`
+
+  const paymentBlock = Object.keys(flowPayments).length > 0
+    ? Object.entries(flowPayments).map(([name, info]) => `  ${name}：${info}`).join('\n')
+    : (defaultPaymentInfo.trim() || '（未設定，告知客人聯繫工作人員確認）')
 
   return `你是專業客服兼預訂助理。嚴格遵守以下所有規則，不得自行發揮。
 
@@ -307,12 +314,12 @@ ${flowSection}
 passenger_id（乘客資料）：每位參加者需明確說出姓名、身分證字號、出生年月日（三項都要），缺一則繼續追問該人資料
 quote（報價）：需自行從定價表計算，告知總金額後問「請問這樣沒問題嗎？」，客人確認才算完成
 
-【所有步驟完成後——情境5】
-才可進行確認流程，順序如下：
-1. 逐行列出所有已收集欄位與數值（確認清單）
-2. 顯示總金額計算（逐步列式）
-3. 主動提供付款帳號：從下方【付款說明】或【知識庫參考資料】中找出帳號、戶名、銀行，完整逐行告知
-   若付款資訊中無具體帳號，才說「付款帳號請聯繫工作人員確認」，禁止說「請在其他平台預訂」
+【所有步驟完成後——情境5，強制執行】
+才可進行確認流程，必須依序完整輸出以下四項：
+1. 逐行列出確認清單（所有已收集欄位）
+2. 計算總金額（逐步列式）
+3. 付款資訊（以下為系統提供的正確帳號，必須完整複製貼上，一字不差，不可省略）：
+${paymentBlock}
 4. 最後問「以上資訊是否正確？」
 
 【情境2：客人說出具體方案名稱】
