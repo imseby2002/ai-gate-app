@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { generateText } from 'ai'
+import { generateText, type CoreMessage } from 'ai'
 
 export const maxDuration = 60
 
@@ -57,20 +57,17 @@ export async function POST(req: NextRequest) {
 產品描述：${description ?? '未提供'}
 目標受眾：${targetAudience ?? '未提供'}`
 
-  type MessageContent =
-    | string
-    | Array<{ type: 'text'; text: string } | { type: 'image'; image: string; mimeType: string }>
+  const promptText = `${DIRECTOR_PROMPT}\n\n【產品資料】\n${textCtx}`
 
-  let messageContent: MessageContent
-
-  if (imageBase64) {
-    messageContent = [
-      { type: 'image' as const, image: imageBase64, mimeType: (imageMimeType ?? 'image/jpeg') as string },
-      { type: 'text' as const, text: `${DIRECTOR_PROMPT}\n\n【產品資料】\n${textCtx}` },
-    ]
-  } else {
-    messageContent = `${DIRECTOR_PROMPT}\n\n【產品資料】\n${textCtx}`
-  }
+  const messages: CoreMessage[] = imageBase64
+    ? [{
+        role: 'user',
+        content: [
+          { type: 'image', image: imageBase64 as string, mimeType: (imageMimeType ?? 'image/jpeg') as string },
+          { type: 'text', text: promptText },
+        ],
+      }]
+    : [{ role: 'user', content: promptText }]
 
   try {
     const { text } = await generateText({
@@ -78,7 +75,7 @@ export async function POST(req: NextRequest) {
       providerOptions: {
         google: { thinkingConfig: { thinkingBudget: 0 } },
       },
-      messages: [{ role: 'user', content: messageContent as Parameters<typeof generateText>[0]['messages'][0]['content'] }],
+      messages,
       maxOutputTokens: 3000,
     })
 
