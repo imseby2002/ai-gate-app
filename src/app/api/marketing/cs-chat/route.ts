@@ -154,6 +154,9 @@ interface PricingConfig {
   customContent?: string
 }
 
+// Replace digit*digit (multiplication used in bed sizes) with × to avoid Markdown misparse
+const sanitizeDim = (s: string) => s.replace(/(\d)\*(\d)/g, '$1×$2')
+
 function formatPricingForAI(name: string, cfg: PricingConfig): string {
   const cur = cfg.currency ?? 'TWD'
   const lines: string[] = [
@@ -192,12 +195,12 @@ function formatPricingForAI(name: string, cfg: PricingConfig): string {
       lines.push(`\n房型與定價（${cur}）：`)
       cfg.rooms.forEach(r => {
         lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
-        if (r.description) lines.push(`      床型：${r.description}`)
+        if (r.description) lines.push(`      床型：${sanitizeDim(r.description)}`)
         lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
         lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
         if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
         if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
-        if (r.extraBedNote) lines.push(`      加床說明：${r.extraBedNote}`)
+        if (r.extraBedNote) lines.push(`      加床說明：${sanitizeDim(r.extraBedNote)}`)
         if (!r.extraBedNote && !r.extraPersonFee && r.capacity <= 2) lines.push(`      不可加床`)
       })
     }
@@ -706,11 +709,11 @@ const systemPrompt = `${baseInstructions}
 
   // Strip Markdown formatting the model may output despite instructions
   reply = reply
-    .replace(/\*\*(.+?)\*\*/g, '$1')   // bold
-    .replace(/\*(.+?)\*/g, '$1')       // italic
-    .replace(/^[\*\-] /gm, '')         // bullet points (* or -)
-    .replace(/^#{1,6} /gm, '')         // headings
-    .replace(/---+/g, '')              // horizontal rules
+    .replace(/\*\*(.+?)\*\*/g, '$1')              // bold
+    .replace(/(?<!\d)\*(?!\d)(.+?)(?<!\d)\*(?!\d)/g, '$1') // italic — skip * adjacent to digits (multiplication sign)
+    .replace(/^[\*\-] /gm, '')                     // bullet points (* or -)
+    .replace(/^#{1,6} /gm, '')                     // headings
+    .replace(/---+/g, '')                          // horizontal rules
     .trim()
 
   // ── Extract [IMG:URL] markers from reply ──────────────────────────────────
