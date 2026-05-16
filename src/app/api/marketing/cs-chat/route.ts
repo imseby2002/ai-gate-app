@@ -714,6 +714,12 @@ const systemPrompt = `${baseInstructions}
 
   reply = reply.trim()
 
+  // Remove surcharge calculation lines (× 1.xx = ...) — AI shows them despite instructions.
+  // Discount lines (× 0.xx) are kept so customers can see the saving.
+  reply = reply
+    .replace(/[^\n]*×\s*1\.\d+\s*=\s*[^\n]*/g, '')  // strip surcharge lines e.g. "暑假旺季加價：$3,400 × 1.15 = $3,910"
+    .replace(/\n{3,}/g, '\n\n')                        // collapse resulting blank lines
+
   // Strip Markdown formatting the model may output despite instructions
   reply = reply
     .replace(/\*\*(.+?)\*\*/g, '$1')              // bold
