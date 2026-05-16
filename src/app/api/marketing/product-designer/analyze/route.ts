@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { generateText, type CoreMessage } from 'ai'
+import { generateText } from 'ai'
 
 export const maxDuration = 60
 
@@ -59,11 +59,12 @@ export async function POST(req: NextRequest) {
 
   const promptText = `${DIRECTOR_PROMPT}\n\n【產品資料】\n${textCtx}`
 
-  const messages: CoreMessage[] = imageBase64
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const messages: any[] = imageBase64
     ? [{
         role: 'user',
         content: [
-          { type: 'image', image: imageBase64 as string, mimeType: (imageMimeType ?? 'image/jpeg') as string },
+          { type: 'image', image: imageBase64, mimeType: imageMimeType ?? 'image/jpeg' },
           { type: 'text', text: promptText },
         ],
       }]
