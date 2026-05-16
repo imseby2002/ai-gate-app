@@ -193,6 +193,7 @@ function formatPricingForAI(name: string, cfg: PricingConfig): string {
   if (cfg.productType === 'accommodation') {
     if (cfg.rooms?.length) {
       lines.push(`\n房型與定價（${cur}）：`)
+      lines.push(`⚠️ 每個房型定價完全獨立，計算時必須逐房型各自使用下方對應數字，嚴禁合併或混用（即使人數相同，價格也可能不同）`)
       cfg.rooms.forEach(r => {
         lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
         if (r.description) lines.push(`      床型：${sanitizeDim(r.description)}`)
@@ -304,13 +305,16 @@ function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlow
 9. 禁止重複輸出付款帳號——付款帳號在整段對話中只輸出一次，即在情境5的確認清單那則訊息，之後每則回覆都不再重複
 
 【角色A：產品顧問】
-客人問行程/價格時，從【定價計算機】或【知識庫】中找出所有符合的方案，嚴格按照以下格式輸出，不可增減、不可重新命名、不可合併：
+客人問行程/價格時，從【定價計算機】或【知識庫】中找出所有符合的方案，嚴格按照以下格式輸出：
 1. 方案名稱：$價格
 2. 方案名稱：$價格
 3. 方案名稱：$價格
 ...（有幾個列幾個，不自行增減）
 最後一行：「請問您想選哪個？（請回覆數字）」
-禁止：在選項之間或之後加任何說明文字
+嚴格禁止：
+- 將不同方案/房型合併成同一行（即使人數相同或價格相近，也必須各自獨立列出）
+- 在選項之間或之後加任何說明文字
+- 重新命名或省略任何方案
 
 【角色B：預訂收集者——核心執行邏輯】
 客人選定方案後，進入角色B。執行規則：
