@@ -4788,9 +4788,10 @@ interface CsInboxMessage {
 
 interface NotifyWebhook {
   id: string
-  type: 'line_notify' | 'webhook'
+  type: 'line_messaging' | 'webhook'
   label: string
-  value: string  // LINE Notify token 或 Webhook URL
+  value: string   // LINE: Channel Access Token；Webhook: URL
+  target?: string // LINE: User ID 或 Group ID
 }
 
 interface Unit12Data {
@@ -6517,7 +6518,7 @@ function Unit12CustomerService({
               <span className="text-sm font-semibold text-gray-800">工單通知</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">建立工單時自動推播</span>
             </div>
-            <p className="text-xs text-gray-500">客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Notify 及自訂 Webhook。</p>
+            <p className="text-xs text-gray-500">客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API 及自訂 Webhook。</p>
             {notifyWebhooks.map((wh, idx) => (
               <div key={wh.id} className="flex gap-2 items-start p-3 bg-gray-50 rounded-xl border">
                 <div className="flex-1 space-y-2">
@@ -6527,7 +6528,7 @@ function Unit12CustomerService({
                       onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, type: e.target.value as NotifyWebhook['type'] } : w))}
                       className="text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     >
-                      <option value="line_notify">LINE Notify</option>
+                      <option value="line_messaging">LINE Messaging API</option>
                       <option value="webhook">Webhook</option>
                     </select>
                     <input
@@ -6537,19 +6538,36 @@ function Unit12CustomerService({
                       className="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     />
                   </div>
-                  <input
-                    placeholder={wh.type === 'line_notify' ? 'LINE Notify Token（從 notify-bot.line.me 取得）' : 'Webhook URL（https://...）'}
-                    value={wh.value}
-                    onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
-                    className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
-                  />
+                  {wh.type === 'line_messaging' ? (
+                    <>
+                      <input
+                        placeholder="Channel Access Token（LINE Developers 取得）"
+                        value={wh.value}
+                        onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
+                        className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+                      />
+                      <input
+                        placeholder="目標 ID：User ID（U 開頭）或 Group ID（C 開頭）"
+                        value={wh.target ?? ''}
+                        onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, target: e.target.value } : w))}
+                        className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+                      />
+                    </>
+                  ) : (
+                    <input
+                      placeholder="Webhook URL（https://...）"
+                      value={wh.value}
+                      onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
+                      className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+                    />
+                  )}
                 </div>
                 <button onClick={() => setNotifyWebhooks(prev => prev.filter((_, i) => i !== idx))}
                   className="text-gray-400 hover:text-red-500 p-1 rounded">✕</button>
               </div>
             ))}
             <button
-              onClick={() => setNotifyWebhooks(prev => [...prev, { id: crypto.randomUUID(), type: 'line_notify', label: '', value: '' }])}
+              onClick={() => setNotifyWebhooks(prev => [...prev, { id: crypto.randomUUID(), type: 'line_messaging', label: '', value: '', target: '' }])}
               className="text-xs text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 flex items-center gap-1"
             >+ 新增通知管道</button>
           </div>

@@ -371,7 +371,7 @@ async function handlePost(req: NextRequest) {
     bookingFlowEnabled = false,
     paymentInfo = '',
     bookingFlows = [] as BookingFlowDef[],
-    notifyWebhooks = [] as Array<{ id: string; type: 'line_notify' | 'webhook'; label: string; value: string }>,
+    notifyWebhooks = [] as Array<{ id: string; type: 'line_messaging' | 'webhook'; label: string; value: string; target?: string }>,
   } = await req.json()
 
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
@@ -461,13 +461,14 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
     // Fire-and-forget notifications (do not await — don't block the response)
     if (notifyWebhooks.length > 0) {
-      type NW = { type: 'line_notify' | 'webhook'; value: string }
+      type NW = { type: 'line_messaging' | 'webhook'; value: string; target?: string }
       void Promise.allSettled((notifyWebhooks as NW[]).filter(wh => wh.value?.trim()).map(wh => {
-        if (wh.type === 'line_notify') {
-          return fetch('https://notify-api.line.me/api/notify', {
+        if (wh.type === 'line_messaging') {
+          if (!wh.target?.trim()) return Promise.resolve()
+          return fetch('https://api.line.me/v2/bot/message/push', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ message: notifyMsg }),
+            headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
           })
         } else {
           return fetch(wh.value.trim(), {
