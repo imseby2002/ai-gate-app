@@ -4786,6 +4786,13 @@ interface CsInboxMessage {
   created_at: string
 }
 
+interface NotifyWebhook {
+  id: string
+  type: 'line_notify' | 'webhook'
+  label: string
+  value: string  // LINE Notify token 或 Webhook URL
+}
+
 interface Unit12Data {
   systemPrompt?: string
   knowledgeBase?: string
@@ -4796,8 +4803,9 @@ interface Unit12Data {
   bookingFlowEnabled?: boolean
   paymentInfo?: string
   bookingFlows?: BookingFlowDef[]
-  vipList?: string        // 換行分隔的 VIP 名單
+  vipList?: string
   autoCloseMinutes?: number
+  notifyWebhooks?: NotifyWebhook[]
 }
 
 const CS_PLATFORMS = [
@@ -5004,6 +5012,7 @@ function Unit12CustomerService({
   // VIP 識別 + 自動結案
   const [vipList, setVipList] = useState(savedData?.vipList ?? '')
   const [autoCloseMinutes, setAutoCloseMinutes] = useState(savedData?.autoCloseMinutes ?? 0)
+  const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -5023,6 +5032,7 @@ function Unit12CustomerService({
     if (savedData.bookingFlows?.length) setBookingFlows(savedData.bookingFlows)
     if (savedData.vipList !== undefined) setVipList(savedData.vipList)
     if (savedData.autoCloseMinutes !== undefined) setAutoCloseMinutes(savedData.autoCloseMinutes)
+    if (savedData.notifyWebhooks !== undefined) setNotifyWebhooks(savedData.notifyWebhooks)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -5602,7 +5612,7 @@ function Unit12CustomerService({
   function saveSettings() {
     setSavingSettings(true)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -5641,6 +5651,7 @@ function Unit12CustomerService({
           bookingFlowEnabled,
           paymentInfo,
           bookingFlows,
+          notifyWebhooks,
         }),
       })
       const raw = await res.text()
@@ -5683,7 +5694,7 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -6498,6 +6509,49 @@ function Unit12CustomerService({
               <span className="text-sm text-gray-500">分鐘後自動結案</span>
               {autoCloseMinutes > 0 && <span className="text-xs text-green-600">✓ 已啟用</span>}
             </div>
+          </div>
+
+          {/* 工單通知設定 */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-800">工單通知</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">建立工單時自動推播</span>
+            </div>
+            <p className="text-xs text-gray-500">客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Notify 及自訂 Webhook。</p>
+            {notifyWebhooks.map((wh, idx) => (
+              <div key={wh.id} className="flex gap-2 items-start p-3 bg-gray-50 rounded-xl border">
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <select
+                      value={wh.type}
+                      onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, type: e.target.value as NotifyWebhook['type'] } : w))}
+                      className="text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    >
+                      <option value="line_notify">LINE Notify</option>
+                      <option value="webhook">Webhook</option>
+                    </select>
+                    <input
+                      placeholder="備註名稱（如：店長LINE）"
+                      value={wh.label}
+                      onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, label: e.target.value } : w))}
+                      className="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                  <input
+                    placeholder={wh.type === 'line_notify' ? 'LINE Notify Token（從 notify-bot.line.me 取得）' : 'Webhook URL（https://...）'}
+                    value={wh.value}
+                    onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
+                    className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+                  />
+                </div>
+                <button onClick={() => setNotifyWebhooks(prev => prev.filter((_, i) => i !== idx))}
+                  className="text-gray-400 hover:text-red-500 p-1 rounded">✕</button>
+              </div>
+            ))}
+            <button
+              onClick={() => setNotifyWebhooks(prev => [...prev, { id: crypto.randomUUID(), type: 'line_notify', label: '', value: '' }])}
+              className="text-xs text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 flex items-center gap-1"
+            >+ 新增通知管道</button>
           </div>
 
           <button onClick={saveSettings} disabled={savingSettings}

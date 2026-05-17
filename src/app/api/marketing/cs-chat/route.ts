@@ -371,6 +371,7 @@ async function handlePost(req: NextRequest) {
     bookingFlowEnabled = false,
     paymentInfo = '',
     bookingFlows = [] as BookingFlowDef[],
+    notifyWebhooks = [] as Array<{ id: string; type: 'line_notify' | 'webhook'; label: string; value: string }>,
   } = await req.json()
 
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
@@ -455,6 +456,29 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
       .single()
 
     const ticketNum = ticket?.id?.slice(0, 8).toUpperCase() ?? '—'
+    const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+    const notifyMsg = `\n[AI GATE 工單]\n客人要求：${message.slice(0, 80)}\n工單編號：${ticketNum}\n時間：${taiwanNow}`
+
+    // Fire-and-forget notifications (do not await — don't block the response)
+    if (notifyWebhooks.length > 0) {
+      type NW = { type: 'line_notify' | 'webhook'; value: string }
+      void Promise.allSettled((notifyWebhooks as NW[]).filter(wh => wh.value?.trim()).map(wh => {
+        if (wh.type === 'line_notify') {
+          return fetch('https://notify-api.line.me/api/notify', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ message: notifyMsg }),
+          })
+        } else {
+          return fetch(wh.value.trim(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: notifyMsg, ticket, ticketNum, customerMessage: message }),
+          })
+        }
+      }))
+    }
+
     return NextResponse.json({
       reply: `好的，已為您建立服務工單（編號：${ticketNum}），客服專員將盡快與您聯繫，請稍候。`,
       intent: '人工客服請求',
