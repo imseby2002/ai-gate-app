@@ -432,6 +432,42 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   }
 
   const t0 = Date.now()
+
+  // ── Human escalation detection ────────────────────────────────────────────
+  // If the customer explicitly asks for a human agent, create a ticket and return immediately.
+  const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務/
+  if (HUMAN_ESCALATION_RE.test(message)) {
+    const allMsgs = [...(history as { role: string; content: string }[]), { role: 'user', content: message }]
+    const { data: ticket } = await supabase
+      .from('cs_tickets')
+      .insert({
+        user_id: user.id,
+        industry: 'homestay',
+        platform: 'chat',
+        subject: message.slice(0, 80),
+        description: '客人要求人工客服',
+        priority: 'high',
+        intent: '人工客服請求',
+        messages: allMsgs,
+        campaign_id: campaignId ?? null,
+      })
+      .select()
+      .single()
+
+    const ticketNum = ticket?.id?.slice(0, 8).toUpperCase() ?? '—'
+    return NextResponse.json({
+      reply: `好的，已為您建立服務工單（編號：${ticketNum}），客服專員將盡快與您聯繫，請稍候。`,
+      intent: '人工客服請求',
+      risk: 'high',
+      provider: 'system',
+      latencyMs: Date.now() - t0,
+      summary: '客人要求人工客服',
+      images: [],
+      ticketCreated: true,
+      ticket,
+    })
+  }
+
   const geminiKey = process.env.GOOGLE_AI_API_KEY
   if (!geminiKey) return NextResponse.json({ error: 'GOOGLE_AI_API_KEY 未設定' }, { status: 500 })
 

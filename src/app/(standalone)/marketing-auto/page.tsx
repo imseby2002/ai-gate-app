@@ -5676,6 +5676,11 @@ function Unit12CustomerService({
             meta: msgMeta,
           }])
         }
+        // 自動建立工單：客人輸入人工客服相關字眼時
+        if (data.ticketCreated && data.ticket) {
+          setTickets(prev => [data.ticket, ...prev])
+          setTab('tickets')
+        }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
         onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes })
