@@ -4743,10 +4743,41 @@ const BOOKING_STEP_LABELS: Record<BookingStep, string> = {
 interface BookingFlowDef {
   id: string
   name: string
-  triggerKeywords: string   // 逗號分隔
-  dataHint: string          // 對應知識庫/定價模組的關鍵字，例如「賞鯨」「海景大床房」
+  triggerKeywords: string
+  dataHint: string
   steps: BookingStep[]
   paymentInfo: string
+  simpleMode?: boolean          // AI 只問方案/人數/報價，確認後彈出表單
+  requirePassengerId?: boolean  // 表單要求身分證（幼兒永遠免填）
+}
+
+interface BookingParticipant {
+  name: string
+  birthday: string  // YYYY-MM-DD
+  idNumber: string
+}
+
+interface BookingFormConfig {
+  flowId: string
+  packageName: string
+  requirePassengerId: boolean
+  headcount: number
+}
+
+function calcParticipantAge(birthday: string): number {
+  if (!birthday) return -1
+  const birth = new Date(birthday)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
+function getAgeCategory(age: number): '幼兒' | '小孩' | '成人' {
+  if (age <= 3) return '幼兒'
+  if (age < 12) return '小孩'
+  return '成人'
 }
 
 const DEFAULT_FLOWS: BookingFlowDef[] = [
@@ -4755,8 +4786,10 @@ const DEFAULT_FLOWS: BookingFlowDef[] = [
     name: '行程預訂（賞鯨/出海）',
     triggerKeywords: '賞鯨,繞島,登島,出海,行程',
     dataHint: '賞鯨',
-    steps: ['product', 'date_depart', 'timeslot', 'headcount', 'passenger_id', 'phone'],
+    steps: ['product', 'date_depart', 'timeslot', 'headcount'],
     paymentInfo: '',
+    simpleMode: true,
+    requirePassengerId: true,
   },
 ]
 
@@ -5010,6 +5043,12 @@ function Unit12CustomerService({
   const [paymentInfo, setPaymentInfo] = useState(savedData?.paymentInfo ?? '')
   const [bookingFlows, setBookingFlows] = useState<BookingFlowDef[]>(savedData?.bookingFlows ?? DEFAULT_FLOWS)
   const [editingFlow, setEditingFlow] = useState<BookingFlowDef | null>(null)
+  // 報名表單 Modal
+  const [bookingFormOpen, setBookingFormOpen] = useState(false)
+  const [bookingFormConfig, setBookingFormConfig] = useState<BookingFormConfig | null>(null)
+  const [bookingParticipants, setBookingParticipants] = useState<BookingParticipant[]>([])
+  const [bookingContactPhone, setBookingContactPhone] = useState('')
+  const [bookingSubmitting, setBookingSubmitting] = useState(false)
   // VIP 識別 + 自動結案
   const [vipList, setVipList] = useState(savedData?.vipList ?? '')
   const [autoCloseMinutes, setAutoCloseMinutes] = useState(savedData?.autoCloseMinutes ?? 0)
@@ -5688,10 +5727,20 @@ function Unit12CustomerService({
             meta: msgMeta,
           }])
         }
-        // 自動建立工單：客人輸入人工客服相關字眼時
+        // 自動建立工單
         if (data.ticketCreated && data.ticket) {
           setTickets(prev => [data.ticket, ...prev])
           setTab('tickets')
+        }
+        // 彈出報名表單
+        if (data.showBookingForm && data.bookingFormConfig) {
+          const cfg = data.bookingFormConfig as BookingFormConfig
+          setBookingFormConfig(cfg)
+          setBookingParticipants(
+            Array.from({ length: Math.max(1, cfg.headcount) }, () => ({ name: '', birthday: '', idNumber: '' }))
+          )
+          setBookingContactPhone('')
+          setBookingFormOpen(true)
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
@@ -6335,7 +6384,10 @@ function Unit12CustomerService({
                 {bookingFlows.map((flow, fi) => (
                   <div key={flow.id} className="bg-white border border-emerald-200 rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-700">{flow.name || `流程 ${fi + 1}`}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold text-gray-700">{flow.name || `流程 ${fi + 1}`}</span>
+                        {flow.simpleMode && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">快速報名</span>}
+                      </div>
                       <div className="flex gap-1.5">
                         <button onClick={() => setEditingFlow({ ...flow })}
                           className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
@@ -6346,9 +6398,10 @@ function Unit12CustomerService({
                     <div className="text-[10px] text-gray-500">
                       觸發關鍵字：<span className="text-emerald-700 font-medium">{flow.triggerKeywords || '(未設定)'}</span>
                     </div>
-                    <div className="text-[10px] text-gray-500">
-                      收集步驟：{flow.steps.map(s => BOOKING_STEP_LABELS[s]).join(' → ')}
-                    </div>
+                    {flow.simpleMode
+                      ? <div className="text-[10px] text-blue-600">AI 報價確認後 → 彈出報名表單 → 推送 LINE</div>
+                      : <div className="text-[10px] text-gray-500">收集步驟：{flow.steps.map(s => BOOKING_STEP_LABELS[s]).join(' → ')}</div>
+                    }
                   </div>
                 ))}
 
@@ -6409,10 +6462,29 @@ function Unit12CustomerService({
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                 </div>
 
-                {/* Steps */}
+                {/* Simple mode toggle */}
+                <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={editingFlow.simpleMode ?? false}
+                      onChange={e => setEditingFlow(f => f ? { ...f, simpleMode: e.target.checked } : f)}
+                      className="rounded" />
+                    <span className="text-xs font-semibold text-blue-800">快速報名模式</span>
+                  </label>
+                  <p className="text-[10px] text-blue-600 leading-relaxed">啟用後：AI 只問方案和人數、報價，客人確認後彈出表單收集詳細資料（姓名/生日/身分證），並推送至客服 LINE。</p>
+                  {editingFlow.simpleMode && (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editingFlow.requirePassengerId ?? true}
+                        onChange={e => setEditingFlow(f => f ? { ...f, requirePassengerId: e.target.checked } : f)}
+                        className="rounded" />
+                      <span className="text-xs text-blue-700">需要填身分證號（幼兒永遠免填）</span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Steps — hidden in simple mode */}
+                {!editingFlow.simpleMode && (
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600">收集步驟（勾選 + 拖排順序）</label>
-                  <p className="text-[10px] text-gray-400">AI 依序詢問已勾選的步驟</p>
+                  <label className="text-xs font-medium text-gray-600">收集步驟（拖動 ↑↓ 調整順序）</label>
                   <div className="space-y-1.5">
                     {(Object.keys(BOOKING_STEP_LABELS) as BookingStep[]).map(step => {
                       const checked = editingFlow.steps.includes(step)
@@ -6427,8 +6499,8 @@ function Unit12CustomerService({
                                 : f.steps.filter(s => s !== step)
                               return { ...f, steps }
                             })
-                          }} className="w-3.5 h-3.5 accent-emerald-500" />
-                          <span className="flex-1 text-xs text-gray-700">{BOOKING_STEP_LABELS[step]}</span>
+                          }} className="rounded" />
+                          <span className="text-xs flex-1">{BOOKING_STEP_LABELS[step]}</span>
                           {checked && (
                             <div className="flex gap-1">
                               <button disabled={idx === 0} onClick={() => setEditingFlow(f => {
@@ -6446,6 +6518,7 @@ function Unit12CustomerService({
                     })}
                   </div>
                 </div>
+                )}
 
                 {/* Payment info per flow */}
                 <div className="space-y-1">
@@ -7696,6 +7769,121 @@ function Unit12CustomerService({
                 ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── 報名表單 Modal ── */}
+      {bookingFormOpen && bookingFormConfig && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setBookingFormOpen(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-gray-800">報名資料填寫</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{bookingFormConfig.packageName}</p>
+              </div>
+              <button onClick={() => setBookingFormOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            {/* 參加人員 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-gray-700">參加人員</label>
+                <div className="flex gap-1.5">
+                  <button onClick={() => setBookingParticipants(p => [...p, { name: '', birthday: '', idNumber: '' }])}
+                    className="text-xs px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200">
+                    + 新增
+                  </button>
+                  {bookingParticipants.length > 1 && (
+                    <button onClick={() => setBookingParticipants(p => p.slice(0, -1))}
+                      className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
+                      − 移除
+                    </button>
+                  )}
+                </div>
+              </div>
+              {bookingParticipants.map((p, i) => {
+                const age = calcParticipantAge(p.birthday)
+                const cat = age >= 0 ? getAgeCategory(age) : null
+                const isInfant = cat === '幼兒'
+                const catColor = cat === '成人' ? 'bg-blue-100 text-blue-700' : cat === '小孩' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                return (
+                  <div key={i} className="p-3 bg-gray-50 rounded-xl border space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-500 w-4">{i + 1}.</span>
+                      {cat && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${catColor}`}>{cat}{age >= 0 ? `（${age}歲）` : ''}</span>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500">姓名 <span className="text-red-500">*</span></label>
+                        <input value={p.name} onChange={e => setBookingParticipants(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
+                          placeholder="王小明"
+                          className="w-full mt-0.5 text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500">生日 <span className="text-red-500">*</span></label>
+                        <input type="date" value={p.birthday} onChange={e => setBookingParticipants(prev => prev.map((x, j) => j === i ? { ...x, birthday: e.target.value } : x))}
+                          className="w-full mt-0.5 text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                      </div>
+                    </div>
+                    {bookingFormConfig.requirePassengerId && !isInfant && (
+                      <div>
+                        <label className="text-[10px] text-gray-500">身分證號 <span className="text-red-500">*</span></label>
+                        <input value={p.idNumber} onChange={e => setBookingParticipants(prev => prev.map((x, j) => j === i ? { ...x, idNumber: e.target.value.toUpperCase() } : x))}
+                          placeholder="A123456789"
+                          className="w-full mt-0.5 text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono" />
+                      </div>
+                    )}
+                    {isInfant && <p className="text-[10px] text-orange-600">幼兒（3歲以下）免填身分證</p>}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* 聯絡電話 */}
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-gray-700">聯絡電話 <span className="text-red-500">*</span></label>
+              <p className="text-[10px] text-gray-400">填寫其中一位參加者的聯絡電話</p>
+              <input value={bookingContactPhone} onChange={e => setBookingContactPhone(e.target.value)}
+                placeholder="0912-345-678"
+                type="tel"
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+            </div>
+
+            {/* Submit */}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setBookingFormOpen(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+              <button
+                disabled={bookingSubmitting || bookingParticipants.some(p => !p.name.trim() || !p.birthday) || !bookingContactPhone.trim()}
+                onClick={async () => {
+                  setBookingSubmitting(true)
+                  try {
+                    await fetch('/api/marketing/booking-submit', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        packageName: bookingFormConfig.packageName,
+                        participants: bookingParticipants,
+                        contactPhone: bookingContactPhone,
+                        notifyWebhooks,
+                        campaignId,
+                      }),
+                    })
+                    setBookingFormOpen(false)
+                    setTestHistory(prev => [...prev, {
+                      role: 'assistant',
+                      content: '感謝您的報名！客服會盡快與您聯繫，請保持電話暢通。',
+                    }])
+                  } finally {
+                    setBookingSubmitting(false)
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                {bookingSubmitting ? '送出中…' : '確認送出'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

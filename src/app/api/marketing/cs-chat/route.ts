@@ -250,9 +250,11 @@ interface BookingFlowDef {
   id: string
   name: string
   triggerKeywords: string
-  dataHint?: string   // 對應知識庫/定價模組的關鍵字，例如「賞鯨」「海景大床房」
+  dataHint?: string
   steps: string[]
   paymentInfo: string
+  simpleMode?: boolean          // AI 只問方案/人數/報價，確認後彈出表單
+  requirePassengerId?: boolean  // 表單是否要求身分證（幼兒永遠免填）
 }
 
 function buildStepLabels(dataHint?: string): Record<string, string> {
@@ -281,6 +283,16 @@ function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlo
   const flowSection = flows.length > 0
     ? flows.map(f => {
         const keywords = f.triggerKeywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
+        if (f.simpleMode) {
+          return `【${f.name}（快速報名模式）】
+觸發：客人提到「${keywords}」等字詞時啟動
+執行步驟：
+  1. 列出可選方案讓客人選（從知識庫/定價表取得）
+  2. 詢問人數（幾位）
+  3. 根據方案和人數報價，告知總金額
+  4. 問：「請問確定要參加嗎？」
+注意：步驟4後禁止再問姓名/身分證/電話，系統會以表單收集`
+        }
         const stepLabels = buildStepLabels(f.dataHint)
         const stepList = f.steps.map((s, i) => `  ${i + 1}. ${stepLabels[s] ?? s}`).join('\n')
         return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}`
@@ -376,9 +388,9 @@ async function handlePost(req: NextRequest) {
 
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
 
-  // ── Server-side booking completion detection ──────────────────────────────
-  // Detects if all defined steps have been answered in the conversation history
-  // and injects an explicit confirmation instruction so AI doesn't have to guess.
+  const t0 = Date.now()
+
+  // ── Server-side booking detection ────────────────────────────────────────
   let bookingCompletionInstruction = ''
   if (bookingFlowEnabled && bookingFlows.length > 0) {
     const allMessages = [
@@ -407,7 +419,40 @@ async function handlePost(req: NextRequest) {
       product:       () => allMessages.filter(m => m.role === 'user').length > 1,
     }
 
+    // ── Simple mode: customer confirmed after quote → return showBookingForm ──
+    const CONFIRM_RE = /^(確定|好|要|ok|yes|是|沒問題|可以|行|好的|確認|好啊|要的|參加|預訂|報名)/i
+    const NEGATIVE_RE = /不|沒|取消|不要|算了|考慮/
     for (const flow of bookingFlows as BookingFlowDef[]) {
+      if (!flow.simpleMode) continue
+      const smKws = flow.triggerKeywords.split(',').map((k: string) => k.trim())
+      const smTriggered = smKws.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
+      if (!smTriggered) continue
+      const quoteGiven = /\$[0-9,，]+|NT\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts)
+      const isConfirm = CONFIRM_RE.test(message.trim()) && !NEGATIVE_RE.test(message)
+      if (quoteGiven && isConfirm) {
+        const hcMatch = userTexts.match(/([0-9]+)\s*(大人|成人|位|人)/)
+        const headcount = hcMatch ? parseInt(hcMatch[1]) : 1
+        return NextResponse.json({
+          showBookingForm: true,
+          bookingFormConfig: {
+            flowId: flow.id,
+            packageName: flow.name,
+            requirePassengerId: flow.requirePassengerId ?? true,
+            headcount,
+          },
+          reply: '好的！請填寫報名資料，客服會盡快與您聯繫。',
+          intent: '確認預訂',
+          risk: 'low',
+          provider: 'system',
+          latencyMs: Date.now() - t0,
+          summary: `客人確認預訂 ${flow.name}`,
+          images: [],
+        })
+      }
+    }
+
+    for (const flow of bookingFlows as BookingFlowDef[]) {
+      if (flow.simpleMode) continue  // simple mode handled above
       const keywords = flow.triggerKeywords.split(',').map((k: string) => k.trim())
       const flowTriggered = keywords.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
       if (!flowTriggered) continue
@@ -431,8 +476,6 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
       }
     }
   }
-
-  const t0 = Date.now()
 
   // ── Human escalation detection ────────────────────────────────────────────
   // If the customer explicitly asks for a human agent, create a ticket and return immediately.
