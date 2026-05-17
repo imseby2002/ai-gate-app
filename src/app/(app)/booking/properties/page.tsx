@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Edit2, Trash2, Home } from 'lucide-react'
 
 interface Property {
@@ -113,8 +114,8 @@ export default function PropertiesPage() {
       )}
 
       {/* Form Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      {isOpen && createPortal(
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) { setAdding(false); setEditing(null) } }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-3">
             <h3 className="font-bold text-gray-900">{editing ? '編輯房源' : '新增房源'}</h3>
@@ -156,7 +157,8 @@ export default function PropertiesPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

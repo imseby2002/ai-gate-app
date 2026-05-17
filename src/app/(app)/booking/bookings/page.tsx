@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Search, Filter } from 'lucide-react'
 
 interface Booking {
@@ -174,8 +175,8 @@ export default function BookingsPage() {
       )}
 
       {/* Add Modal */}
-      {adding && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      {adding && createPortal(
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) setAdding(false) }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3">
             <h3 className="font-bold text-gray-900">新增訂單</h3>
@@ -238,7 +239,8 @@ export default function BookingsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
