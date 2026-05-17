@@ -1,4 +1,3 @@
-import ical, { VEvent } from 'node-ical'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const ICAL_PLATFORMS: Record<string, { name: string; color: string }> = {
@@ -9,6 +8,14 @@ export const ICAL_PLATFORMS: Record<string, { name: string; color: string }> = {
   asiayo:       { name: 'AsiaYo',       color: '#F26522' },
   easytravel:   { name: 'EasyTravel',   color: '#00AEEF' },
   other:        { name: '其他平台',      color: '#6B7280' },
+}
+
+interface ICalEvent {
+  uid: string
+  start: string
+  end: string
+  summary: string
+  description: string
 }
 
 interface SyncResult {
@@ -51,9 +58,9 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     return result
   }
 
-  let events: ReturnType<typeof ical.parseICS>
+  let vevents: ICalEvent[]
   try {
-    events = ical.parseICS(rawIcal)
+    vevents = parseICalEvents(rawIcal)
   } catch (e) {
     const msg = `[${setting.platform_name}] 解析 iCal 失敗：${String(e)}`
     result.errors.push(msg)
@@ -63,16 +70,12 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     return result
   }
 
-  const vevents = Object.values(events).filter(e => e?.type === 'VEVENT') as VEvent[]
-
   for (const ev of vevents) {
-    if (!ev.start || !ev.end) continue
-    const uid = ev.uid ?? `${settingId}_${String(ev.start)}`
-    const checkIn  = toDateStr(ev.start)
-    const checkOut = toDateStr(ev.end)
-    const guestName = extractGuestName(String(ev.summary ?? ''), setting.platform)
+    const uid = ev.uid || `${settingId}_${ev.start}`
+    const checkIn  = ev.start
+    const checkOut = ev.end
+    const guestName = extractGuestName(ev.summary, setting.platform)
 
-    // Upsert booking
     const { data: bk, error: bkErr } = await supabase
       .from('bookings')
       .upsert({
@@ -102,7 +105,6 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
       result.updated++
     }
 
-    // Blocked dates: every day from check_in to check_out (exclusive)
     const dates = dateRange(checkIn, checkOut)
     for (const date of dates) {
       const { error: bdErr } = await supabase
@@ -142,12 +144,73 @@ export async function syncAllICalForUser(userId: string) {
   return Promise.all(settings.map((s: { id: string }) => syncICalForSetting(s.id)))
 }
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Lightweight iCal parser ───────────────────────────────────
 
-function toDateStr(d: Date | string): string {
-  const dt = typeof d === 'string' ? new Date(d) : d
-  return dt.toISOString().slice(0, 10)
+function parseICalEvents(raw: string): ICalEvent[] {
+  const events: ICalEvent[] = []
+  // Unfold continuation lines (lines starting with whitespace)
+  const unfolded = raw.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '')
+  const lines = unfolded.split(/\r?\n/)
+
+  let inEvent = false
+  let current: Partial<ICalEvent> = {}
+
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') {
+      inEvent = true
+      current = {}
+      continue
+    }
+    if (line === 'END:VEVENT') {
+      inEvent = false
+      if (current.start && current.end) {
+        events.push({
+          uid:         current.uid ?? '',
+          start:       current.start,
+          end:         current.end,
+          summary:     current.summary ?? '',
+          description: current.description ?? '',
+        })
+      }
+      continue
+    }
+    if (!inEvent) continue
+
+    const colon = line.indexOf(':')
+    if (colon === -1) continue
+    const key   = line.slice(0, colon).toUpperCase()
+    const value = line.slice(colon + 1).trim()
+
+    if (key === 'UID')                                current.uid         = value
+    else if (key === 'SUMMARY')                       current.summary     = decodeICalText(value)
+    else if (key === 'DESCRIPTION')                   current.description = decodeICalText(value)
+    else if (key.startsWith('DTSTART'))               current.start       = parseDateValue(key, value)
+    else if (key.startsWith('DTEND'))                 current.end         = parseDateValue(key, value)
+  }
+
+  return events
 }
+
+function parseDateValue(key: string, value: string): string {
+  // Key may be DTSTART;VALUE=DATE or DTSTART;TZID=...
+  // Value may be 20240101 or 20240101T120000Z
+  const cleaned = value.replace(/[^0-9TZ]/g, '')
+  if (cleaned.length === 8) {
+    // DATE: YYYYMMDD
+    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 6)}-${cleaned.slice(6, 8)}`
+  }
+  // DATETIME: parse as ISO
+  const y = cleaned.slice(0, 4)
+  const mo = cleaned.slice(4, 6)
+  const d = cleaned.slice(6, 8)
+  return `${y}-${mo}-${d}`
+}
+
+function decodeICalText(value: string): string {
+  return value.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\')
+}
+
+// ── Helpers ──────────────────────────────────────────────────
 
 function dateRange(start: string, end: string): string[] {
   const dates: string[] = []
@@ -161,9 +224,6 @@ function dateRange(start: string, end: string): string[] {
 }
 
 function extractGuestName(summary: string, platform: string): string {
-  // Booking.com: "CLOSED - John Smith"
-  // Airbnb: "Reserved"
-  // Agoda: "Agoda - John Smith"
   const cleaned = summary
     .replace(/^CLOSED\s*-?\s*/i, '')
     .replace(new RegExp(`^${platform}\\s*-?\\s*`, 'i'), '')
