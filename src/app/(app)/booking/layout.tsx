@@ -1,14 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Home, List, Settings, RefreshCw } from 'lucide-react'
+import { CalendarDays, Home, List, RefreshCw, Mail } from 'lucide-react'
 
 const NAV = [
-  { href: '/booking',            label: '總覽',   icon: Home },
-  { href: '/booking/bookings',   label: '訂單',   icon: List },
-  { href: '/booking/calendar',   label: '日曆',   icon: CalendarDays },
-  { href: '/booking/properties', label: '房源',   icon: Home },
+  { href: '/booking',            label: '總覽',      icon: Home },
+  { href: '/booking/bookings',   label: '訂單',      icon: List },
+  { href: '/booking/calendar',   label: '日曆',      icon: CalendarDays },
+  { href: '/booking/properties', label: '房源',      icon: Home },
   { href: '/booking/ical',       label: 'iCal 同步', icon: RefreshCw },
+  { href: '/booking/email',      label: 'Email 擷取', icon: Mail },
 ]
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
