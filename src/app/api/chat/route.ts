@@ -8,6 +8,7 @@ import { streamClaude } from '@/lib/ai/providers/claude'
 import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
+import { streamCliProxy, isCliProxyAvailable, CLI_PROXY_MODELS } from '@/lib/ai/providers/cli-proxy'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -155,7 +156,10 @@ export async function POST(req: NextRequest) {
       maxTokens: 4096,
     }
 
-    if (provider === 'deepseek') {
+    // Route via CLI Proxy if available and model is supported
+    if (isCliProxyAvailable() && modelId in CLI_PROXY_MODELS && !imageBase64) {
+      streamResult = await streamCliProxy(chatParams)
+    } else if (provider === 'deepseek') {
       streamResult = await streamDeepSeek(chatParams)
     } else if (provider === 'google') {
       streamResult = await streamGemini({ ...chatParams, imageBase64 })
