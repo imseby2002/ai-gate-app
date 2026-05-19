@@ -1,0 +1,61 @@
+host: ""
+port: 8317
+
+remote-management:
+  allow-remote: true
+  # 請修改為你的密鑰（登入控制台用）
+  secret-key: "your-management-secret-key"
+  disable-control-panel: false
+
+auth-dir: "~/.cli-proxy-api"
+
+# AI GATE 呼叫 Proxy 用的 API Key（請修改）
+api-keys:
+  - "ai-gate-proxy-key-change-me"
+
+debug: false
+logging-to-file: true
+logs-max-total-size-mb: 100
+usage-statistics-enabled: true
+request-retry: 3
+routing:
+  strategy: "round-robin"
+
+# ── Claude API（你的 Anthropic Key）───────────────────────────────────────────
+claude-api-key:
+  - api-key: "YOUR_ANTHROPIC_API_KEY"
+    models:
+      - name: "claude-sonnet-4-6"
+        alias: "claude-sonnet-4-6"
+      - name: "claude-haiku-4-5-20251001"
+        alias: "claude-haiku-4-5-20251001"
+
+# ── Gemini API（你的 Google AI Key）──────────────────────────────────────────
+gemini-api-key:
+  - api-key: "YOUR_GOOGLE_AI_API_KEY"
+    models:
+      - name: "gemini-2.5-flash"
+        alias: "gemini-2.5-flash"
+      - name: "gemini-2.5-pro"
+        alias: "gemini-2.5-pro"
+
+# ── DeepSeek（OpenAI-compatible）──────────────────────────────────────────────
+openai-compatibility:
+  - name: "deepseek"
+    base-url: "https://api.deepseek.com/v1"
+    api-key-entries:
+      - api-key: "YOUR_DEEPSEEK_API_KEY"
+    models:
+      - name: "deepseek-chat"
+        alias: "deepseek-chat"
+
+# ── Kiro / AWS CodeWhisperer（免費額度）──────────────────────────────────────
+# 登入後自動取得 token，步驟：
+# 1. 開瀏覽器到 http://your-server:8085
+# 2. 使用管理密鑰登入控制台
+# 3. 點 Kiro OAuth 登入
+#kiro:
+#  - token-file: "~/.cli-proxy-api/kiro-token.json"
+
+# ── GitHub Copilot（免費額度）────────────────────────────────────────────────
+# 登入步驟同上，在控制台選 GitHub Copilot OAuth

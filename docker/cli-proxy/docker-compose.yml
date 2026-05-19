@@ -1,0 +1,15 @@
+services:
+  cli-proxy-api:
+    image: eceasy/cli-proxy-api-plus:latest
+    pull_policy: always
+    container_name: cli-proxy-api-plus
+    environment:
+      DEPLOY: "production"
+    ports:
+      - "8317:8317"   # Main API (OpenAI-compatible)
+      - "8085:8085"   # Management control panel
+    volumes:
+      - ./config.yaml:/CLIProxyAPI/config.yaml
+      - ./auths:/root/.cli-proxy-api
+      - ./logs:/CLIProxyAPI/logs
+    restart: unless-stopped
