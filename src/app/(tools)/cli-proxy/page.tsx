@@ -110,7 +110,7 @@ export default function CliProxyPage() {
             ) : (
               <div className="text-xs text-red-500">未設定 PANEL_URL</div>
             )}
-            <div className="text-[11px] text-slate-400 mt-0.5">port 8085</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">port 8317/management.html</div>
           </div>
         </div>
 
@@ -145,7 +145,7 @@ export default function CliProxyPage() {
           <h2 className="font-semibold text-sm text-slate-800">Vercel 環境變數設定</h2>
           <p className="text-xs text-slate-500">在 Vercel 後台 → Settings → Environment Variables 加入以下變數：</p>
           {[
-            { key: 'NEXT_PUBLIC_CLI_PROXY_PANEL_URL', val: 'http://your-server-ip:8085', desc: '控制台 URL（瀏覽器可直連）' },
+            { key: 'NEXT_PUBLIC_CLI_PROXY_PANEL_URL', val: 'http://your-server-ip:8317/management.html', desc: '控制台 URL（瀏覽器可直連）' },
             { key: 'NEXT_PUBLIC_CLI_PROXY_API_URL',   val: 'http://your-server-ip:8317', desc: 'API 端點（伺服器端使用）' },
             { key: 'CLI_PROXY_API_KEY',               val: 'ai-gate-proxy-key-change-me', desc: 'config.yaml 中的 api-keys' },
           ].map(({ key, val, desc }) => (

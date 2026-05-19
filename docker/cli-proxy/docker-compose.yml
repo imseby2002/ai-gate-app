@@ -3,11 +3,12 @@ services:
     image: eceasy/cli-proxy-api:latest
     pull_policy: always
     container_name: cli-proxy-api-plus
-    environment:
-      DEPLOY: "production"
     ports:
-      - "8317:8317"   # Main API (OpenAI-compatible)
-      - "8085:8085"   # Management control panel
+      - "8317:8317"   # Main API + Management panel (/management.html)
+      - "8085:8085"   # Gemini OAuth callback
+      - "1455:1455"   # OpenAI/Codex OAuth callback
+      - "54545:54545" # Claude OAuth callback
+      - "51121:51121" # Antigravity OAuth callback
     volumes:
       - ./config.yaml:/CLIProxyAPI/config.yaml
       - ./auths:/root/.cli-proxy-api
