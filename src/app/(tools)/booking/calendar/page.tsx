@@ -11,7 +11,7 @@ interface Booking {
   platform: string
   num_guests: number
   properties?: { name: string }
-  property_id: string
+  property_id: string | null
 }
 
 interface Property { id: string; name: string }
@@ -28,6 +28,11 @@ const PLATFORM_COLORS: Record<string, string> = {
   other:       'bg-gray-400',
 }
 
+const PROP_PALETTE = [
+  'bg-indigo-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600',
+  'bg-violet-600', 'bg-teal-600',   'bg-orange-600', 'bg-pink-600',
+]
+
 const PLATFORM_NAMES: Record<string, string> = {
   booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
   trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
@@ -37,24 +42,22 @@ const PLATFORM_NAMES: Record<string, string> = {
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
-
 function getFirstDayOfWeek(year: number, month: number) {
   return new Date(year, month, 1).getDay()
 }
-
 function toDateStr(d: Date) {
   return d.toISOString().slice(0, 10)
 }
 
 export default function CalendarPage() {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [year, setYear]           = useState(now.getFullYear())
+  const [month, setMonth]         = useState(now.getMonth())
+  const [bookings, setBookings]   = useState<Booking[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [filterProp, setFilterProp] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<string | null>(null)
+  const [loading, setLoading]     = useState(true)
+  const [selected, setSelected]   = useState<string | null>(null)
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
@@ -81,11 +84,15 @@ export default function CalendarPage() {
     if (month === 11) { setYear(y => y + 1); setMonth(0) } else setMonth(m => m + 1)
   }
 
-  // Build a map: dateStr -> bookings that cover this date
+  // Property → color mapping
+  const propColorMap: Record<string, string> = {}
+  properties.forEach((p, i) => { propColorMap[p.id] = PROP_PALETTE[i % PROP_PALETTE.length] })
+
+  // Date → bookings map
   const dateBookings: Record<string, Booking[]> = {}
   for (const bk of bookings) {
-    const cur = new Date(bk.check_in)
-    const end = new Date(bk.check_out)
+    const cur = new Date(bk.check_in + 'T00:00:00')
+    const end = new Date(bk.check_out + 'T00:00:00')
     while (cur < end) {
       const ds = toDateStr(cur)
       if (!dateBookings[ds]) dateBookings[ds] = []
@@ -95,12 +102,24 @@ export default function CalendarPage() {
   }
 
   const daysInMonth = getDaysInMonth(year, month)
-  const firstDay = getFirstDayOfWeek(year, month)
-  const todayStr = toDateStr(now)
-  const monthName = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
-
-  // Bookings on selected date
+  const firstDay    = getFirstDayOfWeek(year, month)
+  const todayStr    = toDateStr(now)
+  const monthName   = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
   const selectedBookings = selected ? (dateBookings[selected] ?? []) : []
+  const showAllProps = !filterProp && properties.length > 1
+
+  function chipColor(bk: Booking) {
+    if (showAllProps) return propColorMap[bk.property_id ?? ''] ?? 'bg-gray-500'
+    return PLATFORM_COLORS[bk.platform] ?? 'bg-gray-500'
+  }
+  function chipLabel(bk: Booking) {
+    const guestPart = bk.guest_name || PLATFORM_NAMES[bk.platform] || bk.platform
+    if (showAllProps && bk.properties?.name) {
+      const abbr = bk.properties.name.slice(0, 5)
+      return `[${abbr}] ${guestPart}`
+    }
+    return guestPart
+  }
 
   return (
     <div className="p-6 space-y-4 max-w-5xl">
@@ -131,15 +150,26 @@ export default function CalendarPage() {
         <div className="text-center py-24 text-gray-400">載入中…</div>
       ) : (
         <>
+          {/* Property legend when showing all */}
+          {showAllProps && (
+            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+              {properties.map((p, i) => (
+                <div key={p.id} className="flex items-center gap-1 cursor-pointer hover:underline"
+                  onClick={() => setFilterProp(p.id)}>
+                  <span className={`w-2.5 h-2.5 rounded-sm ${PROP_PALETTE[i % PROP_PALETTE.length]}`} />
+                  {p.name}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Calendar grid */}
           <div className="bg-white rounded-xl border overflow-hidden">
-            {/* Weekday headers */}
             <div className="grid grid-cols-7 border-b">
               {['日', '一', '二', '三', '四', '五', '六'].map(d => (
                 <div key={d} className="text-center text-xs font-medium text-gray-500 py-2">{d}</div>
               ))}
             </div>
-            {/* Day cells */}
             <div className="grid grid-cols-7">
               {Array.from({ length: firstDay }).map((_, i) => (
                 <div key={`empty-${i}`} className="min-h-[90px] border-b border-r last:border-r-0 bg-gray-50/50" />
@@ -148,7 +178,7 @@ export default function CalendarPage() {
                 const day = i + 1
                 const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                 const daybks = dateBookings[ds] ?? []
-                const isToday = ds === todayStr
+                const isToday    = ds === todayStr
                 const isSelected = ds === selected
                 const col = (firstDay + i) % 7
                 return (
@@ -164,8 +194,8 @@ export default function CalendarPage() {
                     <div className="space-y-0.5">
                       {daybks.slice(0, 3).map((bk, bi) => (
                         <div key={`${bk.id}-${bi}`}
-                          className={`text-[10px] text-white px-1 py-0.5 rounded truncate ${PLATFORM_COLORS[bk.platform] ?? 'bg-gray-500'}`}>
-                          {bk.guest_name || PLATFORM_NAMES[bk.platform] || bk.platform}
+                          className={`text-[10px] text-white px-1 py-0.5 rounded truncate ${chipColor(bk)}`}>
+                          {chipLabel(bk)}
                         </div>
                       ))}
                       {daybks.length > 3 && (
@@ -178,15 +208,17 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Platform legend */}
-          <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-            {Object.entries(PLATFORM_NAMES).map(([k, v]) => (
-              <div key={k} className="flex items-center gap-1">
-                <span className={`w-2.5 h-2.5 rounded-sm ${PLATFORM_COLORS[k]}`} />
-                {v}
-              </div>
-            ))}
-          </div>
+          {/* Platform legend (when filtered to single property) */}
+          {!showAllProps && (
+            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+              {Object.entries(PLATFORM_NAMES).map(([k, v]) => (
+                <div key={k} className="flex items-center gap-1">
+                  <span className={`w-2.5 h-2.5 rounded-sm ${PLATFORM_COLORS[k]}`} />
+                  {v}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Selected day detail */}
           {selected && (
@@ -201,15 +233,15 @@ export default function CalendarPage() {
                 <div className="divide-y">
                   {selectedBookings.map(bk => (
                     <div key={bk.id} className="py-2.5 flex items-start gap-3">
-                      <span className={`mt-0.5 w-2.5 h-2.5 rounded-sm shrink-0 ${PLATFORM_COLORS[bk.platform] ?? 'bg-gray-400'}`} />
+                      <span className={`mt-0.5 w-2.5 h-2.5 rounded-sm shrink-0 ${chipColor(bk)}`} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900">{bk.guest_name || '(無名)'}</div>
                         <div className="text-xs text-gray-500">
                           {bk.check_in} → {bk.check_out} · {bk.num_guests} 人
-                          {bk.properties?.name && ` · ${bk.properties.name}`}
+                          {bk.properties?.name && ` · 📍${bk.properties.name}`}
                         </div>
+                        <div className="text-xs text-gray-400">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</div>
                       </div>
-                      <div className="text-xs text-gray-400 shrink-0">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</div>
                     </div>
                   ))}
                 </div>

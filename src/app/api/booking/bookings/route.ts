@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   if (property_id) q = q.eq('property_id', property_id)
   if (status)      q = q.eq('status', status)
-  if (from)        q = q.gte('check_in', from)
+  if (from)        q = q.gte('check_out', from)  // include bookings overlapping month start
   if (to)          q = q.lte('check_in', to)
 
   const { data, error } = await q

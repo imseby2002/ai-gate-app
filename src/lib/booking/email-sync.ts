@@ -103,6 +103,19 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const extracted = await extractBookingWithAI(subject, body, platform)
           if (!extracted?.is_booking) continue
 
+          // Skip if already imported from iCal or previous sync (same platform + dates)
+          if (extracted.check_in && extracted.check_out) {
+            const { data: dup } = await supabase
+              .from('bookings')
+              .select('id')
+              .eq('user_id', setting.user_id)
+              .eq('platform', platform)
+              .eq('check_in', extracted.check_in)
+              .eq('check_out', extracted.check_out)
+              .maybeSingle()
+            if (dup) { result.processed++; continue }
+          }
+
           // Upsert booking
           const confId = extracted.confirmation_id || `email_${settingId}_${uid}`
           const { error: bkErr } = await supabase
