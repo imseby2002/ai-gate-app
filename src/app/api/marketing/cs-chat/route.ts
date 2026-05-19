@@ -643,6 +643,45 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     externalDataSection = `\n\n【系統指令】偵測到訂單號「${detectedOrderNum}」但外部資料表查無結果（API設定錯誤或號碼不存在）。請告知客戶查無此號碼，請確認號碼是否正確或聯繫工作人員，禁止捏造任何密碼或房號。`
   }
 
+  // ── Property & booking availability context ───────────────────────────────
+  let propertyAvailSection = ''
+  try {
+    const { data: properties } = await supabase
+      .from('properties')
+      .select('id, name, description, max_guests, base_price')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+
+    if (properties?.length) {
+      const today = new Date().toISOString().slice(0, 10)
+      const future = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
+
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('property_id, guest_name, check_in, check_out, status, num_guests')
+        .eq('user_id', user.id)
+        .in('status', ['confirmed', 'pending'])
+        .gte('check_out', today)
+        .lte('check_in', future)
+
+      const lines: string[] = ['【房源與訂單狀況（系統即時資料，優先採用）】']
+      for (const p of properties) {
+        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}`)
+        const pBookings = (bookings ?? []).filter(b => b.property_id === p.id)
+        if (pBookings.length === 0) {
+          lines.push(`  近90天無訂單，全部可訂`)
+        } else {
+          lines.push(`  已預訂日期：`)
+          pBookings.forEach(b => {
+            lines.push(`    ${b.check_in} ~ ${b.check_out}（${b.guest_name}，${b.num_guests}人，${b.status}）`)
+          })
+        }
+      }
+      lines.push('\n判斷是否可訂：若客人詢問的日期與上方已預訂區間重疊，則無法接受；否則可接受。')
+      propertyAvailSection = '\n\n' + lines.join('\n')
+    }
+  } catch { /* 不中斷主流程 */ }
+
   // ── Intent classification ─────────────────────────────────────────────────
   const knowledgeSection = knowledgeBase
     ? `\n\n【知識庫】\n${knowledgeBase.slice(0, 3000)}`
@@ -744,7 +783,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${propertyAvailSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
