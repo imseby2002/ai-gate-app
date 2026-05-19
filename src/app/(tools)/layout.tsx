@@ -7,11 +7,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function ToolsLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('display_name,user_type').eq('id', user.id).single()
-  if (!profile) redirect('/login')
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
@@ -29,7 +28,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
           <span className="text-xs font-bold text-gray-800">AI GATE</span>
         </div>
         <div className="flex-1" />
-        <span className="text-xs text-gray-400">{profile.display_name ?? user.email}</span>
+        <span className="text-xs text-gray-400">{profile?.display_name ?? user.email}</span>
       </header>
 
       {/* Tool content (each tool has its own sub-layout) */}
