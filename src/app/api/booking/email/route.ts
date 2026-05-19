@@ -21,6 +21,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
+  if (!body.property_id) body.property_id = null
   const { data: setting, error } = await supabase
     .from('email_settings')
     .insert({ ...body, user_id: user.id })
@@ -37,6 +38,7 @@ export async function PUT(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, ...updates } = await req.json()
+  if (!updates.property_id) updates.property_id = null
   const { data: setting, error } = await supabase
     .from('email_settings')
     .update(updates)
