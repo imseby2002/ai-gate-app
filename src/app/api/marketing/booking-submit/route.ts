@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const lineMsg = `[AI GATE 訂位申請]\n方案：${packageName}\n聯絡電話：${contactPhone}\n\n參加人員（共${participants.length}位）：\n${participantLines}\n\n送出時間：${taiwanNow}`
 
-  type NW = { type: 'line_messaging' | 'webhook'; value: string; target?: string }
+  type NW = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
   await Promise.allSettled((notifyWebhooks as NW[]).filter((wh: NW) => wh.value?.trim()).map((wh: NW) => {
     if (wh.type === 'line_messaging') {
       if (!wh.target?.trim()) return Promise.resolve()
@@ -56,6 +56,13 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: lineMsg }] }),
+      })
+    } else if (wh.type === 'telegram') {
+      if (!wh.target?.trim()) return Promise.resolve()
+      return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: wh.target.trim(), text: lineMsg }),
       })
     } else {
       return fetch(wh.value.trim(), {

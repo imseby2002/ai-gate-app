@@ -4821,10 +4821,10 @@ interface CsInboxMessage {
 
 interface NotifyWebhook {
   id: string
-  type: 'line_messaging' | 'webhook'
+  type: 'line_messaging' | 'webhook' | 'telegram'
   label: string
-  value: string   // LINE: Channel Access Token；Webhook: URL
-  target?: string // LINE: User ID 或 Group ID
+  value: string   // LINE: Channel Access Token；Webhook: URL；Telegram: Bot Token
+  target?: string // LINE: User ID 或 Group ID；Telegram: Chat ID
 }
 
 interface Unit12Data {
@@ -6591,21 +6591,22 @@ function Unit12CustomerService({
               <span className="text-sm font-semibold text-gray-800">工單通知</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">建立工單時自動推播</span>
             </div>
-            <p className="text-xs text-gray-500">客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API 及自訂 Webhook。</p>
+            <p className="text-xs text-gray-500">客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。</p>
             {notifyWebhooks.map((wh, idx) => (
               <div key={wh.id} className="flex gap-2 items-start p-3 bg-gray-50 rounded-xl border">
                 <div className="flex-1 space-y-2">
                   <div className="flex gap-2">
                     <select
                       value={wh.type}
-                      onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, type: e.target.value as NotifyWebhook['type'] } : w))}
+                      onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, type: e.target.value as NotifyWebhook['type'], value: '', target: '' } : w))}
                       className="text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     >
                       <option value="line_messaging">LINE Messaging API</option>
+                      <option value="telegram">Telegram Bot</option>
                       <option value="webhook">Webhook</option>
                     </select>
                     <input
-                      placeholder="備註名稱（如：店長LINE）"
+                      placeholder="備註名稱（如：店長群組）"
                       value={wh.label}
                       onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, label: e.target.value } : w))}
                       className="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
@@ -6625,6 +6626,22 @@ function Unit12CustomerService({
                         onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, target: e.target.value } : w))}
                         className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
                       />
+                    </>
+                  ) : wh.type === 'telegram' ? (
+                    <>
+                      <input
+                        placeholder="Bot Token（@BotFather 取得，格式：123456:ABC-DEF...）"
+                        value={wh.value}
+                        onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
+                        className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+                      />
+                      <input
+                        placeholder="Chat ID（用戶/群組/頻道 ID，如：-1001234567890）"
+                        value={wh.target ?? ''}
+                        onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, target: e.target.value } : w))}
+                        className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+                      />
+                      <p className="text-[10px] text-gray-400">💡 將 Bot 加入群組後，傳訊息給 @userinfobot 可查詢 Chat ID</p>
                     </>
                   ) : (
                     <input

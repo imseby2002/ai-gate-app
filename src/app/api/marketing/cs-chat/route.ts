@@ -504,7 +504,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
     // Fire-and-forget notifications (do not await — don't block the response)
     if (notifyWebhooks.length > 0) {
-      type NW = { type: 'line_messaging' | 'webhook'; value: string; target?: string }
+      type NW = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
       void Promise.allSettled((notifyWebhooks as NW[]).filter(wh => wh.value?.trim()).map(wh => {
         if (wh.type === 'line_messaging') {
           if (!wh.target?.trim()) return Promise.resolve()
@@ -512,6 +512,13 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
             method: 'POST',
             headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
+          })
+        } else if (wh.type === 'telegram') {
+          if (!wh.target?.trim()) return Promise.resolve()
+          return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
           })
         } else {
           return fetch(wh.value.trim(), {
