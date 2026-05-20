@@ -52,7 +52,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       .from('properties')
       .select('id')
       .eq('user_id', setting.user_id)
-      .eq('is_active', true)
+      .eq('status', 'active')
       .limit(2)
     if (props?.length === 1) effectivePropertyId = props[0].id
   }

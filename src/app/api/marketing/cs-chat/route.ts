@@ -650,7 +650,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
       .from('properties')
       .select('id, name, description, max_guests, base_price')
       .eq('user_id', user.id)
-      .eq('is_active', true)
+      .eq('status', 'active')
 
     if (properties?.length) {
       const today = new Date().toISOString().slice(0, 10)

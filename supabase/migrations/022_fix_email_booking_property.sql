@@ -8,7 +8,7 @@ SET property_id = (
   SELECT p.id
   FROM properties p
   WHERE p.user_id = b.user_id
-    AND p.is_active = true
+    AND p.status = 'active'
   LIMIT 1
 )
 WHERE b.property_id IS NULL
@@ -16,7 +16,7 @@ WHERE b.property_id IS NULL
   AND (
     SELECT COUNT(*) FROM properties p2
     WHERE p2.user_id = b.user_id
-      AND p2.is_active = true
+      AND p2.status = 'active'
   ) = 1;
 
 -- 2. 刪除 null property_id 的 email 重複訂單（若已有 iCal 版本存在）
