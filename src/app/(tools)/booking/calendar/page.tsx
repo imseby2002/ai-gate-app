@@ -1,14 +1,15 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 
 interface Booking {
-  id: string; guest_name: string; check_in: string; check_out: string
+  id: string; guest_name: string; guest_phone: string; check_in: string; check_out: string
   status: string; platform: string; num_guests: number; total_price: number | null; currency: string
   properties?: { name: string }; property_id: string | null
 }
-interface Property { id: string; name: string; room_count: number }
+interface Property { id: string; name: string; room_count: number; base_price: number | null; currency: string }
 
 const PLATFORM_COLORS: Record<string, string> = {
   booking_com: 'bg-blue-600', agoda: 'bg-purple-600', airbnb: 'bg-rose-500',
@@ -24,10 +25,25 @@ const PLATFORM_NAMES: Record<string, string> = {
   trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
   manual: '手動', direct: '直訂',
 }
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  confirmed: { label: '已確認', color: 'bg-green-100 text-green-700' },
+  pending:   { label: '待確認', color: 'bg-amber-100 text-amber-700' },
+  cancelled: { label: '已取消', color: 'bg-red-100 text-red-600' },
+  completed: { label: '已完成', color: 'bg-gray-100 text-gray-600' },
+  no_show:   { label: '未到訪', color: 'bg-orange-100 text-orange-700' },
+}
 
 function toDateStr(d: Date) { return d.toISOString().slice(0, 10) }
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDayOfWeek(y: number, m: number) { return new Date(y, m, 1).getDay() }
+function addDays(ds: string, n: number) {
+  const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return toDateStr(d)
+}
+
+interface QuickForm {
+  property_id: string; guest_name: string; guest_phone: string; guest_email: string
+  check_in: string; check_out: string; num_guests: number; total_price: string; platform: string
+}
 
 export default function CalendarPage() {
   const now = new Date()
@@ -38,6 +54,13 @@ export default function CalendarPage() {
   const [filterProp, setFilterProp] = useState('')
   const [loading, setLoading]       = useState(true)
   const [selected, setSelected]     = useState<string | null>(null)
+  const [quickProp, setQuickProp]   = useState<Property | null>(null)
+  const [quickDate, setQuickDate]   = useState('')
+  const [quickForm, setQuickForm]   = useState<QuickForm>({
+    property_id: '', guest_name: '', guest_phone: '', guest_email: '',
+    check_in: '', check_out: '', num_guests: 1, total_price: '', platform: 'direct',
+  })
+  const [saving, setSaving] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -63,11 +86,9 @@ export default function CalendarPage() {
   const propColorMap: Record<string, string> = {}
   properties.forEach((p, i) => { propColorMap[p.id] = PROP_PALETTE[i % PROP_PALETTE.length] })
 
-  // totalRooms = sum of room_count for active properties (filtered if needed)
   const visibleProps = filterProp ? properties.filter(p => p.id === filterProp) : properties
   const totalRooms = visibleProps.reduce((s, p) => s + p.room_count, 0)
 
-  // Date → bookings map (include cancelled as "not blocking")
   const dateBookings: Record<string, Booking[]> = {}
   for (const bk of bookings) {
     if (bk.status === 'cancelled') continue
@@ -81,16 +102,16 @@ export default function CalendarPage() {
     }
   }
 
-  function availableRooms(ds: string) {
-    const occupied = (dateBookings[ds] ?? []).length
-    return Math.max(0, totalRooms - occupied)
+  function availableCount(ds: string) {
+    return Math.max(0, totalRooms - (dateBookings[ds] ?? []).length)
   }
 
-  const daysInMonth   = getDaysInMonth(year, month)
-  const firstDay      = getFirstDayOfWeek(year, month)
-  const todayStr      = toDateStr(now)
-  const monthName     = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
-  const showAllProps  = !filterProp && properties.length > 1
+  const daysInMonth  = getDaysInMonth(year, month)
+  const firstDay     = getFirstDayOfWeek(year, month)
+  const todayStr     = toDateStr(now)
+  const monthName    = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
+  const showAllProps = !filterProp && properties.length > 1
+  const selectedBookings = selected ? (dateBookings[selected] ?? []) : []
 
   function chipColor(bk: Booking) {
     return showAllProps ? (propColorMap[bk.property_id ?? ''] ?? 'bg-gray-500') : (PLATFORM_COLORS[bk.platform] ?? 'bg-gray-500')
@@ -101,9 +122,37 @@ export default function CalendarPage() {
     return g
   }
 
-  // Selected day breakdown: available rooms per property + booked list
-  const selectedBookings = selected ? (dateBookings[selected] ?? []) : []
-  const bookedPropIds = new Set(selectedBookings.map(b => b.property_id))
+  function openQuick(p: Property, ds: string) {
+    setQuickProp(p)
+    setQuickDate(ds)
+    setQuickForm({
+      property_id: p.id,
+      guest_name: '', guest_phone: '', guest_email: '',
+      check_in: ds, check_out: addDays(ds, 1),
+      num_guests: 1,
+      total_price: p.base_price ? String(p.base_price) : '',
+      platform: 'direct',
+    })
+  }
+
+  async function saveQuick() {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...quickForm,
+          total_price: quickForm.total_price ? parseFloat(quickForm.total_price) : null,
+          source: 'manual',
+        }),
+      })
+      const d = await res.json()
+      if (d.booking) {
+        setQuickProp(null)
+        fetchData()
+      } else alert(d.error)
+    } finally { setSaving(false) }
+  }
 
   return (
     <div className="p-6 space-y-4 max-w-5xl">
@@ -138,6 +187,7 @@ export default function CalendarPage() {
             </div>
           )}
 
+          {/* Calendar */}
           <div className="bg-white rounded-xl border overflow-hidden">
             <div className="grid grid-cols-7 border-b">
               {['日','一','二','三','四','五','六'].map(d => (
@@ -151,12 +201,12 @@ export default function CalendarPage() {
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const day = i + 1
                 const ds  = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                const daybks  = dateBookings[ds] ?? []
-                const avail   = totalRooms > 0 ? availableRooms(ds) : null
-                const isFull  = avail !== null && avail === 0
+                const daybks = dateBookings[ds] ?? []
+                const avail  = totalRooms > 0 ? availableCount(ds) : null
+                const isFull = avail !== null && avail === 0
                 const isToday = ds === todayStr
                 const isSel   = ds === selected
-                const col     = (firstDay + i) % 7
+                const col = (firstDay + i) % 7
                 return (
                   <div key={ds} onClick={() => setSelected(isSel ? null : ds)}
                     className={`min-h-[96px] border-b border-r p-1.5 cursor-pointer transition-colors
@@ -198,34 +248,42 @@ export default function CalendarPage() {
             </div>
           )}
 
-          {/* Selected day panel — TRAIWAN style two columns */}
+          {/* Selected day — two panels like TRAIWAN */}
           {selected && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Available rooms */}
               <div className="bg-white rounded-xl border overflow-hidden">
-                <div className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2.5">
-                  {new Date(selected + 'T00:00:00').toLocaleDateString('zh-TW', { month: 'long', day: 'numeric' })}
-                  　尚有 <span className="text-lg">{availableRooms(selected)}</span> 間空房
+                <div className="bg-sky-500 text-white px-4 py-2.5 text-sm font-semibold">
+                  {selected}　尚有 <span className="text-lg font-bold">{availableCount(selected)}</span> 間空房
                 </div>
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-xs text-gray-500">
+                  <thead className="bg-gray-50 border-b text-xs text-gray-500">
                     <tr>
-                      <th className="text-left px-4 py-2">房型</th>
-                      <th className="px-2 py-2 text-center">總間數</th>
-                      <th className="px-2 py-2 text-center">已訂</th>
-                      <th className="px-2 py-2 text-center">空房</th>
+                      <th className="text-left px-3 py-2">房型名稱</th>
+                      <th className="px-2 py-2 text-center">當日房價</th>
+                      <th className="px-2 py-2 text-center">尚有間數</th>
+                      <th className="px-2 py-2 text-center">預訂間數</th>
+                      <th className="px-2 py-2 text-center">訂購</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {visibleProps.map(p => {
-                      const bksThisProp = selectedBookings.filter(b => b.property_id === p.id)
-                      const av = Math.max(0, p.room_count - bksThisProp.length)
+                      const bksThis = selectedBookings.filter(b => b.property_id === p.id)
+                      const av = Math.max(0, p.room_count - bksThis.length)
                       return (
                         <tr key={p.id} className={av === 0 ? 'opacity-40' : ''}>
-                          <td className="px-4 py-2.5 font-medium text-gray-900">{p.name}</td>
-                          <td className="px-2 py-2.5 text-center text-gray-600">{p.room_count}</td>
-                          <td className="px-2 py-2.5 text-center text-red-500">{bksThisProp.length}</td>
+                          <td className="px-3 py-2.5 font-medium text-gray-900">{p.name}</td>
+                          <td className="px-2 py-2.5 text-center text-gray-700 text-xs">
+                            {p.base_price ? `${Number(p.base_price).toLocaleString()}` : '—'}
+                          </td>
                           <td className="px-2 py-2.5 text-center font-bold text-emerald-600">{av}</td>
+                          <td className="px-2 py-2.5 text-center text-red-500">{bksThis.length}</td>
+                          <td className="px-2 py-2.5 text-center">
+                            <button disabled={av === 0} onClick={() => openQuick(p, selected)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                              加入訂單
+                            </button>
+                          </td>
                         </tr>
                       )
                     })}
@@ -233,37 +291,50 @@ export default function CalendarPage() {
                 </table>
               </div>
 
-              {/* Booked orders */}
+              {/* Booked rooms */}
               <div className="bg-white rounded-xl border overflow-hidden">
-                <div className="bg-rose-500 text-white text-sm font-semibold px-4 py-2.5">
-                  {new Date(selected + 'T00:00:00').toLocaleDateString('zh-TW', { month: 'long', day: 'numeric' })}
-                  　已售出 <span className="text-lg">{selectedBookings.length}</span> 間
+                <div className="bg-rose-500 text-white px-4 py-2.5 text-sm font-semibold">
+                  {selected}　已售出 <span className="text-lg font-bold">{selectedBookings.length}</span> 間房間
                 </div>
                 {selectedBookings.length === 0 ? (
                   <div className="text-sm text-gray-400 p-4">此日無訂單</div>
                 ) : (
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-xs text-gray-500">
+                    <thead className="bg-gray-50 border-b text-xs text-gray-500">
                       <tr>
-                        <th className="text-left px-4 py-2">旅客</th>
-                        <th className="text-left px-2 py-2">房型</th>
-                        <th className="text-left px-2 py-2">通路</th>
+                        <th className="text-left px-3 py-2">房型</th>
+                        <th className="text-left px-2 py-2">價格</th>
+                        <th className="text-left px-2 py-2">預訂人</th>
+                        <th className="text-left px-2 py-2">電話</th>
+                        <th className="text-left px-2 py-2">來源</th>
+                        <th className="text-left px-2 py-2">狀態</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {selectedBookings.map(bk => (
-                        <tr key={bk.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2.5">
-                            <Link href={`/booking/bookings/${bk.id}`}
-                              className="font-medium text-indigo-600 hover:underline">
-                              {bk.guest_name || '—'}
-                            </Link>
-                            <div className="text-xs text-gray-400">{bk.check_in} → {bk.check_out}</div>
-                          </td>
-                          <td className="px-2 py-2.5 text-xs text-gray-600">{bk.properties?.name ?? '—'}</td>
-                          <td className="px-2 py-2.5 text-xs text-gray-500">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</td>
-                        </tr>
-                      ))}
+                      {selectedBookings.map(bk => {
+                        const st = STATUS_MAP[bk.status]
+                        return (
+                          <tr key={bk.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs text-gray-700">{bk.properties?.name ?? '—'}</td>
+                            <td className="px-2 py-2 text-xs text-gray-600">
+                              {bk.total_price ? `NT$ ${Number(bk.total_price).toLocaleString()}` : '—'}
+                            </td>
+                            <td className="px-2 py-2">
+                              <Link href={`/booking/bookings/${bk.id}`}
+                                className="text-xs font-medium text-indigo-600 hover:underline">
+                                {bk.guest_name || '—'}
+                              </Link>
+                            </td>
+                            <td className="px-2 py-2 text-xs text-gray-500">{bk.guest_phone || '—'}</td>
+                            <td className="px-2 py-2 text-xs text-gray-500">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</td>
+                            <td className="px-2 py-2">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
+                                {st?.label ?? bk.status}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -271,6 +342,85 @@ export default function CalendarPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Quick booking modal */}
+      {quickProp && createPortal(
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setQuickProp(null) }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-gray-900">加入訂單</h3>
+                <div className="text-xs text-gray-400 mt-0.5">{quickProp.name}　{quickDate}</div>
+              </div>
+              <button onClick={() => setQuickProp(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">旅客姓名 *</label>
+                <input value={quickForm.guest_name} onChange={e => setQuickForm(f => ({ ...f, guest_name: e.target.value }))}
+                  placeholder="王小明"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">電話</label>
+                <input value={quickForm.guest_phone} onChange={e => setQuickForm(f => ({ ...f, guest_phone: e.target.value }))}
+                  placeholder="0912-345-678"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">入住</label>
+                <input type="date" value={quickForm.check_in} onChange={e => setQuickForm(f => ({ ...f, check_in: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">退房</label>
+                <input type="date" value={quickForm.check_out} onChange={e => setQuickForm(f => ({ ...f, check_out: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">人數</label>
+                <input type="number" min={1} value={quickForm.num_guests}
+                  onChange={e => setQuickForm(f => ({ ...f, num_guests: parseInt(e.target.value) }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">金額</label>
+                <input type="number" value={quickForm.total_price}
+                  onChange={e => setQuickForm(f => ({ ...f, total_price: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">通路</label>
+              <select value={quickForm.platform} onChange={e => setQuickForm(f => ({ ...f, platform: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setQuickProp(null)}
+                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button onClick={saveQuick} disabled={!quickForm.guest_name || saving}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-sky-500 hover:bg-sky-600 disabled:opacity-50">
+                {saving ? '儲存中…' : '確認加入'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   )
