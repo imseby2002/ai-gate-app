@@ -131,7 +131,7 @@ export default function ReportsPage() {
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie data={data.byPlatform.map(p => ({ ...p, name: PLATFORM_NAMES[p.name] ?? p.name }))}
-                      dataKey="revenue" nameKey="name" cx="40%" cy="50%" outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      dataKey="revenue" nameKey="name" cx="40%" cy="50%" outerRadius={75} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       labelLine={false}>
                       {data.byPlatform.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
@@ -164,7 +164,7 @@ export default function ReportsPage() {
                   <PieChart>
                     <Pie data={data.byRoom} dataKey="revenue" nameKey="name"
                       cx="40%" cy="50%" outerRadius={75}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       labelLine={false}>
                       {data.byRoom.map((_, i) => <Cell key={i} fill={PIE_COLORS[(i + 3) % PIE_COLORS.length]} />)}
                     </Pie>
