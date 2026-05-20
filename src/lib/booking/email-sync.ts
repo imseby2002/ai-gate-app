@@ -76,7 +76,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     return result
   }
 
-  // Load ALL user properties for name-based matching
+  // Load ALL user properties (rooms) for name-based matching
   const { data: userProperties } = await supabase
     .from('properties')
     .select('id, name')
@@ -85,8 +85,18 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
   const properties: UserProperty[] = userProperties ?? []
 
-  // Fallback: if setting has a property assigned, use it when AI can't detect
-  const fallbackPropertyId: string | null = setting.property_id ?? null
+  // Load B&B profile for context (name used in AI prompt)
+  const { data: bnbProfile } = await supabase
+    .from('bnb_profiles')
+    .select('name')
+    .eq('user_id', setting.user_id)
+    .maybeSingle()
+
+  const bnbName = bnbProfile?.name ?? null
+
+  // Fallback: if only one room exists, use it
+  const fallbackPropertyId: string | null =
+    setting.property_id ?? (properties.length === 1 ? properties[0].id : null)
 
   const client = new ImapFlow({
     host: setting.imap_host,
@@ -133,8 +143,8 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             if (from.toLowerCase().includes(domain)) { platform = key; break }
           }
 
-          // AI extraction — pass property list for identification
-          const extracted = await extractBookingWithAI(subject, body, platform, properties)
+          // AI extraction — pass B&B name + room list for identification
+          const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
           if (!extracted?.is_booking) continue
 
           // Resolve property_id: AI match > fallback setting > null
@@ -227,7 +237,8 @@ async function extractBookingWithAI(
   subject: string,
   body: string,
   platform: string,
-  properties: UserProperty[]
+  properties: UserProperty[],
+  bnbName: string | null
 ): Promise<BookingExtracted | null> {
   const apiKey = process.env.DEEPSEEK_API_KEY || process.env.ANTHROPIC_API_KEY
   if (!apiKey) return null
@@ -235,17 +246,18 @@ async function extractBookingWithAI(
   const isDeepSeek = !!process.env.DEEPSEEK_API_KEY
   const truncatedBody = body.slice(0, 3000)
 
-  const propertyListStr = properties.length > 0
-    ? `\n已知房源清單（請從以下找出最符合的，回傳其 id）：\n${properties.map(p => `- id: "${p.id}", 名稱: "${p.name}"`).join('\n')}`
+  const bnbLine = bnbName ? `\n此民宿名稱（所有訂單都屬於此民宿）：${bnbName}` : ''
+  const roomListStr = properties.length > 0
+    ? `\n已知房型清單（請判斷是哪個房型，回傳其 id）：\n${properties.map(p => `- id: "${p.id}", 房型名稱: "${p.name}"`).join('\n')}`
     : ''
 
   const prompt = `從以下訂房平台郵件中擷取訂單資訊，回傳 JSON 格式。
-
+${bnbLine}
 郵件主旨：${subject}
 平台：${platform}
 郵件內容：
 ${truncatedBody}
-${propertyListStr}
+${roomListStr}
 
 請回傳以下 JSON（若欄位無法確定請用 null）：
 {
@@ -257,8 +269,8 @@ ${propertyListStr}
   "confirmation_id": "訂單確認號/預約編號",
   "total_price": 數字或null,
   "num_guests": 數字,
-  "property_name": "郵件中出現的住宿名稱（原文）",
-  "matched_property_id": "從已知房源清單中最符合的 id，若無法確定則為 null",
+  "property_name": "郵件中出現的房型名稱（如：標準雙人房、Standard Double Room）",
+  "matched_property_id": "從已知房型清單中最符合的 id，若無法確定則為 null",
   "platform": "${platform}"
 }
 
