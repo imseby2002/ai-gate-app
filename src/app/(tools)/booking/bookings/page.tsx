@@ -53,7 +53,7 @@ export default function BookingsPage() {
 
   const filtered = bookings.filter(b => {
     if (filterStatus && b.status !== filterStatus) return false
-    if (filterProp && b.properties?.name !== filterProp && b.properties === undefined) return false
+    if (filterProp && b.properties?.name !== filterProp) return false
     if (search) {
       const q = search.toLowerCase()
       return (b.guest_name ?? '').toLowerCase().includes(q)
@@ -164,7 +164,12 @@ export default function BookingsPage() {
                       </select>
                     </td>
                     <td className="px-3 py-2.5 text-xs text-gray-400">
-                      {new Date(b.created_at).toLocaleDateString('zh-TW')}
+                      <div>{new Date(b.created_at).toLocaleDateString('zh-TW')}</div>
+                      {b.notes && (
+                        <div className="text-[10px] text-amber-600 mt-0.5 max-w-[120px] truncate" title={b.notes}>
+                          ⚠ {b.notes}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )
