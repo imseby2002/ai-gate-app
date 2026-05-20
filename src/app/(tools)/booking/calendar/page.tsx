@@ -53,7 +53,7 @@ export default function CalendarPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [filterProp, setFilterProp] = useState('')
   const [loading, setLoading]       = useState(true)
-  const [selected, setSelected]     = useState<string | null>(null)
+  const [selected, setSelected]     = useState<string | null>(toDateStr(now))
   const [quickProp, setQuickProp]   = useState<Property | null>(null)
   const [quickDate, setQuickDate]   = useState('')
   const [quickForm, setQuickForm]   = useState<QuickForm>({
