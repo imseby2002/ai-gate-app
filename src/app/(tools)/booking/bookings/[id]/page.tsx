@@ -69,7 +69,7 @@ export default function BookingDetailPage() {
             onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
             className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
         ) : (
-          <div className="text-sm text-gray-900">{(bk as Record<string, unknown>)?.[key] as string || '—'}</div>
+          <div className="text-sm text-gray-900">{(bk as unknown as Record<string, unknown>)?.[key] as string || '—'}</div>
         )}
       </div>
     )
