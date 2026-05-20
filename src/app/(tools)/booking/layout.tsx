@@ -17,8 +17,8 @@ const NAV = [
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-52 shrink-0 border-r bg-white flex flex-col py-6 gap-1 px-3">
+    <div className="flex h-screen bg-gray-50">
+      <aside className="w-52 shrink-0 border-r bg-white flex flex-col py-6 gap-1 px-3 overflow-y-auto">
         <div className="px-2 pb-4">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>
         </div>

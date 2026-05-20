@@ -153,7 +153,7 @@ export default function CalendarPage() {
     : ''
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* ── LEFT: Calendar ──────────────────────────────────── */}
       <div className="flex flex-col w-[420px] shrink-0 border-r bg-white overflow-y-auto">
         {/* Header */}
