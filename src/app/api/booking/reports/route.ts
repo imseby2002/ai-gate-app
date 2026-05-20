@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
   const roomMap: Record<string, { name: string; revenue: number; bookings: number }> = {}
   for (const b of rows) {
     const pid  = b.property_id ?? 'unknown'
-    const pname = (b.properties as { name: string } | null)?.name ?? '未指定'
+    const pname = (b.properties as unknown as { name: string } | null)?.name ?? '未指定'
     if (!roomMap[pid]) roomMap[pid] = { name: pname, revenue: 0, bookings: 0 }
     roomMap[pid].revenue  += Number(b.total_price ?? 0)
     roomMap[pid].bookings += 1
