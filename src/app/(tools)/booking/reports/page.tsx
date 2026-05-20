@@ -114,7 +114,7 @@ export default function ReportsPage() {
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} width={60}
                   tickFormatter={v => chartMode === 'revenue' ? `${(v/1000).toFixed(0)}K` : String(v)} />
-                <Tooltip formatter={(v: number) => chartMode === 'revenue' ? `NT$ ${fmt(v)}` : fmt(v)} />
+                <Tooltip formatter={(v) => { const n = Number(v ?? 0); return chartMode === 'revenue' ? `NT$ ${fmt(n)}` : fmt(n) }} />
                 <Line dataKey={chartMode} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -135,7 +135,7 @@ export default function ReportsPage() {
                       labelLine={false}>
                       {data.byPlatform.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => `NT$ ${fmt(v)}`} />
+                    <Tooltip formatter={(v) => `NT$ ${fmt(Number(v ?? 0))}`} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -168,7 +168,7 @@ export default function ReportsPage() {
                       labelLine={false}>
                       {data.byRoom.map((_, i) => <Cell key={i} fill={PIE_COLORS[(i + 3) % PIE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip formatter={(v: number) => `NT$ ${fmt(v)}`} />
+                    <Tooltip formatter={(v) => `NT$ ${fmt(Number(v ?? 0))}`} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
