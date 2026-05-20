@@ -53,9 +53,8 @@ export default function CalendarPage() {
   const [properties, setProperties] = useState<Property[]>([])
   const [filterProp, setFilterProp] = useState('')
   const [loading, setLoading]       = useState(true)
-  const [selected, setSelected]     = useState<string | null>(toDateStr(now))
+  const [selected, setSelected]     = useState<string>(toDateStr(now))
   const [quickProp, setQuickProp]   = useState<Property | null>(null)
-  const [quickDate, setQuickDate]   = useState('')
   const [quickForm, setQuickForm]   = useState<QuickForm>({
     property_id: '', guest_name: '', guest_phone: '', guest_email: '',
     check_in: '', check_out: '', num_guests: 1, total_price: '', platform: 'direct',
@@ -106,12 +105,12 @@ export default function CalendarPage() {
     return Math.max(0, totalRooms - (dateBookings[ds] ?? []).length)
   }
 
-  const daysInMonth  = getDaysInMonth(year, month)
-  const firstDay     = getFirstDayOfWeek(year, month)
-  const todayStr     = toDateStr(now)
-  const monthName    = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
-  const showAllProps = !filterProp && properties.length > 1
-  const selectedBookings = selected ? (dateBookings[selected] ?? []) : []
+  const daysInMonth   = getDaysInMonth(year, month)
+  const firstDay      = getFirstDayOfWeek(year, month)
+  const todayStr      = toDateStr(now)
+  const monthName     = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
+  const showAllProps  = !filterProp && properties.length > 1
+  const selectedBookings = dateBookings[selected] ?? []
 
   function chipColor(bk: Booking) {
     return showAllProps ? (propColorMap[bk.property_id ?? ''] ?? 'bg-gray-500') : (PLATFORM_COLORS[bk.platform] ?? 'bg-gray-500')
@@ -124,13 +123,10 @@ export default function CalendarPage() {
 
   function openQuick(p: Property, ds: string) {
     setQuickProp(p)
-    setQuickDate(ds)
     setQuickForm({
-      property_id: p.id,
-      guest_name: '', guest_phone: '', guest_email: '',
+      property_id: p.id, guest_name: '', guest_phone: '', guest_email: '',
       check_in: ds, check_out: addDays(ds, 1),
-      num_guests: 1,
-      total_price: p.base_price ? String(p.base_price) : '',
+      num_guests: 1, total_price: p.base_price ? String(p.base_price) : '',
       platform: 'direct',
     })
   }
@@ -147,60 +143,64 @@ export default function CalendarPage() {
         }),
       })
       const d = await res.json()
-      if (d.booking) {
-        setQuickProp(null)
-        fetchData()
-      } else alert(d.error)
+      if (d.booking) { setQuickProp(null); fetchData() }
+      else alert(d.error)
     } finally { setSaving(false) }
   }
 
-  return (
-    <div className="p-6 space-y-4 max-w-5xl">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">訂房日曆</h1>
-        <div className="flex items-center gap-3">
-          {properties.length > 0 && (
-            <select value={filterProp} onChange={e => { setFilterProp(e.target.value); setSelected(null) }}
-              className="border rounded-lg px-3 py-1.5 bg-white text-sm focus:outline-none">
-              <option value="">全部房源</option>
-              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          )}
-          <div className="flex items-center gap-1">
-            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100"><ChevronLeft className="h-4 w-4" /></button>
-            <span className="text-sm font-semibold text-gray-900 w-32 text-center">{monthName}</span>
-            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100"><ChevronRight className="h-4 w-4" /></button>
-          </div>
-        </div>
-      </div>
+  const selLabel = selected
+    ? new Date(selected + 'T00:00:00').toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' })
+    : ''
 
-      {loading ? <div className="text-center py-24 text-gray-400">載入中…</div> : (
-        <>
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* ── LEFT: Calendar ──────────────────────────────────── */}
+      <div className="flex flex-col w-[420px] shrink-0 border-r bg-white overflow-y-auto">
+        {/* Header */}
+        <div className="p-4 border-b space-y-3">
+          <div className="flex items-center justify-between">
+            {properties.length > 0 && (
+              <select value={filterProp} onChange={e => { setFilterProp(e.target.value); setSelected(todayStr) }}
+                className="border rounded-lg px-2.5 py-1 bg-white text-sm focus:outline-none flex-1 mr-3">
+                <option value="">全部房源</option>
+                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            )}
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100"><ChevronLeft className="h-4 w-4" /></button>
+              <span className="text-sm font-semibold text-gray-900 w-28 text-center">{monthName}</span>
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </div>
           {showAllProps && (
-            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+            <div className="flex flex-wrap gap-2">
               {properties.map((p, i) => (
-                <div key={p.id} className="flex items-center gap-1 cursor-pointer hover:underline" onClick={() => setFilterProp(p.id)}>
-                  <span className={`w-2.5 h-2.5 rounded-sm ${PROP_PALETTE[i % PROP_PALETTE.length]}`} />
-                  {p.name}（{p.room_count}間）
+                <div key={p.id} className="flex items-center gap-1 text-xs text-gray-600 cursor-pointer hover:underline" onClick={() => setFilterProp(p.id)}>
+                  <span className={`w-2 h-2 rounded-sm ${PROP_PALETTE[i % PROP_PALETTE.length]}`} />
+                  {p.name}
                 </div>
               ))}
             </div>
           )}
+        </div>
 
-          {/* Calendar */}
-          <div className="bg-white rounded-xl border overflow-hidden">
-            <div className="grid grid-cols-7 border-b">
+        {/* Calendar grid */}
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">載入中…</div>
+        ) : (
+          <div className="flex-1">
+            <div className="grid grid-cols-7 border-b bg-gray-50">
               {['日','一','二','三','四','五','六'].map(d => (
                 <div key={d} className="text-center text-xs font-medium text-gray-500 py-2">{d}</div>
               ))}
             </div>
             <div className="grid grid-cols-7">
               {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`e${i}`} className="min-h-[96px] border-b border-r bg-gray-50/50" />
+                <div key={`e${i}`} className="h-16 border-b border-r bg-gray-50/60" />
               ))}
               {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1
-                const ds  = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                const day  = i + 1
+                const ds   = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
                 const daybks = dateBookings[ds] ?? []
                 const avail  = totalRooms > 0 ? availableCount(ds) : null
                 const isFull = avail !== null && avail === 0
@@ -208,28 +208,28 @@ export default function CalendarPage() {
                 const isSel   = ds === selected
                 const col = (firstDay + i) % 7
                 return (
-                  <div key={ds} onClick={() => setSelected(isSel ? null : ds)}
-                    className={`min-h-[96px] border-b border-r p-1.5 cursor-pointer transition-colors
-                      ${isSel ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-300' : isFull ? 'bg-red-50/40 hover:bg-red-50' : 'hover:bg-gray-50'}
+                  <div key={ds} onClick={() => setSelected(ds)}
+                    className={`h-16 border-b border-r p-1 cursor-pointer transition-colors
+                      ${isSel ? 'bg-sky-50 ring-2 ring-inset ring-sky-400' : isFull ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-gray-50'}
                       ${col === 0 ? 'text-red-500' : col === 6 ? 'text-blue-500' : ''}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full
-                        ${isToday ? 'bg-indigo-600 text-white' : ''}`}>{day}</span>
+                    <div className="flex items-start justify-between">
+                      <span className={`text-xs font-semibold w-5 h-5 flex items-center justify-center rounded-full
+                        ${isToday ? 'bg-sky-500 text-white' : ''}`}>{day}</span>
                       {avail !== null && totalRooms > 0 && (
-                        <span className={`text-[9px] font-bold px-1 rounded ${isFull ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                        <span className={`text-[9px] font-bold leading-none px-1 py-0.5 rounded ${isFull ? 'text-red-600' : 'text-gray-400'}`}>
                           {isFull ? '客滿' : `${avail}/${totalRooms}`}
                         </span>
                       )}
                     </div>
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 mt-0.5">
                       {daybks.slice(0, 2).map((bk, bi) => (
                         <div key={`${bk.id}-${bi}`}
-                          className={`text-[10px] text-white px-1 py-0.5 rounded truncate ${chipColor(bk)}`}>
+                          className={`text-[9px] text-white px-1 py-px rounded truncate ${chipColor(bk)}`}>
                           {chipLabel(bk)}
                         </div>
                       ))}
                       {daybks.length > 2 && (
-                        <div className="text-[10px] text-gray-400 px-1">+{daybks.length - 2} 筆</div>
+                        <div className="text-[9px] text-gray-400 px-0.5">+{daybks.length - 2}</div>
                       )}
                     </div>
                   </div>
@@ -237,112 +237,110 @@ export default function CalendarPage() {
               })}
             </div>
           </div>
+        )}
+      </div>
 
-          {!showAllProps && (
-            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-              {Object.entries(PLATFORM_NAMES).map(([k, v]) => (
-                <div key={k} className="flex items-center gap-1">
-                  <span className={`w-2.5 h-2.5 rounded-sm ${PLATFORM_COLORS[k]}`} />{v}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Selected day — two panels like TRAIWAN */}
-          {selected && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Available rooms */}
-              <div className="bg-white rounded-xl border overflow-hidden">
-                <div className="bg-sky-500 text-white px-4 py-2.5 text-sm font-semibold">
-                  {selected}　尚有 <span className="text-lg font-bold">{availableCount(selected)}</span> 間空房
-                </div>
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b text-xs text-gray-500">
-                    <tr>
-                      <th className="text-left px-3 py-2">房型名稱</th>
-                      <th className="px-2 py-2 text-center">當日房價</th>
-                      <th className="px-2 py-2 text-center">尚有間數</th>
-                      <th className="px-2 py-2 text-center">預訂間數</th>
-                      <th className="px-2 py-2 text-center">訂購</th>
+      {/* ── RIGHT: Day panels ───────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-y-auto bg-gray-50">
+        {/* Available rooms panel */}
+        <div className="bg-white border-b">
+          <div className="bg-sky-500 text-white px-5 py-3 text-sm font-semibold flex items-center gap-3">
+            <span>{selLabel}</span>
+            <span>　尚有 <span className="text-xl font-bold">{availableCount(selected)}</span> 間空房</span>
+          </div>
+          {loading ? (
+            <div className="py-8 text-center text-sm text-gray-400">載入中…</div>
+          ) : visibleProps.length === 0 ? (
+            <div className="py-8 text-center text-sm text-gray-400">尚未建立房型</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-5 py-2.5">房型名稱</th>
+                  <th className="px-3 py-2.5 text-center">當日房價</th>
+                  <th className="px-3 py-2.5 text-center">尚有間數</th>
+                  <th className="px-3 py-2.5 text-center">預訂間數</th>
+                  <th className="px-3 py-2.5 text-center">訂購</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {visibleProps.map(p => {
+                  const bksThis = selectedBookings.filter(b => b.property_id === p.id)
+                  const av = Math.max(0, p.room_count - bksThis.length)
+                  return (
+                    <tr key={p.id} className={av === 0 ? 'opacity-40' : 'hover:bg-gray-50'}>
+                      <td className="px-5 py-3 font-medium text-gray-900">{p.name}</td>
+                      <td className="px-3 py-3 text-center text-gray-700">
+                        {p.base_price ? Number(p.base_price).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-3 py-3 text-center font-bold text-emerald-600 text-base">{av}</td>
+                      <td className="px-3 py-3 text-center text-gray-500">{bksThis.length}</td>
+                      <td className="px-3 py-3 text-center">
+                        <button disabled={av === 0} onClick={() => openQuick(p, selected)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                          加入訂單
+                        </button>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {visibleProps.map(p => {
-                      const bksThis = selectedBookings.filter(b => b.property_id === p.id)
-                      const av = Math.max(0, p.room_count - bksThis.length)
-                      return (
-                        <tr key={p.id} className={av === 0 ? 'opacity-40' : ''}>
-                          <td className="px-3 py-2.5 font-medium text-gray-900">{p.name}</td>
-                          <td className="px-2 py-2.5 text-center text-gray-700 text-xs">
-                            {p.base_price ? `${Number(p.base_price).toLocaleString()}` : '—'}
-                          </td>
-                          <td className="px-2 py-2.5 text-center font-bold text-emerald-600">{av}</td>
-                          <td className="px-2 py-2.5 text-center text-red-500">{bksThis.length}</td>
-                          <td className="px-2 py-2.5 text-center">
-                            <button disabled={av === 0} onClick={() => openQuick(p, selected)}
-                              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed">
-                              加入訂單
-                            </button>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Booked rooms */}
-              <div className="bg-white rounded-xl border overflow-hidden">
-                <div className="bg-rose-500 text-white px-4 py-2.5 text-sm font-semibold">
-                  {selected}　已售出 <span className="text-lg font-bold">{selectedBookings.length}</span> 間房間
-                </div>
-                {selectedBookings.length === 0 ? (
-                  <div className="text-sm text-gray-400 p-4">此日無訂單</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b text-xs text-gray-500">
-                      <tr>
-                        <th className="text-left px-3 py-2">房型</th>
-                        <th className="text-left px-2 py-2">價格</th>
-                        <th className="text-left px-2 py-2">預訂人</th>
-                        <th className="text-left px-2 py-2">電話</th>
-                        <th className="text-left px-2 py-2">來源</th>
-                        <th className="text-left px-2 py-2">狀態</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {selectedBookings.map(bk => {
-                        const st = STATUS_MAP[bk.status]
-                        return (
-                          <tr key={bk.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-xs text-gray-700">{bk.properties?.name ?? '—'}</td>
-                            <td className="px-2 py-2 text-xs text-gray-600">
-                              {bk.total_price ? `NT$ ${Number(bk.total_price).toLocaleString()}` : '—'}
-                            </td>
-                            <td className="px-2 py-2">
-                              <Link href={`/booking/bookings/${bk.id}`}
-                                className="text-xs font-medium text-indigo-600 hover:underline">
-                                {bk.guest_name || '—'}
-                              </Link>
-                            </td>
-                            <td className="px-2 py-2 text-xs text-gray-500">{bk.guest_phone || '—'}</td>
-                            <td className="px-2 py-2 text-xs text-gray-500">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</td>
-                            <td className="px-2 py-2">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
-                                {st?.label ?? bk.status}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
-        </>
-      )}
+        </div>
+
+        {/* Booked rooms panel */}
+        <div className="bg-white flex-1">
+          <div className="bg-rose-500 text-white px-5 py-3 text-sm font-semibold flex items-center gap-3">
+            <span>{selLabel}</span>
+            <span>　已售出 <span className="text-xl font-bold">{selectedBookings.length}</span> 間房間</span>
+          </div>
+          {loading ? (
+            <div className="py-8 text-center text-sm text-gray-400">載入中…</div>
+          ) : selectedBookings.length === 0 ? (
+            <div className="py-8 text-center text-sm text-gray-400">此日無訂單</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b text-xs text-gray-500">
+                <tr>
+                  <th className="text-left px-5 py-2.5">房型名稱</th>
+                  <th className="text-left px-3 py-2.5">價格</th>
+                  <th className="text-left px-3 py-2.5">預訂人</th>
+                  <th className="text-left px-3 py-2.5">電話</th>
+                  <th className="text-left px-3 py-2.5">來源</th>
+                  <th className="text-left px-3 py-2.5">狀態</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {selectedBookings.map(bk => {
+                  const st = STATUS_MAP[bk.status]
+                  return (
+                    <tr key={bk.id} className="hover:bg-gray-50">
+                      <td className="px-5 py-3 text-gray-700">{bk.properties?.name ?? '—'}</td>
+                      <td className="px-3 py-3 text-gray-600">
+                        {bk.total_price ? `NT$ ${Number(bk.total_price).toLocaleString()}` : '—'}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Link href={`/booking/bookings/${bk.id}`}
+                          className="font-medium text-indigo-600 hover:underline">
+                          {bk.guest_name || '—'}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3 text-gray-500 text-xs">{bk.guest_phone || '—'}</td>
+                      <td className="px-3 py-3 text-gray-500 text-xs">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</td>
+                      <td className="px-3 py-3">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st?.color ?? 'bg-gray-100 text-gray-600'}`}>
+                          {st?.label ?? bk.status}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
 
       {/* Quick booking modal */}
       {quickProp && createPortal(
@@ -352,13 +350,12 @@ export default function CalendarPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-gray-900">加入訂單</h3>
-                <div className="text-xs text-gray-400 mt-0.5">{quickProp.name}　{quickDate}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{quickProp.name}　{quickForm.check_in}</div>
               </div>
               <button onClick={() => setQuickProp(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">旅客姓名 *</label>
@@ -373,7 +370,6 @@ export default function CalendarPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">入住</label>
@@ -386,7 +382,6 @@ export default function CalendarPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">人數</label>
@@ -401,7 +396,6 @@ export default function CalendarPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
-
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">通路</label>
               <select value={quickForm.platform} onChange={e => setQuickForm(f => ({ ...f, platform: e.target.value }))}
@@ -409,7 +403,6 @@ export default function CalendarPage() {
                 {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
-
             <div className="flex gap-2 pt-1">
               <button onClick={() => setQuickProp(null)}
                 className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
