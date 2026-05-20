@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Home, List, RefreshCw, Mail, Building2, BedDouble } from 'lucide-react'
+import { CalendarDays, Home, List, RefreshCw, Mail, Building2, BedDouble, BarChart2 } from 'lucide-react'
 
 const NAV = [
   { href: '/booking',            label: '總覽',       icon: Home },
@@ -9,6 +9,7 @@ const NAV = [
   { href: '/booking/bookings',   label: '訂單',       icon: List },
   { href: '/booking/calendar',   label: '日曆',       icon: CalendarDays },
   { href: '/booking/properties', label: '房型管理',   icon: BedDouble },
+  { href: '/booking/reports',    label: '數據報表',   icon: BarChart2 },
   { href: '/booking/ical',       label: 'iCal 同步',  icon: RefreshCw },
   { href: '/booking/email',      label: 'Email 擷取', icon: Mail },
 ]

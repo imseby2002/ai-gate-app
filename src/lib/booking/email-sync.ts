@@ -165,21 +165,32 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             ?? matchPropertyByName(extracted.property_name, properties)
             ?? fallbackPropertyId
 
-          // Skip if already imported (same property + platform + dates)
-          if (extracted.check_in && extracted.check_out) {
+          // Booking.com emails often lack check_out/guest_name — use placeholders
+          const checkIn  = extracted.check_in
+          const checkOut = extracted.check_out || (checkIn
+            ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
+            : null)
+
+          // Must have at minimum a check_in date
+          if (!checkIn) { result.processed++; continue }
+
+          const isPartial = !extracted.check_out || !extracted.guest_name
+          const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
+
+          // Skip if already imported (same property + platform + confirmation OR dates)
+          const confId = extracted.confirmation_id || `email_${settingId}_${uid}`
+          if (extracted.check_in) {
             let dupQ = supabase
               .from('bookings')
               .select('id')
               .eq('user_id', setting.user_id)
               .eq('platform', platform)
-              .eq('check_in', extracted.check_in)
-              .eq('check_out', extracted.check_out)
+              .eq('check_in', checkIn)
             if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
             const { data: dup } = await dupQ.maybeSingle()
             if (dup) { result.processed++; continue }
           }
 
-          const confId = extracted.confirmation_id || `email_${settingId}_${uid}`
           const { error: bkErr } = await supabase
             .from('bookings')
             .upsert({
@@ -187,13 +198,14 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
               property_id:         resolvedPropertyId,
               platform,
               platform_booking_id: confId,
-              guest_name:          extracted.guest_name || '(Email 訂單)',
-              check_in:            extracted.check_in,
-              check_out:           extracted.check_out,
+              guest_name:          extracted.guest_name || '(待補充)',
+              check_in:            checkIn,
+              check_out:           checkOut,
               num_guests:          extracted.num_guests || 1,
               total_price:         extracted.total_price,
-              status:              extracted.is_cancellation ? 'cancelled' : 'confirmed',
+              status:              bookingStatus,
               source:              'email',
+              notes:               isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null,
               raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
             }, { onConflict: 'user_id,platform,platform_booking_id' })
 
@@ -274,17 +286,19 @@ ${bnbLine}
 ${truncatedBody}
 ${roomListStr}
 
-請回傳以下 JSON（若欄位無法確定請用 null）：
+注意：Booking.com 的通知郵件通常只含訂單號與入住日期，沒有退房日、姓名、房型，這是正常現象，仍請回傳 is_booking: true 並盡量擷取可用欄位。
+
+請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
 {
   "is_booking": true 或 false（是否為訂房確認/取消郵件）,
   "is_cancellation": true 或 false,
-  "guest_name": "旅客姓名",
-  "check_in": "YYYY-MM-DD",
-  "check_out": "YYYY-MM-DD",
+  "guest_name": "旅客姓名，無法取得填 null",
+  "check_in": "YYYY-MM-DD，入住日期",
+  "check_out": "YYYY-MM-DD，退房日期，無法取得填 null",
   "confirmation_id": "訂單確認號/預約編號",
   "total_price": 數字或null,
-  "num_guests": 數字,
-  "property_name": "郵件中出現的房型名稱（如：標準雙人房、Standard Double Room）",
+  "num_guests": 數字或null,
+  "property_name": "郵件中出現的房型名稱（如：標準雙人房、Standard Double Room），無房型資訊填 null",
   "matched_property_id": "從已知房型清單中最符合的 id，若無法確定則為 null",
   "platform": "${platform}"
 }
