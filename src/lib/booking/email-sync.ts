@@ -45,6 +45,18 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     return result
   }
 
+  // Auto-assign property_id if setting has none: use the user's only active property
+  let effectivePropertyId: string | null = setting.property_id ?? null
+  if (!effectivePropertyId) {
+    const { data: props } = await supabase
+      .from('properties')
+      .select('id')
+      .eq('user_id', setting.user_id)
+      .eq('is_active', true)
+      .limit(2)
+    if (props?.length === 1) effectivePropertyId = props[0].id
+  }
+
   const client = new ImapFlow({
     host: setting.imap_host,
     port: setting.imap_port,
@@ -103,26 +115,27 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const extracted = await extractBookingWithAI(subject, body, platform)
           if (!extracted?.is_booking) continue
 
-          // Skip if already imported from iCal or previous sync (same platform + dates)
+          // Skip if already imported (same property + platform + dates)
           if (extracted.check_in && extracted.check_out) {
-            const { data: dup } = await supabase
+            let dupQ = supabase
               .from('bookings')
               .select('id')
               .eq('user_id', setting.user_id)
               .eq('platform', platform)
               .eq('check_in', extracted.check_in)
               .eq('check_out', extracted.check_out)
-              .maybeSingle()
+            if (effectivePropertyId) dupQ = dupQ.eq('property_id', effectivePropertyId)
+            const { data: dup } = await dupQ.maybeSingle()
             if (dup) { result.processed++; continue }
           }
 
-          // Upsert booking
+          // Upsert booking — use confirmation_id as the stable dedup key
           const confId = extracted.confirmation_id || `email_${settingId}_${uid}`
           const { error: bkErr } = await supabase
             .from('bookings')
             .upsert({
               user_id:             setting.user_id,
-              property_id:         setting.property_id ?? null,
+              property_id:         effectivePropertyId,
               platform,
               platform_booking_id: confId,
               guest_name:          extracted.guest_name || '(Email 訂單)',
