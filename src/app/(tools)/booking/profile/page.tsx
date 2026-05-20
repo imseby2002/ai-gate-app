@@ -60,7 +60,7 @@ export default function BnbProfilePage() {
   if (loading) return <div className="p-6 text-gray-400 text-sm">載入中…</div>
 
   return (
-    <div className="p-6 max-w-2xl space-y-6">
+    <div className="p-6 pb-16 max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">民宿基本資料</h1>

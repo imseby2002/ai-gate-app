@@ -130,7 +130,7 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="p-6 space-y-4 max-w-6xl">
+    <div className="p-6 pb-16 space-y-4 max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">訂單管理</h1>
         <div className="flex gap-2">

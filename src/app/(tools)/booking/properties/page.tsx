@@ -86,7 +86,7 @@ export default function PropertiesPage() {
   const isOpen = adding || editing !== null
 
   return (
-    <div className="p-6 space-y-5 max-w-3xl">
+    <div className="p-6 pb-16 space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">房型管理</h1>

@@ -128,7 +128,7 @@ export default function EmailPage() {
   const hasUnassigned = settings.some(s => !s.property_id)
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
+    <div className="p-6 pb-16 space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email 訂單擷取</h1>

@@ -87,7 +87,7 @@ export default function BookingDetailPage() {
   const st = STATUS_MAP[bk.status] ?? { label: bk.status, color: 'bg-gray-100 text-gray-600' }
 
   return (
-    <div className="p-6 max-w-3xl space-y-5">
+    <div className="p-6 pb-16 max-w-3xl space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.back()}
