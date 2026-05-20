@@ -1,21 +1,27 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Edit2, Trash2, Home } from 'lucide-react'
+import { Plus, Edit2, Trash2, BedDouble, X } from 'lucide-react'
 
 interface Property {
   id: string; name: string; description: string
   room_count: number; max_guests: number; base_price: number | null
-  currency: string; status: string; created_at: string
+  currency: string; status: string; name_aliases: string[]
+}
+
+const EMPTY_FORM = {
+  name: '', description: '', room_count: 1, max_guests: 2,
+  base_price: '', currency: 'TWD', name_aliases: [] as string[],
 }
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<Property | null>(null)
-  const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '', room_count: 1, max_guests: 2, base_price: '', currency: 'TWD' })
-  const [saving, setSaving] = useState(false)
+  const [loading, setLoading]   = useState(true)
+  const [editing, setEditing]   = useState<Property | null>(null)
+  const [adding, setAdding]     = useState(false)
+  const [form, setForm]         = useState(EMPTY_FORM)
+  const [aliasInput, setAliasInput] = useState('')
+  const [saving, setSaving]     = useState(false)
 
   useEffect(() => {
     fetch('/api/booking/properties').then(r => r.json())
@@ -25,7 +31,27 @@ export default function PropertiesPage() {
 
   function openEdit(p: Property) {
     setEditing(p)
-    setForm({ name: p.name, description: p.description ?? '', room_count: p.room_count, max_guests: p.max_guests, base_price: p.base_price?.toString() ?? '', currency: p.currency })
+    setForm({
+      name: p.name, description: p.description ?? '',
+      room_count: p.room_count, max_guests: p.max_guests,
+      base_price: p.base_price?.toString() ?? '',
+      currency: p.currency,
+      name_aliases: p.name_aliases ?? [],
+    })
+    setAliasInput('')
+  }
+
+  function openAdd() { setAdding(true); setForm(EMPTY_FORM); setAliasInput('') }
+
+  function addAlias() {
+    const v = aliasInput.trim()
+    if (!v || form.name_aliases.includes(v)) return
+    setForm(f => ({ ...f, name_aliases: [...f.name_aliases, v] }))
+    setAliasInput('')
+  }
+
+  function removeAlias(a: string) {
+    setForm(f => ({ ...f, name_aliases: f.name_aliases.filter(x => x !== a) }))
   }
 
   async function save() {
@@ -47,16 +73,12 @@ export default function PropertiesPage() {
         const d = await res.json()
         if (d.property) setProperties(prev => [...prev, d.property])
       }
-      setEditing(null)
-      setAdding(false)
-      setForm({ name: '', description: '', room_count: 1, max_guests: 2, base_price: '', currency: 'TWD' })
-    } finally {
-      setSaving(false)
-    }
+      setEditing(null); setAdding(false); setForm(EMPTY_FORM)
+    } finally { setSaving(false) }
   }
 
   async function del(id: string) {
-    if (!confirm('確定刪除？刪除後相關訂單不受影響')) return
+    if (!confirm('確定刪除？')) return
     await fetch('/api/booking/properties', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setProperties(prev => prev.filter(p => p.id !== id))
   }
@@ -66,10 +88,13 @@ export default function PropertiesPage() {
   return (
     <div className="p-6 space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">房源管理</h1>
-        <button onClick={() => setAdding(true)}
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">房型管理</h1>
+          <p className="text-sm text-gray-500 mt-0.5">設定各房間及平台別名，Email 同步時自動比對</p>
+        </div>
+        <button onClick={openAdd}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
-          <Plus className="h-4 w-4" /> 新增房源
+          <Plus className="h-4 w-4" /> 新增房型
         </button>
       </div>
 
@@ -77,18 +102,18 @@ export default function PropertiesPage() {
         <div className="text-center py-16 text-gray-400">載入中…</div>
       ) : properties.length === 0 ? (
         <div className="text-center py-16 text-gray-400 space-y-2">
-          <Home className="h-10 w-10 mx-auto opacity-30" />
-          <p className="text-sm">尚未建立任何房源</p>
+          <BedDouble className="h-10 w-10 mx-auto opacity-30" />
+          <p className="text-sm">尚未建立任何房型</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {properties.map(p => (
-            <div key={p.id} className="bg-white border rounded-xl p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                <Home className="h-5 w-5 text-indigo-600" />
+            <div key={p.id} className="bg-white border rounded-xl p-4 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5">
+                <BedDouble className="h-5 w-5 text-indigo-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-gray-900">{p.name}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {p.status === 'active' ? '上架' : '下架'}
@@ -98,6 +123,15 @@ export default function PropertiesPage() {
                   {p.room_count} 間 · 最多 {p.max_guests} 人
                   {p.base_price && ` · ${p.currency} ${Number(p.base_price).toLocaleString()}/晚`}
                 </div>
+                {(p.name_aliases ?? []).length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {p.name_aliases.map(a => (
+                      <span key={a} className="text-[10px] px-1.5 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-full">
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 {p.description && <div className="text-xs text-gray-400 truncate mt-0.5">{p.description}</div>}
               </div>
               <div className="flex gap-1.5 shrink-0">
@@ -117,37 +151,78 @@ export default function PropertiesPage() {
       {isOpen && createPortal(
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) { setAdding(false); setEditing(null) } }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-3">
-            <h3 className="font-bold text-gray-900">{editing ? '編輯房源' : '新增房源'}</h3>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3">
+            <h3 className="font-bold text-gray-900">{editing ? '編輯房型' : '新增房型'}</h3>
+
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">房源名稱 *</label>
+              <label className="text-xs font-medium text-gray-600">房型名稱（中文內部名稱）<span className="text-red-500">*</span></label>
               <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="例：海景大床房、賞鯨套房"
+                placeholder="例：海景房、標準雙人房"
                 className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
+
+            {/* Platform aliases */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600">
+                平台別名
+                <span className="ml-1 font-normal text-gray-400">（各平台顯示的英文/外語名稱，用於 Email 自動比對）</span>
+              </label>
+              <div className="flex gap-2">
+                <input value={aliasInput}
+                  onChange={e => setAliasInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias() } }}
+                  placeholder="如：Sea View Double Room（按 Enter 新增）"
+                  className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <button onClick={addAlias} type="button"
+                  className="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm hover:bg-sky-700">
+                  新增
+                </button>
+              </div>
+              {form.name_aliases.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {form.name_aliases.map(a => (
+                    <span key={a} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-full">
+                      {a}
+                      <button onClick={() => removeAlias(a)} className="hover:text-red-500">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="text-[10px] text-gray-400">
+                Agoda: Sea View Double Room · Booking.com: Sea View Room · Trip.com: 标准海景大床房
+              </div>
+            </div>
+
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">描述</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                 rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
+
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">間數</label>
-                <input type="number" min={1} value={form.room_count} onChange={e => setForm(p => ({ ...p, room_count: parseInt(e.target.value) }))}
+                <input type="number" min={1} value={form.room_count}
+                  onChange={e => setForm(p => ({ ...p, room_count: parseInt(e.target.value) }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">最多人數</label>
-                <input type="number" min={1} value={form.max_guests} onChange={e => setForm(p => ({ ...p, max_guests: parseInt(e.target.value) }))}
+                <input type="number" min={1} value={form.max_guests}
+                  onChange={e => setForm(p => ({ ...p, max_guests: parseInt(e.target.value) }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">底價/晚</label>
-                <input type="number" value={form.base_price} onChange={e => setForm(p => ({ ...p, base_price: e.target.value }))}
+                <input type="number" value={form.base_price}
+                  onChange={e => setForm(p => ({ ...p, base_price: e.target.value }))}
                   placeholder="2000"
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
+
             <div className="flex gap-2 pt-1">
               <button onClick={() => { setAdding(false); setEditing(null) }}
                 className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>

@@ -22,12 +22,12 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, description, room_count = 1, max_guests = 2, base_price, currency = 'TWD', amenities = [], images = [] } = body
+  const { name, description, room_count = 1, max_guests = 2, base_price, currency = 'TWD', amenities = [], images = [], name_aliases = [] } = body
   if (!name?.trim()) return NextResponse.json({ error: '房源名稱必填' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('properties')
-    .insert({ user_id: user.id, name, description, room_count, max_guests, base_price, currency, amenities, images })
+    .insert({ user_id: user.id, name, description, room_count, max_guests, base_price, currency, amenities, images, name_aliases })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

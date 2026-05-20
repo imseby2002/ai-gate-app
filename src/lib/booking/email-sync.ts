@@ -19,6 +19,7 @@ interface BookingExtracted {
 interface UserProperty {
   id: string
   name: string
+  name_aliases: string[]
 }
 
 interface EmailSyncResult {
@@ -40,24 +41,35 @@ const PLATFORM_SENDERS: Record<string, string> = {
 function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
   if (!name || !properties.length) return null
   const lower = name.toLowerCase().trim()
+  const tokens = lower.split(/[\s\-_,]+/).filter(t => t.length > 1)
 
-  // 1. Exact match
+  // Helper: check all name variants (name + aliases)
+  function variants(p: UserProperty): string[] {
+    return [p.name, ...(p.name_aliases ?? [])].map(s => s.toLowerCase())
+  }
+
+  // 1. Alias exact match (highest priority — platform names like "Sea View Double Room")
+  for (const p of properties) {
+    if ((p.name_aliases ?? []).some(a => a.toLowerCase() === lower)) return p.id
+  }
+
+  // 2. Main name exact match
   const exact = properties.find(p => p.name.toLowerCase() === lower)
   if (exact) return exact.id
 
-  // 2. Substring: extracted name contains property name or vice versa
-  const sub = properties.find(p => {
-    const pn = p.name.toLowerCase()
-    return lower.includes(pn) || pn.includes(lower)
-  })
+  // 3. Substring match across all variants
+  const sub = properties.find(p =>
+    variants(p).some(v => lower.includes(v) || v.includes(lower))
+  )
   if (sub) return sub.id
 
-  // 3. Token overlap (any word in common)
-  const tokens = lower.split(/[\s\-_,]+/).filter(t => t.length > 1)
-  const tokenMatch = properties.find(p => {
-    const pTokens = p.name.toLowerCase().split(/[\s\-_,]+/)
-    return tokens.some(t => pTokens.includes(t))
-  })
+  // 4. Token overlap across all variants
+  const tokenMatch = properties.find(p =>
+    variants(p).some(v => {
+      const vTokens = v.split(/[\s\-_,]+/)
+      return tokens.some(t => vTokens.includes(t))
+    })
+  )
   return tokenMatch?.id ?? null
 }
 
@@ -79,7 +91,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   // Load ALL user properties (rooms) for name-based matching
   const { data: userProperties } = await supabase
     .from('properties')
-    .select('id, name')
+    .select('id, name, name_aliases')
     .eq('user_id', setting.user_id)
     .eq('status', 'active')
 
@@ -248,7 +260,10 @@ async function extractBookingWithAI(
 
   const bnbLine = bnbName ? `\n此民宿名稱（所有訂單都屬於此民宿）：${bnbName}` : ''
   const roomListStr = properties.length > 0
-    ? `\n已知房型清單（請判斷是哪個房型，回傳其 id）：\n${properties.map(p => `- id: "${p.id}", 房型名稱: "${p.name}"`).join('\n')}`
+    ? `\n已知房型清單（請判斷是哪個房型，回傳其 id）：\n${properties.map(p => {
+        const aliases = (p.name_aliases ?? []).length > 0 ? `，別名：${p.name_aliases.join('、')}` : ''
+        return `- id: "${p.id}", 房型名稱: "${p.name}"${aliases}`
+      }).join('\n')}`
     : ''
 
   const prompt = `從以下訂房平台郵件中擷取訂單資訊，回傳 JSON 格式。
