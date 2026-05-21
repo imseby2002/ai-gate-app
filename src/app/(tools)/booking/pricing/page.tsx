@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom'
 
 // ── Types ────────────────────────────────────────────────────
 type BookingStatus = 'open' | 'closed' | 'admin_only'
+type HolidayType = 'holiday' | 'winter_vacation' | 'summer_vacation'
+interface HolidayPeriod { name: string; from: string; to: string; type: HolidayType }
 type AdjType = 'percent' | 'fixed'
 type RuleType = 'weekend' | 'holiday' | 'seasonal' | 'occupancy' | 'advance_booking'
 
@@ -112,6 +114,10 @@ export default function PricingPage() {
   const [batchStatus, setBatchStatus] = useState<BookingStatus | ''>('')
   const [batchSaving, setBatchSaving] = useState(false)
 
+  // Holiday presets
+  const [holidays, setHolidays] = useState<HolidayPeriod[]>([])
+  const [holidaysLoading, setHolidaysLoading] = useState(false)
+
   // Rule modal
   const [ruleModal, setRuleModal] = useState<Partial<PricingRule> | null>(null)
   const [ruleSaving, setRuleSaving] = useState(false)
@@ -133,6 +139,23 @@ export default function PricingPage() {
   }, [year, month])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    if (!showBatch) return
+    const cacheKey = `booking_holidays_${year}`
+    const cached = sessionStorage.getItem(cacheKey)
+    if (cached) { try { setHolidays(JSON.parse(cached)); return } catch {} }
+    setHolidaysLoading(true)
+    fetch(`/api/booking/holidays?year=${year}`)
+      .then(r => r.json())
+      .then(data => {
+        const list: HolidayPeriod[] = data.holidays ?? []
+        setHolidays(list)
+        sessionStorage.setItem(cacheKey, JSON.stringify(list))
+      })
+      .catch(() => setHolidays([]))
+      .finally(() => setHolidaysLoading(false))
+  }, [showBatch, year])
 
   const settingsMap = dateSettings.reduce<Record<string, Record<string, DateSetting>>>((acc, s) => {
     if (!acc[s.date]) acc[s.date] = {}
@@ -676,6 +699,61 @@ export default function PricingPage() {
               <button onClick={() => setShowBatch(false)} className="p-1.5 hover:bg-gray-100 rounded-lg">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
+            </div>
+
+            {/* Holiday presets */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-semibold text-gray-700">快速選取假期</div>
+                {holidaysLoading && (
+                  <span className="text-[11px] text-gray-400 animate-pulse">AI 擷取中…</span>
+                )}
+              </div>
+              {!holidaysLoading && holidays.length === 0 && (
+                <div className="text-[11px] text-gray-400">無法取得假期資料</div>
+              )}
+              {holidays.length > 0 && (
+                <div className="space-y-2">
+                  {/* 連續假期 */}
+                  {holidays.filter(h => h.type === 'holiday').length > 0 && (
+                    <div>
+                      <div className="text-[10px] text-gray-400 mb-1">🎉 連續假期</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {holidays.filter(h => h.type === 'holiday').map(h => (
+                          <button key={h.name + h.from}
+                            onClick={() => { setBatchFrom(h.from); setBatchTo(h.to); setBatchDow([0,1,2,3,4,5,6]) }}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors
+                              ${batchFrom === h.from && batchTo === h.to
+                                ? 'bg-orange-500 text-white border-orange-500'
+                                : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'}`}>
+                            {h.name}
+                            <span className="ml-1 opacity-60">{h.from.slice(5)} – {h.to.slice(5)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* 寒假 / 暑假 */}
+                  {holidays.filter(h => h.type !== 'holiday').length > 0 && (
+                    <div>
+                      <div className="text-[10px] text-gray-400 mb-1">🏫 學期假期</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {holidays.filter(h => h.type !== 'holiday').map(h => (
+                          <button key={h.name + h.from}
+                            onClick={() => { setBatchFrom(h.from); setBatchTo(h.to); setBatchDow([0,1,2,3,4,5,6]) }}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors
+                              ${batchFrom === h.from && batchTo === h.to
+                                ? 'bg-violet-500 text-white border-violet-500'
+                                : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'}`}>
+                            {h.name}
+                            <span className="ml-1 opacity-60">{h.from.slice(5)} – {h.to.slice(5)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Date range */}
