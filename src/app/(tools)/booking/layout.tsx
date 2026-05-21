@@ -1,7 +1,8 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { CalendarDays, Home, List, RefreshCw, Mail, Building2, BedDouble, BarChart2, Tag } from 'lucide-react'
+import { CalendarDays, Home, List, RefreshCw, Mail, Building2, BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const NAV = [
   { href: '/booking',            label: '總覽',       icon: Home },
@@ -17,21 +18,34 @@ const NAV = [
 
 export default function BookingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [collapsed, setCollapsed] = useState(false)
+
   return (
     <div className="flex h-screen bg-gray-50">
-      <aside className="w-52 shrink-0 border-r bg-white flex flex-col py-6 gap-1 px-3 overflow-y-auto">
-        <div className="px-2 pb-4">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>
+      <aside className={`relative shrink-0 border-r bg-white flex flex-col py-4 gap-1 overflow-y-auto transition-all duration-200
+        ${collapsed ? 'w-14 px-1.5' : 'w-52 px-3'}`}>
+
+        {/* Header + toggle */}
+        <div className={`flex items-center mb-3 ${collapsed ? 'justify-center px-0' : 'justify-between px-2'}`}>
+          {!collapsed && (
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>
+          )}
+          <button onClick={() => setCollapsed(c => !c)}
+            className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0">
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
         </div>
+
         {NAV.map(n => {
           const Icon = n.icon
           const active = pathname === n.href || (n.href !== '/booking' && pathname.startsWith(n.href))
           return (
-            <Link key={n.href} href={n.href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+            <Link key={n.href} href={n.href} title={collapsed ? n.label : undefined}
+              className={`flex items-center rounded-lg text-sm font-medium transition-colors
+                ${collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2'}
                 ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <Icon className="h-4 w-4" />
-              {n.label}
+              <Icon className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>{n.label}</span>}
             </Link>
           )
         })}
