@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 // ── Types ────────────────────────────────────────────────────
@@ -42,6 +42,17 @@ const DOW = ['日','一','二','三','四','五','六']
 // ── Helpers ──────────────────────────────────────────────────
 function toDateStr(d: Date) { return d.toISOString().slice(0, 10) }
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
+
+function getDateRange(from: string, to: string, dows: number[]): string[] {
+  const dates: string[] = []
+  const cur = new Date(from + 'T00:00:00')
+  const end = new Date(to + 'T00:00:00')
+  while (cur <= end) {
+    if (dows.includes(cur.getDay())) dates.push(toDateStr(cur))
+    cur.setDate(cur.getDate() + 1)
+  }
+  return dates
+}
 
 function computeEffectivePrice(
   basePrice: number | null,
@@ -90,6 +101,16 @@ export default function PricingPage() {
   const [pendingPrice, setPendingPrice] = useState('')
   const [showPriceInput, setShowPriceInput] = useState(false)
   const [applyingSaving, setApplyingSaving] = useState(false)
+
+  // Batch pricing modal
+  const [showBatch, setShowBatch] = useState(false)
+  const [batchFrom, setBatchFrom] = useState('')
+  const [batchTo, setBatchTo] = useState('')
+  const [batchDow, setBatchDow] = useState<number[]>([0,1,2,3,4,5,6])
+  const [batchProps, setBatchProps] = useState<string[]>([])
+  const [batchPrice, setBatchPrice] = useState('')
+  const [batchStatus, setBatchStatus] = useState<BookingStatus | ''>('')
+  const [batchSaving, setBatchSaving] = useState(false)
 
   // Rule modal
   const [ruleModal, setRuleModal] = useState<Partial<PricingRule> | null>(null)
@@ -211,6 +232,43 @@ export default function PricingPage() {
     } finally { setApplyingSaving(false) }
   }
 
+  async function applyBatch() {
+    if (!batchFrom || !batchTo) return
+    setBatchSaving(true)
+    try {
+      const dates = getDateRange(batchFrom, batchTo, batchDow)
+      if (dates.length === 0) { alert('沒有符合條件的日期'); return }
+      const targetProps = batchProps.length > 0 ? batchProps : properties.map(p => p.id)
+
+      // Fetch existing settings for the cross-month range
+      const res = await fetch(`/api/booking/pricing?from=${batchFrom}&to=${batchTo}`).then(r => r.json())
+      const exMap: Record<string, Record<string, DateSetting>> = {}
+      for (const s of res.settings ?? []) {
+        if (!exMap[s.date]) exMap[s.date] = {}
+        exMap[s.date][s.property_id] = s
+      }
+
+      const settings: DateSetting[] = []
+      for (const date of dates) {
+        for (const propertyId of targetProps) {
+          const ex = exMap[date]?.[propertyId] ?? { booking_status: 'open', price_override: null }
+          settings.push({
+            ...ex, property_id: propertyId, date,
+            booking_status: (batchStatus || ex.booking_status) as BookingStatus,
+            price_override: batchPrice !== '' ? parseFloat(batchPrice) : ex.price_override,
+          })
+        }
+      }
+      await fetch('/api/booking/pricing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      })
+      setShowBatch(false)
+      setBatchFrom(''); setBatchTo(''); setBatchPrice(''); setBatchStatus(''); setBatchDow([0,1,2,3,4,5,6])
+      await fetchData()
+    } finally { setBatchSaving(false) }
+  }
+
   async function toggleDynamicPricing(propertyId: string, enabled: boolean) {
     await fetch('/api/booking/properties', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -292,6 +350,11 @@ export default function PricingPage() {
                   清除
                 </button>
               )}
+              <button onClick={() => { setBatchProps(properties.map(p => p.id)); setShowBatch(true) }}
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 whitespace-nowrap font-medium">
+                <CalendarRange className="h-3.5 w-3.5" />
+                批次定價
+              </button>
             </div>
           </div>
 
@@ -598,6 +661,145 @@ export default function PricingPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Batch pricing modal */}
+      {showBatch && typeof window !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
+          onClick={e => { if (e.target === e.currentTarget) setShowBatch(false) }}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-gray-900">批次設定房價</h3>
+                <p className="text-xs text-gray-400 mt-0.5">可跨月設定，一次套用多個日期</p>
+              </div>
+              <button onClick={() => setShowBatch(false)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                <X className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Date range */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-gray-700">日期範圍</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] text-gray-500 mb-1 block">起始日</label>
+                  <input type="date" value={batchFrom} onChange={e => setBatchFrom(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div>
+                  <label className="text-[11px] text-gray-500 mb-1 block">結束日</label>
+                  <input type="date" value={batchTo} onChange={e => setBatchTo(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+              </div>
+              {batchFrom && batchTo && batchFrom <= batchTo && (
+                <div className="text-[11px] text-gray-400">
+                  符合條件：<span className="text-indigo-600 font-semibold">
+                    {getDateRange(batchFrom, batchTo, batchDow).length}
+                  </span> 天
+                </div>
+              )}
+            </div>
+
+            {/* DOW filter */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-gray-700">套用星期</div>
+                <div className="flex gap-2 text-xs text-indigo-600">
+                  <button onClick={() => setBatchDow([0,1,2,3,4,5,6])} className="hover:underline">全部</button>
+                  <button onClick={() => setBatchDow([1,2,3,4,5])} className="hover:underline">平日</button>
+                  <button onClick={() => setBatchDow([0,6])} className="hover:underline">週末</button>
+                </div>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                {DOW.map((d, i) => (
+                  <button key={i}
+                    onClick={() => setBatchDow(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])}
+                    className={`w-9 h-9 rounded-full text-sm font-semibold border transition-colors
+                      ${batchDow.includes(i)
+                        ? (i === 0 ? 'bg-red-500 text-white border-red-500' : i === 6 ? 'bg-blue-500 text-white border-blue-500' : 'bg-indigo-600 text-white border-indigo-600')
+                        : (i === 0 ? 'text-red-500 border-gray-200' : i === 6 ? 'text-blue-500 border-gray-200' : 'text-gray-600 border-gray-200 hover:bg-gray-50')
+                      }`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Room selection */}
+            {properties.length > 1 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-gray-700">套用房型</div>
+                  <button onClick={() => setBatchProps(p => p.length === properties.length ? [] : properties.map(x => x.id))}
+                    className="text-xs text-indigo-600 hover:underline">
+                    {batchProps.length === properties.length ? '取消全選' : '全選'}
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {properties.map(p => (
+                    <label key={p.id} className="flex items-center gap-2.5 cursor-pointer py-1">
+                      <input type="checkbox" checked={batchProps.includes(p.id)}
+                        onChange={e => setBatchProps(prev => e.target.checked ? [...prev, p.id] : prev.filter(id => id !== p.id))}
+                        className="rounded border-gray-300 text-indigo-600" />
+                      <span className="text-sm text-gray-700">{p.name}</span>
+                      {p.base_price && <span className="text-xs text-gray-400">基本價 {Number(p.base_price).toLocaleString()}</span>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Price */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-gray-700">覆蓋房價</div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 shrink-0">NT$</span>
+                <input type="number" min="0" value={batchPrice} onChange={e => setBatchPrice(e.target.value)}
+                  placeholder="空白 = 不更改"
+                  className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                {batchPrice && (
+                  <button onClick={() => setBatchPrice('')} className="text-gray-400 hover:text-gray-600 shrink-0">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400">設定後會覆蓋各日期的基本價與動態定價</p>
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-gray-700">訂購狀態（選填）</div>
+              <div className="flex gap-2 flex-wrap">
+                {([
+                  { v: '' as const,           label: '不更改', cls: 'border-gray-200 text-gray-500 bg-white' },
+                  { v: 'open' as const,        label: '開放訂房', cls: 'border-emerald-300 text-emerald-700 bg-emerald-50' },
+                  { v: 'admin_only' as const,  label: '僅供後台', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
+                  { v: 'closed' as const,      label: '不可訂房', cls: 'border-red-300 text-red-700 bg-red-50' },
+                ]).map(({ v, label, cls }) => (
+                  <button key={v} onClick={() => setBatchStatus(v)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                      ${batchStatus === v ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${cls}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowBatch(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button
+                onClick={applyBatch}
+                disabled={!batchFrom || !batchTo || batchFrom > batchTo || (!batchPrice && !batchStatus) || batchSaving}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+                {batchSaving ? '套用中…' : `套用 ${batchFrom && batchTo && batchFrom <= batchTo ? getDateRange(batchFrom, batchTo, batchDow).length : 0} 天`}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Rule edit modal */}
