@@ -4,36 +4,29 @@ import { createPortal } from 'react-dom'
 import { Mail, Plus, Trash2, RefreshCw, CheckCircle, XCircle, Loader2, Eye, EyeOff, RotateCcw } from 'lucide-react'
 
 const IMAP_PRESETS: Record<string, { host: string; port: number }> = {
-  'Gmail':   { host: 'imap.gmail.com',    port: 993 },
-  'Outlook': { host: 'imap-mail.outlook.com', port: 993 },
-  'Yahoo':   { host: 'imap.mail.yahoo.com', port: 993 },
+  'Gmail':   { host: 'imap.gmail.com',         port: 993 },
+  'Outlook': { host: 'imap-mail.outlook.com',  port: 993 },
+  'Yahoo':   { host: 'imap.mail.yahoo.com',    port: 993 },
   '自訂':    { host: '', port: 993 },
 }
 
 interface EmailSetting {
-  id: string
-  email_address: string
-  imap_host: string
-  imap_port: number
-  imap_folder: string
-  sync_enabled: boolean
-  last_synced_at: string | null
-  last_sync_count: number | null
-  last_sync_error: string | null
-  property_id: string | null
-  properties?: { name: string }
+  id: string; email_address: string; imap_host: string; imap_port: number
+  imap_folder: string; sync_enabled: boolean; last_synced_at: string | null
+  last_sync_count: number | null; last_sync_error: string | null
+  property_id: string | null; properties?: { name: string }
 }
 interface Property { id: string; name: string }
 
 export default function EmailPage() {
-  const [settings, setSettings]   = useState<EmailSetting[]>([])
+  const [settings, setSettings]     = useState<EmailSetting[]>([])
   const [properties, setProperties] = useState<Property[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [syncing, setSyncing]     = useState<string | null>(null)
-  const [adding, setAdding]       = useState(false)
-  const [showPw, setShowPw]       = useState(false)
-  const [preset, setPreset]       = useState('Gmail')
-  const [form, setForm]           = useState({
+  const [loading, setLoading]       = useState(true)
+  const [syncing, setSyncing]       = useState<string | null>(null)
+  const [adding, setAdding]         = useState(false)
+  const [showPw, setShowPw]         = useState(false)
+  const [preset, setPreset]         = useState('Gmail')
+  const [form, setForm] = useState({
     email_address: '', imap_host: 'imap.gmail.com', imap_port: 993,
     imap_user: '', imap_password: '', imap_folder: 'INBOX', property_id: '',
   })
@@ -60,8 +53,7 @@ export default function EmailPage() {
     setSyncing(key)
     try {
       const res = await fetch('/api/booking/email/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(id ? { setting_id: id, reset } : { reset }),
       })
       const d = await res.json()
@@ -69,15 +61,12 @@ export default function EmailPage() {
       alert(`同步完成，共新增 ${total} 筆訂單`)
       const em = await fetch('/api/booking/email').then(r => r.json())
       setSettings(em.settings ?? [])
-    } finally {
-      setSyncing(null)
-    }
+    } finally { setSyncing(null) }
   }
 
   async function updateProperty(id: string, property_id: string) {
     const res = await fetch('/api/booking/email', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, property_id: property_id || null }),
     })
     const d = await res.json()
@@ -90,25 +79,18 @@ export default function EmailPage() {
     setSaving(true)
     try {
       const res = await fetch('/api/booking/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
       const d = await res.json()
-      if (d.setting) {
-        setSettings(prev => [...prev, d.setting])
-        setAdding(false)
-        resetForm()
-      } else alert(d.error)
-    } finally {
-      setSaving(false)
-    }
+      if (d.setting) { setSettings(prev => [...prev, d.setting]); setAdding(false); resetForm() }
+      else alert(d.error)
+    } finally { setSaving(false) }
   }
 
   function resetForm() {
     setForm({ email_address: '', imap_host: 'imap.gmail.com', imap_port: 993, imap_user: '', imap_password: '', imap_folder: 'INBOX', property_id: '' })
-    setPreset('Gmail')
-    setShowPw(false)
+    setPreset('Gmail'); setShowPw(false)
   }
 
   async function del(id: string) {
@@ -128,8 +110,8 @@ export default function EmailPage() {
   const hasUnassigned = settings.some(s => !s.property_id)
 
   return (
-    <div className="p-6 pb-16 space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 pb-16 space-y-5 max-w-3xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Email 訂單擷取</h1>
           <p className="text-sm text-gray-500 mt-0.5">連接信箱，自動從各平台訂房確認信解析訂單</p>
@@ -137,28 +119,28 @@ export default function EmailPage() {
         <div className="flex gap-2">
           <button onClick={() => sync(undefined, false)}
             disabled={syncing !== null || settings.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
             {syncing === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            立即同步全部
+            <span className="hidden sm:inline">立即同步全部</span>
+            <span className="sm:hidden">同步</span>
           </button>
           <button onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border text-sm font-medium hover:bg-gray-50">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border text-sm font-medium hover:bg-gray-50">
             <Plus className="h-4 w-4" /> 新增信箱
           </button>
         </div>
       </div>
 
-      {/* Gmail App Password hint */}
+      {/* Gmail hint */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 space-y-1">
         <div className="font-semibold">Gmail 用戶注意</div>
-        <div>需使用「應用程式密碼」而非帳號密碼。至 Google 帳戶 → 安全性 → 兩步驟驗證 → 應用程式密碼 產生 16 碼密碼。</div>
+        <div className="text-xs">需使用「應用程式密碼」而非帳號密碼。至 Google 帳戶 → 安全性 → 兩步驟驗證 → 應用程式密碼 產生 16 碼密碼。</div>
       </div>
 
-      {/* Warning: unassigned settings */}
       {hasUnassigned && properties.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800">
           <div className="font-semibold mb-1">有信箱設定尚未指定房源</div>
-          <div>匯入的訂單將無法顯示在房源篩選中。請在下方為每個信箱指定對應房源，然後點「重新從頭同步」。</div>
+          <div className="text-xs">匯入的訂單將無法顯示在房源篩選中。請在下方為每個信箱指定對應房源，然後點「重新從頭同步」。</div>
         </div>
       )}
 
@@ -174,28 +156,25 @@ export default function EmailPage() {
         <div className="space-y-3">
           {settings.map(s => (
             <div key={s.id} className={`bg-white border rounded-xl p-4 space-y-3 ${!s.property_id ? 'border-orange-300' : ''}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
                   <Mail className="h-4 w-4 text-indigo-500 shrink-0" />
-                  <span className="font-semibold text-sm text-gray-900">{s.email_address}</span>
+                  <span className="font-semibold text-sm text-gray-900 truncate">{s.email_address}</span>
                   {!s.property_id && (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full">未指定房源</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full shrink-0">未指定房源</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button onClick={() => toggleEnable(s)}
                     className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${s.sync_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {s.sync_enabled ? '啟用' : '停用'}
                   </button>
-                  <button onClick={() => sync(s.id)} disabled={syncing !== null}
-                    title="同步新郵件"
+                  <button onClick={() => sync(s.id)} disabled={syncing !== null} title="同步新郵件"
                     className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 disabled:opacity-40">
                     {syncing === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   </button>
-                  <button onClick={() => {
-                    if (confirm('將清除所有「無房源」的 email 訂單並重新同步近 30 天郵件，確定？')) sync(s.id, true)
-                  }} disabled={syncing !== null}
-                    title="重新從頭同步（清除舊訂單）"
+                  <button onClick={() => { if (confirm('將清除所有「無房源」的 email 訂單並重新同步近 30 天郵件，確定？')) sync(s.id, true) }}
+                    disabled={syncing !== null} title="重新從頭同步"
                     className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40">
                     <RotateCcw className="h-4 w-4" />
                   </button>
@@ -204,28 +183,21 @@ export default function EmailPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Property assignment */}
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 shrink-0">對應房源：</span>
-                <select
-                  value={s.property_id ?? ''}
+                <select value={s.property_id ?? ''}
                   onChange={e => updateProperty(s.id, e.target.value)}
-                  className={`flex-1 text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${!s.property_id ? 'border-orange-300 bg-orange-50' : ''}`}>
+                  className={`flex-1 min-w-0 text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${!s.property_id ? 'border-orange-300 bg-orange-50' : ''}`}>
                   <option value="">-- 未指定 --</option>
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
-                {s.property_id && (
-                  <span className="text-xs text-green-600 shrink-0">指定後點 <RotateCcw className="h-3 w-3 inline" /> 重新同步</span>
-                )}
               </div>
-
               <div className="text-[11px] text-gray-400">{s.imap_host}:{s.imap_port} / {s.imap_folder}</div>
-              <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                {s.last_synced_at && <span>上次同步：{new Date(s.last_synced_at).toLocaleString('zh-TW')}</span>}
-                {s.last_sync_count != null && <span>共 {s.last_sync_count} 筆</span>}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400">
+                {s.last_synced_at && <span>上次：{new Date(s.last_synced_at).toLocaleString('zh-TW')}</span>}
+                {s.last_sync_count != null && <span>{s.last_sync_count} 筆</span>}
                 {s.last_sync_error
-                  ? <span className="flex items-center gap-1 text-red-500"><XCircle className="h-3 w-3" />{s.last_sync_error.slice(0, 60)}</span>
+                  ? <span className="flex items-center gap-1 text-red-500"><XCircle className="h-3 w-3" />{s.last_sync_error.slice(0, 50)}</span>
                   : s.last_synced_at && <span className="flex items-center gap-1 text-green-600"><CheckCircle className="h-3 w-3" />正常</span>}
               </div>
             </div>
@@ -234,30 +206,27 @@ export default function EmailPage() {
       )}
 
       {adding && createPortal(
-        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
           onClick={e => { if (e.target === e.currentTarget) { setAdding(false); resetForm() } }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md max-h-[92dvh] overflow-y-auto p-5 space-y-4">
             <h3 className="font-bold text-gray-900">新增信箱同步</h3>
-
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">信箱類型</label>
               <div className="flex gap-2 flex-wrap">
                 {Object.keys(IMAP_PRESETS).map(name => (
                   <button key={name} onClick={() => applyPreset(name)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${preset === name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${preset === name ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
                     {name}
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">Email 地址</label>
               <input value={form.email_address} onChange={e => setForm(f => ({ ...f, email_address: e.target.value, imap_user: e.target.value }))}
                 placeholder="your@gmail.com"
                 className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
-
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-2 space-y-1">
                 <label className="text-xs font-medium text-gray-600">IMAP 主機</label>
@@ -270,7 +239,6 @@ export default function EmailPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
-
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">應用程式密碼 <span className="text-red-500">*</span></label>
               <div className="relative">
@@ -284,7 +252,6 @@ export default function EmailPage() {
                 </button>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">收件夾</label>
@@ -300,12 +267,11 @@ export default function EmailPage() {
                 </select>
               </div>
             </div>
-
             <div className="flex gap-2 pt-1">
               <button onClick={() => { setAdding(false); resetForm() }}
-                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
               <button onClick={save} disabled={!form.email_address || !form.imap_password || saving}
-                className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
                 {saving ? '儲存中…' : '儲存'}
               </button>
             </div>

@@ -275,6 +275,12 @@ export default function PricingPage() {
     ? new Date(selectedDate + 'T00:00:00').toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
     : ''
   const hasEdits = Object.keys(editedSettings).length > 0
+  const [mobilePanel, setMobilePanel] = useState<'calendar' | 'detail'>('calendar')
+
+  function selectDate(ds: string, e: React.MouseEvent) {
+    handleCellClick(ds, e)
+    setMobilePanel('detail')
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -282,18 +288,29 @@ export default function PricingPage() {
       <div className="bg-white border-b px-5 flex items-center gap-1 shrink-0">
         {(['calendar', 'rules'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`py-3.5 px-4 text-sm font-semibold border-b-2 -mb-px transition-colors
+            className={`py-3.5 px-3 text-sm font-semibold border-b-2 -mb-px transition-colors
               ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-            {t === 'calendar' ? '定價日曆' : '動態定價規則'}
+            {t === 'calendar' ? '定價日曆' : <span><span className="hidden sm:inline">動態定價</span>規則</span>}
           </button>
         ))}
       </div>
 
       {tab === 'calendar' ? (
         /* ── Tab 1: 定價日曆 ──────────────────────────────── */
+        <>
+        {/* Mobile panel toggle */}
+        <div className="sm:hidden flex border-b bg-white shrink-0">
+          {(['calendar', 'detail'] as const).map(p => (
+            <button key={p} onClick={() => setMobilePanel(p)}
+              className={`flex-1 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px
+                ${mobilePanel === p ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500'}`}>
+              {p === 'calendar' ? '日曆' : (batchMode ? '批次設定' : selLabel || '日期詳情')}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-1 overflow-hidden">
           {/* Left: calendar */}
-          <div className="w-[400px] shrink-0 border-r bg-white overflow-y-auto flex flex-col">
+          <div className={`${mobilePanel === 'calendar' ? 'flex flex-col' : 'hidden'} sm:flex sm:flex-col w-full sm:w-[400px] shrink-0 border-r bg-white overflow-y-auto`}>
             <div className="p-4 border-b space-y-3">
               <div className="flex items-center gap-2">
                 {properties.length > 1 && (
@@ -316,7 +333,7 @@ export default function PricingPage() {
                     {STATUS_CFG[s].label}
                   </span>
                 ))}
-                <span className="ml-auto">Shift+點擊選範圍</span>
+                <span className="ml-auto hidden sm:inline">Shift+點擊選範圍</span>
               </div>
             </div>
 
@@ -340,7 +357,7 @@ export default function PricingPage() {
                     const status = getDateSummaryStatus(ds)
                     const overrides = visibleProps.map(p => getSetting(ds, p.id).price_override).filter(Boolean)
                     return (
-                      <div key={ds} onClick={e => handleCellClick(ds, e)}
+                      <div key={ds} onClick={e => selectDate(ds, e)}
                         className={`h-[72px] border-b border-r p-1 cursor-pointer select-none transition-colors
                           ${isSel ? 'bg-sky-50 ring-2 ring-inset ring-sky-400'
                             : status === 'closed' ? 'bg-red-50/60 hover:bg-red-50'
@@ -378,10 +395,10 @@ export default function PricingPage() {
           </div>
 
           {/* Right: day detail or batch */}
-          <div className="flex-1 overflow-y-auto">
+          <div className={`${mobilePanel === 'detail' ? 'flex flex-col' : 'hidden'} sm:flex sm:flex-col flex-1 overflow-y-auto`}>
             {batchMode ? (
               /* ── Batch edit ── */
-              <div className="p-5 space-y-4 max-w-2xl">
+              <div className="p-4 md:p-5 space-y-4 max-w-2xl w-full">
                 <div className="flex items-center justify-between">
                   <h2 className="font-bold text-gray-900 text-lg">批次設定</h2>
                   <button onClick={() => setBatchMode(false)} className="p-1.5 hover:bg-gray-100 rounded-lg">
@@ -495,7 +512,7 @@ export default function PricingPage() {
               </div>
             ) : (
               /* ── Day detail ── */
-              <div className="p-5 space-y-4">
+              <div className="p-4 md:p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-gray-900 text-lg">{selLabel}</h2>
@@ -513,85 +530,149 @@ export default function PricingPage() {
                 ) : visibleProps.length === 0 ? (
                   <div className="py-10 text-center text-sm text-gray-400">尚未建立房型</div>
                 ) : (
-                  <div className="bg-white rounded-xl border overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">房型</th>
-                          <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">訂購狀態</th>
-                          <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">基本價</th>
-                          <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">覆蓋訂價</th>
-                          <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">最終價格</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {visibleProps.map(p => {
-                          const setting = getEditedSetting(p.id)
-                          const relevantRules = rules.filter(r => r.property_id == null || r.property_id === p.id)
-                          const dynamicPrice = computeEffectivePrice(p.base_price, relevantRules, selectedDate, p.dynamic_pricing_enabled)
-                          const finalPrice = setting.price_override ?? dynamicPrice
-                          const isDynamic = setting.price_override == null && p.dynamic_pricing_enabled && dynamicPrice !== p.base_price
-                          const isEdited = !!editedSettings[p.id]
-                          return (
-                            <tr key={p.id} className={isEdited ? 'bg-sky-50/50' : 'hover:bg-gray-50'}>
-                              <td className="px-4 py-3">
-                                <div className="font-medium text-gray-900">{p.name}</div>
+                  <div className="space-y-2">
+                    {/* Mobile cards */}
+                    <div className="sm:hidden space-y-2">
+                      {visibleProps.map(p => {
+                        const setting = getEditedSetting(p.id)
+                        const relevantRules = rules.filter(r => r.property_id == null || r.property_id === p.id)
+                        const dynamicPrice = computeEffectivePrice(p.base_price, relevantRules, selectedDate, p.dynamic_pricing_enabled)
+                        const finalPrice = setting.price_override ?? dynamicPrice
+                        const isDynamic = setting.price_override == null && p.dynamic_pricing_enabled && dynamicPrice !== p.base_price
+                        const isEdited = !!editedSettings[p.id]
+                        return (
+                          <div key={p.id} className={`bg-white rounded-xl border p-3.5 space-y-3 ${isEdited ? 'ring-2 ring-sky-400' : ''}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-sm text-gray-900">{p.name}</div>
                                 {p.dynamic_pricing_enabled && (
                                   <div className="flex items-center gap-1 mt-0.5">
                                     <Zap className="h-3 w-3 text-amber-500" />
-                                    <span className="text-[10px] text-amber-600">動態定價啟用</span>
+                                    <span className="text-[10px] text-amber-600">動態定價</span>
                                   </div>
                                 )}
-                              </td>
-                              <td className="px-3 py-3">
-                                <div className="flex gap-1 justify-center">
-                                  {(['open', 'closed', 'admin_only'] as const).map(s => (
-                                    <button key={s} onClick={() => updateEdit(p.id, 'booking_status', s)}
-                                      className={`px-2 py-1 rounded-md text-[10px] font-semibold border transition-colors
-                                        ${setting.booking_status === s ? STATUS_CFG[s].color : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`}>
-                                      {STATUS_CFG[s].label}
-                                    </button>
-                                  ))}
+                              </div>
+                              {finalPrice != null && (
+                                <div className="text-right">
+                                  <div className="font-bold text-gray-900">NT$ {Number(finalPrice).toLocaleString()}</div>
+                                  {setting.price_override != null && <div className="text-[9px] text-indigo-600 font-semibold">覆蓋價</div>}
+                                  {isDynamic && <div className="text-[9px] text-amber-600 font-semibold">動態</div>}
                                 </div>
-                              </td>
-                              <td className="px-3 py-3 text-center text-gray-500 text-sm">
-                                {p.base_price ? Number(p.base_price).toLocaleString() : '—'}
-                              </td>
-                              <td className="px-3 py-3">
-                                <div className="flex items-center gap-1 justify-center">
-                                  <input type="number" min="0"
-                                    value={setting.price_override ?? ''}
-                                    onChange={e => updateEdit(p.id, 'price_override', e.target.value ? parseFloat(e.target.value) : null)}
-                                    placeholder="—"
-                                    className="w-24 text-sm border rounded-lg px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                                  {setting.price_override != null && (
-                                    <button onClick={() => updateEdit(p.id, 'price_override', null)}
-                                      className="text-gray-300 hover:text-gray-500 shrink-0">
-                                      <X className="h-3 w-3" />
-                                    </button>
+                              )}
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-400 mb-1.5">訂購狀態</div>
+                              <div className="flex gap-1.5">
+                                {(['open', 'closed', 'admin_only'] as const).map(s => (
+                                  <button key={s} onClick={() => updateEdit(p.id, 'booking_status', s)}
+                                    className={`flex-1 py-1.5 rounded-lg text-[10px] font-semibold border transition-colors
+                                      ${setting.booking_status === s ? STATUS_CFG[s].color : 'bg-white text-gray-400 border-gray-200'}`}>
+                                    {STATUS_CFG[s].label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] text-gray-400 mb-1.5">覆蓋訂價（基本價：{p.base_price ? `NT$ ${Number(p.base_price).toLocaleString()}` : '未設定'}）</div>
+                              <div className="flex items-center gap-1.5">
+                                <input type="number" min="0"
+                                  value={setting.price_override ?? ''}
+                                  onChange={e => updateEdit(p.id, 'price_override', e.target.value ? parseFloat(e.target.value) : null)}
+                                  placeholder="使用基本價 / 動態價"
+                                  className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                                {setting.price_override != null && (
+                                  <button onClick={() => updateEdit(p.id, 'price_override', null)}
+                                    className="p-2 text-gray-400 hover:text-gray-600 shrink-0">
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden sm:block bg-white rounded-xl border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b">
+                          <tr>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">房型</th>
+                            <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">訂購狀態</th>
+                            <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">基本價</th>
+                            <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">覆蓋訂價</th>
+                            <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">最終價格</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {visibleProps.map(p => {
+                            const setting = getEditedSetting(p.id)
+                            const relevantRules = rules.filter(r => r.property_id == null || r.property_id === p.id)
+                            const dynamicPrice = computeEffectivePrice(p.base_price, relevantRules, selectedDate, p.dynamic_pricing_enabled)
+                            const finalPrice = setting.price_override ?? dynamicPrice
+                            const isDynamic = setting.price_override == null && p.dynamic_pricing_enabled && dynamicPrice !== p.base_price
+                            const isEdited = !!editedSettings[p.id]
+                            return (
+                              <tr key={p.id} className={isEdited ? 'bg-sky-50/50' : 'hover:bg-gray-50'}>
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-gray-900">{p.name}</div>
+                                  {p.dynamic_pricing_enabled && (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <Zap className="h-3 w-3 text-amber-500" />
+                                      <span className="text-[10px] text-amber-600">動態定價啟用</span>
+                                    </div>
                                   )}
-                                </div>
-                              </td>
-                              <td className="px-3 py-3 text-center">
-                                {finalPrice != null ? (
-                                  <div>
-                                    <div className="font-bold text-gray-900">NT$ {Number(finalPrice).toLocaleString()}</div>
+                                </td>
+                                <td className="px-3 py-3">
+                                  <div className="flex gap-1 justify-center">
+                                    {(['open', 'closed', 'admin_only'] as const).map(s => (
+                                      <button key={s} onClick={() => updateEdit(p.id, 'booking_status', s)}
+                                        className={`px-2 py-1 rounded-md text-[10px] font-semibold border transition-colors
+                                          ${setting.booking_status === s ? STATUS_CFG[s].color : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`}>
+                                        {STATUS_CFG[s].label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-3 text-center text-gray-500 text-sm">
+                                  {p.base_price ? Number(p.base_price).toLocaleString() : '—'}
+                                </td>
+                                <td className="px-3 py-3">
+                                  <div className="flex items-center gap-1 justify-center">
+                                    <input type="number" min="0"
+                                      value={setting.price_override ?? ''}
+                                      onChange={e => updateEdit(p.id, 'price_override', e.target.value ? parseFloat(e.target.value) : null)}
+                                      placeholder="—"
+                                      className="w-24 text-sm border rounded-lg px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-sky-300" />
                                     {setting.price_override != null && (
-                                      <div className="text-[9px] text-indigo-600 font-semibold">覆蓋</div>
-                                    )}
-                                    {isDynamic && (
-                                      <div className="text-[9px] text-amber-600 font-semibold">動態</div>
+                                      <button onClick={() => updateEdit(p.id, 'price_override', null)}
+                                        className="text-gray-300 hover:text-gray-500 shrink-0">
+                                        <X className="h-3 w-3" />
+                                      </button>
                                     )}
                                   </div>
-                                ) : '—'}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                                </td>
+                                <td className="px-3 py-3 text-center">
+                                  {finalPrice != null ? (
+                                    <div>
+                                      <div className="font-bold text-gray-900">NT$ {Number(finalPrice).toLocaleString()}</div>
+                                      {setting.price_override != null && (
+                                        <div className="text-[9px] text-indigo-600 font-semibold">覆蓋</div>
+                                      )}
+                                      {isDynamic && (
+                                        <div className="text-[9px] text-amber-600 font-semibold">動態</div>
+                                      )}
+                                    </div>
+                                  ) : '—'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                     {hasEdits && (
-                      <div className="border-t px-4 py-3 bg-sky-50 flex items-center justify-between">
+                      <div className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3 flex items-center justify-between">
                         <span className="text-xs text-sky-700">有未儲存的修改</span>
                         <div className="flex gap-2">
                           <button onClick={() => setEditedSettings({})}
@@ -611,9 +692,10 @@ export default function PricingPage() {
             )}
           </div>
         </div>
+        </>
       ) : (
         /* ── Tab 2: 動態定價規則 ──────────────────────────── */
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-6">
           {/* Dynamic pricing toggle per property */}
           <div>
             <h2 className="font-bold text-gray-900 mb-3">動態定價開關</h2>
@@ -670,69 +752,110 @@ export default function PricingPage() {
                 尚無定價規則，點擊「新增規則」開始建立
               </div>
             ) : (
-              <div className="bg-white rounded-xl border overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">規則名稱</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">類型</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">調整幅度</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">套用房型</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">狀態</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {[...rules].sort((a, b) => b.priority - a.priority).map(rule => {
-                      const prop = properties.find(p => p.id === rule.property_id)
-                      const adj = rule.adjustment_type === 'percent'
-                        ? `${rule.adjustment_value > 0 ? '+' : ''}${rule.adjustment_value}%`
-                        : `${rule.adjustment_value > 0 ? '+' : ''}NT$ ${Math.abs(Number(rule.adjustment_value)).toLocaleString()}`
-                      const cfg = RULE_TYPE_CFG[rule.rule_type]
-                      return (
-                        <tr key={rule.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-gray-900">{rule.name}</div>
-                            <div className="text-[10px] text-gray-400 mt-0.5">優先級 {rule.priority}</div>
-                          </td>
-                          <td className="px-3 py-3 text-center text-sm">
-                            {cfg?.icon} {cfg?.label}
-                          </td>
-                          <td className="px-3 py-3 text-center font-semibold
-                            {rule.adjustment_value >= 0 ? 'text-rose-600' : 'text-emerald-600'}">
-                            <span className={rule.adjustment_value >= 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                              {adj}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-center text-gray-600 text-xs">
-                            {prop ? prop.name : '全部房型'}
-                          </td>
-                          <td className="px-3 py-3 text-center">
+              <>
+                {/* Mobile cards */}
+                <div className="sm:hidden space-y-2">
+                  {[...rules].sort((a, b) => b.priority - a.priority).map(rule => {
+                    const prop = properties.find(p => p.id === rule.property_id)
+                    const adj = rule.adjustment_type === 'percent'
+                      ? `${rule.adjustment_value > 0 ? '+' : ''}${rule.adjustment_value}%`
+                      : `${rule.adjustment_value > 0 ? '+' : ''}NT$ ${Math.abs(Number(rule.adjustment_value)).toLocaleString()}`
+                    const cfg = RULE_TYPE_CFG[rule.rule_type]
+                    return (
+                      <div key={rule.id} className="bg-white rounded-xl border p-3.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-gray-900 truncate">{rule.name}</div>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
+                              <span className="text-xs text-gray-500">{cfg?.icon} {cfg?.label}</span>
+                              <span className={`text-xs font-semibold ${rule.adjustment_value >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{adj}</span>
+                              <span className="text-[10px] text-gray-400">{prop ? prop.name : '全部房型'}</span>
+                              <span className="text-[10px] text-gray-400">優先級 {rule.priority}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
                             <button onClick={() => toggleRule(rule.id, !rule.enabled)}
                               className={`relative inline-flex w-9 h-5 rounded-full transition-colors
                                 ${rule.enabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
                               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform
                                 ${rule.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                             </button>
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => setRuleModal(rule)}
-                                className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
-                                <Edit2 className="h-3.5 w-3.5" />
+                            <button onClick={() => setRuleModal(rule)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => deleteRule(rule.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden sm:block bg-white rounded-xl border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">規則名稱</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">類型</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">調整幅度</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">套用房型</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">狀態</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {[...rules].sort((a, b) => b.priority - a.priority).map(rule => {
+                        const prop = properties.find(p => p.id === rule.property_id)
+                        const adj = rule.adjustment_type === 'percent'
+                          ? `${rule.adjustment_value > 0 ? '+' : ''}${rule.adjustment_value}%`
+                          : `${rule.adjustment_value > 0 ? '+' : ''}NT$ ${Math.abs(Number(rule.adjustment_value)).toLocaleString()}`
+                        const cfg = RULE_TYPE_CFG[rule.rule_type]
+                        return (
+                          <tr key={rule.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-gray-900">{rule.name}</div>
+                              <div className="text-[10px] text-gray-400 mt-0.5">優先級 {rule.priority}</div>
+                            </td>
+                            <td className="px-3 py-3 text-center text-sm">
+                              {cfg?.icon} {cfg?.label}
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <span className={rule.adjustment_value >= 0 ? 'text-rose-600 font-semibold' : 'text-emerald-600 font-semibold'}>
+                                {adj}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 text-center text-gray-600 text-xs">
+                              {prop ? prop.name : '全部房型'}
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <button onClick={() => toggleRule(rule.id, !rule.enabled)}
+                                className={`relative inline-flex w-9 h-5 rounded-full transition-colors
+                                  ${rule.enabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform
+                                  ${rule.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                               </button>
-                              <button onClick={() => deleteRule(rule.id)}
-                                className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                            <td className="px-3 py-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => setRuleModal(rule)}
+                                  className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={() => deleteRule(rule.id)}
+                                  className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -740,9 +863,9 @@ export default function PricingPage() {
 
       {/* Rule edit modal */}
       {ruleModal && typeof window !== 'undefined' && createPortal(
-        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
           onClick={e => { if (e.target === e.currentTarget) setRuleModal(null) }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-gray-900">{ruleModal.id ? '編輯規則' : '新增定價規則'}</h3>
               <button onClick={() => setRuleModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg">
@@ -759,7 +882,7 @@ export default function PricingPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">規則類型 *</label>
                   <select value={ruleModal.rule_type ?? ''}
@@ -782,7 +905,7 @@ export default function PricingPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">調整方式</label>
                   <select value={ruleModal.adjustment_type ?? 'percent'}

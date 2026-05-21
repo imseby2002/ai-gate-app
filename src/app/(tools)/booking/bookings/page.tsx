@@ -27,19 +27,19 @@ const PLATFORM_NAMES: Record<string, string> = {
 }
 
 export default function BookingsPage() {
-  const [bookings, setBookings]   = useState<Booking[]>([])
-  const [properties, setProperties] = useState<Property[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterProp, setFilterProp]     = useState('')
+  const [bookings, setBookings]       = useState<Booking[]>([])
+  const [properties, setProperties]   = useState<Property[]>([])
+  const [loading, setLoading]         = useState(true)
+  const [search, setSearch]           = useState('')
+  const [filterStatus, setFilterStatus]     = useState('')
+  const [filterProp, setFilterProp]         = useState('')
   const [filterPlatform, setFilterPlatform] = useState('')
-  const [filterFrom, setFilterFrom] = useState('')
-  const [filterTo, setFilterTo]     = useState('')
+  const [filterFrom, setFilterFrom]   = useState('')
+  const [filterTo, setFilterTo]       = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [adding, setAdding]       = useState(false)
-  const [sortKey, setSortKey]     = useState<'check_in' | 'created_at'>('check_in')
-  const [sortDesc, setSortDesc]   = useState(true)
+  const [adding, setAdding]           = useState(false)
+  const [sortKey, setSortKey]         = useState<'check_in' | 'created_at'>('check_in')
+  const [sortDesc, setSortDesc]       = useState(true)
   const [form, setForm] = useState({
     property_id: '', guest_name: '', guest_email: '', guest_phone: '',
     check_in: '', check_out: '', num_guests: 1,
@@ -130,17 +130,21 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="p-6 pb-16 space-y-4 max-w-6xl">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 pb-16 space-y-4 max-w-6xl">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-bold text-gray-900">訂單管理</h1>
         <div className="flex gap-2">
           <button onClick={exportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg bg-white text-sm text-gray-600 hover:bg-gray-50">
-            <Download className="h-4 w-4" /> 匯出
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">匯出</span>
           </button>
           <button onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
-            <Plus className="h-4 w-4" /> 手動新增
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">手動新增</span>
+            <span className="sm:hidden">新增</span>
           </button>
         </div>
       </div>
@@ -148,42 +152,48 @@ export default function BookingsPage() {
       {/* Search + Filters */}
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 border rounded-lg px-3 py-1.5 bg-white text-sm flex-1 min-w-52">
+          <div className="flex items-center gap-1.5 border rounded-lg px-3 py-1.5 bg-white text-sm flex-1 min-w-0">
             <Search className="h-4 w-4 text-gray-400 shrink-0" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="搜尋姓名、電話、確認碼…"
-              className="flex-1 outline-none text-sm" />
+              placeholder="搜尋姓名、電話…"
+              className="flex-1 outline-none text-sm min-w-0" />
           </div>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="border rounded-lg px-3 py-1.5 bg-white text-sm focus:outline-none">
+            className="border rounded-lg px-2 py-1.5 bg-white text-sm focus:outline-none">
             <option value="">全部狀態</option>
             {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
           {properties.length > 0 && (
             <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
-              className="border rounded-lg px-3 py-1.5 bg-white text-sm focus:outline-none">
+              className="border rounded-lg px-2 py-1.5 bg-white text-sm focus:outline-none hidden sm:block">
               <option value="">全部房型</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
           <button onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm ${showFilters ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-            <Filter className="h-3.5 w-3.5" /> 進階
+            <Filter className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">進階</span>
           </button>
-          <div className="flex items-center gap-1 text-xs text-gray-400 px-2">
-            {filtered.length} 筆
-          </div>
+          <span className="flex items-center text-xs text-gray-400 px-1">{filtered.length} 筆</span>
         </div>
 
         {showFilters && (
-          <div className="flex gap-2 flex-wrap p-3 bg-gray-50 rounded-xl border">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="text-xs whitespace-nowrap">入住日期</span>
+          <div className="flex flex-col sm:flex-row gap-2 flex-wrap p-3 bg-gray-50 rounded-xl border">
+            {properties.length > 0 && (
+              <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
+                className="sm:hidden border rounded-lg px-2.5 py-1 bg-white text-sm focus:outline-none">
+                <option value="">全部房型</option>
+                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            )}
+            <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
+              <span className="text-xs whitespace-nowrap text-gray-500">入住日期</span>
               <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
-                className="border rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              <span className="text-xs">至</span>
+                className="border rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 flex-1 min-w-0" />
+              <span className="text-xs text-gray-500">至</span>
               <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)}
-                className="border rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                className="border rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 flex-1 min-w-0" />
             </div>
             <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)}
               className="border rounded-lg px-2.5 py-1 bg-white text-sm focus:outline-none">
@@ -191,81 +201,115 @@ export default function BookingsPage() {
               {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
             <button onClick={() => { setFilterFrom(''); setFilterTo(''); setFilterPlatform(''); setSearch(''); setFilterStatus(''); setFilterProp('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 px-2">清除篩選</button>
+              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">清除篩選</button>
           </div>
         )}
       </div>
 
-      {/* Table */}
       {loading ? (
         <div className="text-center py-16 text-gray-400">載入中…</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">無符合的訂單</div>
       ) : (
-        <div className="bg-white rounded-xl border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">旅客</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">房型</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('check_in')}>
-                  入住 <SortIcon k="check_in" />
-                </th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">退房</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">人數</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">金額</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">來源</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">狀態</th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('created_at')}>
-                  建立 <SortIcon k="created_at" />
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map(b => {
-                const st = STATUS_MAP[b.status] ?? { label: b.status, color: 'bg-gray-100 text-gray-600' }
-                return (
-                  <tr key={b.id} className="hover:bg-gray-50 group">
-                    <td className="px-3 py-2.5">
+        <>
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2">
+            {filtered.map(b => {
+              const st = STATUS_MAP[b.status] ?? { label: b.status, color: 'bg-gray-100 text-gray-600' }
+              return (
+                <div key={b.id} className="bg-white rounded-xl border p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
                       <Link href={`/booking/bookings/${b.id}`}
-                        className="font-medium text-indigo-600 group-hover:underline">
-                        {b.guest_name || '(無名)'}
-                      </Link>
-                      {b.guest_phone && <div className="text-xs text-gray-400">{b.guest_phone}</div>}
-                    </td>
-                    <td className="px-3 py-2.5 text-gray-600 text-xs">{b.properties?.name || '—'}</td>
-                    <td className="px-3 py-2.5 text-gray-700">{b.check_in}</td>
-                    <td className="px-3 py-2.5 text-gray-700">{b.check_out}</td>
-                    <td className="px-3 py-2.5 text-gray-600">{b.num_guests}</td>
-                    <td className="px-3 py-2.5 text-gray-700">
-                      {b.total_price ? `${b.currency} ${Number(b.total_price).toLocaleString()}` : '—'}
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-gray-500">{PLATFORM_NAMES[b.platform] ?? b.platform}</td>
-                    <td className="px-3 py-2.5">
-                      <select value={b.status} onChange={e => updateStatus(b.id, e.target.value)}
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium border-0 cursor-pointer ${st.color}`}>
-                        {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                      </select>
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-gray-400">
-                      <div>{new Date(b.created_at).toLocaleDateString('zh-TW')}</div>
-                      {b.notes && (
-                        <div className="text-[10px] text-amber-600 mt-0.5 max-w-[100px] truncate" title={b.notes}>⚠ {b.notes}</div>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                        className="font-semibold text-indigo-600 block truncate">{b.guest_name || '(無名)'}</Link>
+                      {b.guest_phone && <div className="text-xs text-gray-400 mt-0.5">{b.guest_phone}</div>}
+                    </div>
+                    <select value={b.status} onChange={e => updateStatus(b.id, e.target.value)}
+                      className={`text-[10px] px-2 py-1 rounded-full font-medium border-0 shrink-0 ${st.color}`}>
+                      {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <div className="text-gray-500">{b.properties?.name || '—'}</div>
+                    <div className="text-gray-700 text-right font-medium">
+                      {b.total_price ? `NT$ ${Number(b.total_price).toLocaleString()}` : '—'}
+                    </div>
+                    <div className="text-gray-500">入住 {b.check_in}</div>
+                    <div className="text-gray-500 text-right">退房 {b.check_out}</div>
+                    <div className="text-gray-400">{PLATFORM_NAMES[b.platform] ?? b.platform} · {b.num_guests}人</div>
+                    {b.notes && <div className="text-amber-600 text-right truncate" title={b.notes}>⚠ {b.notes}</div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block bg-white rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">旅客</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">房型</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('check_in')}>
+                    入住 <SortIcon k="check_in" />
+                  </th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">退房</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">人數</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">金額</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">來源</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">狀態</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('created_at')}>
+                    建立 <SortIcon k="created_at" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map(b => {
+                  const st = STATUS_MAP[b.status] ?? { label: b.status, color: 'bg-gray-100 text-gray-600' }
+                  return (
+                    <tr key={b.id} className="hover:bg-gray-50 group">
+                      <td className="px-3 py-2.5">
+                        <Link href={`/booking/bookings/${b.id}`}
+                          className="font-medium text-indigo-600 group-hover:underline">
+                          {b.guest_name || '(無名)'}
+                        </Link>
+                        {b.guest_phone && <div className="text-xs text-gray-400">{b.guest_phone}</div>}
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-600 text-xs">{b.properties?.name || '—'}</td>
+                      <td className="px-3 py-2.5 text-gray-700">{b.check_in}</td>
+                      <td className="px-3 py-2.5 text-gray-700">{b.check_out}</td>
+                      <td className="px-3 py-2.5 text-gray-600">{b.num_guests}</td>
+                      <td className="px-3 py-2.5 text-gray-700">
+                        {b.total_price ? `${b.currency} ${Number(b.total_price).toLocaleString()}` : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-gray-500">{PLATFORM_NAMES[b.platform] ?? b.platform}</td>
+                      <td className="px-3 py-2.5">
+                        <select value={b.status} onChange={e => updateStatus(b.id, e.target.value)}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium border-0 cursor-pointer ${st.color}`}>
+                          {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2.5 text-xs text-gray-400">
+                        <div>{new Date(b.created_at).toLocaleDateString('zh-TW')}</div>
+                        {b.notes && (
+                          <div className="text-[10px] text-amber-600 mt-0.5 max-w-[100px] truncate" title={b.notes}>⚠ {b.notes}</div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Add Modal */}
       {adding && createPortal(
-        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
           onClick={e => { if (e.target === e.currentTarget) setAdding(false) }}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto p-5 space-y-3">
             <h3 className="font-bold text-gray-900">新增訂單</h3>
             {[
               { label: '旅客姓名 *', key: 'guest_name', placeholder: '王小明' },
@@ -328,9 +372,9 @@ export default function BookingsPage() {
                 rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setAdding(false)} className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button onClick={() => setAdding(false)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
               <button onClick={save} disabled={!form.guest_name || !form.check_in || !form.check_out || saving}
-                className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
                 {saving ? '儲存中…' : '新增'}
               </button>
             </div>
