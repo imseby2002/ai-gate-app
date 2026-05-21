@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield } from 'lucide-react'
+import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import type { Profile } from '@/types/database'
@@ -12,6 +12,7 @@ interface HeaderProps {
   profile: Profile
   creditBalance?: number
   locale: string
+  onMenuClick?: () => void
 }
 
 function getInitials(name: string): string {
@@ -31,7 +32,7 @@ function avatarGradient(email: string) {
   return AVATAR_GRADIENTS[n % AVATAR_GRADIENTS.length]
 }
 
-export function Header({ profile, creditBalance, locale }: HeaderProps) {
+export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderProps) {
   const router = useRouter()
   const t = useTranslations('Header')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -53,25 +54,35 @@ export function Header({ profile, creditBalance, locale }: HeaderProps) {
   }[profile.user_type]
 
   return (
-    <header className="relative z-20 flex items-center justify-between px-5 py-2.5 border-b bg-card/80 backdrop-blur-sm">
-      <div />
+    <header className="relative z-20 flex items-center justify-between px-3 sm:px-5 py-2.5 border-b bg-card/80 backdrop-blur-sm">
+      {/* Mobile hamburger */}
+      <button
+        onClick={onMenuClick}
+        className="md:hidden p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      <div className="hidden md:block" />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Credit balance */}
         {profile.user_type === 'external' && creditBalance !== undefined && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-sm">
+          <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-sm">
             <CreditCard className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+            <span className="font-semibold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">
               ${creditBalance?.toFixed(2)}
             </span>
-            <span className="text-emerald-600/70 dark:text-emerald-400/70 text-xs">{t('balance')}</span>
+            <span className="hidden sm:inline text-emerald-600/70 dark:text-emerald-400/70 text-xs">{t('balance')}</span>
           </div>
         )}
 
-        <LanguageSwitcher currentLocale={locale} />
+        <div className="hidden sm:block">
+          <LanguageSwitcher currentLocale={locale} />
+        </div>
 
         {/* User type badge */}
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${userTypeBadge.className}`}>
+        <span className={`hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${userTypeBadge.className}`}>
           {userTypeBadge.label}
         </span>
 

@@ -59,24 +59,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-8 space-y-6 md:space-y-8">
 
         {/* ── Hero ── */}
-        <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/5 via-blue-50/80 to-violet-50/60 dark:from-primary/10 dark:via-slate-900/80 dark:to-violet-950/30 p-8">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/5 via-blue-50/80 to-violet-50/60 dark:from-primary/10 dark:via-slate-900/80 dark:to-violet-950/30 p-5 sm:p-8">
           {/* Decorative blob */}
           <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-violet-400/10 blur-3xl" />
 
-          <div className="relative flex items-center gap-5">
-            <div className="flex-shrink-0 h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary/30 select-none">
+          <div className="relative flex items-center gap-4 flex-wrap">
+            <div className="flex-shrink-0 h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-primary/30 select-none">
               {initials}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <Sparkles className="h-4 w-4 text-primary/70" />
                 <span className="text-xs font-medium text-primary/70 uppercase tracking-wide">AI GATE</span>
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                 {t('welcome', { name: profile?.full_name ?? profile?.email })}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">{t('subtitle')}</p>
@@ -84,7 +84,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
 
           {(isAdmin || enabledModules.includes('chat')) && (
-            <div className="relative mt-6 flex items-center gap-3">
+            <div className="relative mt-5 sm:mt-6 flex items-center gap-3 flex-wrap">
               <Link
                 href="/chat"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
@@ -118,14 +118,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {stats.map((stat, i) => {
               const style = STAT_STYLES[i]
               return (
-                <div key={stat.label} className="card-lift bg-card rounded-2xl border p-5 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
+                <div key={stat.label} className="card-lift bg-card rounded-2xl border p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3 sm:mb-4">
                     <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center', style.iconBg)}>
                       <stat.icon className={cn('h-4 w-4', style.iconColor)} />
                     </div>
                     <span className="text-sm text-muted-foreground font-medium">{stat.label}</span>
                   </div>
-                  <div className="text-2xl font-bold tabular-nums">{stat.value}</div>
+                  <div className="text-xl sm:text-2xl font-bold tabular-nums">{stat.value}</div>
                   <div className="text-xs text-muted-foreground/60 mt-1">{stat.sublabel}</div>
                 </div>
               )
@@ -151,7 +151,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   )}
                 >
                   <div className={cn('h-1 w-full bg-gradient-to-r', mod.color)} />
-                  <div className="p-5">
+                  <div className="p-4 sm:p-5">
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-3xl leading-none">{mod.emoji}</span>
                       {!accessible && <Lock className="h-3.5 w-3.5 text-muted-foreground/50 mt-1" />}

@@ -1,8 +1,7 @@
 ﻿import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { Header } from '@/components/layout/Header'
+import { AppShell } from '@/components/layout/AppShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,18 +38,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const locale = await getLocale()
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        userType={profile.user_type}
-        enabledModules={profile.enabled_modules ?? undefined}
-        conversations={conversations ?? []}
-      />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header profile={profile} creditBalance={creditBalance} locale={locale} />
-        <main className="flex-1 overflow-hidden">
-          {children}
-        </main>
-      </div>
-    </div>
+    <AppShell
+      userType={profile.user_type}
+      enabledModules={profile.enabled_modules ?? undefined}
+      conversations={conversations ?? []}
+      profile={profile}
+      creditBalance={creditBalance}
+      locale={locale}
+    >
+      {children}
+    </AppShell>
   )
 }

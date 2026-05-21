@@ -22,67 +22,68 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-5 border-b bg-white/80 backdrop-blur">
+      <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b bg-white/80 backdrop-blur">
         <div className="flex items-center gap-2">
-          <Zap className="h-7 w-7 text-primary" style={{ color: 'var(--primary)' }} />
-          <span className="text-2xl font-bold tracking-tight">AI GATE</span>
+          <Zap className="h-6 w-6 sm:h-7 sm:w-7 text-primary" style={{ color: 'var(--primary)' }} />
+          <span className="text-xl sm:text-2xl font-bold tracking-tight">AI GATE</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher currentLocale={locale} />
           <Link
             href="/login"
-            className="px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="px-3 sm:px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             {t('signIn')}
           </Link>
           <Link
             href="/register"
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+            className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
             style={{ background: 'var(--primary)' }}
           >
-            {t('freeTrial')}
+            <span className="hidden sm:inline">{t('freeTrial')}</span>
+            <span className="sm:hidden">註冊</span>
           </Link>
         </div>
       </header>
 
       {/* Hero */}
-      <main className="max-w-5xl mx-auto px-8 py-24 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-6"
+      <main className="max-w-5xl mx-auto px-4 sm:px-8 py-12 sm:py-24 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium mb-5 sm:mb-6"
           style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }}>
           <Zap className="h-3.5 w-3.5" />
           {t('badge')}
         </div>
 
-        <h1 className="text-5xl font-bold tracking-tight mb-6 leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-bold tracking-tight mb-5 sm:mb-6 leading-tight">
           {t('heroLine1')}
           <br />
           <span style={{ color: 'var(--primary)' }}>{t('heroLine2')}</span>
         </h1>
 
-        <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed">
           {t('heroDesc')}
         </p>
 
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
           <Link
             href="/register"
-            className="px-8 py-3 rounded-xl text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105"
+            className="w-full sm:w-auto px-8 py-3 rounded-xl text-base font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105"
             style={{ background: 'var(--primary)' }}
           >
             {t('ctaStart')}
           </Link>
           <Link
             href="/login"
-            className="px-8 py-3 rounded-xl text-base font-semibold border-2 transition-all hover:bg-gray-50"
+            className="w-full sm:w-auto px-8 py-3 rounded-xl text-base font-semibold border-2 transition-all hover:bg-gray-50"
           >
             {t('ctaLogin')}
           </Link>
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-24 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mt-14 sm:mt-24 text-left">
           {features.map((f) => (
-            <div key={f.title} className="p-6 rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow">
+            <div key={f.title} className="p-5 sm:p-6 rounded-2xl border bg-white shadow-sm hover:shadow-md transition-shadow">
               <div className="h-10 w-10 rounded-xl flex items-center justify-center mb-4"
                 style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}>
                 <f.icon className="h-5 w-5" style={{ color: 'var(--primary)' }} />

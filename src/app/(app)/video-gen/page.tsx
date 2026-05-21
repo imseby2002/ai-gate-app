@@ -47,13 +47,13 @@ export default function VideoGenPage() {
   const estimatedCost = selectedModel ? `~$${(duration * parseFloat(selectedModel.cost.split('$')[1])).toFixed(2)}` : ''
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6 space-y-6">
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-4 py-4 sm:px-6 sm:py-6 space-y-5 sm:space-y-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold">影片生成</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">影片生成</h1>
         <p className="text-muted-foreground text-sm mt-1">使用 VEO3 或 Kling 從文字生成影片</p>
       </div>
 
-      <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-6 shadow-sm space-y-5">
+      <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-4 sm:p-6 shadow-sm space-y-5">
         {/* Model Selection */}
         <div>
           <label className="block text-sm font-medium mb-2">選擇模型</label>
@@ -80,7 +80,7 @@ export default function VideoGenPage() {
         {/* Duration */}
         <div>
           <label className="block text-sm font-medium mb-2">影片長度</label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {DURATIONS.map(d => (
               <button
                 key={d.value}
@@ -97,8 +97,8 @@ export default function VideoGenPage() {
               </button>
             ))}
             {estimatedCost && (
-              <span className="ml-auto self-center text-sm text-muted-foreground">
-                預估費用：<span className="font-medium text-foreground">{estimatedCost}</span>
+              <span className="text-sm text-muted-foreground">
+                預估：<span className="font-medium text-foreground">{estimatedCost}</span>
               </span>
             )}
           </div>

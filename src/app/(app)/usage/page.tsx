@@ -46,7 +46,7 @@ export default async function UsagePage() {
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-8 space-y-6 md:space-y-8">
 
         {/* Header */}
         <div>
@@ -57,14 +57,14 @@ export default async function UsagePage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {summaryCards.map(s => (
-            <div key={s.label} className="bg-card rounded-2xl border p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
+            <div key={s.label} className="bg-card rounded-2xl border p-4 sm:p-5 shadow-sm">
+              <div className="flex items-center gap-3 mb-3 sm:mb-4">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${s.iconBg}`}>
                   <s.icon className={`h-4 w-4 ${s.iconColor}`} />
                 </div>
                 <span className="text-sm text-muted-foreground font-medium">{s.label}</span>
               </div>
-              <p className="text-3xl font-bold tabular-nums">{s.value}</p>
+              <p className="text-2xl sm:text-3xl font-bold tabular-nums">{s.value}</p>
               <p className="text-xs text-muted-foreground/60 mt-1">{s.sub}</p>
             </div>
           ))}

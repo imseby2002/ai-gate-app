@@ -40,13 +40,13 @@ export default function ImageGenPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-6 py-6 space-y-6">
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background px-4 py-4 sm:px-6 sm:py-6 space-y-5 sm:space-y-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold">圖片生成</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">圖片生成</h1>
         <p className="text-muted-foreground text-sm mt-1">使用 FLUX 或 Nano Banana 從文字生成圖片</p>
       </div>
 
-      <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-6 shadow-sm space-y-5">
+      <div className="max-w-3xl mx-auto bg-card rounded-2xl border p-4 sm:p-6 shadow-sm space-y-5">
         {/* Model Selection */}
         <div>
           <label className="block text-sm font-medium mb-2">選擇模型</label>
