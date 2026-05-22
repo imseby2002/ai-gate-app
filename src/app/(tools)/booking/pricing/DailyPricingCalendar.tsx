@@ -29,13 +29,22 @@ function getDowIdx(dateStr: string) {
   return dow === 0 ? 6 : dow - 1  // Mon=0 ... Sun=6
 }
 
+type TabType = 'daily' | 'calendar' | 'rules'
+const VIEW_TABS: { t: TabType; label: string }[] = [
+  { t: 'daily',    label: '每日定價' },
+  { t: 'calendar', label: '格狀視圖' },
+  { t: 'rules',    label: '定價規則' },
+]
+
 interface Props {
   year: number; month: number
   onPrev: () => void; onNext: () => void
   properties: Property[]
+  tab: TabType
+  onTabChange: (t: TabType) => void
 }
 
-export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties }: Props) {
+export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties, tab, onTabChange }: Props) {
   const [propId, setPropId]       = useState(properties[0]?.id ?? '')
   const [edits, setEdits]         = useState<LocalEdits>({})
   const [orig, setOrig]           = useState<LocalEdits>({})
@@ -176,6 +185,16 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
           </div>
           <span className="text-xs text-gray-400 hidden sm:block">（底色為紅色代表假日）</span>
           <div className="ml-auto flex items-center gap-2">
+            {/* View switcher */}
+            <div className="flex rounded-lg border overflow-hidden text-xs font-medium shrink-0">
+              {VIEW_TABS.map(({ t, label }) => (
+                <button key={t} onClick={() => onTabChange(t)}
+                  className={`px-2.5 py-1.5 transition-colors whitespace-nowrap
+                    ${tab === t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
             {savedOk && !hasPending && (
               <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
                 <Check className="h-3.5 w-3.5" /> 已儲存

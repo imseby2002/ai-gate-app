@@ -356,29 +356,35 @@ export default function PricingPage() {
     setRules(prev => prev.map(r => r.id === id ? { ...r, enabled } : r))
   }
 
-  return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Tabs */}
-      <div className="bg-white border-b px-4 flex items-center gap-1 shrink-0 overflow-x-auto">
-        {([
-          ['daily',    '每日定價'],
-          ['calendar', '格狀視圖'],
-          ['rules',    '定價規則'],
-        ] as const).map(([t, label]) => (
+  const VIEW_TABS_CFG = [
+    { t: 'daily'    as const, label: '每日定價' },
+    { t: 'calendar' as const, label: '格狀視圖' },
+    { t: 'rules'    as const, label: '定價規則' },
+  ]
+
+  function ViewSwitcher() {
+    return (
+      <div className="flex rounded-lg border overflow-hidden text-xs font-medium shrink-0">
+        {VIEW_TABS_CFG.map(({ t, label }) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`py-3.5 px-3 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap
-              ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`px-2.5 py-1.5 transition-colors whitespace-nowrap
+              ${tab === t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
             {label}
           </button>
         ))}
       </div>
+    )
+  }
 
+  return (
+    <div className="flex flex-col h-full bg-gray-50">
       {tab === 'daily' ? (
         /* ── Tab 0: 每日定價（TRAIWAN 式日曆）── */
         <DailyPricingCalendar
           year={year} month={month}
           onPrev={prevMonth} onNext={nextMonth}
           properties={properties}
+          tab={tab} onTabChange={setTab}
         />
       ) : tab === 'calendar' ? (
         /* ── Tab 1: 房間 × 日期格狀視圖 ── */
@@ -386,6 +392,7 @@ export default function PricingPage() {
 
           {/* Controls */}
           <div className="bg-white border-b px-3 py-2 flex items-center gap-2 flex-wrap shrink-0">
+            <ViewSwitcher />
             {properties.length > 1 && (
               <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
                 className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none bg-white">
@@ -574,6 +581,7 @@ export default function PricingPage() {
       ) : (
         /* ── Tab 2: 動態定價規則 ── */
         <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-6">
+          <div className="flex justify-end"><ViewSwitcher /></div>
           {/* Dynamic pricing toggle per property */}
           <div>
             <h2 className="font-bold text-gray-900 mb-3">動態定價開關</h2>
