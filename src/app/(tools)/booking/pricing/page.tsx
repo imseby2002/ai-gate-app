@@ -377,7 +377,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
       {tab === 'daily' ? (
         /* ── Tab 0: 每日定價（TRAIWAN 式日曆）── */
         <DailyPricingCalendar
@@ -526,57 +526,52 @@ export default function PricingPage() {
             </div>
           )}
 
-          {/* Bottom action bar */}
-          <div className="bg-white border-t px-3 py-2.5 shrink-0">
-            {showPriceInput ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-gray-700 shrink-0">覆蓋價 NT$</span>
-                <input type="number" value={pendingPrice} onChange={e => setPendingPrice(e.target.value)}
-                  placeholder="空白=清除覆蓋" autoFocus
-                  className="flex-1 min-w-0 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                <button
-                  onClick={async () => {
-                    await applyPrice(pendingPrice ? parseFloat(pendingPrice) : null)
-                    setShowPriceInput(false); setPendingPrice('')
-                  }}
-                  disabled={applyingSaving}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
-                  {applyingSaving ? '套用中…' : '套用'}
-                </button>
-                <button onClick={() => { setShowPriceInput(false); setPendingPrice('') }}
-                  className="px-4 py-2 rounded-lg border text-sm text-gray-600 hover:bg-gray-50">
-                  取消
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] text-gray-400 mr-1 hidden sm:block">
-                  {selectedCells.size > 0 ? `${selectedCells.size} 格已選` : '點格子或標題選取'}
-                </span>
-                {selectedCells.size > 0 && (
-                  <span className="text-[11px] text-indigo-600 font-semibold mr-1 sm:hidden">{selectedCells.size} 格</span>
-                )}
-                {([
-                  { status: 'open' as BookingStatus,       label: '開放訂房', dot: 'bg-emerald-500', cls: 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
-                  { status: 'admin_only' as BookingStatus,  label: '僅供後台', dot: 'bg-amber-500',   cls: 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100' },
-                  { status: 'closed' as BookingStatus,      label: '不可訂房', dot: 'bg-red-500',     cls: 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100' },
-                ] as const).map(({ status, label, dot, cls }) => (
-                  <button key={status} onClick={() => applyStatus(status)}
-                    disabled={selectedCells.size === 0 || applyingSaving}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors disabled:opacity-40 ${cls}`}>
-                    <span className={`w-2 h-2 rounded-sm shrink-0 ${dot}`} />
-                    {label}
+          {/* Floating action bar — appears only when cells selected */}
+          {(selectedCells.size > 0 || showPriceInput) && (
+            <div className="shrink-0 bg-white border-t shadow-lg px-3 py-2.5">
+              {showPriceInput ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={() => { setShowPriceInput(false); setPendingPrice('') }}
+                    className="text-gray-400 hover:text-gray-600 font-bold text-lg leading-none shrink-0">×</button>
+                  <span className="text-sm font-medium text-gray-700 shrink-0">覆蓋價 NT$</span>
+                  <input type="number" value={pendingPrice} onChange={e => setPendingPrice(e.target.value)}
+                    placeholder="空白=清除覆蓋" autoFocus
+                    className="flex-1 min-w-0 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                  <button
+                    onClick={async () => {
+                      await applyPrice(pendingPrice ? parseFloat(pendingPrice) : null)
+                      setShowPriceInput(false); setPendingPrice('')
+                    }}
+                    disabled={applyingSaving}
+                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
+                    {applyingSaving ? '套用中…' : '套用'}
                   </button>
-                ))}
-                <button onClick={() => setShowPriceInput(true)}
-                  disabled={selectedCells.size === 0}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-indigo-300 bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 disabled:opacity-40 transition-colors">
-                  <span className="w-2 h-2 rounded-sm bg-indigo-500 shrink-0" />
-                  設定價格
-                </button>
-              </div>
-            )}
-          </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={clearSelection}
+                    className="text-gray-400 hover:text-gray-600 font-bold text-lg leading-none shrink-0">×</button>
+                  <span className="text-sm font-semibold text-indigo-700 shrink-0">已選 {selectedCells.size} 格</span>
+                  <div className="flex gap-1.5 flex-wrap ml-auto">
+                    {([
+                      { status: 'open' as BookingStatus,      label: '開放訂房', cls: 'bg-emerald-600 hover:bg-emerald-700' },
+                      { status: 'admin_only' as BookingStatus, label: '僅後台',   cls: 'bg-amber-500 hover:bg-amber-600' },
+                      { status: 'closed' as BookingStatus,     label: '不可訂',   cls: 'bg-red-600 hover:bg-red-700' },
+                    ] as const).map(({ status, label, cls }) => (
+                      <button key={status} onClick={() => applyStatus(status)} disabled={applyingSaving}
+                        className={`px-3 py-2 rounded-lg text-white text-xs font-semibold disabled:opacity-50 ${cls}`}>
+                        {label}
+                      </button>
+                    ))}
+                    <button onClick={() => setShowPriceInput(true)}
+                      className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
+                      設定價格
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         /* ── Tab 2: 動態定價規則 ── */
