@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     guest_name, guest_email, guest_phone,
     check_in, check_out, num_guests = 1,
     total_price, currency = 'TWD', status = 'confirmed',
-    special_requests, notes, source = 'manual',
+    special_requests, notes, source = 'manual', extras = {},
   } = body
 
   if (!check_in || !check_out) return NextResponse.json({ error: '入住/退房日期必填' }, { status: 400 })
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id, property_id, platform, platform_booking_id,
       guest_name, guest_email, guest_phone,
       check_in, check_out, num_guests, total_price, currency,
-      status, special_requests, notes, source,
+      status, special_requests, notes, source, extras,
     })
     .select().single()
 

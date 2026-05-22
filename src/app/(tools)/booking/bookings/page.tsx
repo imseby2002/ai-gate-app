@@ -12,6 +12,8 @@ interface Booking {
   properties?: { name: string }; created_at: string
 }
 interface Property { id: string; name: string }
+interface AddonService { id: string; name: string; enabled: boolean; price: number; unit: string; note: string }
+interface ProfileExtras { breakfast: { type: string; price_per_person: number }; addon_services: AddonService[] }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   confirmed: { label: '已確認', color: 'bg-green-100 text-green-700' },
@@ -29,6 +31,7 @@ const PLATFORM_NAMES: Record<string, string> = {
 export default function BookingsPage() {
   const [bookings, setBookings]       = useState<Booking[]>([])
   const [properties, setProperties]   = useState<Property[]>([])
+  const [profileExtras, setProfileExtras] = useState<ProfileExtras | null>(null)
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
   const [filterStatus, setFilterStatus]     = useState('')
@@ -45,6 +48,7 @@ export default function BookingsPage() {
     check_in: '', check_out: '', num_guests: 1,
     total_price: '', currency: 'TWD', status: 'confirmed',
     platform: 'direct', notes: '', special_requests: '',
+    extras: { breakfast: false, services: [] as string[] },
   })
   const [saving, setSaving] = useState(false)
 
@@ -58,9 +62,11 @@ export default function BookingsPage() {
     Promise.all([
       fetch(`/api/booking/bookings?${params}`).then(r => r.json()),
       fetch('/api/booking/properties').then(r => r.json()),
-    ]).then(([bk, pr]) => {
+      fetch('/api/booking/profile').then(r => r.json()),
+    ]).then(([bk, pr, pf]) => {
       setBookings(bk.bookings ?? [])
       setProperties(pr.properties ?? [])
+      if (pf.profile) setProfileExtras({ breakfast: pf.profile.breakfast ?? { type: 'none', price_per_person: 0 }, addon_services: pf.profile.addon_services ?? [] })
     }).finally(() => setLoading(false))
   }, [filterStatus, filterProp, filterFrom, filterTo])
 
@@ -124,7 +130,7 @@ export default function BookingsPage() {
       if (d.booking) {
         setBookings(prev => [d.booking, ...prev])
         setAdding(false)
-        setForm({ property_id: '', guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', num_guests: 1, total_price: '', currency: 'TWD', status: 'confirmed', platform: 'direct', notes: '', special_requests: '' })
+        setForm({ property_id: '', guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', num_guests: 1, total_price: '', currency: 'TWD', status: 'confirmed', platform: 'direct', notes: '', special_requests: '', extras: { breakfast: false, services: [] } })
       } else alert(d.error)
     } finally { setSaving(false) }
   }
@@ -366,6 +372,48 @@ export default function BookingsPage() {
                 </select>
               </div>
             </div>
+            {/* 加購服務 */}
+            {profileExtras && (profileExtras.breakfast?.type === 'optional' || profileExtras.addon_services.some(s => s.enabled)) && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-gray-600">加購服務</label>
+                <div className="rounded-lg border divide-y">
+                  {profileExtras.breakfast?.type === 'optional' && (
+                    <label className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" checked={form.extras.breakfast}
+                        onChange={e => setForm(p => ({ ...p, extras: { ...p.extras, breakfast: e.target.checked } }))}
+                        className="rounded" />
+                      <span className="text-sm text-gray-700">早餐</span>
+                      {profileExtras.breakfast.price_per_person > 0 && (
+                        <span className="text-xs text-gray-400 ml-auto">NT$ {profileExtras.breakfast.price_per_person}/人</span>
+                      )}
+                    </label>
+                  )}
+                  {profileExtras.addon_services.filter(s => s.enabled).map(svc => (
+                    <label key={svc.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox"
+                        checked={form.extras.services.includes(svc.id)}
+                        onChange={e => setForm(p => ({
+                          ...p, extras: {
+                            ...p.extras,
+                            services: e.target.checked
+                              ? [...p.extras.services, svc.id]
+                              : p.extras.services.filter(s => s !== svc.id),
+                          },
+                        }))}
+                        className="rounded" />
+                      <span className="text-sm text-gray-700">{svc.name}</span>
+                      {svc.note && <span className="text-xs text-gray-400 truncate">{svc.note}</span>}
+                      {svc.price > 0 && (
+                        <span className="text-xs text-gray-400 ml-auto shrink-0">
+                          NT$ {svc.price}/{svc.unit === 'per_trip' ? '趟' : svc.unit === 'per_stay' ? '次' : svc.unit === 'per_person' ? '人' : '晚'}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">備註</label>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
