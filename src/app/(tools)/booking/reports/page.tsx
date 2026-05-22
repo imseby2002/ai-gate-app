@@ -1,16 +1,17 @@
 'use client'
 import { useEffect, useState } from 'react'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts'
-import { TrendingUp, BedDouble, CalendarDays, DollarSign, Download } from 'lucide-react'
+import { TrendingUp, BedDouble, CalendarDays, DollarSign, Download, Percent, Users } from 'lucide-react'
 
 interface ReportData {
-  monthly: { month: string; revenue: number; nights: number; bookings: number }[]
+  monthly: { month: string; revenue: number; nights: number; bookings: number; occupancyRate: number }[]
   byPlatform: { name: string; revenue: number; bookings: number }[]
   byRoom:     { name: string; revenue: number; bookings: number }[]
-  totalRevenue: number; totalNights: number; totalBookings: number; avgPrice: number; year: number
+  totalRevenue: number; totalNights: number; totalBookings: number; avgPrice: number
+  avgStay: number; cancelRate: number; cancelledCount: number; occupancyRate: number; revPAR: number; year: number
 }
 
 const PLATFORM_NAMES: Record<string, string> = {
@@ -27,7 +28,7 @@ export default function ReportsPage() {
   const [selYear, setSelYear]     = useState(year)
   const [data, setData]           = useState<ReportData | null>(null)
   const [loading, setLoading]     = useState(true)
-  const [chartMode, setChartMode] = useState<'revenue' | 'bookings' | 'nights'>('revenue')
+  const [chartMode, setChartMode] = useState<'revenue' | 'bookings' | 'nights' | 'occupancyRate'>('revenue')
 
   useEffect(() => {
     setLoading(true)
@@ -51,8 +52,12 @@ export default function ReportsPage() {
   const kpis = data ? [
     { label: '交易額',    value: `NT$ ${fmt(data.totalRevenue)}`, icon: DollarSign,  color: 'text-indigo-600 bg-indigo-50' },
     { label: '平均房價',  value: `NT$ ${fmt(data.avgPrice)}`,     icon: TrendingUp,  color: 'text-sky-600 bg-sky-50' },
-    { label: '住房晚數',  value: fmt(data.totalNights),            icon: BedDouble,   color: 'text-emerald-600 bg-emerald-50' },
+    { label: '住房率',    value: `${data.occupancyRate}%`,         icon: Percent,     color: 'text-emerald-600 bg-emerald-50' },
     { label: '訂單數',    value: fmt(data.totalBookings),          icon: CalendarDays, color: 'text-amber-600 bg-amber-50' },
+    { label: '住房晚數',  value: fmt(data.totalNights),            icon: BedDouble,   color: 'text-purple-600 bg-purple-50' },
+    { label: '平均入住晚', value: `${data.avgStay} 晚`,            icon: Users,       color: 'text-rose-600 bg-rose-50' },
+    { label: '取消率',    value: `${data.cancelRate}%`,            icon: CalendarDays, color: 'text-gray-600 bg-gray-50' },
+    { label: 'RevPAR',   value: `NT$ ${fmt(data.revPAR)}`,        icon: TrendingUp,  color: 'text-cyan-600 bg-cyan-50' },
   ] : []
 
   return (
@@ -99,7 +104,7 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="font-semibold text-gray-900">月度趨勢</h2>
               <div className="flex gap-1">
-                {([['revenue','營收'],['bookings','訂單'],['nights','晚數']] as const).map(([k, l]) => (
+                {([['revenue','營收'],['bookings','訂單'],['nights','晚數'],['occupancyRate','住房率']] as const).map(([k, l]) => (
                   <button key={k} onClick={() => setChartMode(k)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${chartMode === k ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                     {l}
@@ -112,8 +117,8 @@ export default function ReportsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} width={55}
-                  tickFormatter={v => chartMode === 'revenue' ? `${(v/1000).toFixed(0)}K` : String(v)} />
-                <Tooltip formatter={(v) => { const n = Number(v ?? 0); return chartMode === 'revenue' ? `NT$ ${fmt(n)}` : fmt(n) }} />
+                  tickFormatter={v => chartMode === 'revenue' ? `${(v/1000).toFixed(0)}K` : chartMode === 'occupancyRate' ? `${v}%` : String(v)} />
+                <Tooltip formatter={(v) => { const n = Number(v ?? 0); return chartMode === 'revenue' ? `NT$ ${fmt(n)}` : chartMode === 'occupancyRate' ? `${n}%` : fmt(n) }} />
                 <Line dataKey={chartMode} stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
