@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
   const rows = settings.map((s: {
     property_id: string; date: string; booking_status?: string
     price_override?: number | null; notes?: string
+    deposit?: number | null; extra_person_fee?: number | null
+    extra_large_bed?: number | null; extra_small_bed?: number | null
   }) => ({
     user_id: user.id,
     property_id: s.property_id,
@@ -45,6 +47,10 @@ export async function POST(req: NextRequest) {
     booking_status: s.booking_status ?? 'open',
     price_override: s.price_override ?? null,
     notes: s.notes ?? null,
+    deposit: s.deposit ?? null,
+    extra_person_fee: s.extra_person_fee ?? null,
+    extra_large_bed: s.extra_large_bed ?? null,
+    extra_small_bed: s.extra_small_bed ?? null,
     updated_at: new Date().toISOString(),
   }))
 

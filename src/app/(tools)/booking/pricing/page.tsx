@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import DailyPricingCalendar from './DailyPricingCalendar'
 
 // ── Types ────────────────────────────────────────────────────
 type BookingStatus = 'open' | 'closed' | 'admin_only'
@@ -88,7 +89,7 @@ function computeEffectivePrice(
 // ── Page ─────────────────────────────────────────────────────
 export default function PricingPage() {
   const now = new Date()
-  const [tab, setTab] = useState<'calendar' | 'rules'>('calendar')
+  const [tab, setTab] = useState<'daily' | 'calendar' | 'rules'>('daily')
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [filterProp, setFilterProp] = useState('')
@@ -331,17 +332,28 @@ export default function PricingPage() {
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Tabs */}
-      <div className="bg-white border-b px-4 flex items-center gap-1 shrink-0">
-        {(['calendar', 'rules'] as const).map(t => (
+      <div className="bg-white border-b px-4 flex items-center gap-1 shrink-0 overflow-x-auto">
+        {([
+          ['daily',    '每日定價'],
+          ['calendar', '格狀視圖'],
+          ['rules',    '定價規則'],
+        ] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`py-3.5 px-3 text-sm font-semibold border-b-2 -mb-px transition-colors
+            className={`py-3.5 px-3 text-sm font-semibold border-b-2 -mb-px transition-colors whitespace-nowrap
               ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-            {t === 'calendar' ? '定價日曆' : <span><span className="hidden sm:inline">動態定價</span>規則</span>}
+            {label}
           </button>
         ))}
       </div>
 
-      {tab === 'calendar' ? (
+      {tab === 'daily' ? (
+        /* ── Tab 0: 每日定價（TRAIWAN 式日曆）── */
+        <DailyPricingCalendar
+          year={year} month={month}
+          onPrev={prevMonth} onNext={nextMonth}
+          properties={properties}
+        />
+      ) : tab === 'calendar' ? (
         /* ── Tab 1: 房間 × 日期格狀視圖 ── */
         <div className="flex flex-col flex-1 overflow-hidden">
 
