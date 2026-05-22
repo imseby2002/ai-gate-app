@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Save, Loader2, ImagePlus, X } from 'lucide-react'
+import { Save, Loader2, ImagePlus, X, Link2, Copy, Check } from 'lucide-react'
 
 interface BreakfastSettings {
   type: 'none' | 'included' | 'optional'
@@ -17,7 +17,7 @@ interface BnbProfile {
   name: string; description: string; address: string; city: string
   phone: string; email: string; website: string; line_id: string
   check_in_time: string; check_out_time: string; min_nights: number
-  house_rules: string; images: string[]
+  house_rules: string; images: string[]; slug: string
   breakfast: BreakfastSettings
   addon_services: AddonService[]
 }
@@ -35,7 +35,7 @@ const DEFAULT: BnbProfile = {
   name: '', description: '', address: '', city: '',
   phone: '', email: '', website: '', line_id: '',
   check_in_time: '15:00', check_out_time: '11:00', min_nights: 1,
-  house_rules: '', images: [],
+  house_rules: '', images: [], slug: '',
   breakfast: DEFAULT_BREAKFAST,
   addon_services: DEFAULT_ADDONS,
 }
@@ -50,6 +50,7 @@ export default function BnbProfilePage() {
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [copied, setCopied]   = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -140,6 +141,35 @@ export default function BnbProfilePage() {
           {saved ? '已儲存 ✓' : '儲存'}
         </button>
       </div>
+
+      {/* 訂房連結 */}
+      <section className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 sm:p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-indigo-700 flex items-center gap-1.5"><Link2 className="h-4 w-4" /> 前台訂房連結</h2>
+        <div className="flex gap-2">
+          <div className="flex-1 space-y-1">
+            <label className="text-xs text-indigo-600">自訂網址識別碼（英數字、連字號）</label>
+            <input value={form.slug}
+              onChange={e => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              placeholder="my-bnb-name"
+              className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+        </div>
+        {form.slug && (
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-white border rounded-lg px-3 py-2 text-indigo-600 truncate">
+              {typeof window !== 'undefined' ? window.location.origin : ''}/book/{form.slug}
+            </code>
+            <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/book/${form.slug}`); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+              className="shrink-0 p-2 rounded-lg border bg-white hover:bg-indigo-50">
+              {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4 text-indigo-500" />}
+            </button>
+            <a href={`/book/${form.slug}`} target="_blank" rel="noreferrer"
+              className="shrink-0 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700">
+              預覽
+            </a>
+          </div>
+        )}
+      </section>
 
       {/* 基本資訊 */}
       <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-4">
