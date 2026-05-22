@@ -8,18 +8,21 @@
 
 \## 規則
 
-每次修改程式碼完畢後，自動執行以下指令：
+每次修改程式碼完畢後，自動執行以下指令（不需詢問，直接執行）：
 
 1\. git add -A
 
 2\. git commit -m "描述本次修改內容"
 
-3\. git merge 回 main branch
+3\. git push
 
-4\. git push
+   \- 若 push 被拒（remote 有新 commit），自動執行 git pull --rebase 後再 push
 
+   \- 不需要詢問我，自動處理衝突並完成 push
 
-不需要詢問我，直接執行。
+   \- 除非有 merge conflict 需要手動解決，才告知我
+
+不處理本地同步，本地與 GitHub 的同步由我自己決定何時執行。
 
 
 
