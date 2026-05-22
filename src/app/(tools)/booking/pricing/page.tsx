@@ -526,52 +526,6 @@ export default function PricingPage() {
             </div>
           )}
 
-          {/* Floating action bar — appears only when cells selected */}
-          {(selectedCells.size > 0 || showPriceInput) && (
-            <div className="shrink-0 bg-white border-t shadow-lg px-3 py-2.5">
-              {showPriceInput ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button onClick={() => { setShowPriceInput(false); setPendingPrice('') }}
-                    className="text-gray-400 hover:text-gray-600 font-bold text-lg leading-none shrink-0">×</button>
-                  <span className="text-sm font-medium text-gray-700 shrink-0">覆蓋價 NT$</span>
-                  <input type="number" value={pendingPrice} onChange={e => setPendingPrice(e.target.value)}
-                    placeholder="空白=清除覆蓋" autoFocus
-                    className="flex-1 min-w-0 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                  <button
-                    onClick={async () => {
-                      await applyPrice(pendingPrice ? parseFloat(pendingPrice) : null)
-                      setShowPriceInput(false); setPendingPrice('')
-                    }}
-                    disabled={applyingSaving}
-                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
-                    {applyingSaving ? '套用中…' : '套用'}
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button onClick={clearSelection}
-                    className="text-gray-400 hover:text-gray-600 font-bold text-lg leading-none shrink-0">×</button>
-                  <span className="text-sm font-semibold text-indigo-700 shrink-0">已選 {selectedCells.size} 格</span>
-                  <div className="flex gap-1.5 flex-wrap ml-auto">
-                    {([
-                      { status: 'open' as BookingStatus,      label: '開放訂房', cls: 'bg-emerald-600 hover:bg-emerald-700' },
-                      { status: 'admin_only' as BookingStatus, label: '僅後台',   cls: 'bg-amber-500 hover:bg-amber-600' },
-                      { status: 'closed' as BookingStatus,     label: '不可訂',   cls: 'bg-red-600 hover:bg-red-700' },
-                    ] as const).map(({ status, label, cls }) => (
-                      <button key={status} onClick={() => applyStatus(status)} disabled={applyingSaving}
-                        className={`px-3 py-2 rounded-lg text-white text-xs font-semibold disabled:opacity-50 ${cls}`}>
-                        {label}
-                      </button>
-                    ))}
-                    <button onClick={() => setShowPriceInput(true)}
-                      className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
-                      設定價格
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       ) : (
         /* ── Tab 2: 動態定價規則 ── */
@@ -726,6 +680,50 @@ export default function PricingPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Fixed action bar — appears when grid cells are selected */}
+      {tab === 'calendar' && (selectedCells.size > 0 || showPriceInput) && typeof window !== 'undefined' && createPortal(
+        <div className="fixed bottom-0 left-0 right-0 z-[9990] bg-white border-t shadow-2xl px-4 py-3">
+          {showPriceInput ? (
+            <div className="flex items-center gap-2 flex-wrap max-w-4xl mx-auto">
+              <button onClick={() => { setShowPriceInput(false); setPendingPrice('') }}
+                className="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none shrink-0">×</button>
+              <span className="text-sm font-medium text-gray-700 shrink-0">覆蓋價 NT$</span>
+              <input type="number" value={pendingPrice} onChange={e => setPendingPrice(e.target.value)}
+                placeholder="空白=清除覆蓋" autoFocus
+                className="flex-1 min-w-0 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+              <button onClick={async () => { await applyPrice(pendingPrice ? parseFloat(pendingPrice) : null); setShowPriceInput(false); setPendingPrice('') }}
+                disabled={applyingSaving}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
+                {applyingSaving ? '套用中…' : '套用'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 flex-wrap max-w-4xl mx-auto">
+              <button onClick={clearSelection}
+                className="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none shrink-0">×</button>
+              <span className="text-sm font-semibold text-indigo-700 shrink-0">已選 {selectedCells.size} 格</span>
+              <div className="flex gap-2 flex-wrap ml-auto">
+                {([
+                  { status: 'open' as BookingStatus,      label: '開放訂房', cls: 'bg-emerald-600 hover:bg-emerald-700' },
+                  { status: 'admin_only' as BookingStatus, label: '僅後台',   cls: 'bg-amber-500 hover:bg-amber-600' },
+                  { status: 'closed' as BookingStatus,     label: '不可訂',   cls: 'bg-red-600 hover:bg-red-700' },
+                ] as const).map(({ status, label, cls }) => (
+                  <button key={status} onClick={() => applyStatus(status)} disabled={applyingSaving}
+                    className={`px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 ${cls}`}>
+                    {label}
+                  </button>
+                ))}
+                <button onClick={() => setShowPriceInput(true)}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+                  設定價格
+                </button>
+              </div>
+            </div>
+          )}
+        </div>,
+        document.body
       )}
 
       {/* Batch pricing modal */}
