@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
-  BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X, LayoutGrid,
+  BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X, LayoutGrid, Percent,
 } from 'lucide-react'
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: '/booking/bookings',   label: '訂單',       icon: List },
   { href: '/booking/calendar',   label: '日曆',       icon: CalendarDays },
   { href: '/booking/pricing',    label: '定價管理',   icon: Tag },
+  { href: '/booking/promos',     label: '優惠碼',     icon: Percent },
   { href: '/booking/roomgrid',   label: '空房表',     icon: LayoutGrid },
   { href: '/booking/properties', label: '房型管理',   icon: BedDouble },
   { href: '/booking/reports',    label: '數據報表',   icon: BarChart2 },

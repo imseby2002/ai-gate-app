@@ -51,6 +51,9 @@ export default function BookingsPage() {
     extras: { breakfast: false, services: [] as string[] },
   })
   const [saving, setSaving] = useState(false)
+  const [promoInput, setPromoInput]   = useState('')
+  const [promoResult, setPromoResult] = useState<{ valid: boolean; discount?: number; name?: string; error?: string } | null>(null)
+  const [promoChecking, setPromoChecking] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams({ limit: '500' })
@@ -119,17 +122,36 @@ export default function BookingsPage() {
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
   }
 
+  async function checkPromo() {
+    if (!promoInput) return
+    setPromoChecking(true)
+    const nights = form.check_in && form.check_out
+      ? Math.max(1, Math.ceil((new Date(form.check_out).getTime() - new Date(form.check_in).getTime()) / 86400000))
+      : 1
+    const res = await fetch('/api/booking/promos/validate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: promoInput, num_nights: nights, total_price: parseFloat(form.total_price) || 0 }),
+    })
+    const d = await res.json()
+    setPromoResult(d)
+    if (d.valid) setForm(f => ({ ...f, extras: { ...f.extras } }))
+    setPromoChecking(false)
+  }
+
   async function save() {
     setSaving(true)
     try {
+      const promo_code = promoResult?.valid ? promoInput.toUpperCase() : null
+      const promo_discount = promoResult?.valid ? promoResult.discount : null
       const res = await fetch('/api/booking/bookings', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, total_price: form.total_price ? parseFloat(form.total_price) : null }),
+        body: JSON.stringify({ ...form, total_price: form.total_price ? parseFloat(form.total_price) : null, promo_code, promo_discount }),
       })
       const d = await res.json()
       if (d.booking) {
         setBookings(prev => [d.booking, ...prev])
         setAdding(false)
+        setPromoInput(''); setPromoResult(null)
         setForm({ property_id: '', guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', num_guests: 1, total_price: '', currency: 'TWD', status: 'confirmed', platform: 'direct', notes: '', special_requests: '', extras: { breakfast: false, services: [] } })
       } else alert(d.error)
     } finally { setSaving(false) }
@@ -413,6 +435,28 @@ export default function BookingsPage() {
                 </div>
               </div>
             )}
+
+            {/* 優惠碼 */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">優惠碼</label>
+              <div className="flex gap-2">
+                <input value={promoInput} onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoResult(null) }}
+                  onKeyDown={e => e.key === 'Enter' && checkPromo()}
+                  placeholder="輸入優惠碼"
+                  className="flex-1 text-sm font-mono border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <button type="button" onClick={checkPromo} disabled={!promoInput || promoChecking}
+                  className="px-3 py-2 rounded-lg border text-sm text-indigo-600 border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 whitespace-nowrap">
+                  {promoChecking ? '…' : '套用'}
+                </button>
+              </div>
+              {promoResult && (
+                <div className={`text-xs px-2 py-1 rounded ${promoResult.valid ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+                  {promoResult.valid
+                    ? `✓ ${promoResult.name || promoInput} 折扣 NT$ ${promoResult.discount?.toLocaleString()}`
+                    : `✗ ${promoResult.error}`}
+                </div>
+              )}
+            </div>
 
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">備註</label>
