@@ -118,6 +118,7 @@ export default function PricingPage() {
   // Holiday presets
   const [holidays, setHolidays] = useState<HolidayPeriod[]>([])
   const [holidaysLoading, setHolidaysLoading] = useState(false)
+  const [selectedHolidays, setSelectedHolidays] = useState<Set<string>>(new Set())
 
   // Rule modal
   const [ruleModal, setRuleModal] = useState<Partial<PricingRule> | null>(null)
@@ -166,6 +167,30 @@ export default function PricingPage() {
 
   function getSetting(date: string, propertyId: string): DateSetting {
     return settingsMap[date]?.[propertyId] ?? { property_id: propertyId, date, booking_status: 'open', price_override: null }
+  }
+
+  function holidayKey(h: HolidayPeriod) { return `${h.name}|${h.from}` }
+
+  function toggleHoliday(h: HolidayPeriod) {
+    const key = holidayKey(h)
+    setSelectedHolidays(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
+  function getAllSelectedDates(): string[] {
+    const all = new Set<string>()
+    for (const h of holidays) {
+      if (selectedHolidays.has(holidayKey(h))) {
+        getDateRange(h.from, h.to, batchDow).forEach(d => all.add(d))
+      }
+    }
+    if (batchFrom && batchTo && batchFrom <= batchTo) {
+      getDateRange(batchFrom, batchTo, batchDow).forEach(d => all.add(d))
+    }
+    return Array.from(all).sort()
   }
 
   function prevMonth() { if (month === 0) { setYear(y => y - 1); setMonth(11) } else setMonth(m => m - 1) }
@@ -257,15 +282,16 @@ export default function PricingPage() {
   }
 
   async function applyBatch() {
-    if (!batchFrom || !batchTo) return
+    const dates = getAllSelectedDates()
+    if (dates.length === 0) { alert('沒有符合條件的日期'); return }
     setBatchSaving(true)
     try {
-      const dates = getDateRange(batchFrom, batchTo, batchDow)
-      if (dates.length === 0) { alert('沒有符合條件的日期'); return }
       const targetProps = batchProps.length > 0 ? batchProps : properties.map(p => p.id)
 
-      // Fetch existing settings for the cross-month range
-      const res = await fetch(`/api/booking/pricing?from=${batchFrom}&to=${batchTo}`).then(r => r.json())
+      const rangeFrom = dates[0]
+      const rangeTo = dates[dates.length - 1]
+      // Fetch existing settings for the full range
+      const res = await fetch(`/api/booking/pricing?from=${rangeFrom}&to=${rangeTo}`).then(r => r.json())
       const exMap: Record<string, Record<string, DateSetting>> = {}
       for (const s of res.settings ?? []) {
         if (!exMap[s.date]) exMap[s.date] = {}
@@ -289,6 +315,7 @@ export default function PricingPage() {
       })
       setShowBatch(false)
       setBatchFrom(''); setBatchTo(''); setBatchPrice(''); setBatchStatus(''); setBatchDow([0,1,2,3,4,5,6])
+      setSelectedHolidays(new Set())
       await fetchData()
     } finally { setBatchSaving(false) }
   }
@@ -701,14 +728,14 @@ export default function PricingPage() {
       {/* Batch pricing modal */}
       {showBatch && typeof window !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
-          onClick={e => { if (e.target === e.currentTarget) setShowBatch(false) }}>
+          onClick={e => { if (e.target === e.currentTarget) { setShowBatch(false); setSelectedHolidays(new Set()) } }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-gray-900">批次設定房價</h3>
-                <p className="text-xs text-gray-400 mt-0.5">可跨月設定，一次套用多個日期</p>
+                <p className="text-xs text-gray-400 mt-0.5">可多選假期，或手動輸入日期範圍</p>
               </div>
-              <button onClick={() => setShowBatch(false)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+              <button onClick={() => { setShowBatch(false); setSelectedHolidays(new Set()) }} className="p-1.5 hover:bg-gray-100 rounded-lg">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
@@ -717,10 +744,14 @@ export default function PricingPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <div className="text-xs font-semibold text-gray-700">快速選取假期</div>
+                {selectedHolidays.size > 0 && (
+                  <span className="text-[11px] text-indigo-600 font-semibold">已選 {selectedHolidays.size} 個假期</span>
+                )}
                 {holidaysLoading && (
                   <span className="text-[11px] text-gray-400 animate-pulse">AI 擷取中…</span>
                 )}
               </div>
+              <p className="text-[11px] text-gray-400">可多選，點選後日期會自動合併</p>
               {!holidaysLoading && holidays.length === 0 && (
                 <div className="text-[11px] text-gray-400">無法取得假期資料</div>
               )}
@@ -731,17 +762,20 @@ export default function PricingPage() {
                     <div>
                       <div className="text-[10px] text-gray-400 mb-1">🎉 連續假期</div>
                       <div className="flex flex-wrap gap-1.5">
-                        {holidays.filter(h => h.type === 'holiday').map(h => (
-                          <button key={h.name + h.from}
-                            onClick={() => { setBatchFrom(h.from); setBatchTo(h.to); setBatchDow([0,1,2,3,4,5,6]) }}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors
-                              ${batchFrom === h.from && batchTo === h.to
-                                ? 'bg-orange-500 text-white border-orange-500'
-                                : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'}`}>
-                            {h.name}
-                            <span className="ml-1 opacity-60">{h.from.slice(5)} – {h.to.slice(5)}</span>
-                          </button>
-                        ))}
+                        {holidays.filter(h => h.type === 'holiday').map(h => {
+                          const active = selectedHolidays.has(holidayKey(h))
+                          return (
+                            <button key={holidayKey(h)}
+                              onClick={() => toggleHoliday(h)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors
+                                ${active
+                                  ? 'bg-orange-500 text-white border-orange-500'
+                                  : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'}`}>
+                              {active && '✓ '}{h.name}
+                              <span className="ml-1 opacity-60">{h.from.slice(5)} – {h.to.slice(5)}</span>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -750,17 +784,20 @@ export default function PricingPage() {
                     <div>
                       <div className="text-[10px] text-gray-400 mb-1">🏫 學期假期</div>
                       <div className="flex flex-wrap gap-1.5">
-                        {holidays.filter(h => h.type !== 'holiday').map(h => (
-                          <button key={h.name + h.from}
-                            onClick={() => { setBatchFrom(h.from); setBatchTo(h.to); setBatchDow([0,1,2,3,4,5,6]) }}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors
-                              ${batchFrom === h.from && batchTo === h.to
-                                ? 'bg-violet-500 text-white border-violet-500'
-                                : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'}`}>
-                            {h.name}
-                            <span className="ml-1 opacity-60">{h.from.slice(5)} – {h.to.slice(5)}</span>
-                          </button>
-                        ))}
+                        {holidays.filter(h => h.type !== 'holiday').map(h => {
+                          const active = selectedHolidays.has(holidayKey(h))
+                          return (
+                            <button key={holidayKey(h)}
+                              onClick={() => toggleHoliday(h)}
+                              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors
+                                ${active
+                                  ? 'bg-violet-500 text-white border-violet-500'
+                                  : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'}`}>
+                              {active && '✓ '}{h.name}
+                              <span className="ml-1 opacity-60">{h.from.slice(5)} – {h.to.slice(5)}</span>
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -770,7 +807,7 @@ export default function PricingPage() {
 
             {/* Date range */}
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-gray-700">日期範圍</div>
+              <div className="text-xs font-semibold text-gray-700">額外手動日期範圍（選填）</div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] text-gray-500 mb-1 block">起始日</label>
@@ -783,11 +820,11 @@ export default function PricingPage() {
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
               </div>
-              {batchFrom && batchTo && batchFrom <= batchTo && (
+              {getAllSelectedDates().length > 0 && (
                 <div className="text-[11px] text-gray-400">
-                  符合條件：<span className="text-indigo-600 font-semibold">
-                    {getDateRange(batchFrom, batchTo, batchDow).length}
-                  </span> 天
+                  合計：<span className="text-indigo-600 font-semibold">
+                    {getAllSelectedDates().length}
+                  </span> 天（假期+手動日期合併，星期篩選後）
                 </div>
               )}
             </div>
@@ -878,13 +915,17 @@ export default function PricingPage() {
             </div>
 
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowBatch(false)}
+              <button onClick={() => {
+                setShowBatch(false)
+                setBatchFrom(''); setBatchTo(''); setBatchPrice(''); setBatchStatus(''); setBatchDow([0,1,2,3,4,5,6])
+                setSelectedHolidays(new Set())
+              }}
                 className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
               <button
                 onClick={applyBatch}
-                disabled={!batchFrom || !batchTo || batchFrom > batchTo || (!batchPrice && !batchStatus) || batchSaving}
+                disabled={getAllSelectedDates().length === 0 || (!batchPrice && !batchStatus) || batchSaving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                {batchSaving ? '套用中…' : `套用 ${batchFrom && batchTo && batchFrom <= batchTo ? getDateRange(batchFrom, batchTo, batchDow).length : 0} 天`}
+                {batchSaving ? '套用中…' : `套用 ${getAllSelectedDates().length} 天`}
               </button>
             </div>
           </div>
