@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
   const { text } = await generateText({
     model: anthropic('claude-sonnet-4-6'),
-    maxTokens: 2048,
+    maxOutputTokens: 2048,
     prompt: `請列出台灣 ${year} 年與 ${year + 1} 年初的假期資訊：
 
 1. 所有連續假期（含補班補課安排後，實際連放 3 天以上的連假，例如：春節、清明、端午、中秋、國慶、元旦等）
