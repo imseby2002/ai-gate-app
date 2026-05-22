@@ -1,0 +1,283 @@
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { ChevronLeft, ChevronRight, Lock, Unlock, Plus, RefreshCw } from 'lucide-react'
+import Link from 'next/link'
+
+interface Property { id: string; name: string; room_count: number; base_price: number | null }
+interface Booking  {
+  id: string; property_id: string; guest_name: string | null; guest_phone: string | null
+  check_in: string; check_out: string; status: string; total_price: number | null; platform: string
+}
+interface BlockedDate { property_id: string; date: string; reason: string }
+
+interface GridData {
+  from: string; days: number
+  properties: Property[]; bookings: Booking[]; blocked: BlockedDate[]
+}
+
+type CellState = 'available' | 'booked' | 'blocked'
+
+function toDateStr(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
+function addDays(dateStr: string, n: number) {
+  const d = new Date(dateStr); d.setDate(d.getDate() + n); return toDateStr(d)
+}
+
+const DAYS = 21
+
+export default function RoomGridPage() {
+  const router = useRouter()
+  const [from, setFrom]     = useState(() => toDateStr(new Date()))
+  const [data, setData]     = useState<GridData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<{ propId: string; date: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    fetch(`/api/booking/roomgrid?from=${from}&days=${DAYS}`)
+      .then(r => r.json())
+      .then(d => setData(d))
+      .finally(() => setLoading(false))
+  }, [from])
+
+  useEffect(() => { load() }, [load])
+
+  const dates: string[] = []
+  for (let i = 0; i < DAYS; i++) dates.push(addDays(from, i))
+
+  function cellState(propId: string, date: string): CellState {
+    if (!data) return 'available'
+    const isBlocked = data.blocked.some(b => b.property_id === propId && b.date === date)
+    if (isBlocked) return 'blocked'
+    const isBooked = data.bookings.some(b =>
+      b.property_id === propId && b.check_in <= date && b.check_out > date
+    )
+    if (isBooked) return 'booked'
+    return 'available'
+  }
+
+  function getBooking(propId: string, date: string) {
+    if (!data) return null
+    return data.bookings.find(b =>
+      b.property_id === propId && b.check_in <= date && b.check_out > date
+    ) ?? null
+  }
+
+  function isSelected(propId: string, date: string) {
+    return selected.some(s => s.propId === propId && s.date === date)
+  }
+
+  function toggleCell(propId: string, date: string, state: CellState) {
+    if (state === 'booked') return
+    setSelected(prev => {
+      const exists = prev.some(s => s.propId === propId && s.date === date)
+      return exists ? prev.filter(s => !(s.propId === propId && s.date === date))
+                    : [...prev, { propId, date }]
+    })
+  }
+
+  async function blockSelected() {
+    if (selected.length === 0) return
+    setSaving(true)
+    const grouped: Record<string, string[]> = {}
+    for (const s of selected) {
+      if (!grouped[s.propId]) grouped[s.propId] = []
+      grouped[s.propId].push(s.date)
+    }
+    await Promise.all(Object.entries(grouped).map(([propId, dates]) =>
+      fetch('/api/booking/blocked', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_id: propId, dates }),
+      })
+    ))
+    setSaving(false)
+    setSelected([])
+    setMsg('已關閉選取日期')
+    setTimeout(() => setMsg(null), 2000)
+    load()
+  }
+
+  async function unblockSelected() {
+    if (selected.length === 0) return
+    setSaving(true)
+    const grouped: Record<string, string[]> = {}
+    for (const s of selected) {
+      if (!grouped[s.propId]) grouped[s.propId] = []
+      grouped[s.propId].push(s.date)
+    }
+    await Promise.all(Object.entries(grouped).map(([propId, dates]) =>
+      fetch('/api/booking/blocked', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_id: propId, dates }),
+      })
+    ))
+    setSaving(false)
+    setSelected([])
+    setMsg('已開放選取日期')
+    setTimeout(() => setMsg(null), 2000)
+    load()
+  }
+
+  function clearSelection() { setSelected([]) }
+
+  const selectionHasBlocked = selected.some(s => cellState(s.propId, s.date) === 'blocked')
+  const selectionHasAvailable = selected.some(s => cellState(s.propId, s.date) === 'available')
+
+  const selectedProps = [...new Set(selected.map(s => s.propId))]
+  const bookingQueryStr = selectedProps.length === 1
+    ? `?property_id=${selectedProps[0]}&check_in=${selected.map(s=>s.date).sort()[0]}`
+    : ''
+
+  const today = toDateStr(new Date())
+  const dayLabels = ['日','一','二','三','四','五','六']
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden bg-gray-50">
+      {/* Top bar */}
+      <div className="shrink-0 flex items-center gap-3 px-5 py-3 bg-white border-b">
+        <h1 className="text-base font-bold text-gray-900 mr-2">空房表</h1>
+        <button onClick={() => setFrom(f => addDays(f, -7))}
+          className="p-1.5 rounded hover:bg-gray-100"><ChevronLeft className="h-4 w-4" /></button>
+        <button onClick={() => setFrom(toDateStr(new Date()))}
+          className="px-3 py-1 text-xs rounded-lg border hover:bg-gray-50 font-medium">今日</button>
+        <span className="text-sm text-gray-600 min-w-[120px]">{from} ~ {addDays(from, DAYS - 1)}</span>
+        <button onClick={() => setFrom(f => addDays(f, 7))}
+          className="p-1.5 rounded hover:bg-gray-100"><ChevronRight className="h-4 w-4" /></button>
+        <button onClick={load} className="ml-1 p-1.5 rounded hover:bg-gray-100 text-gray-500">
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
+
+        <div className="ml-auto flex items-center gap-3 text-xs text-gray-500">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-white border" /> 可訂</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-cyan-200" /> 已訂</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-300" /> 關閉</span>
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-auto">
+        {loading ? (
+          <div className="flex items-center justify-center h-32 text-gray-400">載入中…</div>
+        ) : !data || data.properties.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-gray-400">尚無房型資料</div>
+        ) : (
+          <table className="border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
+            <colgroup>
+              <col style={{ width: 140 }} />
+              {dates.map(d => <col key={d} style={{ width: 72 }} />)}
+            </colgroup>
+            <thead>
+              <tr className="bg-white sticky top-0 z-10 shadow-sm">
+                <th className="border border-gray-200 px-2 py-2 text-left font-semibold text-gray-700 bg-white sticky left-0 z-20">
+                  房型
+                </th>
+                {dates.map(d => {
+                  const dt = new Date(d + 'T00:00:00')
+                  const isToday = d === today
+                  const isWeekend = dt.getDay() === 0 || dt.getDay() === 6
+                  return (
+                    <th key={d} className={`border border-gray-200 px-1 py-1.5 text-center font-medium
+                      ${isToday ? 'bg-indigo-50 text-indigo-700' : isWeekend ? 'bg-amber-50 text-amber-700' : 'text-gray-600'}`}>
+                      <div>{d.slice(5)}</div>
+                      <div className="text-gray-400 font-normal">{dayLabels[dt.getDay()]}</div>
+                    </th>
+                  )
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {data.properties.map(prop => (
+                <tr key={prop.id} className="hover:bg-gray-50/50">
+                  <td className="border border-gray-200 px-2 py-2 font-medium text-gray-800 bg-white sticky left-0 z-10 whitespace-nowrap overflow-hidden text-ellipsis">
+                    <div>{prop.name}</div>
+                    {prop.room_count > 1 && (
+                      <div className="text-gray-400 font-normal">{prop.room_count} 間</div>
+                    )}
+                  </td>
+                  {dates.map(date => {
+                    const state = cellState(prop.id, date)
+                    const bk    = state === 'booked' ? getBooking(prop.id, date) : null
+                    const sel   = isSelected(prop.id, date)
+                    const isFirstDay = bk ? bk.check_in === date : false
+
+                    let cellCls = 'border border-gray-200 px-1 py-1 text-center cursor-pointer transition-colors select-none h-12 align-top '
+                    if (sel)             cellCls += 'ring-2 ring-indigo-500 ring-inset '
+                    if (state === 'booked')   cellCls += 'bg-cyan-100 cursor-default '
+                    else if (state === 'blocked') cellCls += 'bg-gray-200 '
+                    else                          cellCls += 'hover:bg-indigo-50 '
+
+                    return (
+                      <td key={date} className={cellCls}
+                        onClick={() => toggleCell(prop.id, date, state)}>
+                        {state === 'booked' && bk ? (
+                          isFirstDay ? (
+                            <Link href={`/booking/bookings/${bk.id}`}
+                              onClick={e => e.stopPropagation()}
+                              className="block truncate text-cyan-800 font-medium text-xs leading-tight hover:underline px-0.5">
+                              {bk.guest_name ?? '—'}
+                            </Link>
+                          ) : null
+                        ) : state === 'blocked' ? (
+                          <Lock className="h-3 w-3 text-gray-400 mx-auto mt-2" />
+                        ) : (
+                          <span className="text-gray-400 text-xs">
+                            {prop.base_price ? `${prop.base_price}` : ''}
+                          </span>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Bottom action bar */}
+      {selected.length > 0 && (
+        <div className="shrink-0 flex items-center gap-3 px-5 py-3 bg-white border-t shadow-lg">
+          <button onClick={clearSelection}
+            className="text-gray-400 hover:text-gray-600 font-bold text-lg leading-none">×</button>
+          <span className="text-sm font-medium text-gray-700">
+            已選 {selected.length} 格
+          </span>
+
+          <div className="flex gap-2 ml-auto">
+            {selectedProps.length === 1 && selectionHasAvailable && (
+              <Link href={`/booking/bookings${bookingQueryStr}`}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+                <Plus className="h-4 w-4" /> 填寫訂單
+              </Link>
+            )}
+            {selectionHasAvailable && (
+              <button onClick={blockSelected} disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-700 text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                <Lock className="h-4 w-4" /> 關閉訂房
+              </button>
+            )}
+            {selectionHasBlocked && (
+              <button onClick={unblockSelected} disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                <Unlock className="h-4 w-4" /> 開放訂房
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {msg && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">
+          {msg}
+        </div>
+      )}
+    </div>
+  )
+}
