@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Search, Filter, Download, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, Filter, Download, ChevronDown, ChevronUp, Send } from 'lucide-react'
 import Link from 'next/link'
 
 interface Booking {
@@ -51,6 +51,7 @@ export default function BookingsPage() {
     extras: { breakfast: false, services: [] as string[] },
   })
   const [saving, setSaving] = useState(false)
+  const [sendingNotif, setSendingNotif] = useState<string | null>(null)
   const [promoInput, setPromoInput]   = useState('')
   const [promoResult, setPromoResult] = useState<{ valid: boolean; discount?: number; name?: string; error?: string } | null>(null)
   const [promoChecking, setPromoChecking] = useState(false)
@@ -112,6 +113,19 @@ export default function BookingsPage() {
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a'); a.href = url; a.download = '訂單匯出.csv'; a.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function sendConfirmation(bookingId: string) {
+    setSendingNotif(bookingId)
+    try {
+      const res = await fetch('/api/booking/notifications/send', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId, type: 'confirmation' }),
+      })
+      const d = await res.json()
+      if (d.ok) alert(`確認信已發送至 ${d.sent_to}`)
+      else alert(d.error ?? '發送失敗')
+    } finally { setSendingNotif(null) }
   }
 
   async function updateStatus(id: string, status: string) {
@@ -290,6 +304,7 @@ export default function BookingsPage() {
                   <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('created_at')}>
                     建立 <SortIcon k="created_at" />
                   </th>
+                  <th className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -322,6 +337,14 @@ export default function BookingsPage() {
                         <div>{new Date(b.created_at).toLocaleDateString('zh-TW')}</div>
                         {b.notes && (
                           <div className="text-[10px] text-amber-600 mt-0.5 max-w-[100px] truncate" title={b.notes}>⚠ {b.notes}</div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {b.guest_email && (
+                          <button onClick={() => sendConfirmation(b.id)} disabled={sendingNotif === b.id}
+                            title="發送確認信" className="p-1.5 rounded hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 disabled:opacity-50">
+                            <Send className="h-3.5 w-3.5" />
+                          </button>
                         )}
                       </td>
                     </tr>
