@@ -9,7 +9,7 @@ type BookingStatus = 'open' | 'closed' | 'admin_only'
 type HolidayType = 'holiday' | 'winter_vacation' | 'summer_vacation'
 interface HolidayPeriod { name: string; from: string; to: string; type: HolidayType }
 type AdjType = 'percent' | 'fixed'
-type RuleType = 'weekend' | 'holiday' | 'seasonal' | 'occupancy' | 'advance_booking'
+type RuleType = 'weekend' | 'holiday' | 'seasonal' | 'occupancy' | 'advance_booking' | 'early_bird'
 
 interface Property {
   id: string; name: string; room_count: number
@@ -33,11 +33,12 @@ const STATUS_CFG = {
 } as const
 
 const RULE_TYPE_CFG: Record<RuleType, { label: string; icon: string }> = {
-  weekend:         { label: '週末',   icon: '📅' },
-  holiday:         { label: '假日',   icon: '🎉' },
-  seasonal:        { label: '季節性', icon: '🌸' },
-  occupancy:       { label: '住房率', icon: '📊' },
-  advance_booking: { label: '提前訂', icon: '⏰' },
+  weekend:         { label: '週末',              icon: '📅' },
+  holiday:         { label: '假日',              icon: '🎉' },
+  seasonal:        { label: '季節性',            icon: '🌸' },
+  occupancy:       { label: '住房率',            icon: '📊' },
+  advance_booking: { label: '臨時訂（N天內）',   icon: '⚡' },
+  early_bird:      { label: '早鳥訂（N天以上）', icon: '🐦' },
 }
 
 const DOW = ['日','一','二','三','四','五','六']
@@ -1026,9 +1027,28 @@ export default function PricingPage() {
               )}
               {ruleModal.rule_type === 'advance_booking' && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">入住前 N 天內訂房才觸發</label>
-                  <input type="number" min="1"
+                  <label className="text-xs font-medium text-gray-600 block mb-1">
+                    ⚡ 臨時訂：入住前 N 天內訂房才觸發
+                  </label>
+                  <p className="text-[11px] text-gray-400 mb-1.5">
+                    例：N=0 → 當天訂當天住才有效（空房最後出清）；N=7 → 7天內訂房都算
+                  </p>
+                  <input type="number" min="0"
                     value={(ruleModal.conditions as Record<string, number>)?.days_before ?? 7}
+                    onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, days_before: parseInt(e.target.value) } }))}
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                </div>
+              )}
+              {ruleModal.rule_type === 'early_bird' && (
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">
+                    🐦 早鳥訂：入住前至少 N 天訂房才觸發
+                  </label>
+                  <p className="text-[11px] text-gray-400 mb-1.5">
+                    例：N=90 → 90 天以前訂房才算早鳥；N=30 → 30 天以前訂都算
+                  </p>
+                  <input type="number" min="1"
+                    value={(ruleModal.conditions as Record<string, number>)?.days_before ?? 90}
                     onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, days_before: parseInt(e.target.value) } }))}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
                 </div>
