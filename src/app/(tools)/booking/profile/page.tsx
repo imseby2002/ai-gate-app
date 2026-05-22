@@ -1,17 +1,19 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { Save, Loader2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Save, Loader2, ImagePlus, X } from 'lucide-react'
 
 interface BnbProfile {
   name: string; description: string; address: string; city: string
   phone: string; email: string; website: string; line_id: string
-  check_in_time: string; check_out_time: string; min_nights: number; house_rules: string
+  check_in_time: string; check_out_time: string; min_nights: number
+  house_rules: string; images: string[]
 }
 
 const DEFAULT: BnbProfile = {
   name: '', description: '', address: '', city: '',
   phone: '', email: '', website: '', line_id: '',
-  check_in_time: '15:00', check_out_time: '11:00', min_nights: 1, house_rules: '',
+  check_in_time: '15:00', check_out_time: '11:00', min_nights: 1,
+  house_rules: '', images: [],
 }
 
 export default function BnbProfilePage() {
@@ -19,16 +21,37 @@ export default function BnbProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/booking/profile').then(r => r.json()).then(d => {
-      if (d.profile) setForm({ ...DEFAULT, ...d.profile })
+      if (d.profile) setForm({ ...DEFAULT, ...d.profile, images: d.profile.images ?? [] })
     }).finally(() => setLoading(false))
   }, [])
 
-  function set(k: keyof BnbProfile, v: string | number) {
+  function set<K extends keyof BnbProfile>(k: K, v: BnbProfile[K]) {
     setForm(f => ({ ...f, [k]: v }))
     setSaved(false)
+  }
+
+  async function uploadPhoto(file: File) {
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/booking/photos', { method: 'POST', body: fd })
+      const d = await res.json()
+      if (d.url) setForm(f => ({ ...f, images: [...f.images, d.url] }))
+    } finally { setUploading(false) }
+  }
+
+  async function removePhoto(url: string) {
+    setForm(f => ({ ...f, images: f.images.filter(u => u !== url) }))
+    await fetch('/api/booking/photos', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
   }
 
   async function save() {
@@ -39,7 +62,7 @@ export default function BnbProfilePage() {
         body: JSON.stringify(form),
       })
       const d = await res.json()
-      if (d.profile) { setForm({ ...DEFAULT, ...d.profile }); setSaved(true) }
+      if (d.profile) { setForm({ ...DEFAULT, ...d.profile, images: d.profile.images ?? [] }); setSaved(true) }
       else alert(d.error)
     } finally { setSaving(false) }
   }
@@ -141,6 +164,36 @@ export default function BnbProfilePage() {
             rows={4} placeholder="禁止吸菸、禁止攜帶寵物、請保持安靜…"
             className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
         </div>
+      </section>
+
+      {/* 民宿照片 */}
+      <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700">民宿照片</h2>
+        <p className="text-xs text-gray-400">上傳民宿整體環境照片，第一張為主圖</p>
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {form.images.map((url, i) => (
+            <div key={url} className="relative aspect-square rounded-xl overflow-hidden border group">
+              <img src={url} alt={`photo-${i}`} className="w-full h-full object-cover" />
+              {i === 0 && (
+                <span className="absolute top-1 left-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">主圖</span>
+              )}
+              <button onClick={() => removePhoto(url)}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 hover:border-indigo-400 transition-colors">
+            {uploading
+              ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+              : <ImagePlus className="h-5 w-5 text-gray-400" />}
+            <span className="text-[10px] text-gray-400">{uploading ? '上傳中…' : '新增照片'}</span>
+          </button>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = '' }} />
       </section>
 
       <div className="text-xs text-gray-400 pb-4">

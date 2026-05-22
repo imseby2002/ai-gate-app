@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest) {
   const fields = [
     'name','description','address','city','phone','email',
     'website','line_id','check_in_time','check_out_time',
-    'min_nights','amenities','house_rules',
+    'min_nights','amenities','images','house_rules',
   ]
   const updates: Record<string, unknown> = {}
   for (const f of fields) if (f in body) updates[f] = body[f]
