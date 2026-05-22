@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Lock, Unlock, Plus, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
@@ -28,7 +27,6 @@ function addDays(dateStr: string, n: number) {
 const DAYS = 21
 
 export default function RoomGridPage() {
-  const router = useRouter()
   const [from, setFrom]     = useState(() => toDateStr(new Date()))
   const [data, setData]     = useState<GridData | null>(null)
   const [loading, setLoading] = useState(true)
