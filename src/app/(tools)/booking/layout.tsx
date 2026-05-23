@@ -36,27 +36,31 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
   return (
     <div className="flex h-[100dvh] bg-gray-50">
       {/* Desktop sidebar */}
-      <aside className={`hidden sm:flex shrink-0 h-[100dvh] border-r bg-white flex-col py-4 gap-1 overflow-y-auto transition-all duration-200
-        ${collapsed ? 'w-14 px-1.5' : 'w-52 px-3'}`}>
-        <div className={`flex items-center mb-3 ${collapsed ? 'justify-center' : 'justify-between px-2'}`}>
+      <aside className={`hidden sm:flex shrink-0 h-[100dvh] border-r bg-white flex-col transition-all duration-200
+        ${collapsed ? 'w-14' : 'w-52'}`}>
+        {/* Header */}
+        <div className={`flex items-center shrink-0 pt-4 mb-2 ${collapsed ? 'justify-center px-1.5' : 'justify-between px-5'}`}>
           {!collapsed && <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>}
           <button onClick={() => setCollapsed(c => !c)}
             className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors shrink-0">
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
-        {NAV.map(n => {
-          const Icon = n.icon
-          return (
-            <Link key={n.href} href={n.href} title={collapsed ? n.label : undefined}
-              className={`flex items-center rounded-lg text-sm font-medium transition-colors
-                ${collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2'}
-                ${isActive(n.href) ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{n.label}</span>}
-            </Link>
-          )
-        })}
+        {/* Scrollable nav */}
+        <nav className={`flex-1 overflow-y-auto min-h-0 flex flex-col gap-1 pb-4 ${collapsed ? 'px-1.5' : 'px-3'}`}>
+          {NAV.map(n => {
+            const Icon = n.icon
+            return (
+              <Link key={n.href} href={n.href} title={collapsed ? n.label : undefined}
+                className={`flex items-center rounded-lg text-sm font-medium transition-colors shrink-0
+                  ${collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-3 py-2'}
+                  ${isActive(n.href) ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                <Icon className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>{n.label}</span>}
+              </Link>
+            )
+          })}
+        </nav>
       </aside>
 
       {/* Content area: mobile top bar + main */}
@@ -76,24 +80,26 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="sm:hidden fixed inset-0 z-50 flex">
-          <nav className="w-[280px] h-full bg-white border-r flex flex-col py-5 gap-1 px-3 overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between px-2 pb-4">
+          <nav className="w-[280px] h-full bg-white border-r flex flex-col shadow-xl">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>
               <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
-            {NAV.map(n => {
-              const Icon = n.icon
-              return (
-                <Link key={n.href} href={n.href} onClick={() => setDrawerOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors
-                    ${isActive(n.href) ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {n.label}
-                </Link>
-              )
-            })}
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-1 px-3 pb-5">
+              {NAV.map(n => {
+                const Icon = n.icon
+                return (
+                  <Link key={n.href} href={n.href} onClick={() => setDrawerOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors shrink-0
+                      ${isActive(n.href) ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {n.label}
+                  </Link>
+                )
+              })}
+            </div>
           </nav>
           <div className="flex-1 bg-black/40" onClick={() => setDrawerOpen(false)} />
         </div>
