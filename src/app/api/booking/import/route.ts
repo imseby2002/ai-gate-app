@@ -41,6 +41,29 @@ async function fetchWithScrapfly(url: string): Promise<string | null> {
   }
 }
 
+// curl_cffi + Camoufox microservice (for Agoda / primary bypass)
+async function fetchWithPyScraper(url: string): Promise<string | null> {
+  const scraperUrl = process.env.OTA_SCRAPER_URL
+  const scraperKey = process.env.OTA_SCRAPER_KEY
+  if (!scraperUrl) return null
+  try {
+    const res = await fetch(`${scraperUrl}/scrape`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(scraperKey ? { 'X-Api-Key': scraperKey } : {}),
+      },
+      body: JSON.stringify({ url }),
+      signal: AbortSignal.timeout(40000), // Camoufox can be slow
+    })
+    if (!res.ok) return null
+    const d = await res.json()
+    return d.html ?? null
+  } catch {
+    return null
+  }
+}
+
 async function fetchBasic(url: string, platform?: string): Promise<string | null> {
   try {
     const headers: Record<string, string> = {
@@ -59,6 +82,26 @@ async function fetchBasic(url: string, platform?: string): Promise<string | null
   } catch {
     return null
   }
+}
+
+// Routing strategy per platform
+async function fetchHtml(url: string, platform: string): Promise<string | null> {
+  if (platform === 'booking_com') {
+    // ScrapFly → Python scraper → basic fetch
+    return (await fetchWithScrapfly(url))
+      ?? (await fetchWithPyScraper(url))
+      ?? (await fetchBasic(url, platform))
+  }
+  if (platform === 'agoda') {
+    // Python scraper (curl_cffi + Camoufox) → ScrapFly → basic fetch
+    return (await fetchWithPyScraper(url))
+      ?? (await fetchWithScrapfly(url))
+      ?? (await fetchBasic(url, platform))
+  }
+  // Airbnb / other: ScrapFly → Python → basic
+  return (await fetchWithScrapfly(url))
+    ?? (await fetchWithPyScraper(url))
+    ?? (await fetchBasic(url, platform))
 }
 
 const SYSTEM_PROMPT = `You are a data extraction assistant. Extract B&B / hotel property information from the provided webpage text and return ONLY valid JSON.
@@ -105,10 +148,7 @@ export async function POST(req: NextRequest) {
 
   // Try URL fetch if provided
   if (url && !rawContent) {
-    // Try ScrapFly first (bypasses Cloudflare/anti-bot), fall back to basic fetch
-    let html: string | null = await fetchWithScrapfly(url)
-    if (!html) html = await fetchBasic(url, platform)
-
+    const html = await fetchHtml(url, platform ?? 'other')
     if (html) {
       const { text, jsonLd } = extractTextFromHtml(html)
       rawContent = jsonLd ? `=== Structured Data ===\n${jsonLd}\n\n=== Page Text ===\n${text}` : text
