@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { CalendarDays, Users, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { CalendarDays, Users, AlertCircle, CheckCircle2, Globe } from 'lucide-react'
 import Link from 'next/link'
 
 interface Booking {
@@ -25,15 +25,20 @@ const PLATFORM_NAMES: Record<string, string> = {
 
 export default function BookingDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [pendingOnline, setPendingOnline] = useState(0)
   const [loading, setLoading] = useState(true)
 
   const today = new Date().toISOString().slice(0, 10)
   const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
 
   useEffect(() => {
-    fetch(`/api/booking/bookings?from=${today}&to=${in7}&limit=200`)
-      .then(r => r.json()).then(d => setBookings(d.bookings ?? []))
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch(`/api/booking/bookings?from=${today}&to=${in7}&limit=200`).then(r => r.json()),
+      fetch('/api/booking/public-bookings').then(r => r.json()),
+    ]).then(([main, pub]) => {
+      setBookings(main.bookings ?? [])
+      setPendingOnline((pub.bookings ?? []).filter((b: { status: string }) => b.status === 'pending').length)
+    }).finally(() => setLoading(false))
   }, [today, in7])
 
   const checkingInToday  = bookings.filter(b => b.check_in === today && b.status === 'confirmed')
@@ -41,10 +46,11 @@ export default function BookingDashboard() {
   const upcoming = bookings.filter(b => b.check_in > today && b.check_in <= in7 && b.status === 'confirmed')
 
   const stats = [
-    { label: '今日入住',  value: checkingInToday.length,                           icon: Users,        color: 'bg-green-50 text-green-700 border-green-200' },
-    { label: '今日退房',  value: checkingOutToday.length,                          icon: CheckCircle2, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { label: '7天內入住', value: upcoming.length,                                   icon: CalendarDays, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-    { label: '待確認',    value: bookings.filter(b => b.status === 'pending').length, icon: AlertCircle,  color: 'bg-amber-50 text-amber-700 border-amber-200' },
+    { label: '今日入住',    value: checkingInToday.length,                              icon: Users,        color: 'bg-green-50 text-green-700 border-green-200',  href: null },
+    { label: '今日退房',    value: checkingOutToday.length,                             icon: CheckCircle2, color: 'bg-blue-50 text-blue-700 border-blue-200',    href: null },
+    { label: '7天內入住',   value: upcoming.length,                                      icon: CalendarDays, color: 'bg-indigo-50 text-indigo-700 border-indigo-200', href: null },
+    { label: '待確認',      value: bookings.filter(b => b.status === 'pending').length,  icon: AlertCircle,  color: 'bg-amber-50 text-amber-700 border-amber-200',  href: null },
+    { label: '線上訂房申請', value: pendingOnline,                                       icon: Globe,        color: 'bg-rose-50 text-rose-700 border-rose-200',     href: '/booking/public-bookings' },
   ]
 
   return (
@@ -57,11 +63,11 @@ export default function BookingDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {stats.map(s => {
           const Icon = s.icon
-          return (
-            <div key={s.label} className={`border rounded-xl p-4 ${s.color}`}>
+          const inner = (
+            <div key={s.label} className={`border rounded-xl p-4 ${s.color} ${s.href ? 'hover:opacity-80 transition-opacity' : ''}`}>
               <div className="flex items-center gap-2 mb-2">
                 <Icon className="h-4 w-4" />
                 <span className="text-xs font-medium">{s.label}</span>
@@ -69,6 +75,9 @@ export default function BookingDashboard() {
               <div className="text-3xl font-bold">{loading ? '…' : s.value}</div>
             </div>
           )
+          return s.href
+            ? <Link key={s.label} href={s.href}>{inner}</Link>
+            : <div key={s.label}>{inner}</div>
         })}
       </div>
 

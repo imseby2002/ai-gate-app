@@ -5,14 +5,14 @@ import { Plus, Edit2, Trash2, BedDouble, X, ImagePlus, Loader2 } from 'lucide-re
 
 interface Property {
   id: string; name: string; description: string
-  room_count: number; max_guests: number; base_price: number | null
+  room_count: number; max_guests: number; base_price: number | null; extra_guest_fee: number | null
   currency: string; status: string; name_aliases: string[]
   amenities: string[]; images: string[]
 }
 
 const EMPTY_FORM = {
   name: '', description: '', room_count: 1, max_guests: 2,
-  base_price: '', currency: 'TWD', name_aliases: [] as string[],
+  base_price: '', extra_guest_fee: '', currency: 'TWD', name_aliases: [] as string[],
   amenities: [] as string[], images: [] as string[],
 }
 
@@ -53,6 +53,7 @@ export default function PropertiesPage() {
       name: p.name, description: p.description ?? '',
       room_count: p.room_count, max_guests: p.max_guests,
       base_price: p.base_price?.toString() ?? '',
+      extra_guest_fee: p.extra_guest_fee?.toString() ?? '',
       currency: p.currency,
       name_aliases: p.name_aliases ?? [],
       amenities: p.amenities ?? [],
@@ -111,7 +112,11 @@ export default function PropertiesPage() {
   async function save() {
     setSaving(true)
     try {
-      const body = { ...form, base_price: form.base_price ? parseFloat(form.base_price) : null }
+      const body = {
+        ...form,
+        base_price: form.base_price ? parseFloat(form.base_price) : null,
+        extra_guest_fee: form.extra_guest_fee ? parseFloat(form.extra_guest_fee) : null,
+      }
       if (editing) {
         const res = await fetch('/api/booking/properties', {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -283,7 +288,7 @@ export default function PropertiesPage() {
                     rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">間數</label>
                     <input type="number" min={1} value={form.room_count}
@@ -301,6 +306,13 @@ export default function PropertiesPage() {
                     <input type="number" value={form.base_price}
                       onChange={e => setForm(p => ({ ...p, base_price: e.target.value }))}
                       placeholder="2000"
+                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">超額/人/晚</label>
+                    <input type="number" value={form.extra_guest_fee}
+                      onChange={e => setForm(p => ({ ...p, extra_guest_fee: e.target.value }))}
+                      placeholder="500"
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
                 </div>
