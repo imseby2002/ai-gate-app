@@ -7,8 +7,12 @@ OTA Scraper Microservice
 
 import os
 import itertools
+import logging
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -90,6 +94,8 @@ async def scrape(req: ScrapeRequest, x_api_key: str | None = Header(None)):
     url = req.url
     is_agoda = "agoda.com" in url
 
+    logger.info(f"Scraping: {url} (agoda={is_agoda})")
+
     # ─── Method 1: curl_cffi (skip for Agoda SPA — always needs JS render) ──
     if not is_agoda:
         try:
@@ -110,33 +116,42 @@ async def scrape(req: ScrapeRequest, x_api_key: str | None = Header(None)):
 
                 r = await session.get(url, **kwargs)
                 if r.status_code == 200 and not is_blocked(r.text) and not is_spa_shell(r.text):
+                    logger.info("curl_cffi success")
                     return {"html": r.text, "method": "curl_cffi"}
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"curl_cffi failed: {e}")
 
     # ─── Method 2: Camoufox stealth browser (JS rendering) ──────────────────
     try:
         from camoufox.async_api import AsyncCamoufox
 
-        browser_args: dict = {"headless": True}
+        browser_args: dict = {
+            "headless": True,
+            # Required for Docker/containerized environments (no /dev/shm)
+            "args": ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        }
         if proxy:
             browser_args["proxy"] = {"server": list(proxy.values())[0]}
 
+        logger.info("Launching Camoufox...")
         async with AsyncCamoufox(**browser_args) as browser:
             page = await browser.new_page()
             try:
                 await page.goto(url, timeout=30_000, wait_until="domcontentloaded")
-                # Wait for main content to appear
                 await page.wait_for_load_state("networkidle", timeout=15_000)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"page.goto/wait error (continuing): {e}")
 
             html = await page.content()
             await page.close()
 
-            if not is_blocked(html) and not is_spa_shell(html):
-                return {"html": html, "method": "camoufox"}
-    except Exception:
-        pass
+            logger.info(f"Camoufox got {len(html)} bytes, spa_shell={is_spa_shell(html)}, blocked={is_blocked(html)}")
 
+            if not is_blocked(html) and not is_spa_shell(html):
+                logger.info("camoufox success")
+                return {"html": html, "method": "camoufox"}
+    except Exception as e:
+        logger.error(f"Camoufox failed: {e}")
+
+    logger.error("All methods failed")
     raise HTTPException(status_code=422, detail="All scraping methods failed")
