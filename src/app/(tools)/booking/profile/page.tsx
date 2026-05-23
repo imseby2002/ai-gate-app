@@ -19,6 +19,7 @@ interface ParsedData {
   phone: string | null; email: string | null; check_in_time: string | null; check_out_time: string | null
   min_nights: number; house_rules: string | null; amenities: string[]; rooms: ParsedRoom[]
 }
+interface ImportResult { parsed: ParsedData; images: string[] }
 
 interface BreakfastSettings {
   type: 'none' | 'included' | 'optional'
@@ -83,6 +84,7 @@ export default function BnbProfilePage() {
   const [importError, setImportError]     = useState('')
   const [importFetchFailed, setImportFetchFailed] = useState(false)
   const [parsed, setParsed]               = useState<ParsedData | null>(null)
+  const [importImages, setImportImages]   = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/booking/profile').then(r => r.json()).then(d => {
@@ -160,7 +162,9 @@ export default function BnbProfilePage() {
         setImportStep('input')
         return
       }
-      setParsed(d.parsed)
+      const result = d as ImportResult
+      setParsed(result.parsed)
+      setImportImages(result.images ?? [])
       setImportStep('preview')
     } catch {
       setImportError('網路錯誤，請重試')
@@ -288,6 +292,21 @@ export default function BnbProfilePage() {
                           <span className="text-gray-500 flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{r.max_guests}人{r.base_price ? ` · NT$${r.base_price}` : ''}</span>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {importImages.length > 0 && (
+                    <div className="pt-2">
+                      <div className="text-[10px] font-semibold text-gray-500 mb-1.5">找到 {importImages.length} 張圖片（點擊可在新分頁開啟下載）</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {importImages.map((src, i) => (
+                          <a key={i} href={src} target="_blank" rel="noopener noreferrer"
+                            className="block w-16 h-12 rounded overflow-hidden border border-gray-200 hover:border-indigo-400 transition-colors shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt="" className="w-full h-full object-cover" loading="lazy"
+                              onError={e => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

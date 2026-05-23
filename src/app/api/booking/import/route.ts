@@ -7,10 +7,21 @@ export const maxDuration = 60 // seconds (Vercel Hobby max)
 
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// Strip HTML to plain text, preserve JSON-LD blocks
-function extractTextFromHtml(html: string): { text: string; jsonLd: string } {
+// Strip HTML to plain text, preserve JSON-LD blocks, extract image URLs
+function extractTextFromHtml(html: string): { text: string; jsonLd: string; images: string[] } {
   const jsonLdMatches = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) ?? []
   const jsonLd = jsonLdMatches.map(m => m.replace(/<[^>]+>/g, '')).join('\n')
+
+  // Extract image URLs: og:image meta + large <img> src
+  const imageSet = new Set<string>()
+  const ogImages = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/gi) ?? []
+  ogImages.forEach(m => { const u = m.match(/content=["']([^"']+)["']/)?.[1]; if (u) imageSet.add(u) })
+  const imgTags = html.match(/<img[^>]+src=["']([^"']{20,})["'][^>]*>/gi) ?? []
+  imgTags.forEach(m => {
+    const u = m.match(/src=["']([^"']+)["']/)?.[1]
+    if (u && !u.startsWith('data:') && (u.startsWith('http') || u.startsWith('//'))) imageSet.add(u)
+  })
+  const images = [...imageSet].slice(0, 30)
 
   let text = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
@@ -21,7 +32,7 @@ function extractTextFromHtml(html: string): { text: string; jsonLd: string } {
     .replace(/\s{3,}/g, '\n').trim()
     .slice(0, 12000)
 
-  return { text, jsonLd }
+  return { text, jsonLd, images }
 }
 
 async function fetchWithScrapfly(url: string, renderJs = false): Promise<string | null> {
@@ -150,10 +161,12 @@ export async function POST(req: NextRequest) {
   let rawContent = pastedText ?? ''
 
   // Try URL fetch if provided
+  let imageUrls: string[] = []
   if (url && !rawContent) {
     const html = await fetchHtml(url, platform ?? 'other')
     if (html) {
-      const { text, jsonLd } = extractTextFromHtml(html)
+      const { text, jsonLd, images } = extractTextFromHtml(html)
+      imageUrls = images
       const combined = jsonLd ? `=== Structured Data ===\n${jsonLd}\n\n=== Page Text ===\n${text}` : text
       if (combined.trim().length >= 20) rawContent = combined
     }
@@ -181,7 +194,7 @@ export async function POST(req: NextRequest) {
     if (!jsonMatch) throw new Error('AI did not return valid JSON')
     const parsed = JSON.parse(jsonMatch[0])
 
-    return NextResponse.json({ parsed })
+    return NextResponse.json({ parsed, images: imageUrls })
   } catch (e) {
     return NextResponse.json({ error: `AI 解析失敗：${e instanceof Error ? e.message : '未知錯誤'}` }, { status: 500 })
   }
