@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { generateText } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 
+export const maxDuration = 60 // seconds (Vercel Hobby max)
+
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // Strip HTML to plain text, preserve JSON-LD blocks
