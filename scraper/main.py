@@ -57,59 +57,84 @@ def health():
     return {"ok": True}
 
 
+def is_spa_shell(html: str) -> bool:
+    """Detect JS-only shell pages (React/Vue SPA before hydration)."""
+    from html.parser import HTMLParser
+
+    class TextExtractor(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.text = []
+            self._skip = False
+        def handle_starttag(self, tag, attrs):
+            if tag in ("script", "style"):
+                self._skip = True
+        def handle_endtag(self, tag):
+            if tag in ("script", "style"):
+                self._skip = False
+        def handle_data(self, data):
+            if not self._skip:
+                self.text.append(data.strip())
+
+    p = TextExtractor()
+    p.feed(html)
+    visible_text = " ".join(t for t in p.text if t)
+    return len(visible_text) < 500  # Very little visible text = SPA shell
+
+
 @app.post("/scrape")
 async def scrape(req: ScrapeRequest, x_api_key: str | None = Header(None)):
     check_auth(x_api_key)
 
     proxy = next_proxy()
+    url = req.url
+    is_agoda = "agoda.com" in url
 
-    # ─── Method 1: curl_cffi ────────────────────────────────────────────
-    # Impersonates Chrome TLS fingerprint, bypasses most custom WAFs (Agoda, etc.)
-    try:
-        from curl_cffi.requests import AsyncSession
+    # ─── Method 1: curl_cffi (skip for Agoda SPA — always needs JS render) ──
+    if not is_agoda:
+        try:
+            from curl_cffi.requests import AsyncSession
 
-        async with AsyncSession(impersonate="chrome124") as session:
-            kwargs: dict = {
-                "headers": {
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
-                    "Accept-Encoding": "gzip, deflate, br",
-                    "Cache-Control": "no-cache",
-                },
-                "timeout": 20,
-                "allow_redirects": True,
-            }
-            if proxy:
-                kwargs["proxies"] = proxy
+            async with AsyncSession(impersonate="chrome124") as session:
+                kwargs: dict = {
+                    "headers": {
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+                        "Cache-Control": "no-cache",
+                    },
+                    "timeout": 20,
+                    "allow_redirects": True,
+                }
+                if proxy:
+                    kwargs["proxies"] = proxy
 
-            r = await session.get(req.url, **kwargs)
-            if r.status_code == 200 and not is_blocked(r.text):
-                return {"html": r.text, "method": "curl_cffi", "status": r.status_code}
-    except Exception as e:
-        pass  # Fall through to Camoufox
+                r = await session.get(url, **kwargs)
+                if r.status_code == 200 and not is_blocked(r.text) and not is_spa_shell(r.text):
+                    return {"html": r.text, "method": "curl_cffi"}
+        except Exception:
+            pass
 
-    # ─── Method 2: Camoufox stealth browser ─────────────────────────────
-    # Full JS rendering + stealth fingerprint; heavier but handles behaviour challenges
+    # ─── Method 2: Camoufox stealth browser (JS rendering) ──────────────────
     try:
         from camoufox.async_api import AsyncCamoufox
 
         browser_args: dict = {"headless": True}
         if proxy:
-            # Camoufox accepts a single proxy string
             browser_args["proxy"] = {"server": list(proxy.values())[0]}
 
         async with AsyncCamoufox(**browser_args) as browser:
             page = await browser.new_page()
             try:
-                await page.goto(req.url, timeout=30_000, wait_until="domcontentloaded")
-                await page.wait_for_load_state("networkidle", timeout=10_000)
+                await page.goto(url, timeout=30_000, wait_until="domcontentloaded")
+                # Wait for main content to appear
+                await page.wait_for_load_state("networkidle", timeout=15_000)
             except Exception:
-                pass  # Timeout is fine; grab whatever loaded
+                pass
 
             html = await page.content()
             await page.close()
 
-            if not is_blocked(html):
+            if not is_blocked(html) and not is_spa_shell(html):
                 return {"html": html, "method": "camoufox"}
     except Exception:
         pass
