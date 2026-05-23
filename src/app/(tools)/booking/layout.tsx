@@ -36,7 +36,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
   return (
     <div className="flex h-[100dvh] bg-gray-50">
       {/* Desktop sidebar */}
-      <aside className={`hidden sm:flex shrink-0 border-r bg-white flex-col py-4 gap-1 overflow-y-auto transition-all duration-200
+      <aside className={`hidden sm:flex shrink-0 h-[100dvh] border-r bg-white flex-col py-4 gap-1 overflow-y-auto transition-all duration-200
         ${collapsed ? 'w-14 px-1.5' : 'w-52 px-3'}`}>
         <div className={`flex items-center mb-3 ${collapsed ? 'justify-center' : 'justify-between px-2'}`}>
           {!collapsed && <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>}
@@ -76,7 +76,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="sm:hidden fixed inset-0 z-50 flex">
-          <nav className="w-[280px] bg-white border-r flex flex-col py-5 gap-1 px-3 overflow-y-auto shadow-xl">
+          <nav className="w-[280px] h-full bg-white border-r flex flex-col py-5 gap-1 px-3 overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between px-2 pb-4">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">訂房管理</span>
               <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
