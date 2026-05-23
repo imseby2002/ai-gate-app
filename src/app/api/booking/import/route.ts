@@ -44,7 +44,7 @@ async function fetchWithScrapfly(url: string, renderJs = false): Promise<string 
 }
 
 // curl_cffi + Camoufox microservice (for Agoda / primary bypass)
-async function fetchWithPyScraper(url: string): Promise<string | null> {
+async function fetchWithPyScraper(url: string, timeoutMs = 25000): Promise<string | null> {
   const scraperUrl = process.env.OTA_SCRAPER_URL
   const scraperKey = process.env.OTA_SCRAPER_KEY
   if (!scraperUrl) return null
@@ -56,7 +56,7 @@ async function fetchWithPyScraper(url: string): Promise<string | null> {
         ...(scraperKey ? { 'X-Api-Key': scraperKey } : {}),
       },
       body: JSON.stringify({ url }),
-      signal: AbortSignal.timeout(40000), // Camoufox can be slow
+      signal: AbortSignal.timeout(timeoutMs),
     })
     if (!res.ok) return null
     const d = await res.json()
