@@ -66,9 +66,9 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="flex h-[100dvh] bg-gray-50">
+    <div className="flex h-full bg-gray-50">
       {/* Desktop sidebar */}
-      <aside className={`hidden sm:flex shrink-0 h-[100dvh] border-r bg-white flex-col transition-all duration-200
+      <aside className={`hidden sm:flex shrink-0 h-full border-r bg-white flex-col transition-all duration-200
         ${collapsed ? 'w-14' : 'w-52'}`}>
 
         {/* Header */}
