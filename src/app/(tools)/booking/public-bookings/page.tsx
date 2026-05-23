@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, Clock, Trash2, ExternalLink } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Trash2, ExternalLink, ArrowRightCircle } from 'lucide-react'
 
 interface PubBooking {
   id: string; confirmation_code: string; guest_name: string; guest_email: string
@@ -28,6 +28,7 @@ export default function PublicBookingsPage() {
   const [bookings, setBookings] = useState<PubBooking[]>([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all')
+  const [converting, setConverting] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/booking/public-bookings').then(r => r.json())
@@ -42,6 +43,31 @@ export default function PublicBookingsPage() {
     })
     const d = await res.json()
     if (d.booking) setBookings(prev => prev.map(b => b.id === id ? d.booking : b))
+  }
+
+  async function convertToBooking(b: PubBooking) {
+    if (!confirm(`將「${b.guest_name}」的訂單轉入正式訂單？`)) return
+    setConverting(b.id)
+    try {
+      const body = {
+        guest_name: b.guest_name, guest_email: b.guest_email, guest_phone: b.guest_phone ?? '',
+        check_in: b.check_in, check_out: b.check_out, num_guests: b.num_guests,
+        total_price: b.total_price ?? 0, property_id: b.property_id ?? '',
+        platform: 'direct', status: 'confirmed', notes: b.notes ?? '',
+        promo_code: b.promo_code ?? '', promo_discount: b.promo_discount ?? 0,
+      }
+      const res = await fetch('/api/booking/bookings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        await updateStatus(b.id, 'confirmed')
+        alert('已轉入正式訂單')
+      } else {
+        const d = await res.json()
+        alert(d.error ?? '轉換失敗')
+      }
+    } finally { setConverting(null) }
   }
 
   async function remove(id: string) {
@@ -147,6 +173,10 @@ export default function PublicBookingsPage() {
                       恢復待確認
                     </button>
                   )}
+                  <button onClick={() => convertToBooking(b)} disabled={converting === b.id}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border text-purple-600 border-purple-200 hover:bg-purple-50 disabled:opacity-50">
+                    <ArrowRightCircle className="h-3.5 w-3.5" /> {converting === b.id ? '轉換中…' : '轉正式訂單'}
+                  </button>
                   <a href={`mailto:${b.guest_email}`}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border text-indigo-600 border-indigo-200 hover:bg-indigo-50">
                     <ExternalLink className="h-3.5 w-3.5" /> 寄信

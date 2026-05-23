@@ -64,7 +64,7 @@ export default function PublicBookingPage({ params }: { params: Promise<{ slug: 
   async function checkPromo() {
     if (!form.promo_code) return
     setPromoError(''); setPromoValid(null)
-    const res = await fetch('/api/booking/promos/validate', {
+    const res = await fetch(`/api/book/${slug}/validate-promo`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: form.promo_code, num_nights: n, total_price: basePrice ?? 0 }),
     })
