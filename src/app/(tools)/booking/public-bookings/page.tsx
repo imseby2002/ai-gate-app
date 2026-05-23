@@ -6,7 +6,7 @@ interface PubBooking {
   id: string; confirmation_code: string; guest_name: string; guest_email: string
   guest_phone: string | null; num_guests: number; check_in: string; check_out: string
   total_price: number | null; promo_code: string | null; promo_discount: number | null
-  notes: string | null; status: 'pending' | 'confirmed' | 'cancelled'; created_at: string
+  property_id: string | null; notes: string | null; status: 'pending' | 'confirmed' | 'cancelled'; created_at: string
   properties?: { name: string } | null
 }
 

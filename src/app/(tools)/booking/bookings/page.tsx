@@ -369,7 +369,7 @@ export default function BookingsPage() {
             ].map(f => (
               <div key={f.key} className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">{f.label}</label>
-                <input value={(form as Record<string, string | number>)[f.key] as string}
+                <input value={(form as unknown as Record<string, string>)[f.key]}
                   onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
