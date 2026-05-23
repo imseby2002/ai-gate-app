@@ -1,6 +1,24 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { Save, Loader2, ImagePlus, X, Link2, Copy, Check } from 'lucide-react'
+import {
+  Save, Loader2, ImagePlus, X, Link2, Copy, Check,
+  Download, FileText, CheckCircle, AlertCircle,
+  ChevronDown, ChevronUp, BedDouble, MapPin, Clock, Users, Wifi,
+} from 'lucide-react'
+
+const PLATFORMS = [
+  { id: 'booking_com', label: 'Booking.com', color: 'bg-blue-600', hint: 'https://www.booking.com/hotel/...' },
+  { id: 'agoda',       label: 'Agoda',       color: 'bg-rose-500', hint: 'https://www.agoda.com/...' },
+  { id: 'airbnb',      label: 'Airbnb',      color: 'bg-orange-500', hint: 'https://www.airbnb.com/rooms/...' },
+  { id: 'other',       label: '其他',        color: 'bg-gray-500', hint: '' },
+]
+
+interface ParsedRoom { name: string; description: string | null; max_guests: number; base_price: number | null }
+interface ParsedData {
+  name: string; description: string | null; address: string | null; city: string | null
+  phone: string | null; email: string | null; check_in_time: string | null; check_out_time: string | null
+  min_nights: number; house_rules: string | null; amenities: string[]; rooms: ParsedRoom[]
+}
 
 interface BreakfastSettings {
   type: 'none' | 'included' | 'optional'
@@ -44,6 +62,8 @@ const UNIT_LABELS: Record<string, string> = {
   per_trip: '每趟', per_stay: '每次入住', per_night: '每晚', per_person: '每人',
 }
 
+type ImportStep = 'input' | 'parsing' | 'preview' | 'done'
+
 export default function BnbProfilePage() {
   const [form, setForm]       = useState<BnbProfile>(DEFAULT)
   const [loading, setLoading] = useState(true)
@@ -52,6 +72,17 @@ export default function BnbProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied]   = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // OTA import states
+  const [importOpen, setImportOpen]       = useState(false)
+  const [importStep, setImportStep]       = useState<ImportStep>('input')
+  const [importPlatform, setImportPlatform] = useState('booking_com')
+  const [importUrl, setImportUrl]         = useState('')
+  const [importText, setImportText]       = useState('')
+  const [importMode, setImportMode]       = useState<'url' | 'text'>('url')
+  const [importError, setImportError]     = useState('')
+  const [importFetchFailed, setImportFetchFailed] = useState(false)
+  const [parsed, setParsed]               = useState<ParsedData | null>(null)
 
   useEffect(() => {
     fetch('/api/booking/profile').then(r => r.json()).then(d => {
@@ -111,6 +142,65 @@ export default function BnbProfilePage() {
     })
   }
 
+  async function startImportParse() {
+    setImportError(''); setImportFetchFailed(false); setImportStep('parsing')
+    try {
+      const res = await fetch('/api/booking/import', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: importMode === 'url' ? importUrl : '',
+          text: importMode === 'text' ? importText : '',
+          platform: importPlatform,
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        setImportFetchFailed(d.fetch_failed ?? false)
+        setImportError(d.error ?? '分析失敗')
+        setImportStep('input')
+        return
+      }
+      setParsed(d.parsed)
+      setImportStep('preview')
+    } catch {
+      setImportError('網路錯誤，請重試')
+      setImportStep('input')
+    }
+  }
+
+  async function applyImport() {
+    if (!parsed) return
+    setForm(f => ({
+      ...f,
+      name:           parsed.name || f.name,
+      description:    parsed.description || f.description,
+      address:        parsed.address || f.address,
+      city:           parsed.city || f.city,
+      phone:          parsed.phone || f.phone,
+      email:          parsed.email || f.email,
+      check_in_time:  parsed.check_in_time || f.check_in_time,
+      check_out_time: parsed.check_out_time || f.check_out_time,
+      min_nights:     parsed.min_nights || f.min_nights,
+      house_rules:    parsed.house_rules || f.house_rules,
+    }))
+    setSaved(false)
+
+    // Create room types in background
+    const rooms = parsed.rooms?.length ? parsed.rooms : [{ name: parsed.name || '標準房', description: '', max_guests: 2, base_price: null }]
+    for (const room of rooms) {
+      await fetch('/api/booking/properties', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: room.name, description: room.description ?? '',
+          max_guests: room.max_guests ?? 2, base_price: room.base_price ?? null,
+          amenities: parsed.amenities ?? [],
+        }),
+      })
+    }
+
+    setImportStep('done')
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -141,6 +231,139 @@ export default function BnbProfilePage() {
           {saved ? '已儲存 ✓' : '儲存'}
         </button>
       </div>
+
+      {/* OTA 匯入 */}
+      <section className="bg-white rounded-xl border overflow-hidden">
+        <button type="button" onClick={() => { setImportOpen(o => !o); setImportStep('input'); setImportError('') }}
+          className="w-full flex items-center justify-between px-4 sm:px-5 py-3.5 hover:bg-gray-50 transition-colors">
+          <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
+            <Download className="h-4 w-4" />
+            從 OTA 平台匯入民宿資料
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            {!importOpen && <span>Booking.com / Agoda / Airbnb</span>}
+            {importOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </button>
+
+        {importOpen && (
+          <div className="border-t px-4 sm:px-5 pb-5 pt-4 space-y-4">
+            {importStep === 'done' ? (
+              <div className="text-center space-y-3 py-4">
+                <CheckCircle className="h-10 w-10 text-emerald-500 mx-auto" />
+                <p className="text-sm font-semibold text-gray-800">已套用到下方表單</p>
+                <p className="text-xs text-gray-500">請確認資料後點「儲存」</p>
+                <button onClick={() => { setImportOpen(false); setImportStep('input'); setParsed(null) }}
+                  className="text-xs text-indigo-600 underline">關閉</button>
+              </div>
+            ) : importStep === 'preview' && parsed ? (
+              <div className="space-y-3">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5 flex items-center gap-2 text-xs text-emerald-800">
+                  <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                  AI 解析完成，確認後套用至表單
+                </div>
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-xs text-gray-700">
+                  <div className="font-semibold text-sm text-gray-900">{parsed.name || '（未取得名稱）'}</div>
+                  {parsed.description && <p className="line-clamp-3 text-gray-600">{parsed.description}</p>}
+                  <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    {parsed.address && <div className="flex items-center gap-1"><MapPin className="h-3 w-3 text-gray-400" />{parsed.address}{parsed.city ? ` ${parsed.city}` : ''}</div>}
+                    {parsed.phone && <div>📞 {parsed.phone}</div>}
+                    {parsed.check_in_time && <div className="flex items-center gap-1"><Clock className="h-3 w-3 text-gray-400" />入住 {parsed.check_in_time}</div>}
+                    {parsed.check_out_time && <div className="flex items-center gap-1"><Clock className="h-3 w-3 text-gray-400" />退房 {parsed.check_out_time}</div>}
+                  </div>
+                  {parsed.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {parsed.amenities.slice(0, 12).map(a => (
+                        <span key={a} className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full text-[10px]">{a}</span>
+                      ))}
+                      {parsed.amenities.length > 12 && <span className="text-[10px] text-gray-400">+{parsed.amenities.length - 12}</span>}
+                    </div>
+                  )}
+                  {parsed.rooms.length > 0 && (
+                    <div className="pt-1">
+                      <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-500 mb-1"><BedDouble className="h-3 w-3" />房型 {parsed.rooms.length} 種（將新增至房型管理）</div>
+                      {parsed.rooms.slice(0, 3).map((r, i) => (
+                        <div key={i} className="flex items-center justify-between py-0.5">
+                          <span>{r.name}</span>
+                          <span className="text-gray-500 flex items-center gap-0.5"><Users className="h-2.5 w-2.5" />{r.max_guests}人{r.base_price ? ` · NT$${r.base_price}` : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setImportStep('input')}
+                    className="flex-1 py-2 rounded-lg border text-xs text-gray-600 hover:bg-gray-50">重新輸入</button>
+                  <button onClick={applyImport}
+                    className="flex-1 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">
+                    套用至表單
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Platform */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  {PLATFORMS.map(p => (
+                    <button key={p.id} type="button" onClick={() => setImportPlatform(p.id)}
+                      className={`py-2 rounded-lg text-xs font-semibold border-2 transition-all
+                        ${importPlatform === p.id ? `${p.color} text-white border-transparent` : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Input mode tabs */}
+                <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+                  <button type="button" onClick={() => setImportMode('url')}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-colors
+                      ${importMode === 'url' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                    <Link2 className="h-3 w-3" /> 貼上網址
+                  </button>
+                  <button type="button" onClick={() => setImportMode('text')}
+                    className={`flex-1 py-1.5 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-colors
+                      ${importMode === 'text' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                    <FileText className="h-3 w-3" /> 貼上文字
+                  </button>
+                </div>
+
+                {importMode === 'url' ? (
+                  <div className="space-y-1">
+                    <input value={importUrl} onChange={e => setImportUrl(e.target.value)}
+                      placeholder={PLATFORMS.find(p => p.id === importPlatform)?.hint ?? 'https://...'}
+                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <p className="text-[11px] text-gray-400">若平台有防爬蟲，建議改用「貼上文字」</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <textarea value={importText} onChange={e => setImportText(e.target.value)}
+                      rows={5} placeholder="在瀏覽器開啟民宿頁面 → Ctrl+A → Ctrl+C → 貼上"
+                      className="w-full text-sm border rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono" />
+                  </div>
+                )}
+
+                {importError && (
+                  <div className="bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5 flex items-start gap-2 text-xs text-rose-700">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <div>
+                      <p>{importError}</p>
+                      {importFetchFailed && <p className="mt-0.5 text-rose-600">請改用「貼上文字」模式</p>}
+                    </div>
+                  </div>
+                )}
+
+                <button type="button" onClick={startImportParse}
+                  disabled={importStep === 'parsing' || (importMode === 'url' ? !importUrl.trim() : !importText.trim())}
+                  className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {importStep === 'parsing'
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> AI 解析中…</>
+                    : <><Download className="h-4 w-4" /> 開始解析</>}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* 訂房連結 */}
       <section className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 sm:p-5 space-y-3">

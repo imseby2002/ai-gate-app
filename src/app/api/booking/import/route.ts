@@ -7,11 +7,9 @@ const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // Strip HTML to plain text, preserve JSON-LD blocks
 function extractTextFromHtml(html: string): { text: string; jsonLd: string } {
-  // Extract JSON-LD
   const jsonLdMatches = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi) ?? []
   const jsonLd = jsonLdMatches.map(m => m.replace(/<[^>]+>/g, '')).join('\n')
 
-  // Remove script/style/head blocks
   let text = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -19,9 +17,48 @@ function extractTextFromHtml(html: string): { text: string; jsonLd: string } {
     .replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#\d+;/g, ' ')
     .replace(/\s{3,}/g, '\n').trim()
-    .slice(0, 12000) // cap at 12K chars
+    .slice(0, 12000)
 
   return { text, jsonLd }
+}
+
+async function fetchWithScrapfly(url: string): Promise<string | null> {
+  const key = process.env.SCRAPFLY_API_KEY
+  if (!key) return null
+  try {
+    const { ScrapflyClient, ScrapeConfig } = await import('scrapfly-sdk')
+    const client = new ScrapflyClient({ key })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await client.scrape(new ScrapeConfig({
+      url,
+      asp: true,
+      render_js: false,
+      country: 'tw',
+    }))
+    return result.result?.content ?? null
+  } catch {
+    return null
+  }
+}
+
+async function fetchBasic(url: string, platform?: string): Promise<string | null> {
+  try {
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+    }
+    if (platform === 'booking_com') headers['Referer'] = 'https://www.booking.com/'
+    if (platform === 'agoda') headers['Referer'] = 'https://www.agoda.com/'
+
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) })
+    if (!res.ok) return null
+    return await res.text()
+  } catch {
+    return null
+  }
 }
 
 const SYSTEM_PROMPT = `You are a data extraction assistant. Extract B&B / hotel property information from the provided webpage text and return ONLY valid JSON.
@@ -68,26 +105,13 @@ export async function POST(req: NextRequest) {
 
   // Try URL fetch if provided
   if (url && !rawContent) {
-    try {
-      const headers: Record<string, string> = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-      }
-      // Add referer based on platform
-      if (platform === 'booking_com') headers['Referer'] = 'https://www.booking.com/'
-      if (platform === 'agoda') headers['Referer'] = 'https://www.agoda.com/'
+    // Try ScrapFly first (bypasses Cloudflare/anti-bot), fall back to basic fetch
+    let html: string | null = await fetchWithScrapfly(url)
+    if (!html) html = await fetchBasic(url, platform)
 
-      const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) })
-      if (res.ok) {
-        const html = await res.text()
-        const { text, jsonLd } = extractTextFromHtml(html)
-        rawContent = jsonLd ? `=== Structured Data ===\n${jsonLd}\n\n=== Page Text ===\n${text}` : text
-      }
-    } catch {
-      // fetch failed – rawContent stays empty, will need pastedText
+    if (html) {
+      const { text, jsonLd } = extractTextFromHtml(html)
+      rawContent = jsonLd ? `=== Structured Data ===\n${jsonLd}\n\n=== Page Text ===\n${text}` : text
     }
   }
 

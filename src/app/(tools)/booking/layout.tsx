@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
-  LayoutGrid, Percent, Bell, Star, Globe, Download,
+  LayoutGrid, Percent, Bell, Star, Globe,
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: React.ElementType }
@@ -15,8 +15,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: '',
     items: [
-      { href: '/booking',        label: '總覽',     icon: Home },
-      { href: '/booking/import', label: 'OTA 匯入', icon: Download },
+      { href: '/booking', label: '總覽', icon: Home },
     ],
   },
   {

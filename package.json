@@ -50,6 +50,7 @@
     "react-dropzone": "^15.0.0",
     "recharts": "^3.8.1",
     "resend": "^6.12.2",
+    "scrapfly-sdk": "^0.10.6",
     "stripe": "^22.0.0",
     "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5",
