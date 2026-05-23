@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
-  BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X, LayoutGrid, Percent, Bell, Star, Globe,
+  BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X, LayoutGrid, Percent, Bell, Star, Globe, Download,
 } from 'lucide-react'
 
 const NAV = [
   { href: '/booking',                label: '總覽',       icon: Home },
+  { href: '/booking/import',         label: 'OTA 匯入',   icon: Download },
   { href: '/booking/profile',        label: '民宿資料',   icon: Building2 },
   { href: '/booking/bookings',       label: '訂單',       icon: List },
   { href: '/booking/calendar',       label: '日曆',       icon: CalendarDays },
