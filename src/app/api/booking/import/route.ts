@@ -24,7 +24,7 @@ function extractTextFromHtml(html: string): { text: string; jsonLd: string } {
   return { text, jsonLd }
 }
 
-async function fetchWithScrapfly(url: string): Promise<string | null> {
+async function fetchWithScrapfly(url: string, renderJs = false): Promise<string | null> {
   const key = process.env.SCRAPFLY_API_KEY
   if (!key) return null
   try {
@@ -34,7 +34,7 @@ async function fetchWithScrapfly(url: string): Promise<string | null> {
     const result: any = await client.scrape(new ScrapeConfig({
       url,
       asp: true,
-      render_js: false,
+      render_js: renderJs,
       country: 'tw',
     }))
     return result.result?.content ?? null
@@ -95,9 +95,10 @@ async function fetchHtml(url: string, platform: string): Promise<string | null> 
       ?? (await fetchBasic(url, platform))
   }
   if (platform === 'agoda') {
-    // Python scraper (curl_cffi + Camoufox) → ScrapFly → basic fetch
-    return (await fetchWithPyScraper(url))
-      ?? (await fetchWithScrapfly(url))
+    // ScrapFly JS render → Python scraper → ScrapFly no-JS → basic fetch
+    return (await fetchWithScrapfly(url, true))
+      ?? (await fetchWithPyScraper(url))
+      ?? (await fetchWithScrapfly(url, false))
       ?? (await fetchBasic(url, platform))
   }
   // Airbnb / other: ScrapFly → Python → basic
@@ -153,7 +154,8 @@ export async function POST(req: NextRequest) {
     const html = await fetchHtml(url, platform ?? 'other')
     if (html) {
       const { text, jsonLd } = extractTextFromHtml(html)
-      rawContent = jsonLd ? `=== Structured Data ===\n${jsonLd}\n\n=== Page Text ===\n${text}` : text
+      const combined = jsonLd ? `=== Structured Data ===\n${jsonLd}\n\n=== Page Text ===\n${text}` : text
+      if (combined.trim().length >= 20) rawContent = combined
     }
   }
 
