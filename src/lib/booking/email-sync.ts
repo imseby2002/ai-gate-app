@@ -26,6 +26,14 @@ interface EmailSyncResult {
   processed: number
   added: number
   errors: string[]
+  debug: {
+    found_uids: number
+    skipped_no_checkin: number
+    skipped_not_booking: number
+    skipped_duplicate: number
+    ai_null: number
+    since_date: string
+  }
 }
 
 const PLATFORM_SENDERS: Record<string, string> = {
@@ -94,7 +102,10 @@ function matchPropertyByName(name: string | null, properties: UserProperty[]): s
 
 export async function syncEmailForSetting(settingId: string): Promise<EmailSyncResult> {
   const supabase = createAdminClient()
-  const result: EmailSyncResult = { processed: 0, added: 0, errors: [] }
+  const result: EmailSyncResult = {
+    processed: 0, added: 0, errors: [],
+    debug: { found_uids: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_duplicate: 0, ai_null: 0, since_date: '' },
+  }
 
   const { data: setting, error: se } = await supabase
     .from('email_settings')
@@ -107,7 +118,6 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     return result
   }
 
-  // Load ALL user properties (rooms) for name-based matching
   const { data: userProperties } = await supabase
     .from('properties')
     .select('id, name, name_aliases')
@@ -116,7 +126,6 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
   const properties: UserProperty[] = userProperties ?? []
 
-  // Load B&B profile for context (name used in AI prompt)
   const { data: bnbProfile } = await supabase
     .from('bnb_profiles')
     .select('name')
@@ -125,7 +134,6 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
   const bnbName = bnbProfile?.name ?? null
 
-  // Fallback: if only one room exists, use it
   const fallbackPropertyId: string | null =
     setting.property_id ?? (properties.length === 1 ? properties[0].id : null)
 
@@ -142,33 +150,45 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     const lock = await client.getMailboxLock(setting.imap_folder)
 
     try {
-      const sinceDate = setting.last_synced_at
-        ? new Date(setting.last_synced_at)
+      // Extra 1-day buffer to avoid timezone edge issues; IMAP SINCE is date-only
+      const baseSince = setting.last_synced_at
+        ? new Date(new Date(setting.last_synced_at).getTime() - 86400000)
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      result.debug.since_date = baseSince.toISOString().slice(0, 10)
 
-      let uids: number[] = []
+      let seqs: number[] = []
 
       // Strategy 1: search by known sender domains
       for (const domain of Object.values(PLATFORM_SENDERS)) {
         try {
-          const found = await client.search({ from: `@${domain}`, since: sinceDate })
-          if (Array.isArray(found)) uids = [...uids, ...found]
-        } catch { /* some servers don't support all search criteria */ }
+          const found = await client.search({ from: domain, since: baseSince })
+          if (Array.isArray(found)) seqs = [...seqs, ...found]
+        } catch { /* server may not support FROM search */ }
       }
 
-      // Strategy 2: search by subject keywords (catches unlisted platforms)
+      // Strategy 2: search by subject keywords
       for (const kw of BOOKING_SUBJECT_KEYWORDS) {
         try {
-          const found = await client.search({ subject: kw, since: sinceDate })
-          if (Array.isArray(found)) uids = [...uids, ...found]
-        } catch { /* keyword search may not be supported */ }
+          const found = await client.search({ subject: kw, since: baseSince })
+          if (Array.isArray(found)) seqs = [...seqs, ...found]
+        } catch { /* server may not support subject search */ }
       }
 
-      const uniqueUids = [...new Set(uids)]
-
-      for (const uid of uniqueUids) {
+      // Strategy 3: fallback — fetch ALL recent emails and let AI decide
+      // Only runs if strategies 1+2 found nothing (e.g., server doesn't support search criteria)
+      if (seqs.length === 0) {
         try {
-          const msg = await client.fetchOne(String(uid), { source: true })
+          const allRecent = await client.search({ since: baseSince })
+          if (Array.isArray(allRecent)) seqs = allRecent
+        } catch { /* ignore */ }
+      }
+
+      const uniqueSeqs = [...new Set(seqs)]
+      result.debug.found_uids = uniqueSeqs.length
+
+      for (const seq of uniqueSeqs) {
+        try {
+          const msg = await client.fetchOne(String(seq), { source: true })
           if (!msg || !('source' in msg) || !msg.source) continue
 
           const parsed = await simpleParser(msg.source as Buffer)
@@ -178,46 +198,52 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const html    = (parsed.html as string | false | null | undefined) || ''
           const body    = text || (typeof html === 'string' ? html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') : '')
 
-          // Detect platform from sender domain
           let platform = 'other'
           for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
             if (from.toLowerCase().includes(domain)) { platform = key; break }
           }
 
-          // AI extraction — pass B&B name + room list for identification
           const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
-          if (!extracted?.is_booking) continue
+          if (!extracted) { result.debug.ai_null++; continue }
+          if (!extracted.is_booking) { result.debug.skipped_not_booking++; continue }
 
-          // Resolve property_id: AI match > fallback setting > null
           const resolvedPropertyId =
             extracted.matched_property_id
             ?? matchPropertyByName(extracted.property_name, properties)
             ?? fallbackPropertyId
 
-          // Booking.com emails often lack check_out/guest_name — use placeholders
           const checkIn  = extracted.check_in
           const checkOut = extracted.check_out || (checkIn
             ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
             : null)
 
-          // Must have at minimum a check_in date
-          if (!checkIn) { result.processed++; continue }
+          if (!checkIn) { result.debug.skipped_no_checkin++; result.processed++; continue }
 
           const isPartial = !extracted.check_out || !extracted.guest_name
           const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
 
-          // Skip if already imported (same property + platform + confirmation OR dates)
-          const confId = extracted.confirmation_id || `email_${settingId}_${uid}`
-          if (extracted.check_in) {
+          const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
+
+          // Duplicate check: by confirmation_id first, then by platform+check_in+property
+          const { data: dupById } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('user_id', setting.user_id)
+            .eq('platform_booking_id', confId)
+            .maybeSingle()
+          if (dupById) { result.debug.skipped_duplicate++; result.processed++; continue }
+
+          if (checkIn) {
             let dupQ = supabase
               .from('bookings')
               .select('id')
               .eq('user_id', setting.user_id)
               .eq('platform', platform)
               .eq('check_in', checkIn)
+              .eq('source', 'email')
             if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
             const { data: dup } = await dupQ.maybeSingle()
-            if (dup) { result.processed++; continue }
+            if (dup) { result.debug.skipped_duplicate++; result.processed++; continue }
           }
 
           const { error: bkErr } = await supabase
@@ -245,7 +271,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           }
           result.processed++
         } catch (e) {
-          result.errors.push(`處理郵件 ${uid} 失敗: ${String(e)}`)
+          result.errors.push(`處理郵件 ${seq} 失敗: ${String(e)}`)
         }
       }
     } finally {

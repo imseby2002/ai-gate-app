@@ -31,6 +31,7 @@ export default function EmailPage() {
     imap_user: '', imap_password: '', imap_folder: 'INBOX', property_id: '',
   })
   const [saving, setSaving] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -51,14 +52,24 @@ export default function EmailPage() {
   async function sync(id?: string, reset = false) {
     const key = id ?? 'all'
     setSyncing(key)
+    setSyncMsg(null)
     try {
       const res = await fetch('/api/booking/email/sync', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(id ? { setting_id: id, reset } : { reset }),
       })
       const d = await res.json()
-      const total = (d.results ?? []).reduce((s: number, r: { added: number }) => s + r.added, 0)
-      alert(`同步完成，共新增 ${total} 筆訂單`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results: any[] = d.results ?? []
+      const totalAdded = results.reduce((s, r) => s + (r.added ?? 0), 0)
+      const lines: string[] = [`新增 ${totalAdded} 筆`]
+      for (const r of results) {
+        if (r.debug) {
+          lines.push(`找到 ${r.debug.found_uids} 封 | 非訂單 ${r.debug.skipped_not_booking} | AI無回應 ${r.debug.ai_null} | 重複 ${r.debug.skipped_duplicate} | 無入住日 ${r.debug.skipped_no_checkin} | 起始日 ${r.debug.since_date}`)
+        }
+        if (r.errors?.length) lines.push(`錯誤：${r.errors.join(' / ')}`)
+      }
+      setSyncMsg(lines.join('\n'))
       const em = await fetch('/api/booking/email').then(r => r.json())
       setSettings(em.settings ?? [])
     } finally { setSyncing(null) }
@@ -130,6 +141,12 @@ export default function EmailPage() {
           </button>
         </div>
       </div>
+
+      {syncMsg && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800 whitespace-pre-line font-mono">
+          {syncMsg}
+        </div>
+      )}
 
       {/* Gmail hint */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 space-y-1">
