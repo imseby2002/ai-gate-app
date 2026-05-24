@@ -35,7 +35,26 @@ const PLATFORM_SENDERS: Record<string, string> = {
   trip_com:    'trip.com',
   asiayo:      'asiayo.com',
   easytravel:  'eztravel.com.tw',
+  kkday:       'kkday.com',
+  klook:       'klook.com',
+  expedia:     'expedia.com',
+  hotels_com:  'hotels.com',
+  ctrip:       'ctrip.com',
+  mafengwo:    'mafengwo.cn',
+  traveloka:   'traveloka.com',
 }
+
+// Subject keywords that indicate a booking confirmation/cancellation email
+const BOOKING_SUBJECT_KEYWORDS = [
+  '訂房確認', '預訂確認', '預約確認', '訂單確認', '確認通知',
+  '入住確認', '訂房成功', '預訂成功',
+  '取消確認', '取消通知', '訂單取消',
+  'booking confirmation', 'reservation confirmed', 'confirmed booking',
+  'reservation confirmation', 'booking confirmed',
+  'cancellation confirmation', 'booking cancelled',
+  'new reservation', 'new booking',
+  'itinerary', '行程確認',
+]
 
 // ── Property name fuzzy matching ─────────────────────────────
 function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
@@ -128,6 +147,8 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
       let uids: number[] = []
+
+      // Strategy 1: search by known sender domains
       for (const domain of Object.values(PLATFORM_SENDERS)) {
         try {
           const found = await client.search({ from: `@${domain}`, since: sinceDate })
@@ -135,7 +156,15 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         } catch { /* some servers don't support all search criteria */ }
       }
 
-      const uniqueUids = [...new Set(uids)].slice(0, 50)
+      // Strategy 2: search by subject keywords (catches unlisted platforms)
+      for (const kw of BOOKING_SUBJECT_KEYWORDS) {
+        try {
+          const found = await client.search({ subject: kw, since: sinceDate })
+          if (Array.isArray(found)) uids = [...uids, ...found]
+        } catch { /* keyword search may not be supported */ }
+      }
+
+      const uniqueUids = [...new Set(uids)]
 
       for (const uid of uniqueUids) {
         try {
