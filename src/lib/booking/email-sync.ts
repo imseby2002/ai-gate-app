@@ -68,6 +68,8 @@ const BOOKING_SUBJECT_KEYWORDS = [
   'booking no.', 'accepted', 'itinerary',
   // Trip.com specific
   'booking no.#', 'accepted#',
+  // Agoda specific
+  'agoda booking id', '- cancelled', 'cancelled ciao',
 ]
 
 // ── Property name fuzzy matching ─────────────────────────────
@@ -232,11 +234,20 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           // Duplicate check 1: exact confirmation_id match
           const { data: dupById } = await supabase
             .from('bookings')
-            .select('id, total_price, guest_name, check_out')
+            .select('id, status')
             .eq('user_id', setting.user_id)
             .eq('platform_booking_id', confId)
             .maybeSingle()
-          if (dupById) { result.debug.skipped_duplicate++; result.processed++; continue }
+          if (dupById) {
+            // If this is a cancellation email and existing booking is not yet cancelled, update it
+            if (extracted.is_cancellation && dupById.status !== 'cancelled') {
+              await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
+              result.added++
+            } else {
+              result.debug.skipped_duplicate++
+            }
+            result.processed++; continue
+          }
 
           // Duplicate check 2: same platform + check_in + check_out + guest_name (catches re-imported with different confId)
           let existingId: string | null = null
