@@ -54,14 +54,20 @@ const PLATFORM_SENDERS: Record<string, string> = {
 
 // Subject keywords that indicate a booking confirmation/cancellation email
 const BOOKING_SUBJECT_KEYWORDS = [
+  // 中文
   '訂房確認', '預訂確認', '預約確認', '訂單確認', '確認通知',
-  '入住確認', '訂房成功', '預訂成功',
+  '入住確認', '訂房成功', '預訂成功', '已確認訂單', '確認訂單',
+  '訂單已確認', '已接受預訂', '已確認預訂',
   '取消確認', '取消通知', '訂單取消',
+  '行程確認', '您已接受',
+  // English
   'booking confirmation', 'reservation confirmed', 'confirmed booking',
   'reservation confirmation', 'booking confirmed',
   'cancellation confirmation', 'booking cancelled',
-  'new reservation', 'new booking',
-  'itinerary', '行程確認',
+  'new reservation', 'new booking', 'booking accepted',
+  'booking no.', 'accepted', 'itinerary',
+  // Trip.com specific
+  'booking no.#', 'accepted#',
 ]
 
 // ── Property name fuzzy matching ─────────────────────────────
@@ -161,7 +167,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       // Strategy 1: search by known sender domains
       for (const domain of Object.values(PLATFORM_SENDERS)) {
         try {
-          const found = await client.search({ from: domain, since: baseSince })
+          const found = await client.search({ from: `@${domain}`, since: baseSince })
           if (Array.isArray(found)) seqs = [...seqs, ...found]
         } catch { /* server may not support FROM search */ }
       }
@@ -174,14 +180,13 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         } catch { /* server may not support subject search */ }
       }
 
-      // Strategy 3: fallback — fetch ALL recent emails and let AI decide
-      // Only runs if strategies 1+2 found nothing (e.g., server doesn't support search criteria)
-      if (seqs.length === 0) {
-        try {
-          const allRecent = await client.search({ since: baseSince })
-          if (Array.isArray(allRecent)) seqs = allRecent
-        } catch { /* ignore */ }
-      }
+      // Strategy 3: ALWAYS scan all emails in last 7 days — catches anything missed above
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      const recentSince = baseSince < sevenDaysAgo ? sevenDaysAgo : baseSince
+      try {
+        const allRecent = await client.search({ since: recentSince })
+        if (Array.isArray(allRecent)) seqs = [...seqs, ...allRecent]
+      } catch { /* ignore */ }
 
       const uniqueSeqs = [...new Set(seqs)]
       result.debug.found_uids = uniqueSeqs.length
@@ -224,16 +229,45 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
           const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
 
-          // Duplicate check: by confirmation_id first, then by platform+check_in+property
+          // Duplicate check 1: exact confirmation_id match
           const { data: dupById } = await supabase
             .from('bookings')
-            .select('id')
+            .select('id, total_price, guest_name, check_out')
             .eq('user_id', setting.user_id)
             .eq('platform_booking_id', confId)
             .maybeSingle()
           if (dupById) { result.debug.skipped_duplicate++; result.processed++; continue }
 
-          if (checkIn) {
+          // Duplicate check 2: same platform + check_in + check_out + guest_name (catches re-imported with different confId)
+          let existingId: string | null = null
+          if (checkIn && extracted.guest_name && checkOut) {
+            const { data: dupByGuest } = await supabase
+              .from('bookings')
+              .select('id, total_price, platform_booking_id')
+              .eq('user_id', setting.user_id)
+              .eq('platform', platform)
+              .eq('check_in', checkIn)
+              .eq('check_out', checkOut)
+              .eq('source', 'email')
+              .ilike('guest_name', `%${extracted.guest_name.split(/[\s/]/)[0]}%`)
+              .maybeSingle()
+            if (dupByGuest) {
+              existingId = dupByGuest.id
+              // If we now have a real confirmation_id but the existing record used a fallback id, update it
+              if (extracted.confirmation_id && dupByGuest.platform_booking_id?.startsWith('email_')) {
+                await supabase.from('bookings').update({
+                  platform_booking_id: extracted.confirmation_id,
+                  total_price: extracted.total_price ?? dupByGuest.total_price,
+                  status: extracted.is_cancellation ? 'cancelled' : 'confirmed',
+                  notes: null,
+                }).eq('id', existingId)
+              }
+              result.debug.skipped_duplicate++; result.processed++; continue
+            }
+          }
+
+          // Duplicate check 3: same platform + check_in + property (looser, last resort)
+          if (checkIn && !existingId) {
             let dupQ = supabase
               .from('bookings')
               .select('id')
