@@ -3,9 +3,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { syncEmailForSetting } from '@/lib/booking/email-sync'
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const cronSecret = process.env.CRON_SECRET
+  if (cronSecret) {
+    const authHeader = req.headers.get('authorization')
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  } else {
+    // CRON_SECRET not configured — accept Vercel-internal cron calls only
+    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
+    const isLocalhost = req.headers.get('host')?.startsWith('localhost')
+    if (!isVercelCron && !isLocalhost) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   const supabase = createAdminClient()
