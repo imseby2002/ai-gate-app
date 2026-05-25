@@ -392,6 +392,8 @@ async function handlePost(req: NextRequest) {
     paymentInfo = '',
     bookingFlows = [] as BookingFlowDef[],
     notifyWebhooks = [] as Array<{ id: string; type: 'line_messaging' | 'webhook'; label: string; value: string; target?: string }>,
+    discountMaxPct = 0,
+    discountGifts = '',
   } = await req.json()
 
   if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
@@ -691,6 +693,29 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     }
   } catch { /* 不中斷主流程 */ }
 
+  // ── Discount authority closing toolkit ───────────────────────────────────
+  let closingToolkitSection = ''
+  const hasDiscount = discountMaxPct > 0
+  const giftList = discountGifts.split('\n').map(g => g.trim()).filter(Boolean)
+  const hasGifts = giftList.length > 0
+
+  if (hasDiscount || hasGifts) {
+    const lines = ['\n\n【促成工具箱——客人猶豫或嫌貴時才使用，每次只說一項，不一次全列】']
+    lines.push('使用時機：客人說「有點貴」「我再想想」「比較一下」「考慮看看」等猶豫訊號時主動提出')
+    lines.push('提出方式：自然融入對話，例如「我幫您申請一個小優惠，您看可以嗎？」')
+    if (hasDiscount) {
+      lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額後告知客人，若客人確認則生效）`)
+      lines.push(`折扣使用方式：「我幫您申請 ${discountMaxPct}% 的優惠，折後只需 $（重新計算），這樣可以嗎？」`)
+    }
+    if (hasGifts) {
+      lines.push('\n可贈送項目（從以下選一項，問客人偏好）：')
+      giftList.forEach(g => lines.push(`• ${g}`))
+      lines.push('贈品使用方式：「我幫您加送一個小禮，（項目名稱），您覺得好嗎？」')
+    }
+    lines.push('\n重要：優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
+    closingToolkitSection = lines.join('\n')
+  }
+
   // ── Top reviews for social proof ─────────────────────────────────────────
   let reviewsSection = ''
   try {
@@ -820,7 +845,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${propertyAvailSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({

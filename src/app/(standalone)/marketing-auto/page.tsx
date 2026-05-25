@@ -4840,6 +4840,8 @@ interface Unit12Data {
   vipList?: string
   autoCloseMinutes?: number
   notifyWebhooks?: NotifyWebhook[]
+  discountMaxPct?: number
+  discountGifts?: string
 }
 
 const CS_PLATFORMS = [
@@ -5053,6 +5055,8 @@ function Unit12CustomerService({
   const [vipList, setVipList] = useState(savedData?.vipList ?? '')
   const [autoCloseMinutes, setAutoCloseMinutes] = useState(savedData?.autoCloseMinutes ?? 0)
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
+  const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
+  const [discountGifts, setDiscountGifts] = useState(savedData?.discountGifts ?? '')
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -5073,6 +5077,8 @@ function Unit12CustomerService({
     if (savedData.vipList !== undefined) setVipList(savedData.vipList)
     if (savedData.autoCloseMinutes !== undefined) setAutoCloseMinutes(savedData.autoCloseMinutes)
     if (savedData.notifyWebhooks !== undefined) setNotifyWebhooks(savedData.notifyWebhooks)
+    if (savedData.discountMaxPct !== undefined) setDiscountMaxPct(savedData.discountMaxPct)
+    if (savedData.discountGifts !== undefined) setDiscountGifts(savedData.discountGifts)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -5097,7 +5103,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, discountMaxPct, discountGifts })
       }
     } finally {
       setUploadingDialogue(false)
@@ -5107,7 +5113,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, discountMaxPct, discountGifts })
   }
 
   // Test chat
@@ -5652,7 +5658,7 @@ function Unit12CustomerService({
   function saveSettings() {
     setSavingSettings(true)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -5692,6 +5698,8 @@ function Unit12CustomerService({
           paymentInfo,
           bookingFlows,
           notifyWebhooks,
+          discountMaxPct,
+          discountGifts,
         }),
       })
       const raw = await res.text()
@@ -5744,7 +5752,7 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -6547,6 +6555,44 @@ function Unit12CustomerService({
               </div>
             </div>
           )}
+
+          {/* ── AI 促成優惠權限 ── */}
+          <div className="border rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              <span className="text-sm font-semibold text-gray-800">AI 促成優惠權限</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">業務工具</span>
+            </div>
+            <p className="text-xs text-gray-500">設定 AI 在客人猶豫或嫌貴時，可主動提出的折扣與贈品。AI 每次只說一項，不一次全列，自然融入對話。</p>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">
+                最大折扣　<span className="font-normal text-gray-400">0 = 不提供折扣</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min={0} max={30} step={1}
+                  value={discountMaxPct}
+                  onChange={e => setDiscountMaxPct(Number(e.target.value))}
+                  className="w-20 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400"
+                />
+                <span className="text-sm text-gray-500">%</span>
+                {discountMaxPct > 0 && <span className="text-xs text-purple-600">✓ AI 最多可讓 {discountMaxPct}% 折扣</span>}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">
+                可贈送項目　<span className="font-normal text-gray-400">一行一項</span>
+              </label>
+              <textarea
+                value={discountGifts}
+                onChange={e => setDiscountGifts(e.target.value)}
+                rows={4}
+                placeholder={'免費早餐（一人）\n延遲退房至 12 點\n免費停車一天\n升級套房（視空房狀況）'}
+                className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none font-mono"
+              />
+              <p className="text-[10px] text-gray-400">客人猶豫時 AI 會從清單中挑一項主動提出，確認後列入訂單確認清單。</p>
+            </div>
+          </div>
 
           {/* ── VIP 識別 ── */}
           <div className="border rounded-xl p-4 space-y-3">
