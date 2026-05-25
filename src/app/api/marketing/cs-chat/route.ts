@@ -443,26 +443,35 @@ async function handlePost(req: NextRequest) {
       ...(history as { role: string; content: string }[]),
       { role: 'user', content: message },
     ]
-    const userTexts = allMessages.filter(m => m.role === 'user').map(m => m.content).join('\n')
+    const userMsgs = allMessages.filter(m => m.role === 'user').map(m => m.content)
+    const userTexts = userMsgs.join('\n')
+    const userTurns = userMsgs.length
     const assistantTexts = allMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
 
-    // Step completion detectors
+    // A standalone message that plausibly answers a "name" prompt:
+    // short, letters/CJK only, no digits or @ (so order numbers / emails don't count).
+    const looksLikeName = (s: string) => {
+      const t = s.trim()
+      return t.length >= 2 && t.length <= 12 && !/[0-9@]/.test(t) && /^[\p{L}·\s]+$/u.test(t)
+    }
+
+    // Step completion detectors — evaluated against the full customer transcript.
     // DATE_RE matches: "7月8日" / "7/8" / "2026/7/8" / "7-8" / "2026-7-8"
     const DATE_RE = /[0-9]{1,2}\s*月|[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}|(?<![0-9])[0-9]{1,2}[\/\-][0-9]{1,2}(?![0-9])/
-    const stepDetectors: Record<string, (u: string) => boolean> = {
-      headcount:     u => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(u),
-      passenger_id:  u => /[A-Za-z][0-9]{9}/.test(u),
-      phone:         u => /0[0-9]{8,9}/.test(u),
-      date_depart:   u => DATE_RE.test(u),
-      date_checkin:  u => DATE_RE.test(u),
-      date_checkout: u => DATE_RE.test(u) && allMessages.filter(m => m.role === 'user').length > 2,
-      timeslot:      u => /[0-9]{1,2}[:：點時]/.test(u),
-      booker_name:   u => u.trim().length >= 2 && /[一-鿿]/.test(u),
-      email:         u => /@/.test(u),
-      plate:         u => /[A-Z0-9]{4,8}/.test(u),
+    const stepDetectors: Record<string, () => boolean> = {
+      headcount:     () => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(userTexts),
+      passenger_id:  () => /[A-Za-z][0-9]{9}/.test(userTexts),
+      phone:         () => /0[0-9]{8,9}/.test(userTexts),
+      date_depart:   () => DATE_RE.test(userTexts),
+      date_checkin:  () => DATE_RE.test(userTexts),
+      date_checkout: () => DATE_RE.test(userTexts) && userTurns > 2,
+      timeslot:      () => /[0-9]{1,2}[:：點時]/.test(userTexts),
+      booker_name:   () => userMsgs.some(looksLikeName),  // a dedicated name-like turn, not just any CJK
+      email:         () => /@/.test(userTexts),
+      plate:         () => /[A-Z0-9]{4,8}/.test(userTexts),
       special_req:   () => true, // optional, always passes
-      quote:         (_u) => /\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts),
-      product:       () => allMessages.filter(m => m.role === 'user').length > 1,
+      quote:         () => /\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts),
+      product:       () => userTurns > 1,
     }
 
     // ── Simple mode: customer confirmed after quote → return showBookingForm ──
@@ -473,8 +482,12 @@ async function handlePost(req: NextRequest) {
       const smKws = flow.triggerKeywords.split(',').map((k: string) => k.trim())
       const smTriggered = smKws.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
       if (!smTriggered) continue
-      const quoteGiven = /\$[0-9,，]+|NT\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts)
-      const isConfirm = CONFIRM_RE.test(message.trim()) && !NEGATIVE_RE.test(message)
+      // Quote must be in the MOST RECENT assistant turn, and the confirmation must be
+      // a short standalone "yes" — so "好，那價格呢？" or a stale earlier quote won't trigger.
+      const lastAssistant = [...allMessages].reverse().find(m => m.role === 'assistant')?.content ?? ''
+      const quoteGiven = /\$[0-9,，]+|NT\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(lastAssistant)
+      const msgTrim = message.trim()
+      const isConfirm = CONFIRM_RE.test(msgTrim) && !NEGATIVE_RE.test(message) && msgTrim.length <= 12
       if (quoteGiven && isConfirm) {
         const hcMatch = userTexts.match(/([0-9]+)\s*(大人|成人|位|人)/)
         const headcount = hcMatch ? parseInt(hcMatch[1]) : 1
@@ -503,9 +516,12 @@ async function handlePost(req: NextRequest) {
       const flowTriggered = keywords.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
       if (!flowTriggered) continue
 
-      const allStepsDone = flow.steps.every((step: string) => {
+      // Require at least one customer turn per required step (excludes optional special_req)
+      // so the payment-account reveal can never fire after just a couple of messages.
+      const requiredStepCount = flow.steps.filter((s: string) => s !== 'special_req').length
+      const allStepsDone = userTurns >= requiredStepCount && flow.steps.every((step: string) => {
         const detector = stepDetectors[step]
-        return detector ? detector(userTexts) : true
+        return detector ? detector() : true
       })
 
       if (allStepsDone) {
