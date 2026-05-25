@@ -838,6 +838,7 @@ const systemPrompt = `${baseInstructions}
 - 禁止輸出任何內部思考、推理過程（THOUGHT、think、思考等區塊），直接給出最終回覆
 - 計算步驟用純文字逐行呈現，例如「成人 2 位 × $800 = $1,600」，不用符號列點
 - 報價禁止顯示加價乘數（× 1.15 等），直接查定價表取假日/週末價輸出；只有折扣（打折、優惠）才需標示
+- 資料使用分工：【定價計算機】只用於計算價格；【知識庫參考資料】用於回答所有房型細節（設施、空間、特色、景觀、衛浴、辦公設備等）——兩者功能不可混用
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
@@ -845,7 +846,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——民宿所有細節的權威來源】\n以下是民宿的完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n規則：\n1. 客人詢問任何房型特色、設施、空間大小、設備（浴缸、辦公桌、陽台、景觀等）時，必須優先查閱本區塊，給出具體描述\n2. 禁止用「詳見網站」「請直接詢問」等推諉回應\n3. 禁止只轉述定價計算機的簡略房型名稱，定價計算機只用於計算價格\n4. 若本區塊有提到的設施細節，必須主動提供給客人，不需等客人追問\n\n${knowledgeBase.slice(0, 20000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
