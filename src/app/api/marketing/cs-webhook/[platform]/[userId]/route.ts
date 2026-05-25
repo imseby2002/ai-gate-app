@@ -55,6 +55,40 @@ async function saveHistory(userId: string, customerId: string, history: HistoryM
     )
 }
 
+// ── Persist a customer turn to cs_messages (powers the dashboard metrics) ─────
+async function logCsMessage(userId: string, platform: string, customerId: string, industry: string, message: string, reply: string) {
+  try {
+    await getServiceClient().from('cs_messages').insert({
+      user_id: userId, industry, platform, from_id: customerId, message, reply,
+    })
+  } catch { /* metrics logging must never break the reply flow */ }
+}
+
+// Customer asking to talk to a real person
+const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務|專人/
+
+// Single entry point for every platform: human handoff → ticket, else AI reply; logs both.
+async function replyToCustomer(
+  userId: string, platform: string, customerId: string,
+  knowledge: CsKnowledge, history: HistoryMsg[], text: string,
+): Promise<string> {
+  if (HUMAN_ESCALATION_RE.test(text)) {
+    try {
+      await getServiceClient().from('cs_tickets').insert({
+        user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
+        subject: text.slice(0, 80), description: '客人要求人工客服',
+        priority: 'high', intent: '人工客服請求',
+      })
+    } catch { /* ignore */ }
+    const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+    return reply
+  }
+  const reply = await getAIReply(text, knowledge, history, userId)
+  void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+  return reply
+}
+
 // ── Load CS knowledge base (unit_data[12]) + company data ────────────────────
 interface CsKnowledge {
   systemPrompt: string
@@ -64,6 +98,7 @@ interface CsKnowledge {
   bookingFlowEnabled: boolean
   paymentInfo: string
   bookingFlows: BookingFlowDef[]
+  industry: string
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -131,6 +166,16 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     if (pricingLines.length) knowledgeParts.push(pricingLines.join('\n\n'))
   }
 
+  // Industry (for ticket/message records) — taken from the most recent data source
+  const { data: industryRow } = await supabase
+    .from('cs_data_sources')
+    .select('industry')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const industry = (industryRow?.industry as string) ?? 'homestay'
+
   // Load company data as fallback knowledge
   const { data: companyRow } = await supabase
     .from('company_data')
@@ -161,6 +206,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     bookingFlowEnabled,
     paymentInfo,
     bookingFlows,
+    industry,
   }
 }
 
@@ -666,7 +712,7 @@ export async function POST(
       const replyToken: string = event.replyToken
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
       const history = await loadHistory(userId, customerId)
-      const reply = await getAIReply(text, knowledge, history, userId)
+      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text)
       if (token && replyToken) await replyLine(replyToken, reply, token)
       await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
@@ -699,7 +745,7 @@ export async function POST(
       const text: string = msg.text?.body ?? ''
       const to: string   = msg.from
       const history = await loadHistory(userId, to)
-      const reply = await getAIReply(text, knowledge, history, userId)
+      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text)
       if (token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
       await saveHistory(userId, to, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
     }
@@ -806,7 +852,7 @@ export async function POST(
         const history = await loadHistory(userId, customerId)
 
         // 1. AI auto-reply to customer
-        const reply = await getAIReply(text, knowledge, history, userId)
+        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text)
         await replyTelegram(chatId, reply, botToken)
         await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
 
@@ -838,7 +884,7 @@ export async function POST(
       const senderId: string = body?.sender?.id ?? ''
       if (text && senderId) {
         const history = await loadHistory(userId, senderId)
-        const reply = await getAIReply(text, knowledge, history, userId)
+        const reply = await replyToCustomer(userId, platform, senderId, knowledge, history, text)
         if (oaToken) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
@@ -876,7 +922,7 @@ export async function POST(
 
     if (text && from && to) {
       const history = await loadHistory(userId, from)
-      const reply = await getAIReply(text, knowledge, history, userId)
+      const reply = await replyToCustomer(userId, 'wechat', from, knowledge, history, text)
       await saveHistory(userId, from, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
       const safeReply = reply.replace(/]]>/g, ']]&gt;')  // prevent CDATA breakout
       const xmlReply = `<xml>
@@ -904,7 +950,7 @@ export async function POST(
 
     if (text && fromJid) {
       const history = await loadHistory(userId, fromJid)
-      const reply = await getAIReply(text, knowledge, history, userId)
+      const reply = await replyToCustomer(userId, platform, fromJid, knowledge, history, text)
 
       // Reply via Bridge
       const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
