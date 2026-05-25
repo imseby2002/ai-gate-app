@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
+import { isSafeWebhookUrl } from '@/lib/ssrf'
+import { buildDeterministicQuote } from '@/lib/cs/quote'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -23,7 +25,18 @@ interface SheetConfig {
 // Matches numbers with 8+ digits, not starting with 0, not preceded by +
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 
-async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
+// Columns whose values must NOT be revealed until the requester's identity is verified.
+// (Order number alone is guessable → prevents IDOR on door codes / room numbers.)
+const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
+// Column that holds the guest name, used as the verification factor.
+const NAME_COL_RE = /姓名|名字|訂房人|訂位人|入住人|旅客|客戶|貴賓|聯絡人|\bname\b|guest|customer/i
+
+interface SheetQueryOpts {
+  conversationText?: string
+  verifyName?: (storedName: string, conversationText: string) => Promise<boolean>
+}
+
+async function queryGoogleSheet(config: SheetConfig, message: string, opts: SheetQueryOpts = {}): Promise<string | null> {
   const triggerMode = config.triggerMode ?? 'keyword'
   let triggered = false
 
@@ -54,8 +67,8 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}?key=${config.apiKey}`
     const res = await fetch(url)
     if (!res.ok) {
-      const errText = await res.text().catch(() => `HTTP ${res.status}`)
-      return `【外部資料表：${config.sheetName}】\nAPI 連線失敗（${res.status}）：${errText.slice(0, 200)}`
+      // Do not leak raw upstream error text to the customer-facing context
+      return `【外部資料表：${config.sheetName}】\n（系統提示：資料查詢暫時無法使用，請告知客戶系統忙碌、稍後再試或聯繫工作人員，禁止捏造任何資料。）`
     }
 
     const json = await res.json()
@@ -87,18 +100,42 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
         matchedRow = findRow(headers.map((_, i) => i))
       }
 
-      const debugInfo = `（資料表欄位：${headers.join('、')}，共 ${dataRows.length} 筆資料，查詢欄位設定：${config.keyColumn}${keyColIdxs.length === 0 ? '【⚠️ 找不到此欄位，已改為全欄掃描】' : ''}）`
-
       if (!matchedRow) {
-        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。\n${debugInfo}`
+        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
       }
 
-      // Always return ALL columns — prevents AI from fabricating missing fields
-      const result = headers.map((h, i) => `${h}：${matchedRow![i] ?? ''}`).filter(l => {
+      // ── Identity gate on sensitive columns (door code / room number) ──────
+      // Order numbers are guessable, so revealing door codes on a bare number
+      // is an IDOR. Require a fuzzy name match against the booking name first.
+      const sensitiveIdxs = headers.map((h, i) => SENSITIVE_COL_RE.test(h ?? '') ? i : -1).filter(i => i >= 0)
+      const nameIdx = headers.findIndex(h => NAME_COL_RE.test(h ?? ''))
+      const storedName = nameIdx >= 0 ? cellStr(matchedRow[nameIdx]) : ''
+
+      let verified = true
+      let gateNote = ''
+      if (sensitiveIdxs.length > 0) {
+        if (opts.verifyName && storedName) {
+          verified = await opts.verifyName(storedName, opts.conversationText ?? '')
+        } else {
+          verified = false  // no name column / no verifier → cannot confirm identity
+        }
+        if (!verified) {
+          gateNote = storedName
+            ? `\n（⚠️ 身分未核對：上方密碼/房號/門鎖等敏感欄位已遮蔽。請客人提供「訂房時登記的姓名」，系統會自動核對；核對相符前，嚴禁透露任何密碼、房號、門鎖、鑰匙資訊。）`
+            : `\n（⚠️ 此資料表無可核對的姓名欄位，無法驗證身分。涉及密碼/房號等敏感資訊請改由真人客服協助，嚴禁透露。）`
+        }
+      }
+
+      // Return columns (mask sensitive ones until verified) — prevents fabrication
+      const result = headers.map((h, i) => {
+        const masked = !verified && sensitiveIdxs.includes(i)
+        const val = masked ? '（需核對姓名後提供）' : (matchedRow![i] ?? '')
+        return `${h}：${val}`
+      }).filter(l => {
         const val = l.split('：').slice(1).join('：').trim()
         return val !== ''
       }).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單所有欄位，請直接引用，禁止修改或捏造任何數值）`
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單資料，請直接引用，禁止修改或捏造任何數值）${gateNote}`
     }
 
     // Keyword trigger: return full filtered table
@@ -115,8 +152,9 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
       .join('\n')
 
     return `【外部資料表：${config.sheetName}】\n${table}`
-  } catch (e) {
-    return `【外部資料表：${config.sheetName}】\n連線異常：${String(e).slice(0, 200)}`
+  } catch {
+    // Do not leak internal exception details to the customer-facing context
+    return `【外部資料表：${config.sheetName}】\n（系統提示：資料查詢發生異常，請告知客戶稍後再試或聯繫工作人員，禁止捏造任何資料。）`
   }
 }
 
@@ -407,26 +445,35 @@ async function handlePost(req: NextRequest) {
       ...(history as { role: string; content: string }[]),
       { role: 'user', content: message },
     ]
-    const userTexts = allMessages.filter(m => m.role === 'user').map(m => m.content).join('\n')
+    const userMsgs = allMessages.filter(m => m.role === 'user').map(m => m.content)
+    const userTexts = userMsgs.join('\n')
+    const userTurns = userMsgs.length
     const assistantTexts = allMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
 
-    // Step completion detectors
+    // A standalone message that plausibly answers a "name" prompt:
+    // short, letters/CJK only, no digits or @ (so order numbers / emails don't count).
+    const looksLikeName = (s: string) => {
+      const t = s.trim()
+      return t.length >= 2 && t.length <= 12 && !/[0-9@]/.test(t) && /^[\p{L}·\s]+$/u.test(t)
+    }
+
+    // Step completion detectors — evaluated against the full customer transcript.
     // DATE_RE matches: "7月8日" / "7/8" / "2026/7/8" / "7-8" / "2026-7-8"
     const DATE_RE = /[0-9]{1,2}\s*月|[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}|(?<![0-9])[0-9]{1,2}[\/\-][0-9]{1,2}(?![0-9])/
-    const stepDetectors: Record<string, (u: string) => boolean> = {
-      headcount:     u => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(u),
-      passenger_id:  u => /[A-Za-z][0-9]{9}/.test(u),
-      phone:         u => /0[0-9]{8,9}/.test(u),
-      date_depart:   u => DATE_RE.test(u),
-      date_checkin:  u => DATE_RE.test(u),
-      date_checkout: u => DATE_RE.test(u) && allMessages.filter(m => m.role === 'user').length > 2,
-      timeslot:      u => /[0-9]{1,2}[:：點時]/.test(u),
-      booker_name:   u => u.trim().length >= 2 && /[一-鿿]/.test(u),
-      email:         u => /@/.test(u),
-      plate:         u => /[A-Z0-9]{4,8}/.test(u),
+    const stepDetectors: Record<string, () => boolean> = {
+      headcount:     () => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(userTexts),
+      passenger_id:  () => /[A-Za-z][0-9]{9}/.test(userTexts),
+      phone:         () => /0[0-9]{8,9}/.test(userTexts),
+      date_depart:   () => DATE_RE.test(userTexts),
+      date_checkin:  () => DATE_RE.test(userTexts),
+      date_checkout: () => DATE_RE.test(userTexts) && userTurns > 2,
+      timeslot:      () => /[0-9]{1,2}[:：點時]/.test(userTexts),
+      booker_name:   () => userMsgs.some(looksLikeName),  // a dedicated name-like turn, not just any CJK
+      email:         () => /@/.test(userTexts),
+      plate:         () => /[A-Z0-9]{4,8}/.test(userTexts),
       special_req:   () => true, // optional, always passes
-      quote:         (_u) => /\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts),
-      product:       () => allMessages.filter(m => m.role === 'user').length > 1,
+      quote:         () => /\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts),
+      product:       () => userTurns > 1,
     }
 
     // ── Simple mode: customer confirmed after quote → return showBookingForm ──
@@ -437,8 +484,12 @@ async function handlePost(req: NextRequest) {
       const smKws = flow.triggerKeywords.split(',').map((k: string) => k.trim())
       const smTriggered = smKws.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
       if (!smTriggered) continue
-      const quoteGiven = /\$[0-9,，]+|NT\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts)
-      const isConfirm = CONFIRM_RE.test(message.trim()) && !NEGATIVE_RE.test(message)
+      // Quote must be in the MOST RECENT assistant turn, and the confirmation must be
+      // a short standalone "yes" — so "好，那價格呢？" or a stale earlier quote won't trigger.
+      const lastAssistant = [...allMessages].reverse().find(m => m.role === 'assistant')?.content ?? ''
+      const quoteGiven = /\$[0-9,，]+|NT\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(lastAssistant)
+      const msgTrim = message.trim()
+      const isConfirm = CONFIRM_RE.test(msgTrim) && !NEGATIVE_RE.test(message) && msgTrim.length <= 12
       if (quoteGiven && isConfirm) {
         const hcMatch = userTexts.match(/([0-9]+)\s*(大人|成人|位|人)/)
         const headcount = hcMatch ? parseInt(hcMatch[1]) : 1
@@ -467,9 +518,12 @@ async function handlePost(req: NextRequest) {
       const flowTriggered = keywords.some((kw: string) => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))
       if (!flowTriggered) continue
 
-      const allStepsDone = flow.steps.every((step: string) => {
+      // Require at least one customer turn per required step (excludes optional special_req)
+      // so the payment-account reveal can never fire after just a couple of messages.
+      const requiredStepCount = flow.steps.filter((s: string) => s !== 'special_req').length
+      const allStepsDone = userTurns >= requiredStepCount && flow.steps.every((step: string) => {
         const detector = stepDetectors[step]
-        return detector ? detector(userTexts) : true
+        return detector ? detector() : true
       })
 
       if (allStepsDone) {
@@ -531,6 +585,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
             body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
           })
         } else {
+          if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
           return fetch(wh.value.trim(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -558,6 +613,30 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   const google = createGoogleGenerativeAI({ apiKey: geminiKey })
 
+  // Conversation text (customer turns) used for fuzzy identity verification
+  const convUserText = [
+    ...(history as { role: string; content: string }[]).filter(m => m.role === 'user').map(m => m.content),
+    message,
+  ].join('\n')
+
+  // Fuzzy name verifier: tolerant of CN↔EN romanization, surname order, spacing/case.
+  // Delegated to the LLM because phonetic romanization has too many rule variants.
+  const verifyName = async (storedName: string, conv: string): Promise<boolean> => {
+    if (!storedName.trim() || !conv.trim()) return false
+    try {
+      const { text } = await generateText({
+        model: google('gemini-2.5-flash'),
+        messages: [{
+          role: 'user',
+          content: `訂單登記的姓名是：「${storedName}」\n客人在對話中提供的內容：「${conv.slice(-600)}」\n\n請判斷：客人是否說出了與登記姓名屬於「同一個人」的姓名？\n比對規則（皆視為相符）：中文與英文拼音互換、發音相近即可（拼法不需完全一致，如 Chen=Chern、Lee=Li）、姓氏可在前或在後、大小寫與空格差異。\n只有當你有把握是同一人時回 YES；客人未提供姓名或無法確認時回 NO。只回一個詞：YES 或 NO。`,
+        }],
+      })
+      return /^\s*yes/i.test(text)
+    } catch {
+      return false  // fail closed — never reveal sensitive data on verifier error
+    }
+  }
+
   // ── Query external data sources ───────────────────────────────────────────
   const { data: sources } = await supabase
     .from('cs_data_sources')
@@ -575,7 +654,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   // 偵測前端送來的確認封包，POST 到 Apps Script
   if (breakfastCfg?.webhookUrl) {
     const confirmMatch = message.match(/^##BREAKFAST_ORDER##(.+)$/)
-    if (confirmMatch) {
+    if (confirmMatch && isSafeWebhookUrl(breakfastCfg.webhookUrl)) {
       try {
         await fetch(breakfastCfg.webhookUrl, {
           method: 'POST',
@@ -618,7 +697,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
             }
           } catch { /* 忽略錯誤 */ }
         } else {
-          result = await queryGoogleSheet(sheetCfg, message)
+          result = await queryGoogleSheet(sheetCfg, message, { conversationText: convUserText, verifyName })
         }
       }
       if (result) sheetResults.push(result)
@@ -626,6 +705,19 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   }
 
   const hasPricing = sources?.some(s => s.type === 'json_pricing' && sheetResults.some(r => r.includes(s.name)))
+
+  // Authoritative server-side quote (LLM extracts params, code does the math)
+  let deterministicQuoteSection = ''
+  if (bookingFlowEnabled && sources?.length) {
+    const pricingCfgs = sources.filter(s => s.type === 'json_pricing').map(s => s.config as PricingConfig)
+    if (pricingCfgs.length) {
+      const lc = convUserText.toLowerCase()
+      const cfg = pricingCfgs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase()))) ?? pricingCfgs[0]
+      const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+      const q = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+      if (q) deterministicQuoteSection = `\n\n${q}`
+    }
+  }
 
   // Detect numeric order number and sensitive-data intent
   const detectedOrderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
@@ -696,7 +788,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   // ── Discount authority closing toolkit ───────────────────────────────────
   let closingToolkitSection = ''
   const hasDiscount = discountMaxPct > 0
-  const giftList = discountGifts.split('\n').map(g => g.trim()).filter(Boolean)
+  const giftList: string[] = String(discountGifts ?? '').split('\n').map((g: string) => g.trim()).filter(Boolean)
   const hasGifts = giftList.length > 0
 
   if (hasDiscount || hasGifts) {
@@ -846,7 +938,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
