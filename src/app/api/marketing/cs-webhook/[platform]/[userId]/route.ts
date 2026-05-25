@@ -361,16 +361,18 @@ function buildStepLabels(dataHint?: string): Record<string, string> {
   }
 }
 
-function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
+function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlowDef[]): string {
+  // Payment info is intentionally NOT embedded here — it is injected only via
+  // detectBookingCompletion() after server-side step completion is confirmed,
+  // so the AI cannot reveal account details before the booking is complete.
   const flowSection = flows.length > 0
     ? flows.map(f => {
         const keywords = f.triggerKeywords.split(',').map((k: string) => k.trim()).filter(Boolean).join('、')
         const stepLabels = buildStepLabels(f.dataHint)
         const stepList = f.steps.map((s, i) => `  ${i + 1}. ${stepLabels[s] ?? s}`).join('\n')
-        const payment = (f.paymentInfo || defaultPaymentInfo).trim()
-        return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}${payment ? `\n付款說明：${payment}` : ''}`
+        return `【${f.name}】\n觸發：客人提到「${keywords}」等字詞時啟動此流程\n收集順序：\n${stepList}`
       }).join('\n\n')
-    : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話${defaultPaymentInfo ? `\n付款說明：${defaultPaymentInfo}` : ''}`
+    : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話`
 
   return `你是專業客服兼預訂助理。嚴格遵守以下所有規則，不得自行發揮。
 
@@ -379,6 +381,7 @@ function buildBookingSystemPrompt(defaultPaymentInfo: string, flows: BookingFlow
 2. 禁止複製知識庫原文，只摘重點
 3. 禁止使用 Markdown（禁用 **、*、#、---）
 4. 每則回覆結尾必須有一個問句引導客人行動
+5. 禁止在所有步驟完成前輸出付款帳號；付款帳號只會由系統在步驟完成時提供，禁止自行填寫或捏造任何帳號
 
 【角色A：產品顧問】
 客人問問題時 → 條列 2~4 個重點或選項 + 價格，然後問「請問您想選哪個？」
@@ -431,6 +434,46 @@ ${flowSection}
 語氣親切自然，計算總價時逐步列式，嚴格使用定價表數字。`
 }
 
+// ── Server-side booking completion → inject payment only when all steps done ──
+// Mirrors cs-chat's gating so the live (webhook) path never reveals the payment
+// account before the booking is genuinely complete.
+function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[], message: string, defaultPayment: string): string {
+  if (!flows.length) return ''
+  const allMessages = [...history, { role: 'user' as const, content: message }]
+  const userMsgs = allMessages.filter(m => m.role === 'user').map(m => m.content)
+  const userTexts = userMsgs.join('\n')
+  const userTurns = userMsgs.length
+  const assistantTexts = allMessages.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
+  const DATE_RE = /[0-9]{1,2}\s*月|[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}|(?<![0-9])[0-9]{1,2}[\/\-][0-9]{1,2}(?![0-9])/
+  const looksLikeName = (s: string) => { const t = s.trim(); return t.length >= 2 && t.length <= 12 && !/[0-9@]/.test(t) && /^[\p{L}·\s]+$/u.test(t) }
+  const det: Record<string, () => boolean> = {
+    headcount:     () => /[0-9一二三四五六七八九十]+\s*(大人|成人|小孩|嬰兒|位|人)/.test(userTexts),
+    passenger_id:  () => /[A-Za-z][0-9]{9}/.test(userTexts),
+    phone:         () => /0[0-9]{8,9}/.test(userTexts),
+    date_depart:   () => DATE_RE.test(userTexts),
+    date_checkin:  () => DATE_RE.test(userTexts),
+    date_checkout: () => DATE_RE.test(userTexts) && userTurns > 2,
+    timeslot:      () => /[0-9]{1,2}[:：點時]/.test(userTexts),
+    booker_name:   () => userMsgs.some(looksLikeName),
+    email:         () => /@/.test(userTexts),
+    plate:         () => /[A-Z0-9]{4,8}/.test(userTexts),
+    special_req:   () => true,
+    quote:         () => /\$[0-9,，]+|[0-9,，]+\s*(元|元整)/.test(assistantTexts),
+    product:       () => userTurns > 1,
+  }
+  for (const flow of flows) {
+    const kws = flow.triggerKeywords.split(',').map(k => k.trim())
+    if (!kws.some(kw => kw && userTexts.toLowerCase().includes(kw.toLowerCase()))) continue
+    const requiredStepCount = flow.steps.filter(s => s !== 'special_req').length
+    const done = userTurns >= requiredStepCount && flow.steps.every(s => det[s] ? det[s]() : true)
+    if (done) {
+      const payment = (flow.paymentInfo || defaultPayment || '').trim()
+      return `\n\n【系統偵測：所有預訂步驟已完成——立即執行】\n你的下一則回覆必須：\n第一行「好的！以下是您的預訂確認：」\n接著逐行列出所有已收集資料與總金額\n接著原文輸出以下付款資訊（禁止修改或省略）：\n${payment || '（付款方式請聯繫工作人員確認）'}\n最後一行「以上資訊是否正確？」`
+    }
+  }
+  return ''
+}
+
 // ── AI reply (直接呼叫 Gemini / Claude，不經過 cs-chat 路由) ─────────────────
 async function getAIReply(
   message: string,
@@ -478,6 +521,10 @@ async function getAIReply(
       ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName })
       : ''
 
+    const bookingCompletion = knowledge.bookingFlowEnabled
+      ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
+      : ''
+
     const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
@@ -485,7 +532,7 @@ async function getAIReply(
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${externalDataSection}`
+- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${externalDataSection}${bookingCompletion}`
 
     const messages = [
       ...history.slice(-10),
