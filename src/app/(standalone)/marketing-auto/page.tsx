@@ -5638,11 +5638,13 @@ function Unit12CustomerService({
         { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
         { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
         { key: 'whatsapp_verify_token', label: 'Verify Token（自訂任意字串）', placeholder: 'my_verify_token', secret: false },
+        { key: 'whatsapp_app_secret', label: 'App Secret（驗證 webhook 簽章，強烈建議填）', placeholder: 'Meta 應用程式密鑰', secret: true },
       ],
       whatsapp_personal: [],  // QR-based auth, no manual fields needed
       telegram: [
         { key: 'telegram_bot_token', label: 'Bot Token（從 @BotFather 取得）', placeholder: '123456789:AAF...', secret: true },
         { key: 'telegram_admin_chat_id', label: '管理員 Chat ID（選填）', placeholder: '你的個人 Chat ID，從 @userinfobot 取得', secret: false },
+        { key: 'telegram_webhook_secret', label: 'Webhook Secret（setWebhook 的 secret_token，強烈建議填）', placeholder: '自訂任意字串', secret: true },
       ],
       zalo: [
         { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
@@ -5650,6 +5652,7 @@ function Unit12CustomerService({
       wechat: [
         { key: 'wechat_app_id', label: 'App ID', placeholder: 'wx...', secret: false },
         { key: 'wechat_app_secret', label: 'App Secret', placeholder: '...', secret: true },
+        { key: 'wechat_token', label: 'Token（伺服器設定的 Token，驗證簽章用）', placeholder: '自訂任意字串', secret: false },
       ],
     }
     return map[platformId] ?? []

@@ -192,7 +192,16 @@ interface PricingConfig {
 
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 
-async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
+// Columns gated behind identity verification (prevents IDOR on door codes / room numbers)
+const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
+const NAME_COL_RE = /姓名|名字|訂房人|訂位人|入住人|旅客|客戶|貴賓|聯絡人|\bname\b|guest|customer/i
+
+interface SheetQueryOpts {
+  conversationText?: string
+  verifyName?: (storedName: string, conversationText: string) => Promise<boolean>
+}
+
+async function queryGoogleSheet(config: SheetConfig, message: string, opts: SheetQueryOpts = {}): Promise<string | null> {
   const triggerMode = config.triggerMode ?? 'keyword'
   let triggered = false
   let exactKey: string | null = null
@@ -227,8 +236,28 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
       const colIdxs = wantedCols.length > 1
         ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
         : headers.map((_, i) => i)
-      const result = colIdxs.map(i => `${headers[i]}：${matchedRow[i] ?? ''}`).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}`
+
+      // ── Identity gate on sensitive columns (door code / room number) ──────
+      const sensitiveIdxs = colIdxs.filter(i => SENSITIVE_COL_RE.test(headers[i] ?? ''))
+      const nameIdx = headers.findIndex(h => NAME_COL_RE.test(h ?? ''))
+      const storedName = nameIdx >= 0 ? (matchedRow[nameIdx] ?? '').trim() : ''
+      let verified = true
+      let gateNote = ''
+      if (sensitiveIdxs.length > 0) {
+        verified = (opts.verifyName && storedName)
+          ? await opts.verifyName(storedName, opts.conversationText ?? '')
+          : false
+        if (!verified) {
+          gateNote = storedName
+            ? `\n（⚠️ 身分未核對：上方密碼/房號/門鎖等敏感欄位已遮蔽。請客人提供「訂房時登記的姓名」，系統會自動核對；核對相符前，嚴禁透露任何密碼、房號、門鎖、鑰匙資訊。）`
+            : `\n（⚠️ 此資料表無可核對的姓名欄位，無法驗證身分。涉及密碼/房號等敏感資訊請改由真人客服協助，嚴禁透露。）`
+        }
+      }
+      const result = colIdxs.map(i => {
+        const masked = !verified && sensitiveIdxs.includes(i)
+        return `${headers[i]}：${masked ? '（需核對姓名後提供）' : (matchedRow[i] ?? '')}`
+      }).join('\n')
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}${gateNote}`
     }
 
     const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
@@ -276,7 +305,7 @@ function queryJsonPricing(name: string, config: PricingConfig, message: string):
   return formatPricingForAI(name, config)
 }
 
-async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false): Promise<string> {
+async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}): Promise<string> {
   const supabase = getServiceClient()
   const { data: sources } = await supabase
     .from('cs_data_sources')
@@ -294,7 +323,7 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
         ? formatPricingForAI(src.name, src.config as PricingConfig)
         : queryJsonPricing(src.name, src.config as PricingConfig, message)
     } else {
-      result = await queryGoogleSheet(src.config as SheetConfig, message)
+      result = await queryGoogleSheet(src.config as SheetConfig, message, sheetOpts)
     }
     if (result) results.push(result)
   }))
@@ -423,7 +452,31 @@ async function getAIReply(
           : '你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。')
 
     const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
-    const externalDataSection = userId ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled) : ''
+
+    const geminiKey = process.env.GOOGLE_AI_API_KEY
+    if (!geminiKey) return FALLBACK
+
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+
+    // Fuzzy identity verifier for sensitive order fields (CN↔EN romanization, surname order)
+    const convUserText = [...history.filter(m => m.role === 'user').map(m => m.content), message].join('\n')
+    const verifyName = async (storedName: string, conv: string): Promise<boolean> => {
+      if (!storedName.trim() || !conv.trim()) return false
+      try {
+        const { text } = await generateText({
+          model: google('gemini-2.5-flash'),
+          messages: [{
+            role: 'user',
+            content: `訂單登記的姓名是：「${storedName}」\n客人在對話中提供的內容：「${conv.slice(-600)}」\n\n請判斷：客人是否說出了與登記姓名屬於「同一個人」的姓名？\n比對規則（皆視為相符）：中文與英文拼音互換、發音相近即可（拼法不需完全一致，如 Chen=Chern、Lee=Li）、姓氏可在前或在後、大小寫與空格差異。\n只有當你有把握是同一人時回 YES；客人未提供姓名或無法確認時回 NO。只回一個詞：YES 或 NO。`,
+          }],
+        })
+        return /^\s*yes/i.test(text)
+      } catch { return false }
+    }
+
+    const externalDataSection = userId
+      ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName })
+      : ''
 
     const systemPrompt = `${baseInstructions}
 
@@ -438,11 +491,6 @@ async function getAIReply(
       ...history.slice(-10),
       { role: 'user' as const, content: message },
     ]
-
-    const geminiKey = process.env.GOOGLE_AI_API_KEY
-    if (!geminiKey) return FALLBACK
-
-    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
 
     // High risk → try Claude first
     const HIGH_RISK_KEYWORDS = ['退款', '退貨', '投訴', '抱怨', '法律', 'refund', 'complaint', 'lawsuit']
@@ -474,7 +522,15 @@ async function getAIReply(
   }
 }
 
-// ── LINE signature verification ───────────────────────────────────────────────
+// ── Constant-time string compare ──────────────────────────────────────────────
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let r = 0
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return r === 0
+}
+
+// ── LINE signature verification (HMAC-SHA256, base64) ─────────────────────────
 async function verifyLineSignature(body: string, signature: string, secret: string): Promise<boolean> {
   try {
     const key = await crypto.subtle.importKey(
@@ -482,7 +538,30 @@ async function verifyLineSignature(body: string, signature: string, secret: stri
     )
     const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
     const expected = btoa(String.fromCharCode(...new Uint8Array(sig)))
-    return signature === expected
+    return timingSafeEqual(signature, expected)
+  } catch { return false }
+}
+
+// ── Meta (WhatsApp Cloud) signature: X-Hub-Signature-256 = sha256=<hex> ───────
+async function verifyMetaSignature(rawBody: string, header: string, appSecret: string): Promise<boolean> {
+  try {
+    const expected = header.startsWith('sha256=') ? header.slice(7) : header
+    const key = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(appSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    )
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody))
+    const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+    return timingSafeEqual(hex, expected)
+  } catch { return false }
+}
+
+// ── WeChat signature: sha1(sort(token, timestamp, nonce)) ─────────────────────
+async function verifyWeChatSignature(token: string, signature: string, timestamp: string, nonce: string): Promise<boolean> {
+  try {
+    const raw = [token, timestamp, nonce].sort().join('')
+    const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(raw))
+    const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    return timingSafeEqual(hex, signature)
   } catch { return false }
 }
 
@@ -549,10 +628,21 @@ export async function POST(
 
   // ── WhatsApp / WhatsApp Business ──────────────────────────────────────────
   if (platform === 'whatsapp' || platform === 'whatsapp-biz') {
-    const creds   = await loadCredentials(userId, platform)
-    const phoneId = creds.whatsapp_phone_number_id ?? ''
-    const token   = creds.whatsapp_access_token ?? ''
-    const body    = await req.json()
+    const creds     = await loadCredentials(userId, platform)
+    const phoneId   = creds.whatsapp_phone_number_id ?? ''
+    const token     = creds.whatsapp_access_token ?? ''
+    const appSecret = creds.whatsapp_app_secret ?? ''
+    const rawBody   = await req.text()
+
+    // Verify Meta payload signature only when an App Secret is configured
+    if (appSecret) {
+      const sigHeader = req.headers.get('x-hub-signature-256') ?? ''
+      if (!sigHeader || !(await verifyMetaSignature(rawBody, sigHeader, appSecret))) {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
+
+    const body    = JSON.parse(rawBody)
     const entry   = body?.entry?.[0]
     const changes = entry?.changes?.[0]?.value
     const msgs    = changes?.messages ?? []
@@ -571,10 +661,18 @@ export async function POST(
 
   // ── Telegram ──────────────────────────────────────────────────────────────
   if (platform === 'telegram') {
-    const creds        = await loadCredentials(userId, 'telegram')
-    const botToken     = creds.telegram_bot_token ?? ''
-    const adminChatId  = creds.telegram_admin_chat_id ?? ''
-    const body         = await req.json()
+    const creds         = await loadCredentials(userId, 'telegram')
+    const botToken      = creds.telegram_bot_token ?? ''
+    const adminChatId   = creds.telegram_admin_chat_id ?? ''
+    const webhookSecret = creds.telegram_webhook_secret ?? ''
+
+    // Verify Telegram secret token only when configured (set via setWebhook secret_token).
+    // Without this, anyone knowing the URL + adminChatId could impersonate the admin.
+    if (webhookSecret && req.headers.get('x-telegram-bot-api-secret-token') !== webhookSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body          = await req.json()
 
     // ── Pipeline approval: inline button callback_query ────────────────────
     const cq = body?.callback_query
@@ -709,6 +807,17 @@ export async function POST(
 
   // ── WeChat ────────────────────────────────────────────────────────────────
   if (platform === 'wechat') {
+    const wechatToken = (await loadCredentials(userId, 'wechat')).wechat_token ?? ''
+    if (wechatToken) {
+      const { searchParams } = new URL(req.url)
+      const ok = await verifyWeChatSignature(
+        wechatToken,
+        searchParams.get('signature') ?? '',
+        searchParams.get('timestamp') ?? '',
+        searchParams.get('nonce') ?? ''
+      )
+      if (!ok) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
     const rawBody = await req.text()
     const msgMatch  = rawBody.match(/<Content><!\[CDATA\[(.*?)\]\]><\/Content>/)
     const fromMatch = rawBody.match(/<FromUserName><!\[CDATA\[(.*?)\]\]><\/FromUserName>/)
@@ -722,12 +831,13 @@ export async function POST(
       const history = await loadHistory(userId, from)
       const reply = await getAIReply(text, knowledge, history, userId)
       await saveHistory(userId, from, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+      const safeReply = reply.replace(/]]>/g, ']]&gt;')  // prevent CDATA breakout
       const xmlReply = `<xml>
 <ToUserName><![CDATA[${from}]]></ToUserName>
 <FromUserName><![CDATA[${to}]]></FromUserName>
 <CreateTime>${Math.floor(Date.now() / 1000)}</CreateTime>
 <MsgType><![CDATA[text]]></MsgType>
-<Content><![CDATA[${reply}]]></Content>
+<Content><![CDATA[${safeReply}]]></Content>
 </xml>`
       return new NextResponse(xmlReply, { headers: { 'Content-Type': 'text/xml' } })
     }
@@ -736,6 +846,11 @@ export async function POST(
 
   // ── WhatsApp Personal (Baileys Bridge) ───────────────────────────────────
   if (platform === 'whatsapp-personal' || platform === 'whatsapp_personal') {
+    // Inbound comes from our own Baileys Bridge — require the shared API key when configured
+    const bridgeKey = process.env.WHATSAPP_BRIDGE_API_KEY ?? ''
+    if (bridgeKey && req.headers.get('x-api-key') !== bridgeKey) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const body       = await req.json()
     const text: string = body?.text ?? ''
     const fromJid: string = body?.fromJid ?? (body?.from ? `${body.from}@s.whatsapp.net` : '')
@@ -791,6 +906,20 @@ export async function GET(
   // Zalo OA verification
   if (platform === 'zalo' || platform === 'zalo-oa') {
     return NextResponse.json({ ok: true })
+  }
+
+  // WeChat server verification (echo back echostr after validating signature)
+  if (platform === 'wechat') {
+    const wechatToken = (await loadCredentials(userId, 'wechat')).wechat_token ?? ''
+    const echostr = searchParams.get('echostr') ?? ''
+    const ok = !wechatToken || await verifyWeChatSignature(
+      wechatToken,
+      searchParams.get('signature') ?? '',
+      searchParams.get('timestamp') ?? '',
+      searchParams.get('nonce') ?? ''
+    )
+    if (ok) return new NextResponse(echostr, { status: 200 })
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
   }
 
   return NextResponse.json({ ok: true, platform, userId, status: 'webhook active' })

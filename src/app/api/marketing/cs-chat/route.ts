@@ -23,7 +23,18 @@ interface SheetConfig {
 // Matches numbers with 8+ digits, not starting with 0, not preceded by +
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 
-async function queryGoogleSheet(config: SheetConfig, message: string): Promise<string | null> {
+// Columns whose values must NOT be revealed until the requester's identity is verified.
+// (Order number alone is guessable → prevents IDOR on door codes / room numbers.)
+const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
+// Column that holds the guest name, used as the verification factor.
+const NAME_COL_RE = /姓名|名字|訂房人|訂位人|入住人|旅客|客戶|貴賓|聯絡人|\bname\b|guest|customer/i
+
+interface SheetQueryOpts {
+  conversationText?: string
+  verifyName?: (storedName: string, conversationText: string) => Promise<boolean>
+}
+
+async function queryGoogleSheet(config: SheetConfig, message: string, opts: SheetQueryOpts = {}): Promise<string | null> {
   const triggerMode = config.triggerMode ?? 'keyword'
   let triggered = false
 
@@ -54,8 +65,8 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}?key=${config.apiKey}`
     const res = await fetch(url)
     if (!res.ok) {
-      const errText = await res.text().catch(() => `HTTP ${res.status}`)
-      return `【外部資料表：${config.sheetName}】\nAPI 連線失敗（${res.status}）：${errText.slice(0, 200)}`
+      // Do not leak raw upstream error text to the customer-facing context
+      return `【外部資料表：${config.sheetName}】\n（系統提示：資料查詢暫時無法使用，請告知客戶系統忙碌、稍後再試或聯繫工作人員，禁止捏造任何資料。）`
     }
 
     const json = await res.json()
@@ -87,18 +98,42 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
         matchedRow = findRow(headers.map((_, i) => i))
       }
 
-      const debugInfo = `（資料表欄位：${headers.join('、')}，共 ${dataRows.length} 筆資料，查詢欄位設定：${config.keyColumn}${keyColIdxs.length === 0 ? '【⚠️ 找不到此欄位，已改為全欄掃描】' : ''}）`
-
       if (!matchedRow) {
-        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。\n${debugInfo}`
+        return `【外部資料表：${config.sheetName}】\n查無符合「${exactKey}」的資料，請確認號碼是否正確。`
       }
 
-      // Always return ALL columns — prevents AI from fabricating missing fields
-      const result = headers.map((h, i) => `${h}：${matchedRow![i] ?? ''}`).filter(l => {
+      // ── Identity gate on sensitive columns (door code / room number) ──────
+      // Order numbers are guessable, so revealing door codes on a bare number
+      // is an IDOR. Require a fuzzy name match against the booking name first.
+      const sensitiveIdxs = headers.map((h, i) => SENSITIVE_COL_RE.test(h ?? '') ? i : -1).filter(i => i >= 0)
+      const nameIdx = headers.findIndex(h => NAME_COL_RE.test(h ?? ''))
+      const storedName = nameIdx >= 0 ? cellStr(matchedRow[nameIdx]) : ''
+
+      let verified = true
+      let gateNote = ''
+      if (sensitiveIdxs.length > 0) {
+        if (opts.verifyName && storedName) {
+          verified = await opts.verifyName(storedName, opts.conversationText ?? '')
+        } else {
+          verified = false  // no name column / no verifier → cannot confirm identity
+        }
+        if (!verified) {
+          gateNote = storedName
+            ? `\n（⚠️ 身分未核對：上方密碼/房號/門鎖等敏感欄位已遮蔽。請客人提供「訂房時登記的姓名」，系統會自動核對；核對相符前，嚴禁透露任何密碼、房號、門鎖、鑰匙資訊。）`
+            : `\n（⚠️ 此資料表無可核對的姓名欄位，無法驗證身分。涉及密碼/房號等敏感資訊請改由真人客服協助，嚴禁透露。）`
+        }
+      }
+
+      // Return columns (mask sensitive ones until verified) — prevents fabrication
+      const result = headers.map((h, i) => {
+        const masked = !verified && sensitiveIdxs.includes(i)
+        const val = masked ? '（需核對姓名後提供）' : (matchedRow![i] ?? '')
+        return `${h}：${val}`
+      }).filter(l => {
         const val = l.split('：').slice(1).join('：').trim()
         return val !== ''
       }).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單所有欄位，請直接引用，禁止修改或捏造任何數值）`
+      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}\n（以上為此訂單資料，請直接引用，禁止修改或捏造任何數值）${gateNote}`
     }
 
     // Keyword trigger: return full filtered table
@@ -115,8 +150,9 @@ async function queryGoogleSheet(config: SheetConfig, message: string): Promise<s
       .join('\n')
 
     return `【外部資料表：${config.sheetName}】\n${table}`
-  } catch (e) {
-    return `【外部資料表：${config.sheetName}】\n連線異常：${String(e).slice(0, 200)}`
+  } catch {
+    // Do not leak internal exception details to the customer-facing context
+    return `【外部資料表：${config.sheetName}】\n（系統提示：資料查詢發生異常，請告知客戶稍後再試或聯繫工作人員，禁止捏造任何資料。）`
   }
 }
 
@@ -558,6 +594,30 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   const google = createGoogleGenerativeAI({ apiKey: geminiKey })
 
+  // Conversation text (customer turns) used for fuzzy identity verification
+  const convUserText = [
+    ...(history as { role: string; content: string }[]).filter(m => m.role === 'user').map(m => m.content),
+    message,
+  ].join('\n')
+
+  // Fuzzy name verifier: tolerant of CN↔EN romanization, surname order, spacing/case.
+  // Delegated to the LLM because phonetic romanization has too many rule variants.
+  const verifyName = async (storedName: string, conv: string): Promise<boolean> => {
+    if (!storedName.trim() || !conv.trim()) return false
+    try {
+      const { text } = await generateText({
+        model: google('gemini-2.5-flash'),
+        messages: [{
+          role: 'user',
+          content: `訂單登記的姓名是：「${storedName}」\n客人在對話中提供的內容：「${conv.slice(-600)}」\n\n請判斷：客人是否說出了與登記姓名屬於「同一個人」的姓名？\n比對規則（皆視為相符）：中文與英文拼音互換、發音相近即可（拼法不需完全一致，如 Chen=Chern、Lee=Li）、姓氏可在前或在後、大小寫與空格差異。\n只有當你有把握是同一人時回 YES；客人未提供姓名或無法確認時回 NO。只回一個詞：YES 或 NO。`,
+        }],
+      })
+      return /^\s*yes/i.test(text)
+    } catch {
+      return false  // fail closed — never reveal sensitive data on verifier error
+    }
+  }
+
   // ── Query external data sources ───────────────────────────────────────────
   const { data: sources } = await supabase
     .from('cs_data_sources')
@@ -618,7 +678,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
             }
           } catch { /* 忽略錯誤 */ }
         } else {
-          result = await queryGoogleSheet(sheetCfg, message)
+          result = await queryGoogleSheet(sheetCfg, message, { conversationText: convUserText, verifyName })
         }
       }
       if (result) sheetResults.push(result)
