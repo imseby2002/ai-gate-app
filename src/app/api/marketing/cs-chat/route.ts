@@ -299,7 +299,15 @@ function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlo
       }).join('\n\n')
     : `【通用預訂流程】\n收集順序：\n  1. 確認選定方案\n  2. 日期\n  3. 時段\n  4. 人數\n  5. 乘客資料（姓名/生日/身分證）\n  6. 聯絡電話`
 
-  return `你是專業客服兼預訂助理。嚴格遵守以下所有規則，不得自行發揮。
+  return `你是民宿的專屬業務顧問兼預訂助理，目標是讓每位詢問的客人都能找到最適合的房型、順利完成預訂，並留下美好體驗。
+
+【業務員核心思維——每則回覆都要體現，這是你最重要的行為準則】
+主動引導：回答完問題後，立即問下一步（「請問您有想好日期了嗎？」「要不要我幫您確認一下空房狀況？」），不讓對話停在問答上
+強調體驗：說出房間的特色、景觀、獨特賣點，不只是列價格和規格
+溫和緊迫感：有空房時說「目前您詢問的日期還有空房，假日通常訂很快，需要的話可以先幫您確認」
+化解猶豫：客人說「我再想想」或遲疑時，主動問「是日期還沒確定，還是價格上有疑慮？我來幫您解答」，不讓對話冷掉
+價格疑慮時：轉移到價值（含早餐、停車、景觀、在地體驗），讓客人看到划算之處
+語氣：親切自然如熟識的朋友，不是冷冰冰的制式機器人
 
 【絕對禁止清單——違反即為錯誤回覆】
 1. 禁止使用 Markdown（禁用 **、*、#、---、- 列點）
@@ -678,7 +686,36 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
         }
       }
       lines.push('\n判斷是否可訂：若客人詢問的日期與上方已預訂區間重疊，則無法接受；否則可接受。')
+      lines.push('若所詢問日期可訂，主動說「目前還有空房，假日訂單通常很快就滿，需要的話可以先幫您確認」以製造溫和緊迫感，促進決策。')
       propertyAvailSection = '\n\n' + lines.join('\n')
+    }
+  } catch { /* 不中斷主流程 */ }
+
+  // ── Top reviews for social proof ─────────────────────────────────────────
+  let reviewsSection = ''
+  try {
+    const { data: topReviews } = await supabase
+      .from('reviews')
+      .select('guest_name, platform, rating, comment')
+      .eq('user_id', user.id)
+      .not('comment', 'is', null)
+      .gte('rating', 8)
+      .order('rating', { ascending: false })
+      .limit(4)
+
+    if (topReviews?.length) {
+      const PLAT: Record<string, string> = {
+        booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
+        google: 'Google', trip_com: 'Trip.com', asiayo: 'AsiaYo',
+        tripadvisor: 'TripAdvisor', manual: '旅客',
+      }
+      const validReviews = topReviews.filter(r => r.comment && r.comment.length > 10)
+      if (validReviews.length > 0) {
+        reviewsSection = '\n\n【客人真實好評（社會證明）——客人猶豫或詢問品質時自然引用，勿一次全部列出】\n' +
+          validReviews.map(r =>
+            `${r.guest_name}（${PLAT[r.platform] ?? r.platform}）：「${r.comment!.slice(0, 80)}」⭐ ${r.rating}/10`
+          ).join('\n')
+      }
     }
   } catch { /* 不中斷主流程 */ }
 
@@ -733,7 +770,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     ? userSystemPrompt.trim()
     : (bookingFlowEnabled
         ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
-        : `你是一個專業的客服 AI 助理，代表公司提供售後支援。語氣親切專業，回答簡潔明瞭，不捏造資訊。`)
+        : `你是民宿的專屬業務顧問，目標是讓每位客人都能找到最適合的房型並順利預訂。語氣親切自然如朋友，主動引導客人表達需求，回答問題後立即問下一步，不讓對話冷場。客人猶豫時主動問原因並協助解決，有空房時製造溫和緊迫感。不確定的資訊請誠實說明，勿猜測。`)
 
   const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
 
@@ -783,7 +820,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${propertyAvailSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledgeBase.slice(0, 8000)}` : ''}${propertyAvailSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
