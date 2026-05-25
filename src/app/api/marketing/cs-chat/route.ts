@@ -4,6 +4,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { isSafeWebhookUrl } from '@/lib/ssrf'
+import { buildDeterministicQuote } from '@/lib/cs/quote'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -705,6 +706,19 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   const hasPricing = sources?.some(s => s.type === 'json_pricing' && sheetResults.some(r => r.includes(s.name)))
 
+  // Authoritative server-side quote (LLM extracts params, code does the math)
+  let deterministicQuoteSection = ''
+  if (bookingFlowEnabled && sources?.length) {
+    const pricingCfgs = sources.filter(s => s.type === 'json_pricing').map(s => s.config as PricingConfig)
+    if (pricingCfgs.length) {
+      const lc = convUserText.toLowerCase()
+      const cfg = pricingCfgs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase()))) ?? pricingCfgs[0]
+      const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+      const q = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+      if (q) deterministicQuoteSection = `\n\n${q}`
+    }
+  }
+
   // Detect numeric order number and sensitive-data intent
   const detectedOrderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
   const hasSheetSources = sources?.some(s => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.enabled)
@@ -924,7 +938,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({

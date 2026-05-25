@@ -10,6 +10,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { buildDeterministicQuote } from '@/lib/cs/quote'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -150,6 +151,7 @@ interface CsKnowledge {
   industry: string
   discountMaxPct: number
   discountGifts: string
+  pricingConfigs: PricingConfig[]
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -212,10 +214,12 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     .eq('type', 'json_pricing')
     .eq('enabled', true)
 
+  const pricingConfigs: PricingConfig[] = []
   if (pricingSources?.length) {
     const pricingLines: string[] = []
     for (const src of pricingSources) {
       const cfg = src.config as Record<string, unknown>
+      pricingConfigs.push(src.config as PricingConfig)
       pricingLines.push(`【定價資料：${src.name}】\n${JSON.stringify(cfg, null, 2)}`)
     }
     if (pricingLines.length) knowledgeParts.push(pricingLines.join('\n\n'))
@@ -264,6 +268,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     industry,
     discountMaxPct,
     discountGifts,
+    pricingConfigs,
   }
 }
 
@@ -713,6 +718,16 @@ async function getAIReply(
       ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
       : ''
 
+    // Authoritative server-side quote (LLM extracts params, code does the math)
+    let deterministicQuote = ''
+    if (knowledge.bookingFlowEnabled && knowledge.pricingConfigs.length) {
+      const lc = convUserText.toLowerCase()
+      const cfg = knowledge.pricingConfigs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase())))
+        ?? knowledge.pricingConfigs[0]
+      const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+      deterministicQuote = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+    }
+
     const salesContext = userId
       ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts)
       : ''
@@ -724,7 +739,7 @@ async function getAIReply(
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${salesContext}${externalDataSection}${bookingCompletion}`
+- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
 
     const messages = [
       ...history.slice(-10),
