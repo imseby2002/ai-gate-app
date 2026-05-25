@@ -15,8 +15,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,6 +33,7 @@ export async function POST(req: NextRequest) {
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ error: '請設定環境變數 RESEND_API_KEY' }, { status: 500 })
   }
+  const resend = new Resend(process.env.RESEND_API_KEY)
   if (recipients.length === 0) {
     return NextResponse.json({ error: '收件人清單為空' }, { status: 400 })
   }
