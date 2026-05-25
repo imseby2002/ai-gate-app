@@ -64,6 +64,20 @@ async function logCsMessage(userId: string, platform: string, customerId: string
   } catch { /* metrics logging must never break the reply flow */ }
 }
 
+// Atomic fixed-window rate check via the DB. Fails open so an un-applied migration
+// (or a transient DB error) never silences the bot.
+async function checkRateLimit(bucket: string, limit: number, windowSec: number): Promise<boolean> {
+  try {
+    const { data, error } = await getServiceClient().rpc('check_cs_rate_limit', {
+      p_bucket: bucket, p_limit: limit, p_window_seconds: windowSec,
+    })
+    if (error) return true
+    return data !== false
+  } catch {
+    return true
+  }
+}
+
 // Customer asking to talk to a real person
 const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務|專人/
 
@@ -97,6 +111,11 @@ async function replyToCustomer(
   userId: string, platform: string, customerId: string,
   knowledge: CsKnowledge, history: HistoryMsg[], text: string,
 ): Promise<string> {
+  // Rate limit (per-customer + per-tenant) before any LLM call — caps spam / API-cost abuse
+  const withinLimit = await checkRateLimit(`${userId}:${customerId}`, 30, 60)
+    && await checkRateLimit(`u:${userId}`, 600, 60)
+  if (!withinLimit) return ''  // over limit → drop silently
+
   // A human is already handling this customer → stay silent until the ticket is resolved
   if (await hasOpenHandoff(userId, customerId)) {
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, '')
