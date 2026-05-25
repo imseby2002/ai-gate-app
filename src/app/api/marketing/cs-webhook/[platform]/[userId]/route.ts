@@ -99,6 +99,8 @@ interface CsKnowledge {
   paymentInfo: string
   bookingFlows: BookingFlowDef[]
   industry: string
+  discountMaxPct: number
+  discountGifts: string
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -119,6 +121,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let bookingFlowEnabled = false
   let paymentInfo = ''
   let bookingFlows: BookingFlowDef[] = []
+  let discountMaxPct = 0
+  let discountGifts = ''
   const knowledgeParts: string[] = []
 
   // Find first campaign that has unit_data[12] with content
@@ -133,6 +137,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
       if (unit12.bookingFlowEnabled) bookingFlowEnabled = Boolean(unit12.bookingFlowEnabled)
       if (unit12.paymentInfo) paymentInfo = String(unit12.paymentInfo)
       if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
+      if (typeof unit12.discountMaxPct === 'number') discountMaxPct = unit12.discountMaxPct
+      if (unit12.discountGifts) discountGifts = String(unit12.discountGifts)
 
       // Direct text knowledge input
       if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
@@ -207,6 +213,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     paymentInfo,
     bookingFlows,
     industry,
+    discountMaxPct,
+    discountGifts,
   }
 }
 
@@ -376,6 +384,68 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
   if (!results.length) return ''
   const hasPricing = sources.some(s => s.type === 'json_pricing' && results.some(r => r.includes(s.name)))
   return `\n\n【外部資料查詢結果】\n${results.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
+}
+
+// ── Sales context: availability + urgency, closing toolkit, social proof ──────
+// Mirrors the cs-chat sandbox so live customers get the same business-minded behavior.
+async function buildSalesContext(userId: string, discountMaxPct: number, discountGifts: string): Promise<string> {
+  const supabase = getServiceClient()
+  const sections: string[] = []
+
+  // Property availability + gentle urgency (homestay; empty for other industries)
+  try {
+    const { data: properties } = await supabase
+      .from('properties').select('id, name, description, max_guests, base_price')
+      .eq('user_id', userId).eq('status', 'active')
+    if (properties?.length) {
+      const today = new Date().toISOString().slice(0, 10)
+      const future = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
+      const { data: bookings } = await supabase
+        .from('bookings').select('property_id, guest_name, check_in, check_out, status, num_guests')
+        .eq('user_id', userId).in('status', ['confirmed', 'pending'])
+        .gte('check_out', today).lte('check_in', future)
+      const lines = ['【房源與訂單狀況（系統即時資料，優先採用）】']
+      for (const p of properties) {
+        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}`)
+        const pB = (bookings ?? []).filter(b => b.property_id === p.id)
+        if (!pB.length) lines.push('  近90天無訂單，全部可訂')
+        else { lines.push('  已預訂日期：'); pB.forEach(b => lines.push(`    ${b.check_in} ~ ${b.check_out}（${b.guest_name}，${b.num_guests}人，${b.status}）`)) }
+      }
+      lines.push('\n判斷是否可訂：若客人詢問的日期與上方已預訂區間重疊，則無法接受；否則可接受。')
+      lines.push('若所詢問日期可訂，主動說「目前還有空房，假日訂單通常很快就滿，需要的話可以先幫您確認」以製造溫和緊迫感。')
+      sections.push(lines.join('\n'))
+    }
+  } catch { /* 不中斷主流程 */ }
+
+  // Closing toolkit (discounts / gifts)
+  const giftList = (discountGifts ?? '').split('\n').map(g => g.trim()).filter(Boolean)
+  if (discountMaxPct > 0 || giftList.length) {
+    const lines = ['【促成工具箱——客人猶豫或嫌貴時才使用，每次只說一項，不一次全列】']
+    lines.push('使用時機：客人說「有點貴」「我再想想」「考慮看看」等猶豫訊號時主動提出')
+    if (discountMaxPct > 0) lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額告知客人，客人確認則生效）`)
+    if (giftList.length) { lines.push('\n可贈送項目（從以下選一項，問客人偏好）：'); giftList.forEach(g => lines.push(`• ${g}`)) }
+    lines.push('\n優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
+    sections.push(lines.join('\n'))
+  }
+
+  // Reviews / social proof
+  try {
+    const { data: topReviews } = await supabase
+      .from('reviews').select('guest_name, platform, rating, comment')
+      .eq('user_id', userId).not('comment', 'is', null).gte('rating', 8)
+      .order('rating', { ascending: false }).limit(4)
+    const valid = (topReviews ?? []).filter(r => r.comment && r.comment.length > 10)
+    if (valid.length) {
+      const PLAT: Record<string, string> = {
+        booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb', google: 'Google',
+        trip_com: 'Trip.com', asiayo: 'AsiaYo', tripadvisor: 'TripAdvisor', manual: '旅客',
+      }
+      sections.push('【客人真實好評（社會證明）——客人猶豫或詢問品質時自然引用，勿一次全部列出】\n' +
+        valid.map(r => `${r.guest_name}（${PLAT[r.platform] ?? r.platform}）：「${r.comment!.slice(0, 80)}」⭐ ${r.rating}/10`).join('\n'))
+    }
+  } catch { /* 不中斷主流程 */ }
+
+  return sections.length ? '\n\n' + sections.join('\n\n') : ''
 }
 
 // ── Build booking flow system prompt ─────────────────────────────────────────
@@ -571,6 +641,10 @@ async function getAIReply(
       ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
       : ''
 
+    const salesContext = userId
+      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts)
+      : ''
+
     const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
@@ -578,7 +652,7 @@ async function getAIReply(
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${externalDataSection}${bookingCompletion}`
+- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${salesContext}${externalDataSection}${bookingCompletion}`
 
     const messages = [
       ...history.slice(-10),
