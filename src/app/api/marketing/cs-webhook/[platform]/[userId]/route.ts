@@ -590,6 +590,29 @@ function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[],
   return ''
 }
 
+// ── Strip leaked reasoning / Markdown the model emits despite instructions ────
+function cleanReply(raw: string): string {
+  let reply = raw
+    .replace(/^THOUGHT[\s\S]*?\n\n(?=\S)/i, '')
+    .replace(/^<think>[\s\S]*?<\/think>\s*/i, '')
+    .replace(/^\*\*思考\*\*[\s\S]*?\n\n(?=\S)/i, '')
+  // Discard leading non-Chinese reasoning paragraphs, but only when Chinese content
+  // exists (so a full English/Korean reply for a foreign customer is preserved).
+  const paragraphs = reply.split(/\n\n+/)
+  const CN_START = /^[一-鿿㐀-䶿！-￮　-〿]|^好的|^您好|^謝謝|^感謝|^請問|^抱歉|^很抱歉|^非常感謝/
+  const idx = paragraphs.findIndex(p => CN_START.test(p.trimStart()))
+  if (idx > 0) reply = paragraphs.slice(idx).join('\n\n')
+  return reply.trim()
+    .replace(/[^\n]*×\s*1\.\d+\s*=\s*[^\n]*/g, '')   // strip surcharge-multiplier lines
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\*\*(.+?)\*\*/g, '$1')                  // bold
+    .replace(/(?<!\d)\*(?!\d)(.+?)(?<!\d)\*(?!\d)/g, '$1') // italic (skip * next to digits)
+    .replace(/^[\*\-] /gm, '')                         // bullets
+    .replace(/^#{1,6} /gm, '')                         // headings
+    .replace(/---+/g, '')                              // hr
+    .trim()
+}
+
 // ── AI reply (直接呼叫 Gemini / Claude，不經過 cs-chat 路由) ─────────────────
 async function getAIReply(
   message: string,
@@ -673,7 +696,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return text || FALLBACK
+          return cleanReply(text) || FALLBACK
         } catch { /* fall through to Gemini */ }
       }
     }
@@ -683,7 +706,7 @@ async function getAIReply(
       system: systemPrompt,
       messages,
     })
-    return text || FALLBACK
+    return cleanReply(text) || FALLBACK
   } catch {
     return FALLBACK
   }
