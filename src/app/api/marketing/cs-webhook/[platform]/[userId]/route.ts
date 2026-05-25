@@ -67,11 +67,41 @@ async function logCsMessage(userId: string, platform: string, customerId: string
 // Customer asking to talk to a real person
 const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務|專人/
 
+// Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
+async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
+  try {
+    const { data } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('from_id', customerId)
+      .eq('intent', '人工客服請求')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    return !!data?.length
+  } catch {
+    return false  // fail open — never let a check error mute the bot for everyone
+  }
+}
+
+// Build the next history array; only record the assistant turn when the bot actually replied
+function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMsg[] {
+  const h: HistoryMsg[] = [...history, { role: 'user', content: text }]
+  if (reply) h.push({ role: 'assistant', content: reply })
+  return h
+}
+
 // Single entry point for every platform: human handoff → ticket, else AI reply; logs both.
+// Returns '' when the bot should stay silent (a human has taken over).
 async function replyToCustomer(
   userId: string, platform: string, customerId: string,
   knowledge: CsKnowledge, history: HistoryMsg[], text: string,
 ): Promise<string> {
+  // A human is already handling this customer → stay silent until the ticket is resolved
+  if (await hasOpenHandoff(userId, customerId)) {
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, '')
+    return ''
+  }
   if (HUMAN_ESCALATION_RE.test(text)) {
     try {
       await getServiceClient().from('cs_tickets').insert({
@@ -810,8 +840,8 @@ export async function POST(
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
       const history = await loadHistory(userId, customerId)
       const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text)
-      if (token && replyToken) await replyLine(replyToken, reply, token)
-      await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+      if (reply && token && replyToken) await replyLine(replyToken, reply, token)
+      await saveHistory(userId, customerId, withTurn(history, text, reply))
     }
     return NextResponse.json({ ok: true })
   }
@@ -843,8 +873,8 @@ export async function POST(
       const to: string   = msg.from
       const history = await loadHistory(userId, to)
       const reply = await replyToCustomer(userId, platform, to, knowledge, history, text)
-      if (token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
-      await saveHistory(userId, to, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+      if (reply && token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
+      await saveHistory(userId, to, withTurn(history, text, reply))
     }
     return NextResponse.json({ ok: true })
   }
@@ -950,8 +980,8 @@ export async function POST(
 
         // 1. AI auto-reply to customer
         const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text)
-        await replyTelegram(chatId, reply, botToken)
-        await saveHistory(userId, customerId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+        if (reply) await replyTelegram(chatId, reply, botToken)
+        await saveHistory(userId, customerId, withTurn(history, text, reply))
 
         // 2. Forward to admin if configured
         if (adminChatId) {
@@ -982,14 +1012,14 @@ export async function POST(
       if (text && senderId) {
         const history = await loadHistory(userId, senderId)
         const reply = await replyToCustomer(userId, platform, senderId, knowledge, history, text)
-        if (oaToken) {
+        if (reply && oaToken) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', access_token: oaToken },
             body: JSON.stringify({ recipient: { user_id: senderId }, message: { text: reply } }),
           })
         }
-        await saveHistory(userId, senderId, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+        await saveHistory(userId, senderId, withTurn(history, text, reply))
       }
     }
     return NextResponse.json({ ok: true })
@@ -1020,7 +1050,8 @@ export async function POST(
     if (text && from && to) {
       const history = await loadHistory(userId, from)
       const reply = await replyToCustomer(userId, 'wechat', from, knowledge, history, text)
-      await saveHistory(userId, from, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+      await saveHistory(userId, from, withTurn(history, text, reply))
+      if (!reply) return new NextResponse('success')  // human handling → no passive reply
       const safeReply = reply.replace(/]]>/g, ']]&gt;')  // prevent CDATA breakout
       const xmlReply = `<xml>
 <ToUserName><![CDATA[${from}]]></ToUserName>
@@ -1052,14 +1083,14 @@ export async function POST(
       // Reply via Bridge
       const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
       const bridgeKey = process.env.WHATSAPP_BRIDGE_API_KEY ?? ''
-      if (bridgeUrl && bridgeKey) {
+      if (reply && bridgeUrl && bridgeKey) {
         await fetch(`${bridgeUrl}/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': bridgeKey },
           body: JSON.stringify({ userId, to: fromJid, text: reply }),
         }).catch(() => {})
       }
-      await saveHistory(userId, fromJid, [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }])
+      await saveHistory(userId, fromJid, withTurn(history, text, reply))
     }
     return NextResponse.json({ ok: true })
   }
