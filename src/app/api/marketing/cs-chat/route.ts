@@ -788,7 +788,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   // ── Discount authority closing toolkit ───────────────────────────────────
   let closingToolkitSection = ''
   const hasDiscount = discountMaxPct > 0
-  const giftList = discountGifts.split('\n').map(g => g.trim()).filter(Boolean)
+  const giftList: string[] = String(discountGifts ?? '').split('\n').map((g: string) => g.trim()).filter(Boolean)
   const hasGifts = giftList.length > 0
 
   if (hasDiscount || hasGifts) {
