@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
+import { isSafeWebhookUrl } from '@/lib/ssrf'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -583,6 +584,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
             body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
           })
         } else {
+          if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
           return fetch(wh.value.trim(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -651,7 +653,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   // 偵測前端送來的確認封包，POST 到 Apps Script
   if (breakfastCfg?.webhookUrl) {
     const confirmMatch = message.match(/^##BREAKFAST_ORDER##(.+)$/)
-    if (confirmMatch) {
+    if (confirmMatch && isSafeWebhookUrl(breakfastCfg.webhookUrl)) {
       try {
         await fetch(breakfastCfg.webhookUrl, {
           method: 'POST',
