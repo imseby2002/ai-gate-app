@@ -50,6 +50,7 @@ export default function PublicBookingPage({ params }: { params: Promise<{ slug: 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [unavailable, setUnavailable] = useState<Set<string>>(new Set())
+  const [serverQuote, setServerQuote] = useState<{ total: number; currency: string; nights: number; extraGuestFee: number } | null>(null)
   const [confirmation, setConfirmation] = useState<
     { code: string; total: number | null; roomName: string; checkIn: string; checkOut: string; guests: number } | null
   >(null)
@@ -84,12 +85,25 @@ export default function PublicBookingPage({ params }: { params: Promise<{ slug: 
   }
 
   const n = nights(form.check_in, form.check_out)
-  const basePrice = selectedProp ? calcPrice(selectedProp, n, form.num_guests) : null
+  // 顯示價以伺服器 Plan A 報價為準（每日價+規則+加人費）；尚未載入時用近似值
+  const basePrice = serverQuote ? serverQuote.total : (selectedProp ? calcPrice(selectedProp, n, form.num_guests) : null)
   const finalPrice = basePrice !== null ? Math.max(0, basePrice - (promoValid?.discount ?? 0)) : null
   const datesInvalid = !!(form.check_in && form.check_out && new Date(form.check_out) <= new Date(form.check_in))
   const dateConflict = rangeConflict(form.check_in, form.check_out)
   const dateBlocked = datesInvalid || dateConflict
   const overCapacity = !!(selectedProp?.max_guests && form.num_guests > selectedProp.max_guests && !selectedProp.extra_guest_fee)
+
+  // 取伺服器權威報價（Plan A）作為顯示與送出依據
+  useEffect(() => {
+    const ci = form.check_in, co = form.check_out
+    if (!selectedProp || !ci || !co || new Date(co) <= new Date(ci)) { setServerQuote(null); return }
+    let cancelled = false
+    fetch(`/api/book/${slug}/quote?property_id=${selectedProp.id}&check_in=${ci}&check_out=${co}&num_guests=${form.num_guests}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setServerQuote(d.quote ?? null) })
+      .catch(() => { if (!cancelled) setServerQuote(null) })
+    return () => { cancelled = true }
+  }, [selectedProp, form.check_in, form.check_out, form.num_guests, slug])
 
   async function checkPromo() {
     if (!form.promo_code) return

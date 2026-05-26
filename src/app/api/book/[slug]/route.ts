@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { computeStayPrice } from '@/lib/booking/pricing'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -65,16 +66,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     (new Date(check_out).getTime() - new Date(check_in).getTime()) / 86400000
   ))
 
-  // Pricing (server-side; never trust a client-supplied total)
+  // Pricing — authoritative server-side engine (每日價 + 規則 + 加人費)
   let totalPrice: number | null = null
   let promoDiscount: number | null = null
   if (property_id) {
-    const { data: prop } = await admin.from('properties').select('base_price, extra_guest_fee, max_guests').eq('id', property_id).single()
-    if (prop?.base_price) {
-      const base = prop.base_price * nights
-      const extra = (prop.extra_guest_fee ?? 0) * Math.max(0, guests - (prop.max_guests ?? 2)) * nights
-      totalPrice = base + extra
-    }
+    const quote = await computeStayPrice(admin, profile.user_id, property_id, check_in, check_out, guests)
+    if (quote) totalPrice = quote.total
   }
 
   // Validate promo (server-side). used_count is incremented only when the host
