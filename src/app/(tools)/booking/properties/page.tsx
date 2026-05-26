@@ -109,6 +109,10 @@ export default function PropertiesPage() {
     })
   }
 
+  function setCover(url: string) {
+    setForm(f => ({ ...f, images: [url, ...f.images.filter(u => u !== url)] }))
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -352,8 +356,13 @@ export default function PropertiesPage() {
                     {form.images.map((url, i) => (
                       <div key={url} className="relative aspect-square rounded-xl overflow-hidden border group">
                         <img src={url} alt={`photo-${i}`} className="w-full h-full object-cover" />
-                        {i === 0 && (
+                        {i === 0 ? (
                           <span className="absolute top-1 left-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">封面</span>
+                        ) : (
+                          <button type="button" onClick={() => setCover(url)}
+                            className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/60 text-white py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            設為封面
+                          </button>
                         )}
                         <button onClick={() => removePhoto(url)}
                           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
