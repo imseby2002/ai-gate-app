@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Star, Trash2, MessageSquare, Loader2 } from 'lucide-react'
+import { Star, Trash2, MessageSquare, Loader2, Plus } from 'lucide-react'
 
 interface Review {
   id: string; user_id: string; booking_id: string | null; property_id: string | null
@@ -43,6 +43,9 @@ export default function ReviewsPage() {
   const [replyText, setReplyText] = useState('')
   const [saving, setSaving]     = useState(false)
   const [filterPlatform, setFilterPlatform] = useState('')
+  const [addModal, setAddModal] = useState(false)
+  const [addForm, setAddForm]   = useState({ guest_name: '', platform: 'manual', rating: 10, comment: '', review_date: '' })
+  const [adding, setAdding]     = useState(false)
 
   useEffect(() => {
     fetch('/api/booking/reviews').then(r => r.json())
@@ -71,6 +74,26 @@ export default function ReviewsPage() {
     } finally { setSaving(false) }
   }
 
+  async function addReview() {
+    if (!addForm.guest_name.trim()) return
+    setAdding(true)
+    try {
+      const res = await fetch('/api/booking/reviews', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...addForm,
+          review_date: addForm.review_date || new Date().toISOString().slice(0, 10),
+        }),
+      })
+      const d = await res.json()
+      if (d.review) {
+        setReviews(prev => [d.review, ...prev])
+        setAddModal(false)
+        setAddForm({ guest_name: '', platform: 'manual', rating: 10, comment: '', review_date: '' })
+      }
+    } finally { setAdding(false) }
+  }
+
   async function deleteReview(id: string) {
     if (!confirm('確定要刪除這則評價？')) return
     await fetch('/api/booking/reviews', {
@@ -91,13 +114,19 @@ export default function ReviewsPage() {
 
   return (
     <div className="p-4 md:p-6 pb-16 max-w-4xl space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">評價管理</h1>
-        <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-          <span>共 {reviews.length} 則評價</span>
-          {avgRating && <span className="flex items-center gap-1"><Star className="h-3 w-3 text-amber-400 fill-amber-400" /> 平均 {avgRating} 分</span>}
-          <span>回覆率 {replyRate}%</span>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">評價管理</h1>
+          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+            <span>共 {reviews.length} 則評價</span>
+            {avgRating && <span className="flex items-center gap-1"><Star className="h-3 w-3 text-amber-400 fill-amber-400" /> 平均 {avgRating} 分</span>}
+            <span>回覆率 {replyRate}%</span>
+          </div>
         </div>
+        <button onClick={() => setAddModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+          <Plus className="h-4 w-4" /> 新增評價
+        </button>
       </div>
 
       {/* Platform filter */}
@@ -187,6 +216,7 @@ export default function ReviewsPage() {
                   onChange={e => setReplyText(e.target.value)}
                   placeholder="感謝您的評價…"
                   className="w-full text-sm border rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <p className="text-[11px] text-gray-400">此回覆僅儲存在本系統，不會自動張貼回 Booking.com／Agoda 等平台。</p>
               </div>
             </div>
             <div className="shrink-0 flex gap-2 px-5 py-4 border-t">
@@ -196,6 +226,59 @@ export default function ReviewsPage() {
                 className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
                 {saving ? '儲存中…' : '送出回覆'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Review Modal */}
+      {addModal && createPortal(
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
+          onClick={e => { if (e.target === e.currentTarget) setAddModal(false) }}>
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto p-5 space-y-3">
+            <h3 className="font-bold text-gray-900">新增評價</h3>
+            <p className="text-xs text-gray-500">手動記錄來自各平台或私訊的旅客評價。</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">旅客姓名 *</label>
+                <input value={addForm.guest_name} onChange={e => setAddForm(f => ({ ...f, guest_name: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">來源平台</label>
+                <select value={addForm.platform} onChange={e => setAddForm(f => ({ ...f, platform: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  {PLATFORMS.map(([p, l]) => <option key={p} value={p}>{l}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">評分（0–10）</label>
+                <input type="number" min={0} max={10} value={addForm.rating}
+                  onChange={e => setAddForm(f => ({ ...f, rating: Math.max(0, Math.min(10, Number(e.target.value))) }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">評價日期</label>
+                <input type="date" value={addForm.review_date}
+                  onChange={e => setAddForm(f => ({ ...f, review_date: e.target.value }))}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">評價內容</label>
+              <textarea value={addForm.comment} rows={4}
+                onChange={e => setAddForm(f => ({ ...f, comment: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setAddModal(false)}
+                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button onClick={addReview} disabled={adding || !addForm.guest_name.trim()}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {adding ? '新增中…' : '新增評價'}
               </button>
             </div>
           </div>
