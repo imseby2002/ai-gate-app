@@ -20,10 +20,20 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, status } = await req.json()
+
+  // Detect a first-time transition into 'confirmed' so we count the promo exactly once
+  const { data: existing } = await supabase.from('public_bookings')
+    .select('status, promo_code').eq('id', id).eq('host_user_id', user.id).single()
+
   const { data, error } = await supabase.from('public_bookings')
     .update({ status }).eq('id', id).eq('host_user_id', user.id).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (status === 'confirmed' && existing && existing.status !== 'confirmed' && existing.promo_code) {
+    await supabase.rpc('increment_promo_use', { p_user_id: user.id, p_code: existing.promo_code })
+  }
+
   return NextResponse.json({ booking: data })
 }
 
