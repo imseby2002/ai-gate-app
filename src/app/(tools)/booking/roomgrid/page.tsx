@@ -128,9 +128,13 @@ export default function RoomGridPage() {
   const selectionHasAvailable = selected.some(s => cellState(s.propId, s.date) === 'available')
 
   const selectedProps = [...new Set(selected.map(s => s.propId))]
-  const bookingQueryStr = selectedProps.length === 1
-    ? `?property_id=${selectedProps[0]}&check_in=${selected.map(s=>s.date).sort()[0]}`
-    : ''
+  const bookingQueryStr = (() => {
+    if (selectedProps.length !== 1) return ''
+    const ds = selected.map(s => s.date).sort()
+    const checkIn = ds[0]
+    const checkOut = addDays(ds[ds.length - 1], 1)  // 退房為最後一晚的隔天
+    return `?property_id=${selectedProps[0]}&check_in=${checkIn}&check_out=${checkOut}`
+  })()
 
   const today = toDateStr(new Date())
   const dayLabels = ['日','一','二','三','四','五','六']
