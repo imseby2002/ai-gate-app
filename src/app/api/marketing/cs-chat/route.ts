@@ -5,6 +5,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
+import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -706,16 +707,22 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   const hasPricing = sources?.some(s => s.type === 'json_pricing' && sheetResults.some(r => r.includes(s.name)))
 
-  // Authoritative server-side quote (LLM extracts params, code does the math)
+  // Authoritative server-side quote. Prefer the booking module (Plan A) so bot quotes
+  // match online booking; fall back to json_pricing config if no property matches.
   let deterministicQuoteSection = ''
-  if (bookingFlowEnabled && sources?.length) {
-    const pricingCfgs = sources.filter(s => s.type === 'json_pricing').map(s => s.config as PricingConfig)
-    if (pricingCfgs.length) {
-      const lc = convUserText.toLowerCase()
-      const cfg = pricingCfgs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase()))) ?? pricingCfgs[0]
-      const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
-      const q = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
-      if (q) deterministicQuoteSection = `\n\n${q}`
+  if (bookingFlowEnabled) {
+    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+    const bq = await buildBookingModuleQuote(supabase, user.id, google('gemini-2.5-flash'), convUserText, todayIso)
+    if (bq) {
+      deterministicQuoteSection = `\n\n${bq}`
+    } else if (sources?.length) {
+      const pricingCfgs = sources.filter(s => s.type === 'json_pricing').map(s => s.config as PricingConfig)
+      if (pricingCfgs.length) {
+        const lc = convUserText.toLowerCase()
+        const cfg = pricingCfgs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase()))) ?? pricingCfgs[0]
+        const q = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+        if (q) deterministicQuoteSection = `\n\n${q}`
+      }
     }
   }
 

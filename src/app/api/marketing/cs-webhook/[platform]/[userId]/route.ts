@@ -11,6 +11,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
+import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -718,14 +719,20 @@ async function getAIReply(
       ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
       : ''
 
-    // Authoritative server-side quote (LLM extracts params, code does the math)
+    // Authoritative server-side quote. Prefer booking module (Plan A) so bot quotes
+    // match online booking; fall back to json_pricing config when no property matches.
     let deterministicQuote = ''
-    if (knowledge.bookingFlowEnabled && knowledge.pricingConfigs.length) {
-      const lc = convUserText.toLowerCase()
-      const cfg = knowledge.pricingConfigs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase())))
-        ?? knowledge.pricingConfigs[0]
+    if (knowledge.bookingFlowEnabled && userId) {
       const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
-      deterministicQuote = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+      const bq = await buildBookingModuleQuote(getServiceClient(), userId, google('gemini-2.5-flash'), convUserText, todayIso)
+      if (bq) {
+        deterministicQuote = bq
+      } else if (knowledge.pricingConfigs.length) {
+        const lc = convUserText.toLowerCase()
+        const cfg = knowledge.pricingConfigs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase())))
+          ?? knowledge.pricingConfigs[0]
+        deterministicQuote = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+      }
     }
 
     const salesContext = userId
