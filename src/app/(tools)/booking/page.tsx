@@ -27,18 +27,19 @@ export default function BookingDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [pendingOnline, setPendingOnline] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   const today = new Date().toISOString().slice(0, 10)
   const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/booking/bookings?from=${today}&to=${in7}&limit=200`).then(r => r.json()),
-      fetch('/api/booking/public-bookings').then(r => r.json()),
+      fetch(`/api/booking/bookings?from=${today}&to=${in7}&limit=200`).then(r => { if (!r.ok) throw new Error(); return r.json() }),
+      fetch('/api/booking/public-bookings').then(r => { if (!r.ok) throw new Error(); return r.json() }),
     ]).then(([main, pub]) => {
       setBookings(main.bookings ?? [])
       setPendingOnline((pub.bookings ?? []).filter((b: { status: string }) => b.status === 'pending').length)
-    }).finally(() => setLoading(false))
+    }).catch(() => setLoadError(true)).finally(() => setLoading(false))
   }, [today, in7])
 
   const checkingInToday  = bookings.filter(b => b.check_in === today && b.status === 'confirmed')
@@ -61,6 +62,12 @@ export default function BookingDashboard() {
           {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
         </p>
       </div>
+
+      {loadError && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-600 text-sm rounded-lg px-3 py-2">
+          資料載入失敗，請重新整理頁面或稍後再試。
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

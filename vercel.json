@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/release-stale-bookings",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/booking-reminders",
+      "schedule": "0 23 * * *"
     }
   ]
 }
