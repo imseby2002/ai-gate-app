@@ -33,6 +33,7 @@ export default function RoomGridPage() {
   const [selected, setSelected] = useState<{ propId: string; date: string }[]>([])
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [dragBk, setDragBk] = useState<Booking | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -67,6 +68,33 @@ export default function RoomGridPage() {
 
   function isSelected(propId: string, date: string) {
     return selected.some(s => s.propId === propId && s.date === date)
+  }
+
+  // 拖拉換房/改期：把整筆訂單移到新房型，入住日對齊放下的日期，保留原住宿晚數
+  async function moveBooking(bk: Booking, newPropId: string, newDate: string) {
+    const nightsCount = Math.max(1, Math.round((new Date(bk.check_out).getTime() - new Date(bk.check_in).getTime()) / 86400000))
+    const newCheckIn = newDate
+    const newCheckOut = addDays(newDate, nightsCount)
+    if (newPropId === bk.property_id && newCheckIn === bk.check_in) return
+    // 目標區間是否被占用（排除自己）
+    for (let i = 0; i < nightsCount; i++) {
+      const d = addDays(newDate, i)
+      const occupied = (data?.bookings ?? []).some(o =>
+        o.id !== bk.id && o.property_id === newPropId && ['pending', 'confirmed'].includes(o.status) && o.check_in <= d && o.check_out > d)
+        || (data?.blocked ?? []).some(b => b.property_id === newPropId && b.date === d)
+      if (occupied) { setMsg('目標日期已被占用，無法移動'); setTimeout(() => setMsg(null), 2500); return }
+    }
+    if (!window.confirm(`將「${bk.guest_name ?? '訂單'}」移到 ${newCheckIn} ~ ${newCheckOut}？`)) return
+    setSaving(true)
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: bk.id, property_id: newPropId, check_in: newCheckIn, check_out: newCheckOut }),
+      })
+      if (!res.ok) { setMsg('改期失敗，請重試'); setTimeout(() => setMsg(null), 2500); return }
+      setMsg('已完成換房/改期'); setTimeout(() => setMsg(null), 2000)
+      load()
+    } finally { setSaving(false) }
   }
 
   function toggleCell(propId: string, date: string, state: CellState) {
@@ -159,6 +187,7 @@ export default function RoomGridPage() {
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-white border" /> 可訂</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-cyan-200" /> 已訂</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-300" /> 關閉</span>
+          <span className="hidden md:inline text-gray-400">· 拖曳訂單可換房／改期</span>
         </div>
       </div>
 
@@ -208,20 +237,27 @@ export default function RoomGridPage() {
                     const sel   = isSelected(prop.id, date)
                     const isFirstDay = bk ? bk.check_in === date : false
 
+                    const isDropTarget = state === 'available' && !!dragBk
                     let cellCls = 'border border-gray-200 px-1 py-1 text-center cursor-pointer transition-colors select-none h-12 align-top '
                     if (sel)             cellCls += 'ring-2 ring-indigo-500 ring-inset '
-                    if (state === 'booked')   cellCls += 'bg-cyan-100 cursor-default '
+                    if (state === 'booked')   cellCls += 'bg-cyan-100 '
                     else if (state === 'blocked') cellCls += 'bg-gray-200 '
-                    else                          cellCls += 'hover:bg-indigo-50 '
+                    else                          cellCls += isDropTarget ? 'bg-emerald-50 hover:bg-emerald-100 ' : 'hover:bg-indigo-50 '
 
                     return (
                       <td key={date} className={cellCls}
-                        onClick={() => toggleCell(prop.id, date, state)}>
+                        onClick={() => toggleCell(prop.id, date, state)}
+                        onDragOver={isDropTarget ? (e => e.preventDefault()) : undefined}
+                        onDrop={isDropTarget ? (() => { if (dragBk) moveBooking(dragBk, prop.id, date); setDragBk(null) }) : undefined}>
                         {state === 'booked' && bk ? (
                           isFirstDay ? (
                             <Link href={`/booking/bookings/${bk.id}`}
+                              draggable
+                              onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; setDragBk(bk) }}
+                              onDragEnd={() => setDragBk(null)}
                               onClick={e => e.stopPropagation()}
-                              className="block truncate text-cyan-800 font-medium text-xs leading-tight hover:underline px-0.5">
+                              className="block truncate text-cyan-800 font-medium text-xs leading-tight hover:underline px-0.5 cursor-move"
+                              title="拖拉可換房／改期">
                               {bk.guest_name ?? '—'}
                             </Link>
                           ) : null
