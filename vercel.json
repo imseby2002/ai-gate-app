@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/email-sync",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/release-stale-bookings",
+      "schedule": "0 4 * * *"
     }
   ]
 }
