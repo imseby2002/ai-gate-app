@@ -1,9 +1,23 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { ArrowRight, Zap } from 'lucide-react'
-import { SYSTEM_LIST } from '@/lib/systems'
+import { createClient } from '@/lib/supabase/server'
+import { SYSTEM_LIST, SYSTEMS, SCOPE_COOKIE, isSystemKey } from '@/lib/systems'
 
-// 系統選擇頁：每個系統各自獨立登入/註冊入口
-export default function LoginChooser() {
+export const dynamic = 'force-dynamic'
+
+// 系統選擇頁（全功能主登入頁）：僅供管理者與未登入者；已登入的一般使用者導回其功能首頁
+export default async function LoginChooser() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
+    if (profile?.user_type !== 'admin') {
+      const scope = (await cookies()).get(SCOPE_COOKIE)?.value
+      redirect(isSystemKey(scope) ? SYSTEMS[scope].home : '/dashboard')
+    }
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-10">
       <div className="w-full max-w-md">
