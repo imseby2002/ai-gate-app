@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { SYSTEMS, SCOPE_COOKIE, isSystemKey, isPathAllowedForScope, systemForPath } from '@/lib/systems'
 
 
 export async function middleware(request: NextRequest) {
@@ -53,13 +54,18 @@ export async function middleware(request: NextRequest) {
 
     if (!user && !isPublic) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/login'
+      // 導向該路徑所屬系統的登入頁；無對應則導向系統選擇頁
+      const sys = systemForPath(pathname)
+      redirectUrl.pathname = sys ? `/login/${sys}` : '/login'
+      redirectUrl.search = ''
       redirectUrl.searchParams.set('redirectedFrom', pathname)
       return NextResponse.redirect(redirectUrl)
     }
 
-    // Admin + module route protection (single profile fetch covers both)
+    // 系統範圍鎖定：從某系統登入後，session 被限定在該系統（管理員不受限）
+    const scope = request.cookies.get(SCOPE_COOKIE)?.value
     const needsProfileCheck =
+      (user && isSystemKey(scope)) ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
@@ -73,8 +79,15 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single()
 
+      const isAdmin = profile?.user_type === 'admin'
+
+      // Scope guard — 非管理員、且帶 scope cookie 時，限制只能存取該系統路徑
+      if (!isAdmin && isSystemKey(scope) && !isPathAllowedForScope(scope, pathname)) {
+        return NextResponse.redirect(new URL(SYSTEMS[scope].home, request.url))
+      }
+
       // Admin guard
-      if (pathname.startsWith('/admin') && profile?.user_type !== 'admin') {
+      if (pathname.startsWith('/admin') && !isAdmin) {
         return NextResponse.redirect(new URL('/dashboard', request.url))
       }
 
