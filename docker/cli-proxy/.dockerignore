@@ -1,0 +1,4 @@
+# 不要把 OAuth 憑證/日誌打進 image（憑證走 Fly volume）
+auths/
+logs/
+.env

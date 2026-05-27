@@ -12,6 +12,7 @@ services:
       - "54545:54545" # Claude OAuth callback
       - "51121:51121" # Antigravity OAuth callback
     volumes:
+      # 先 cp config.example.yaml config.yaml 並填入金鑰（config.yaml 已被 git 忽略）
       - ./config.yaml:/CLIProxyAPI/config.yaml
       - ./auths:/root/.cli-proxy-api
       - ./logs:/CLIProxyAPI/logs

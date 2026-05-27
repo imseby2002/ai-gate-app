@@ -35,6 +35,11 @@ yarn-error.log*
 !.env.example
 !**/.env.example
 
+# CLI Proxy 真實設定（含金鑰）— 只提交 config.example.yaml
+docker/cli-proxy/config.yaml
+docker/cli-proxy/auths/
+docker/cli-proxy/logs/
+
 # vercel
 .vercel
 

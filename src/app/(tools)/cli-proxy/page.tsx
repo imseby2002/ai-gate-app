@@ -168,7 +168,7 @@ export default function CliProxyPage() {
           <div className="space-y-2 text-sm text-slate-600">
             {[
               { n: '1', text: '安裝 flyctl 並登入：fly auth login' },
-              { n: '2', text: '編輯 docker/cli-proxy/config.yaml：填入 api-keys 與管理密鑰（真實金鑰勿提交 git）' },
+              { n: '2', text: '複製 config.example.yaml 為 config.yaml，填入 api-keys 與管理密鑰（config.yaml 已被 git 忽略，不會外洩）' },
               { n: '3', text: 'cd docker/cli-proxy，視需要改 fly.toml 的 app 名稱與 region' },
               { n: '4', text: '建立 app（不部署）：fly launch --no-deploy --copy-config' },
               { n: '5', text: '建立持久化磁碟：fly volumes create cliproxy_data --size 1' },
