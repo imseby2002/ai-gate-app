@@ -757,7 +757,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   try {
     const { data: properties } = await supabase
       .from('properties')
-      .select('id, name, description, max_guests, base_price')
+      .select('id, name, description, max_guests, base_price, extra_guest_fee, dynamic_pricing_enabled')
       .eq('user_id', user.id)
       .eq('status', 'active')
 
@@ -773,9 +773,11 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
         .gte('check_out', today)
         .lte('check_in', future)
 
-      const lines: string[] = ['【房源與訂單狀況（系統即時資料，優先採用）】']
+      const lines: string[] = ['【房源與價目／訂單狀況（系統即時資料，報價一律以此為準）】']
       for (const p of properties) {
-        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}`)
+        const feeNote = p.extra_guest_fee ? `，超過加收 $${Number(p.extra_guest_fee).toLocaleString()}/人/晚` : ''
+        const dynNote = p.dynamic_pricing_enabled ? '（假日/特定日期價格另計，請客人提供入住日期以精算實際房價）' : ''
+        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}/晚${feeNote}${dynNote}`)
         const pBookings = (bookings ?? []).filter(b => b.property_id === p.id)
         if (pBookings.length === 0) {
           lines.push(`  近90天無訂單，全部可訂`)
