@@ -21,6 +21,33 @@ function getServiceClient() {
   )
 }
 
+// ── 業務顧問 / 客戶認識 / 問價次數 ────────────────────────────────────────────────
+const PRICE_RE = /價格|價錢|價位|多少錢|費用|報價|怎麼算|多少|預算|划算|便宜|折扣|優惠|price|cost|how much|rate|quote|budget|discount/i
+
+type CsCustomerRow = {
+  name: string | null
+  summary: string | null
+  stage: string | null
+  price_ask_count: number
+  message_count: number
+}
+
+// 建立「銷售冠軍」業務指引（含第一次／第二次問價的不同處理、認得回頭客）
+function buildSellSection(cust: CsCustomerRow | null, convoPriceAsks: number, isPriceAskNow: boolean): string {
+  const lines = [
+    '\n\n【業務顧問模式——像銷售冠軍一樣對話】',
+    '你不只是客服，更是頂尖業務顧問：先同理 → 用提問釐清真正需求 → 把產品特點翻成「對這位客戶的好處」→ 描繪他選擇後的畫面 → 主動推進到下一步（用二選一收尾）。可運用社會證明、誠實的稀缺與互惠，但絕不施壓、不誇大、不欺騙。',
+  ]
+  if (cust?.name) lines.push(`客戶稱呼：${cust.name}。請自然地稱呼對方，展現你記得他。`)
+  if (cust?.summary) lines.push(`這位是回頭客，先前洽詢摘要：「${cust.summary}」。請延續脈絡、不要重問已知資訊。`)
+  if (isPriceAskNow) {
+    if (convoPriceAsks <= 1) lines.push('【價格詢問——第 1 次】不要只丟一個數字：報價同時說明「包含什麼、為什麼值得」，並順勢回問 1 個關鍵需求（日期／人數／用途）以便推薦最適方案。')
+    else if (convoPriceAsks === 2) lines.push('【價格詢問——第 2 次】這是明確的購買訊號或價格敏感。先同理預算考量，問出他真正在比較或猶豫的點，主動提供誘因（若有折扣／贈品就善用），並用二選一推進成交（例：「您想訂週五還是週六？」）。')
+    else lines.push('【價格詢問——第 3 次（含）以上】客戶可能卡在價格。給出你能提供的最佳方案或小讓步並請求承諾；若仍猶豫，提議由專員親自跟進，不要無限重複報價。')
+  }
+  return lines.join('\n')
+}
+
 // ── Load credentials from DB ──────────────────────────────────────────────────
 async function loadCredentials(userId: string, platform: string): Promise<Record<string, string>> {
   const supabase = getServiceClient()
@@ -135,8 +162,39 @@ async function replyToCustomer(
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
     return reply
   }
-  const reply = await getAIReply(text, knowledge, history, userId)
+  // 認識客戶 + 問價次數 → 業務指引；回覆後更新追蹤資料
+  const convoPriceAsks = [...history.filter(m => m.role === 'user').map(m => m.content), text].filter(t => PRICE_RE.test(t)).length
+  const isPriceAskNow = PRICE_RE.test(text)
+  let cust: CsCustomerRow | null = null
+  try {
+    const { data } = await getServiceClient()
+      .from('cs_customers')
+      .select('name, summary, stage, price_ask_count, message_count')
+      .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', knowledge.industry)
+      .single()
+    cust = (data as CsCustomerRow | null) ?? null
+  } catch { /* 表可能尚未建立 */ }
+
+  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow))
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+
+  try {
+    let stage = cust?.stage ?? 'new'
+    if (convoPriceAsks >= 2) stage = 'negotiating'
+    else if (isPriceAskNow) stage = 'quoted'
+    else if (stage === 'new') stage = 'inquiring'
+    await getServiceClient().from('cs_customers').upsert({
+      user_id: userId, platform, from_id: customerId, industry: knowledge.industry,
+      name: cust?.name ?? null,
+      stage,
+      price_ask_count: (cust?.price_ask_count ?? 0) + (isPriceAskNow ? 1 : 0),
+      message_count: (cust?.message_count ?? 0) + 1,
+      summary: cust?.summary ?? null,
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,platform,from_id,industry' })
+  } catch { /* 表可能尚未建立 */ }
+
   return reply
 }
 
@@ -450,7 +508,7 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
   // Property availability + gentle urgency (homestay; empty for other industries)
   try {
     const { data: properties } = await supabase
-      .from('properties').select('id, name, description, max_guests, base_price')
+      .from('properties').select('id, name, description, max_guests, base_price, extra_guest_fee, dynamic_pricing_enabled')
       .eq('user_id', userId).eq('status', 'active')
     if (properties?.length) {
       const today = new Date().toISOString().slice(0, 10)
@@ -459,9 +517,11 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
         .from('bookings').select('property_id, guest_name, check_in, check_out, status, num_guests')
         .eq('user_id', userId).in('status', ['confirmed', 'pending'])
         .gte('check_out', today).lte('check_in', future)
-      const lines = ['【房源與訂單狀況（系統即時資料，優先採用）】']
+      const lines = ['【房源與價目／訂單狀況（系統即時資料，報價一律以此為準）】']
       for (const p of properties) {
-        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}`)
+        const feeNote = p.extra_guest_fee ? `，超過加收 $${Number(p.extra_guest_fee).toLocaleString()}/人/晚` : ''
+        const dynNote = p.dynamic_pricing_enabled ? '（假日/特定日期價格另計，請客人提供入住日期以精算實際房價）' : ''
+        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}/晚${feeNote}${dynNote}`)
         const pB = (bookings ?? []).filter(b => b.property_id === p.id)
         if (!pB.length) lines.push('  近90天無訂單，全部可訂')
         else { lines.push('  已預訂日期：'); pB.forEach(b => lines.push(`    ${b.check_in} ~ ${b.check_out}（${b.guest_name}，${b.num_guests}人，${b.status}）`)) }
@@ -673,7 +733,8 @@ async function getAIReply(
   message: string,
   knowledge: CsKnowledge,
   history: HistoryMsg[] = [],
-  userId = ''
+  userId = '',
+  sellSection = ''
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -746,7 +807,7 @@ async function getAIReply(
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
+- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
 
     const messages = [
       ...history.slice(-10),

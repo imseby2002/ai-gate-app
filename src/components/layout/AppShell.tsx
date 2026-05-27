@@ -8,6 +8,7 @@ import type { Profile } from '@/types/database'
 interface AppShellProps {
   userType?: string
   enabledModules?: string[]
+  scope?: string
   conversations?: Array<{ id: string; title: string; updated_at: string; pinned: boolean }>
   profile: Profile
   creditBalance?: number
@@ -15,7 +16,7 @@ interface AppShellProps {
   children: React.ReactNode
 }
 
-export function AppShell({ children, userType, enabledModules, conversations, profile, creditBalance, locale }: AppShellProps) {
+export function AppShell({ children, userType, enabledModules, scope, conversations, profile, creditBalance, locale }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
 
@@ -32,7 +33,7 @@ export function AppShell({ children, userType, enabledModules, conversations, pr
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="w-[280px] h-full bg-card border-r overflow-y-auto flex flex-col">
-            <Sidebar userType={userType} enabledModules={enabledModules} conversations={conversations} />
+            <Sidebar userType={userType} enabledModules={enabledModules} scope={scope} conversations={conversations} />
           </div>
           <div className="flex-1 bg-black/40" onClick={() => setMobileOpen(false)} />
         </div>

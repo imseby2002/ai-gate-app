@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, Phone, LayoutDashboard, CalendarDays,
+  FileText, Megaphone, Headphones, Phone, LayoutDashboard, CalendarDays, Terminal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -16,44 +16,68 @@ import { ConversationItem } from './ConversationItem'
 interface SidebarProps {
   userType?: string
   enabledModules?: string[]
+  scope?: string
   conversations?: Array<{ id: string; title: string; updated_at: string; pinned: boolean }>
 }
 
-const MAIN_NAV = [
+type NavItem = {
+  labelKey: string
+  label?: string
+  href: string
+  icon: React.ElementType
+  module: string | null
+  adminOnly?: boolean
+}
+
+const MAIN_NAV: NavItem[] = [
   { labelKey: 'dashboard',   href: '/dashboard',      icon: LayoutDashboard, module: null },
   { labelKey: 'assistants',  href: '/assistants',     icon: Bot,             module: 'chat' },
   { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat' },
   { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat' },
-] as const
+]
 
-const TOOL_NAV = [
+const TOOL_NAV: NavItem[] = [
   { labelKey: 'resume',        href: '/resume',          icon: FileText,     module: 'resume' },
   { labelKey: 'marketing',     href: '/marketing',        icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
   { labelKey: 'leads',         href: '/prospect-call',   icon: Phone,        module: 'leads' },
   { labelKey: 'booking',       href: '/booking',         icon: CalendarDays, module: 'booking' },
-] as const
+]
+
+// 僅總管理員可見的連結
+const ADMIN_NAV: NavItem[] = [
+  { labelKey: 'cliProxy', label: 'CLI Proxy', href: '/cli-proxy', icon: Terminal, module: null, adminOnly: true },
+]
 
 
-export function Sidebar({ userType, enabledModules, conversations = [] }: SidebarProps) {
+export function Sidebar({ userType, enabledModules, scope, conversations = [] }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const t = useTranslations('Sidebar')
   const isAdmin = userType === 'admin'
   const mods = enabledModules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
 
+  // 連結可見性：管理員看全部；非管理員若帶系統範圍（scope）只看該系統，否則依 enabled_modules
+  const isVisible = (item: NavItem) => {
+    if (item.adminOnly) return isAdmin
+    if (isAdmin) return true
+    if (scope) return (item.module ?? 'chat') === scope
+    return !item.module || mods.includes(item.module)
+  }
+
+  const labelOf = (item: NavItem) => item.label ?? t(item.labelKey as Parameters<typeof t>[0])
+  const chatVisible = isAdmin || (scope ? scope === 'chat' : mods.includes('chat'))
+
   const isActive = (href: string) =>
     href === '/dashboard' ? pathname === '/dashboard' : pathname === href || pathname.startsWith(href + '/')
 
-  const renderNavItem = (item: { labelKey: string; href: string; icon: React.ElementType; module: string | null; adminOnly?: boolean }) => {
-    if ('adminOnly' in item && item.adminOnly && !isAdmin) return null
-    if (item.module && item.module !== null && !isAdmin && !mods.includes(item.module)) return null
-
+  const renderNavItem = (item: NavItem) => {
     const Icon = item.icon
     const active = isActive(item.href)
+    const label = labelOf(item)
 
     return (
-      <Link key={item.labelKey} href={item.href} title={collapsed ? t(item.labelKey as Parameters<typeof t>[0]) : undefined}>
+      <Link key={item.href} href={item.href} title={collapsed ? label : undefined}>
         <div className={cn(
           'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
           active
@@ -63,7 +87,7 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
         )}>
           <Icon className={cn('h-4 w-4 flex-shrink-0', active && 'text-primary')} />
           {!collapsed && (
-            <span className="truncate">{t(item.labelKey as Parameters<typeof t>[0])}</span>
+            <span className="truncate">{label}</span>
           )}
           {!collapsed && active && (
             <div className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
@@ -73,15 +97,9 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
     )
   }
 
-  const mainItems = [...MAIN_NAV].filter(item => {
-    if (item.module && !isAdmin && !mods.includes(item.module)) return false
-    return true
-  })
-
-  const toolItems = [...TOOL_NAV].filter(item => {
-    if (!isAdmin && !mods.includes(item.module)) return false
-    return true
-  })
+  const mainItems = MAIN_NAV.filter(isVisible)
+  const toolItems = TOOL_NAV.filter(isVisible)
+  const adminItems = ADMIN_NAV.filter(isVisible)
 
   return (
     <aside className={cn(
@@ -126,7 +144,7 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
       </div>
 
       {/* New Chat Button */}
-      {(isAdmin || mods.includes('chat')) && (
+      {chatVisible && (
         <div className="px-3 pt-3 pb-1">
           <Link href="/chat">
             <Button
@@ -155,6 +173,19 @@ export function Sidebar({ userType, enabledModules, conversations = [] }: Sideba
             )}
             {collapsed && <div className="my-2 border-t border-border/50" />}
             {toolItems.map(renderNavItem)}
+          </>
+        )}
+
+        {/* Admin-only links */}
+        {adminItems.length > 0 && (
+          <>
+            {!collapsed && (
+              <div className="pt-3 pb-1 px-3">
+                <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">{t('admin')}</p>
+              </div>
+            )}
+            {collapsed && <div className="my-2 border-t border-border/50" />}
+            {adminItems.map(renderNavItem)}
           </>
         )}
 

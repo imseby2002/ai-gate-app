@@ -13,6 +13,14 @@ const INTENT_CATEGORIES = [
 ]
 const HIGH_RISK_INTENTS = ['退換貨/退款', '投訴/抱怨', '法律/合約']
 
+type CsCustomerRow = {
+  name: string | null
+  summary: string | null
+  stage: string | null
+  price_ask_count: number
+  message_count: number
+}
+
 interface SheetConfig {
   apiKey: string
   spreadsheetId: string
@@ -427,6 +435,10 @@ async function handlePost(req: NextRequest) {
     escalationThreshold = 'high',
     language = 'auto',
     campaignId,
+    industry = 'homestay',
+    platform = 'test',
+    fromId = '',
+    fromName = '',
     bookingFlowEnabled = false,
     paymentInfo = '',
     bookingFlows = [] as BookingFlowDef[],
@@ -757,7 +769,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   try {
     const { data: properties } = await supabase
       .from('properties')
-      .select('id, name, description, max_guests, base_price')
+      .select('id, name, description, max_guests, base_price, extra_guest_fee, dynamic_pricing_enabled')
       .eq('user_id', user.id)
       .eq('status', 'active')
 
@@ -773,9 +785,11 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
         .gte('check_out', today)
         .lte('check_in', future)
 
-      const lines: string[] = ['【房源與訂單狀況（系統即時資料，優先採用）】']
+      const lines: string[] = ['【房源與價目／訂單狀況（系統即時資料，報價一律以此為準）】']
       for (const p of properties) {
-        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}`)
+        const feeNote = p.extra_guest_fee ? `，超過加收 $${Number(p.extra_guest_fee).toLocaleString()}/人/晚` : ''
+        const dynNote = p.dynamic_pricing_enabled ? '（假日/特定日期價格另計，請客人提供入住日期以精算實際房價）' : ''
+        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}/晚${feeNote}${dynNote}`)
         const pBookings = (bookings ?? []).filter(b => b.property_id === p.id)
         if (pBookings.length === 0) {
           lines.push(`  近90天無訂單，全部可訂`)
@@ -876,6 +890,46 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     // keep defaults
   }
 
+  // ── Customer recognition & price-ask tracking ─────────────────────────────
+  // 偵測「第幾次問價」用於業務話術；認得回頭客；累計追蹤資料。
+  const PRICE_RE = /價格|價錢|價位|多少錢|費用|報價|怎麼算|多少|預算|划算|便宜|折扣|優惠|price|cost|how much|rate|quote|budget|discount/i
+  const convoPriceAsks =
+    [...(history as { role: string; content: string }[])
+      .filter(m => m.role === 'user').map(m => m.content), message]
+      .filter(t => PRICE_RE.test(t)).length
+  const isPriceAskNow = PRICE_RE.test(message)
+
+  let customer: CsCustomerRow | null = null
+  if (fromId) {
+    try {
+      const { data } = await supabase
+        .from('cs_customers')
+        .select('name, summary, stage, price_ask_count, message_count')
+        .eq('user_id', user.id).eq('platform', platform).eq('from_id', fromId).eq('industry', industry)
+        .single()
+      customer = (data as CsCustomerRow | null) ?? null
+    } catch { /* 表可能尚未建立，略過追蹤 */ }
+  }
+  const knownName = (fromName || customer?.name || '').trim()
+
+  // 業務模式指引（永遠注入，讓客服像銷售冠軍；含第一次/第二次問價的不同處理）
+  const sellLines: string[] = [
+    '\n\n【業務顧問模式——像銷售冠軍一樣對話】',
+    '你不只是客服，更是頂尖業務顧問：先同理 → 用提問釐清真正需求 → 把產品特點翻成「對這位客戶的好處」→ 描繪他選擇後的畫面 → 主動推進到下一步（用二選一收尾）。可運用社會證明、誠實的稀缺與互惠，但絕不施壓、不誇大、不欺騙。',
+  ]
+  if (knownName) sellLines.push(`客戶稱呼：${knownName}。請自然地稱呼對方，展現你記得他。`)
+  if (customer?.summary) sellLines.push(`這位是回頭客，先前洽詢摘要：「${customer.summary}」。請延續脈絡、不要重問已知資訊。`)
+  if (isPriceAskNow) {
+    if (convoPriceAsks <= 1) {
+      sellLines.push('【價格詢問——第 1 次】不要只丟一個數字：報價同時說明「包含什麼、為什麼值得」，並順勢回問 1 個關鍵需求（日期／人數／用途）以便推薦最適方案。')
+    } else if (convoPriceAsks === 2) {
+      sellLines.push('【價格詢問——第 2 次】這是明確的購買訊號或價格敏感。先同理預算考量，問出他真正在比較或猶豫的點，主動提供誘因（若有折扣／贈品工具就善用），並用二選一推進成交（例：「您想訂週五還是週六？」）。')
+    } else {
+      sellLines.push('【價格詢問——第 3 次（含）以上】客戶可能卡在價格。給出你能提供的最佳方案或小讓步並請求承諾；若仍猶豫，提議由專員親自跟進，不要無限重複報價。')
+    }
+  }
+  const customerSection = sellLines.join('\n')
+
   // ── Build system prompt ───────────────────────────────────────────────────
   const shouldEscalate =
     risk === 'high' ||
@@ -894,7 +948,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     ? userSystemPrompt.trim()
     : (bookingFlowEnabled
         ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
-        : `你是民宿的專屬業務顧問，目標是讓每位客人都能找到最適合的房型並順利預訂。語氣親切自然如朋友，主動引導客人表達需求，回答問題後立即問下一步，不讓對話冷場。客人猶豫時主動問原因並協助解決，有空房時製造溫和緊迫感。不確定的資訊請誠實說明，勿猜測。`)
+        : `你是民宿的金牌業務顧問兼客服，兼具銷售冠軍的成交力與優秀客服的溫度。目標是真正理解每位客人、幫他找到最適合的房型並順利預訂，讓他心甘情願下單並成為回頭客。語氣溫暖自信如值得信賴的朋友，不諂媚也不高壓。主動引導客人說出需求，把房型特色翻成「對他的好處」，回答後立即推進下一步、不讓對話冷場；客人猶豫時先同理再問原因並協助解決，有空房時製造誠實而溫和的緊迫感。不確定的資訊請誠實說明，勿猜測。`)
 
   const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
 
@@ -945,7 +999,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
@@ -1060,6 +1114,31 @@ const systemPrompt = `${baseInstructions}
         unit_data: { ...unitData, 12: { ...unit12, logs: updatedLogs } },
       }).eq('id', campaignId)
     })
+  }
+
+  // ── Persist customer tracking ─────────────────────────────────────────────
+  if (fromId) {
+    try {
+      let stage = customer?.stage ?? 'new'
+      if (/預訂|預約|確認|成交|下單|報名|訂位/.test(intent)) stage = 'won'
+      else if (convoPriceAsks >= 2) stage = 'negotiating'
+      else if (isPriceAskNow) stage = 'quoted'
+      else if (stage === 'new') stage = 'inquiring'
+      await supabase.from('cs_customers').upsert({
+        user_id: user.id,
+        platform,
+        from_id: fromId,
+        industry,
+        name: knownName || customer?.name || null,
+        stage,
+        price_ask_count: (customer?.price_ask_count ?? 0) + (isPriceAskNow ? 1 : 0),
+        message_count: (customer?.message_count ?? 0) + 1,
+        last_intent: intent,
+        summary: summary || customer?.summary || null,
+        last_message_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,platform,from_id,industry' })
+    } catch { /* 表可能尚未建立，略過追蹤 */ }
   }
 
   return NextResponse.json({ reply, intent, risk, provider, latencyMs, summary, images })
