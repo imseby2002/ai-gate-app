@@ -64,7 +64,7 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
         return
       }
       // 需 email 驗證才能登入
-      setInfo('已為您建立帳號，請至信箱收取驗證信後再登入。')
+      setInfo('已為您建立帳號！請到信箱點擊驗證信後，再回來用同一組 Email／密碼登入（沒收到請查看垃圾信匣）。想免驗證可改用上方 Google 登入。')
       setLoading(false)
       return
     }
@@ -145,7 +145,7 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {loading ? '處理中…' : '登入 / 註冊'}
                 </button>
-                <p className="text-center text-xs text-gray-400">未註冊會自動建立帳號，並直接進入{def.label}</p>
+                <p className="text-center text-xs text-gray-400 leading-relaxed">首次使用 Email 會自動註冊，需到信箱點擊驗證信後才能登入。<br />想免驗證、立即進入，請用上方 Google 登入。</p>
               </form>
             </>
           )}
