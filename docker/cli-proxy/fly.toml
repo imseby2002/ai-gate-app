@@ -1,25 +1,44 @@
-# Fly.io 部署設定（CLI Proxy）。指令見 cli-proxy 頁面的「部署步驟」。
 app = 'imseby-cli-proxy'
+
 primary_region = 'sin'
 
+
+
 [build]
-  dockerfile = 'Dockerfile'
 
-# Fly 邊緣自動提供 https（https://<app>.fly.dev），内部轉發到容器的 8317
+dockerfile = 'Dockerfile'
+
+
+
 [http_service]
-  internal_port = 8317
-  force_https = true
-  auto_stop_machines = 'off'
-  auto_start_machines = true
-  min_machines_running = 1
-  processes = ['app']
 
-# 持久化 OAuth 憑證（config.yaml 的 auth-dir: ~/.cli-proxy-api → /root/.cli-proxy-api）
+internal_port = 8317
+
+force_https = true
+
+auto_stop_machines = 'off'
+
+auto_start_machines = true
+
+min_machines_running = 1
+
+processes = ['app']
+
+
+
 [[mounts]]
-  source = 'cliproxy_data'
-  destination = '/root/.cli-proxy-api'
+
+source = 'cliproxy_data'
+
+destination = '/root/.cli-proxy-api'
+
+
 
 [[vm]]
-  memory = '1gb'
-  cpus = 1
-  memory_mb = 1024
+
+memory = '1gb'
+
+cpus = 1
+
+memory_mb = 1024
+
