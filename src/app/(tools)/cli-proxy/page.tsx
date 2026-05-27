@@ -145,8 +145,8 @@ export default function CliProxyPage() {
           <h2 className="font-semibold text-sm text-slate-800">Vercel 環境變數設定</h2>
           <p className="text-xs text-slate-500">在 Vercel 後台 → Settings → Environment Variables 加入以下變數：</p>
           {[
-            { key: 'NEXT_PUBLIC_CLI_PROXY_PANEL_URL', val: 'https://cli-proxy.yourdomain.com/management.html', desc: '控制台 URL（經 Cloudflare Tunnel，https）' },
-            { key: 'NEXT_PUBLIC_CLI_PROXY_API_URL',   val: 'https://cli-proxy.yourdomain.com', desc: 'API 端點（經 Cloudflare Tunnel，https）' },
+            { key: 'NEXT_PUBLIC_CLI_PROXY_PANEL_URL', val: 'https://你的app.fly.dev/management.html', desc: '控制台 URL（Fly.io 自動 https）' },
+            { key: 'NEXT_PUBLIC_CLI_PROXY_API_URL',   val: 'https://你的app.fly.dev', desc: 'API 端點（Fly.io 自動 https）' },
             { key: 'CLI_PROXY_API_KEY',               val: 'ai-gate-proxy-key-change-me', desc: 'config.yaml 中的 api-keys' },
           ].map(({ key, val, desc }) => (
             <div key={key} className="bg-slate-50 rounded-lg p-3 border">
@@ -164,16 +164,17 @@ export default function CliProxyPage() {
 
         {/* Deploy guide */}
         <div className="bg-white rounded-xl border p-5 space-y-3">
-          <h2 className="font-semibold text-sm text-slate-800">伺服器部署步驟</h2>
+          <h2 className="font-semibold text-sm text-slate-800">部署步驟（Fly.io，免自有機器、自動 https）</h2>
           <div className="space-y-2 text-sm text-slate-600">
             {[
-              { n: '1', text: '將 docker/cli-proxy/ 資料夾上傳到你的 VPS' },
-              { n: '2', text: '修改 config.yaml：填入 API Keys 和管理密鑰' },
-              { n: '3', text: 'Cloudflare Zero Trust → Networks → Tunnels 建立 tunnel，Public Hostname 服務填 http://cli-proxy-api:8317，複製 token' },
-              { n: '4', text: '在 VPS 的 docker/cli-proxy/.env 填入 CLOUDFLARE_TUNNEL_TOKEN=剛複製的 token' },
-              { n: '5', text: '執行：docker compose up -d（cli-proxy 與 cloudflared 一起啟動）' },
-              { n: '6', text: '開 https://你的tunnel網域/management.html 進控制台，登入 Kiro / GitHub Copilot 取得免費額度' },
-              { n: '7', text: '在 Vercel 設定上方環境變數（https 網域）後重新部署' },
+              { n: '1', text: '安裝 flyctl 並登入：fly auth login' },
+              { n: '2', text: '編輯 docker/cli-proxy/config.yaml：填入 api-keys 與管理密鑰（真實金鑰勿提交 git）' },
+              { n: '3', text: 'cd docker/cli-proxy，視需要改 fly.toml 的 app 名稱與 region' },
+              { n: '4', text: '建立 app（不部署）：fly launch --no-deploy --copy-config' },
+              { n: '5', text: '建立持久化磁碟：fly volumes create cliproxy_data --size 1' },
+              { n: '6', text: '部署：fly deploy → 取得 https://你的app.fly.dev' },
+              { n: '7', text: '開 https://你的app.fly.dev/management.html 登入 Kiro / GitHub Copilot 取得免費額度' },
+              { n: '8', text: '在 Vercel 設定上方環境變數（fly.dev 網址）後重新部署' },
             ].map(({ n, text }) => (
               <div key={n} className="flex gap-3">
                 <span className="h-5 w-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
@@ -184,9 +185,9 @@ export default function CliProxyPage() {
 
           <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-xs text-amber-700">
-              <strong>防火牆設定：</strong>使用 Cloudflare Tunnel 後對外不需開放 8317，
-              建議防火牆只保留 SSH，其餘對外關閉（流量都走 tunnel，自動 https）。
-              OAuth 初次登入若需回呼埠（8085 等）再臨時開放。
+              <strong>說明：</strong>Fly.io 邊緣自動提供 https（*.fly.dev），不用網域、不用開防火牆埠。
+              OAuth 憑證存在 cliproxy_data 磁碟，重啟不會掉。多數供應商用 device-code 登入（免回呼埠）；
+              若某供應商需 localhost 回呼，該項可能要另行處理。
             </p>
           </div>
         </div>
