@@ -4,6 +4,8 @@ services:
     pull_policy: always
     container_name: cli-proxy-api-plus
     ports:
+      # 有了 Cloudflare Tunnel 後，對外可只走 tunnel；下列埠建議用防火牆限制來源 IP，
+      # 或在確認 tunnel 正常後移除 8317 的對外發佈（OAuth 回呼埠初次登入時才需要）。
       - "8317:8317"   # Main API + Management panel (/management.html)
       - "8085:8085"   # Gemini OAuth callback
       - "1455:1455"   # OpenAI/Codex OAuth callback
@@ -13,4 +15,17 @@ services:
       - ./config.yaml:/CLIProxyAPI/config.yaml
       - ./auths:/root/.cli-proxy-api
       - ./logs:/CLIProxyAPI/logs
+    restart: unless-stopped
+
+  # Cloudflare Tunnel：對外提供 https，免開防火牆埠、自動 TLS。
+  # 設定步驟見同目錄 README 註解 / 下方說明。
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cli-proxy-tunnel
+    command: tunnel --no-autoupdate run
+    environment:
+      # 在 Cloudflare Zero Trust → Networks → Tunnels 建立 tunnel 後取得的 token
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - cli-proxy-api
     restart: unless-stopped

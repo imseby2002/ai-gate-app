@@ -110,7 +110,7 @@ export default function CliProxyPage() {
             ) : (
               <div className="text-xs text-red-500">未設定 PANEL_URL</div>
             )}
-            <div className="text-[11px] text-slate-400 mt-0.5">port 8317/management.html</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">/management.html（https）</div>
           </div>
         </div>
 
@@ -145,8 +145,8 @@ export default function CliProxyPage() {
           <h2 className="font-semibold text-sm text-slate-800">Vercel 環境變數設定</h2>
           <p className="text-xs text-slate-500">在 Vercel 後台 → Settings → Environment Variables 加入以下變數：</p>
           {[
-            { key: 'NEXT_PUBLIC_CLI_PROXY_PANEL_URL', val: 'http://your-server-ip:8317/management.html', desc: '控制台 URL（瀏覽器可直連）' },
-            { key: 'NEXT_PUBLIC_CLI_PROXY_API_URL',   val: 'http://your-server-ip:8317', desc: 'API 端點（伺服器端使用）' },
+            { key: 'NEXT_PUBLIC_CLI_PROXY_PANEL_URL', val: 'https://cli-proxy.yourdomain.com/management.html', desc: '控制台 URL（經 Cloudflare Tunnel，https）' },
+            { key: 'NEXT_PUBLIC_CLI_PROXY_API_URL',   val: 'https://cli-proxy.yourdomain.com', desc: 'API 端點（經 Cloudflare Tunnel，https）' },
             { key: 'CLI_PROXY_API_KEY',               val: 'ai-gate-proxy-key-change-me', desc: 'config.yaml 中的 api-keys' },
           ].map(({ key, val, desc }) => (
             <div key={key} className="bg-slate-50 rounded-lg p-3 border">
@@ -169,10 +169,11 @@ export default function CliProxyPage() {
             {[
               { n: '1', text: '將 docker/cli-proxy/ 資料夾上傳到你的 VPS' },
               { n: '2', text: '修改 config.yaml：填入 API Keys 和管理密鑰' },
-              { n: '3', text: '執行：docker compose up -d' },
-              { n: '4', text: '開瀏覽器到 http://server-ip:8085 進入控制台' },
-              { n: '5', text: '在控制台登入 Kiro / GitHub Copilot 取得免費額度' },
-              { n: '6', text: '在 Vercel 設定上方的環境變數後重新部署' },
+              { n: '3', text: 'Cloudflare Zero Trust → Networks → Tunnels 建立 tunnel，Public Hostname 服務填 http://cli-proxy-api:8317，複製 token' },
+              { n: '4', text: '在 VPS 的 docker/cli-proxy/.env 填入 CLOUDFLARE_TUNNEL_TOKEN=剛複製的 token' },
+              { n: '5', text: '執行：docker compose up -d（cli-proxy 與 cloudflared 一起啟動）' },
+              { n: '6', text: '開 https://你的tunnel網域/management.html 進控制台，登入 Kiro / GitHub Copilot 取得免費額度' },
+              { n: '7', text: '在 Vercel 設定上方環境變數（https 網域）後重新部署' },
             ].map(({ n, text }) => (
               <div key={n} className="flex gap-3">
                 <span className="h-5 w-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</span>
@@ -183,8 +184,9 @@ export default function CliProxyPage() {
 
           <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
             <p className="text-xs text-amber-700">
-              <strong>防火牆設定：</strong>確保 VPS 的 8317（API）和 8085（控制台）連接埠已開放。
-              建議 8085 只允許你自己的 IP，8317 可開放給 Vercel（或限制特定 IP 範圍）。
+              <strong>防火牆設定：</strong>使用 Cloudflare Tunnel 後對外不需開放 8317，
+              建議防火牆只保留 SSH，其餘對外關閉（流量都走 tunnel，自動 https）。
+              OAuth 初次登入若需回呼埠（8085 等）再臨時開放。
             </p>
           </div>
         </div>
