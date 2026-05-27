@@ -67,6 +67,7 @@ type ImportStep = 'input' | 'parsing' | 'preview' | 'done'
 
 export default function BnbProfilePage() {
   const [form, setForm]       = useState<BnbProfile>(DEFAULT)
+  const [initialForm, setInitialForm] = useState<BnbProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [saved, setSaved]     = useState(false)
@@ -98,12 +99,14 @@ export default function BnbProfilePage() {
         })
         // Append any custom addons not in defaults
         const extra = savedAddons.filter(s => !DEFAULT_ADDONS.find(d => d.id === s.id))
-        setForm({
+        const merged = {
           ...DEFAULT, ...p,
           images: p.images ?? [],
           breakfast: p.breakfast ?? DEFAULT_BREAKFAST,
           addon_services: [...mergedAddons, ...extra],
-        })
+        }
+        setForm(merged)
+        setInitialForm(merged)
       }
     }).finally(() => setLoading(false))
   }, [])
@@ -112,6 +115,15 @@ export default function BnbProfilePage() {
     setForm(f => ({ ...f, [k]: v }))
     setSaved(false)
   }
+
+  // 有未儲存變更時，離開/重新整理前提醒
+  useEffect(() => {
+    const dirtyNow = initialForm ? JSON.stringify(form) !== JSON.stringify(initialForm) : false
+    if (!dirtyNow) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [form, initialForm])
 
   function setBreakfast(updates: Partial<BreakfastSettings>) {
     setForm(f => ({ ...f, breakfast: { ...f.breakfast, ...updates } }))
@@ -142,6 +154,10 @@ export default function BnbProfilePage() {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     })
+  }
+
+  function setCover(url: string) {
+    setForm(f => ({ ...f, images: [url, ...f.images.filter(u => u !== url)] }))
   }
 
   async function startImportParse() {
@@ -213,7 +229,7 @@ export default function BnbProfilePage() {
         body: JSON.stringify(form),
       })
       const d = await res.json()
-      if (d.profile) { setSaved(true) }
+      if (d.profile) { setSaved(true); setInitialForm(form) }
       else alert(d.error)
     } finally { setSaving(false) }
   }
@@ -221,6 +237,7 @@ export default function BnbProfilePage() {
   if (loading) return <div className="p-6 text-gray-400 text-sm">載入中…</div>
 
   const { breakfast, addon_services } = form
+  const dirty = initialForm ? JSON.stringify(form) !== JSON.stringify(initialForm) : false
 
   return (
     <div className="p-4 md:p-6 pb-16 max-w-2xl space-y-5">
@@ -607,8 +624,13 @@ export default function BnbProfilePage() {
           {form.images.map((url, i) => (
             <div key={url} className="relative aspect-square rounded-xl overflow-hidden border group">
               <img src={url} alt={`photo-${i}`} className="w-full h-full object-cover" />
-              {i === 0 && (
+              {i === 0 ? (
                 <span className="absolute top-1 left-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">主圖</span>
+              ) : (
+                <button onClick={() => setCover(url)}
+                  className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/60 text-white py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  設為主圖
+                </button>
               )}
               <button onClick={() => removePhoto(url)}
                 className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -629,6 +651,20 @@ export default function BnbProfilePage() {
       <div className="text-xs text-gray-400 pb-4">
         民宿名稱會用於 Email 擷取時自動識別訂單來源，請確保與各平台上的名稱一致。
       </div>
+
+      {/* 底部固定儲存列：有未儲存變更時出現，免捲回頂部 */}
+      {dirty && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur px-4 py-3 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+          <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
+            <span className="text-sm text-amber-600">有未儲存的變更</span>
+            <button onClick={save} disabled={saving}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              儲存變更
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

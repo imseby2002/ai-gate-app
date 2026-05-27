@@ -183,7 +183,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
             <span className="text-sm font-bold min-w-[88px] text-center">{monthName}</span>
             <button onClick={onNext} className="p-1.5 rounded hover:bg-gray-100"><ChevronRight className="h-4 w-4" /></button>
           </div>
-          <span className="text-xs text-gray-400 hidden sm:block">（底色為紅色代表假日）</span>
+          <span className="text-xs text-gray-400 hidden sm:block">（粉紅底為週五～日；國定假日請於「定價規則」另設）</span>
           <div className="ml-auto flex items-center gap-2">
             {/* View switcher */}
             <div className="flex rounded-lg border overflow-hidden text-xs font-medium shrink-0">

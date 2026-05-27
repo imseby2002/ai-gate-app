@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Search, Filter, Download, ChevronDown, ChevronUp, Send } from 'lucide-react'
+import { Plus, Search, Filter, Download, ChevronDown, ChevronUp, Send, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 interface Booking {
@@ -55,6 +55,12 @@ export default function BookingsPage() {
   const [promoInput, setPromoInput]   = useState('')
   const [promoResult, setPromoResult] = useState<{ valid: boolean; discount?: number; name?: string; error?: string } | null>(null)
   const [promoChecking, setPromoChecking] = useState(false)
+  const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null)
+
+  function notify(ok: boolean, text: string) {
+    setFlash({ ok, text })
+    setTimeout(() => setFlash(null), 4000)
+  }
 
   useEffect(() => {
     const params = new URLSearchParams({ limit: '500' })
@@ -73,6 +79,16 @@ export default function BookingsPage() {
       if (pf.profile) setProfileExtras({ breakfast: pf.profile.breakfast ?? { type: 'none', price_per_person: 0 }, addon_services: pf.profile.addon_services ?? [] })
     }).finally(() => setLoading(false))
   }, [filterStatus, filterProp, filterFrom, filterTo])
+
+  // 從空房表/日曆帶入的預填參數 → 自動開啟新增視窗並填好房型與日期
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const pid = sp.get('property_id')
+    if (pid) {
+      setForm(f => ({ ...f, property_id: pid, check_in: sp.get('check_in') ?? '', check_out: sp.get('check_out') ?? '' }))
+      setAdding(true)
+    }
+  }, [])
 
   const filtered = bookings.filter(b => {
     if (filterPlatform && b.platform !== filterPlatform) return false
@@ -123,17 +139,31 @@ export default function BookingsPage() {
         body: JSON.stringify({ booking_id: bookingId, type: 'confirmation' }),
       })
       const d = await res.json()
-      if (d.ok) alert(`確認信已發送至 ${d.sent_to}`)
-      else alert(d.error ?? '發送失敗')
+      if (d.ok) notify(true, `確認信已發送至 ${d.sent_to}`)
+      else notify(false, d.error ?? '發送失敗')
     } finally { setSendingNotif(null) }
   }
 
   async function updateStatus(id: string, status: string) {
-    await fetch('/api/booking/bookings', {
+    const res = await fetch('/api/booking/bookings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),
     })
+    if (!res.ok) { notify(false, '狀態更新失敗，請重試'); return }
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
+  }
+
+  async function removeBooking(id: string) {
+    if (!window.confirm('確定刪除此訂單？此動作無法復原。')) return
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) { const d = await res.json(); notify(false, d.error ?? '刪除失敗'); return }
+      setBookings(prev => prev.filter(b => b.id !== id))
+      notify(true, '已刪除訂單')
+    } catch { notify(false, '網路錯誤，請稍後再試') }
   }
 
   async function checkPromo() {
@@ -167,7 +197,8 @@ export default function BookingsPage() {
         setAdding(false)
         setPromoInput(''); setPromoResult(null)
         setForm({ property_id: '', guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', num_guests: 1, total_price: '', currency: 'TWD', status: 'confirmed', platform: 'direct', notes: '', special_requests: '', extras: { breakfast: false, services: [] } })
-      } else alert(d.error)
+        notify(true, '訂單已新增')
+      } else notify(false, d.error ?? '新增失敗')
     } finally { setSaving(false) }
   }
 
@@ -190,6 +221,12 @@ export default function BookingsPage() {
           </button>
         </div>
       </div>
+
+      {flash && (
+        <div className={`text-sm rounded-lg px-3 py-2 ${flash.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}>
+          {flash.text}
+        </div>
+      )}
 
       {/* Search + Filters */}
       <div className="space-y-2">
@@ -281,6 +318,18 @@ export default function BookingsPage() {
                     <div className="text-gray-400">{PLATFORM_NAMES[b.platform] ?? b.platform} · {b.num_guests}人</div>
                     {b.notes && <div className="text-amber-600 text-right truncate" title={b.notes}>⚠ {b.notes}</div>}
                   </div>
+                  <div className="flex items-center gap-2 pt-1 border-t">
+                    {b.guest_email && (
+                      <button onClick={() => sendConfirmation(b.id)} disabled={sendingNotif === b.id}
+                        className="flex items-center gap-1 text-xs text-indigo-600 disabled:opacity-50">
+                        <Send className="h-3.5 w-3.5" /> 確認信
+                      </button>
+                    )}
+                    <button onClick={() => removeBooking(b.id)}
+                      className="flex items-center gap-1 text-xs text-rose-500 ml-auto">
+                      <Trash2 className="h-3.5 w-3.5" /> 刪除
+                    </button>
+                  </div>
                 </div>
               )
             })}
@@ -340,12 +389,18 @@ export default function BookingsPage() {
                         )}
                       </td>
                       <td className="px-3 py-2.5">
-                        {b.guest_email && (
-                          <button onClick={() => sendConfirmation(b.id)} disabled={sendingNotif === b.id}
-                            title="發送確認信" className="p-1.5 rounded hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 disabled:opacity-50">
-                            <Send className="h-3.5 w-3.5" />
+                        <div className="flex items-center gap-0.5">
+                          {b.guest_email && (
+                            <button onClick={() => sendConfirmation(b.id)} disabled={sendingNotif === b.id}
+                              title="發送確認信" className="p-1.5 rounded hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 disabled:opacity-50">
+                              <Send className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => removeBooking(b.id)}
+                            title="刪除訂單" className="p-1.5 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-500">
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   )
