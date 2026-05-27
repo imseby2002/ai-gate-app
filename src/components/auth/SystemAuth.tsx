@@ -22,11 +22,18 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => {
-      setSessionEmail(data.user?.email ?? null)
+    const sb = createClient()
+    sb.auth.getUser().then(async ({ data }) => {
+      const u = data.user
+      setSessionEmail(u?.email ?? null)
+      if (u) {
+        const { data: prof } = await sb.from('profiles').select('user_type').eq('id', u.id).single()
+        setIsAdmin(prof?.user_type === 'admin')
+      }
       setChecking(false)
     })
   }, [])
@@ -103,8 +110,11 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
                 style={{ background: 'var(--primary)' }}>
                 進入{def.label} <ArrowRight className="h-4 w-4" />
               </button>
-              <button onClick={async () => { await createClient().auth.signOut(); setSessionEmail(null) }}
+              <button onClick={async () => { await createClient().auth.signOut(); setSessionEmail(null); setIsAdmin(false) }}
                 className="text-xs text-gray-400 hover:text-gray-600">用其他帳號登入</button>
+              {isAdmin && (
+                <div><Link href="/login" className="text-xs text-gray-400 hover:text-gray-600">切換其他系統（管理者）</Link></div>
+              )}
             </div>
           ) : (
             <>
@@ -150,10 +160,6 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
             </>
           )}
         </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          <Link href="/login" className="hover:text-gray-600">← 切換其他系統</Link>
-        </p>
       </div>
     </div>
   )
