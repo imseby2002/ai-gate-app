@@ -67,6 +67,7 @@ export async function middleware(request: NextRequest) {
     const needsProfileCheck =
       (user && isSystemKey(scope)) ||
       pathname.startsWith('/admin') ||
+      pathname.startsWith('/cli-proxy') ||
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
@@ -86,9 +87,10 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(SYSTEMS[scope].home, request.url))
       }
 
-      // Admin guard
-      if (pathname.startsWith('/admin') && !isAdmin) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Admin guard — /admin 與 /cli-proxy 僅限總管理員
+      if (!isAdmin && (pathname.startsWith('/admin') || pathname.startsWith('/cli-proxy'))) {
+        const home = isSystemKey(scope) ? SYSTEMS[scope].home : '/dashboard'
+        return NextResponse.redirect(new URL(home, request.url))
       }
 
       // Module guard — admin bypasses
