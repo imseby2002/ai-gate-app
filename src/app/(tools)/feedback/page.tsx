@@ -54,10 +54,17 @@ export default function FeedbackPage() {
       })
       const d = await r.json()
       if (d.feedback) {
-        setFeedbacks(prev => [d.feedback, ...prev])
+        const newFb = { ...d.feedback, status: 'processing' as const }
+        setFeedbacks(prev => [newFb, ...prev])
         setForm({ title: '', description: '', type: 'bug' })
         setSubmitted(true)
-        setTimeout(() => setSubmitted(false), 4000)
+        setTimeout(() => setSubmitted(false), 5000)
+
+        // Auto-trigger AI processing in background — no admin needed
+        fetch(`/api/feedback/${d.feedback.id}`, { method: 'POST' })
+          .then(r => r.json())
+          .then(() => loadFeedbacks())  // refresh status when done
+          .catch(() => {})
       }
     } finally { setSubmitting(false) }
   }
@@ -70,7 +77,7 @@ export default function FeedbackPage() {
           意見回饋
         </h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          回報問題或提出建議，AI 會自動嘗試修復並建立測試分支給你試用
+          回報問題或提出建議——簡單修改 AI 自動完成並建測試分支，複雜需求記錄供管理者處理
         </p>
       </div>
 
@@ -105,8 +112,8 @@ export default function FeedbackPage() {
 
         {submitted && (
           <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm">
-            <CheckCircle2 className="h-4 w-4" />
-            已提交！管理者會在處理後通知你測試連結。
+            <Loader2 className="h-4 w-4 animate-spin" />
+            已提交！AI 正在自動分析處理，完成後下方會顯示測試連結…
           </div>
         )}
 

@@ -81,7 +81,7 @@ export default function AdminFeedbackPage() {
             <MessageSquare className="h-5 w-5 text-indigo-600" />
             使用者回饋管理
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">按「AI 處理」→ 自動生成分支；複雜需求記為建議</p>
+          <p className="text-sm text-gray-500 mt-0.5">用戶送出後 AI 自動處理。你只需：① 合併 GitHub PR  ② 手動解決「建議」類複雜需求</p>
         </div>
         <button onClick={load} className="p-2 rounded-lg border hover:bg-gray-50 text-gray-500">
           <RefreshCw className="h-4 w-4" />
@@ -186,11 +186,12 @@ export default function AdminFeedbackPage() {
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2">
-                {(fb.status === 'pending' || fb.status === 'processing') && (
+                {/* Retry: only for failed/stuck items */}
+                {(fb.status === 'pending' || fb.status === 'suggestion') && (
                   <button onClick={() => process(fb.id)} disabled={processing === fb.id}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
                     {processing === fb.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-                    {processing === fb.id ? 'AI 處理中…' : 'AI 處理'}
+                    {processing === fb.id ? 'AI 處理中…' : '重新嘗試 AI'}
                   </button>
                 )}
                 {fb.status === 'pr_ready' && (
@@ -203,12 +204,6 @@ export default function AdminFeedbackPage() {
                   <button onClick={() => updateStatus(fb.id, 'rejected')}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
                     <AlertCircle className="h-3.5 w-3.5" />關閉
-                  </button>
-                )}
-                {fb.status === 'suggestion' && (
-                  <button onClick={() => updateStatus(fb.id, 'pending')}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200">
-                    <Clock className="h-3.5 w-3.5" />重新嘗試
                   </button>
                 )}
               </div>

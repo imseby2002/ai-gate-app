@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
+export const maxDuration = 300
+
 const REPO_OWNER = 'imseby2002'
 const REPO_NAME  = 'ai-gate-app'
 const BASE_BRANCH = 'main'
@@ -221,18 +223,26 @@ ${existing}
 
 // ── Main handler ───────────────────────────────────────────────────────────────
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type').eq('id', user.id).single()
-  if (profile?.user_type !== 'admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 })
-
   const { id } = await params
+
+  // Allow the feedback owner OR admin to trigger processing
   const { data: fb } = await admin.from('user_feedback').select('*').eq('id', id).single()
   if (!fb) return NextResponse.json({ error: '找不到回饋' }, { status: 404 })
+
+  const { data: profile } = await admin.from('profiles').select('user_type').eq('id', user.id).single()
+  const isAdmin = profile?.user_type === 'admin'
+  if (fb.user_id !== user.id && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  // Prevent double-processing
+  if (fb.status === 'processing' || fb.status === 'pr_ready' || fb.status === 'merged') {
+    return NextResponse.json({ ok: true, status: fb.status, skipped: true })
+  }
 
   // Mark as processing
   await admin.from('user_feedback').update({ status: 'processing', updated_at: new Date().toISOString() }).eq('id', id)
