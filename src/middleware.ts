@@ -87,6 +87,16 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(SYSTEMS[scope].home, request.url))
       }
 
+      // Module access — 非管理員：該功能必須在 enabled_modules 內（管理者可後台限制）
+      // 只擋該系統的功能頁，不擋 /login 等共用路徑（避免無限導向）
+      if (!isAdmin && isSystemKey(scope)) {
+        const enabled = profile?.enabled_modules ?? ['chat', 'booking', 'cs', 'marketing', 'leads', 'resume']
+        const inOwnSystem = SYSTEMS[scope].prefixes.some(p => pathname === p || pathname.startsWith(p + '/'))
+        if (inOwnSystem && !enabled.includes(scope)) {
+          return NextResponse.redirect(new URL(`/login/${scope}?denied=1`, request.url))
+        }
+      }
+
       // Admin guard — /admin 與 /cli-proxy 僅限總管理員
       if (!isAdmin && (pathname.startsWith('/admin') || pathname.startsWith('/cli-proxy'))) {
         const home = isSystemKey(scope) ? SYSTEMS[scope].home : '/dashboard'

@@ -13,6 +13,7 @@ export interface Profile {
   avatar_url: string | null
   user_type: UserType
   is_active: boolean
+  enabled_modules: string[] | null
   department: string | null
   monthly_budget: number | null
   credit_balance: number
