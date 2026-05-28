@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# cli-proxy — 真實設定含金鑰，不入 git
+docker/cli-proxy/config.yaml
+docker/cli-proxy/auths/
+docker/cli-proxy/logs/
+
 # vercel
 .vercel
 

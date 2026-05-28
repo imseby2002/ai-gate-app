@@ -51,7 +51,7 @@ openai-compatibility:
 
 # ── Kiro / AWS CodeWhisperer（免費額度）──────────────────────────────────────
 # 登入後自動取得 token，步驟：
-# 1. 開瀏覽器到 http://your-server:8085
+# 1. 開瀏覽器到 https://imseby-cli-proxy.fly.dev
 # 2. 使用管理密鑰登入控制台
 # 3. 點 Kiro OAuth 登入
 #kiro:
