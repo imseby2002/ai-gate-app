@@ -139,6 +139,7 @@ function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMs
 async function replyToCustomer(
   userId: string, platform: string, customerId: string,
   knowledge: CsKnowledge, history: HistoryMsg[], text: string,
+  imageBuffer?: Buffer, imageMimeType?: string,
 ): Promise<string> {
   // Rate limit (per-customer + per-tenant) before any LLM call — caps spam / API-cost abuse
   const withinLimit = await checkRateLimit(`${userId}:${customerId}`, 30, 60)
@@ -175,7 +176,7 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow))
+  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow), imageBuffer, imageMimeType)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
 
   try {
@@ -734,7 +735,9 @@ async function getAIReply(
   knowledge: CsKnowledge,
   history: HistoryMsg[] = [],
   userId = '',
-  sellSection = ''
+  sellSection = '',
+  imageBuffer?: Buffer,
+  imageMimeType?: string,
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -809,12 +812,21 @@ async function getAIReply(
 - 不確定的資訊請誠實說明，勿猜測
 - 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
 
+    // Build user message — multimodal if image present
+    type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
+    const userContent: UserContent = (imageBuffer && imageMimeType)
+      ? [
+          ...(message.trim() ? [{ type: 'text' as const, text: message }] : [{ type: 'text' as const, text: '客人傳送了一張圖片' }]),
+          { type: 'image' as const, image: new Uint8Array(imageBuffer), mimeType: imageMimeType },
+        ]
+      : message
+
     const messages = [
       ...history.slice(-10),
-      { role: 'user' as const, content: message },
+      { role: 'user' as const, content: userContent },
     ]
 
-    // High risk → try Claude first
+    // High risk → try Claude first (Claude also supports vision)
     const HIGH_RISK_KEYWORDS = ['退款', '退貨', '投訴', '抱怨', '法律', 'refund', 'complaint', 'lawsuit']
     const isHighRisk = HIGH_RISK_KEYWORDS.some(kw => message.toLowerCase().includes(kw.toLowerCase()))
 
@@ -842,6 +854,64 @@ async function getAIReply(
   } catch {
     return FALLBACK
   }
+}
+
+// ── Image fetch helpers ───────────────────────────────────────────────────────
+
+async function fetchLineImage(messageId: string, token: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  try {
+    const res = await fetch(`https://api-data.line.me/v2/bot/message/${messageId}/content`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) return null
+    const ct = res.headers.get('content-type') ?? 'image/jpeg'
+    const buf = Buffer.from(await res.arrayBuffer())
+    return { buffer: buf, mimeType: ct.split(';')[0].trim() }
+  } catch { return null }
+}
+
+async function fetchWhatsAppImage(mediaId: string, token: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  try {
+    // Step 1: get media URL
+    const metaRes = await fetch(`https://graph.facebook.com/v18.0/${mediaId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!metaRes.ok) return null
+    const meta = await metaRes.json()
+    const url: string = meta.url
+    if (!url) return null
+    // Step 2: download
+    const imgRes = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!imgRes.ok) return null
+    const ct = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    const buf = Buffer.from(await imgRes.arrayBuffer())
+    return { buffer: buf, mimeType: ct.split(';')[0].trim() }
+  } catch { return null }
+}
+
+async function fetchTelegramImage(fileId: string, botToken: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`, {
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!r.ok) return null
+    const d = await r.json()
+    const filePath: string = d.result?.file_path
+    if (!filePath) return null
+    const imgRes = await fetch(`https://api.telegram.org/file/bot${botToken}/${filePath}`, {
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!imgRes.ok) return null
+    const ext = filePath.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+    const buf = Buffer.from(await imgRes.arrayBuffer())
+    return { buffer: buf, mimeType }
+  } catch { return null }
 }
 
 // ── Constant-time string compare ──────────────────────────────────────────────
@@ -936,14 +1006,25 @@ export async function POST(
     const body = JSON.parse(rawBody)
     const events = body?.events ?? []
     for (const event of events) {
-      if (event.type !== 'message' || event.message?.type !== 'text') continue
-      const text: string = event.message.text
+      if (event.type !== 'message') continue
+      const msgType: string = event.message?.type
+      if (msgType !== 'text' && msgType !== 'image') continue
+
       const replyToken: string = event.replyToken
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
       const history = await loadHistory(userId, customerId)
-      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text)
+
+      let text = msgType === 'text' ? (event.message.text as string) : ''
+      let imgBuf: Buffer | undefined; let imgMime: string | undefined
+      if (msgType === 'image' && token) {
+        const img = await fetchLineImage(event.message.id, token)
+        if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
+        else text = '（客人傳送了一張圖片，但無法讀取）'
+      }
+
+      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, imgBuf, imgMime)
       if (reply && token && replyToken) await replyLine(replyToken, reply, token)
-      await saveHistory(userId, customerId, withTurn(history, text, reply))
+      await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
     }
     return NextResponse.json({ ok: true })
   }
@@ -970,13 +1051,21 @@ export async function POST(
     const msgs    = changes?.messages ?? []
 
     for (const msg of msgs) {
-      if (msg.type !== 'text') continue
-      const text: string = msg.text?.body ?? ''
-      const to: string   = msg.from
+      if (msg.type !== 'text' && msg.type !== 'image') continue
+      const to: string = msg.from
       const history = await loadHistory(userId, to)
-      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text)
+
+      let text = msg.type === 'text' ? (msg.text?.body ?? '') : ''
+      let imgBuf: Buffer | undefined; let imgMime: string | undefined
+      if (msg.type === 'image' && msg.image?.id && token) {
+        const img = await fetchWhatsAppImage(msg.image.id, token)
+        if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
+        else text = '（客人傳送了一張圖片，但無法讀取）'
+      }
+
+      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, imgBuf, imgMime)
       if (reply && token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
-      await saveHistory(userId, to, withTurn(history, text, reply))
+      await saveHistory(userId, to, withTurn(history, text || '【圖片】', reply))
     }
     return NextResponse.json({ ok: true })
   }
@@ -1075,23 +1164,33 @@ export async function POST(
         return NextResponse.json({ ok: true })
       }
 
-      // ── Regular customer message ────────────────────────────────────────
-      if (chatId && text && !text.startsWith('/') && !isAdmin) {
+      // ── Regular customer message (text or photo) ───────────────────────
+      const hasPhoto = Array.isArray(message?.photo) && message.photo.length > 0
+      if (chatId && (text || hasPhoto) && !text.startsWith('/') && !isAdmin) {
         const customerId = String(chatId)
         const history = await loadHistory(userId, customerId)
 
+        let imgBuf: Buffer | undefined; let imgMime: string | undefined
+        if (hasPhoto && botToken) {
+          // Pick the largest photo (last in array)
+          const photo = message.photo[message.photo.length - 1]
+          const img = await fetchTelegramImage(photo.file_id, botToken)
+          if (img) { imgBuf = img.buffer; imgMime = img.mimeType }
+        }
+
         // 1. AI auto-reply to customer
-        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text)
+        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, imgBuf, imgMime)
         if (reply) await replyTelegram(chatId, reply, botToken)
-        await saveHistory(userId, customerId, withTurn(history, text, reply))
+        await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
 
         // 2. Forward to admin if configured
         if (adminChatId) {
+          const displayText = hasPhoto ? `【圖片】${text ? ` + ${text}` : ''}` : text
           const forwardMsg =
             `💬 客戶訊息\n` +
             `👤 ${senderName}\n` +
             `🆔 ChatID: ${chatId}\n\n` +
-            `「${text}」\n\n` +
+            `「${displayText}」\n\n` +
             `🤖 AI 已回覆：\n${reply}\n\n` +
             `─────────────\n` +
             `↩️ 直接回覆此訊息可代替 AI 回覆客戶`

@@ -445,9 +445,11 @@ async function handlePost(req: NextRequest) {
     notifyWebhooks = [] as Array<{ id: string; type: 'line_messaging' | 'webhook'; label: string; value: string; target?: string }>,
     discountMaxPct = 0,
     discountGifts = '',
+    imageBase64 = '',    // base64-encoded image from test panel
+    imageMimeType = '',  // e.g. 'image/jpeg'
   } = await req.json()
 
-  if (!message?.trim()) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
+  if (!message?.trim() && !imageBase64) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
 
   const t0 = Date.now()
 
@@ -1019,12 +1021,21 @@ const systemPrompt = `${baseInstructions}
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
 注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
+  // Build user turn — multimodal when image is provided
+  type MsgContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
+  const userTurnContent: MsgContent = (imageBase64 && imageMimeType)
+    ? [
+        ...(message?.trim() ? [{ type: 'text' as const, text: message }] : [{ type: 'text' as const, text: '客人傳送了一張圖片' }]),
+        { type: 'image' as const, image: new Uint8Array(Buffer.from(imageBase64, 'base64')), mimeType: imageMimeType },
+      ]
+    : message
+
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
       role: h.role as 'user' | 'assistant',
       content: h.content,
     })),
-    { role: 'user' as const, content: message },
+    { role: 'user' as const, content: userTurnContent },
   ]
 
   let reply = ''
