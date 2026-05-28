@@ -1,6 +1,6 @@
 ﻿import { createClient } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
-import { Users, MessageSquare, DollarSign, Activity, Shield } from 'lucide-react'
+import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus } from 'lucide-react'
 import NextLink from 'next/link'
 
 export default async function AdminDashboardPage() {
@@ -47,9 +47,10 @@ export default async function AdminDashboardPage() {
   ]
 
   const adminLinks = [
-    { href: '/admin/users', label: '用戶管理', desc: '管理用戶帳號、類型與模組權限', icon: Users },
-    { href: '/admin/models', label: '模型設定', desc: '管理 AI 模型與計費配置', icon: Activity },
-    { href: '/admin/usage', label: '平台用量', desc: '查看全平台 API 用量明細', icon: DollarSign },
+    { href: '/admin/users',    label: '用戶管理',   desc: '管理用戶帳號、類型與模組權限', icon: Users },
+    { href: '/admin/models',   label: '模型設定',   desc: '管理 AI 模型與計費配置', icon: Activity },
+    { href: '/admin/usage',    label: '平台用量',   desc: '查看全平台 API 用量明細', icon: DollarSign },
+    { href: '/admin/feedback', label: '使用者回饋', desc: '審查回饋、觸發 AI 生成分支', icon: MessageSquarePlus },
   ]
 
   return (
