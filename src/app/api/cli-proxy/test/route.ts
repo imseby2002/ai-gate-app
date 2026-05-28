@@ -14,7 +14,7 @@ export async function POST() {
   if (!apiUrl) return NextResponse.json({ error: 'CLI_PROXY_API_URL 未設定' })
 
   try {
-    const r = await fetch(`${apiUrl}/v1/chat/completions`, {
+    const r = await fetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

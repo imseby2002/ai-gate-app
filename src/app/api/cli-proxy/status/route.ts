@@ -14,7 +14,7 @@ export async function GET() {
   if (!apiUrl) return NextResponse.json({ ok: false, error: 'CLI_PROXY_API_URL 未設定' })
 
   try {
-    const r = await fetch(`${apiUrl}/v1/models`, {
+    const r = await fetch(`${apiUrl}/models`, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
       signal: AbortSignal.timeout(5000),
     })
