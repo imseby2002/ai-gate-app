@@ -68,6 +68,12 @@ export function UserManagementTable({ users }: Props) {
     setSaving(null)
   }
 
+  const handleSetModules = async (user: UserRow, next: string[]) => {
+    setSaving(user.id + ':bulk')
+    await patch(user.id, { enabled_modules: next })
+    setSaving(null)
+  }
+
   const TYPE_COLORS: Record<string, string> = {
     employee: 'bg-green-100 text-green-700',
     external: 'bg-blue-100 text-blue-700',
@@ -166,7 +172,29 @@ export function UserManagementTable({ users }: Props) {
                   </tr>
                   {isExpanded && (
                     <tr key={user.id + '_modules'} className="border-b bg-indigo-50/40">
-                      <td colSpan={6} className="px-5 py-3">
+                      <td colSpan={6} className="px-5 py-3 space-y-2">
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <span className="text-xs text-gray-500 font-medium mr-1">快速設定：</span>
+                          <button
+                            onClick={() => handleSetModules(user, ALL_MODULES.map(m => m.id))}
+                            disabled={saving === user.id + ':bulk'}
+                            className="text-xs px-2.5 py-1 rounded-md border border-emerald-200 text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50"
+                          >全選</button>
+                          <button
+                            onClick={() => handleSetModules(user, [])}
+                            disabled={saving === user.id + ':bulk'}
+                            className="text-xs px-2.5 py-1 rounded-md border border-rose-200 text-rose-700 bg-white hover:bg-rose-50 disabled:opacity-50"
+                          >全不選</button>
+                          <select
+                            value=""
+                            onChange={e => { if (e.target.value) handleSetModules(user, [e.target.value]) }}
+                            disabled={saving === user.id + ':bulk'}
+                            className="text-xs px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50"
+                          >
+                            <option value="">只給單一功能…</option>
+                            {ALL_MODULES.map(m => <option key={m.id} value={m.id}>只給 {m.label}</option>)}
+                          </select>
+                        </div>
                         <div className="flex flex-wrap gap-2 items-center">
                           <span className="text-xs text-gray-500 font-medium mr-1">可用模組：</span>
                           {ALL_MODULES.map(m => {
@@ -176,7 +204,7 @@ export function UserManagementTable({ users }: Props) {
                               <button
                                 key={m.id}
                                 onClick={() => handleToggleModule(user, m.id)}
-                                disabled={isSaving}
+                                disabled={isSaving || saving === user.id + ':bulk'}
                                 className={`text-xs px-3 py-1 rounded-full border font-medium transition-all ${
                                   enabled
                                     ? 'bg-indigo-600 text-white border-indigo-600'
