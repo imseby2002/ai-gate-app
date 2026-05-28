@@ -2,17 +2,22 @@
 import { useState, useEffect } from 'react'
 import { ExternalLink, CheckCircle2, XCircle, Loader2, Copy, Check, Terminal, Zap, Shield, Server } from 'lucide-react'
 
-const PANEL_URL  = process.env.NEXT_PUBLIC_CLI_PROXY_PANEL_URL  ?? ''
-const API_URL    = process.env.NEXT_PUBLIC_CLI_PROXY_API_URL    ?? ''
+const PANEL_URL    = process.env.NEXT_PUBLIC_CLI_PROXY_PANEL_URL  ?? ''
+const API_URL      = process.env.NEXT_PUBLIC_CLI_PROXY_API_URL    ?? ''
+const FREE_LLM_URL = process.env.NEXT_PUBLIC_FREE_LLM_URL         ?? ''
+
+type StatusVal = 'idle' | 'checking' | 'ok' | 'error'
 
 export default function CliProxyPage() {
-  const [status, setStatus]     = useState<'idle' | 'checking' | 'ok' | 'error'>('idle')
-  const [models, setModels]     = useState<string[]>([])
+  const [status, setStatus]         = useState<StatusVal>('idle')
+  const [models, setModels]         = useState<string[]>([])
+  const [freeStatus, setFreeStatus] = useState<StatusVal>('idle')
+  const [freeModels, setFreeModels] = useState<string[]>([])
   const [copied, setCopied]     = useState('')
   const [testResult, setTestResult] = useState<string | null>(null)
   const [testing, setTesting]   = useState(false)
 
-  useEffect(() => { checkStatus() }, [])
+  useEffect(() => { checkStatus(); checkFreeStatus() }, [])
 
   async function checkStatus() {
     if (!API_URL) { setStatus('error'); return }
@@ -20,15 +25,20 @@ export default function CliProxyPage() {
     try {
       const r = await fetch('/api/cli-proxy/status')
       const d = await r.json()
-      if (d.ok) {
-        setStatus('ok')
-        setModels(d.models ?? [])
-      } else {
-        setStatus('error')
-      }
-    } catch {
-      setStatus('error')
-    }
+      if (d.ok) { setStatus('ok'); setModels(d.models ?? []) }
+      else setStatus('error')
+    } catch { setStatus('error') }
+  }
+
+  async function checkFreeStatus() {
+    if (!FREE_LLM_URL) { setFreeStatus('error'); return }
+    setFreeStatus('checking')
+    try {
+      const r = await fetch('/api/cli-proxy/free-status')
+      const d = await r.json()
+      if (d.ok) { setFreeStatus('ok'); setFreeModels(d.models ?? []) }
+      else setFreeStatus('error')
+    } catch { setFreeStatus('error') }
   }
 
   async function testApi() {
@@ -51,8 +61,14 @@ export default function CliProxyPage() {
     setTimeout(() => setCopied(''), 2000)
   }
 
-  const statusColor = { idle: 'text-gray-400', checking: 'text-amber-500', ok: 'text-green-600', error: 'text-red-500' }[status]
-  const statusText  = { idle: '尚未檢查', checking: '檢查中…', ok: '連線正常', error: '無法連線' }[status]
+  function statusColor(s: StatusVal) { return { idle: 'text-gray-400', checking: 'text-amber-500', ok: 'text-green-600', error: 'text-red-500' }[s] }
+  function statusText(s: StatusVal)  { return { idle: '尚未檢查', checking: '檢查中…', ok: '連線正常', error: '無法連線' }[s] }
+  function StatusIcon({ s }: { s: StatusVal }) {
+    if (s === 'checking') return <Loader2 className="h-4 w-4 animate-spin" />
+    if (s === 'ok')       return <CheckCircle2 className="h-4 w-4" />
+    if (s === 'error')    return <XCircle className="h-4 w-4" />
+    return null
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50">
@@ -70,47 +86,82 @@ export default function CliProxyPage() {
 
       <div className="max-w-4xl mx-auto px-6 py-6 space-y-5">
 
-        {/* Status cards */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Server className="h-4 w-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">API 狀態</span>
-            </div>
-            <div className={`flex items-center gap-1.5 font-semibold text-sm ${statusColor}`}>
-              {status === 'checking' ? <Loader2 className="h-4 w-4 animate-spin" /> :
-               status === 'ok'       ? <CheckCircle2 className="h-4 w-4" /> :
-               status === 'error'    ? <XCircle className="h-4 w-4" /> : null}
-              {statusText}
-            </div>
-            <button onClick={checkStatus} className="mt-2 text-[11px] text-indigo-600 hover:underline">重新檢查</button>
+        {/* ── CLI Proxy 狀態 ── */}
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="px-4 py-2.5 bg-slate-100 border-b flex items-center gap-2">
+            <Terminal className="h-3.5 w-3.5 text-slate-500" />
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">CLIProxyAPI（付費模型）</span>
           </div>
-
-          <div className="bg-white rounded-xl border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="h-4 w-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">可用模型</span>
+          <div className="grid grid-cols-3 gap-0 divide-x">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Server className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">API 狀態</span>
+              </div>
+              <div className={`flex items-center gap-1.5 font-semibold text-sm ${statusColor(status)}`}>
+                <StatusIcon s={status} />{statusText(status)}
+              </div>
+              <button onClick={checkStatus} className="mt-2 text-[11px] text-indigo-600 hover:underline">重新檢查</button>
             </div>
-            <div className="text-2xl font-bold text-slate-800">{status === 'ok' ? models.length : '—'}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5 truncate">
-              {models.slice(0, 3).join('、') || '—'}
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">可用模型</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-800">{status === 'ok' ? models.length : '—'}</div>
+              <div className="text-[11px] text-slate-400 mt-0.5 truncate">{models.slice(0, 3).join('、') || '—'}</div>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">控制台</span>
+              </div>
+              {PANEL_URL
+                ? <a href={PANEL_URL} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-indigo-600 hover:underline text-sm font-medium">開啟控制台 <ExternalLink className="h-3.5 w-3.5" /></a>
+                : <div className="text-xs text-red-500">未設定 PANEL_URL</div>}
+              <div className="text-[11px] text-slate-400 mt-0.5">fly.dev/management.html</div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white rounded-xl border p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="h-4 w-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">控制台</span>
-            </div>
-            {PANEL_URL ? (
-              <a href={PANEL_URL} target="_blank" rel="noreferrer"
-                className="flex items-center gap-1 text-indigo-600 hover:underline text-sm font-medium">
-                開啟控制台 <ExternalLink className="h-3.5 w-3.5" />
+        {/* ── FreeLLMAPI 狀態 ── */}
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="px-4 py-2.5 bg-emerald-50 border-b flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">FreeLLMAPI（免費模型 × 12 平台）</span>
+            {FREE_LLM_URL && (
+              <a href={FREE_LLM_URL} target="_blank" rel="noreferrer"
+                className="ml-auto flex items-center gap-1 text-[11px] text-emerald-700 hover:underline">
+                Admin UI <ExternalLink className="h-3 w-3" />
               </a>
-            ) : (
-              <div className="text-xs text-red-500">未設定 PANEL_URL</div>
             )}
-            <div className="text-[11px] text-slate-400 mt-0.5">port 8317/management.html</div>
+          </div>
+          <div className="grid grid-cols-3 gap-0 divide-x">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Server className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">API 狀態</span>
+              </div>
+              <div className={`flex items-center gap-1.5 font-semibold text-sm ${statusColor(freeStatus)}`}>
+                <StatusIcon s={freeStatus} />{statusText(freeStatus)}
+              </div>
+              <button onClick={checkFreeStatus} className="mt-2 text-[11px] text-emerald-600 hover:underline">重新檢查</button>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">可用模型</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-800">{freeStatus === 'ok' ? freeModels.length : '—'}</div>
+              <div className="text-[11px] text-slate-400 mt-0.5 truncate">{freeModels.slice(0, 3).join('、') || '—'}</div>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">來源</span>
+              </div>
+              <div className="text-xs text-slate-600">Groq / Gemini / Mistral<br/>Cohere / Cloudflare 等</div>
+            </div>
           </div>
         </div>
 
