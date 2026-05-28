@@ -23,6 +23,7 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   const [info, setInfo] = useState('')
   const [sessionEmail, setSessionEmail] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [allowed, setAllowed] = useState(true)
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
@@ -31,14 +32,21 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
       const u = data.user
       setSessionEmail(u?.email ?? null)
       if (u) {
-        const { data: prof } = await sb.from('profiles').select('user_type').eq('id', u.id).single()
-        setIsAdmin(prof?.user_type === 'admin')
+        const { data: prof } = await sb.from('profiles').select('user_type, enabled_modules').eq('id', u.id).single()
+        const admin = prof?.user_type === 'admin'
+        setIsAdmin(admin)
+        // 管理者不受限；enabled_modules 為空視為全開
+        setAllowed(admin || !prof?.enabled_modules || prof.enabled_modules.includes(system))
       }
       setChecking(false)
     })
-  }, [])
+  }, [system])
 
   function enter() {
+    if (!allowed) {
+      setError(`您的帳號尚未開通「${def.label}」，請聯絡管理員開通後再使用。`)
+      return
+    }
     setScopeCookie(system)
     router.push(def.home)
     router.refresh()
@@ -105,11 +113,17 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
             // 已登入 → 直接進入此系統（切換 scope）
             <div className="space-y-4 text-center">
               <p className="text-sm text-gray-600">目前登入：<span className="font-medium">{sessionEmail}</span></p>
-              <button onClick={enter}
-                className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2"
-                style={{ background: 'var(--primary)' }}>
-                進入{def.label} <ArrowRight className="h-4 w-4" />
-              </button>
+              {allowed ? (
+                <button onClick={enter}
+                  className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2"
+                  style={{ background: 'var(--primary)' }}>
+                  進入{def.label} <ArrowRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <div className="p-3 rounded-lg text-sm text-amber-700 bg-amber-50 border border-amber-200">
+                  您的帳號尚未開通「{def.label}」，請聯絡管理員開通後再使用。
+                </div>
+              )}
               <button onClick={async () => { await createClient().auth.signOut(); setSessionEmail(null); setIsAdmin(false) }}
                 className="text-xs text-gray-400 hover:text-gray-600">用其他帳號登入</button>
               {isAdmin && (

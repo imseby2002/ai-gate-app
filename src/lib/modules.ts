@@ -43,6 +43,15 @@ export const MODULES = [
     color: 'from-rose-500 to-pink-600',
     standalone: true,
   },
+  {
+    id: 'booking',
+    label: '訂房系統',
+    desc: '房源、訂單、定價與線上訂房',
+    href: '/booking',
+    emoji: '🏨',
+    color: 'from-cyan-500 to-sky-600',
+    standalone: true,
+  },
 ] as const
 
 export type ModuleId = typeof MODULES[number]['id']
