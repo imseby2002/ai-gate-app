@@ -5165,6 +5165,18 @@ function Unit12CustomerService({
   const [savingPc, setSavingPc] = useState(false)
   const [pcJsonError, setPcJsonError] = useState('')
 
+  // FAQ 知識庫
+  interface FaqItem { id: string; q: string; a: string; keywords: string[]; created_at: string }
+  const [faqItems, setFaqItems] = useState<FaqItem[]>([])
+  const [faqDialog, setFaqDialog] = useState<{ open: boolean; q: string; a: string; keywords: string; saving: boolean }>({
+    open: false, q: '', a: '', keywords: '', saving: false,
+  })
+  const loadFaq = (ind: string) => {
+    fetch(`/api/marketing/cs-faq?industry=${ind}`).then(r => r.json()).then(d => {
+      if (d.items) setFaqItems(d.items)
+    }).catch(() => {})
+  }
+
   // Breakfast webhook configs (多筆)
   const [breakfastSources, setBreakfastSources] = useState<CsDataSource[]>([])
   const [editingBreakfast, setEditingBreakfast] = useState<CsDataSource | null | { id: '' }>(null)
@@ -5940,6 +5952,7 @@ function Unit12CustomerService({
     p === 'line' ? '💬' : p === 'whatsapp' ? '📱' : p === 'telegram' ? '✈️' : p === 'test' ? '🧪' : '💌'
 
   return (
+    <>
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -5965,6 +5978,7 @@ function Unit12CustomerService({
                   setTab(t)
                   if (t === 'tickets') loadTickets()
                   if (t === 'inbox') loadInbox()
+                  if (t === 'data-sources') loadFaq(industry ?? 'homestay')
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative ${
                   tab === t ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
@@ -7403,7 +7417,7 @@ function Unit12CustomerService({
                         </div>
                       )}
                       {msg.role === 'assistant' && msg.meta && (
-                        <div className="flex items-center gap-1.5 px-1">
+                        <div className="flex items-center gap-1.5 px-1 flex-wrap">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.meta.risk ?? 'low')}`}>
                             {msg.meta.risk === 'high' ? '高風險' : msg.meta.risk === 'medium' ? '中風險' : '低風險'}
                           </span>
@@ -7412,6 +7426,14 @@ function Unit12CustomerService({
                           <span className={`text-[10px] font-medium ${msg.meta.provider === 'Claude' ? 'text-orange-500' : 'text-blue-500'}`}>
                             {msg.meta.provider}
                           </span>
+                          <button
+                            onClick={() => {
+                              const prevUser = [...testHistory].slice(0, i).reverse().find(m => m.role === 'user')
+                              setFaqDialog({ open: true, q: prevUser?.content ?? '', a: msg.content, keywords: '', saving: false })
+                            }}
+                            className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1">
+                            📚 加入知識庫
+                          </button>
                         </div>
                       )}
                     </div>
@@ -7522,6 +7544,51 @@ function Unit12CustomerService({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── FAQ 知識庫管理（data-sources tab 內） ──────────────────────────────── */}
+      {tab === 'data-sources' && (
+        <div className="space-y-3 mt-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-700">📚 自動學習 FAQ</div>
+              <div className="text-xs text-gray-400 mt-0.5">客服回答後加入知識庫，AI 下次遇到類似問題直接引用標準答案</div>
+            </div>
+            <button
+              onClick={() => setFaqDialog({ open: true, q: '', a: '', keywords: '', saving: false })}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="h-3.5 w-3.5" />手動新增
+            </button>
+          </div>
+          {faqItems.length === 0 ? (
+            <div className="text-center text-xs text-gray-400 py-8 border rounded-xl border-dashed">
+              尚無學習記錄。在「測試」Tab 的 AI 回覆旁點「📚 加入知識庫」即可新增。
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {faqItems.map(item => (
+                <div key={item.id} className="border rounded-xl p-3 bg-emerald-50/40 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-xs font-medium text-gray-800">Q: {item.q}</div>
+                    <button
+                      onClick={async () => {
+                        await fetch(`/api/marketing/cs-faq?industry=${industry}&itemId=${item.id}`, { method: 'DELETE' })
+                        setFaqItems(prev => prev.filter(f => f.id !== item.id))
+                      }}
+                      className="text-[10px] text-red-400 hover:text-red-600 shrink-0">刪除</button>
+                  </div>
+                  <div className="text-xs text-gray-600 border-l-2 border-emerald-300 pl-2">A: {item.a.slice(0, 120)}{item.a.length > 120 ? '…' : ''}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {item.keywords?.map(kw => (
+                      <span key={kw} className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">{kw}</span>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-gray-400">{new Date(item.created_at).toLocaleString('zh-TW')}</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -7747,7 +7814,7 @@ function Unit12CustomerService({
                     </div>
                     <div className="text-xs font-semibold text-gray-800">{ticket.subject}</div>
                     <div className="text-[11px] text-gray-500 line-clamp-2">{ticket.description.slice(0, 120)}{ticket.description.length > 120 ? '…' : ''}</div>
-                    <div className="flex gap-1.5 pt-1 flex-wrap">
+                    <div className="flex gap-1.5 pt-1 flex-wrap items-center">
                       {(['open', 'in_progress', 'resolved', 'closed'] as const).filter(s => s !== ticket.status).map(s => (
                         <button key={s} onClick={async () => {
                           const res = await fetch(`/api/marketing/cs-tickets/${ticket.id}`, {
@@ -7761,6 +7828,11 @@ function Unit12CustomerService({
                           → {ticketStatusLabel(s)}
                         </button>
                       ))}
+                      <button
+                        onClick={() => setFaqDialog({ open: true, q: ticket.subject || ticket.description.slice(0, 80), a: '', keywords: '', saving: false })}
+                        className="ml-auto text-[10px] px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 flex items-center gap-1">
+                        📚 加入知識庫
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -7952,7 +8024,70 @@ function Unit12CustomerService({
           </div>
         </div>
       )}
+
+      {/* ── FAQ 加入知識庫 Dialog ───────────────────────────────────────────────── */}
+      {faqDialog.open && (
+        <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setFaqDialog(p => ({ ...p, open: false })) }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4">
+            <div className="font-bold text-gray-900">📚 加入知識庫</div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">客戶問題（Q）</label>
+              <textarea rows={2} value={faqDialog.q}
+                onChange={e => setFaqDialog(p => ({ ...p, q: e.target.value }))}
+                placeholder="例：幾點可以入住？"
+                className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">標準答案（A）<span className="text-red-500 ml-0.5">*</span></label>
+              <textarea rows={4} value={faqDialog.a}
+                onChange={e => setFaqDialog(p => ({ ...p, a: e.target.value }))}
+                placeholder="輸入正確的客服回覆內容…"
+                className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">觸發關鍵字（逗號分隔，留空由 AI 自動建議）</label>
+              <input value={faqDialog.keywords}
+                onChange={e => setFaqDialog(p => ({ ...p, keywords: e.target.value }))}
+                placeholder="例：入住,幾點,check in"
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setFaqDialog(p => ({ ...p, open: false }))}
+                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button
+                disabled={!faqDialog.a.trim() || faqDialog.saving}
+                onClick={async () => {
+                  setFaqDialog(p => ({ ...p, saving: true }))
+                  const keywords = faqDialog.keywords.trim()
+                    ? faqDialog.keywords.split(',').map(k => k.trim()).filter(Boolean)
+                    : []
+                  const res = await fetch('/api/marketing/cs-faq', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      q: faqDialog.q, a: faqDialog.a, keywords,
+                      industry, autoSuggest: keywords.length === 0,
+                      context: faqDialog.q,
+                    }),
+                  })
+                  const d = await res.json()
+                  if (d.item) {
+                    setFaqItems(prev => [...prev, d.item])
+                    setFaqDialog({ open: false, q: '', a: '', keywords: '', saving: false })
+                  } else {
+                    setFaqDialog(p => ({ ...p, saving: false }))
+                  }
+                }}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                {faqDialog.saving ? <><Loader2 className="h-4 w-4 animate-spin" />AI 分析中…</> : '儲存至知識庫'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   )
 }
 
@@ -8576,5 +8711,6 @@ export default function MarketingAutoPage() {
         </div>
       </main>
     </div>
+
   )
 }

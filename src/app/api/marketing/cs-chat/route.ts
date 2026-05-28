@@ -678,11 +678,29 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     }
   }
 
+  // ── FAQ 知識庫注入 ────────────────────────────────────────────────────────
+  const faqSource = sources?.find(s => s.type === 'faq')
+  let faqSection = ''
+  if (faqSource?.config) {
+    interface FaqItem { q: string; a: string; keywords: string[] }
+    const items: FaqItem[] = (faqSource.config as { items?: FaqItem[] }).items ?? []
+    const msgLower = message.toLowerCase()
+    const matched = items.filter(item =>
+      item.keywords?.some(kw => kw.trim() && msgLower.includes(kw.trim().toLowerCase()))
+    )
+    if (matched.length > 0) {
+      faqSection = `\n\n【FAQ 知識庫（以下是經過人工確認的標準答案，遇到類似問題時直接引用）】\n` +
+        matched.map(item => `Q: ${item.q}\nA: ${item.a}`).join('\n\n')
+    }
+  }
+
   const sheetResults: string[] = []
   if (sources?.length) {
     await Promise.all(sources.map(async (src) => {
       let result: string | null = null
-      if (src.type === 'json_pricing') {
+      if (src.type === 'faq') {
+        return // 已單獨處理
+      } else if (src.type === 'json_pricing') {
         // 預訂流程開啟時直接注入所有定價模組，不依賴訊息關鍵字觸發
         result = bookingFlowEnabled
           ? formatPricingForAI(src.name, src.config as PricingConfig)
@@ -999,7 +1017,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   const msgHistory = [
     ...history.slice(-6).map((h: { role: string; content: string }) => ({
