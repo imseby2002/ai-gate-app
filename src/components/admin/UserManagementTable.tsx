@@ -131,6 +131,17 @@ export function UserManagementTable({ users }: Props) {
                       <div className="font-medium">{user.full_name ?? '—'}</div>
                       <div className="text-xs text-gray-400">{user.email}</div>
                       {user.department && <div className="text-xs text-gray-400">{user.department}</div>}
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {user.user_type === 'admin' ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-600">全部功能</span>
+                        ) : mods.length === 0 ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">未開通功能</span>
+                        ) : (
+                          ALL_MODULES.filter(m => mods.includes(m.id)).map(m => (
+                            <span key={m.id} className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600">{m.label}</span>
+                          ))
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[user.user_type]}`}>
@@ -194,6 +205,16 @@ export function UserManagementTable({ users }: Props) {
                             <option value="">只給單一功能…</option>
                             {ALL_MODULES.map(m => <option key={m.id} value={m.id}>只給 {m.label}</option>)}
                           </select>
+                          <button
+                            onClick={() => handleSetModules(user, ['cs', 'booking'])}
+                            disabled={saving === user.id + ':bulk'}
+                            className="text-xs px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50"
+                          >客服+訂房</button>
+                          <button
+                            onClick={() => handleSetModules(user, ['marketing', 'cs'])}
+                            disabled={saving === user.id + ':bulk'}
+                            className="text-xs px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50 disabled:opacity-50"
+                          >行銷+客服</button>
                         </div>
                         <div className="flex flex-wrap gap-2 items-center">
                           <span className="text-xs text-gray-500 font-medium mr-1">可用模組：</span>
