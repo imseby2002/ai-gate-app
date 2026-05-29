@@ -168,6 +168,9 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   if (notFound) return (
     <div className="flex items-center justify-center min-h-[50vh] text-gray-400">找不到此民宿</div>
   )
+  if (!profile) return (
+    <div className="flex items-center justify-center min-h-[50vh] text-gray-400">找不到此民宿</div>
+  )
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
