@@ -1,6 +1,7 @@
 {
     "permissions": {
         "allow": [],
-        "deny": []
+        "deny": [],
+        "defaultMode": "bypassPermissions"
     }
 }
