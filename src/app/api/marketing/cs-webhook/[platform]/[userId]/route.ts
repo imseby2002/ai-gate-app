@@ -32,19 +32,29 @@ type CsCustomerRow = {
   message_count: number
 }
 
-// 建立「銷售冠軍」業務指引（含第一次／第二次問價的不同處理、認得回頭客）
-function buildSellSection(cust: CsCustomerRow | null, convoPriceAsks: number, isPriceAskNow: boolean): string {
-  const lines = [
-    '\n\n【業務顧問模式——像銷售冠軍一樣對話】',
-    '你不只是客服，更是頂尖業務顧問：先同理 → 用提問釐清真正需求 → 把產品特點翻成「對這位客戶的好處」→ 描繪他選擇後的畫面 → 主動推進到下一步（用二選一收尾）。可運用社會證明、誠實的稀缺與互惠，但絕不施壓、不誇大、不欺騙。',
-  ]
-  if (cust?.name) lines.push(`客戶稱呼：${cust.name}。請自然地稱呼對方，展現你記得他。`)
-  if (cust?.summary) lines.push(`這位是回頭客，先前洽詢摘要：「${cust.summary}」。請延續脈絡、不要重問已知資訊。`)
-  if (isPriceAskNow) {
-    if (convoPriceAsks <= 1) lines.push('【價格詢問——第 1 次】不要只丟一個數字：報價同時說明「包含什麼、為什麼值得」，並順勢回問 1 個關鍵需求（日期／人數／用途）以便推薦最適方案。')
-    else if (convoPriceAsks === 2) lines.push('【價格詢問——第 2 次】這是明確的購買訊號或價格敏感。先同理預算考量，問出他真正在比較或猶豫的點，主動提供誘因（若有折扣／贈品就善用），並用二選一推進成交（例：「您想訂週五還是週六？」）。')
-    else lines.push('【價格詢問——第 3 次（含）以上】客戶可能卡在價格。給出你能提供的最佳方案或小讓步並請求承諾；若仍猶豫，提議由專員親自跟進，不要無限重複報價。')
+// 偵測猶豫關鍵字
+const HESITATION_RE = /考慮|再想想|比較|猶豫|還沒決定|再看看|回頭|之後再|有點貴|太貴|划算|值得嗎|其他家|別家|下次|想一下|想想看|不確定|先問問|問一下/
+
+// 業務輔助只在客人猶豫時才啟動；平時只保留客戶上下文
+function buildSellSection(cust: CsCustomerRow | null, convoPriceAsks: number, isPriceAskNow: boolean, currentMessage: string): string {
+  const lines: string[] = []
+
+  // 客戶記憶：永遠保留（不影響話術）
+  if (cust?.name) lines.push(`\n\n客戶稱呼：${cust.name}，請自然稱呼對方。`)
+  if (cust?.summary) lines.push(`回頭客背景：「${cust.summary}」，勿重問已知資訊。`)
+
+  // 偵測猶豫：關鍵字 OR 第 2 次以上問價 OR 已在 negotiating 階段
+  const isHesitating = HESITATION_RE.test(currentMessage) || convoPriceAsks >= 2 || cust?.stage === 'negotiating'
+
+  if (isHesitating) {
+    lines.push('\n\n【客戶正在猶豫——此刻才啟動業務模式】同理客戶的考量，簡短找出真正顧慮，提供一個具體誘因或解法，最後用二選一收尾推進決定。語氣溫暖，不施壓，不拖長篇幅。')
   }
+
+  // 報價提示：只加一句，不展開銷售話術
+  if (isPriceAskNow && !isHesitating) {
+    lines.push('\n\n【報價提醒】報完價後問一個關鍵需求（日期或人數），以便推薦最適方案。')
+  }
+
   return lines.join('\n')
 }
 
@@ -176,7 +186,7 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow), imageBuffer, imageMimeType)
+  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), imageBuffer, imageMimeType)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
 
   try {

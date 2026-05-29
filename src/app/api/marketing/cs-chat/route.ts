@@ -932,22 +932,22 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   }
   const knownName = (fromName || customer?.name || '').trim()
 
-  // 業務模式指引（永遠注入，讓客服像銷售冠軍；含第一次/第二次問價的不同處理）
-  const sellLines: string[] = [
-    '\n\n【業務顧問模式——像銷售冠軍一樣對話】',
-    '你不只是客服，更是頂尖業務顧問：先同理 → 用提問釐清真正需求 → 把產品特點翻成「對這位客戶的好處」→ 描繪他選擇後的畫面 → 主動推進到下一步（用二選一收尾）。可運用社會證明、誠實的稀缺與互惠，但絕不施壓、不誇大、不欺騙。',
-  ]
-  if (knownName) sellLines.push(`客戶稱呼：${knownName}。請自然地稱呼對方，展現你記得他。`)
-  if (customer?.summary) sellLines.push(`這位是回頭客，先前洽詢摘要：「${customer.summary}」。請延續脈絡、不要重問已知資訊。`)
-  if (isPriceAskNow) {
-    if (convoPriceAsks <= 1) {
-      sellLines.push('【價格詢問——第 1 次】不要只丟一個數字：報價同時說明「包含什麼、為什麼值得」，並順勢回問 1 個關鍵需求（日期／人數／用途）以便推薦最適方案。')
-    } else if (convoPriceAsks === 2) {
-      sellLines.push('【價格詢問——第 2 次】這是明確的購買訊號或價格敏感。先同理預算考量，問出他真正在比較或猶豫的點，主動提供誘因（若有折扣／贈品工具就善用），並用二選一推進成交（例：「您想訂週五還是週六？」）。')
-    } else {
-      sellLines.push('【價格詢問——第 3 次（含）以上】客戶可能卡在價格。給出你能提供的最佳方案或小讓步並請求承諾；若仍猶豫，提議由專員親自跟進，不要無限重複報價。')
-    }
+  // 客戶上下文 + 業務模式（只在客人猶豫時才啟動）
+  const HESITATION_RE_CS = /考慮|再想想|比較|猶豫|還沒決定|再看看|回頭|之後再|有點貴|太貴|划算|值得嗎|其他家|別家|下次|想一下|想想看|不確定|先問問/
+  const isHesitating = HESITATION_RE_CS.test(message) || convoPriceAsks >= 2 || customer?.stage === 'negotiating'
+
+  const sellLines: string[] = []
+  if (knownName) sellLines.push(`\n\n客戶稱呼：${knownName}，請自然稱呼對方。`)
+  if (customer?.summary) sellLines.push(`回頭客背景：「${customer.summary}」，勿重問已知資訊。`)
+
+  if (isHesitating) {
+    sellLines.push('\n\n【客戶正在猶豫——此刻才啟動業務模式】同理客戶考量，簡短找出真正顧慮，提供一個具體誘因或解法，用二選一收尾推進決定。語氣溫暖，不施壓，不拖長篇幅。')
   }
+
+  if (isPriceAskNow && !isHesitating) {
+    sellLines.push('\n\n【報價提醒】報完價後問一個關鍵需求（日期或人數），以便推薦最適方案。')
+  }
+
   const customerSection = sellLines.join('\n')
 
   // ── Build system prompt ───────────────────────────────────────────────────
@@ -968,7 +968,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     ? userSystemPrompt.trim()
     : (bookingFlowEnabled
         ? buildBookingSystemPrompt(paymentInfo, bookingFlows)
-        : `你是民宿的金牌業務顧問兼客服，兼具銷售冠軍的成交力與優秀客服的溫度。目標是真正理解每位客人、幫他找到最適合的房型並順利預訂，讓他心甘情願下單並成為回頭客。語氣溫暖自信如值得信賴的朋友，不諂媚也不高壓。主動引導客人說出需求，把房型特色翻成「對他的好處」，回答後立即推進下一步、不讓對話冷場；客人猶豫時先同理再問原因並協助解決，有空房時製造誠實而溫和的緊迫感。不確定的資訊請誠實說明，勿猜測。`)
+        : `你是民宿的 AI 客服。直接回答客人問題，語氣親切自然。不確定的資訊請誠實說明，勿猜測。`)
 
   const taiwanTime = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
 
