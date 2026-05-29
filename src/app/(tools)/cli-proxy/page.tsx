@@ -108,10 +108,10 @@ export default function CliProxyPage() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-2 text-slate-400 text-xs mb-3">
             <Terminal className="h-3.5 w-3.5" />
-            <span>Proxy 管理</span>
+            <span>LLM Proxy 管理</span>
           </div>
-          <h1 className="text-2xl font-bold mb-1">代理伺服器管理</h1>
-          <p className="text-slate-400 text-sm">整合多個免費 LLM 平台，最大化可用額度</p>
+          <h1 className="text-2xl font-bold mb-1">LLM Proxy 管理</h1>
+          <p className="text-slate-400 text-sm">整合 CLIProxyAPI + FreeLLMAPI，最大化免費模型額度</p>
         </div>
       </div>
 

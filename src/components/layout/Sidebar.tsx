@@ -46,7 +46,7 @@ const TOOL_NAV: NavItem[] = [
 
 // 僅總管理員可見的連結
 const ADMIN_NAV: NavItem[] = [
-  { labelKey: 'cliProxy',  label: 'CLI Proxy',  href: '/cli-proxy',  icon: Terminal,         module: null, adminOnly: true },
+  { labelKey: 'llmProxy',  label: 'LLM Proxy',  href: '/cli-proxy',  icon: Terminal,         module: null, adminOnly: true },
   { labelKey: 'feedback',  label: '意見回饋',    href: '/feedback',   icon: MessageSquarePlus, module: null },
 ]
 
