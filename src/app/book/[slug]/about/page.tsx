@@ -48,7 +48,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
       <div className="max-w-5xl mx-auto px-4 py-10 space-y-12">
         {!images[0] && (
-          <h1 className={`text-3xl font-bold text-gray-900 ${tpl.heroLayout === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
+          <h1 className={`text-3xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
             關於我們
           </h1>
         )}
@@ -81,7 +81,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {images.map((src, i) => (
-                <div key={i} className={`aspect-square overflow-hidden ${tpl.heroLayout === 'boutique' ? '' : 'rounded-xl'}`}>
+                <div key={i} className={`aspect-square overflow-hidden ${profile.template_id === 'boutique' ? '' : 'rounded-xl'}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                 </div>

@@ -173,7 +173,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
       {/* Header */}
       <div>
-        <h1 className={`text-2xl font-bold text-gray-900 ${tpl.heroLayout === 'boutique' ? 'uppercase tracking-widest text-xl' : ''}`}>
+        <h1 className={`text-2xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-xl' : ''}`}>
           線上訂房
         </h1>
         {profile?.booking_instructions && (

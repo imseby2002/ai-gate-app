@@ -32,7 +32,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-10">
       <div>
-        <h1 className={`text-3xl font-bold text-gray-900 ${tpl.heroLayout === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
+        <h1 className={`text-3xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
           聯絡我們
         </h1>
         {contactNote && (

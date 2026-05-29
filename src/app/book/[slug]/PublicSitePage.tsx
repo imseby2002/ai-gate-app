@@ -44,7 +44,7 @@ export default function PublicHomePage({
     <div className={`relative z-10 max-w-5xl mx-auto px-4 py-16 sm:py-24 w-full
       ${tpl.heroLayout === 'centered' ? 'flex flex-col items-center text-center' : 'flex flex-col items-start text-left'}`}>
       <h1 className={`text-4xl sm:text-5xl font-bold text-white leading-tight
-        ${tpl.heroLayout === 'boutique' ? 'tracking-widest uppercase text-3xl sm:text-4xl' : ''}`}>
+        ${profile.template_id === 'boutique' ? 'tracking-widest uppercase text-3xl sm:text-4xl' : ''}`}>
         {profile.name}
       </h1>
       {profile.tagline && (
@@ -149,7 +149,7 @@ export default function PublicHomePage({
         <section className={`py-12 ${tpl.sectionAlt}`}>
           <div className="max-w-5xl mx-auto px-4">
             <div className="flex items-end justify-between mb-6">
-              <h2 className={`text-2xl font-bold text-gray-900 ${tpl.heroLayout === 'boutique' ? 'tracking-widest uppercase text-xl' : ''}`}>
+              <h2 className={`text-2xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'tracking-widest uppercase text-xl' : ''}`}>
                 精選房型
               </h2>
               <Link href={`${base}/rooms`} className="text-sm hover:underline flex items-center gap-1" style={aText}>
@@ -207,7 +207,7 @@ export default function PublicHomePage({
           <div className="max-w-5xl mx-auto px-4">
             <div className="grid sm:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
-                <h2 className={`text-2xl font-bold text-gray-900 ${tpl.heroLayout === 'boutique' ? 'tracking-widest uppercase text-xl' : ''}`}>
+                <h2 className={`text-2xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'tracking-widest uppercase text-xl' : ''}`}>
                   關於我們
                 </h2>
                 <p className="text-gray-600 leading-relaxed line-clamp-5">
@@ -220,7 +220,7 @@ export default function PublicHomePage({
               {images.length > 1 && (
                 <div className="grid grid-cols-2 gap-2">
                   {images.slice(1, 5).map((src, i) => (
-                    <div key={i} className={`aspect-square overflow-hidden ${tpl.heroLayout === 'boutique' ? '' : 'rounded-xl'}`}>
+                    <div key={i} className={`aspect-square overflow-hidden ${profile.template_id === 'boutique' ? '' : 'rounded-xl'}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={src} alt="" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                     </div>

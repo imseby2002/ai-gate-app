@@ -34,7 +34,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
       <div className="mb-8">
-        <h1 className={`text-3xl font-bold text-gray-900 ${tpl.heroLayout === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
+        <h1 className={`text-3xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
           房型介紹
         </h1>
         <p className="text-sm text-gray-500 mt-1">選擇最適合您的房型，直接線上預訂</p>
