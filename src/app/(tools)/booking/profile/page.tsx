@@ -4,8 +4,9 @@ import {
   Save, Loader2, ImagePlus, X, Link2, Copy, Check,
   Download, FileText, CheckCircle, AlertCircle,
   ChevronDown, ChevronUp, BedDouble, MapPin, Clock, Users, Wifi,
-  Globe, Plus, HelpCircle, Palette, Search,
+  Globe, Plus, HelpCircle, Palette, Search, ExternalLink,
 } from 'lucide-react'
+import { TEMPLATES } from '@/lib/booking/templates'
 
 const PLATFORMS = [
   { id: 'booking_com', label: 'Booking.com', color: 'bg-blue-600', hint: 'https://www.booking.com/hotel/...' },
@@ -41,10 +42,13 @@ interface BnbProfile {
   house_rules: string; images: string[]; slug: string
   breakfast: BreakfastSettings
   addon_services: AddonService[]
-  tagline: string; about: string
+  tagline: string; about: string; owner_intro: string
   social_links: { facebook: string; instagram: string; youtube: string }
   faq: FaqItem[]
   theme_color: string; seo_title: string; seo_description: string
+  template_id: string; hero_cta_text: string
+  booking_instructions: string; cancellation_policy: string
+  contact_map_embed: string; contact_note: string
 }
 
 const DEFAULT_BREAKFAST: BreakfastSettings = {
@@ -63,10 +67,13 @@ const DEFAULT: BnbProfile = {
   house_rules: '', images: [], slug: '',
   breakfast: DEFAULT_BREAKFAST,
   addon_services: DEFAULT_ADDONS,
-  tagline: '', about: '',
+  tagline: '', about: '', owner_intro: '',
   social_links: { facebook: '', instagram: '', youtube: '' },
   faq: [],
   theme_color: '#4f46e5', seo_title: '', seo_description: '',
+  template_id: 'natural', hero_cta_text: '',
+  booking_instructions: '', cancellation_policy: '',
+  contact_map_embed: '', contact_note: '',
 }
 
 const UNIT_LABELS: Record<string, string> = {
@@ -74,6 +81,7 @@ const UNIT_LABELS: Record<string, string> = {
 }
 
 type ImportStep = 'input' | 'parsing' | 'preview' | 'done'
+type WebTab = 'template' | 'homepage' | 'about' | 'rooms' | 'booking' | 'contact' | 'seo'
 
 export default function BnbProfilePage() {
   const [form, setForm]       = useState<BnbProfile>(DEFAULT)
@@ -83,6 +91,7 @@ export default function BnbProfilePage() {
   const [saved, setSaved]     = useState(false)
   const [uploading, setUploading] = useState(false)
   const [copied, setCopied]   = useState(false)
+  const [webTab, setWebTab]   = useState<WebTab>('template')
   const fileRef = useRef<HTMLInputElement>(null)
 
   // OTA import states
@@ -651,93 +660,263 @@ export default function BnbProfilePage() {
       </section>
 
       {/* 官網設定 */}
-      <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5"><Globe className="h-4 w-4" /> 官網設定</h2>
-        <p className="text-xs text-gray-400">這些資訊會顯示在您的公開訂房官網（/book/{form.slug || 'your-slug'}）</p>
+      <section className="bg-white rounded-xl border overflow-hidden">
+        <div className="px-4 sm:px-5 pt-4 pb-0">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+              <Globe className="h-4 w-4" /> 官網編輯器
+            </h2>
+            {form.slug && (
+              <a href={`/book/${form.slug}`} target="_blank" rel="noreferrer"
+                className="flex items-center gap-1 text-xs text-indigo-500 hover:underline">
+                <ExternalLink className="h-3 w-3" /> 預覽官網
+              </a>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mb-3">設定後顯示於 /book/{form.slug || 'your-slug'} 各頁面</p>
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-600">副標語（Tagline）</label>
-          <input value={form.tagline} onChange={e => set('tagline', e.target.value)}
-            placeholder="例：山中靜謐，回歸自然的好所在"
-            className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-600">關於我們（詳細介紹）</label>
-          <textarea value={form.about} onChange={e => set('about', e.target.value)}
-            rows={4} placeholder="詳細描述民宿故事、環境特色、周邊景點…"
-            className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+          {/* Tab bar */}
+          <div className="flex gap-0.5 overflow-x-auto border-b -mx-4 sm:-mx-5 px-4 sm:px-5">
+            {(['template', 'homepage', 'about', 'rooms', 'booking', 'contact', 'seo'] as WebTab[]).map(t => {
+              const labels: Record<WebTab, string> = {
+                template: '🎨 模板', homepage: '🏠 首頁',
+                about: '📖 關於頁', rooms: '🛏 房型頁',
+                booking: '📅 訂房頁', contact: '📍 聯絡頁', seo: '🔍 SEO',
+              }
+              return (
+                <button key={t} type="button" onClick={() => setWebTab(t)}
+                  className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors
+                    ${webTab === t
+                      ? 'border-indigo-600 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                  {labels[t]}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        {/* 社群連結 */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-gray-600">社群連結</label>
-          {([
-            { key: 'facebook' as const, label: 'Facebook', placeholder: 'https://www.facebook.com/...' },
-            { key: 'instagram' as const, label: 'Instagram', placeholder: 'https://www.instagram.com/...' },
-            { key: 'youtube' as const, label: 'YouTube', placeholder: 'https://www.youtube.com/...' },
-          ]).map(({ key, label, placeholder }) => (
-            <div key={key} className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-20 shrink-0">{label}</span>
-              <input value={form.social_links[key]} onChange={e => setSocialLink(key, e.target.value)}
-                placeholder={placeholder}
-                className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+        <div className="px-4 sm:px-5 py-4">
+          {/* ── 模板 tab ── */}
+          {webTab === 'template' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {TEMPLATES.map(tpl => (
+                  <button key={tpl.id} type="button" onClick={() => {
+                    set('template_id', tpl.id)
+                    if (!form.theme_color || form.theme_color === '#4f46e5') set('theme_color', tpl.defaultAccent)
+                  }}
+                    className={`relative p-0 rounded-xl overflow-hidden border-2 transition-all text-left
+                      ${form.template_id === tpl.id
+                        ? 'border-indigo-600 ring-2 ring-indigo-200'
+                        : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className={`h-20 w-full bg-gradient-to-br ${tpl.previewBg} relative`}>
+                      {tpl.id === 'natural' && (
+                        <div className="absolute bottom-2 left-3 right-10 space-y-1">
+                          <div className="h-2.5 bg-white/80 rounded-full w-3/4" />
+                          <div className="h-1.5 bg-white/50 rounded-full w-1/2" />
+                          <div className="h-5 w-16 bg-white/30 rounded-full mt-1.5" />
+                        </div>
+                      )}
+                      {tpl.id === 'coastal' && (
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="flex-1 px-3 space-y-1">
+                            <div className="h-2.5 bg-white/80 rounded-full w-3/4" />
+                            <div className="h-1.5 bg-white/50 rounded-full w-1/2" />
+                            <div className="h-5 w-14 bg-white/30 rounded-xl mt-1.5" />
+                          </div>
+                          <div className="w-10 h-full bg-white/10 border-l border-white/20" />
+                        </div>
+                      )}
+                      {tpl.id === 'boutique' && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                          <div className="h-2.5 bg-white/80 rounded-full w-1/2" />
+                          <div className="h-1.5 bg-white/50 rounded-full w-1/3" />
+                          <div className="h-5 w-12 bg-white/30 mt-1" />
+                        </div>
+                      )}
+                      {tpl.id === 'zen' && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-white/15 backdrop-blur-sm px-3 py-2 space-y-1">
+                          <div className="h-2 bg-white/80 rounded-full w-2/3" />
+                          <div className="h-1.5 bg-white/50 rounded-full w-1/2" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-800">{tpl.name}</span>
+                        {form.template_id === tpl.id && <Check className="h-3.5 w-3.5 text-indigo-600" />}
+                      </div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{tpl.desc}</div>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <div className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: tpl.defaultAccent }} />
+                        <span className="text-[10px] text-gray-400 font-mono">{tpl.defaultAccent}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 pt-2 border-t">
+                <label className="text-xs font-medium text-gray-600 flex items-center gap-1 shrink-0">
+                  <Palette className="h-3.5 w-3.5" /> 自訂主題色
+                </label>
+                <input type="color" value={form.theme_color}
+                  onChange={e => set('theme_color', e.target.value)}
+                  className="w-10 h-8 rounded border cursor-pointer" />
+                <span className="text-xs text-gray-400 font-mono">{form.theme_color}</span>
+                <button type="button" onClick={() => {
+                  const tpl = TEMPLATES.find(t => t.id === form.template_id)
+                  if (tpl) set('theme_color', tpl.defaultAccent)
+                }} className="text-xs text-indigo-500 hover:underline ml-auto">套用模板預設色</button>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
 
-        {/* 主題色 */}
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-medium text-gray-600 flex items-center gap-1"><Palette className="h-3.5 w-3.5" /> 主題色</label>
-          <input type="color" value={form.theme_color}
-            onChange={e => set('theme_color', e.target.value)}
-            className="w-10 h-8 rounded border cursor-pointer" />
-          <span className="text-xs text-gray-400 font-mono">{form.theme_color}</span>
-          <button type="button" onClick={() => set('theme_color', '#4f46e5')}
-            className="text-xs text-indigo-500 hover:underline">重設</button>
-        </div>
+          {/* ── 首頁 tab ── */}
+          {webTab === 'homepage' && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">副標語（顯示於 Hero）</label>
+                <input value={form.tagline} onChange={e => set('tagline', e.target.value)}
+                  placeholder="例：山中靜謐，回歸自然的好所在"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">CTA 按鈕文字</label>
+                <input value={form.hero_cta_text} onChange={e => set('hero_cta_text', e.target.value)}
+                  placeholder="立即訂房（預設）"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <p className="text-[11px] text-gray-400">留空使用「立即訂房」</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-3 text-xs text-amber-700">
+                💡 Hero 圖片從「民宿照片」選取，第一張為首頁主圖
+              </div>
+            </div>
+          )}
 
-        {/* FAQ */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-gray-600 flex items-center gap-1"><HelpCircle className="h-3.5 w-3.5" /> 常見問題</label>
-          {form.faq.map((item, i) => (
-            <div key={i} className="border rounded-xl p-3 space-y-2 bg-gray-50">
-              <div className="flex items-start gap-2">
-                <div className="flex-1 space-y-1.5">
-                  <input value={item.q} onChange={e => updateFaq(i, { q: e.target.value })}
-                    placeholder="問題"
-                    className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                  <textarea value={item.a} onChange={e => updateFaq(i, { a: e.target.value })}
-                    rows={2} placeholder="回答"
-                    className="w-full text-sm border rounded-lg px-3 py-2 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                </div>
-                <button onClick={() => removeFaq(i)}
-                  className="mt-1 p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50">
-                  <X className="h-4 w-4" />
+          {/* ── 關於頁 tab ── */}
+          {webTab === 'about' && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">民宿故事（關於頁主要內容）</label>
+                <textarea value={form.about} onChange={e => set('about', e.target.value)}
+                  rows={5} placeholder="詳細描述民宿故事、環境特色、周邊景點…"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">主人 / 業者介紹</label>
+                <textarea value={form.owner_intro} onChange={e => set('owner_intro', e.target.value)}
+                  rows={3} placeholder="簡短介紹經營者，讓旅客感受到溫度…"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                  <HelpCircle className="h-3.5 w-3.5" /> 常見問題 FAQ
+                </label>
+                {form.faq.map((item, i) => (
+                  <div key={i} className="border rounded-xl p-3 space-y-2 bg-gray-50">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 space-y-1.5">
+                        <input value={item.q} onChange={e => updateFaq(i, { q: e.target.value })}
+                          placeholder="問題"
+                          className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                        <textarea value={item.a} onChange={e => updateFaq(i, { a: e.target.value })}
+                          rows={2} placeholder="回答"
+                          className="w-full text-sm border rounded-lg px-3 py-2 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                      <button onClick={() => removeFaq(i)}
+                        className="mt-1 p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={addFaq}
+                  className="flex items-center gap-1.5 text-sm text-indigo-600 hover:underline">
+                  <Plus className="h-3.5 w-3.5" /> 新增問題
                 </button>
               </div>
             </div>
-          ))}
-          <button type="button" onClick={addFaq}
-            className="flex items-center gap-1.5 text-sm text-indigo-600 hover:underline">
-            <Plus className="h-3.5 w-3.5" /> 新增問題
-          </button>
-        </div>
+          )}
 
-        {/* SEO */}
-        <div className="space-y-3 pt-1 border-t">
-          <label className="text-xs font-medium text-gray-600 flex items-center gap-1 pt-1"><Search className="h-3.5 w-3.5" /> SEO 設定</label>
-          <div className="space-y-1">
-            <label className="text-[11px] text-gray-500">網頁標題（留空則使用民宿名稱）</label>
-            <input value={form.seo_title} onChange={e => set('seo_title', e.target.value)}
-              placeholder={form.name || '民宿名稱'}
-              className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] text-gray-500">網頁描述（Google 搜尋結果摘要）</label>
-            <textarea value={form.seo_description} onChange={e => set('seo_description', e.target.value)}
-              rows={2} placeholder="簡短描述，建議 120 字以內"
-              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-          </div>
+          {/* ── 房型頁 tab ── */}
+          {webTab === 'rooms' && (
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-xs text-gray-600">
+              <p className="font-medium text-gray-700">房型資料從「房型管理」設定</p>
+              <p>每間房型的照片、描述、容納人數、定價在房型管理頁面維護，自動顯示於官網房型介紹頁。</p>
+              <a href="/booking/properties" className="inline-flex items-center gap-1 text-indigo-600 hover:underline mt-1">
+                前往房型管理 <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+
+          {/* ── 訂房頁 tab ── */}
+          {webTab === 'booking' && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">訂房頁說明文字</label>
+                <textarea value={form.booking_instructions} onChange={e => set('booking_instructions', e.target.value)}
+                  rows={3} placeholder="例：請填寫正確聯絡資料，業者確認後將以 Email 通知，付款方式為現場付款。"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">取消政策</label>
+                <textarea value={form.cancellation_policy} onChange={e => set('cancellation_policy', e.target.value)}
+                  rows={3} placeholder="例：入住 48 小時前可免費取消，逾時收取首晚費用。特殊假期不適用免費取消。"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-y" />
+              </div>
+              <p className="text-[11px] text-gray-400">早餐與加購服務在上方「早餐設定 / 加購服務」區段設定</p>
+            </div>
+          )}
+
+          {/* ── 聯絡頁 tab ── */}
+          {webTab === 'contact' && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">聯絡頁說明</label>
+                <textarea value={form.contact_note} onChange={e => set('contact_note', e.target.value)}
+                  rows={2} placeholder="例：LINE 為主要聯絡管道，我們通常在 1 小時內回覆。"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">Google Maps 嵌入網址</label>
+                <input value={form.contact_map_embed} onChange={e => set('contact_map_embed', e.target.value)}
+                  placeholder="https://www.google.com/maps/embed?pb=..."
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <p className="text-[11px] text-gray-400">Google Maps → 分享 → 嵌入地圖 → 複製 src="" 內的網址</p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-600">社群連結</label>
+                {(['facebook', 'instagram', 'youtube'] as const).map(key => (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 w-20 shrink-0 capitalize">{key}</span>
+                    <input value={form.social_links[key]} onChange={e => setSocialLink(key, e.target.value)}
+                      placeholder={`https://www.${key}.com/...`}
+                      className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-400">電話 / Email / LINE ID 在上方「聯絡方式」區段設定</p>
+            </div>
+          )}
+
+          {/* ── SEO tab ── */}
+          {webTab === 'seo' && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[11px] text-gray-500">網頁標題（留空使用民宿名稱）</label>
+                <input value={form.seo_title} onChange={e => set('seo_title', e.target.value)}
+                  placeholder={form.name || '民宿名稱'}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] text-gray-500">Google 搜尋摘要描述（建議 120 字以內）</label>
+                <textarea value={form.seo_description} onChange={e => set('seo_description', e.target.value)}
+                  rows={3} placeholder="簡短描述民宿特色，吸引旅客點擊…"
+                  className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

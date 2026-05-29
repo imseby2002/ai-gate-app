@@ -26,6 +26,8 @@ export async function PUT(req: NextRequest) {
     'website','line_id','check_in_time','check_out_time',
     'min_nights','amenities','images','house_rules','breakfast','addon_services','slug',
     'tagline','about','social_links','faq','theme_color','seo_title','seo_description',
+    'template_id','hero_cta_text','booking_instructions','cancellation_policy',
+    'contact_map_embed','contact_note','owner_intro',
   ]
   const updates: Record<string, unknown> = {}
   for (const f of fields) if (f in body) updates[f] = body[f]
