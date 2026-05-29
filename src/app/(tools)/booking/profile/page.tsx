@@ -4,6 +4,7 @@ import {
   Save, Loader2, ImagePlus, X, Link2, Copy, Check,
   Download, FileText, CheckCircle, AlertCircle,
   ChevronDown, ChevronUp, BedDouble, MapPin, Clock, Users, Wifi,
+  Globe, Plus, HelpCircle, Palette, Search,
 } from 'lucide-react'
 
 const PLATFORMS = [
@@ -32,6 +33,7 @@ interface AddonService {
   id: string; name: string; enabled: boolean
   price: number; unit: 'per_trip' | 'per_stay' | 'per_night' | 'per_person'; note: string
 }
+interface FaqItem { q: string; a: string }
 interface BnbProfile {
   name: string; description: string; address: string; city: string
   phone: string; email: string; website: string; line_id: string
@@ -39,6 +41,10 @@ interface BnbProfile {
   house_rules: string; images: string[]; slug: string
   breakfast: BreakfastSettings
   addon_services: AddonService[]
+  tagline: string; about: string
+  social_links: { facebook: string; instagram: string; youtube: string }
+  faq: FaqItem[]
+  theme_color: string; seo_title: string; seo_description: string
 }
 
 const DEFAULT_BREAKFAST: BreakfastSettings = {
@@ -57,6 +63,10 @@ const DEFAULT: BnbProfile = {
   house_rules: '', images: [], slug: '',
   breakfast: DEFAULT_BREAKFAST,
   addon_services: DEFAULT_ADDONS,
+  tagline: '', about: '',
+  social_links: { facebook: '', instagram: '', youtube: '' },
+  faq: [],
+  theme_color: '#4f46e5', seo_title: '', seo_description: '',
 }
 
 const UNIT_LABELS: Record<string, string> = {
@@ -104,6 +114,13 @@ export default function BnbProfilePage() {
           images: p.images ?? [],
           breakfast: p.breakfast ?? DEFAULT_BREAKFAST,
           addon_services: [...mergedAddons, ...extra],
+          tagline: p.tagline ?? '',
+          about: p.about ?? '',
+          social_links: p.social_links ?? { facebook: '', instagram: '', youtube: '' },
+          faq: p.faq ?? [],
+          theme_color: p.theme_color ?? '#4f46e5',
+          seo_title: p.seo_title ?? '',
+          seo_description: p.seo_description ?? '',
         }
         setForm(merged)
         setInitialForm(merged)
@@ -135,6 +152,23 @@ export default function BnbProfilePage() {
       ...f,
       addon_services: f.addon_services.map(s => s.id === id ? { ...s, ...updates } : s),
     }))
+    setSaved(false)
+  }
+
+  function setSocialLink(key: keyof BnbProfile['social_links'], value: string) {
+    setForm(f => ({ ...f, social_links: { ...f.social_links, [key]: value } }))
+    setSaved(false)
+  }
+  function addFaq() {
+    setForm(f => ({ ...f, faq: [...f.faq, { q: '', a: '' }] }))
+    setSaved(false)
+  }
+  function updateFaq(i: number, updates: Partial<FaqItem>) {
+    setForm(f => ({ ...f, faq: f.faq.map((item, idx) => idx === i ? { ...item, ...updates } : item) }))
+    setSaved(false)
+  }
+  function removeFaq(i: number) {
+    setForm(f => ({ ...f, faq: f.faq.filter((_, idx) => idx !== i) }))
     setSaved(false)
   }
 
@@ -613,6 +647,97 @@ export default function BnbProfilePage() {
               )}
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* 官網設定 */}
+      <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5"><Globe className="h-4 w-4" /> 官網設定</h2>
+        <p className="text-xs text-gray-400">這些資訊會顯示在您的公開訂房官網（/book/{form.slug || 'your-slug'}）</p>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600">副標語（Tagline）</label>
+          <input value={form.tagline} onChange={e => set('tagline', e.target.value)}
+            placeholder="例：山中靜謐，回歸自然的好所在"
+            className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600">關於我們（詳細介紹）</label>
+          <textarea value={form.about} onChange={e => set('about', e.target.value)}
+            rows={4} placeholder="詳細描述民宿故事、環境特色、周邊景點…"
+            className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none" />
+        </div>
+
+        {/* 社群連結 */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-600">社群連結</label>
+          {([
+            { key: 'facebook' as const, label: 'Facebook', placeholder: 'https://www.facebook.com/...' },
+            { key: 'instagram' as const, label: 'Instagram', placeholder: 'https://www.instagram.com/...' },
+            { key: 'youtube' as const, label: 'YouTube', placeholder: 'https://www.youtube.com/...' },
+          ]).map(({ key, label, placeholder }) => (
+            <div key={key} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-20 shrink-0">{label}</span>
+              <input value={form.social_links[key]} onChange={e => setSocialLink(key, e.target.value)}
+                placeholder={placeholder}
+                className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+          ))}
+        </div>
+
+        {/* 主題色 */}
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1"><Palette className="h-3.5 w-3.5" /> 主題色</label>
+          <input type="color" value={form.theme_color}
+            onChange={e => set('theme_color', e.target.value)}
+            className="w-10 h-8 rounded border cursor-pointer" />
+          <span className="text-xs text-gray-400 font-mono">{form.theme_color}</span>
+          <button type="button" onClick={() => set('theme_color', '#4f46e5')}
+            className="text-xs text-indigo-500 hover:underline">重設</button>
+        </div>
+
+        {/* FAQ */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1"><HelpCircle className="h-3.5 w-3.5" /> 常見問題</label>
+          {form.faq.map((item, i) => (
+            <div key={i} className="border rounded-xl p-3 space-y-2 bg-gray-50">
+              <div className="flex items-start gap-2">
+                <div className="flex-1 space-y-1.5">
+                  <input value={item.q} onChange={e => updateFaq(i, { q: e.target.value })}
+                    placeholder="問題"
+                    className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  <textarea value={item.a} onChange={e => updateFaq(i, { a: e.target.value })}
+                    rows={2} placeholder="回答"
+                    className="w-full text-sm border rounded-lg px-3 py-2 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <button onClick={() => removeFaq(i)}
+                  className="mt-1 p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+          <button type="button" onClick={addFaq}
+            className="flex items-center gap-1.5 text-sm text-indigo-600 hover:underline">
+            <Plus className="h-3.5 w-3.5" /> 新增問題
+          </button>
+        </div>
+
+        {/* SEO */}
+        <div className="space-y-3 pt-1 border-t">
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1 pt-1"><Search className="h-3.5 w-3.5" /> SEO 設定</label>
+          <div className="space-y-1">
+            <label className="text-[11px] text-gray-500">網頁標題（留空則使用民宿名稱）</label>
+            <input value={form.seo_title} onChange={e => set('seo_title', e.target.value)}
+              placeholder={form.name || '民宿名稱'}
+              className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px] text-gray-500">網頁描述（Google 搜尋結果摘要）</label>
+            <textarea value={form.seo_description} onChange={e => set('seo_description', e.target.value)}
+              rows={2} placeholder="簡短描述，建議 120 字以內"
+              className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
         </div>
       </section>
 
