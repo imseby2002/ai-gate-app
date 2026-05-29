@@ -9,14 +9,25 @@ export type RoutingIntent =
   | 'video-gen'
 
 export const MODEL_ROUTING: Record<RoutingIntent, string> = {
-  daily:       'gemini-2.0-flash',        // Gemini Flash - 極低費用，通用對話
-  finance:     'deepseek-reasoner',       // DeepSeek R1 - 財務/數學推理
-  creative:    'gemini-2.0-flash',        // Gemini Flash - 創意/行銷文案
-  analysis:    'deepseek-chat',           // DeepSeek Chat - 深度分析
-  legal:       'perplexity-sonar-pro',    // Perplexity - 法條/網路查證
-  vision:      'gemini-2.5-flash',        // Gemini 2.5 Flash - 圖片/OCR（原生多模態）
-  'image-gen': 'flux-1-pro',             // FAL - 圖片生成
-  'video-gen': 'veo3',                   // VEO3 - 影片生成
+  daily:       'gemini-2.0-flash',        // fallback direct model (used when chain disabled)
+  finance:     'deepseek-chat',
+  creative:    'gemini-2.0-flash',
+  analysis:    'deepseek-chat',
+  legal:       'perplexity-sonar-pro',    // Perplexity - 法條/網路查證（直接，需 web）
+  vision:      'gemini-2.5-flash',        // 視覺直接用 Gemini（原生 multimodal）
+  'image-gen': 'flux-1-pro',
+  'video-gen': 'veo3',
+}
+
+// Map routing intent → fallback chain name
+import type { ChainName } from './proxy-fallback'
+export const INTENT_CHAIN: Partial<Record<RoutingIntent, ChainName>> = {
+  daily:     'daily',
+  finance:   'finance',
+  creative:  'creative',
+  analysis:  'analysis',
+  legal:     'legal',
+  // vision → direct Gemini (needs multimodal, handled separately)
 }
 
 const INTENT_KEYWORDS: Record<RoutingIntent, string[]> = {

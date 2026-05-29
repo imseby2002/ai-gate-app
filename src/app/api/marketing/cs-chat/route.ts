@@ -1039,41 +1039,66 @@ const systemPrompt = `${baseInstructions}
   ]
 
   let reply = ''
-  let provider: 'Gemini' | 'Claude' = 'Gemini'
+  let provider = 'FreeLLM'
 
+  // High-risk (投訴/退款) → Claude Sonnet directly, no proxy
   if (shouldEscalate) {
     const anthropicKey = process.env.ANTHROPIC_API_KEY
-    if (!anthropicKey) {
-      provider = 'Gemini'
-    } else {
+    if (anthropicKey) {
       provider = 'Claude'
       try {
         const anthropic = createAnthropic({ apiKey: anthropicKey })
         const { text } = await generateText({
-          model: anthropic('claude-sonnet-4-5'),
+          model: anthropic('claude-sonnet-4-6'),
           system: systemPrompt,
           messages: msgHistory,
         })
         reply = text
-      } catch {
-        provider = 'Gemini'
-      }
+      } catch { /* fall through to CS chain */ }
     }
   }
 
-  if (provider === 'Gemini') {
-    try {
-      const { text } = await generateText({
-        model: google('gemini-2.5-flash'),
-        providerOptions: {
-          google: { thinkingConfig: { thinkingBudget: 2048 } },
-        },
-        system: systemPrompt,
-        messages: msgHistory,
-      })
-      reply = text
-    } catch (e) {
-      return NextResponse.json({ error: `Gemini 呼叫失敗：${String(e).slice(0, 200)}` }, { status: 500 })
+  // Normal CS: FreeLLMAPI auto → CLI Proxy → Direct Gemini
+  if (!reply) {
+    const csChain = [
+      // FreeLLMAPI first — high volume, 12 free platforms
+      ...(process.env.FREE_LLM_API_KEY && (process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL)
+        ? [{ url: (process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL)!, key: process.env.FREE_LLM_API_KEY, model: 'auto', label: 'FreeLLM' }]
+        : []),
+      // CLI Proxy Gemini — free Copilot tier
+      ...(process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
+        ? [{ url: (process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL)!, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: 'gemini-3-flash', label: 'CLIProxy' }]
+        : []),
+    ]
+
+    for (const entry of csChain) {
+      try {
+        const { createOpenAI } = await import('@ai-sdk/openai')
+        const openaiCompat = createOpenAI({ apiKey: entry.key, baseURL: entry.url })
+        const { text } = await generateText({
+          model: openaiCompat.chat(entry.model),
+          system: systemPrompt,
+          messages: msgHistory,
+          maxOutputTokens: 2048,
+          abortSignal: AbortSignal.timeout(20000),
+        })
+        if (text) { reply = text; provider = entry.label; break }
+      } catch { /* try next */ }
+    }
+
+    // Final fallback: Direct Gemini
+    if (!reply) {
+      try {
+        const { text } = await generateText({
+          model: google('gemini-2.5-flash'),
+          system: systemPrompt,
+          messages: msgHistory,
+        })
+        reply = text
+        provider = 'Gemini'
+      } catch (e) {
+        return NextResponse.json({ error: `所有模型失敗：${String(e).slice(0, 200)}` }, { status: 500 })
+      }
     }
   }
 

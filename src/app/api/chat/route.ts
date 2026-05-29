@@ -1,6 +1,6 @@
 ﻿import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { detectIntent, resolveModel, getProviderFromModel, calculateCost, isImageModel, isVideoModel } from '@/lib/ai/router'
+import { detectIntent, resolveModel, getProviderFromModel, calculateCost, isImageModel, isVideoModel, INTENT_CHAIN } from '@/lib/ai/router'
 import { buildSystemPrompt, formatMessagesForContext } from '@/lib/ai/context-builder'
 import { streamDeepSeek } from '@/lib/ai/providers/deepseek'
 import { streamGemini } from '@/lib/ai/providers/gemini'
@@ -8,7 +8,7 @@ import { streamClaude } from '@/lib/ai/providers/claude'
 import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
-import { streamCliProxy, isCliProxyAvailable, CLI_PROXY_MODELS } from '@/lib/ai/providers/cli-proxy'
+import { streamByChain } from '@/lib/ai/proxy-fallback'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -156,22 +156,34 @@ export async function POST(req: NextRequest) {
       maxTokens: 4096,
     }
 
-    // Route via CLI Proxy if available and model is supported
-    if (isCliProxyAvailable() && modelId in CLI_PROXY_MODELS && !imageBase64) {
-      streamResult = await streamCliProxy(chatParams)
+    // ── Proxy fallback chain (free first, paid last) ─────────────────────────
+    const chainName = !modelOverride ? INTENT_CHAIN[intent] : undefined
+
+    if (chainName && intent !== 'vision') {
+      // Use fallback chain: CLI Proxy → FreeLLMAPI → Direct paid API
+      const imageInput = imageBase64 ? { base64: imageBase64, mimeType: 'image/jpeg' } : undefined
+      const fallback = await streamByChain(chainName, chatParams, imageInput)
+      streamResult = fallback.stream
+      // Override modelId for cost tracking (best-effort, free models cost 0)
+      if (fallback.usedVia !== 'direct') {
+        Object.assign(chatParams, { modelId: `proxy:${fallback.usedModel}` })
+      }
+    } else if (provider === 'perplexity') {
+      // Legal/web search → always direct Perplexity (needs real web)
+      streamResult = await streamPerplexity(chatParams)
+    } else if (provider === 'google' || intent === 'vision') {
+      // Vision or Google → direct Gemini (multimodal needs native support)
+      streamResult = await streamGemini({ ...chatParams, imageBase64 })
     } else if (provider === 'deepseek') {
       streamResult = await streamDeepSeek(chatParams)
-    } else if (provider === 'google') {
-      streamResult = await streamGemini({ ...chatParams, imageBase64 })
     } else if (provider === 'anthropic') {
       streamResult = await streamClaude(chatParams)
-    } else if (provider === 'perplexity') {
-      streamResult = await streamPerplexity(chatParams)
     } else if (provider === 'openrouter') {
       streamResult = await streamOpenRouter(chatParams)
     } else if (provider === 'groq') {
       streamResult = await streamGroq(chatParams)
     } else {
+      // Final fallback: DeepSeek direct
       streamResult = await streamDeepSeek({ ...chatParams, modelId: 'deepseek-chat' })
     }
 
