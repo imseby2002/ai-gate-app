@@ -99,6 +99,7 @@ export default function WebsiteEditorPage() {
       })
       const d = await res.json()
       if (d.profile) { setSaved(true); setInitial(form); setPreviewKey(k => k + 1) }
+      else alert(d.error ?? '儲存失敗，請再試一次')
     } finally { setSaving(false) }
   }
 

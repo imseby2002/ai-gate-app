@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('bnb_profiles')
-    .upsert({ ...updates, user_id: user.id }, { onConflict: 'user_id' })
+    .upsert({ name: '', ...updates, user_id: user.id }, { onConflict: 'user_id' })
     .select()
     .single()
 
