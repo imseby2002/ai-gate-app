@@ -52,35 +52,10 @@ export default function DailyPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      // 同時抓今日記錄 + 所有房型
-      const [dailyRes, propRes] = await Promise.all([
-        fetch(`/api/booking/daily?date=${date}`),
-        fetch('/api/booking/properties'),
-      ])
-      const existing: DailyRecord[] = await dailyRes.json().then(d => Array.isArray(d) ? d : [])
-      const properties: { id: string; name: string }[] = await propRes.json().then(d => Array.isArray(d) ? d : [])
-
-      // 找出尚未建立記錄的房型，自動新增（排序依房型管理順序）
-      const existingNames = new Set(existing.map(r => r.room_name))
-      const missing = properties
-        .filter(p => !existingNames.has(p.name))
-        .map((p, i) => ({ date, room_name: p.name, source: 'manual', sort_order: existing.length + i }))
-
-      let merged = existing
-      if (missing.length > 0) {
-        const createRes = await fetch('/api/booking/daily', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(missing),
-        })
-        const created: DailyRecord[] = await createRes.json().then(d => Array.isArray(d) ? d : [])
-        merged = [...existing, ...created]
-      }
-
-      // 依 sort_order 再依 room_name 排序，保持與房型管理一致
-      const nameOrder = Object.fromEntries(properties.map((p, i) => [p.name, i]))
-      merged.sort((a, b) => (nameOrder[a.room_name] ?? 999) - (nameOrder[b.room_name] ?? 999))
-      setRows(merged)
+      // API 已自動帶入房型、昨日密碼、今日訂單
+      const res = await fetch(`/api/booking/daily?date=${date}`)
+      const data = await res.json()
+      setRows(Array.isArray(data) ? data : [])
     } finally {
       setLoading(false)
     }
