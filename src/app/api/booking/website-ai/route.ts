@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { generateText } from 'ai'
+import { createAnthropic } from '@ai-sdk/anthropic'
 
 const SYSTEM = `你是專業民宿官網文案撰寫師。根據使用者需求，幫助優化或生成民宿官網各頁面文案。
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const { messages, profile } = await req.json()
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   const systemWithProfile = `${SYSTEM}
 
@@ -42,17 +43,15 @@ ${profile.tagline ? `副標語：${profile.tagline}` : ''}
 ${profile.about ? `故事：${profile.about.slice(0, 200)}...` : ''}
 模板：${profile.template_id || 'natural'}`
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
+  const { text: raw } = await generateText({
+    model: anthropic('claude-sonnet-4-6'),
     system: systemWithProfile,
     messages: messages.map((m: { role: string; content: string }) => ({
       role: m.role === 'user' ? 'user' : 'assistant',
       content: m.content,
     })),
+    maxTokens: 2000,
   })
-
-  const raw = response.content[0].type === 'text' ? response.content[0].text : ''
 
   const updatesMatch = raw.match(/<updates>([\s\S]*?)<\/updates>/)
   let updates: Record<string, unknown> | null = null
