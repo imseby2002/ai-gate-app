@@ -10,7 +10,8 @@
     "postinstall": "patch-package",
     "cf:build": "npx opennextjs-cloudflare build",
     "cf:deploy": "npm run cf:build && wrangler deploy",
-    "cf:preview": "npm run cf:build && wrangler dev"
+    "cf:preview": "npm run cf:build && wrangler dev",
+    "traiwan": "tsx scripts/traiwan/index.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.66",
@@ -66,8 +67,11 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "googleapis": "^146.0.0",
     "patch-package": "^8.0.1",
+    "playwright": "^1.50.0",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5",
     "workerd": "1.20250718.0",
     "wrangler": "^4.65.0"

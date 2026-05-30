@@ -1,0 +1,45 @@
+name: TRAIWAN 每日入住名單擷取
+
+on:
+  schedule:
+    # 每天台灣時間 14:30 = UTC 06:30
+    - cron: '30 6 * * *'
+  workflow_dispatch:  # 允許手動觸發（測試用）
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 安裝依賴
+        run: npm ci
+
+      - name: 安裝 Playwright 瀏覽器
+        run: npx playwright install chromium --with-deps
+
+      - name: 執行擷取
+        env:
+          TRAIWAN_USERNAME: ${{ secrets.TRAIWAN_USERNAME }}
+          TRAIWAN_PASSWORD: ${{ secrets.TRAIWAN_PASSWORD }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEETS_TAB: ${{ secrets.GOOGLE_SHEETS_TAB }}
+        run: npm run traiwan
+
+      - name: 上傳截圖（除錯用）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: traiwan-screenshots-${{ github.run_id }}
+          path: tmp/traiwan-screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
