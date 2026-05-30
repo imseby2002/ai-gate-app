@@ -30,9 +30,9 @@ jobs:
           TRAIWAN_USERNAME: ${{ secrets.TRAIWAN_USERNAME }}
           TRAIWAN_PASSWORD: ${{ secrets.TRAIWAN_PASSWORD }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
-          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          GOOGLE_SHEETS_TAB: ${{ secrets.GOOGLE_SHEETS_TAB }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TRAIWAN_USER_ID: ${{ secrets.TRAIWAN_USER_ID }}
         run: npm run traiwan
 
       - name: 上傳截圖（除錯用）

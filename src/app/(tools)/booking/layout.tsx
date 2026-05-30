@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
-  LayoutGrid, Percent, Bell, Star, Globe,
+  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList,
 } from 'lucide-react'
 
 type NavItem = { href: string; label: string; icon: React.ElementType }
@@ -31,6 +31,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: '訂單管理',
     items: [
+      { href: '/booking/daily',           label: '每日入住', icon: ClipboardList },
       { href: '/booking/bookings',        label: '訂單',     icon: List },
       { href: '/booking/public-bookings', label: '線上訂房', icon: Globe },
       { href: '/booking/calendar',        label: '日曆',     icon: CalendarDays },
