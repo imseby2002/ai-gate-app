@@ -50,7 +50,17 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prevList: any[] = prevRecords ?? []
 
-  const existingNames = new Set(existingList.map(r => r.room_name as string))
+  // 刪除不在 properties 的過期記錄（已刪除的房型）
+  const validNames = new Set(propList.map(p => p.name as string))
+  const stale = existingList.filter(r => !validNames.has(r.room_name))
+  if (stale.length > 0) {
+    await supabase.from('bnb_daily_records')
+      .delete()
+      .in('id', stale.map(r => r.id))
+  }
+  const cleanList = existingList.filter(r => validNames.has(r.room_name))
+
+  const existingNames = new Set(cleanList.map(r => r.room_name as string))
 
   // 昨日密碼 map
   const prevByRoom: Record<string, { room_password: string | null; gate_password: string | null }> = {}
@@ -81,7 +91,7 @@ export async function GET(req: NextRequest) {
         order_number: booking?.platform_booking_id ?? null,
         guest_name: booking?.guest_name ?? null,
         source: booking ? 'booking' : 'manual',
-        sort_order: existingList.length + i,
+        sort_order: cleanList.length + i,
         updated_at: new Date().toISOString(),
       }
     })
@@ -96,7 +106,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 補填現有記錄中空白的訂單欄位
-  for (const rec of existingList) {
+  for (const rec of cleanList) {
     const prop = propList.find(p => p.name === rec.room_name)
     if (!prop) continue
     const booking = bookingByPropId[prop.id]
@@ -116,7 +126,7 @@ export async function GET(req: NextRequest) {
   const nameOrder: Record<string, number> = {}
   propList.forEach((p, i) => { nameOrder[p.name] = i })
 
-  const all = [...existingList, ...created]
+  const all = [...cleanList, ...created]
   all.sort((a: { room_name: string }, b: { room_name: string }) =>
     (nameOrder[a.room_name] ?? 999) - (nameOrder[b.room_name] ?? 999)
   )
