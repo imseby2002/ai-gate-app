@@ -137,7 +137,7 @@ export default function WebsiteEditorPage() {
                 ? 'bg-violet-600 text-white border-violet-600'
                 : 'border-violet-200 text-violet-600 hover:bg-violet-50'}`}>
             <Sparkles className="h-3.5 w-3.5" />
-            AI 寫文案
+            AI 設計官網
           </button>
           {/* Desktop device toggle */}
           <div className="hidden md:flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
