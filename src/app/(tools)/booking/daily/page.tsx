@@ -39,9 +39,15 @@ function addDays(iso: string, n: number) {
   return d.toLocaleDateString('sv-SE')
 }
 
+interface UnmatchedBooking {
+  guest_name: string
+  order_number: string
+}
+
 export default function DailyPage() {
   const [date, setDate] = useState(todayTW)
   const [rows, setRows] = useState<DailyRecord[]>([])
+  const [unmatched, setUnmatched] = useState<UnmatchedBooking[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState<string | null>(null)
   const [showPasswords, setShowPasswords] = useState(false)
@@ -52,10 +58,16 @@ export default function DailyPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      // API 已自動帶入房型、昨日密碼、今日訂單
       const res = await fetch(`/api/booking/daily?date=${date}`)
       const data = await res.json()
-      setRows(Array.isArray(data) ? data : [])
+      if (data.rooms) {
+        setRows(Array.isArray(data.rooms) ? data.rooms : [])
+        setUnmatched(Array.isArray(data.unmatched) ? data.unmatched : [])
+      } else {
+        // 向下相容舊格式
+        setRows(Array.isArray(data) ? data : [])
+        setUnmatched([])
+      }
     } finally {
       setLoading(false)
     }
@@ -256,6 +268,32 @@ export default function DailyPage() {
       <p className="mt-4 text-xs text-gray-400">
         點擊任意格子即可編輯 · 綠色「自動」標籤表示由 TRAIWAN 系統自動填入 · 密碼預設隱藏
       </p>
+
+      {/* 未分配訂單 */}
+      {unmatched.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-gray-600 mb-2">
+            今日訂單（未對應房間，共 {unmatched.length} 筆）
+          </h2>
+          <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+            <div className="grid bg-amber-50 border-b text-xs font-semibold text-amber-700 uppercase tracking-wide"
+              style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <div className="px-3 py-2.5">旅客姓名</div>
+              <div className="px-3 py-2.5">訂單號碼</div>
+            </div>
+            {unmatched.map((b, i) => (
+              <div key={i} className="grid border-b last:border-0 text-sm"
+                style={{ gridTemplateColumns: '1fr 1fr' }}>
+                <div className="px-3 py-2.5 text-gray-800">{b.guest_name || '—'}</div>
+                <div className="px-3 py-2.5 text-gray-500 font-mono text-xs">{b.order_number || '—'}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-amber-600">
+            ⚠ 這些訂單的房型尚未對應，請至「訂單」頁面手動指定房型後即可自動帶入
+          </p>
+        </div>
+      )}
     </div>
   )
 }

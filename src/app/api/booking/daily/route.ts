@@ -31,9 +31,10 @@ export async function GET(req: NextRequest) {
 
   const { data: todayBookings } = await supabase
     .from('bookings')
-    .select('property_id, guest_name, platform_booking_id')
+    .select('property_id, guest_name, platform_booking_id, check_in')
     .eq('user_id', user.id)
     .eq('check_in', date)
+    .order('created_at')
 
   const { data: prevRecords } = await supabase
     .from('bnb_daily_records')
@@ -131,7 +132,16 @@ export async function GET(req: NextRequest) {
     (nameOrder[a.room_name] ?? 999) - (nameOrder[b.room_name] ?? 999)
   )
 
-  return NextResponse.json(all)
+  // 找出有訂單但 property_id 為 null 或不在現有房型的訂單
+  const matchedOrderNums = new Set(all.map((r: { order_number: string | null }) => r.order_number).filter(Boolean))
+  const unmatched = bookingList.filter(b =>
+    !matchedOrderNums.has(b.platform_booking_id) && (b.guest_name || b.platform_booking_id)
+  ).map(b => ({
+    guest_name: b.guest_name ?? '',
+    order_number: b.platform_booking_id ?? '',
+  }))
+
+  return NextResponse.json({ rooms: all, unmatched })
 }
 
 // POST — 批次 upsert
