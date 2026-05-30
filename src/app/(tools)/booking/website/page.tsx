@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react'
 import {
   Save, Loader2, ExternalLink, RefreshCw,
-  Monitor, Smartphone, Check, Plus, X, Globe,
+  Monitor, Smartphone, Check, Plus, X, Globe, Sparkles,
 } from 'lucide-react'
 import { TEMPLATES } from '@/lib/booking/templates'
+import AiPanel from './AiPanel'
 
 interface FaqItem { q: string; a: string }
 interface WebForm {
@@ -48,6 +49,7 @@ export default function WebsiteEditorPage() {
   const [device, setDevice]   = useState<'desktop' | 'mobile'>('desktop')
   const [previewKey, setPreviewKey] = useState(0)
   const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit')
+  const [aiOpen, setAiOpen]         = useState(false)
 
   useEffect(() => {
     fetch('/api/booking/profile').then(r => r.json()).then(d => {
@@ -129,6 +131,14 @@ export default function WebsiteEditorPage() {
         )}
 
         <div className="ml-auto flex items-center gap-2">
+          <button onClick={() => setAiOpen(o => !o)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+              ${aiOpen
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'border-violet-200 text-violet-600 hover:bg-violet-50'}`}>
+            <Sparkles className="h-3.5 w-3.5" />
+            AI 寫文案
+          </button>
           {/* Desktop device toggle */}
           <div className="hidden md:flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
             <button onClick={() => setDevice('desktop')} title="電腦版"
@@ -160,10 +170,26 @@ export default function WebsiteEditorPage() {
 
       <div className="flex-1 flex overflow-hidden">
 
-        {/* ── Left settings panel ── */}
-        <aside className={`w-72 shrink-0 bg-white border-r flex flex-col overflow-hidden
+        {/* ── Left panel (settings or AI) ── */}
+        <aside className={`w-72 shrink-0 border-r flex flex-col overflow-hidden transition-colors
+          ${aiOpen ? 'bg-white' : 'bg-white'}
           ${mobileView === 'preview' ? 'hidden md:flex' : 'flex'}`}>
 
+          {/* AI Panel */}
+          {aiOpen && (
+            <AiPanel
+              form={form}
+              onApply={updates => {
+                Object.entries(updates).forEach(([k, v]) => {
+                  if (v !== undefined) set(k as keyof typeof form, v as never)
+                })
+              }}
+              onClose={() => setAiOpen(false)}
+            />
+          )}
+
+          {/* Settings Panel */}
+          {!aiOpen && <>
           {/* Page tabs */}
           <div className="flex border-b overflow-x-auto shrink-0 bg-gray-50">
             {PAGES.map(p => (
@@ -386,6 +412,7 @@ export default function WebsiteEditorPage() {
               預覽
             </button>
           </div>
+          </>}
         </aside>
 
         {/* ── Right preview ── */}
