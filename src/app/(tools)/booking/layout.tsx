@@ -22,6 +22,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: '民宿設定',
     items: [
       { href: '/booking/profile',     label: '民宿資料', icon: Building2 },
+      { href: '/booking/website',     label: '官網編輯器', icon: Globe },
       { href: '/booking/properties',  label: '房型管理', icon: BedDouble },
       { href: '/booking/pricing',     label: '定價管理', icon: Tag },
       { href: '/booking/promos',      label: '優惠碼',   icon: Percent },
