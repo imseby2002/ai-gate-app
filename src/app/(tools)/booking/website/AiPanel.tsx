@@ -12,9 +12,11 @@ interface WebForm {
   seo_title: string; seo_description: string
 }
 
-type Updates = Partial<Omit<WebForm, 'slug' | 'template_id' | 'theme_color' | 'contact_map_embed' | 'social_links'>>
+type Updates = Partial<Omit<WebForm, 'slug' | 'contact_map_embed' | 'social_links'>>
 
 const FIELD_LABELS: Record<string, string> = {
+  template_id: '🎨 視覺模板',
+  theme_color: '🎨 主題色',
   tagline: '副標語',
   about: '民宿故事',
   owner_intro: '主人介紹',
@@ -27,12 +29,17 @@ const FIELD_LABELS: Record<string, string> = {
   faq: '常見問題',
 }
 
+const TEMPLATE_NAMES: Record<string, string> = {
+  natural: '自然山居', coastal: '海濱度假', boutique: '精品時尚', zen: '日式禪意',
+}
+
 const QUICK_PROMPTS = [
-  '幫我完整寫好所有官網文案',
+  '幫我設計整個官網，包含模板、顏色和所有文案',
+  '根據我的民宿特色，推薦最適合的視覺風格',
+  '幫我完整寫好所有頁面文案',
   '寫一個吸引旅客的民宿故事',
   '幫我想 5 個常見問題 FAQ',
-  '優化我的 SEO 標題和摘要',
-  '寫訂房說明和取消政策',
+  '優化 SEO 標題和搜尋摘要',
 ]
 
 interface Message {
@@ -52,7 +59,7 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: `你好！我可以幫你撰寫或優化官網文案。\n你可以告訴我民宿的特色、風格、目標旅客，或直接說「幫我完整寫好所有文案」。`,
+      content: `你好！我是你的官網設計師 ✨\n\n我可以幫你：\n• 選擇最適合的視覺模板與主題色\n• 撰寫所有頁面的文案\n• 整體設計與文案一起優化\n\n告訴我你的民宿特色、風格、目標旅客，或直接說「幫我設計整個官網」。`,
     },
   ])
   const [input, setInput] = useState('')
@@ -83,7 +90,14 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
           messages: history
             .filter(m => m.role === 'user' || (m.role === 'assistant' && m !== messages[0]))
             .map(m => ({ role: m.role, content: m.content })),
-          profile: { name: form.name ?? '', template_id: form.template_id, tagline: form.tagline, about: form.about },
+          profile: {
+            name: form.name ?? '',
+            template_id: form.template_id,
+            theme_color: form.theme_color,
+            tagline: form.tagline,
+            about: form.about,
+            seo_title: form.seo_title,
+          },
         }),
       })
       const d = await res.json()
@@ -122,7 +136,7 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
           <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center">
             <Sparkles className="h-3.5 w-3.5 text-white" />
           </div>
-          <span className="text-sm font-semibold text-gray-800">AI 文案助理</span>
+          <span className="text-sm font-semibold text-gray-800">AI 官網設計師</span>
         </div>
         <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-md">
           <X className="h-4 w-4" />
@@ -162,10 +176,14 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
                           <div className="text-[11px] font-semibold text-indigo-600 uppercase tracking-wide">
                             {FIELD_LABELS[key] ?? key}
                           </div>
-                          <div className="text-xs text-gray-600 line-clamp-3">
-                            {key === 'faq'
-                              ? `${(val as { q: string }[]).length} 個問題`
-                              : String(val).slice(0, 120) + (String(val).length > 120 ? '…' : '')}
+                          <div className="text-xs text-gray-600 line-clamp-3 flex items-center gap-1.5">
+                            {key === 'template_id'
+                              ? <span className="font-medium">{TEMPLATE_NAMES[String(val)] ?? String(val)}</span>
+                              : key === 'theme_color'
+                                ? <><span className="inline-block w-4 h-4 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: String(val) }} /><span className="font-mono">{String(val)}</span></>
+                                : key === 'faq'
+                                  ? `${(val as { q: string }[]).length} 個問題`
+                                  : String(val).slice(0, 120) + (String(val).length > 120 ? '…' : '')}
                           </div>
                         </div>
                       ))}
