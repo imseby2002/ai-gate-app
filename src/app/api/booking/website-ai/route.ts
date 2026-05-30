@@ -50,7 +50,7 @@ ${profile.about ? `故事：${profile.about.slice(0, 200)}...` : ''}
       role: m.role === 'user' ? 'user' : 'assistant',
       content: m.content,
     })),
-    maxTokens: 2000,
+    maxOutputTokens: 2000,
   })
 
   const updatesMatch = raw.match(/<updates>([\s\S]*?)<\/updates>/)
