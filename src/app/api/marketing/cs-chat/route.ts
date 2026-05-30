@@ -124,15 +124,13 @@ async function queryGoogleSheet(config: SheetConfig, message: string, opts: Shee
       let gateNote = ''
       if (sensitiveIdxs.length > 0) {
         if (opts.verifyName && storedName) {
+          // Full verification: fuzzy name match against booking record
           verified = await opts.verifyName(storedName, opts.conversationText ?? '')
-        } else {
-          verified = false  // no name column / no verifier → cannot confirm identity
+          if (!verified) {
+            gateNote = `\n（⚠️ 身分未核對：上方密碼/房號/門鎖等敏感欄位已遮蔽。請客人提供「訂房時登記的姓名」，系統會自動核對；核對相符前，嚴禁透露任何密碼、房號、門鎖、鑰匙資訊。）`
+          }
         }
-        if (!verified) {
-          gateNote = storedName
-            ? `\n（⚠️ 身分未核對：上方密碼/房號/門鎖等敏感欄位已遮蔽。請客人提供「訂房時登記的姓名」，系統會自動核對；核對相符前，嚴禁透露任何密碼、房號、門鎖、鑰匙資訊。）`
-            : `\n（⚠️ 此資料表無可核對的姓名欄位，無法驗證身分。涉及密碼/房號等敏感資訊請改由真人客服協助，嚴禁透露。）`
-        }
+        // else: no verifier configured → order number alone is sufficient (temporary mode)
       }
 
       // Return columns (mask sensitive ones until verified) — prevents fabrication
