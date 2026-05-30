@@ -108,13 +108,13 @@ export default function WebsiteEditorPage() {
     : null
 
   if (loading) return (
-    <div className="h-screen flex items-center justify-center text-gray-400 text-sm">
+    <div className="h-full flex items-center justify-center text-gray-400 text-sm">
       <Loader2 className="h-4 w-4 animate-spin mr-2" /> 載入中…
     </div>
   )
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
 
       {/* ── Top bar ── */}
       <header className="h-12 bg-white border-b flex items-center gap-3 px-4 shrink-0 z-10 shadow-sm">
@@ -181,6 +181,24 @@ export default function WebsiteEditorPage() {
 
             {/* ─── 首頁 ─── */}
             {page === 'home' && <>
+              <div>
+                <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-1.5">官網網址</label>
+                <div className="flex items-center gap-1.5 bg-gray-50 border rounded-lg px-3 py-2 text-sm">
+                  <span className="text-gray-400 shrink-0 text-xs">/book/</span>
+                  <input
+                    value={form.slug}
+                    onChange={e => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="my-bnb-name"
+                    className="flex-1 bg-transparent focus:outline-none text-gray-800 text-sm"
+                  />
+                  {form.slug && (
+                    <a href={`/book/${form.slug}`} target="_blank" rel="noreferrer" className="shrink-0">
+                      <ExternalLink className="h-3.5 w-3.5 text-indigo-400 hover:text-indigo-600" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
               <div>
                 <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-2">視覺風格</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -374,10 +392,23 @@ export default function WebsiteEditorPage() {
           ${mobileView === 'edit' ? 'hidden md:flex' : 'flex'}`}>
           {!form.slug ? (
             <div className="flex-1 flex items-center justify-center p-8 text-center">
-              <div className="space-y-3">
+              <div className="space-y-4 w-full max-w-xs">
                 <Globe className="h-10 w-10 text-gray-300 mx-auto" />
-                <p className="text-sm text-gray-500">請先在「民宿資料」設定網址識別碼</p>
-                <a href="/booking/profile" className="text-xs text-indigo-500 hover:underline">前往設定</a>
+                <p className="text-sm font-medium text-gray-600">設定網址後即可預覽官網</p>
+                <div className="flex items-center gap-1.5 bg-white border rounded-xl px-3 py-2 text-sm text-gray-400">
+                  <span className="shrink-0 text-gray-300">/book/</span>
+                  <input
+                    value={form.slug}
+                    onChange={e => set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="my-bnb"
+                    className="flex-1 focus:outline-none text-gray-800 bg-transparent"
+                  />
+                </div>
+                <button onClick={save} disabled={saving || !form.slug}
+                  className="w-full py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5">
+                  {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  儲存並預覽
+                </button>
               </div>
             </div>
           ) : (
