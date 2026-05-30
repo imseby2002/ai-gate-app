@@ -58,7 +58,8 @@ async function waitForVerificationCode(timeoutMs = 90_000): Promise<string> {
     while (Date.now() < deadline) {
       await client.mailboxOpen('INBOX')
       const since = new Date(Date.now() - 5 * 60 * 1000)
-      const uids = await client.search({ since, from: 'traiwan' }, { uid: true })
+      const result = await client.search({ since, from: 'traiwan' }, { uid: true })
+      const uids: number[] = result === false ? [] : result
 
       for (const uid of [...uids].reverse()) {
         const msg = await client.fetchOne(String(uid), { source: true }, { uid: true })
