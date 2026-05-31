@@ -12,6 +12,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
   if (!user) redirect('/login')
 
   const locale = await getLocale()
+  const homeHref = '/dashboard'
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
