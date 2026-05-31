@@ -38,7 +38,7 @@ async function screenshot(page: Page, name: string) {
 
 // ─── Gmail IMAP：等待驗證碼 ──────────────────────────────────────────────────
 
-async function waitForVerificationCode(timeoutMs = 90_000): Promise<string> {
+async function waitForVerificationCode(notBefore: Date, timeoutMs = 90_000): Promise<string> {
   const client = new ImapFlow({
     host: 'imap.gmail.com',
     port: 993,
@@ -51,28 +51,44 @@ async function waitForVerificationCode(timeoutMs = 90_000): Promise<string> {
   })
 
   const deadline = Date.now() + timeoutMs
-  console.log('📧 等待 TRAIWAN 驗證碼郵件…')
+  console.log(`📧 等待 TRAIWAN 驗證碼郵件（只接受 ${notBefore.toISOString()} 之後的信）…`)
+
+  // 先等 10 秒讓信件有時間送達
+  await new Promise(r => setTimeout(r, 10_000))
 
   await client.connect()
   try {
     while (Date.now() < deadline) {
       await client.mailboxOpen('INBOX')
-      const since = new Date(Date.now() - 5 * 60 * 1000)
+      // since 用今天，搜到全部今日信再手動過濾時間
+      const since = new Date(); since.setHours(0, 0, 0, 0)
       const result = await client.search({ since, from: 'traiwan' }, { uid: true })
       const uids: number[] = result === false ? [] : result
+      console.log(`📬 找到 ${uids.length} 封今日 TRAIWAN 信件`)
 
       for (const uid of [...uids].reverse()) {
         const msg = await client.fetchOne(String(uid), { source: true }, { uid: true })
         if (!msg?.source) continue
         const parsed = await simpleParser(msg.source)
-        const body = parsed.text ?? parsed.html ?? ''
-        const match = body.match(/\b(\d{4,8})\b/)
+
+        // 只看 notBefore 之後寄出的信
+        const mailDate = parsed.date ?? new Date(0)
+        if (mailDate < notBefore) {
+          console.log(`⏩ 跳過舊信件 (${mailDate.toISOString()})`)
+          continue
+        }
+
+        const body = parsed.text ?? ''
+        console.log(`📄 信件時間：${mailDate.toISOString()}，內容片段：${body.slice(0, 100)}`)
+
+        // 精確比對 6 位數字
+        const match = body.match(/\b(\d{6})\b/)
         if (match) {
           console.log(`✅ 驗證碼：${match[1]}`)
           return match[1]
         }
       }
-      await new Promise(r => setTimeout(r, 5000))
+      await new Promise(r => setTimeout(r, 8000))
     }
   } finally {
     await client.logout()
@@ -132,6 +148,7 @@ async function scrape(): Promise<CheckInRecord[]> {
     await accountInput.fill(process.env.TRAIWAN_USERNAME!)
     await page.fill('input[name="password"], input[type="password"], #password', process.env.TRAIWAN_PASSWORD!)
 
+    const loginTime = new Date() // 記錄送出登入的時間，只讀這之後的驗證信
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30_000 }),
       page.click('button[type="submit"], input[type="submit"], .btn-login'),
@@ -139,19 +156,30 @@ async function scrape(): Promise<CheckInRecord[]> {
     await screenshot(page, '02-after-login')
 
     // ── 2. 2FA ───────────────────────────────────────────────────────────────
+    const pageContent = await page.content()
     const url = page.url()
-    const is2FA = url.includes('verify') || url.includes('otp') || url.includes('code') ||
-      await page.$('input[name="otp"], input[name="code"], input[name="verify_code"]') !== null
+    const is2FA =
+      url.includes('verify') || url.includes('otp') || url.includes('code') ||
+      pageContent.includes('驗證碼') || pageContent.includes('OTP') ||
+      await page.$('input[name="otp"], input[name="code"], input[name="verify_code"], input[maxlength="6"]') !== null
 
     if (is2FA) {
       console.log('🔐 2FA 頁面，讀取驗證碼…')
-      const code = await waitForVerificationCode()
-      const codeInput = await page.$('input[name="otp"], input[name="code"], input[name="verify_code"], input[type="number"]')
+      const code = await waitForVerificationCode(loginTime)
+
+      // 廣泛選取 OTP 輸入框
+      const codeInput = await page.$(
+        'input[name="otp"], input[name="code"], input[name="verify_code"], input[type="number"], input[maxlength="6"], input[placeholder="000000"]'
+      ) ?? await page.$('input[type="text"]')
       if (!codeInput) throw new Error('找不到驗證碼輸入欄，請看截圖')
+
+      await codeInput.click({ clickCount: 3 }) // 先全選清空
       await codeInput.fill(code)
+      console.log(`🔢 已填入驗證碼：${code}`)
+
       await Promise.all([
         page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15_000 }),
-        page.click('button[type="submit"], input[type="submit"]'),
+        page.click('button[type="submit"], input[type="submit"], button:has-text("驗證")'),
       ])
       await screenshot(page, '03-after-2fa')
     }
