@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Link from 'next/link'
-import { Zap, ArrowLeft } from 'lucide-react'
+import { Zap } from 'lucide-react'
+import { BackToMenu } from '@/components/layout/BackToMenu'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,18 +11,13 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   if (authError || !user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('display_name,user_type').eq('id', user.id).single()
-
-  // /dashboard 已在 SHARED_PREFIXES，任何 scope 都可訪問，統一返回主選單
-  const homeHref = '/dashboard'
+  const isAdmin = profile?.user_type === 'admin'
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       {/* Minimal top bar */}
       <header className="h-11 shrink-0 bg-white border-b flex items-center px-4 gap-3">
-        <Link href={homeHref} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm transition-colors">
-          <ArrowLeft className="h-3.5 w-3.5" />
-          返回首頁
-        </Link>
+        <BackToMenu isAdmin={isAdmin} variant="tools" />
         <div className="h-4 w-px bg-gray-200" />
         <div className="flex items-center gap-1.5">
           <div className="h-5 w-5 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">

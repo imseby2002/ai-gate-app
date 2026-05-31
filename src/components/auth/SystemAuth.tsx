@@ -49,7 +49,8 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
       setError(`您的帳號尚未開通「${def.label}」，請聯絡管理員開通後再使用。`)
       return
     }
-    setScope(system)
+    // 管理者不寫入 scope，保持自由導航；非管理者才鎖定分頁 scope
+    if (!isAdmin) setScope(system)
     router.push(def.home)
     router.refresh()
   }
