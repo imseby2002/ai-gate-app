@@ -12,11 +12,14 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name,user_type').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('display_name,user_type,enabled_modules').eq('id', user.id).single()
 
-  // 非管理員若被限定在某系統，「返回」回到該系統首頁而非主選單
   const scope = (await cookies()).get(SCOPE_COOKIE)?.value
-  const homeHref = profile?.user_type !== 'admin' && isSystemKey(scope) ? SYSTEMS[scope].home : '/dashboard'
+  const isAdmin = profile?.user_type === 'admin'
+  const enabledCount = profile?.enabled_modules?.length ?? 999
+  const homeHref = (isAdmin || !isSystemKey(scope) || enabledCount > 1)
+    ? '/dashboard'
+    : SYSTEMS[scope].home
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">

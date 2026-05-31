@@ -25,7 +25,8 @@ export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)
 export const SCOPE_COOKIE = 'ai_gate_scope'
 
 // 不受 scope 限制、任何系統都可存取的共用路徑（後端 API、設定、登入/切換頁等）
-const SHARED_PREFIXES = ['/settings', '/api', '/callback', '/login', '/register', '/logout', '/privacy']
+// /dashboard 加入共用，讓多模組或管理員用戶不論 scope 為何都能返回主選單
+const SHARED_PREFIXES = ['/settings', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/dashboard']
 
 export function isSystemKey(s: string | undefined | null): s is SystemKey {
   return !!s && Object.prototype.hasOwnProperty.call(SYSTEMS, s)

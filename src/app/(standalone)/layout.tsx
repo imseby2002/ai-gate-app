@@ -13,9 +13,15 @@ export default async function StandaloneLayout({ children }: { children: React.R
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('user_type, enabled_modules').eq('id', user.id).single()
   const scope = (await cookies()).get(SCOPE_COOKIE)?.value
-  const homeHref = profile?.user_type !== 'admin' && isSystemKey(scope) ? SYSTEMS[scope].home : '/dashboard'
+  // 管理員、無效 scope、或已開通多個模組的用戶 → 返回主選單 /dashboard
+  // 真正只有單一模組的受限用戶 → 返回系統首頁
+  const isAdmin = profile?.user_type === 'admin'
+  const enabledCount = profile?.enabled_modules?.length ?? 999
+  const homeHref = (isAdmin || !isSystemKey(scope) || enabledCount > 1)
+    ? '/dashboard'
+    : SYSTEMS[scope].home
 
   const locale = await getLocale()
 
