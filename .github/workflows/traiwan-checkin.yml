@@ -9,7 +9,7 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +25,9 @@ jobs:
       - name: 安裝 Playwright 瀏覽器
         run: npx playwright install chromium --with-deps
 
+      - name: 安裝 Xvfb（虛擬顯示，繞過 reCAPTCHA headless 偵測）
+        run: sudo apt-get install -y xvfb
+
       - name: 執行擷取
         env:
           TRAIWAN_USERNAME: ${{ secrets.TRAIWAN_USERNAME }}
@@ -33,7 +36,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TRAIWAN_USER_ID: ${{ secrets.TRAIWAN_USER_ID }}
-        run: npm run traiwan
+          DISPLAY: ':99'
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 2
+          npm run traiwan
 
       - name: 上傳截圖（除錯用）
         if: always()

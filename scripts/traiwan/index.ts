@@ -93,19 +93,43 @@ interface CheckInRecord {
 
 async function scrape(): Promise<CheckInRecord[]> {
   const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    // CI 環境用 xvfb-run 提供虛擬顯示，headless:false 可繞過 reCAPTCHA 偵測
+    headless: false,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-dev-shm-usage',
+    ],
   })
-  const context = await browser.newContext({ locale: 'zh-TW', timezoneId: 'Asia/Taipei' })
+  const context = await browser.newContext({
+    locale: 'zh-TW',
+    timezoneId: 'Asia/Taipei',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    viewport: { width: 1280, height: 800 },
+  })
+
+  // 隱藏 webdriver 特徵，避免 reCAPTCHA 偵測
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false })
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] })
+    Object.defineProperty(navigator, 'languages', { get: () => ['zh-TW', 'zh', 'en-US', 'en'] })
+  })
+
   const page = await context.newPage()
 
   try {
     // ── 1. 登入 ──────────────────────────────────────────────────────────────
     console.log('🔑 登入 TRAIWAN PMS…')
-    await page.goto(LOGIN_URL, { waitUntil: 'domcontentloaded' })
+    await page.goto(LOGIN_URL, { waitUntil: 'networkidle', timeout: 30_000 })
     await screenshot(page, '01-login')
 
-    await page.fill('input[name="account"], input[type="email"], #account', process.env.TRAIWAN_USERNAME!)
+    // 等待登入表單出現（reCAPTCHA 載入後才顯示）
+    const accountInput = await page.waitForSelector(
+      'input[name="account"], input[type="email"], #account, input[placeholder*="帳號"], input[placeholder*="Email"]',
+      { timeout: 20_000 }
+    )
+    await accountInput.fill(process.env.TRAIWAN_USERNAME!)
     await page.fill('input[name="password"], input[type="password"], #password', process.env.TRAIWAN_PASSWORD!)
 
     await Promise.all([
