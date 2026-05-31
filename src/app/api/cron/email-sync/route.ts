@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   const results = await Promise.allSettled(
     settings.map((s: { id: string }) => syncEmailForSetting(s.id))
   )
-  const done = results.filter(r => r.status === 'fulfilled').length
+  const done = results.filter((r: PromiseSettledResult<unknown>) => r.status === 'fulfilled').length
 
   return NextResponse.json({ total: settings.length, synced: done })
 }
