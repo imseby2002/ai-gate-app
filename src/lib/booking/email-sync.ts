@@ -203,7 +203,19 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const subject = parsed.subject ?? ''
           const text    = parsed.text ?? ''
           const html    = (parsed.html as string | false | null | undefined) || ''
-          const body    = text || (typeof html === 'string' ? html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') : '')
+          const htmlStripped = typeof html === 'string'
+            ? html
+                .replace(/<style[\s\S]*?<\/style>/gi, '')
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/\s+/g, ' ')
+                .trim()
+            : ''
+          const body    = text || htmlStripped
 
           let platform = 'other'
           for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
@@ -368,7 +380,7 @@ async function extractBookingWithAI(
   if (!apiKey) return null
 
   const isDeepSeek = !!process.env.DEEPSEEK_API_KEY
-  const truncatedBody = body.slice(0, 3000)
+  const truncatedBody = body.slice(0, 8000)
 
   const bnbLine = bnbName ? `\n此民宿名稱（所有訂單都屬於此民宿）：${bnbName}` : ''
   const roomListStr = properties.length > 0
@@ -386,7 +398,10 @@ ${bnbLine}
 ${truncatedBody}
 ${roomListStr}
 
-注意：Booking.com 的通知郵件通常只含訂單號與入住日期，沒有退房日、姓名、房型，這是正常現象，仍請回傳 is_booking: true 並盡量擷取可用欄位。
+注意：
+- Booking.com 的通知郵件通常只含訂單號與入住日期，沒有退房日、姓名、房型，這是正常現象，仍請回傳 is_booking: true 並盡量擷取可用欄位。
+- Booking.com 的訂單號（confirmation_id）是純數字，通常 9-10 位，如 "5155978344"、"3812345678"，請務必從郵件內文或主旨中找出這個數字。
+- 若郵件中出現 "Booking number"、"Booking No."、"Reservation number"、"訂單編號" 後面跟著純數字，那就是 confirmation_id。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
 {
