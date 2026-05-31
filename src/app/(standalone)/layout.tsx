@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
 import { Zap } from 'lucide-react'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
-import { SCOPE_COOKIE, SYSTEMS, isSystemKey } from '@/lib/systems'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,16 +10,6 @@ export default async function StandaloneLayout({ children }: { children: React.R
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-
-  const { data: profile } = await supabase.from('profiles').select('user_type, enabled_modules').eq('id', user.id).single()
-  const scope = (await cookies()).get(SCOPE_COOKIE)?.value
-  // 管理員、無效 scope、或已開通多個模組的用戶 → 返回主選單 /dashboard
-  // 真正只有單一模組的受限用戶 → 返回系統首頁
-  const isAdmin = profile?.user_type === 'admin'
-  const enabledCount = profile?.enabled_modules?.length ?? 999
-  const homeHref = (isAdmin || !isSystemKey(scope) || enabledCount > 1)
-    ? '/dashboard'
-    : SYSTEMS[scope].home
 
   const locale = await getLocale()
 
