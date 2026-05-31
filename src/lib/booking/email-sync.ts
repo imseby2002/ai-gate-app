@@ -442,6 +442,57 @@ export async function syncAllEmailForUser(userId: string) {
   return Promise.all(settings.map((s: { id: string }) => syncEmailForSetting(s.id)))
 }
 
+// ── Platform-specific extraction hints (derived from real sample emails) ──
+const PLATFORM_HINTS: Record<string, string> = {
+  booking_com: `Booking.com：
+- 訂單號為純數字 9-10 位，出現在主旨「(數字, 日期)」、內文「Booking information — 數字」「確認訂房編號為 數字」或網址「res_id=數字」。
+- 兩段式郵件：入住日前的通知常只有入住/退房日期與訂單號，沒有姓名/房型/金額（正常，is_booking 仍為 true）；入住當天才會有完整房客資訊。
+- 日期格式如「2026年6月5日」。`,
+  agoda: `Agoda：
+- 訂單號為純數字（約 10 位），出現在主旨「Agoda 訂單 數字」或「Agoda Booking ID 數字」、內文「訂房編號」下一行。
+- 欄位標籤：訂房編號 / 入住 / 退房 / 房型 / 入住人數 / 房客姓名 / 總金額。
+- 主旨含「CANCELLED」或內文「您的訂單已取消」→ is_cancellation true。
+- 金額如「TWD 3,600」；房客姓名格式「姓, 名」。`,
+  trip_com: `Trip.com：
+- 訂單號為純數字（約 16 位），出現在主旨「Booking no.數字」、內文「訂單編號」下一行。
+- 欄位標籤：訂單編號 / 入住 / 退房 / 房型 / 住客姓名 / 房間數 / 入住人數 / 總價。
+- 主旨「Cancellation request accepted」或內文「訂單已取消」→ is_cancellation true。
+- 房客姓名格式「姓/名」。`,
+  asiayo: `AsiaYo：
+- 訂單號以「AY」開頭後接數字（如 AY123456789），出現在主旨/內文「訂單編號」。
+- 欄位標籤：訂單編號 / 入住日期 / 退房日期 / 房型 / 住客姓名 / 入住人數 / 總金額。`,
+}
+
+// Order-number shapes per platform — used for cheap regex anchoring + fallback.
+const CONF_ID_PATTERNS: Record<string, RegExp> = {
+  booking_com: /\b\d{9,10}\b/,
+  agoda:       /\b\d{9,11}\b/,
+  trip_com:    /\b\d{15,18}\b/,
+  asiayo:      /\bAY\d{6,}\b/i,
+}
+
+// High-confidence regex pre-extraction to anchor the model and to fall back on
+// when it misses the order number / dates.
+function regexPreExtract(subject: string, body: string, platform: string): {
+  confirmation_id: string | null
+  dates: string[]
+} {
+  const hay = `${subject}\n${body}`
+  let confirmation_id: string | null = null
+  const pat = CONF_ID_PATTERNS[platform]
+  if (pat) {
+    const m = hay.match(pat)
+    if (m) confirmation_id = m[0]
+  }
+  const dates: string[] = []
+  let mm: RegExpExecArray | null
+  const reCn = /(\d{4})年(\d{1,2})月(\d{1,2})日/g           // 2026年6月5日
+  while ((mm = reCn.exec(hay))) dates.push(`${mm[1]}-${mm[2].padStart(2, '0')}-${mm[3].padStart(2, '0')}`)
+  const reIso = /\b(\d{4}-\d{2}-\d{2})\b/g
+  while ((mm = reIso.exec(hay))) dates.push(mm[1])
+  return { confirmation_id, dates: [...new Set(dates)] }
+}
+
 // ── AI Extraction ─────────────────────────────────────────────
 
 async function extractBookingWithAI(
@@ -465,18 +516,25 @@ async function extractBookingWithAI(
       }).join('\n')}`
     : ''
 
+  const hint = PLATFORM_HINTS[platform] ? `\n平台專屬規則：\n${PLATFORM_HINTS[platform]}` : ''
+  const pre = regexPreExtract(subject, body, platform)
+  const preLine = (pre.confirmation_id || pre.dates.length)
+    ? `\n程式預擷取（高信心，可作為校驗依據；若與內文一致請採用）：\n- 可能的訂單號：${pre.confirmation_id ?? '無'}\n- 內文偵測到的日期（已轉 YYYY-MM-DD，通常較小者為入住、較大者為退房）：${pre.dates.join('、') || '無'}`
+    : ''
+
   const prompt = `從以下訂房平台郵件中擷取訂單資訊，回傳 JSON 格式。
 ${bnbLine}
 郵件主旨：${subject}
 平台：${platform}
 郵件內容：
 ${truncatedBody}
-${roomListStr}
+${roomListStr}${hint}${preLine}
 
-注意：
-- Booking.com 的通知郵件通常只含訂單號與入住日期，沒有退房日、姓名、房型，這是正常現象，仍請回傳 is_booking: true 並盡量擷取可用欄位。
-- Booking.com 的訂單號（confirmation_id）是純數字，通常 9-10 位，如 "5155978344"、"3812345678"，請務必從郵件內文或主旨中找出這個數字。
-- 若郵件中出現 "Booking number"、"Booking No."、"Reservation number"、"訂單編號" 後面跟著純數字，那就是 confirmation_id。
+通用注意：
+- confirmation_id 務必從主旨或內文找出；純數字平台不要把電話、金額、日期數字當成訂單號。
+- 日期一律輸出 YYYY-MM-DD；中文「2026年6月5日」要轉成「2026-06-05」；退房日必須晚於入住日。
+- 無法確定的欄位填 null，不要猜測。
+- 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
 {
@@ -506,7 +564,8 @@ ${roomListStr}
           model: 'deepseek-chat',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0,
-          max_tokens: 600,
+          max_tokens: 1000,
+          response_format: { type: 'json_object' },
         }),
         signal: AbortSignal.timeout(20000),
       })
@@ -522,7 +581,8 @@ ${roomListStr}
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 600,
+          max_tokens: 1000,
+          temperature: 0,
           messages: [{ role: 'user', content: prompt }],
         }),
         signal: AbortSignal.timeout(20000),
@@ -533,7 +593,10 @@ ${roomListStr}
 
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return null
-    return JSON.parse(jsonMatch[0]) as BookingExtracted
+    const parsed = JSON.parse(jsonMatch[0]) as BookingExtracted
+    // Fall back to the regex-detected order number when the model missed it.
+    if (!parsed.confirmation_id && pre.confirmation_id) parsed.confirmation_id = pre.confirmation_id
+    return parsed
   } catch {
     return null
   }
