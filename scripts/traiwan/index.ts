@@ -203,14 +203,22 @@ async function scrape(): Promise<CheckInRecord[]> {
     type RowData = { cells: string[]; href: string }
     const rowsData: RowData[] = await page.evaluate(() => {
       const tables = Array.from(document.querySelectorAll('table'))
-      // 找含「預訂人」欄標題的 table（右側已售出表）
-      const soldTable = tables.find(t => {
-        const ths = Array.from(t.querySelectorAll('th, thead td'))
-        return ths.some(h => h.textContent?.includes('預訂人'))
-      })
-      if (!soldTable) return []
+      // 寬鬆比對：只要 table textContent 含「預訂人」且含「來源」即為右側售出表
+      const soldTable = tables.find(t =>
+        (t.textContent ?? '').includes('預訂人') && (t.textContent ?? '').includes('來源')
+      )
+      if (!soldTable) {
+        console.warn('[evaluate] 找不到含「預訂人」的 table')
+        return []
+      }
 
-      return Array.from(soldTable.querySelectorAll('tbody tr')).map(row => {
+      // 找到「預訂人」所在的列 index，作為表頭
+      const allRows = Array.from(soldTable.querySelectorAll('tr'))
+      const headerIdx = allRows.findIndex(r => (r.textContent ?? '').includes('預訂人'))
+      // 資料列從表頭後一行開始
+      const dataRows = headerIdx >= 0 ? allRows.slice(headerIdx + 1) : allRows
+
+      return dataRows.map(row => {
         const cells = Array.from(row.querySelectorAll('td')).map(
           c => (c.textContent ?? '').trim().replace(/\s+/g, ' ')
         )
@@ -219,12 +227,14 @@ async function scrape(): Promise<CheckInRecord[]> {
       })
     })
 
-    // 過濾掉標題行、分組行（cells[0] 為空或含「已售出」「房型名稱」）
+    console.log(`📊 evaluate 返回 ${rowsData.length} 列，cells 範例：`, rowsData[0]?.cells)
+
+    // 過濾有效資料行：至少3欄、第0欄有值、排除分組標題行
+    const SKIP_KEYWORDS = ['已售出', '房型名稱', 'CIAOHOME', '喬民宿', '民宿']
     const validRows = rowsData.filter(r =>
       r.cells.length >= 3 &&
-      r.cells[0] &&
-      !r.cells[0].includes('已售出') &&
-      !r.cells[0].includes('房型名稱')
+      r.cells[0]?.trim() &&
+      !SKIP_KEYWORDS.some(k => r.cells[0].includes(k))
     )
     console.log(`🏠 有效訂單行：${validRows.length} 筆`)
 
@@ -267,19 +277,21 @@ async function scrape(): Promise<CheckInRecord[]> {
       console.log(`     ✅ 訂單：${orderNumber || '（未找到）'}`)
     }
 
-    // 備用：無右側表格時從連結抓
+    // 備用：無右側表格時，用 evaluate 抓所有訂單連結
     if (records.length === 0) {
-      const links = await page.$$('a[href*="order"], a[href*="booking"], a[href*="reservation"]')
-      for (const link of links) {
-        const text = (await link.textContent() ?? '').trim()
-        const href = await link.getAttribute('href') ?? ''
-        if (!text || !href) continue
-        const fullUrl = href.startsWith('http') ? href : `https://pms.traiwan.com${href}`
-        await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 })
-        const content = await page.textContent('body') ?? ''
+      console.log('⚠ 無有效行，嘗試 fallback 抓連結…')
+      const fallbackLinks: { text: string; href: string }[] = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('a[href]'))
+          .filter(a => /order|booking|reservation/i.test(a.getAttribute('href') ?? ''))
+          .map(a => ({ text: (a.textContent ?? '').trim(), href: (a as HTMLAnchorElement).href }))
+          .filter(x => x.text && x.href)
+      )
+      for (const { text, href } of fallbackLinks) {
+        await page.goto(href, { waitUntil: 'domcontentloaded', timeout: 10_000 }).catch(() => {})
+        const content = await page.textContent('body').catch(() => '') ?? ''
         const m = content.match(/訂單[：:\s]*([A-Z0-9\-]+)/i) ?? content.match(/#([0-9]{4,10})/)
         records.push({ room_name: text, order_number: m?.[1] ?? '', guest_name: '' })
-        await page.goBack()
+        await page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => {})
       }
     }
 
