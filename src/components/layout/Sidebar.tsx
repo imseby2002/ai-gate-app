@@ -10,8 +10,9 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ConversationItem } from './ConversationItem'
+import { SCOPE_SESSION_KEY, isSystemKey } from '@/lib/systems'
 
 interface SidebarProps {
   userType?: string
@@ -51,12 +52,19 @@ const ADMIN_NAV: NavItem[] = [
 ]
 
 
-export function Sidebar({ userType, enabledModules, scope, conversations = [] }: SidebarProps) {
+export function Sidebar({ userType, enabledModules, scope: scopeProp, conversations = [] }: SidebarProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const [scope, setScope] = useState<string | undefined>(scopeProp)
   const t = useTranslations('Sidebar')
   const isAdmin = userType === 'admin'
   const mods = enabledModules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+
+  // 從 sessionStorage 讀取 per-tab scope（mount 後更新，覆蓋 server props）
+  useEffect(() => {
+    const ss = sessionStorage.getItem(SCOPE_SESSION_KEY)
+    if (isSystemKey(ss)) setScope(ss)
+  }, [])
 
   // 連結可見性：管理員看全部；非管理員若帶系統範圍（scope）只看該系統，否則依 enabled_modules
   const isVisible = (item: NavItem) => {

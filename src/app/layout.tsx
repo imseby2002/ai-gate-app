@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
+import { ScopeManager } from '@/components/layout/ScopeManager'
 import "./globals.css";
 
 export const dynamic = 'force-dynamic'
@@ -33,6 +34,7 @@ export default async function RootLayout({
     <html lang={locale} className="h-full antialiased">
       <body className="h-full">
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <ScopeManager />
           {children}
         </NextIntlClientProvider>
       </body>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { SYSTEMS, SCOPE_COOKIE, isSystemKey } from '@/lib/systems'
+import { SYSTEMS, isSystemKey } from '@/lib/systems'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -12,12 +12,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      const res = NextResponse.redirect(`${origin}${next}`)
-      // 透過某系統登入 → 限定該系統
+      // 用 ?_si= 把 system 傳給 client，由 ScopeManager 寫入 sessionStorage（per-tab）
+      const redirectUrl = new URL(`${origin}${next}`)
       if (isSystemKey(system)) {
-        res.cookies.set(SCOPE_COOKIE, system, { path: '/', maxAge: 60 * 60 * 24 * 30, sameSite: 'lax' })
+        redirectUrl.searchParams.set('_si', system)
       }
-      return res
+      return NextResponse.redirect(redirectUrl.toString())
     }
   }
 

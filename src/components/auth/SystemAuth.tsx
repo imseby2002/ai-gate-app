@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { SYSTEMS, SCOPE_COOKIE, type SystemKey } from '@/lib/systems'
+import { SYSTEMS, SCOPE_SESSION_KEY, type SystemKey } from '@/lib/systems'
 
-function setScopeCookie(system: SystemKey) {
-  // 非 httpOnly，middleware 可讀；限定本系統用
-  document.cookie = `${SCOPE_COOKIE}=${system}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`
+function setScope(system: SystemKey) {
+  // sessionStorage：每個分頁獨立，不跨分頁共用
+  sessionStorage.setItem(SCOPE_SESSION_KEY, system)
+  // 清除舊的 cookie（若有）
+  document.cookie = 'ai_gate_scope=; path=/; max-age=0; samesite=lax'
 }
 
 export default function SystemAuth({ system }: { system: SystemKey }) {
@@ -47,7 +49,7 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
       setError(`您的帳號尚未開通「${def.label}」，請聯絡管理員開通後再使用。`)
       return
     }
-    setScopeCookie(system)
+    setScope(system)
     router.push(def.home)
     router.refresh()
   }

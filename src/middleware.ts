@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { SYSTEMS, SCOPE_COOKIE, isSystemKey, isPathAllowedForScope, systemForPath } from '@/lib/systems'
+import { systemForPath } from '@/lib/systems'
 
 
 export async function middleware(request: NextRequest) {
@@ -62,18 +62,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl)
     }
 
-    // 系統範圍鎖定：從某系統登入後，session 被限定在該系統（管理員不受限）
-    const scope = request.cookies.get(SCOPE_COOKIE)?.value
-    const needsProfileCheck =
-      (user && isSystemKey(scope)) ||
+    // scope guard 已移至 client-side ScopeManager（sessionStorage per-tab）
+    // 這裡只保留 admin guard 和 module guard
+    const needsProfileCheck = user && (
       pathname.startsWith('/admin') ||
       pathname.startsWith('/cli-proxy') ||
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
       pathname.startsWith('/resume')
+    )
 
-    if (needsProfileCheck && user) {
+    if (needsProfileCheck) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('user_type, enabled_modules')
@@ -82,29 +82,13 @@ export async function middleware(request: NextRequest) {
 
       const isAdmin = profile?.user_type === 'admin'
 
-      // Scope guard — 非管理員、且帶 scope cookie 時，限制只能存取該系統路徑
-      if (!isAdmin && isSystemKey(scope) && !isPathAllowedForScope(scope, pathname)) {
-        return NextResponse.redirect(new URL(SYSTEMS[scope].home, request.url))
-      }
-
-      // Module access — 非管理員：該功能必須在 enabled_modules 內（管理者可後台限制）
-      // 只擋該系統的功能頁，不擋 /login 等共用路徑（避免無限導向）
-      if (!isAdmin && isSystemKey(scope)) {
-        const enabled = profile?.enabled_modules ?? ['chat', 'booking', 'cs', 'marketing', 'leads', 'resume']
-        const inOwnSystem = SYSTEMS[scope].prefixes.some(p => pathname === p || pathname.startsWith(p + '/'))
-        if (inOwnSystem && !enabled.includes(scope)) {
-          return NextResponse.redirect(new URL(`/login/${scope}?denied=1`, request.url))
-        }
-      }
-
       // Admin guard — /admin 與 /cli-proxy 僅限總管理員
       if (!isAdmin && (pathname.startsWith('/admin') || pathname.startsWith('/cli-proxy'))) {
-        const home = isSystemKey(scope) ? SYSTEMS[scope].home : '/dashboard'
-        return NextResponse.redirect(new URL(home, request.url))
+        return NextResponse.redirect(new URL('/dashboard', request.url))
       }
 
-      // Module guard — admin bypasses
-      if (profile && profile.user_type !== 'admin') {
+      // Module guard — 檢查 enabled_modules，admin 跳過
+      if (profile && !isAdmin) {
         const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing-auto': ['marketing', 'cs'],
