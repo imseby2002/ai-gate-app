@@ -464,6 +464,24 @@ const PLATFORM_HINTS: Record<string, string> = {
 - 欄位標籤：訂單編號 / 入住日期 / 退房日期 / 房型 / 住客姓名（格式「名 姓」）/ 入住人數（大人＋小孩）/ 訂單金額。`,
 }
 
+// Few-shot examples distilled from real (de-identified) sample emails. They teach
+// the model the trickiest per-platform shapes: Booking.com's order-number-only
+// pre-stay email, the 姓/名 guest format, and cancellation wording.
+const FEW_SHOT_EXAMPLES: Record<string, string> = {
+  booking_com: `輸入主旨：「Booking.com - 新的預訂！ (5155978344, 2026年6月5日星期五)」
+輸入內文片段：「Booking information — 5155978344 … res_id=5155978344」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":null,"check_in":"2026-06-05","check_out":null,"confirmation_id":"5155978344","total_price":null,"num_guests":null,"property_name":null,"matched_property_id":null,"platform":"booking_com"}
+（說明：入住日前通知常只有訂單號與入住日，其餘填 null，不要猜測。）`,
+  agoda: `輸入內文片段：「訂單編號 1732718574 … Check-in 入住 11-Jul-2026 … Check-out 退房 12-Jul-2026 … 顧客名 RueiJie 姓 Chen … Mountain View Double Room … 2 Adults … TWD 1,911.00」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"RueiJie Chen","check_in":"2026-07-11","check_out":"2026-07-12","confirmation_id":"1732718574","total_price":1911,"num_guests":2,"property_name":"Mountain View Double Room","matched_property_id":null,"platform":"agoda"}`,
+  trip_com: `輸入主旨：「【訂單已取消】… Cancellation request accepted (booking no. #1616330516335375#)」
+輸入內文片段：「訂單編號 1616330516335375 … 旅客姓名 HUANG/YA CHI … 訂單金額 TWD 1377 … 住宿日期 2026 年 6 月 16 日 - 2026 年 6 月 17 日」
+正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":"HUANG/YA CHI","check_in":"2026-06-16","check_out":"2026-06-17","confirmation_id":"1616330516335375","total_price":1377,"num_guests":null,"property_name":"Standard Double Room","matched_property_id":null,"platform":"trip_com"}`,
+  asiayo: `輸入主旨：「AsiaYo.com 訂房已確認通知 (202605260319)」
+輸入內文片段：「訂單編號 202605260319 … 會員姓名 函霓 林 … 大人：1 位 小孩：0 位 … 海景房: 最多4人入住 … 入住日期 2026/07/10 退房日期 2026/07/12 … 已付金額 4,838」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"函霓 林","check_in":"2026-07-10","check_out":"2026-07-12","confirmation_id":"202605260319","total_price":4838,"num_guests":1,"property_name":"海景房: 最多4人入住","matched_property_id":null,"platform":"asiayo"}`,
+}
+
 // Order-number shapes per platform — used for cheap regex anchoring + fallback.
 const CONF_ID_PATTERNS: Record<string, RegExp> = {
   booking_com: /\b\d{9,10}\b/,
@@ -508,10 +526,6 @@ async function extractBookingWithAI(
   properties: UserProperty[],
   bnbName: string | null
 ): Promise<BookingExtracted | null> {
-  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return null
-
-  const isDeepSeek = !!process.env.DEEPSEEK_API_KEY
   const truncatedBody = body.slice(0, 8000)
 
   const bnbLine = bnbName ? `\n此民宿名稱（所有訂單都屬於此民宿）：${bnbName}` : ''
@@ -528,13 +542,15 @@ async function extractBookingWithAI(
     ? `\n程式預擷取（高信心，可作為校驗依據；若與內文一致請採用）：\n- 可能的訂單號：${pre.confirmation_id ?? '無'}\n- 內文偵測到的日期（已轉 YYYY-MM-DD，通常較小者為入住、較大者為退房）：${pre.dates.join('、') || '無'}`
     : ''
 
+  const fewShot = FEW_SHOT_EXAMPLES[platform] ? `\n參考範例（同平台真實格式，協助你對應欄位）：\n${FEW_SHOT_EXAMPLES[platform]}` : ''
+
   const prompt = `從以下訂房平台郵件中擷取訂單資訊，回傳 JSON 格式。
 ${bnbLine}
 郵件主旨：${subject}
 平台：${platform}
 郵件內容：
 ${truncatedBody}
-${roomListStr}${hint}${preLine}
+${roomListStr}${hint}${preLine}${fewShot}
 
 通用注意：
 - confirmation_id 務必從主旨或內文找出；純數字平台不要把電話、金額、日期數字當成訂單號。
@@ -559,51 +575,65 @@ ${roomListStr}${hint}${preLine}
 
 只回傳 JSON，不要其他說明。`
 
-  try {
-    let responseText: string
+  // Build the provider attempt order: primary (whichever key exists) then the
+  // other as a fallback, so a transient failure or bad JSON on one model can be
+  // recovered by the other instead of silently dropping the order.
+  const providers: Array<'deepseek' | 'claude'> = []
+  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
+  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  if (providers.length === 0) return null
 
-    if (isDeepSeek) {
-      const res = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0,
-          max_tokens: 1000,
-          response_format: { type: 'json_object' },
-        }),
-        signal: AbortSignal.timeout(20000),
-      })
-      const data = await res.json()
-      responseText = data.choices?.[0]?.message?.content ?? ''
-    } else {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1000,
-          temperature: 0,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-        signal: AbortSignal.timeout(20000),
-      })
-      const data = await res.json()
-      responseText = data.content?.[0]?.text ?? ''
+  for (const provider of providers) {
+    // One retry per provider for transient errors / truncated JSON.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const responseText = await callModel(provider, prompt)
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) continue
+        const parsed = JSON.parse(jsonMatch[0]) as BookingExtracted
+        // Fall back to the regex-detected order number when the model missed it.
+        if (!parsed.confirmation_id && pre.confirmation_id) parsed.confirmation_id = pre.confirmation_id
+        return parsed
+      } catch {
+        // try again / next provider
+      }
     }
-
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return null
-    const parsed = JSON.parse(jsonMatch[0]) as BookingExtracted
-    // Fall back to the regex-detected order number when the model missed it.
-    if (!parsed.confirmation_id && pre.confirmation_id) parsed.confirmation_id = pre.confirmation_id
-    return parsed
-  } catch {
-    return null
   }
+  return null
+}
+
+async function callModel(provider: 'deepseek' | 'claude', prompt: string): Promise<string> {
+  if (provider === 'deepseek') {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0,
+        max_tokens: 1000,
+        response_format: { type: 'json_object' },
+      }),
+      signal: AbortSignal.timeout(20000),
+    })
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content ?? ''
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+    signal: AbortSignal.timeout(20000),
+  })
+  const data = await res.json()
+  return data.content?.[0]?.text ?? ''
 }
