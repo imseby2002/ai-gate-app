@@ -110,6 +110,14 @@ function pickRicherBody(text: string, htmlStripped: string): string {
   return t
 }
 
+// Strict YYYY-MM-DD validator (rejects impossible dates like 2026-02-31 via round-trip).
+function isValidYmd(d: string | null | undefined): d is string {
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false
+  const t = Date.parse(`${d}T00:00:00Z`)
+  if (Number.isNaN(t)) return false
+  return new Date(t).toISOString().slice(0, 10) === d
+}
+
 // ── Property name fuzzy matching ─────────────────────────────
 function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
   if (!name || !properties.length) return null
@@ -255,19 +263,32 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           if (!extracted) { result.debug.ai_null++; continue }
           if (!extracted.is_booking) { result.debug.skipped_not_booking++; continue }
 
+          // Validate the AI-returned id actually exists before trusting it; the model
+          // sometimes hallucinates an id that isn't in the room list (→ FK error / wrong room).
+          const validMatchedId =
+            extracted.matched_property_id && properties.some(p => p.id === extracted.matched_property_id)
+              ? extracted.matched_property_id
+              : null
+
           const resolvedPropertyId =
-            extracted.matched_property_id
+            validMatchedId
             ?? matchPropertyByName(extracted.property_name, properties)
             ?? fallbackPropertyId
 
-          const checkIn  = extracted.check_in
-          const checkOut = extracted.check_out || (checkIn
+          // Validate dates: must be a real YYYY-MM-DD and check_out strictly after check_in
+          // (guards against DD/MM vs MM/DD swaps the model occasionally makes).
+          const checkIn = isValidYmd(extracted.check_in) ? extracted.check_in : null
+          const validCheckOut =
+            isValidYmd(extracted.check_out) && checkIn && extracted.check_out > checkIn
+              ? extracted.check_out
+              : null
+          const checkOut = validCheckOut || (checkIn
             ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
             : null)
 
           if (!checkIn) { result.debug.skipped_no_checkin++; result.processed++; continue }
 
-          const isPartial = !extracted.check_out || !extracted.guest_name
+          const isPartial = !validCheckOut || !extracted.guest_name
           const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
 
           const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
@@ -275,14 +296,39 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           // Duplicate check 1: exact confirmation_id match
           const { data: dupById } = await supabase
             .from('bookings')
-            .select('id, status')
+            .select('id, status, guest_name, check_out, total_price, num_guests, property_id')
             .eq('user_id', setting.user_id)
             .eq('platform_booking_id', confId)
             .maybeSingle()
           if (dupById) {
-            // If this is a cancellation email and existing booking is not yet cancelled, update it
+            // Cancellation email → mark existing as cancelled.
             if (extracted.is_cancellation && dupById.status !== 'cancelled') {
               await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
+              result.added++
+              result.processed++; continue
+            }
+            // Booking.com two-stage flow: the first (pre-stay) email carries only the
+            // order number + check-in; the same-day email fills in guest / check-out /
+            // price. Merge newly-available fields into the existing record instead of
+            // dropping this richer email as a duplicate.
+            const patch: Record<string, unknown> = {}
+            if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
+              patch.guest_name = extracted.guest_name
+            if (validCheckOut && validCheckOut !== dupById.check_out)
+              patch.check_out = validCheckOut
+            if (extracted.total_price != null && dupById.total_price == null)
+              patch.total_price = extracted.total_price
+            if (extracted.num_guests && (dupById.num_guests == null || dupById.num_guests <= 1))
+              patch.num_guests = extracted.num_guests
+            if (resolvedPropertyId && !dupById.property_id)
+              patch.property_id = resolvedPropertyId
+            if (Object.keys(patch).length > 0) {
+              // Promote pending → confirmed once the full picture has arrived.
+              if (!extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
+                patch.status = 'confirmed'
+                patch.notes = null
+              }
+              await supabase.from('bookings').update(patch).eq('id', dupById.id)
               result.added++
             } else {
               result.debug.skipped_duplicate++
