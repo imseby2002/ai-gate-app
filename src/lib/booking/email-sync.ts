@@ -459,8 +459,9 @@ const PLATFORM_HINTS: Record<string, string> = {
 - 主旨「Cancellation request accepted」或內文「訂單已取消」→ is_cancellation true。
 - 房客姓名格式「姓/名」。`,
   asiayo: `AsiaYo：
-- 訂單號以「AY」開頭後接數字（如 AY123456789），出現在主旨/內文「訂單編號」。
-- 欄位標籤：訂單編號 / 入住日期 / 退房日期 / 房型 / 住客姓名 / 入住人數 / 總金額。`,
+- 訂單號為純數字 12 碼（格式類似 YYYYMMDD+序號，如 202605260319），出現在主旨括號內與內文「訂單編號」下一行。
+- 入住/退房日期格式為 YYYY/MM/DD（如 2026/07/10、2026/07/12）。
+- 欄位標籤：訂單編號 / 入住日期 / 退房日期 / 房型 / 住客姓名（格式「名 姓」）/ 入住人數（大人＋小孩）/ 訂單金額。`,
 }
 
 // Order-number shapes per platform — used for cheap regex anchoring + fallback.
@@ -468,7 +469,7 @@ const CONF_ID_PATTERNS: Record<string, RegExp> = {
   booking_com: /\b\d{9,10}\b/,
   agoda:       /\b\d{9,11}\b/,
   trip_com:    /\b\d{15,18}\b/,
-  asiayo:      /\bAY\d{6,}\b/i,
+  asiayo:      /\b\d{12}\b/,
 }
 
 // High-confidence regex pre-extraction to anchor the model and to fall back on
@@ -486,11 +487,16 @@ function regexPreExtract(subject: string, body: string, platform: string): {
   }
   const dates: string[] = []
   let mm: RegExpExecArray | null
-  const reCn = /(\d{4})年(\d{1,2})月(\d{1,2})日/g           // 2026年6月5日
+  // 中文日期，容忍空格：「2026年6月5日」「2026 年 7 月 6 日」(Trip.com)
+  const reCn = /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g
   while ((mm = reCn.exec(hay))) dates.push(`${mm[1]}-${mm[2].padStart(2, '0')}-${mm[3].padStart(2, '0')}`)
+  // 斜線日期 YYYY/MM/DD (AsiaYo)
+  const reSlash = /\b(\d{4})\/(\d{1,2})\/(\d{1,2})\b/g
+  while ((mm = reSlash.exec(hay))) dates.push(`${mm[1]}-${mm[2].padStart(2, '0')}-${mm[3].padStart(2, '0')}`)
+  // ISO YYYY-MM-DD
   const reIso = /\b(\d{4}-\d{2}-\d{2})\b/g
   while ((mm = reIso.exec(hay))) dates.push(mm[1])
-  return { confirmation_id, dates: [...new Set(dates)] }
+  return { confirmation_id, dates: [...new Set(dates)].sort() }
 }
 
 // ── AI Extraction ─────────────────────────────────────────────
