@@ -197,57 +197,74 @@ async function scrape(): Promise<CheckInRecord[]> {
     await screenshot(page, '04-calendar')
 
     // 頁面載入後今日已自動選取，右側顯示「已售出N間房間」
-    // ── 4. 解析右側「已售出」表格，逐一點入取訂單號碼 ──────────────────────
+    // ── 4. 一次用 evaluate 取出所有行資料（避免點擊後 element handle 失效）──────
     const records: CheckInRecord[] = []
 
-    // 找到右側含「預訂人」欄的 table
-    const allTables = await page.$$('table')
-    let soldTable = null
-    for (const t of allTables) {
-      const txt = await t.textContent() ?? ''
-      if (txt.includes('預訂人') && txt.includes('來源')) { soldTable = t; break }
-    }
+    type RowData = { cells: string[]; href: string }
+    const rowsData: RowData[] = await page.evaluate(() => {
+      const tables = Array.from(document.querySelectorAll('table'))
+      // 找含「預訂人」欄標題的 table（右側已售出表）
+      const soldTable = tables.find(t => {
+        const ths = Array.from(t.querySelectorAll('th, thead td'))
+        return ths.some(h => h.textContent?.includes('預訂人'))
+      })
+      if (!soldTable) return []
 
-    if (!soldTable) {
-      console.log('⚠ 未找到右側訂單表格，今日可能無入住訂單')
-    } else {
-      const rows = await soldTable.$$('tbody tr')
-      console.log(`🏠 今日已售出 ${rows.length} 間`)
+      return Array.from(soldTable.querySelectorAll('tbody tr')).map(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(
+          c => (c.textContent ?? '').trim().replace(/\s+/g, ' ')
+        )
+        const link = row.querySelector<HTMLAnchorElement>('a[href]')
+        return { cells, href: link?.href ?? '' }
+      })
+    })
 
-      for (let i = 0; i < rows.length; i++) {
-        const cells = await rows[i].$$('td')
-        if (cells.length === 0) continue
-        const vals = await Promise.all(cells.map(c => c.textContent().then(t => t?.trim().replace(/\s+/g, ' ') ?? '')))
-        // 欄位順序：房型名稱 | 價格 | 預訂人 | 電話 | 來源 | 狀態
-        const roomName  = vals[0] ?? ''
-        const guestName = vals[2] ?? ''
-        console.log(`  📄 ${roomName} / ${guestName}`)
+    // 過濾掉標題行、分組行（cells[0] 為空或含「已售出」「房型名稱」）
+    const validRows = rowsData.filter(r =>
+      r.cells.length >= 3 &&
+      r.cells[0] &&
+      !r.cells[0].includes('已售出') &&
+      !r.cells[0].includes('房型名稱')
+    )
+    console.log(`🏠 有效訂單行：${validRows.length} 筆`)
 
-        // 點進去取訂單號碼
-        const rowLink = await rows[i].$('a') ?? rows[i]
-        await rowLink.click().catch(() => {})
-        await page.waitForLoadState('domcontentloaded', { timeout: 10_000 }).catch(() => {})
+    const calendarUrl = page.url() // 記住日曆頁 URL，便於返回
+
+    for (let i = 0; i < validRows.length; i++) {
+      const r = validRows[i]
+      // 欄位：房型名稱 | 價格 | 預訂人 | 電話 | 來源 | 狀態
+      const roomName  = r.cells[0] ?? ''
+      const guestName = r.cells[2] ?? ''
+      console.log(`  📄 ${roomName} / ${guestName}  href: ${r.href}`)
+
+      // 先從 URL 取訂單 ID（常見格式：?id=xxx 或 /detail/xxx）
+      let orderNumber = ''
+      const urlIdMatch = r.href.match(/[?&/](?:id|oid|order_id)=([A-Z0-9]+)/i)
+        ?? r.href.match(/\/(\d{4,12})(?:\?|$|#)/)
+      if (urlIdMatch) orderNumber = urlIdMatch[1]
+
+      // 若 URL 沒有，則進入詳情頁解析
+      if (!orderNumber && r.href) {
+        await page.goto(r.href, { waitUntil: 'domcontentloaded', timeout: 12_000 }).catch(() => {})
         await page.waitForTimeout(600)
         await screenshot(page, `05-order-${i + 1}`)
 
         const body = await page.textContent('body') ?? ''
-        // 嘗試多種訂單號格式
-        const orderMatch =
+        console.log(`     頁面片段：${body.slice(0, 200)}`)
+
+        const m =
           body.match(/訂單[編號碼No.#：:\s]+([A-Z0-9][A-Z0-9\-]{3,19})/i) ??
           body.match(/Order\s*(?:No|#|ID)?[.:\s]+([A-Z0-9][A-Z0-9\-]{3,19})/i) ??
-          body.match(/#([A-Z0-9]{4,15})\b/) ??
-          body.match(/\b([A-Z]{1,3}[0-9]{6,12})\b/)
+          body.match(/#([A-Z0-9]{5,15})\b/)
+        orderNumber = m?.[1]?.trim() ?? ''
 
-        records.push({
-          room_name:    roomName,
-          order_number: orderMatch?.[1]?.trim() ?? '',
-          guest_name:   guestName,
-        })
-        console.log(`     訂單號碼：${orderMatch?.[1] ?? '（未找到）'}`)
-
-        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10_000 }).catch(() => {})
+        // 返回日曆頁
+        await page.goto(calendarUrl, { waitUntil: 'domcontentloaded', timeout: 12_000 }).catch(() => {})
         await page.waitForTimeout(500)
       }
+
+      records.push({ room_name: roomName, order_number: orderNumber, guest_name: guestName })
+      console.log(`     ✅ 訂單：${orderNumber || '（未找到）'}`)
     }
 
     // 備用：無右側表格時從連結抓
