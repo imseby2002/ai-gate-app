@@ -72,6 +72,44 @@ const BOOKING_SUBJECT_KEYWORDS = [
   'agoda booking id', '- cancelled', 'cancelled ciao',
 ]
 
+// ── HTML → structured text ───────────────────────────────────
+// Keep table rows / cells / line breaks so field labels stay attached to their
+// values. The old approach flattened everything to single spaces, which scrambled
+// "Check-in | 2026-05-31" into ambiguous token soup and caused field mismatches.
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/(td|th)\s*>/gi, '\t')              // cell separator
+    .replace(/<\/(tr|table|div|p|li|h[1-6])\s*>/gi, '\n') // row / block break
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')                        // drop remaining tags
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, ' ')                         // collapse runs of spaces/tabs
+    .replace(/ *\n */g, '\n')                        // trim around line breaks
+    .replace(/\n{3,}/g, '\n\n')                      // cap blank lines
+    .trim()
+}
+
+// Choose the body variant that looks more likely to contain order fields.
+// Some platforms send a near-empty plain-text part with all data in HTML.
+function pickRicherBody(text: string, htmlStripped: string): string {
+  const t = text.trim()
+  const h = htmlStripped.trim()
+  if (!h) return t
+  if (!t) return h
+  // Plain text shorter than ~40% of HTML usually means it's a stub; prefer HTML.
+  if (t.length < h.length * 0.4) return h
+  return t
+}
+
 // ── Property name fuzzy matching ─────────────────────────────
 function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
   if (!name || !properties.length) return null
@@ -203,19 +241,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const subject = parsed.subject ?? ''
           const text    = parsed.text ?? ''
           const html    = (parsed.html as string | false | null | undefined) || ''
-          const htmlStripped = typeof html === 'string'
-            ? html
-                .replace(/<style[\s\S]*?<\/style>/gi, '')
-                .replace(/<script[\s\S]*?<\/script>/gi, '')
-                .replace(/<[^>]+>/g, ' ')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/\s+/g, ' ')
-                .trim()
-            : ''
-          const body    = text || htmlStripped
+          const htmlStripped = typeof html === 'string' ? htmlToText(html) : ''
+          // Prefer whichever version carries more booking signal (HTML tables often
+          // hold the structured fields that the plain-text part omits).
+          const body    = pickRicherBody(text, htmlStripped)
 
           let platform = 'other'
           for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
