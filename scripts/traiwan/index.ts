@@ -184,102 +184,73 @@ async function scrape(): Promise<CheckInRecord[]> {
       await screenshot(page, '03-after-2fa')
     }
 
-    // ── 3. 訂房 → 日曆 → 今日 ────────────────────────────────────────────────
-    console.log('📅 導覽至訂房日曆…')
-    await page.goto(DASHBOARD_URL, { waitUntil: 'domcontentloaded', timeout: 15_000 })
+    // ── 3. 訂房 → 日曆式訂房（頁面自動顯示今日資料）─────────────────────────
+    console.log('📅 導覽至「日曆式訂房」…')
 
-    // 點側邊欄「訂房」展開子選單
-    await page.click('text=訂房').catch(() => console.log('⚠ 找不到「訂房」連結'))
-    await page.waitForTimeout(800)
-    await screenshot(page, '04-menu-booking')
+    // 點「訂房」展開子選單
+    await page.click('text=訂房').catch(() => console.log('⚠ 找不到「訂房」'))
+    await page.waitForTimeout(600)
 
-    // 點「日曆」
-    await page.click('text=日曆').catch(() => console.log('⚠ 找不到「日曆」連結'))
+    // 點「日曆式訂房」
+    await page.click('text=日曆式訂房').catch(() => console.log('⚠ 找不到「日曆式訂房」'))
     await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {})
-    await screenshot(page, '05-calendar')
+    await screenshot(page, '04-calendar')
 
-    // 確認目前在哪個月；若不是本月則導覽至今日
-    const todayDay = parseInt(TODAY.split('-')[2], 10)  // e.g. 31
-    const [todayYear, todayMonth] = TODAY.split('-')
-
-    // 試著點「今天」按鈕，或找到今日日期格子
-    const todayBtn = await page.$('button:has-text("今天"), a:has-text("今天"), [data-date="' + TODAY + '"]')
-    if (todayBtn) {
-      await todayBtn.click()
-      await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {})
-    }
-
-    // 找今日的日曆格子並點擊（各 PMS 寫法不一，廣泛嘗試）
-    const dayCellSelectors = [
-      `[data-date="${TODAY}"]`,
-      `td[data-date="${TODAY}"]`,
-      `.day-${todayDay}`,
-      `td:has-text("${todayDay}")`,
-      `.fc-day[data-date="${TODAY}"]`,  // FullCalendar
-    ]
-    let dayClicked = false
-    for (const sel of dayCellSelectors) {
-      const cell = await page.$(sel)
-      if (cell) {
-        console.log(`📆 點擊今日格子：${sel}`)
-        await cell.click()
-        await page.waitForTimeout(1500)
-        dayClicked = true
-        break
-      }
-    }
-    if (!dayClicked) console.log('⚠ 未能點擊今日格子，繼續嘗試解析')
-    await screenshot(page, '06-today-clicked')
-
-    // ── 4. 收集今日所有訂單連結，逐一進入取資料 ──────────────────────────────
+    // 頁面載入後今日已自動選取，右側顯示「已售出N間房間」
+    // ── 4. 解析右側「已售出」表格，逐一點入取訂單號碼 ──────────────────────
     const records: CheckInRecord[] = []
 
-    // 找今日有入住標記的房間連結（TRAIWAN 日曆中通常是 a 標籤包著房間名）
-    const bookingLinks = await page.$$(
-      'a[href*="order"], a[href*="booking"], a[href*="reservation"], a[href*="detail"], .booking-item a, .event a'
-    )
-    console.log(`🔗 找到 ${bookingLinks.length} 個訂單連結`)
-
-    for (let i = 0; i < bookingLinks.length; i++) {
-      const link = bookingLinks[i]
-      const href = await link.getAttribute('href') ?? ''
-      const linkText = (await link.textContent() ?? '').trim()
-      if (!href || !linkText) continue
-
-      const fullUrl = href.startsWith('http') ? href : `https://pms.traiwan.com${href}`
-      console.log(`📄 進入訂單 ${i + 1}：${fullUrl}`)
-
-      await page.goto(fullUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 }).catch(() => {})
-      await page.waitForTimeout(800)
-
-      const content = await page.textContent('body') ?? ''
-
-      // 抓訂單號碼
-      const orderMatch = content.match(/訂單[編號碼：:\s]*([A-Z0-9\-]{4,20})/i)
-        ?? content.match(/#([0-9]{4,10})/)
-        ?? content.match(/\b([A-Z]{0,3}[0-9]{6,10})\b/)
-
-      // 抓旅客姓名
-      const guestMatch = content.match(/(?:姓名|旅客|住客)[：:\s]*([^\s,，。\n]{2,10})/)
-        ?? content.match(/旅客姓名[：:\s]*([^\n]{2,10})/)
-
-      // 抓房型名稱
-      const roomMatch = content.match(/房型[：:\s]*([^\n,，]{2,20})/)
-        ?? content.match(/房間[：:\s]*([^\n,，]{2,20})/)
-
-      if (orderMatch || guestMatch) {
-        records.push({
-          room_name: roomMatch?.[1]?.trim() ?? linkText,
-          order_number: orderMatch?.[1]?.trim() ?? '',
-          guest_name: guestMatch?.[1]?.trim() ?? '',
-        })
-        console.log(`  ✅ 房型：${roomMatch?.[1] ?? '?'} / 訂單：${orderMatch?.[1] ?? '?'} / 旅客：${guestMatch?.[1] ?? '?'}`)
-      }
-
-      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10_000 }).catch(() => {})
+    // 找到右側含「預訂人」欄的 table
+    const allTables = await page.$$('table')
+    let soldTable = null
+    for (const t of allTables) {
+      const txt = await t.textContent() ?? ''
+      if (txt.includes('預訂人') && txt.includes('來源')) { soldTable = t; break }
     }
 
-    // 備用：若日曆沒有連結，嘗試舊的 table 解析方式
+    if (!soldTable) {
+      console.log('⚠ 未找到右側訂單表格，今日可能無入住訂單')
+    } else {
+      const rows = await soldTable.$$('tbody tr')
+      console.log(`🏠 今日已售出 ${rows.length} 間`)
+
+      for (let i = 0; i < rows.length; i++) {
+        const cells = await rows[i].$$('td')
+        if (cells.length === 0) continue
+        const vals = await Promise.all(cells.map(c => c.textContent().then(t => t?.trim().replace(/\s+/g, ' ') ?? '')))
+        // 欄位順序：房型名稱 | 價格 | 預訂人 | 電話 | 來源 | 狀態
+        const roomName  = vals[0] ?? ''
+        const guestName = vals[2] ?? ''
+        console.log(`  📄 ${roomName} / ${guestName}`)
+
+        // 點進去取訂單號碼
+        const rowLink = await rows[i].$('a') ?? rows[i]
+        await rowLink.click().catch(() => {})
+        await page.waitForLoadState('domcontentloaded', { timeout: 10_000 }).catch(() => {})
+        await page.waitForTimeout(600)
+        await screenshot(page, `05-order-${i + 1}`)
+
+        const body = await page.textContent('body') ?? ''
+        // 嘗試多種訂單號格式
+        const orderMatch =
+          body.match(/訂單[編號碼No.#：:\s]+([A-Z0-9][A-Z0-9\-]{3,19})/i) ??
+          body.match(/Order\s*(?:No|#|ID)?[.:\s]+([A-Z0-9][A-Z0-9\-]{3,19})/i) ??
+          body.match(/#([A-Z0-9]{4,15})\b/) ??
+          body.match(/\b([A-Z]{1,3}[0-9]{6,12})\b/)
+
+        records.push({
+          room_name:    roomName,
+          order_number: orderMatch?.[1]?.trim() ?? '',
+          guest_name:   guestName,
+        })
+        console.log(`     訂單號碼：${orderMatch?.[1] ?? '（未找到）'}`)
+
+        await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10_000 }).catch(() => {})
+        await page.waitForTimeout(500)
+      }
+    }
+
+    // 備用：無右側表格時從連結抓
     if (records.length === 0) {
       const links = await page.$$('a[href*="order"], a[href*="booking"], a[href*="reservation"]')
       for (const link of links) {
