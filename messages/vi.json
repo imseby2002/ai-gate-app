@@ -125,7 +125,8 @@
       "marketing": { "label": "Marketing Tự Động", "desc": "Tạo nội dung, hình ảnh, video, tự động hóa quy trình" },
       "cs": { "label": "Dịch vụ Khách hàng", "desc": "LINE / WhatsApp / Telegram chăm sóc khách hàng" },
       "leads": { "label": "Tiếp thị Khách hàng", "desc": "Kịch bản cuộc gọi marketing, phân tích khách hàng tiềm năng" },
-      "resume": { "label": "Công cụ CV", "desc": "Chỉnh sửa CV bằng AI & ghép việc làm" }
+      "resume": { "label": "Công cụ CV", "desc": "Chỉnh sửa CV bằng AI & ghép việc làm" },
+      "booking": { "label": "Hệ thống Đặt phòng", "desc": "Phòng, đơn đặt, giá & đặt phòng trực tuyến" }
     },
     "routes": {
       "daily": "Trò chuyện hàng ngày",
