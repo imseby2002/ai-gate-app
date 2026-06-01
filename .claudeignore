@@ -1,0 +1,9 @@
+.next/
+node_modules/
+dist/
+build/
+coverage/
+*.log
+.turbo/
+supabase/.branches/
+supabase/.temp/
