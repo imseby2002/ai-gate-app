@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import {
   Megaphone, Sparkles, GitBranch, BarChart3,
-  ArrowRight, Zap, Target, Layers,
+  ArrowRight, Zap, Target, Layers, Phone,
 } from 'lucide-react'
 
 const FEATURES = [
@@ -33,6 +33,15 @@ const FEATURES = [
     color: 'from-blue-500 to-cyan-600',
     badge: '進階功能',
     tags: ['任務排程', '進度追蹤', 'Telegram 審核', '多活動管理'],
+  },
+  {
+    title: '潛在客戶行銷',
+    desc: '自動蒐集組織 → AI 篩選分類 → 距離計算 → 電話撥打 / Email 寄送，主動開發潛在客戶',
+    icon: Phone,
+    href: '/prospect-call',
+    color: 'from-teal-500 to-emerald-600',
+    badge: '開發工具',
+    tags: ['自動蒐集', 'AI 篩選', '電話行銷', 'Email 行銷'],
   },
   {
     title: '市場競品分析',
