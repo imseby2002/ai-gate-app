@@ -33,6 +33,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const enabledModules: string[] = profile?.enabled_modules ?? MODULES.map(m => m.id)
   const isAdmin = profile?.user_type === 'admin'
 
+  // 潛在客戶已歸類至行銷中心，不在 dashboard 模組格單獨顯示（權限模組仍保留於 MODULES）
+  const visibleModules = MODULES.filter(m => m.id !== 'leads')
+
   const { data: usageData } = await supabase
     .from('usage_daily')
     .select('model_id, message_count, total_cost_usd, input_tokens, output_tokens')
@@ -137,10 +140,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div>
           <div className="flex items-center justify-between mb-4 px-0.5">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('modulesTitle')}</h2>
-            <span className="text-xs text-muted-foreground">{t('modulesAvailable', { count: MODULES.filter(m => isAdmin || enabledModules.includes(m.id)).length, total: MODULES.length })}</span>
+            <span className="text-xs text-muted-foreground">{t('modulesAvailable', { count: visibleModules.filter(m => isAdmin || enabledModules.includes(m.id)).length, total: visibleModules.length })}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MODULES.map(mod => {
+            {visibleModules.map(mod => {
               const accessible = isAdmin || enabledModules.includes(mod.id)
               return (
                 <div
