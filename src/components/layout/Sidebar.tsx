@@ -111,7 +111,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
 
   return (
     <aside className={cn(
-      'flex flex-col h-full border-r bg-card transition-all duration-300 ease-in-out',
+      'relative flex flex-col h-full border-r bg-card transition-all duration-300 ease-in-out',
       collapsed ? 'w-[60px]' : 'w-60'
     )}>
       {/* Logo */}
