@@ -93,7 +93,7 @@ export async function middleware(request: NextRequest) {
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing-auto': ['marketing', 'cs'],
           '/cs':             ['cs'],
-          '/prospect-call':  ['leads'],
+          '/prospect-call':  ['leads', 'marketing'],
           '/resume':         ['resume'],
         }
         for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
