@@ -118,7 +118,6 @@ export default function EmailPage() {
     setSettings(prev => prev.map(x => x.id === s.id ? { ...x, sync_enabled: !x.sync_enabled } : x))
   }
 
-  const hasUnassigned = settings.some(s => !s.property_id)
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-3xl">
@@ -154,10 +153,10 @@ export default function EmailPage() {
         <div className="text-xs">需使用「應用程式密碼」而非帳號密碼。至 Google 帳戶 → 安全性 → 兩步驟驗證 → 應用程式密碼 產生 16 碼密碼。</div>
       </div>
 
-      {hasUnassigned && properties.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm text-orange-800">
-          <div className="font-semibold mb-1">有信箱設定尚未指定房源</div>
-          <div className="text-xs">匯入的訂單將無法顯示在房源篩選中。請在下方為每個信箱指定對應房源，然後點「重新從頭同步」。</div>
+      {properties.length > 1 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+          <div className="font-semibold mb-1">多房型信箱免指定房源</div>
+          <div className="text-xs">同一信箱會收到不同房型的訂單，系統會依每封郵件內容自動判斷房型。房源欄位留空即可，毋需手動指定。</div>
         </div>
       )}
 
@@ -172,14 +171,11 @@ export default function EmailPage() {
       ) : (
         <div className="space-y-3">
           {settings.map(s => (
-            <div key={s.id} className={`bg-white border rounded-xl p-4 space-y-3 ${!s.property_id ? 'border-orange-300' : ''}`}>
+            <div key={s.id} className="bg-white border rounded-xl p-4 space-y-3">
               <div className="flex items-start justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap min-w-0">
                   <Mail className="h-4 w-4 text-indigo-500 shrink-0" />
                   <span className="font-semibold text-sm text-gray-900 truncate">{s.email_address}</span>
-                  {!s.property_id && (
-                    <span className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full shrink-0">未指定房源</span>
-                  )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button onClick={() => toggleEnable(s)}
@@ -201,11 +197,11 @@ export default function EmailPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 shrink-0">對應房源：</span>
+                <span className="text-xs text-gray-500 shrink-0">指定房源：</span>
                 <select value={s.property_id ?? ''}
                   onChange={e => updateProperty(s.id, e.target.value)}
-                  className={`flex-1 min-w-0 text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 ${!s.property_id ? 'border-orange-300 bg-orange-50' : ''}`}>
-                  <option value="">-- 未指定 --</option>
+                  className="flex-1 min-w-0 text-xs border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                  <option value="">自動判斷（依郵件內容）</option>
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
@@ -276,10 +272,10 @@ export default function EmailPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">房源 <span className="text-red-500">*</span></label>
+                <label className="text-xs font-medium text-gray-600">房源<span className="text-gray-400">（選填）</span></label>
                 <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                  <option value="">-- 請選擇 --</option>
+                  <option value="">自動判斷（依郵件內容）</option>
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>

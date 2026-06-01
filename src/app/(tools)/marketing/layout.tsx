@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Megaphone, Palette, LayoutDashboard, Menu } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
-  { href: '/marketing',                  label: '行銷中心',    icon: LayoutDashboard },
-  { href: '/marketing/product-designer', label: '產品設計師',  icon: Palette },
+  { href: '/marketing',                  label: '行銷中心',      icon: LayoutDashboard },
+  { href: '/marketing/product-designer', label: '產品設計師',    icon: Palette },
+  { href: '/prospect-call',              label: '潛在客戶行銷',  icon: Phone },
 ]
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

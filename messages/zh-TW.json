@@ -126,7 +126,8 @@
       "marketing": { "label": "行銷自動化", "desc": "內容生成、圖片影片、流程自動化" },
       "cs": { "label": "客服系統", "desc": "LINE / WhatsApp / Telegram 智能客服" },
       "leads": { "label": "潛在客戶", "desc": "行銷電話腳本、潛客分析" },
-      "resume": { "label": "履歷優化", "desc": "AI 履歷潤稿與職缺媒合" }
+      "resume": { "label": "履歷優化", "desc": "AI 履歷潤稿與職缺媒合" },
+      "booking": { "label": "訂房系統", "desc": "房源、訂單、定價與線上訂房" }
     },
     "routes": {
       "daily": "日常對話",

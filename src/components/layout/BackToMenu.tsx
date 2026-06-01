@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { Zap, ArrowLeft } from 'lucide-react'
-import { SYSTEMS, SCOPE_SESSION_KEY, isSystemKey } from '@/lib/systems'
+import { SYSTEMS, SCOPE_SESSION_KEY, isSystemKey, systemForPath } from '@/lib/systems'
 
 interface BackToMenuProps {
   isAdmin: boolean
@@ -10,18 +11,35 @@ interface BackToMenuProps {
 }
 
 export function BackToMenu({ isAdmin, variant = 'standalone' }: BackToMenuProps) {
+  const pathname = usePathname()
   const [href, setHref] = useState('/dashboard')
 
   useEffect(() => {
-    if (!isAdmin) {
-      try {
-        const scope = sessionStorage.getItem(SCOPE_SESSION_KEY)
-        if (isSystemKey(scope)) setHref(SYSTEMS[scope].home)
-      } catch {
-        // sessionStorage 不可用（私密模式等），保持 /dashboard
-      }
+    // 管理員自由導航，返回主選單一律回 /dashboard
+    if (isAdmin) return
+
+    // 優先依「目前所在路徑」推回所屬系統首頁——比 per-tab scope 可靠，
+    // 即使用戶是從統一 App 進來（未設定 scope）也能正確返回該功能入口頁。
+    // /marketing-auto 同時被行銷與客服系統共用，靠 ?module=cs 區分。
+    const isCsMode = typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).get('module') === 'cs'
+    if (pathname.startsWith('/marketing-auto') && isCsMode) {
+      setHref(SYSTEMS.cs.home); return
     }
-  }, [isAdmin])
+    if (pathname.startsWith('/marketing')) {
+      setHref(SYSTEMS.marketing.home); return
+    }
+    const sys = systemForPath(pathname)
+    if (sys) { setHref(SYSTEMS[sys].home); return }
+
+    // 路徑無法判別時，退回 per-tab scope，最後才是 /dashboard
+    try {
+      const scope = sessionStorage.getItem(SCOPE_SESSION_KEY)
+      if (isSystemKey(scope)) setHref(SYSTEMS[scope].home)
+    } catch {
+      // sessionStorage 不可用（私密模式等），保持 /dashboard
+    }
+  }, [isAdmin, pathname])
 
   if (variant === 'tools') {
     return (

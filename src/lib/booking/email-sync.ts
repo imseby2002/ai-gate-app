@@ -72,6 +72,52 @@ const BOOKING_SUBJECT_KEYWORDS = [
   'agoda booking id', '- cancelled', 'cancelled ciao',
 ]
 
+// ── HTML → structured text ───────────────────────────────────
+// Keep table rows / cells / line breaks so field labels stay attached to their
+// values. The old approach flattened everything to single spaces, which scrambled
+// "Check-in | 2026-05-31" into ambiguous token soup and caused field mismatches.
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/(td|th)\s*>/gi, '\t')              // cell separator
+    .replace(/<\/(tr|table|div|p|li|h[1-6])\s*>/gi, '\n') // row / block break
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')                        // drop remaining tags
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, ' ')                         // collapse runs of spaces/tabs
+    .replace(/ *\n */g, '\n')                        // trim around line breaks
+    .replace(/\n{3,}/g, '\n\n')                      // cap blank lines
+    .trim()
+}
+
+// Choose the body variant that looks more likely to contain order fields.
+// Some platforms send a near-empty plain-text part with all data in HTML.
+function pickRicherBody(text: string, htmlStripped: string): string {
+  const t = text.trim()
+  const h = htmlStripped.trim()
+  if (!h) return t
+  if (!t) return h
+  // Plain text shorter than ~40% of HTML usually means it's a stub; prefer HTML.
+  if (t.length < h.length * 0.4) return h
+  return t
+}
+
+// Strict YYYY-MM-DD validator (rejects impossible dates like 2026-02-31 via round-trip).
+function isValidYmd(d: string | null | undefined): d is string {
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false
+  const t = Date.parse(`${d}T00:00:00Z`)
+  if (Number.isNaN(t)) return false
+  return new Date(t).toISOString().slice(0, 10) === d
+}
+
 // ── Property name fuzzy matching ─────────────────────────────
 function matchPropertyByName(name: string | null, properties: UserProperty[]): string | null {
   if (!name || !properties.length) return null
@@ -203,19 +249,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const subject = parsed.subject ?? ''
           const text    = parsed.text ?? ''
           const html    = (parsed.html as string | false | null | undefined) || ''
-          const htmlStripped = typeof html === 'string'
-            ? html
-                .replace(/<style[\s\S]*?<\/style>/gi, '')
-                .replace(/<script[\s\S]*?<\/script>/gi, '')
-                .replace(/<[^>]+>/g, ' ')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/\s+/g, ' ')
-                .trim()
-            : ''
-          const body    = text || htmlStripped
+          const htmlStripped = typeof html === 'string' ? htmlToText(html) : ''
+          // Prefer whichever version carries more booking signal (HTML tables often
+          // hold the structured fields that the plain-text part omits).
+          const body    = pickRicherBody(text, htmlStripped)
 
           let platform = 'other'
           for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
@@ -226,19 +263,32 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           if (!extracted) { result.debug.ai_null++; continue }
           if (!extracted.is_booking) { result.debug.skipped_not_booking++; continue }
 
+          // Validate the AI-returned id actually exists before trusting it; the model
+          // sometimes hallucinates an id that isn't in the room list (→ FK error / wrong room).
+          const validMatchedId =
+            extracted.matched_property_id && properties.some(p => p.id === extracted.matched_property_id)
+              ? extracted.matched_property_id
+              : null
+
           const resolvedPropertyId =
-            extracted.matched_property_id
+            validMatchedId
             ?? matchPropertyByName(extracted.property_name, properties)
             ?? fallbackPropertyId
 
-          const checkIn  = extracted.check_in
-          const checkOut = extracted.check_out || (checkIn
+          // Validate dates: must be a real YYYY-MM-DD and check_out strictly after check_in
+          // (guards against DD/MM vs MM/DD swaps the model occasionally makes).
+          const checkIn = isValidYmd(extracted.check_in) ? extracted.check_in : null
+          const validCheckOut =
+            isValidYmd(extracted.check_out) && checkIn && extracted.check_out > checkIn
+              ? extracted.check_out
+              : null
+          const checkOut = validCheckOut || (checkIn
             ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
             : null)
 
           if (!checkIn) { result.debug.skipped_no_checkin++; result.processed++; continue }
 
-          const isPartial = !extracted.check_out || !extracted.guest_name
+          const isPartial = !validCheckOut || !extracted.guest_name
           const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
 
           const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
@@ -246,14 +296,39 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           // Duplicate check 1: exact confirmation_id match
           const { data: dupById } = await supabase
             .from('bookings')
-            .select('id, status')
+            .select('id, status, guest_name, check_out, total_price, num_guests, property_id')
             .eq('user_id', setting.user_id)
             .eq('platform_booking_id', confId)
             .maybeSingle()
           if (dupById) {
-            // If this is a cancellation email and existing booking is not yet cancelled, update it
+            // Cancellation email → mark existing as cancelled.
             if (extracted.is_cancellation && dupById.status !== 'cancelled') {
               await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
+              result.added++
+              result.processed++; continue
+            }
+            // Booking.com two-stage flow: the first (pre-stay) email carries only the
+            // order number + check-in; the same-day email fills in guest / check-out /
+            // price. Merge newly-available fields into the existing record instead of
+            // dropping this richer email as a duplicate.
+            const patch: Record<string, unknown> = {}
+            if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
+              patch.guest_name = extracted.guest_name
+            if (validCheckOut && validCheckOut !== dupById.check_out)
+              patch.check_out = validCheckOut
+            if (extracted.total_price != null && dupById.total_price == null)
+              patch.total_price = extracted.total_price
+            if (extracted.num_guests && (dupById.num_guests == null || dupById.num_guests <= 1))
+              patch.num_guests = extracted.num_guests
+            if (resolvedPropertyId && !dupById.property_id)
+              patch.property_id = resolvedPropertyId
+            if (Object.keys(patch).length > 0) {
+              // Promote pending → confirmed once the full picture has arrived.
+              if (!extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
+                patch.status = 'confirmed'
+                patch.notes = null
+              }
+              await supabase.from('bookings').update(patch).eq('id', dupById.id)
               result.added++
             } else {
               result.debug.skipped_duplicate++
@@ -367,6 +442,81 @@ export async function syncAllEmailForUser(userId: string) {
   return Promise.all(settings.map((s: { id: string }) => syncEmailForSetting(s.id)))
 }
 
+// ── Platform-specific extraction hints (derived from real sample emails) ──
+const PLATFORM_HINTS: Record<string, string> = {
+  booking_com: `Booking.com：
+- 訂單號為純數字 9-10 位，出現在主旨「(數字, 日期)」、內文「Booking information — 數字」「確認訂房編號為 數字」或網址「res_id=數字」。
+- 兩段式郵件：入住日前的通知常只有入住/退房日期與訂單號，沒有姓名/房型/金額（正常，is_booking 仍為 true）；入住當天才會有完整房客資訊。
+- 日期格式如「2026年6月5日」。`,
+  agoda: `Agoda：
+- 訂單號為純數字（約 10 位），出現在主旨「Agoda 訂單 數字」或「Agoda Booking ID 數字」、內文「訂房編號」下一行。
+- 欄位標籤：訂房編號 / 入住 / 退房 / 房型 / 入住人數 / 房客姓名 / 總金額。
+- 主旨含「CANCELLED」或內文「您的訂單已取消」→ is_cancellation true。
+- 金額如「TWD 3,600」；房客姓名格式「姓, 名」。`,
+  trip_com: `Trip.com：
+- 訂單號為純數字（約 16 位），出現在主旨「Booking no.數字」、內文「訂單編號」下一行。
+- 欄位標籤：訂單編號 / 入住 / 退房 / 房型 / 住客姓名 / 房間數 / 入住人數 / 總價。
+- 主旨「Cancellation request accepted」或內文「訂單已取消」→ is_cancellation true。
+- 房客姓名格式「姓/名」。`,
+  asiayo: `AsiaYo：
+- 訂單號為純數字 12 碼（格式類似 YYYYMMDD+序號，如 202605260319），出現在主旨括號內與內文「訂單編號」下一行。
+- 入住/退房日期格式為 YYYY/MM/DD（如 2026/07/10、2026/07/12）。
+- 欄位標籤：訂單編號 / 入住日期 / 退房日期 / 房型 / 住客姓名（格式「名 姓」）/ 入住人數（大人＋小孩）/ 訂單金額。`,
+}
+
+// Few-shot examples distilled from real (de-identified) sample emails. They teach
+// the model the trickiest per-platform shapes: Booking.com's order-number-only
+// pre-stay email, the 姓/名 guest format, and cancellation wording.
+const FEW_SHOT_EXAMPLES: Record<string, string> = {
+  booking_com: `輸入主旨：「Booking.com - 新的預訂！ (5155978344, 2026年6月5日星期五)」
+輸入內文片段：「Booking information — 5155978344 … res_id=5155978344」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":null,"check_in":"2026-06-05","check_out":null,"confirmation_id":"5155978344","total_price":null,"num_guests":null,"property_name":null,"matched_property_id":null,"platform":"booking_com"}
+（說明：入住日前通知常只有訂單號與入住日，其餘填 null，不要猜測。）`,
+  agoda: `輸入內文片段：「訂單編號 1732718574 … Check-in 入住 11-Jul-2026 … Check-out 退房 12-Jul-2026 … 顧客名 RueiJie 姓 Chen … Mountain View Double Room … 2 Adults … TWD 1,911.00」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"RueiJie Chen","check_in":"2026-07-11","check_out":"2026-07-12","confirmation_id":"1732718574","total_price":1911,"num_guests":2,"property_name":"Mountain View Double Room","matched_property_id":null,"platform":"agoda"}`,
+  trip_com: `輸入主旨：「【訂單已取消】… Cancellation request accepted (booking no. #1616330516335375#)」
+輸入內文片段：「訂單編號 1616330516335375 … 旅客姓名 HUANG/YA CHI … 訂單金額 TWD 1377 … 住宿日期 2026 年 6 月 16 日 - 2026 年 6 月 17 日」
+正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":"HUANG/YA CHI","check_in":"2026-06-16","check_out":"2026-06-17","confirmation_id":"1616330516335375","total_price":1377,"num_guests":null,"property_name":"Standard Double Room","matched_property_id":null,"platform":"trip_com"}`,
+  asiayo: `輸入主旨：「AsiaYo.com 訂房已確認通知 (202605260319)」
+輸入內文片段：「訂單編號 202605260319 … 會員姓名 函霓 林 … 大人：1 位 小孩：0 位 … 海景房: 最多4人入住 … 入住日期 2026/07/10 退房日期 2026/07/12 … 已付金額 4,838」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"函霓 林","check_in":"2026-07-10","check_out":"2026-07-12","confirmation_id":"202605260319","total_price":4838,"num_guests":1,"property_name":"海景房: 最多4人入住","matched_property_id":null,"platform":"asiayo"}`,
+}
+
+// Order-number shapes per platform — used for cheap regex anchoring + fallback.
+const CONF_ID_PATTERNS: Record<string, RegExp> = {
+  booking_com: /\b\d{9,10}\b/,
+  agoda:       /\b\d{9,11}\b/,
+  trip_com:    /\b\d{15,18}\b/,
+  asiayo:      /\b\d{12}\b/,
+}
+
+// High-confidence regex pre-extraction to anchor the model and to fall back on
+// when it misses the order number / dates.
+function regexPreExtract(subject: string, body: string, platform: string): {
+  confirmation_id: string | null
+  dates: string[]
+} {
+  const hay = `${subject}\n${body}`
+  let confirmation_id: string | null = null
+  const pat = CONF_ID_PATTERNS[platform]
+  if (pat) {
+    const m = hay.match(pat)
+    if (m) confirmation_id = m[0]
+  }
+  const dates: string[] = []
+  let mm: RegExpExecArray | null
+  // 中文日期，容忍空格：「2026年6月5日」「2026 年 7 月 6 日」(Trip.com)
+  const reCn = /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/g
+  while ((mm = reCn.exec(hay))) dates.push(`${mm[1]}-${mm[2].padStart(2, '0')}-${mm[3].padStart(2, '0')}`)
+  // 斜線日期 YYYY/MM/DD (AsiaYo)
+  const reSlash = /\b(\d{4})\/(\d{1,2})\/(\d{1,2})\b/g
+  while ((mm = reSlash.exec(hay))) dates.push(`${mm[1]}-${mm[2].padStart(2, '0')}-${mm[3].padStart(2, '0')}`)
+  // ISO YYYY-MM-DD
+  const reIso = /\b(\d{4}-\d{2}-\d{2})\b/g
+  while ((mm = reIso.exec(hay))) dates.push(mm[1])
+  return { confirmation_id, dates: [...new Set(dates)].sort() }
+}
+
 // ── AI Extraction ─────────────────────────────────────────────
 
 async function extractBookingWithAI(
@@ -376,10 +526,6 @@ async function extractBookingWithAI(
   properties: UserProperty[],
   bnbName: string | null
 ): Promise<BookingExtracted | null> {
-  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return null
-
-  const isDeepSeek = !!process.env.DEEPSEEK_API_KEY
   const truncatedBody = body.slice(0, 8000)
 
   const bnbLine = bnbName ? `\n此民宿名稱（所有訂單都屬於此民宿）：${bnbName}` : ''
@@ -390,18 +536,27 @@ async function extractBookingWithAI(
       }).join('\n')}`
     : ''
 
+  const hint = PLATFORM_HINTS[platform] ? `\n平台專屬規則：\n${PLATFORM_HINTS[platform]}` : ''
+  const pre = regexPreExtract(subject, body, platform)
+  const preLine = (pre.confirmation_id || pre.dates.length)
+    ? `\n程式預擷取（高信心，可作為校驗依據；若與內文一致請採用）：\n- 可能的訂單號：${pre.confirmation_id ?? '無'}\n- 內文偵測到的日期（已轉 YYYY-MM-DD，通常較小者為入住、較大者為退房）：${pre.dates.join('、') || '無'}`
+    : ''
+
+  const fewShot = FEW_SHOT_EXAMPLES[platform] ? `\n參考範例（同平台真實格式，協助你對應欄位）：\n${FEW_SHOT_EXAMPLES[platform]}` : ''
+
   const prompt = `從以下訂房平台郵件中擷取訂單資訊，回傳 JSON 格式。
 ${bnbLine}
 郵件主旨：${subject}
 平台：${platform}
 郵件內容：
 ${truncatedBody}
-${roomListStr}
+${roomListStr}${hint}${preLine}${fewShot}
 
-注意：
-- Booking.com 的通知郵件通常只含訂單號與入住日期，沒有退房日、姓名、房型，這是正常現象，仍請回傳 is_booking: true 並盡量擷取可用欄位。
-- Booking.com 的訂單號（confirmation_id）是純數字，通常 9-10 位，如 "5155978344"、"3812345678"，請務必從郵件內文或主旨中找出這個數字。
-- 若郵件中出現 "Booking number"、"Booking No."、"Reservation number"、"訂單編號" 後面跟著純數字，那就是 confirmation_id。
+通用注意：
+- confirmation_id 務必從主旨或內文找出；純數字平台不要把電話、金額、日期數字當成訂單號。
+- 日期一律輸出 YYYY-MM-DD；中文「2026年6月5日」要轉成「2026-06-05」；退房日必須晚於入住日。
+- 無法確定的欄位填 null，不要猜測。
+- 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
 {
@@ -420,46 +575,65 @@ ${roomListStr}
 
 只回傳 JSON，不要其他說明。`
 
-  try {
-    let responseText: string
+  // Build the provider attempt order: primary (whichever key exists) then the
+  // other as a fallback, so a transient failure or bad JSON on one model can be
+  // recovered by the other instead of silently dropping the order.
+  const providers: Array<'deepseek' | 'claude'> = []
+  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
+  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  if (providers.length === 0) return null
 
-    if (isDeepSeek) {
-      const res = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0,
-          max_tokens: 600,
-        }),
-        signal: AbortSignal.timeout(20000),
-      })
-      const data = await res.json()
-      responseText = data.choices?.[0]?.message?.content ?? ''
-    } else {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 600,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-        signal: AbortSignal.timeout(20000),
-      })
-      const data = await res.json()
-      responseText = data.content?.[0]?.text ?? ''
+  for (const provider of providers) {
+    // One retry per provider for transient errors / truncated JSON.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const responseText = await callModel(provider, prompt)
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) continue
+        const parsed = JSON.parse(jsonMatch[0]) as BookingExtracted
+        // Fall back to the regex-detected order number when the model missed it.
+        if (!parsed.confirmation_id && pre.confirmation_id) parsed.confirmation_id = pre.confirmation_id
+        return parsed
+      } catch {
+        // try again / next provider
+      }
     }
-
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return null
-    return JSON.parse(jsonMatch[0]) as BookingExtracted
-  } catch {
-    return null
   }
+  return null
+}
+
+async function callModel(provider: 'deepseek' | 'claude', prompt: string): Promise<string> {
+  if (provider === 'deepseek') {
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0,
+        max_tokens: 1000,
+        response_format: { type: 'json_object' },
+      }),
+      signal: AbortSignal.timeout(20000),
+    })
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content ?? ''
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1000,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+    signal: AbortSignal.timeout(20000),
+  })
+  const data = await res.json()
+  return data.content?.[0]?.text ?? ''
 }

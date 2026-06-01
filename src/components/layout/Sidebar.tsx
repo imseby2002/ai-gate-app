@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, Phone, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus,
+  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -41,7 +41,6 @@ const TOOL_NAV: NavItem[] = [
   { labelKey: 'resume',        href: '/resume',          icon: FileText,     module: 'resume' },
   { labelKey: 'marketing',     href: '/marketing',        icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
-  { labelKey: 'leads',         href: '/prospect-call',   icon: Phone,        module: 'leads' },
   { labelKey: 'booking',       href: '/booking',         icon: CalendarDays, module: 'booking' },
 ]
 
@@ -112,7 +111,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
 
   return (
     <aside className={cn(
-      'flex flex-col h-full border-r bg-card transition-all duration-300 ease-in-out',
+      'relative flex flex-col h-full border-r bg-card transition-all duration-300 ease-in-out',
       collapsed ? 'w-[60px]' : 'w-60'
     )}>
       {/* Logo */}
