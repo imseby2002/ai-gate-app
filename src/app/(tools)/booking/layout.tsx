@@ -15,7 +15,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: '',
     items: [
-      { href: '/booking', label: '總覽', icon: Home },
+      { href: '/admin', label: '總覽', icon: Home },
     ],
   },
   {
