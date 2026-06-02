@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Plus, Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Download, Loader2, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
 
 interface DailyRecord {
   id: string
@@ -44,8 +44,6 @@ interface UnmatchedBooking {
   order_number: string
 }
 
-type WorkflowStatus = 'idle' | 'triggering' | 'queued' | 'in_progress' | 'success' | 'failure'
-
 export default function DailyPage() {
   const [date, setDate] = useState(todayTW)
   const [rows, setRows] = useState<DailyRecord[]>([])
@@ -56,11 +54,6 @@ export default function DailyPage() {
   const [editing, setEditing] = useState<{ id: string; field: EditableField } | null>(null)
   const [editVal, setEditVal] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-
-  // TRAIWAN 同步狀態
-  const [wfStatus, setWfStatus] = useState<WorkflowStatus>('idle')
-  const [wfUrl, setWfUrl] = useState<string | null>(null)
-  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -84,60 +77,6 @@ export default function DailyPage() {
   useEffect(() => {
     if (editing) inputRef.current?.focus()
   }, [editing])
-
-  // ── TRAIWAN 觸發 & 輪詢 ──────────────────────────────────────────────────────
-
-  function clearPoll() {
-    if (pollRef.current) { clearTimeout(pollRef.current); pollRef.current = null }
-  }
-
-  const pollStatus = useCallback(async (isAfterTrigger = false) => {
-    try {
-      const res  = await fetch('/api/booking/traiwan/trigger')
-      const data = await res.json()
-      if (data.error || data.status === 'none') { setWfStatus('idle'); return }
-
-      const { status, conclusion, html_url } = data
-      setWfUrl(html_url ?? null)
-
-      if (status === 'completed') {
-        setWfStatus(conclusion === 'success' ? 'success' : 'failure')
-        clearPoll()
-        // 成功後自動重新整理資料
-        if (conclusion === 'success') load()
-      } else {
-        setWfStatus(status === 'queued' ? 'queued' : 'in_progress')
-        clearPoll()
-        pollRef.current = setTimeout(() => pollStatus(), 10_000)
-      }
-    } catch {
-      if (isAfterTrigger) setWfStatus('failure')
-    }
-  }, [load])
-
-  useEffect(() => () => clearPoll(), [])
-
-  async function triggerTraiwan() {
-    setWfStatus('triggering')
-    setWfUrl(null)
-    clearPoll()
-    try {
-      const res = await fetch('/api/booking/traiwan/trigger', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        alert(`觸發失敗：${data.error}`)
-        setWfStatus('idle')
-        return
-      }
-      // 稍等 3 秒後開始輪詢（GitHub 需要一點時間建立 run）
-      setTimeout(() => pollStatus(true), 3_000)
-    } catch (e) {
-      alert(`網路錯誤：${e}`)
-      setWfStatus('idle')
-    }
-  }
-
-  // ── 資料編輯 ────────────────────────────────────────────────────────────────
 
   async function startEdit(id: string, field: EditableField, val: string | null) {
     setEditing({ id, field })
@@ -185,55 +124,6 @@ export default function DailyPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     })
-  }
-
-  // ── 狀態顯示元件 ─────────────────────────────────────────────────────────────
-
-  function TraiwanButton() {
-    const busy = wfStatus === 'triggering' || wfStatus === 'queued' || wfStatus === 'in_progress'
-    const label: Record<WorkflowStatus, string> = {
-      idle:        '同步 TRAIWAN',
-      triggering:  '送出中…',
-      queued:      '排隊中…',
-      in_progress: '擷取中…',
-      success:     '已同步',
-      failure:     '失敗，重試',
-    }
-    const icon: Record<WorkflowStatus, React.ReactNode> = {
-      idle:        <Download className="h-4 w-4" />,
-      triggering:  <Loader2 className="h-4 w-4 animate-spin" />,
-      queued:      <Clock className="h-4 w-4 animate-pulse" />,
-      in_progress: <Loader2 className="h-4 w-4 animate-spin" />,
-      success:     <CheckCircle className="h-4 w-4" />,
-      failure:     <XCircle className="h-4 w-4" />,
-    }
-    const color: Record<WorkflowStatus, string> = {
-      idle:        'bg-indigo-600 hover:bg-indigo-700 text-white',
-      triggering:  'bg-indigo-400 text-white cursor-not-allowed',
-      queued:      'bg-amber-500 text-white cursor-not-allowed',
-      in_progress: 'bg-amber-500 text-white cursor-not-allowed',
-      success:     'bg-green-600 hover:bg-green-700 text-white',
-      failure:     'bg-red-600 hover:bg-red-700 text-white',
-    }
-
-    return (
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={triggerTraiwan}
-          disabled={busy}
-          className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg transition-colors ${color[wfStatus]}`}
-        >
-          {icon[wfStatus]}
-          {label[wfStatus]}
-        </button>
-        {wfUrl && (wfStatus === 'in_progress' || wfStatus === 'queued' || wfStatus === 'success' || wfStatus === 'failure') && (
-          <a href={wfUrl} target="_blank" rel="noreferrer"
-            className="text-xs text-indigo-500 hover:underline">
-            查看 log
-          </a>
-        )}
-      </div>
-    )
   }
 
   function Cell({ row, col }: { row: DailyRecord; col: typeof COLS[0] }) {
@@ -287,7 +177,6 @@ export default function DailyPage() {
           <p className="text-sm text-gray-500 mt-0.5">房號 · 密碼 · 旅客資訊</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <TraiwanButton />
           <button
             onClick={() => setShowPasswords(v => !v)}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-gray-600">
@@ -325,14 +214,6 @@ export default function DailyPage() {
         <span className="text-sm text-gray-500 ml-1">{fmtDate(date)}{isToday ? '（今天）' : ''}</span>
       </div>
 
-      {/* TRAIWAN 說明 */}
-      {isToday && (
-        <div className="mb-4 px-3 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 flex items-center gap-2">
-          <Download className="h-3.5 w-3.5 flex-shrink-0" />
-          點擊「同步 TRAIWAN」可立即從 TRAIWAN PMS 抓取今日入住名單，約需 1–2 分鐘，完成後自動更新。
-        </div>
-      )}
-
       {/* Table */}
       <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
         <div className="grid bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wide"
@@ -347,7 +228,7 @@ export default function DailyPage() {
           <div className="py-12 text-center text-sm text-gray-400">載入中…</div>
         ) : rows.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-gray-400 mb-3">尚無資料，可點「同步 TRAIWAN」自動匯入或手動新增</p>
+            <p className="text-sm text-gray-400 mb-3">尚無資料，請手動新增房間</p>
           </div>
         ) : (
           rows.map((row, i) => (
@@ -379,7 +260,7 @@ export default function DailyPage() {
       </button>
 
       <p className="mt-4 text-xs text-gray-400">
-        點擊任意格子即可編輯 · 綠色「自動」= TRAIWAN 同步 · 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
+        點擊任意格子即可編輯 · 綠色「自動」= 已同步資料 · 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
       </p>
 
       {/* 未分配訂單 */}

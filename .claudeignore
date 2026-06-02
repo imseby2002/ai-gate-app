@@ -7,3 +7,30 @@ coverage/
 .turbo/
 supabase/.branches/
 supabase/.temp/
+
+# 圖片/影片資源
+public/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.mp4
+*.webm
+
+# lock 檔
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 型別產生檔
+src/types/database.ts
+
+# Vercel
+.vercel/
+
+# 環境變數
+.env*
+
+# git
+.git/

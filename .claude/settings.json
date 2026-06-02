@@ -3,5 +3,24 @@
         "allow": [],
         "deny": [],
         "defaultMode": "bypassPermissions"
-    }
+    },
+    "disabledMcpServers": [
+        "claude.ai Hugging Face",
+        "claude.ai Moody's",
+        "claude.ai Notion",
+        "claude.ai Jotform",
+        "claude.ai Canva",
+        "claude.ai Cloudinary",
+        "claude.ai WordPress.com",
+        "claude.ai Box"
+    ],
+    "allowedSkills": [
+        "vercel:deploy",
+        "vercel:env",
+        "vercel:status",
+        "code-review",
+        "simplify",
+        "verify",
+        "run"
+    ]
 }
