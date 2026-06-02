@@ -1,0 +1,45 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { LogOut, ChevronDown } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+export function ToolsUserMenu({ displayName }: { displayName: string }) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
+      >
+        <span>{displayName}</span>
+        <ChevronDown className={`h-3 w-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 w-36 rounded-lg border bg-white shadow-md z-50 overflow-hidden">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              登出
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

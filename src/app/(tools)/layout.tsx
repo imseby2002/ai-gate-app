@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Zap } from 'lucide-react'
 import { BackToMenu } from '@/components/layout/BackToMenu'
+import { ToolsUserMenu } from '@/components/layout/ToolsUserMenu'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
           <span className="text-xs font-bold text-gray-800">AI GATE</span>
         </div>
         <div className="flex-1" />
-        <span className="text-xs text-gray-400">{profile?.display_name ?? user.email}</span>
+        <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} />
       </header>
 
       {/* Tool content (each tool has its own sub-layout) */}
