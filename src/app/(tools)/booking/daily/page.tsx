@@ -44,6 +44,60 @@ interface UnmatchedBooking {
   order_number: string
 }
 
+interface CellProps {
+  row: DailyRecord
+  col: typeof COLS[0]
+  editing: { id: string; field: EditableField } | null
+  editVal: string
+  showPasswords: boolean
+  saving: string | null
+  inputRef: React.RefObject<HTMLInputElement | null>
+  onStartEdit: (id: string, field: EditableField, val: string | null) => void
+  onCommitEdit: () => void
+  onCancelEdit: () => void
+  onEditValChange: (v: string) => void
+}
+
+function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange }: CellProps) {
+  const val = row[col.key]
+  const isEditing = editing?.id === row.id && editing?.field === col.key
+  const masked = col.sensitive && !showPasswords && val
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        value={editVal}
+        onChange={e => onEditValChange(e.target.value)}
+        onBlur={onCommitEdit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') onCommitEdit()
+          if (e.key === 'Escape') onCancelEdit()
+        }}
+        className="w-full px-2 py-1 text-sm border border-indigo-400 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
+      />
+    )
+  }
+
+  return (
+    <div
+      onClick={() => onStartEdit(row.id, col.key, val)}
+      className={`min-h-[32px] px-2 py-1 rounded cursor-pointer text-sm transition-colors
+        hover:bg-indigo-50 group flex items-center gap-1
+        ${!val ? 'text-gray-300' : 'text-gray-800'}
+        ${saving === row.id ? 'opacity-60' : ''}`}
+    >
+      {masked ? '••••••' : (val || '點擊填入')}
+      {row.source === 'traiwan' && col.key === 'order_number' && val && (
+        <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">自動</span>
+      )}
+      {row.source === 'booking' && col.key === 'order_number' && val && (
+        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">訂單</span>
+      )}
+    </div>
+  )
+}
+
 export default function DailyPage() {
   const [date, setDate] = useState(todayTW)
   const [rows, setRows] = useState<DailyRecord[]>([])
@@ -126,46 +180,6 @@ export default function DailyPage() {
     })
   }
 
-  function Cell({ row, col }: { row: DailyRecord; col: typeof COLS[0] }) {
-    const val = row[col.key]
-    const isEditing = editing?.id === row.id && editing?.field === col.key
-    const masked = col.sensitive && !showPasswords && val
-
-    if (isEditing) {
-      return (
-        <input
-          ref={inputRef}
-          value={editVal}
-          onChange={e => setEditVal(e.target.value)}
-          onBlur={commitEdit}
-          onKeyDown={e => {
-            if (e.key === 'Enter') commitEdit()
-            if (e.key === 'Escape') setEditing(null)
-          }}
-          className="w-full px-2 py-1 text-sm border border-indigo-400 rounded focus:outline-none focus:ring-2 focus:ring-indigo-300"
-        />
-      )
-    }
-
-    return (
-      <div
-        onClick={() => startEdit(row.id, col.key, val)}
-        className={`min-h-[32px] px-2 py-1 rounded cursor-pointer text-sm transition-colors
-          hover:bg-indigo-50 group flex items-center gap-1
-          ${!val ? 'text-gray-300' : 'text-gray-800'}
-          ${saving === row.id ? 'opacity-60' : ''}`}
-      >
-        {masked ? '••••••' : (val || '點擊填入')}
-        {row.source === 'traiwan' && col.key === 'order_number' && val && (
-          <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">自動</span>
-        )}
-        {row.source === 'booking' && col.key === 'order_number' && val && (
-          <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">訂單</span>
-        )}
-      </div>
-    )
-  }
-
   const isToday = date === todayTW()
 
   return (
@@ -238,7 +252,19 @@ export default function DailyPage() {
               style={{ gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 2rem' }}>
               {COLS.map(col => (
                 <div key={col.key} className="px-2 py-1">
-                  <Cell row={row} col={col} />
+                  <Cell
+                    row={row}
+                    col={col}
+                    editing={editing}
+                    editVal={editVal}
+                    showPasswords={showPasswords}
+                    saving={saving}
+                    inputRef={inputRef}
+                    onStartEdit={startEdit}
+                    onCommitEdit={commitEdit}
+                    onCancelEdit={() => setEditing(null)}
+                    onEditValChange={setEditVal}
+                  />
                 </div>
               ))}
               <div className="flex justify-center pr-1">
