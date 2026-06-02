@@ -58,18 +58,20 @@ const BOOKING_SUBJECT_KEYWORDS = [
   '訂房確認', '預訂確認', '預約確認', '訂單確認', '確認通知',
   '入住確認', '訂房成功', '預訂成功', '已確認訂單', '確認訂單',
   '訂單已確認', '已接受預訂', '已確認預訂',
-  '取消確認', '取消通知', '訂單取消',
+  '取消確認', '取消通知', '訂單取消', '訂單已取消', '您的訂單已取消',
+  '訂房已取消', '預訂已取消', '已取消',
   '行程確認', '您已接受',
   // English
   'booking confirmation', 'reservation confirmed', 'confirmed booking',
   'reservation confirmation', 'booking confirmed',
-  'cancellation confirmation', 'booking cancelled',
+  'cancellation confirmation', 'booking cancelled', 'booking has been cancelled',
+  'reservation has been cancelled', 'your booking has been cancelled',
   'new reservation', 'new booking', 'booking accepted',
   'booking no.', 'accepted', 'itinerary',
   // Trip.com specific
   'booking no.#', 'accepted#',
   // Agoda specific
-  'agoda booking id', '- cancelled', 'cancelled ciao',
+  'agoda booking id', '- cancelled', 'cancelled ciao', 'cancelled',
 ]
 
 // ── HTML → structured text ───────────────────────────────────
@@ -204,10 +206,12 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     const lock = await client.getMailboxLock(setting.imap_folder)
 
     try {
-      // Extra 1-day buffer to avoid timezone edge issues; IMAP SINCE is date-only
+      // Always scan at least 30 days back so emails missed by a previous AI failure
+      // get another chance. If last_synced_at is older than 30 days, keep going back.
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       const baseSince = setting.last_synced_at
-        ? new Date(new Date(setting.last_synced_at).getTime() - 86400000)
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        ? new Date(Math.min(new Date(setting.last_synced_at).getTime() - 86400000, thirtyDaysAgo.getTime()))
+        : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
       result.debug.since_date = baseSince.toISOString().slice(0, 10)
 
       let seqs: number[] = []
@@ -228,11 +232,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         } catch { /* server may not support subject search */ }
       }
 
-      // Strategy 3: ALWAYS scan all emails in last 7 days — catches anything missed above
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      const recentSince = baseSince < sevenDaysAgo ? sevenDaysAgo : baseSince
+      // Strategy 3: scan ALL emails since baseSince (no extra cap) — catches anything
+      // that doesn't match sender domain or subject keyword filters above.
       try {
-        const allRecent = await client.search({ since: recentSince })
+        const allRecent = await client.search({ since: baseSince })
         if (Array.isArray(allRecent)) seqs = [...seqs, ...allRecent]
       } catch { /* ignore */ }
 
@@ -351,12 +354,16 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
               .maybeSingle()
             if (dupByGuest) {
               existingId = dupByGuest.id
+              if (extracted.is_cancellation) {
+                await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', existingId)
+                result.added++; result.processed++; continue
+              }
               // If we now have a real confirmation_id but the existing record used a fallback id, update it
               if (extracted.confirmation_id && dupByGuest.platform_booking_id?.startsWith('email_')) {
                 await supabase.from('bookings').update({
                   platform_booking_id: extracted.confirmation_id,
                   total_price: extracted.total_price ?? dupByGuest.total_price,
-                  status: extracted.is_cancellation ? 'cancelled' : 'confirmed',
+                  status: 'confirmed',
                   notes: null,
                 }).eq('id', existingId)
               }
@@ -368,14 +375,22 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           if (checkIn && !existingId) {
             let dupQ = supabase
               .from('bookings')
-              .select('id')
+              .select('id, status')
               .eq('user_id', setting.user_id)
               .eq('platform', platform)
               .eq('check_in', checkIn)
               .eq('source', 'email')
             if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
             const { data: dup } = await dupQ.maybeSingle()
-            if (dup) { result.debug.skipped_duplicate++; result.processed++; continue }
+            if (dup) {
+              if (extracted.is_cancellation && dup.status !== 'cancelled') {
+                await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dup.id)
+                result.added++
+              } else {
+                result.debug.skipped_duplicate++
+              }
+              result.processed++; continue
+            }
           }
 
           const { error: bkErr } = await supabase
@@ -449,7 +464,8 @@ const PLATFORM_HINTS: Record<string, string> = {
   agoda: `Agoda：
 - 訂單號為純數字（約 10 位），出現在主旨「Agoda 訂單 數字」或「Agoda Booking ID 數字」、內文「訂房編號」下一行。
 - 欄位標籤：訂房編號 / 入住 / 退房 / 房型 / 入住人數 / 房客姓名 / 總金額。
-- 主旨含「CANCELLED」或內文「您的訂單已取消」→ is_cancellation true。
+- 取消郵件：主旨常含「CANCELLED」（大寫）、「已取消」，內文含「您的訂單已取消」「This booking has been cancelled」→ is_cancellation=true, is_booking=true；仍需擷取訂單號與入住退房日。
+- 連住多晚：郵件會同時顯示入住日（Check-in/入住）與退房日（Check-out/退房），兩個日期都要擷取，不可只取入住日。
 - 金額如「TWD 3,600」；房客姓名格式「姓, 名」。`,
   trip_com: `Trip.com：
 - 訂單號為純數字（約 16 位），出現在主旨「Booking no.數字」、內文「訂單編號」下一行。
@@ -470,8 +486,14 @@ const FEW_SHOT_EXAMPLES: Record<string, string> = {
 輸入內文片段：「Booking information — 5155978344 … res_id=5155978344」
 正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":null,"check_in":"2026-06-05","check_out":null,"confirmation_id":"5155978344","total_price":null,"num_guests":null,"property_name":null,"matched_property_id":null,"platform":"booking_com"}
 （說明：入住日前通知常只有訂單號與入住日，其餘填 null，不要猜測。）`,
-  agoda: `輸入內文片段：「訂單編號 1732718574 … Check-in 入住 11-Jul-2026 … Check-out 退房 12-Jul-2026 … 顧客名 RueiJie 姓 Chen … Mountain View Double Room … 2 Adults … TWD 1,911.00」
-正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"RueiJie Chen","check_in":"2026-07-11","check_out":"2026-07-12","confirmation_id":"1732718574","total_price":1911,"num_guests":2,"property_name":"Mountain View Double Room","matched_property_id":null,"platform":"agoda"}`,
+  agoda: `範例1（確認，1晚）：內文「訂單編號 1732718574 … Check-in 入住 11-Jul-2026 … Check-out 退房 12-Jul-2026 … 顧客名 RueiJie 姓 Chen … Mountain View Double Room … 2 Adults … TWD 1,911.00」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"RueiJie Chen","check_in":"2026-07-11","check_out":"2026-07-12","confirmation_id":"1732718574","total_price":1911,"num_guests":2,"property_name":"Mountain View Double Room","matched_property_id":null,"platform":"agoda"}
+
+範例2（確認，3晚）：內文「訂房編號 1723090474 … 入住 10-Jul-2026 … 退房 13-Jul-2026 … 顧客名 Wei 姓 Lin … Sea View Room … 2 Adults … TWD 5,400.00」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"Wei Lin","check_in":"2026-07-10","check_out":"2026-07-13","confirmation_id":"1723090474","total_price":5400,"num_guests":2,"property_name":"Sea View Room","matched_property_id":null,"platform":"agoda"}
+
+範例3（取消）：主旨「Agoda - CANCELLED (1731646163)」；內文「訂房編號 1731646163 … 入住 28-May-2026 … 退房 29-May-2026 … This booking has been cancelled」
+正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":null,"check_in":"2026-05-28","check_out":"2026-05-29","confirmation_id":"1731646163","total_price":null,"num_guests":null,"property_name":null,"matched_property_id":null,"platform":"agoda"}`,
   trip_com: `輸入主旨：「【訂單已取消】… Cancellation request accepted (booking no. #1616330516335375#)」
 輸入內文片段：「訂單編號 1616330516335375 … 旅客姓名 HUANG/YA CHI … 訂單金額 TWD 1377 … 住宿日期 2026 年 6 月 16 日 - 2026 年 6 月 17 日」
 正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":"HUANG/YA CHI","check_in":"2026-06-16","check_out":"2026-06-17","confirmation_id":"1616330516335375","total_price":1377,"num_guests":null,"property_name":"Standard Double Room","matched_property_id":null,"platform":"trip_com"}`,
@@ -553,8 +575,9 @@ ${roomListStr}${hint}${preLine}${fewShot}
 通用注意：
 - confirmation_id 務必從主旨或內文找出；純數字平台不要把電話、金額、日期數字當成訂單號。
 - 日期一律輸出 YYYY-MM-DD；中文「2026年6月5日」要轉成「2026-06-05」；退房日必須晚於入住日。
+- 連住多晚時，check_out 必須填最後退房日（不是入住日+1天）。若郵件標明「退房 7/13」check_out=2026-07-13；若只有「住 N 晚」，check_out = check_in + N 天。
+- 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true；盡量從郵件擷取 confirmation_id、入住/退房日。
 - 無法確定的欄位填 null，不要猜測。
-- 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
 {
