@@ -430,14 +430,12 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   return result
 }
 
-export async function syncAllEmailForUser(userId: string) {
+export async function syncAllEmailForUser(userId: string, onlyEnabled = false) {
   const supabase = createAdminClient()
-  const { data: settings } = await supabase
-    .from('email_settings')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('sync_enabled', true)
+  let query = supabase.from('email_settings').select('id').eq('user_id', userId)
+  if (onlyEnabled) query = query.eq('sync_enabled', true)
 
+  const { data: settings } = await query
   if (!settings?.length) return []
   return Promise.all(settings.map((s: { id: string }) => syncEmailForSetting(s.id)))
 }
