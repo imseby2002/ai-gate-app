@@ -237,11 +237,8 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     }
 
     try {
-      // Always scan at least 30 days back so emails missed by a previous AI failure
-      // get another chance. If last_synced_at is older than 30 days, keep going back.
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       const baseSince = setting.last_synced_at
-        ? new Date(Math.min(new Date(setting.last_synced_at).getTime() - 86400000, thirtyDaysAgo.getTime()))
+        ? new Date(new Date(setting.last_synced_at).getTime() - 60 * 60 * 1000)
         : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
       result.debug.since_date = baseSince.toISOString().slice(0, 10)
 
