@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
   { href: '/marketing',                  label: '行銷中心',      icon: LayoutDashboard },
   { href: '/marketing/product-designer', label: '產品設計師',    icon: Palette },
+  { href: '/marketing/skills',           label: 'AI Skills',     icon: Sparkles },
   { href: '/prospect-call',              label: '潛在客戶行銷',  icon: Phone },
 ]
 
