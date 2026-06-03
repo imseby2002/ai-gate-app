@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Mail, Plus, Trash2, RefreshCw, CheckCircle, XCircle, Loader2, Eye, EyeOff, RotateCcw } from 'lucide-react'
 
-const IMAP_PRESETS: Record<string, { host: string; port: number }> = {
-  'Gmail':   { host: 'imap.gmail.com',         port: 993 },
-  'Outlook': { host: 'imap-mail.outlook.com',  port: 993 },
-  'Yahoo':   { host: 'imap.mail.yahoo.com',    port: 993 },
-  '自訂':    { host: '', port: 993 },
+const IMAP_PRESETS: Record<string, { host: string; port: number; folder: string }> = {
+  'Gmail':   { host: 'imap.gmail.com',         port: 993, folder: '[Gmail]/All Mail' },
+  'Outlook': { host: 'imap-mail.outlook.com',  port: 993, folder: 'INBOX' },
+  'Yahoo':   { host: 'imap.mail.yahoo.com',    port: 993, folder: 'INBOX' },
+  '自訂':    { host: '', port: 993, folder: 'INBOX' },
 }
 
 interface EmailSetting {
@@ -28,7 +28,7 @@ export default function EmailPage() {
   const [preset, setPreset]         = useState('Gmail')
   const [form, setForm] = useState({
     email_address: '', imap_host: 'imap.gmail.com', imap_port: 993,
-    imap_user: '', imap_password: '', imap_folder: 'INBOX', property_id: '',
+    imap_user: '', imap_password: '', imap_folder: '[Gmail]/All Mail', property_id: '',
   })
   const [saving, setSaving] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
@@ -46,7 +46,7 @@ export default function EmailPage() {
   function applyPreset(name: string) {
     setPreset(name)
     const p = IMAP_PRESETS[name]
-    setForm(f => ({ ...f, imap_host: p.host, imap_port: p.port }))
+    setForm(f => ({ ...f, imap_host: p.host, imap_port: p.port, imap_folder: p.folder }))
   }
 
   async function sync(id?: string, reset = false) {
@@ -101,7 +101,7 @@ export default function EmailPage() {
   }
 
   function resetForm() {
-    setForm({ email_address: '', imap_host: 'imap.gmail.com', imap_port: 993, imap_user: '', imap_password: '', imap_folder: 'INBOX', property_id: '' })
+    setForm({ email_address: '', imap_host: 'imap.gmail.com', imap_port: 993, imap_user: '', imap_password: '', imap_folder: '[Gmail]/All Mail', property_id: '' })
     setPreset('Gmail'); setShowPw(false)
   }
 
