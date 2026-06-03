@@ -2,7 +2,7 @@
 // 每個 skill = 一份定義：UI 表單欄位 + 計價（點數）+ run()。
 // run() 透過 ctx 取得模型呼叫與圖片生成能力，與既有 marketing 基礎一致。
 
-export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research'
+export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio'
 
 export interface SkillField {
   name: string
@@ -23,6 +23,8 @@ export interface SkillRunContext {
   }) => Promise<{ text: string; inputTokens: number; outputTokens: number }>
   // 生成圖片（fal-ai），回傳圖片 URL
   generateImage: (prompt: string, aspectRatio?: string) => Promise<string>
+  // 文字轉語音（fal-ai TTS），回傳音檔 URL
+  generateAudio: (text: string, voice?: string) => Promise<string>
 }
 
 export interface SkillResult {
@@ -265,12 +267,141 @@ const marketResearchReports: SkillDef = {
   },
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// 6. 商品影片企劃師（分鏡 + 影片 prompt + 配音稿 + 關鍵視覺參考圖）
+//    註：實際影片渲染為非同步流程，請至既有影片生成功能提交；本 skill 產出可直接餵入的企劃包。
+// ──────────────────────────────────────────────────────────────────────────
+const productVideoCreator: SkillDef = {
+  id: 'product-video-creator',
+  label: '商品影片企劃師',
+  description: '產出商品影片分鏡、影片生成 prompt、配音稿，並生成 1 張關鍵視覺參考圖。',
+  category: 'video',
+  module: 'marketing',
+  priceCredits: 0.05,
+  fields: [
+    { name: 'product', label: '商品名稱', type: 'text', required: true },
+    { name: 'features', label: '賣點 / 規格', type: 'textarea', required: true },
+    { name: 'duration', label: '影片長度（秒）', type: 'number', default: 15 },
+    { name: 'aspectRatio', label: '畫面比例', type: 'select', default: '9:16', options: [
+      { value: '9:16', label: '9:16 直式（短影音）' },
+      { value: '16:9', label: '16:9 橫式' },
+      { value: '1:1', label: '1:1 方形' },
+    ] },
+  ],
+  estimateCost() {
+    return 0.05 + IMAGE_UNIT_COST
+  },
+  async run(input, ctx) {
+    const aspectRatio = str(input, 'aspectRatio', '9:16')
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是商品影片導演，熟悉 AI 影片生成（kling / veo）的 prompt 寫法。輸出需含：①分鏡表（時間軸/畫面描述/運鏡）②每個鏡頭可直接使用的英文影片生成 prompt ③配音逐字稿。最後另起一行輸出「KEY_VISUAL:」加上一段適合生成關鍵視覺的英文圖片 prompt。',
+      prompt: `請為以下商品規劃一支約 ${num(input, 'duration', 15)} 秒、${aspectRatio} 的商品影片：
+
+商品名稱：${str(input, 'product')}
+賣點/規格：${str(input, 'features')}`,
+      maxOutputTokens: 2000,
+    })
+
+    // 取出關鍵視覺 prompt 並生成參考圖
+    let imageUrl = ''
+    const m = text.match(/KEY_VISUAL:\s*(.+)/i)
+    const visualPrompt = m?.[1]?.trim() || `${str(input, 'product')} product commercial key visual, studio lighting`
+    try {
+      imageUrl = await ctx.generateImage(visualPrompt, aspectRatio)
+    } catch {
+      imageUrl = ''
+    }
+
+    const planText = text.replace(/KEY_VISUAL:\s*.+/i, '').trim()
+    const output = imageUrl
+      ? `${planText}\n\n【關鍵視覺參考圖】\n${imageUrl}`
+      : planText
+
+    return {
+      output,
+      data: { imageUrl, visualPrompt, inputTokens, outputTokens },
+      extraCredits: imageUrl ? IMAGE_UNIT_COST : 0,
+    }
+  },
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 7. 電商帶貨短影片腳本
+// ──────────────────────────────────────────────────────────────────────────
+const ecommerceVideoMarketing: SkillDef = {
+  id: 'ecommerce-video-marketing',
+  label: '電商帶貨短影片腳本',
+  description: '產出帶貨短影片腳本：口播、節奏、CTA 與平台投放建議。',
+  category: 'video',
+  module: 'marketing',
+  priceCredits: 0.03,
+  fields: [
+    { name: 'product', label: '商品 / 服務', type: 'text', required: true },
+    { name: 'sellingPoints', label: '主打賣點 / 優惠', type: 'textarea', required: true },
+    { name: 'platform', label: '投放平台', type: 'select', default: 'tiktok', options: [
+      { value: 'tiktok', label: '抖音 / TikTok' },
+      { value: 'reels', label: 'Instagram Reels' },
+      { value: 'shorts', label: 'YouTube Shorts' },
+      { value: 'shopee', label: '蝦皮直播 / 影片' },
+    ] },
+  ],
+  async run(input, ctx) {
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是電商帶貨短影片操盤手，擅長高轉換的口播腳本。輸出需含：①3 個前 3 秒鉤子 ②完整口播逐字稿（含節奏與情緒提示）③畫面建議 ④結尾促購 CTA ⑤該平台投放與 hashtag 建議。',
+      prompt: `請為以下商品撰寫帶貨短影片腳本：
+
+商品/服務：${str(input, 'product')}
+主打賣點/優惠：${str(input, 'sellingPoints')}
+投放平台：${str(input, 'platform', 'tiktok')}`,
+      maxOutputTokens: 2000,
+    })
+    return { output: text, data: { inputTokens, outputTokens } }
+  },
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 8. AI 語音配音（TTS）
+// ──────────────────────────────────────────────────────────────────────────
+const ttsVoiceSynthesis: SkillDef = {
+  id: 'tts-voice-synthesis',
+  label: 'AI 語音配音',
+  description: '將文字稿合成為語音配音，回傳可下載的音檔。',
+  category: 'audio',
+  module: 'marketing',
+  priceCredits: 0.03,
+  fields: [
+    { name: 'text', label: '配音文字稿', type: 'textarea', required: true, placeholder: '貼上要配音的文字…' },
+    { name: 'voice', label: '音色', type: 'select', default: 'default', options: [
+      { value: 'default', label: '預設' },
+      { value: 'female', label: '女聲' },
+      { value: 'male', label: '男聲' },
+    ] },
+  ],
+  async run(input, ctx) {
+    const text = str(input, 'text')
+    if (!text.trim()) return { output: '請提供配音文字稿。' }
+    let audioUrl = ''
+    try {
+      audioUrl = await ctx.generateAudio(text, str(input, 'voice', 'default'))
+    } catch (err) {
+      return { output: `語音合成失敗：${String(err)}` }
+    }
+    return {
+      output: audioUrl ? `【配音音檔】\n${audioUrl}` : '語音合成未回傳音檔。',
+      data: { audioUrl },
+    }
+  },
+}
+
 export const SKILLS: Record<string, SkillDef> = {
   [ecommerceCopywriter.id]: ecommerceCopywriter,
   [productMarketingCopywriter.id]: productMarketingCopywriter,
   [viralVideoCopywriting.id]: viralVideoCopywriting,
   [articleIllustrator.id]: articleIllustrator,
   [marketResearchReports.id]: marketResearchReports,
+  [productVideoCreator.id]: productVideoCreator,
+  [ecommerceVideoMarketing.id]: ecommerceVideoMarketing,
+  [ttsVoiceSynthesis.id]: ttsVoiceSynthesis,
 }
 
 export function getSkill(id: string): SkillDef | undefined {

@@ -31,6 +31,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   video: '短影音',
   illustration: '配圖',
   research: '研究',
+  audio: '語音',
 }
 
 export default function SkillsPage() {
