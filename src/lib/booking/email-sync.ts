@@ -209,7 +209,9 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   try {
     await client.connect()
 
-    // For Gmail, auto-detect the \All folder (language-independent)
+    // For Gmail, auto-detect the \All folder (language-independent).
+    // If the detected folder is not accessible (IMAP disabled in Gmail settings),
+    // fall back to the configured folder (INBOX).
     let mailboxToUse = setting.imap_folder
     if (setting.imap_host.toLowerCase().includes('gmail.com')) {
       try {
@@ -217,10 +219,21 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const allMail = mailboxes.find((m: any) => m.specialUse === '\\All' || m.flags?.has('\\All'))
         if (allMail) mailboxToUse = allMail.path
-      } catch { /* fall back to configured folder */ }
+      } catch { /* ignore */ }
     }
 
-    const lock = await client.getMailboxLock(mailboxToUse)
+    let lock: Awaited<ReturnType<typeof client.getMailboxLock>>
+    if (mailboxToUse !== setting.imap_folder) {
+      try {
+        lock = await client.getMailboxLock(mailboxToUse)
+      } catch {
+        // Auto-detected folder not accessible, fall back to configured folder
+        mailboxToUse = setting.imap_folder
+        lock = await client.getMailboxLock(mailboxToUse)
+      }
+    } else {
+      lock = await client.getMailboxLock(mailboxToUse)
+    }
 
     try {
       // Always scan at least 30 days back so emails missed by a previous AI failure
