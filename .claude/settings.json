@@ -12,15 +12,21 @@
         "claude.ai Canva",
         "claude.ai Cloudinary",
         "claude.ai WordPress.com",
-        "claude.ai Box"
+        "claude.ai Box",
+        "claude.ai Google Drive",
+        "claude.ai Supabase",
+        "claude.ai Make",
+        "claude.ai Vercel"
+    ],
+    "disabledHooks": [
+        "knowledge-update",
+        "sessionStart"
     ],
     "allowedSkills": [
-        "vercel:deploy",
-        "vercel:env",
-        "vercel:status",
         "code-review",
         "simplify",
         "verify",
         "run"
-    ]
+    ],
+    "model": "claude-sonnet-4-5-20251022"
 }

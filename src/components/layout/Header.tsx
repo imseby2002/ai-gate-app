@@ -89,8 +89,9 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
         {/* User menu */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => setMenuOpen(v => !v)}
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-accent transition-colors cursor-pointer"
           >
             <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-xs font-semibold select-none shadow-sm`}>
               {initials}

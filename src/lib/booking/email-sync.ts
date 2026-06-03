@@ -33,6 +33,7 @@ interface EmailSyncResult {
     skipped_duplicate: number
     ai_null: number
     since_date: string
+    log: string[]  // per-email outcomes, capped at 60 entries
   }
 }
 
@@ -160,7 +161,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const supabase = createAdminClient()
   const result: EmailSyncResult = {
     processed: 0, added: 0, errors: [],
-    debug: { found_uids: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_duplicate: 0, ai_null: 0, since_date: '' },
+    debug: { found_uids: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_duplicate: 0, ai_null: 0, since_date: '', log: [] },
+  }
+  function addLog(entry: string) {
+    if (result.debug.log.length < 60) result.debug.log.push(entry)
   }
 
   const { data: setting, error: se } = await supabase
@@ -263,8 +267,9 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           }
 
           const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
-          if (!extracted) { result.debug.ai_null++; continue }
-          if (!extracted.is_booking) { result.debug.skipped_not_booking++; continue }
+          const subj80 = subject.slice(0, 80)
+          if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
+          if (!extracted.is_booking) { result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`); continue }
 
           // Validate the AI-returned id actually exists before trusting it; the model
           // sometimes hallucinates an id that isn't in the room list (→ FK error / wrong room).
@@ -289,7 +294,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
             : null)
 
-          if (!checkIn) { result.debug.skipped_no_checkin++; result.processed++; continue }
+          if (!checkIn) { result.debug.skipped_no_checkin++; addLog(`[無入住日] ${platform} | ci=${extracted.check_in} | ${subj80}`); result.processed++; continue }
 
           const isPartial = !validCheckOut || !extracted.guest_name
           const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
@@ -307,8 +312,12 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             // Cancellation email → mark existing as cancelled.
             if (extracted.is_cancellation && dupById.status !== 'cancelled') {
               await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
+              addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
               result.added++
               result.processed++; continue
+            }
+            if (extracted.is_cancellation && dupById.status === 'cancelled') {
+              addLog(`[已取消skip] ${confId} | ${subj80}`)
             }
             // Booking.com two-stage flow: the first (pre-stay) email carries only the
             // order number + check-in; the same-day email fills in guest / check-out /
@@ -356,6 +365,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
               existingId = dupByGuest.id
               if (extracted.is_cancellation) {
                 await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', existingId)
+                addLog(`[取消✓ dup2] ${confId} | ${subj80}`)
                 result.added++; result.processed++; continue
               }
               // If we now have a real confirmation_id but the existing record used a fallback id, update it
@@ -385,8 +395,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             if (dup) {
               if (extracted.is_cancellation && dup.status !== 'cancelled') {
                 await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dup.id)
+                addLog(`[取消✓ dup3] ${confId} | ${subj80}`)
                 result.added++
               } else {
+                addLog(`[重複skip] ${confId} canc=${extracted.is_cancellation} dupStatus=${dup.status} | ${subj80}`)
                 result.debug.skipped_duplicate++
               }
               result.processed++; continue
@@ -413,7 +425,9 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
           if (bkErr) {
             result.errors.push(`訂單 upsert 失敗: ${bkErr.message}`)
+            addLog(`[新增失敗] ${confId} ${bkErr.message.slice(0,40)}`)
           } else {
+            addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
             result.added++
           }
           result.processed++

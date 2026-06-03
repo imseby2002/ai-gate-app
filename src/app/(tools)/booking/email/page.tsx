@@ -66,6 +66,7 @@ export default function EmailPage() {
       for (const r of results) {
         if (r.debug) {
           lines.push(`找到 ${r.debug.found_uids} 封 | 非訂單 ${r.debug.skipped_not_booking} | AI無回應 ${r.debug.ai_null} | 重複 ${r.debug.skipped_duplicate} | 無入住日 ${r.debug.skipped_no_checkin} | 起始日 ${r.debug.since_date}`)
+          if (r.debug.log?.length) lines.push('--- 詳細 ---\n' + r.debug.log.join('\n'))
         }
         if (r.errors?.length) lines.push(`錯誤：${r.errors.join(' / ')}`)
       }

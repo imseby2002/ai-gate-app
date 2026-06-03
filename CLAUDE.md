@@ -9,6 +9,43 @@
 - 修改前先確認檔案路徑，不要猜測
 - 大型重構分多個小步驟執行
 
+## 禁止行為
+- 禁止使用 Playwright、puppeteer、browser automation
+- 禁止安裝任何新套件
+- 禁止啟動 dev server
+- 禁止執行 find / rg / grep 掃描整個專案
+
+## 模型設定
+- 優先使用 claude-sonnet-4-5 或 claude-opus-4-5
+- 禁止使用 claude-opus-4-6（品質不穩定）
+
+## Auth 參考
+
+**Clients**
+- `src/lib/supabase/server.ts` → `createClient()`
+- `src/lib/supabase/admin.ts` → `createAdminClient()`
+
+**取得用戶與權限**
+```ts
+const { data: { user } } = await supabase.auth.getUser()
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .single()
+```
+
+**用戶類型**：`profile.user_type` → `'admin' | 'employee' | 'external'`
+
+**HTTP 狀態碼**
+- 未登入 → 401
+- 餘額不足 → 402
+- 停用 → 403
+
+**路由判斷**
+- Admin：`profile.user_type === 'admin'` → `/admin`
+- 其他：`/dashboard`
+
 ## Git 工作流
 
 **每次開始工作前**執行：
