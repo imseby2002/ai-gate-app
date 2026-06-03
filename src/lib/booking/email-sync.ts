@@ -280,7 +280,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         }
         try {
           const msg = await client.fetchOne(String(seq), { source: true })
-          if (!msg?.source) { result.debug.no_source++; continue }
+          if (!msg || msg === false || !('source' in msg) || !msg.source) { result.debug.no_source++; continue }
           rawSources.push({ seq, source: msg.source as Buffer })
         } catch (e) {
           if (String(e).includes('Connection not available')) {
