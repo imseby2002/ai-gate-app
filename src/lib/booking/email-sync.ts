@@ -198,6 +198,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const fallbackPropertyId: string | null =
     setting.property_id ?? (properties.length === 1 ? properties[0].id : null)
 
+  const rawSources: Array<{ seq: number; source: Buffer }> = []
   const client = new ImapFlow({
     host: setting.imap_host,
     port: setting.imap_port,
@@ -262,204 +263,34 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         } catch { /* server may not support subject search */ }
       }
 
-      // Strategy 3: scan ALL emails since baseSince (no extra cap) — catches anything
-      // that doesn't match sender domain or subject keyword filters above.
-      try {
-        const allRecent = await client.search({ since: baseSince })
-        if (Array.isArray(allRecent)) seqs = [...seqs, ...allRecent]
-      } catch { /* ignore */ }
-
       const uniqueSeqs = [...new Set(seqs)]
       result.debug.found_uids = uniqueSeqs.length
 
+      // Phase 1: fetch all raw sources via IMAP (fast — no AI, no Supabase).
+      // Reconnect once if connection drops mid-fetch.
+      let reconnecting = false
       for (const seq of uniqueSeqs) {
+        if (reconnecting) {
+          try {
+            try { lock.release() } catch {}
+            await client.connect()
+            lock = await client.getMailboxLock(mailboxToUse)
+            reconnecting = false
+          } catch (e) {
+            result.errors.push(`重連失敗: ${String(e)}`)
+            break
+          }
+        }
         try {
           const msg = await client.fetchOne(String(seq), { source: true })
-          if (!msg || !('source' in msg) || !msg.source) { result.debug.no_source++; continue }
-
-          const parsed = await simpleParser(msg.source as Buffer)
-          const from    = parsed.from?.text ?? ''
-          const subject = parsed.subject ?? ''
-          const text    = parsed.text ?? ''
-          const html    = (parsed.html as string | false | null | undefined) || ''
-          const htmlStripped = typeof html === 'string' ? htmlToText(html) : ''
-          // Prefer whichever version carries more booking signal (HTML tables often
-          // hold the structured fields that the plain-text part omits).
-          const body    = pickRicherBody(text, htmlStripped)
-
-          let platform = 'other'
-          for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
-            if (from.toLowerCase().includes(domain)) { platform = key; break }
-          }
-
-          const subj80 = subject.slice(0, 80)
-          if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
-          const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
-          if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
-          if (!extracted.is_booking) { result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`); continue }
-
-          // Validate the AI-returned id actually exists before trusting it; the model
-          // sometimes hallucinates an id that isn't in the room list (→ FK error / wrong room).
-          const validMatchedId =
-            extracted.matched_property_id && properties.some(p => p.id === extracted.matched_property_id)
-              ? extracted.matched_property_id
-              : null
-
-          const resolvedPropertyId =
-            validMatchedId
-            ?? matchPropertyByName(extracted.property_name, properties)
-            ?? fallbackPropertyId
-
-          // Validate dates: must be a real YYYY-MM-DD and check_out strictly after check_in
-          // (guards against DD/MM vs MM/DD swaps the model occasionally makes).
-          const checkIn = isValidYmd(extracted.check_in) ? extracted.check_in : null
-          const validCheckOut =
-            isValidYmd(extracted.check_out) && checkIn && extracted.check_out > checkIn
-              ? extracted.check_out
-              : null
-          const checkOut = validCheckOut || (checkIn
-            ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
-            : null)
-
-          if (!checkIn) { result.debug.skipped_no_checkin++; addLog(`[無入住日] ${platform} | ci=${extracted.check_in} | ${subj80}`); result.processed++; continue }
-
-          const isPartial = !validCheckOut || !extracted.guest_name
-          const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
-
-          const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
-
-          // Duplicate check 1: exact confirmation_id match
-          const { data: dupById } = await supabase
-            .from('bookings')
-            .select('id, status, guest_name, check_out, total_price, num_guests, property_id')
-            .eq('user_id', setting.user_id)
-            .eq('platform_booking_id', confId)
-            .maybeSingle()
-          if (dupById) {
-            // Cancellation email → mark existing as cancelled.
-            if (extracted.is_cancellation && dupById.status !== 'cancelled') {
-              await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
-              addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
-              result.added++
-              result.processed++; continue
-            }
-            if (extracted.is_cancellation && dupById.status === 'cancelled') {
-              addLog(`[已取消skip] ${confId} | ${subj80}`)
-            }
-            // Booking.com two-stage flow: the first (pre-stay) email carries only the
-            // order number + check-in; the same-day email fills in guest / check-out /
-            // price. Merge newly-available fields into the existing record instead of
-            // dropping this richer email as a duplicate.
-            const patch: Record<string, unknown> = {}
-            if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
-              patch.guest_name = extracted.guest_name
-            if (validCheckOut && validCheckOut !== dupById.check_out)
-              patch.check_out = validCheckOut
-            if (extracted.total_price != null && dupById.total_price == null)
-              patch.total_price = extracted.total_price
-            if (extracted.num_guests && (dupById.num_guests == null || dupById.num_guests <= 1))
-              patch.num_guests = extracted.num_guests
-            if (resolvedPropertyId && !dupById.property_id)
-              patch.property_id = resolvedPropertyId
-            if (Object.keys(patch).length > 0) {
-              // Promote pending → confirmed once the full picture has arrived.
-              if (!extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
-                patch.status = 'confirmed'
-                patch.notes = null
-              }
-              await supabase.from('bookings').update(patch).eq('id', dupById.id)
-              result.added++
-            } else {
-              result.debug.skipped_duplicate++
-            }
-            result.processed++; continue
-          }
-
-          // Duplicate check 2: same platform + check_in + check_out + guest_name (catches re-imported with different confId)
-          let existingId: string | null = null
-          if (checkIn && extracted.guest_name && checkOut) {
-            const { data: dupByGuest } = await supabase
-              .from('bookings')
-              .select('id, total_price, platform_booking_id')
-              .eq('user_id', setting.user_id)
-              .eq('platform', platform)
-              .eq('check_in', checkIn)
-              .eq('check_out', checkOut)
-              .eq('source', 'email')
-              .ilike('guest_name', `%${extracted.guest_name.split(/[\s/]/)[0]}%`)
-              .maybeSingle()
-            if (dupByGuest) {
-              existingId = dupByGuest.id
-              if (extracted.is_cancellation) {
-                await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', existingId)
-                addLog(`[取消✓ dup2] ${confId} | ${subj80}`)
-                result.added++; result.processed++; continue
-              }
-              // If we now have a real confirmation_id but the existing record used a fallback id, update it
-              if (extracted.confirmation_id && dupByGuest.platform_booking_id?.startsWith('email_')) {
-                await supabase.from('bookings').update({
-                  platform_booking_id: extracted.confirmation_id,
-                  total_price: extracted.total_price ?? dupByGuest.total_price,
-                  status: 'confirmed',
-                  notes: null,
-                }).eq('id', existingId)
-              }
-              result.debug.skipped_duplicate++; result.processed++; continue
-            }
-          }
-
-          // Duplicate check 3: same platform + check_in + property (looser, last resort)
-          if (checkIn && !existingId) {
-            let dupQ = supabase
-              .from('bookings')
-              .select('id, status')
-              .eq('user_id', setting.user_id)
-              .eq('platform', platform)
-              .eq('check_in', checkIn)
-              .eq('source', 'email')
-            if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
-            const { data: dup } = await dupQ.maybeSingle()
-            if (dup) {
-              if (extracted.is_cancellation && dup.status !== 'cancelled') {
-                await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dup.id)
-                addLog(`[取消✓ dup3] ${confId} | ${subj80}`)
-                result.added++
-              } else {
-                addLog(`[重複skip] ${confId} canc=${extracted.is_cancellation} dupStatus=${dup.status} | ${subj80}`)
-                result.debug.skipped_duplicate++
-              }
-              result.processed++; continue
-            }
-          }
-
-          const { error: bkErr } = await supabase
-            .from('bookings')
-            .upsert({
-              user_id:             setting.user_id,
-              property_id:         resolvedPropertyId,
-              platform,
-              platform_booking_id: confId,
-              guest_name:          extracted.guest_name || '(待補充)',
-              check_in:            checkIn,
-              check_out:           checkOut,
-              num_guests:          extracted.num_guests || 1,
-              total_price:         extracted.total_price,
-              status:              bookingStatus,
-              source:              'email',
-              notes:               isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null,
-              raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
-            }, { onConflict: 'user_id,platform,platform_booking_id' })
-
-          if (bkErr) {
-            result.errors.push(`訂單 upsert 失敗: ${bkErr.message}`)
-            addLog(`[新增失敗] ${confId} ${bkErr.message.slice(0,40)}`)
-          } else {
-            addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
-            result.added++
-          }
-          result.processed++
+          if (!msg?.source) { result.debug.no_source++; continue }
+          rawSources.push({ seq, source: msg.source as Buffer })
         } catch (e) {
-          result.errors.push(`處理郵件 ${seq} 失敗: ${String(e)}`)
+          if (String(e).includes('Connection not available')) {
+            reconnecting = true
+          } else {
+            result.errors.push(`郵件 ${seq}: ${String(e)}`)
+          }
         }
       }
     } finally {
@@ -475,6 +306,182 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       last_synced_at: new Date().toISOString(),
     }).eq('id', settingId)
     return result
+  }
+
+  // Phase 2: parse + AI + Supabase (no IMAP connection needed)
+  for (const { seq, source } of rawSources) {
+    try {
+      const parsed = await simpleParser(source)
+      const from    = parsed.from?.text ?? ''
+      const subject = parsed.subject ?? ''
+      const text    = parsed.text ?? ''
+      const html    = (parsed.html as string | false | null | undefined) || ''
+      const htmlStripped = typeof html === 'string' ? htmlToText(html) : ''
+      const body    = pickRicherBody(text, htmlStripped)
+
+      let platform = 'other'
+      for (const [key, domain] of Object.entries(PLATFORM_SENDERS)) {
+        if (from.toLowerCase().includes(domain)) { platform = key; break }
+      }
+
+      const subj80 = subject.slice(0, 80)
+      if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
+      const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
+      if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
+      if (!extracted.is_booking) { result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`); continue }
+
+      const validMatchedId =
+        extracted.matched_property_id && properties.some(p => p.id === extracted.matched_property_id)
+          ? extracted.matched_property_id
+          : null
+
+      const resolvedPropertyId =
+        validMatchedId
+        ?? matchPropertyByName(extracted.property_name, properties)
+        ?? fallbackPropertyId
+
+      const checkIn = isValidYmd(extracted.check_in) ? extracted.check_in : null
+      const validCheckOut =
+        isValidYmd(extracted.check_out) && checkIn && extracted.check_out > checkIn
+          ? extracted.check_out
+          : null
+      const checkOut = validCheckOut || (checkIn
+        ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
+        : null)
+
+      if (!checkIn) { result.debug.skipped_no_checkin++; addLog(`[無入住日] ${platform} | ci=${extracted.check_in} | ${subj80}`); result.processed++; continue }
+
+      const isPartial = !validCheckOut || !extracted.guest_name
+      const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
+
+      const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
+
+      // Duplicate check 1: exact confirmation_id match
+      const { data: dupById } = await supabase
+        .from('bookings')
+        .select('id, status, guest_name, check_out, total_price, num_guests, property_id')
+        .eq('user_id', setting.user_id)
+        .eq('platform_booking_id', confId)
+        .maybeSingle()
+      if (dupById) {
+        if (extracted.is_cancellation && dupById.status !== 'cancelled') {
+          await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
+          addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
+          result.added++
+          result.processed++; continue
+        }
+        if (extracted.is_cancellation && dupById.status === 'cancelled') {
+          addLog(`[已取消skip] ${confId} | ${subj80}`)
+        }
+        const patch: Record<string, unknown> = {}
+        if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
+          patch.guest_name = extracted.guest_name
+        if (validCheckOut && validCheckOut !== dupById.check_out)
+          patch.check_out = validCheckOut
+        if (extracted.total_price != null && dupById.total_price == null)
+          patch.total_price = extracted.total_price
+        if (extracted.num_guests && (dupById.num_guests == null || dupById.num_guests <= 1))
+          patch.num_guests = extracted.num_guests
+        if (resolvedPropertyId && !dupById.property_id)
+          patch.property_id = resolvedPropertyId
+        if (Object.keys(patch).length > 0) {
+          if (!extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
+            patch.status = 'confirmed'
+            patch.notes = null
+          }
+          await supabase.from('bookings').update(patch).eq('id', dupById.id)
+          result.added++
+        } else {
+          result.debug.skipped_duplicate++
+        }
+        result.processed++; continue
+      }
+
+      // Duplicate check 2: same platform + check_in + check_out + guest_name
+      let existingId: string | null = null
+      if (checkIn && extracted.guest_name && checkOut) {
+        const { data: dupByGuest } = await supabase
+          .from('bookings')
+          .select('id, total_price, platform_booking_id')
+          .eq('user_id', setting.user_id)
+          .eq('platform', platform)
+          .eq('check_in', checkIn)
+          .eq('check_out', checkOut)
+          .eq('source', 'email')
+          .ilike('guest_name', `%${extracted.guest_name.split(/[\s/]/)[0]}%`)
+          .maybeSingle()
+        if (dupByGuest) {
+          existingId = dupByGuest.id
+          if (extracted.is_cancellation) {
+            await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', existingId)
+            addLog(`[取消✓ dup2] ${confId} | ${subj80}`)
+            result.added++; result.processed++; continue
+          }
+          if (extracted.confirmation_id && dupByGuest.platform_booking_id?.startsWith('email_')) {
+            await supabase.from('bookings').update({
+              platform_booking_id: extracted.confirmation_id,
+              total_price: extracted.total_price ?? dupByGuest.total_price,
+              status: 'confirmed',
+              notes: null,
+            }).eq('id', existingId)
+          }
+          result.debug.skipped_duplicate++; result.processed++; continue
+        }
+      }
+
+      // Duplicate check 3: same platform + check_in + property (looser, last resort)
+      if (checkIn && !existingId) {
+        let dupQ = supabase
+          .from('bookings')
+          .select('id, status')
+          .eq('user_id', setting.user_id)
+          .eq('platform', platform)
+          .eq('check_in', checkIn)
+          .eq('source', 'email')
+        if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
+        const { data: dup } = await dupQ.maybeSingle()
+        if (dup) {
+          if (extracted.is_cancellation && dup.status !== 'cancelled') {
+            await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dup.id)
+            addLog(`[取消✓ dup3] ${confId} | ${subj80}`)
+            result.added++
+          } else {
+            addLog(`[重複skip] ${confId} canc=${extracted.is_cancellation} dupStatus=${dup.status} | ${subj80}`)
+            result.debug.skipped_duplicate++
+          }
+          result.processed++; continue
+        }
+      }
+
+      const { error: bkErr } = await supabase
+        .from('bookings')
+        .upsert({
+          user_id:             setting.user_id,
+          property_id:         resolvedPropertyId,
+          platform,
+          platform_booking_id: confId,
+          guest_name:          extracted.guest_name || '(待補充)',
+          check_in:            checkIn,
+          check_out:           checkOut,
+          num_guests:          extracted.num_guests || 1,
+          total_price:         extracted.total_price,
+          status:              bookingStatus,
+          source:              'email',
+          notes:               isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null,
+          raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
+        }, { onConflict: 'user_id,platform,platform_booking_id' })
+
+      if (bkErr) {
+        result.errors.push(`訂單 upsert 失敗: ${bkErr.message}`)
+        addLog(`[新增失敗] ${confId} ${bkErr.message.slice(0,40)}`)
+      } else {
+        addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
+        result.added++
+      }
+      result.processed++
+    } catch (e) {
+      result.errors.push(`處理郵件 ${seq} 失敗: ${String(e)}`)
+    }
   }
 
   await supabase.from('email_settings').update({
