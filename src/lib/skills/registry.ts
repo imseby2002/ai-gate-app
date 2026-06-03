@@ -447,40 +447,62 @@ const pptGenerator: SkillDef = {
     }
     slides = slides.slice(0, n)
 
-    // ② 用 pptxgenjs 產出 .pptx
-    const pptx = new pptxgen()
-    pptx.layout = 'LAYOUT_WIDE'
-    pptx.defineSlideMaster({ title: 'MAIN', background: { color: 'FFFFFF' } })
+    // 完整投影片文字（產檔失敗時的 fallback，LLM 成果不浪費）
+    const slidesText = slides
+      .map((s, i) => `${i === 0 ? '【封面】' : `${i}.`} ${s.title}${s.bullets.length ? '\n' + s.bullets.map(b => `   • ${b}`).join('\n') : ''}`)
+      .join('\n\n')
 
-    slides.forEach((s, idx) => {
-      const slide = pptx.addSlide()
-      if (idx === 0) {
-        slide.background = { color: '1E293B' }
-        slide.addText(s.title, { x: 0.6, y: 2.0, w: '90%', h: 1.5, fontSize: 40, bold: true, color: 'FFFFFF' })
-        if (s.bullets.length) {
-          slide.addText(s.bullets.join('\n'), { x: 0.6, y: 3.6, w: '90%', h: 1.5, fontSize: 18, color: 'CBD5E1' })
+    // ② 用 pptxgenjs 產出 .pptx 並上傳；於不支援的執行環境（如部分 Workers runtime）優雅降級
+    let url = ''
+    let genError = ''
+    try {
+      const pptx = new pptxgen()
+      pptx.layout = 'LAYOUT_WIDE'
+      pptx.defineSlideMaster({ title: 'MAIN', background: { color: 'FFFFFF' } })
+
+      slides.forEach((s, idx) => {
+        const slide = pptx.addSlide()
+        if (idx === 0) {
+          slide.background = { color: '1E293B' }
+          slide.addText(s.title, { x: 0.6, y: 2.0, w: '90%', h: 1.5, fontSize: 40, bold: true, color: 'FFFFFF' })
+          if (s.bullets.length) {
+            slide.addText(s.bullets.join('\n'), { x: 0.6, y: 3.6, w: '90%', h: 1.5, fontSize: 18, color: 'CBD5E1' })
+          }
+        } else {
+          slide.addText(s.title, { x: 0.5, y: 0.4, w: '92%', h: 0.9, fontSize: 28, bold: true, color: '1E293B' })
+          if (s.bullets.length) {
+            slide.addText(
+              s.bullets.map(b => ({ text: b, options: { bullet: true } })),
+              { x: 0.7, y: 1.6, w: '88%', h: 4.5, fontSize: 18, color: '334155', lineSpacingMultiple: 1.2 },
+            )
+          }
         }
-      } else {
-        slide.addText(s.title, { x: 0.5, y: 0.4, w: '92%', h: 0.9, fontSize: 28, bold: true, color: '1E293B' })
-        if (s.bullets.length) {
-          slide.addText(
-            s.bullets.map(b => ({ text: b, options: { bullet: true } })),
-            { x: 0.7, y: 1.6, w: '88%', h: 4.5, fontSize: 18, color: '334155', lineSpacingMultiple: 1.2 },
-          )
-        }
+      })
+
+      const out = await pptx.write({ outputType: 'nodebuffer' })
+      const bytes = out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer)
+
+      const safeTopic = topic.replace(/[^a-zA-Z0-9一-龥._-]/g, '_').slice(0, 40) || 'presentation'
+      const filename = `${Date.now()}_${safeTopic}.pptx`
+      url = await ctx.storeFile(
+        bytes,
+        filename,
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      )
+    } catch (err) {
+      genError = String(err)
+    }
+
+    if (!url) {
+      // 產檔/上傳失敗：回傳完整投影片內容＋引導，不中斷
+      return {
+        output:
+          `⚠️ 簡報結構已生成，但本環境無法輸出 .pptx 檔（${genError || '未知原因'}）。\n` +
+          `常見原因：Cloudflare Workers runtime 對 pptxgenjs 相容性限制；此 skill 在 Vercel（Node）部署可正常產檔。\n\n` +
+          `以下為完整投影片內容，可直接貼入 PowerPoint / Google Slides：\n\n${slidesText}`,
+        data: { slides, error: genError, inputTokens, outputTokens },
       }
-    })
-
-    const out = await pptx.write({ outputType: 'nodebuffer' })
-    const bytes = out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer)
-
-    const safeTopic = topic.replace(/[^a-zA-Z0-9一-龥._-]/g, '_').slice(0, 40) || 'presentation'
-    const filename = `${Date.now()}_${safeTopic}.pptx`
-    const url = await ctx.storeFile(
-      bytes,
-      filename,
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    )
+    }
 
     const outline = slides.map((s, i) => `${i + 1}. ${s.title}`).join('\n')
     return {
