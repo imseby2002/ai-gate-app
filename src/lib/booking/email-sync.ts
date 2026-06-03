@@ -28,12 +28,13 @@ interface EmailSyncResult {
   errors: string[]
   debug: {
     found_uids: number
+    no_source: number
     skipped_no_checkin: number
     skipped_not_booking: number
     skipped_duplicate: number
     ai_null: number
     since_date: string
-    log: string[]  // per-email outcomes, capped at 60 entries
+    log: string[]
   }
 }
 
@@ -161,7 +162,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const supabase = createAdminClient()
   const result: EmailSyncResult = {
     processed: 0, added: 0, errors: [],
-    debug: { found_uids: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_duplicate: 0, ai_null: 0, since_date: '', log: [] },
+    debug: { found_uids: 0, no_source: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_duplicate: 0, ai_null: 0, since_date: '', log: [] },
   }
   function addLog(entry: string) {
     if (result.debug.log.length < 60) result.debug.log.push(entry)
@@ -249,7 +250,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       for (const seq of uniqueSeqs) {
         try {
           const msg = await client.fetchOne(String(seq), { source: true })
-          if (!msg || !('source' in msg) || !msg.source) continue
+          if (!msg || !('source' in msg) || !msg.source) { result.debug.no_source++; continue }
 
           const parsed = await simpleParser(msg.source as Buffer)
           const from    = parsed.from?.text ?? ''
@@ -266,8 +267,9 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
             if (from.toLowerCase().includes(domain)) { platform = key; break }
           }
 
-          const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
           const subj80 = subject.slice(0, 80)
+          if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
+          const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
           if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
           if (!extracted.is_booking) { result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`); continue }
 
