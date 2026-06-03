@@ -2,7 +2,10 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { fal } from '@fal-ai/client'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { SkillRunContext } from './registry'
+
+const STORAGE_BUCKET = 'marketing-assets'
 
 const FAL_IMAGE_SIZES: Record<string, { width: number; height: number }> = {
   '1:1':  { width: 1024, height: 1024 },
@@ -18,7 +21,7 @@ const FAL_TTS_VOICES: Record<string, string> = {
   male: 'Dexter (English (US)/American)',
 }
 
-export function createSkillContext(): SkillRunContext {
+export function createSkillContext(userId?: string): SkillRunContext {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY 未設定')
   }
@@ -72,6 +75,17 @@ export function createSkillContext(): SkillRunContext {
       const data = (result?.data ?? result) as Record<string, unknown>
       const audio = data.audio as { url?: string } | undefined
       return audio?.url ?? (data.audio_url as string) ?? (data.url as string) ?? ''
+    },
+
+    async storeFile(bytes, filename, contentType) {
+      const admin = createAdminClient()
+      const path = `${userId ?? 'skills'}/${filename}`
+      const { error } = await admin.storage
+        .from(STORAGE_BUCKET)
+        .upload(path, bytes, { contentType, upsert: false })
+      if (error) throw new Error(`檔案上傳失敗：${error.message}`)
+      const { data } = admin.storage.from(STORAGE_BUCKET).getPublicUrl(path)
+      return data.publicUrl
     },
   }
 }

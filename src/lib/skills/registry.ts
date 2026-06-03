@@ -1,8 +1,9 @@
-// 可執行 skill 註冊表（第一批）
+// 可執行 skill 註冊表
 // 每個 skill = 一份定義：UI 表單欄位 + 計價（點數）+ run()。
 // run() 透過 ctx 取得模型呼叫與圖片生成能力，與既有 marketing 基礎一致。
+import pptxgen from 'pptxgenjs'
 
-export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio'
+export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation'
 
 export interface SkillField {
   name: string
@@ -25,6 +26,8 @@ export interface SkillRunContext {
   generateImage: (prompt: string, aspectRatio?: string) => Promise<string>
   // 文字轉語音（fal-ai TTS），回傳音檔 URL
   generateAudio: (text: string, voice?: string) => Promise<string>
+  // 上傳檔案至 storage，回傳公開下載 URL
+  storeFile: (bytes: Uint8Array, filename: string, contentType: string) => Promise<string>
 }
 
 export interface SkillResult {
@@ -393,6 +396,100 @@ const ttsVoiceSynthesis: SkillDef = {
   },
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// 9. 簡報生成（PPTX）
+//    LLM 規劃投影片結構 → pptxgenjs 產出 .pptx → 上傳 storage 回傳下載連結
+// ──────────────────────────────────────────────────────────────────────────
+interface SlideSpec { title: string; bullets: string[] }
+
+const pptGenerator: SkillDef = {
+  id: 'ppt-generator',
+  label: '簡報生成（PPTX）',
+  description: '依主題自動規劃投影片並產出可下載的 .pptx 簡報檔。',
+  category: 'presentation',
+  module: 'marketing',
+  priceCredits: 0.05,
+  fields: [
+    { name: 'topic', label: '簡報主題', type: 'text', required: true, placeholder: '例：2026 年品牌行銷策略' },
+    { name: 'context', label: '內容重點 / 補充資料', type: 'textarea', placeholder: '要涵蓋的重點、數據、章節…' },
+    { name: 'numSlides', label: '投影片張數', type: 'number', default: 8 },
+    { name: 'audience', label: '對象', type: 'text', placeholder: '例：主管、客戶、投資人' },
+  ],
+  async run(input, ctx) {
+    const n = Math.max(3, Math.min(20, num(input, 'numSlides', 8)))
+    const topic = str(input, 'topic')
+
+    // ① LLM 規劃投影片結構（JSON）
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是簡報架構師。請只輸出 JSON 陣列，每個元素為 { "title": string, "bullets": string[] }，bullets 每張 3-5 點、精煉有力。第一張為封面（title=簡報標題、bullets 可含副標/講者），最後一張為結語/CTA。',
+      prompt: `請規劃一份共 ${n} 張投影片的簡報，輸出 JSON 陣列：
+
+主題：${topic}
+內容重點：${str(input, 'context', '（請依主題自行充實）')}
+對象：${str(input, 'audience', '一般聽眾')}`,
+      maxOutputTokens: 2500,
+    })
+
+    let slides: SlideSpec[] = []
+    try {
+      const match = text.match(/\[[\s\S]*\]/)
+      if (match) {
+        slides = (JSON.parse(match[0]) as unknown[])
+          .filter((s): s is SlideSpec =>
+            !!s && typeof (s as SlideSpec).title === 'string')
+          .map(s => ({ title: String(s.title), bullets: Array.isArray(s.bullets) ? s.bullets.map(String) : [] }))
+      }
+    } catch {
+      slides = []
+    }
+    if (slides.length === 0) {
+      return { output: '簡報結構解析失敗，請再試一次或補充內容重點。' }
+    }
+    slides = slides.slice(0, n)
+
+    // ② 用 pptxgenjs 產出 .pptx
+    const pptx = new pptxgen()
+    pptx.layout = 'LAYOUT_WIDE'
+    pptx.defineSlideMaster({ title: 'MAIN', background: { color: 'FFFFFF' } })
+
+    slides.forEach((s, idx) => {
+      const slide = pptx.addSlide()
+      if (idx === 0) {
+        slide.background = { color: '1E293B' }
+        slide.addText(s.title, { x: 0.6, y: 2.0, w: '90%', h: 1.5, fontSize: 40, bold: true, color: 'FFFFFF' })
+        if (s.bullets.length) {
+          slide.addText(s.bullets.join('\n'), { x: 0.6, y: 3.6, w: '90%', h: 1.5, fontSize: 18, color: 'CBD5E1' })
+        }
+      } else {
+        slide.addText(s.title, { x: 0.5, y: 0.4, w: '92%', h: 0.9, fontSize: 28, bold: true, color: '1E293B' })
+        if (s.bullets.length) {
+          slide.addText(
+            s.bullets.map(b => ({ text: b, options: { bullet: true } })),
+            { x: 0.7, y: 1.6, w: '88%', h: 4.5, fontSize: 18, color: '334155', lineSpacingMultiple: 1.2 },
+          )
+        }
+      }
+    })
+
+    const out = await pptx.write({ outputType: 'nodebuffer' })
+    const bytes = out instanceof Uint8Array ? out : new Uint8Array(out as ArrayBuffer)
+
+    const safeTopic = topic.replace(/[^a-zA-Z0-9一-龥._-]/g, '_').slice(0, 40) || 'presentation'
+    const filename = `${Date.now()}_${safeTopic}.pptx`
+    const url = await ctx.storeFile(
+      bytes,
+      filename,
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    )
+
+    const outline = slides.map((s, i) => `${i + 1}. ${s.title}`).join('\n')
+    return {
+      output: `已生成 ${slides.length} 張投影片簡報。\n\n【大綱】\n${outline}\n\n【下載】\n${url}`,
+      data: { url, slides, inputTokens, outputTokens },
+    }
+  },
+}
+
 export const SKILLS: Record<string, SkillDef> = {
   [ecommerceCopywriter.id]: ecommerceCopywriter,
   [productMarketingCopywriter.id]: productMarketingCopywriter,
@@ -402,6 +499,7 @@ export const SKILLS: Record<string, SkillDef> = {
   [productVideoCreator.id]: productVideoCreator,
   [ecommerceVideoMarketing.id]: ecommerceVideoMarketing,
   [ttsVoiceSynthesis.id]: ttsVoiceSynthesis,
+  [pptGenerator.id]: pptGenerator,
 }
 
 export function getSkill(id: string): SkillDef | undefined {

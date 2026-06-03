@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   // 執行
   let result
   try {
-    const ctx = createSkillContext()
+    const ctx = createSkillContext(user.id)
     result = await skill.run(input, ctx)
   } catch (err) {
     await logSkillRun({
