@@ -294,15 +294,18 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       lock.release()
     }
 
-    await client.logout()
+    try { await client.logout() } catch { /* ignore if connection already dropped */ }
   } catch (e) {
     const msg = `IMAP 連線失敗: ${String(e)}`
     result.errors.push(msg)
-    await supabase.from('email_settings').update({
-      last_sync_error: msg,
-      last_synced_at: new Date().toISOString(),
-    }).eq('id', settingId)
-    return result
+    // Only return early if nothing was fetched — otherwise fall through to Phase 2
+    if (rawSources.length === 0) {
+      await supabase.from('email_settings').update({
+        last_sync_error: msg,
+        last_synced_at: new Date().toISOString(),
+      }).eq('id', settingId)
+      return result
+    }
   }
 
   // Phase 2: parse + AI + Supabase (no IMAP connection needed)
