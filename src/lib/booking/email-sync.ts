@@ -208,7 +208,19 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
   try {
     await client.connect()
-    const lock = await client.getMailboxLock(setting.imap_folder)
+
+    // For Gmail, auto-detect the \All folder (language-independent)
+    let mailboxToUse = setting.imap_folder
+    if (setting.imap_host.toLowerCase().includes('gmail.com')) {
+      try {
+        const mailboxes = await client.list()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const allMail = mailboxes.find((m: any) => m.specialUse === '\\All' || m.flags?.has('\\All'))
+        if (allMail) mailboxToUse = allMail.path
+      } catch { /* fall back to configured folder */ }
+    }
+
+    const lock = await client.getMailboxLock(mailboxToUse)
 
     try {
       // Always scan at least 30 days back so emails missed by a previous AI failure
