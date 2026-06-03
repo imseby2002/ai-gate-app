@@ -242,23 +242,29 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
       result.debug.since_date = baseSince.toISOString().slice(0, 10)
 
+      // Build a nested OR tree: {or:[a,{or:[b,{or:[c,d]}]}]}
+      // Top-level keys outside 'or' are implicit AND (e.g. since applies to all branches).
+      function buildOr(items: Record<string, unknown>[]): Record<string, unknown> {
+        if (items.length === 1) return items[0]
+        const [head, ...tail] = items
+        return { or: [head, buildOr(tail)] }
+      }
+
       let seqs: number[] = []
 
-      // Strategy 1: search by known sender domains
-      for (const domain of Object.values(PLATFORM_SENDERS)) {
-        try {
-          const found = await client.search({ from: `@${domain}`, since: baseSince })
-          if (Array.isArray(found)) seqs = [...seqs, ...found]
-        } catch { /* server may not support FROM search */ }
-      }
+      // Strategy 1: one combined search across all known sender domains
+      try {
+        const domainCriteria = Object.values(PLATFORM_SENDERS).map(d => ({ from: `@${d}` }))
+        const found = await client.search({ ...buildOr(domainCriteria), since: baseSince })
+        if (Array.isArray(found)) seqs = [...seqs, ...found]
+      } catch { /* ignore */ }
 
-      // Strategy 2: search by subject keywords
-      for (const kw of BOOKING_SUBJECT_KEYWORDS) {
-        try {
-          const found = await client.search({ subject: kw, since: baseSince })
-          if (Array.isArray(found)) seqs = [...seqs, ...found]
-        } catch { /* server may not support subject search */ }
-      }
+      // Strategy 2: one combined search across key booking subject keywords
+      try {
+        const kwCriteria = BOOKING_SUBJECT_KEYWORDS.map(kw => ({ subject: kw }))
+        const found = await client.search({ ...buildOr(kwCriteria), since: baseSince })
+        if (Array.isArray(found)) seqs = [...seqs, ...found]
+      } catch { /* ignore */ }
 
       const uniqueSeqs = [...new Set(seqs)]
       result.debug.found_uids = uniqueSeqs.length
