@@ -131,8 +131,16 @@ export default function EmailPage() {
             disabled={syncing !== null || settings.length === 0}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
             {syncing === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span className="hidden sm:inline">立即同步全部</span>
+            <span className="hidden sm:inline">同步新郵件</span>
             <span className="sm:hidden">同步</span>
+          </button>
+          <button
+            onClick={() => { if (confirm('將刪除所有未對應房源的 Email 訂單，並重新掃描近 90 天郵件全部重新匯入，確定？')) sync(undefined, true) }}
+            disabled={syncing !== null || settings.length === 0}
+            title="清除後從頭重新掃描 90 天"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50">
+            {syncing === 'all-reset' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+            <span className="hidden sm:inline">重新從頭同步</span>
           </button>
           <button onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border text-sm font-medium hover:bg-gray-50">
@@ -186,7 +194,7 @@ export default function EmailPage() {
                     className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 disabled:opacity-40">
                     {syncing === s.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   </button>
-                  <button onClick={() => { if (confirm('將清除所有「無房源」的 email 訂單並重新同步近 30 天郵件，確定？')) sync(s.id, true) }}
+                  <button onClick={() => { if (confirm('將刪除未對應房源的 Email 訂單，並重新掃描近 90 天郵件，確定？')) sync(s.id, true) }}
                     disabled={syncing !== null} title="重新從頭同步"
                     className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 disabled:opacity-40">
                     <RotateCcw className="h-4 w-4" />
