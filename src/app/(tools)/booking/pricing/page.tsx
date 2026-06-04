@@ -90,7 +90,7 @@ function computeEffectivePrice(
 // ── Page ─────────────────────────────────────────────────────
 export default function PricingPage() {
   const now = new Date()
-  const [tab, setTab] = useState<'daily' | 'calendar' | 'rules'>('daily')
+  const [tab, setTab] = useState<'daily' | 'calendar' | 'rules' | 'compare'>('daily')
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [filterProp, setFilterProp] = useState('')
@@ -124,6 +124,35 @@ export default function PricingPage() {
   // Rule modal
   const [ruleModal, setRuleModal] = useState<Partial<PricingRule> | null>(null)
   const [ruleSaving, setRuleSaving] = useState(false)
+
+  // 周邊比價（SerpApi Google Hotels）
+  const todayStr = toDateStr(now)
+  const tomorrowStr = toDateStr(new Date(now.getTime() + 86400000))
+  const [cmpLocation, setCmpLocation] = useState('')
+  const [cmpCheckIn, setCmpCheckIn] = useState(todayStr)
+  const [cmpCheckOut, setCmpCheckOut] = useState(tomorrowStr)
+  const [cmpItems, setCmpItems] = useState<{ name: string; type: string | null; price: number | null; rating: number | null; reviews: number | null }[]>([])
+  const [cmpStats, setCmpStats] = useState<{ count: number; min: number; max: number; avg: number; median: number } | null>(null)
+  const [cmpLoading, setCmpLoading] = useState(false)
+  const [cmpErr, setCmpErr] = useState<string | null>(null)
+  const [cmpQueried, setCmpQueried] = useState(false)
+
+  async function runCompare() {
+    if (!cmpLocation.trim()) { setCmpErr('請輸入地區'); return }
+    setCmpLoading(true); setCmpErr(null)
+    try {
+      const res = await fetch('/api/booking/pricing/compare', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: cmpLocation.trim(), check_in: cmpCheckIn, check_out: cmpCheckOut }),
+      })
+      const d = await res.json()
+      if (!res.ok) { setCmpErr(d.error ?? '查詢失敗'); setCmpItems([]); setCmpStats(null) }
+      else { setCmpItems(d.items ?? []); setCmpStats(d.stats ?? null) }
+      setCmpQueried(true)
+    } catch (e) {
+      setCmpErr(String(e))
+    } finally { setCmpLoading(false) }
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -361,6 +390,7 @@ export default function PricingPage() {
     { t: 'daily'    as const, label: '每日定價' },
     { t: 'calendar' as const, label: '格狀視圖' },
     { t: 'rules'    as const, label: '定價規則' },
+    { t: 'compare'  as const, label: '周邊比價' },
   ]
 
   function ViewSwitcher() {
@@ -528,7 +558,7 @@ export default function PricingPage() {
           )}
 
         </div>
-      ) : (
+      ) : tab === 'rules' ? (
         /* ── Tab 2: 動態定價規則 ── */
         <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-6">
           <div className="flex justify-end"><ViewSwitcher /></div>
@@ -680,6 +710,117 @@ export default function PricingPage() {
               </>
             )}
           </div>
+        </div>
+      ) : (
+        /* ── Tab 3: 周邊比價（SerpApi Google Hotels）── */
+        <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="font-bold text-gray-900">周邊比價</h2>
+              <p className="text-xs text-gray-400 mt-0.5">查詢同地區其他飯店／民宿在指定入住日的房價（Google Hotels）</p>
+            </div>
+            <ViewSwitcher />
+          </div>
+
+          {/* 查詢條件 */}
+          <div className="bg-white rounded-xl border p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-xs font-medium text-gray-600">地區關鍵字</label>
+                <input value={cmpLocation} onChange={e => setCmpLocation(e.target.value)}
+                  placeholder="例：宜蘭礁溪、台南安平、墾丁"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">入住日</label>
+                <input type="date" value={cmpCheckIn} onChange={e => setCmpCheckIn(e.target.value)}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">退房日</label>
+                <input type="date" value={cmpCheckOut} onChange={e => setCmpCheckOut(e.target.value)}
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-[11px] text-gray-400">每次查詢消耗 1 次 SerpApi 額度（免費方案 250 次／月）</p>
+              <button onClick={runCompare} disabled={cmpLoading}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                {cmpLoading ? '查詢中…' : '查詢周邊房價'}
+              </button>
+            </div>
+            {cmpErr && <div className="text-xs text-red-500">{cmpErr}</div>}
+          </div>
+
+          {/* 統計卡 */}
+          {cmpStats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: '最低', v: cmpStats.min },
+                { label: '中位數', v: cmpStats.median },
+                { label: '平均', v: cmpStats.avg },
+                { label: '最高', v: cmpStats.max },
+              ].map(s => (
+                <div key={s.label} className="bg-white rounded-xl border p-3 text-center">
+                  <div className="text-[11px] text-gray-400">{s.label}</div>
+                  <div className="text-lg font-bold text-gray-900 tabular-nums">NT$ {s.v.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 你的定價對比 */}
+          {cmpStats && properties.some(p => p.base_price != null) && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+              <div className="text-sm font-semibold text-indigo-800">你的定價 vs 周邊中位數（NT$ {cmpStats.median.toLocaleString()}）</div>
+              <div className="space-y-1.5">
+                {properties.filter(p => p.base_price != null).map(p => {
+                  const base = Number(p.base_price)
+                  const diff = base - cmpStats.median
+                  const pct = cmpStats.median ? Math.round((diff / cmpStats.median) * 100) : 0
+                  return (
+                    <div key={p.id} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-700">{p.name}</span>
+                      <span className="tabular-nums text-gray-700">
+                        NT$ {base.toLocaleString()}
+                        <span className={`ml-2 font-semibold ${diff > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {diff > 0 ? '高' : '低'} {Math.abs(pct)}%
+                        </span>
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 周邊清單 */}
+          {cmpItems.length > 0 ? (
+            <div className="bg-white rounded-xl border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">名稱</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500">類型</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-500">每晚</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500">評分</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {cmpItems.map((it, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 text-gray-900">{it.name}</td>
+                      <td className="px-3 py-2.5 text-center text-xs text-gray-500">{it.type ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{it.price != null ? `NT$ ${it.price.toLocaleString()}` : '—'}</td>
+                      <td className="px-3 py-2.5 text-center text-xs text-gray-600">{it.rating != null ? `⭐ ${it.rating}${it.reviews != null ? `（${it.reviews}）` : ''}` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : cmpQueried && !cmpLoading && !cmpErr ? (
+            <div className="bg-white rounded-xl border py-12 text-center text-sm text-gray-400">查無資料，換個地區關鍵字試試</div>
+          ) : null}
         </div>
       )}
 

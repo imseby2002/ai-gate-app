@@ -29,11 +29,12 @@ function getDowIdx(dateStr: string) {
   return dow === 0 ? 6 : dow - 1  // Mon=0 ... Sun=6
 }
 
-type TabType = 'daily' | 'calendar' | 'rules'
+type TabType = 'daily' | 'calendar' | 'rules' | 'compare'
 const VIEW_TABS: { t: TabType; label: string }[] = [
   { t: 'daily',    label: '每日定價' },
   { t: 'calendar', label: '格狀視圖' },
   { t: 'rules',    label: '定價規則' },
+  { t: 'compare',  label: '周邊比價' },
 ]
 
 interface Props {
