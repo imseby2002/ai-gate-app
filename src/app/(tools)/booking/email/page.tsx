@@ -33,6 +33,7 @@ export default function EmailPage() {
   })
   const [saving, setSaving] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const [folderEdit, setFolderEdit] = useState<{ id: string; label: string } | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -95,6 +96,20 @@ export default function EmailPage() {
     const d = await res.json()
     if (d.setting) {
       setSettings(prev => prev.map(s => s.id === id ? { ...s, property_id: d.setting.property_id, properties: d.setting.properties } : s))
+    }
+  }
+
+  // 變更擷取模式：imap_folder 填 INBOX = 自動掃描；填標籤名 = 標籤模式。
+  // 帶上現有 property_id 以免被後端 PUT 邏輯清空。
+  async function updateFolder(s: EmailSetting, imap_folder: string, cancel_folder?: string) {
+    const res = await fetch('/api/booking/email', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: s.id, imap_folder, cancel_folder: cancel_folder ?? s.cancel_folder ?? '', property_id: s.property_id }),
+    })
+    const d = await res.json()
+    if (d.setting) {
+      setSettings(prev => prev.map(x => x.id === s.id ? { ...x, imap_folder: d.setting.imap_folder, cancel_folder: d.setting.cancel_folder } : x))
+      setFolderEdit(null)
     }
   }
 
@@ -225,7 +240,36 @@ export default function EmailPage() {
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div className="text-[11px] text-gray-400">{s.imap_host}:{s.imap_port} / {s.imap_folder}</div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                  <span className="text-gray-400">{s.imap_host}:{s.imap_port}</span>
+                  <span className={`px-1.5 py-0.5 rounded font-medium ${s.imap_folder.toUpperCase() === 'INBOX' ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-600'}`}>
+                    {s.imap_folder.toUpperCase() === 'INBOX' ? '自動掃描' : `標籤：${s.imap_folder}`}
+                  </span>
+                  {folderEdit?.id !== s.id && (
+                    <button onClick={() => setFolderEdit({ id: s.id, label: s.imap_folder.toUpperCase() === 'INBOX' ? '訂房' : s.imap_folder })}
+                      className="text-indigo-500 hover:underline">變更模式</button>
+                  )}
+                </div>
+                {folderEdit?.id === s.id && (
+                  <div className="flex items-center gap-1.5 flex-wrap bg-gray-50 border rounded-lg p-2">
+                    <button onClick={() => updateFolder(s, 'INBOX', '')}
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium border bg-white text-gray-600 hover:bg-gray-100">
+                      自動掃描收件匣
+                    </button>
+                    <span className="text-[11px] text-gray-400">或標籤</span>
+                    <input value={folderEdit.label} onChange={e => setFolderEdit({ id: s.id, label: e.target.value })}
+                      placeholder="訂房"
+                      className="w-24 text-[11px] border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <button onClick={() => updateFolder(s, folderEdit.label.trim() || '訂房')}
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                      套用
+                    </button>
+                    <button onClick={() => setFolderEdit(null)}
+                      className="px-2 py-1 rounded-lg text-[11px] text-gray-500 hover:bg-gray-100">取消</button>
+                  </div>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400">
                 {s.last_synced_at && <span>上次：{new Date(s.last_synced_at).toLocaleString('zh-TW')}</span>}
                 {s.last_sync_count != null && <span>{s.last_sync_count} 筆</span>}
