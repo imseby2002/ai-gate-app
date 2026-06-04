@@ -140,15 +140,62 @@ export default function PricingPage() {
   // 前端 session 快取：同地區+同日期不重複打 SerpApi，省額度。
   const cmpCache = useRef<Map<string, { items: typeof cmpItems; stats: typeof cmpStats }>>(new Map())
 
-  // 自動帶入民宿所在地（縣市+地址）作為預設查詢地區。
+  // 關注競品清單（指定要特別盯的飯店/民宿名稱）
+  const [watchlist, setWatchlist] = useState<string[]>([])
+  const [watchInput, setWatchInput] = useState('')
+  const [watchPrices, setWatchPrices] = useState<Record<string, { price: number | null; rating: number | null } | null>>({})
+  const [watchQuerying, setWatchQuerying] = useState<string | null>(null)
+
+  // 自動帶入民宿所在地（縣市+地址）作為預設查詢地區，並載入關注競品清單。
   useEffect(() => {
     fetch('/api/booking/profile').then(r => r.json()).then(d => {
       const p = d.profile
       if (!p) return
       const loc = [p.city, p.address].filter(Boolean).join(' ').trim()
       if (loc) setCmpLocation(prev => prev || loc)
+      if (Array.isArray(p.competitor_watchlist)) setWatchlist(p.competitor_watchlist as string[])
     }).catch(() => {})
   }, [])
+
+  async function saveWatchlist(next: string[]) {
+    setWatchlist(next)
+    fetch('/api/booking/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ competitor_watchlist: next }),
+    }).catch(() => {})
+  }
+  function addWatch() {
+    const v = watchInput.trim()
+    if (!v || watchlist.includes(v)) { setWatchInput(''); return }
+    saveWatchlist([...watchlist, v]); setWatchInput('')
+  }
+  function removeWatch(name: string) {
+    saveWatchlist(watchlist.filter(n => n !== name))
+    setWatchPrices(prev => { const c = { ...prev }; delete c[name]; return c })
+  }
+  function nameMatches(a: string, b: string) {
+    const x = a.toLowerCase(), y = b.toLowerCase()
+    return x.includes(y) || y.includes(x)
+  }
+  function isWatched(itemName: string) {
+    return watchlist.some(w => nameMatches(itemName, w))
+  }
+  // 周邊清單沒涵蓋的關注競品，單獨精準查一次（耗 1 額度，有後端快取）
+  async function queryWatch(name: string) {
+    setWatchQuerying(name)
+    try {
+      const res = await fetch('/api/booking/pricing/compare', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: `${name} ${cmpLocation.trim()}`.trim(), check_in: cmpCheckIn, check_out: cmpCheckOut }),
+      })
+      const d = await res.json()
+      const items: { name: string; price: number | null; rating: number | null }[] = d.items ?? []
+      const hit = items.find(it => nameMatches(it.name, name))
+      setWatchPrices(prev => ({ ...prev, [name]: hit ? { price: hit.price, rating: hit.rating } : null }))
+    } catch {
+      setWatchPrices(prev => ({ ...prev, [name]: null }))
+    } finally { setWatchQuerying(null) }
+  }
 
   async function runCompare(force = false) {
     if (!cmpLocation.trim()) { setCmpErr('請輸入地區'); return }
@@ -786,6 +833,32 @@ export default function PricingPage() {
             {cmpErr && <div className="text-xs text-red-500">{cmpErr}</div>}
           </div>
 
+          {/* 關注競品 */}
+          <div className="bg-white rounded-xl border p-4 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">關注競品</h3>
+              <p className="text-[11px] text-gray-400 mt-0.5">指定要特別盯的飯店／民宿，查價後會在清單中標示並置頂；周邊未涵蓋的可單獨精準查。</p>
+            </div>
+            <div className="flex gap-2">
+              <input value={watchInput} onChange={e => setWatchInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addWatch() }}
+                placeholder="輸入飯店／民宿名稱"
+                className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              <button onClick={addWatch}
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-800 text-white hover:bg-gray-900">加入</button>
+            </div>
+            {watchlist.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {watchlist.map(name => (
+                  <span key={name} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                    {name}
+                    <button onClick={() => removeWatch(name)} className="text-indigo-400 hover:text-red-500 font-bold leading-none">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           {cmpFromCache && (
             <div className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               ↺ 此結果來自快取（未消耗額度）。需要最新報價請按「強制重查」。
@@ -847,20 +920,64 @@ export default function PricingPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {cmpItems.map((it, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-2.5 text-gray-900">{it.name}</td>
-                      <td className="px-3 py-2.5 text-center text-xs text-gray-500">{it.type ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{it.price != null ? `NT$ ${it.price.toLocaleString()}` : '—'}</td>
-                      <td className="px-3 py-2.5 text-center text-xs text-gray-600">{it.rating != null ? `⭐ ${it.rating}${it.reviews != null ? `（${it.reviews}）` : ''}` : '—'}</td>
-                    </tr>
-                  ))}
+                  {[...cmpItems]
+                    .sort((a, b) => (isWatched(b.name) ? 1 : 0) - (isWatched(a.name) ? 1 : 0))
+                    .map((it, i) => {
+                      const watched = isWatched(it.name)
+                      return (
+                        <tr key={i} className={watched ? 'bg-amber-50' : 'hover:bg-gray-50'}>
+                          <td className="px-4 py-2.5 text-gray-900">{watched && <span className="mr-1">⭐</span>}{it.name}</td>
+                          <td className="px-3 py-2.5 text-center text-xs text-gray-500">{it.type ?? '—'}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-gray-900">{it.price != null ? `NT$ ${it.price.toLocaleString()}` : '—'}</td>
+                          <td className="px-3 py-2.5 text-center text-xs text-gray-600">{it.rating != null ? `⭐ ${it.rating}${it.reviews != null ? `（${it.reviews}）` : ''}` : '—'}</td>
+                        </tr>
+                      )
+                    })}
                 </tbody>
               </table>
             </div>
           ) : cmpQueried && !cmpLoading && !cmpErr ? (
             <div className="bg-white rounded-xl border py-12 text-center text-sm text-gray-400">查無資料，換個地區關鍵字試試</div>
           ) : null}
+
+          {/* 關注競品：周邊清單未涵蓋者 */}
+          {cmpQueried && (() => {
+            const missing = watchlist.filter(w => !cmpItems.some(it => nameMatches(it.name, w)))
+            if (missing.length === 0) return null
+            return (
+              <div className="bg-white rounded-xl border p-4 space-y-2">
+                <div className="text-sm font-semibold text-gray-800">關注競品（周邊清單未涵蓋）</div>
+                <p className="text-[11px] text-gray-400">這些名稱未出現在周邊結果，可單獨精準查（每次耗 1 額度，有快取）。</p>
+                <div className="space-y-1.5 pt-1">
+                  {missing.map(name => {
+                    const wp = watchPrices[name]
+                    return (
+                      <div key={name} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-gray-700">{name}</span>
+                        <div className="flex items-center gap-2">
+                          {wp === undefined ? (
+                            <button onClick={() => queryWatch(name)} disabled={watchQuerying === name}
+                              className="px-2 py-1 rounded-lg border text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                              {watchQuerying === name ? '查詢中…' : '精準查價'}
+                            </button>
+                          ) : wp === null ? (
+                            <span className="text-gray-400">查無
+                              <button onClick={() => queryWatch(name)} className="text-indigo-500 hover:underline ml-1">重試</button>
+                            </span>
+                          ) : (
+                            <span className="tabular-nums font-semibold text-gray-900">
+                              {wp.price != null ? `NT$ ${wp.price.toLocaleString()}` : '無報價'}
+                              {wp.rating != null && <span className="ml-2 text-gray-500 font-normal">⭐{wp.rating}</span>}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
