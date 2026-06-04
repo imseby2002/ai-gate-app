@@ -205,10 +205,25 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     secure: true,
     auth: { user: setting.imap_user, pass: setting.imap_password },
     logger: false,
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 180000,
   })
 
   try {
-    await client.connect()
+    // 連線重試：首次同步常因網路抖動或 Gmail 節流而建立連線失敗
+    let connected = false
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await client.connect()
+        connected = true
+        break
+      } catch (e) {
+        if (attempt === 3) throw e
+        await new Promise(r => setTimeout(r, 2000 * attempt))
+      }
+    }
+    if (!connected) throw new Error('Connection not available')
 
     // For Gmail, auto-detect the \All folder (language-independent).
     // If the detected folder is not accessible (IMAP disabled in Gmail settings),
