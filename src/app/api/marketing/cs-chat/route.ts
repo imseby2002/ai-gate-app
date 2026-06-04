@@ -727,6 +727,12 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     .eq('user_id', user.id)
     .eq('enabled', true)
 
+  // 資料來源偏好：價格／密碼各自可切換「訂單系統」或「客服自建資料」。
+  // 預設 booking_system（維持原行為）；沒有訂單系統的用戶可切到 pricing_calculator / datasource。
+  const sourcePrefs = (sources?.find(s => s.type === 'source_prefs')?.config ?? {}) as { priceSource?: string; passwordSource?: string }
+  const priceFromCalculator = sourcePrefs.priceSource === 'pricing_calculator'
+  const passwordFromDatasource = sourcePrefs.passwordSource === 'datasource'
+
   // 取出早餐設定
   const breakfastSource = sources?.find(s => s.type === 'breakfast_webhook')
   const breakfastCfg = breakfastSource?.config as {
@@ -806,8 +812,9 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   }
 
   // ── BnB Daily Records：訂單號碼 → 今日密碼查詢（優先於 Google Sheets）──────
+  // 密碼來源切到「資料來源（訂單密碼表）」時跳過此步，改由 Google Sheets 等資料來源注入比對。
   const bnbOrderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
-  if (bnbOrderNum) {
+  if (bnbOrderNum && !passwordFromDatasource) {
     try {
       const bnbResult = await queryBnbCheckin(supabase, user.id, bnbOrderNum)
       if (bnbResult) sheetResults.unshift(bnbResult)  // 插到最前面，確保優先被 AI 引用
@@ -821,7 +828,10 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   let deterministicQuoteSection = ''
   if (bookingFlowEnabled) {
     const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
-    const bq = await buildBookingModuleQuote(supabase, user.id, google('gemini-2.5-flash'), convUserText, todayIso)
+    // 價格來源切到「定價計算機」時跳過訂單系統算價，直接 fallback 用 json_pricing 設定。
+    const bq = priceFromCalculator
+      ? null
+      : await buildBookingModuleQuote(supabase, user.id, google('gemini-2.5-flash'), convUserText, todayIso)
     if (bq) {
       deterministicQuoteSection = `\n\n${bq}`
     } else if (sources?.length) {
