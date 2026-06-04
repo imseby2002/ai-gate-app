@@ -254,6 +254,21 @@ export default function PricingPage() {
     } finally { setApplySaving(false) }
   }
 
+  // 手動立即執行市場跟隨（只跑當前用戶，不用等排程）
+  const [marketRunning, setMarketRunning] = useState(false)
+  const [marketRunMsg, setMarketRunMsg] = useState<string | null>(null)
+  async function runMarketNow() {
+    setMarketRunning(true); setMarketRunMsg(null)
+    try {
+      const res = await fetch('/api/booking/pricing/market-run', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) setMarketRunMsg(d.error ?? '執行失敗')
+      else { setMarketRunMsg(`完成：抓取 ${d.snapshots} 天行情、套用 ${d.applied} 筆定價（消耗 API ${d.apiCalls} 次）`); fetchData() }
+    } catch (e) {
+      setMarketRunMsg(String(e))
+    } finally { setMarketRunning(false) }
+  }
+
   async function runCompare(force = false) {
     if (!cmpLocation.trim()) { setCmpErr('請輸入地區'); return }
     const key = `${cmpLocation.trim()}|${cmpCheckIn}|${cmpCheckOut}`
@@ -729,18 +744,30 @@ export default function PricingPage() {
 
           {/* Pricing rules */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <div>
                 <h2 className="font-bold text-gray-900">定價規則</h2>
                 <p className="text-xs text-gray-400 mt-0.5">規則僅對已開啟動態定價的房型生效</p>
               </div>
-              <button
-                onClick={() => setRuleModal({ enabled: true, adjustment_type: 'percent', adjustment_value: 0, priority: 0, conditions: {} })}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
-                <Plus className="h-3.5 w-3.5" />
-                新增規則
-              </button>
+              <div className="flex items-center gap-2">
+                {rules.some(r => r.rule_type === 'market') && (
+                  <button onClick={runMarketNow} disabled={marketRunning}
+                    title="立即抓周邊行情並依市場規則更新每日定價"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border text-indigo-600 border-indigo-300 hover:bg-indigo-50 disabled:opacity-50">
+                    📈 {marketRunning ? '執行中…' : '立即執行市場跟隨'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setRuleModal({ enabled: true, adjustment_type: 'percent', adjustment_value: 0, priority: 0, conditions: {} })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                  <Plus className="h-3.5 w-3.5" />
+                  新增規則
+                </button>
+              </div>
             </div>
+            {marketRunMsg && (
+              <div className="mb-3 text-xs bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-indigo-700">{marketRunMsg}</div>
+            )}
             {loading ? (
               <div className="text-sm text-gray-400">載入中…</div>
             ) : rules.length === 0 ? (
