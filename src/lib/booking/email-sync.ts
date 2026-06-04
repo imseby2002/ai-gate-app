@@ -204,7 +204,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     port: setting.imap_port,
     secure: true,
     auth: { user: setting.imap_user, pass: setting.imap_password },
-    logger: false,
+    logger: false as const,
     connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 180000,
