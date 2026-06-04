@@ -5180,6 +5180,8 @@ function Unit12CustomerService({
 
   // Breakfast webhook configs (多筆)
   const [breakfastSources, setBreakfastSources] = useState<CsDataSource[]>([])
+  const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string }>({ priceSource: 'booking_system', passwordSource: 'booking_system' })
+  const [savingPrefs, setSavingPrefs] = useState(false)
   const [editingBreakfast, setEditingBreakfast] = useState<CsDataSource | null | { id: '' }>(null)
   const [editingBreakfastForm, setEditingBreakfastForm] = useState({
     name: '', webhookUrl: '', cutoffTime: '22:00', deliveryTime: '07:50', rooms: '', menu: '',
@@ -5243,12 +5245,29 @@ function Unit12CustomerService({
   useEffect(() => {
     fetch(`/api/marketing/cs-datasource?industry=${ind}`).then(r => r.json()).then(d => {
       if (d.sources) {
-        setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook'))
+        setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.type !== 'source_prefs'))
         setPricingConfigs(d.sources.filter((s: { type: string }) => s.type === 'json_pricing'))
         setBreakfastSources(d.sources.filter((s: { type: string }) => s.type === 'breakfast_webhook'))
       }
     }).catch(() => {})
   }, [ind])
+
+  useEffect(() => {
+    fetch('/api/marketing/cs-source-prefs').then(r => r.json()).then(d => {
+      if (d.prefs) setSourcePrefs(d.prefs)
+    }).catch(() => {})
+  }, [])
+
+  async function saveSourcePrefs(next: { priceSource: string; passwordSource: string }) {
+    setSourcePrefs(next)
+    setSavingPrefs(true)
+    try {
+      await fetch('/api/marketing/cs-source-prefs', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      })
+    } finally { setSavingPrefs(false) }
+  }
 
   function openAddPc(templateKey?: string) {
     const template = templateKey ? PRICING_TEMPLATES[templateKey] : PRICING_TEMPLATES.tour
@@ -6842,6 +6861,39 @@ function Unit12CustomerService({
           </div>
 
           {/* Industry recommended sheets guide */}
+          {ind === 'homestay' && (
+            <div className="bg-white border rounded-xl p-4 space-y-3">
+              <div>
+                <div className="text-sm font-semibold text-gray-800">AI 取得來源切換</div>
+                <p className="text-[11px] text-gray-400 mt-0.5">沒有使用「訂單系統」的話，可切換成由下方資料來源／定價計算機取得。</p>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-gray-700">房價／動態價格</div>
+                  <div className="text-[10px] text-gray-400">客人問價時 AI 從哪取得</div>
+                </div>
+                <div className="flex rounded-lg border overflow-hidden text-xs shrink-0">
+                  <button onClick={() => saveSourcePrefs({ ...sourcePrefs, priceSource: 'booking_system' })} disabled={savingPrefs}
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.priceSource === 'booking_system' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單系統</button>
+                  <button onClick={() => saveSourcePrefs({ ...sourcePrefs, priceSource: 'pricing_calculator' })} disabled={savingPrefs}
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.priceSource === 'pricing_calculator' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>定價計算機</button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-gray-700">入住密碼／房號</div>
+                  <div className="text-[10px] text-gray-400">客人給訂單號時 AI 從哪取得</div>
+                </div>
+                <div className="flex rounded-lg border overflow-hidden text-xs shrink-0">
+                  <button onClick={() => saveSourcePrefs({ ...sourcePrefs, passwordSource: 'booking_system' })} disabled={savingPrefs}
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'booking_system' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單系統</button>
+                  <button onClick={() => saveSourcePrefs({ ...sourcePrefs, passwordSource: 'datasource' })} disabled={savingPrefs}
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'datasource' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單密碼表</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {industry && CS_INDUSTRY_TEMPLATES[industry] && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2">
