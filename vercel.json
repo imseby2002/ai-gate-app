@@ -7,11 +7,11 @@
     },
     {
       "path": "/api/cron/ical-sync",
-      "schedule": "0 2 * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/email-sync",
-      "schedule": "0 3 * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/release-stale-bookings",
