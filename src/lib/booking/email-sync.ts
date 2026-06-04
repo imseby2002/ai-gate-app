@@ -203,11 +203,15 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const MAX_PER_RUN = 25
   let hasMore = false
 
-  // 標籤模式：設定了「取消資料夾」即啟用。imap_folder 視為「預定」標籤，
-  // 直接抓該資料夾全部信當訂房、抓取消資料夾全部信當取消，不靠寄件者/主旨關鍵字搜尋。
+  // 標籤模式：imap_folder 指定了非 INBOX 的自訂標籤（如「訂房」）即啟用。
+  // 直接抓該標籤全部信，不靠寄件者/主旨關鍵字搜尋；預定與取消信都放在同一個
+  // 「訂房」標籤，取消與否一律交給 AI 判斷（預定確認信常含「取消政策」字樣，
+  // 不能靠關鍵字或獨立標籤判斷取消）。
+  // cancel_folder 為選填的向後相容欄位：若另外設了取消標籤，該標籤的信強制標記為取消。
   const cancelFolder: string | null =
     (setting as { cancel_folder?: string | null }).cancel_folder || null
-  const labelMode = !!cancelFolder
+  const bookingLabel: string = setting.imap_folder || ''
+  const labelMode = !!bookingLabel && bookingLabel.toUpperCase() !== 'INBOX'
   const isFirstSync = !setting.last_synced_at
   // 增量同步起點：上次同步時間往前 1 小時（IMAP SINCE 只到日期粒度，重疊靠去重處理）。
   const incrementalSince = setting.last_synced_at
@@ -723,6 +727,7 @@ ${roomListStr}${hint}${preLine}${fewShot}
 - 日期一律輸出 YYYY-MM-DD；中文「2026年6月5日」要轉成「2026-06-05」；退房日必須晚於入住日。
 - 連住多晚時，check_out 必須填最後退房日（不是入住日+1天）。若郵件標明「退房 7/13」check_out=2026-07-13；若只有「住 N 晚」，check_out = check_in + N 天。
 - 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true；盡量從郵件擷取 confirmation_id、入住/退房日。
+- 重要：「取消政策」「取消條款」「免費取消」「cancellation policy」「free cancellation」屬於訂房須知/條款用語，不代表此訂單已被取消。is_cancellation 只有在郵件明確表示本訂單「已取消／被取消／cancelled／canceled／cancellation request accepted」時才設為 true；若只是預定確認信中提到取消政策，is_cancellation 必須為 false。
 - 無法確定的欄位填 null，不要猜測。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
