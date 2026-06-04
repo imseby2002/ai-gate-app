@@ -198,10 +198,23 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const fallbackPropertyId: string | null =
     setting.property_id ?? (properties.length === 1 ? properties[0].id : null)
 
-  const rawSources: Array<{ seq: number; source: Buffer; internalDate?: Date }> = []
+  const rawSources: Array<{ seq: number; source: Buffer; internalDate?: Date; forceCancel?: boolean }> = []
   // 每次最多處理幾封（避免 Vercel 300 秒逾時）。超過的部分靠 last_synced_at 推進下次續傳。
   const MAX_PER_RUN = 25
   let hasMore = false
+
+  // 標籤模式：設定了「取消資料夾」即啟用。imap_folder 視為「預定」標籤，
+  // 直接抓該資料夾全部信當訂房、抓取消資料夾全部信當取消，不靠寄件者/主旨關鍵字搜尋。
+  const cancelFolder: string | null =
+    (setting as { cancel_folder?: string | null }).cancel_folder || null
+  const labelMode = !!cancelFolder
+  const isFirstSync = !setting.last_synced_at
+  // 增量同步起點：上次同步時間往前 1 小時（IMAP SINCE 只到日期粒度，重疊靠去重處理）。
+  const incrementalSince = setting.last_synced_at
+    ? new Date(new Date(setting.last_synced_at).getTime() - 60 * 60 * 1000)
+    : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  // 標籤模式首次同步抓整個標籤的歷史信；增量則只抓 incrementalSince 之後。
+  const labelSince = isFirstSync ? new Date('2000-01-01') : incrementalSince
   const imapOptions = {
     host: setting.imap_host,
     port: setting.imap_port,
@@ -228,8 +241,9 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         await c.connect()
 
         // For Gmail, auto-detect the \All folder (language-independent).
+        // 標籤模式不偵測 All Mail，直接鎖定指定的「預定」標籤資料夾。
         let mailboxToUse = setting.imap_folder
-        if (setting.imap_host.toLowerCase().includes('gmail.com')) {
+        if (!labelMode && setting.imap_host.toLowerCase().includes('gmail.com')) {
           try {
             const mailboxes = await c.list()
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -272,10 +286,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     mailboxToUse = conn.mailboxToUse
 
     try {
-      const baseSince = setting.last_synced_at
-        ? new Date(new Date(setting.last_synced_at).getTime() - 60 * 60 * 1000)
-        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      result.debug.since_date = baseSince.toISOString().slice(0, 10)
+      result.debug.since_date = (labelMode ? labelSince : incrementalSince).toISOString().slice(0, 10)
 
       // Build a nested OR tree: {or:[a,{or:[b,{or:[c,d]}]}]}
       // Top-level keys outside 'or' are implicit AND (e.g. since applies to all branches).
@@ -287,38 +298,46 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
       let seqs: number[] = []
 
-      // Strategy 1: one combined search across all known sender domains
-      try {
-        const domainCriteria = Object.values(PLATFORM_SENDERS).map(d => ({ from: `@${d}` }))
-        const found = await client.search({ ...buildOr(domainCriteria), since: baseSince })
-        if (Array.isArray(found)) seqs = [...seqs, ...found]
-      } catch { /* ignore */ }
+      if (labelMode) {
+        // 標籤模式：直接抓「預定」資料夾全部信，不靠關鍵字搜尋。
+        try {
+          const found = await client.search({ since: labelSince })
+          if (Array.isArray(found)) seqs = found
+        } catch { /* ignore */ }
+      } else {
+        // Strategy 1: one combined search across all known sender domains
+        try {
+          const domainCriteria = Object.values(PLATFORM_SENDERS).map(d => ({ from: `@${d}` }))
+          const found = await client.search({ ...buildOr(domainCriteria), since: incrementalSince })
+          if (Array.isArray(found)) seqs = [...seqs, ...found]
+        } catch { /* ignore */ }
 
-      // Strategy 2: one combined search across key booking subject keywords
-      try {
-        const kwCriteria = BOOKING_SUBJECT_KEYWORDS.map(kw => ({ subject: kw }))
-        const found = await client.search({ ...buildOr(kwCriteria), since: baseSince })
-        if (Array.isArray(found)) seqs = [...seqs, ...found]
-      } catch { /* ignore */ }
+        // Strategy 2: one combined search across key booking subject keywords
+        try {
+          const kwCriteria = BOOKING_SUBJECT_KEYWORDS.map(kw => ({ subject: kw }))
+          const found = await client.search({ ...buildOr(kwCriteria), since: incrementalSince })
+          if (Array.isArray(found)) seqs = [...seqs, ...found]
+        } catch { /* ignore */ }
+      }
+
+      // Phase 1: 一次批次串流抓取所有 raw source（取代逐封 fetchOne，速度差數十倍）。
+      async function fetchBatch(list: number[], forceCancel = false) {
+        if (list.length === 0) return
+        for await (const msg of client.fetch(list.join(','), { source: true, internalDate: true })) {
+          if (msg.source) {
+            const idate = msg.internalDate ? new Date(msg.internalDate) : undefined
+            rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: idate, forceCancel })
+          } else {
+            result.debug.no_source++
+          }
+        }
+      }
 
       // 最舊優先排序，只取前 MAX_PER_RUN 封；其餘留待下次（last_synced_at 推進後）續傳。
       const sortedSeqs = [...new Set(seqs)].sort((a, b) => a - b)
       result.debug.found_uids = sortedSeqs.length
       const batchSeqs = sortedSeqs.slice(0, MAX_PER_RUN)
       hasMore = sortedSeqs.length > batchSeqs.length
-
-      // Phase 1: 一次批次串流抓取所有 raw source（取代逐封 fetchOne，速度差數十倍）。
-      async function fetchBatch(list: number[]) {
-        if (list.length === 0) return
-        for await (const msg of client.fetch(list.join(','), { source: true, internalDate: true })) {
-          if (msg.source) {
-            const idate = msg.internalDate ? new Date(msg.internalDate) : undefined
-            rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: idate })
-          } else {
-            result.debug.no_source++
-          }
-        }
-      }
 
       try {
         await fetchBatch(batchSeqs)
@@ -338,6 +357,29 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       lock.release()
     }
 
+    // 標籤模式：另外抓「取消」資料夾，命中的信一律標記為取消。
+    if (labelMode && cancelFolder) {
+      try {
+        const cancelLock = await client.getMailboxLock(cancelFolder)
+        try {
+          const found = await client.search({ since: labelSince })
+          const cancelSeqs = Array.isArray(found)
+            ? [...new Set(found)].sort((a, b) => a - b).slice(0, MAX_PER_RUN)
+            : []
+          for await (const msg of client.fetch(cancelSeqs.join(','), { source: true, internalDate: true })) {
+            if (msg.source) {
+              const idate = msg.internalDate ? new Date(msg.internalDate) : undefined
+              rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: idate, forceCancel: true })
+            }
+          }
+        } finally {
+          cancelLock.release()
+        }
+      } catch (e) {
+        result.errors.push(`取消資料夾抓取失敗: ${String(e)}`)
+      }
+    }
+
     try { await client.logout() } catch { /* ignore if connection already dropped */ }
   } catch (e) {
     const msg = `IMAP 連線失敗: ${String(e)}`
@@ -353,7 +395,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   }
 
   // Phase 2: parse + AI + Supabase (no IMAP connection needed)
-  for (const { seq, source } of rawSources) {
+  for (const { seq, source, forceCancel } of rawSources) {
     try {
       const parsed = await simpleParser(source)
       const from    = parsed.from?.text ?? ''
@@ -372,6 +414,8 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
       const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
       if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
+      // 來自「取消」資料夾的信一律視為取消（不靠 AI 判斷取消意圖）。
+      if (forceCancel) { extracted.is_cancellation = true; extracted.is_booking = true }
       if (!extracted.is_booking) { result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`); continue }
 
       const validMatchedId =

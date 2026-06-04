@@ -3,16 +3,16 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Mail, Plus, Trash2, RefreshCw, CheckCircle, XCircle, Loader2, Eye, EyeOff, RotateCcw } from 'lucide-react'
 
-const IMAP_PRESETS: Record<string, { host: string; port: number; folder: string }> = {
-  'Gmail':   { host: 'imap.gmail.com',         port: 993, folder: '[Gmail]/All Mail' },
-  'Outlook': { host: 'imap-mail.outlook.com',  port: 993, folder: 'INBOX' },
-  'Yahoo':   { host: 'imap.mail.yahoo.com',    port: 993, folder: 'INBOX' },
-  '自訂':    { host: '', port: 993, folder: 'INBOX' },
+const IMAP_PRESETS: Record<string, { host: string; port: number; folder: string; cancel: string }> = {
+  'Gmail':   { host: 'imap.gmail.com',         port: 993, folder: '預定', cancel: '取消' },
+  'Outlook': { host: 'imap-mail.outlook.com',  port: 993, folder: 'INBOX', cancel: '' },
+  'Yahoo':   { host: 'imap.mail.yahoo.com',    port: 993, folder: 'INBOX', cancel: '' },
+  '自訂':    { host: '', port: 993, folder: 'INBOX', cancel: '' },
 }
 
 interface EmailSetting {
   id: string; email_address: string; imap_host: string; imap_port: number
-  imap_folder: string; sync_enabled: boolean; last_synced_at: string | null
+  imap_folder: string; cancel_folder?: string | null; sync_enabled: boolean; last_synced_at: string | null
   last_sync_count: number | null; last_sync_error: string | null
   property_id: string | null; properties?: { name: string }
 }
@@ -28,7 +28,7 @@ export default function EmailPage() {
   const [preset, setPreset]         = useState('Gmail')
   const [form, setForm] = useState({
     email_address: '', imap_host: 'imap.gmail.com', imap_port: 993,
-    imap_user: '', imap_password: '', imap_folder: '[Gmail]/All Mail', property_id: '',
+    imap_user: '', imap_password: '', imap_folder: '預定', cancel_folder: '取消', property_id: '',
   })
   const [saving, setSaving] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
@@ -46,7 +46,7 @@ export default function EmailPage() {
   function applyPreset(name: string) {
     setPreset(name)
     const p = IMAP_PRESETS[name]
-    setForm(f => ({ ...f, imap_host: p.host, imap_port: p.port, imap_folder: p.folder }))
+    setForm(f => ({ ...f, imap_host: p.host, imap_port: p.port, imap_folder: p.folder, cancel_folder: p.cancel }))
   }
 
   async function sync(id?: string, reset = false) {
@@ -101,7 +101,7 @@ export default function EmailPage() {
   }
 
   function resetForm() {
-    setForm({ email_address: '', imap_host: 'imap.gmail.com', imap_port: 993, imap_user: '', imap_password: '', imap_folder: '[Gmail]/All Mail', property_id: '' })
+    setForm({ email_address: '', imap_host: 'imap.gmail.com', imap_port: 993, imap_user: '', imap_password: '', imap_folder: '預定', cancel_folder: '取消', property_id: '' })
     setPreset('Gmail'); setShowPw(false)
   }
 
@@ -276,18 +276,28 @@ export default function EmailPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">收件夾</label>
+                <label className="text-xs font-medium text-gray-600">預定標籤</label>
                 <input value={form.imap_folder} onChange={e => setForm(f => ({ ...f, imap_folder: e.target.value }))}
+                  placeholder="預定"
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">房源<span className="text-gray-400">（選填）</span></label>
-                <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
-                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                  <option value="">自動判斷（依郵件內容）</option>
-                  {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                <label className="text-xs font-medium text-gray-600">取消標籤<span className="text-gray-400">（選填）</span></label>
+                <input value={form.cancel_folder} onChange={e => setForm(f => ({ ...f, cancel_folder: e.target.value }))}
+                  placeholder="取消"
+                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">房源<span className="text-gray-400">（選填）</span></label>
+              <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="">自動判斷（依郵件內容）</option>
+                {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-[11px] text-indigo-700 leading-relaxed">
+              標籤模式：在 Gmail 將訂房確認信貼上「預定」標籤、取消信貼上「取消」標籤，系統會直接抓整個標籤的信，不靠關鍵字猜測。標籤名稱需與 Gmail 完全一致。
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={() => { setAdding(false); resetForm() }}
