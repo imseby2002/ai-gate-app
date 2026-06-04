@@ -312,7 +312,8 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         if (list.length === 0) return
         for await (const msg of client.fetch(list.join(','), { source: true, internalDate: true })) {
           if (msg.source) {
-            rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: msg.internalDate })
+            const idate = msg.internalDate ? new Date(msg.internalDate) : undefined
+            rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: idate })
           } else {
             result.debug.no_source++
           }
