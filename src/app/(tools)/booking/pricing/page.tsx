@@ -165,12 +165,13 @@ export default function PricingPage() {
     try {
       const res = await fetch('/api/booking/pricing/compare', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ location: cmpLocation.trim(), check_in: cmpCheckIn, check_out: cmpCheckOut }),
+        body: JSON.stringify({ location: cmpLocation.trim(), check_in: cmpCheckIn, check_out: cmpCheckOut, force }),
       })
       const d = await res.json()
       if (!res.ok) { setCmpErr(d.error ?? '查詢失敗'); setCmpItems([]); setCmpStats(null) }
       else {
         setCmpItems(d.items ?? []); setCmpStats(d.stats ?? null)
+        setCmpFromCache(!!d.cached)
         cmpCache.current.set(key, { items: d.items ?? [], stats: d.stats ?? null })
       }
       setCmpQueried(true)
