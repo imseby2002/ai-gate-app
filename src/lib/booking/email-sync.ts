@@ -254,7 +254,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     try {
       const baseSince = setting.last_synced_at
         ? new Date(new Date(setting.last_synced_at).getTime() - 60 * 60 * 1000)
-        : new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
       result.debug.since_date = baseSince.toISOString().slice(0, 10)
 
       // Build a nested OR tree: {or:[a,{or:[b,{or:[c,d]}]}]}
