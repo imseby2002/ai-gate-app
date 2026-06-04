@@ -9,7 +9,7 @@ type BookingStatus = 'open' | 'closed' | 'admin_only'
 type HolidayType = 'holiday' | 'winter_vacation' | 'summer_vacation'
 interface HolidayPeriod { name: string; from: string; to: string; type: HolidayType }
 type AdjType = 'percent' | 'fixed'
-type RuleType = 'weekend' | 'holiday' | 'seasonal' | 'occupancy' | 'advance_booking' | 'early_bird'
+type RuleType = 'weekend' | 'holiday' | 'seasonal' | 'occupancy' | 'advance_booking' | 'early_bird' | 'market'
 
 interface Property {
   id: string; name: string; room_count: number
@@ -39,6 +39,7 @@ const RULE_TYPE_CFG: Record<RuleType, { label: string; icon: string }> = {
   occupancy:       { label: '住房率',            icon: '📊' },
   advance_booking: { label: '臨時訂（N天內）',   icon: '⚡' },
   early_bird:      { label: '早鳥訂（N天以上）', icon: '🐦' },
+  market:          { label: '市場跟隨（排程自動）', icon: '📈' },
 }
 
 const DOW = ['日','一','二','三','四','五','六']
@@ -1474,6 +1475,41 @@ export default function PricingPage() {
                     value={(ruleModal.conditions as Record<string, number>)?.days_before ?? 90}
                     onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, days_before: parseInt(e.target.value) } }))}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                </div>
+              )}
+              {ruleModal.rule_type === 'market' && (
+                <div className="space-y-2">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 text-[11px] text-indigo-700 leading-relaxed">
+                    📈 市場跟隨：排程每天自動抓周邊行情，以「基準價 ＋ 上方調整幅度」算出價格寫入每日定價（夾在下／上限之間）。需先在「周邊比價」確認民宿所在地已填。
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">基準</label>
+                    <select value={(ruleModal.conditions as Record<string, string>)?.basis ?? 'median'}
+                      onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, basis: e.target.value } }))}
+                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white">
+                      <option value="median">周邊中位數</option>
+                      <option value="min">周邊最低</option>
+                      <option value="avg">周邊平均</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">價格下限（選填）</label>
+                      <input type="number"
+                        value={(ruleModal.conditions as Record<string, number | null>)?.floor ?? ''}
+                        onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, floor: e.target.value === '' ? null : parseInt(e.target.value) } }))}
+                        placeholder="不低於"
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">價格上限（選填）</label>
+                      <input type="number"
+                        value={(ruleModal.conditions as Record<string, number | null>)?.ceil ?? ''}
+                        onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, ceil: e.target.value === '' ? null : parseInt(e.target.value) } }))}
+                        placeholder="不高於"
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    </div>
+                  </div>
                 </div>
               )}
               <div>
