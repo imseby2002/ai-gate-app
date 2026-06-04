@@ -198,7 +198,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const fallbackPropertyId: string | null =
     setting.property_id ?? (properties.length === 1 ? properties[0].id : null)
 
-  const rawSources: Array<{ seq: number; source: Buffer }> = []
+  const rawSources: Array<{ seq: number; source: Buffer; internalDate?: Date }> = []
+  // 每次最多處理幾封（避免 Vercel 300 秒逾時）。超過的部分靠 last_synced_at 推進下次續傳。
+  const MAX_PER_RUN = 25
+  let hasMore = false
   const imapOptions = {
     host: setting.imap_host,
     port: setting.imap_port,
@@ -298,34 +301,36 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         if (Array.isArray(found)) seqs = [...seqs, ...found]
       } catch { /* ignore */ }
 
-      const uniqueSeqs = [...new Set(seqs)]
-      result.debug.found_uids = uniqueSeqs.length
+      // 最舊優先排序，只取前 MAX_PER_RUN 封；其餘留待下次（last_synced_at 推進後）續傳。
+      const sortedSeqs = [...new Set(seqs)].sort((a, b) => a - b)
+      result.debug.found_uids = sortedSeqs.length
+      const batchSeqs = sortedSeqs.slice(0, MAX_PER_RUN)
+      hasMore = sortedSeqs.length > batchSeqs.length
 
-      // Phase 1: fetch all raw sources via IMAP (fast — no AI, no Supabase).
-      // Reconnect once if connection drops mid-fetch.
-      let reconnecting = false
-      for (const seq of uniqueSeqs) {
-        if (reconnecting) {
-          try {
-            try { lock.release() } catch {}
-            await client.connect()
-            lock = await client.getMailboxLock(mailboxToUse)
-            reconnecting = false
-          } catch (e) {
-            result.errors.push(`重連失敗: ${String(e)}`)
-            break
+      // Phase 1: 一次批次串流抓取所有 raw source（取代逐封 fetchOne，速度差數十倍）。
+      async function fetchBatch(list: number[]) {
+        if (list.length === 0) return
+        for await (const msg of client.fetch(list.join(','), { source: true, internalDate: true })) {
+          if (msg.source) {
+            rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: msg.internalDate })
+          } else {
+            result.debug.no_source++
           }
         }
-        try {
-          const msg = await client.fetchOne(String(seq), { source: true })
-          if (!msg || !('source' in msg) || !msg.source) { result.debug.no_source++; continue }
-          rawSources.push({ seq, source: msg.source as Buffer })
-        } catch (e) {
-          if (String(e).includes('Connection not available')) {
-            reconnecting = true
-          } else {
-            result.errors.push(`郵件 ${seq}: ${String(e)}`)
-          }
+      }
+
+      try {
+        await fetchBatch(batchSeqs)
+      } catch (e) {
+        // 串流中途斷線：重連一次，補抓尚未取得的部分
+        if (String(e).includes('Connection not available')) {
+          try { lock.release() } catch {}
+          await client.connect()
+          lock = await client.getMailboxLock(mailboxToUse)
+          const got = new Set(rawSources.map(r => r.seq))
+          await fetchBatch(batchSeqs.filter(s => !got.has(s)))
+        } else {
+          result.errors.push(`批次抓取失敗: ${String(e)}`)
         }
       }
     } finally {
@@ -522,8 +527,18 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     }
   }
 
+  // 還有未處理的 backlog：把 last_synced_at 推進到本批已處理最新信的時間，下次續傳；
+  // 否則（已追上）設為現在。
+  let nextSyncedAt = new Date().toISOString()
+  if (hasMore) {
+    const times = rawSources
+      .map(r => r.internalDate?.getTime())
+      .filter((t): t is number => typeof t === 'number')
+    if (times.length) nextSyncedAt = new Date(Math.max(...times)).toISOString()
+  }
+
   await supabase.from('email_settings').update({
-    last_synced_at:  new Date().toISOString(),
+    last_synced_at:  nextSyncedAt,
     last_sync_count: result.added,
     last_sync_error: result.errors.length > 0 ? result.errors[0] : null,
   }).eq('id', settingId)
