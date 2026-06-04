@@ -195,6 +195,64 @@ export default function PricingPage() {
     } finally { setWatchQuerying(null) }
   }
 
+  // 方案A：以本次行情為基準，加減幅度後寫入每日定價（人工審核套用）
+  const [applyBasis, setApplyBasis] = useState<'median' | 'min' | 'avg'>('median')
+  const [applyOffset, setApplyOffset] = useState('-5')
+  const [applyProps, setApplyProps] = useState<string[]>([])
+  const [applyFrom, setApplyFrom] = useState('')
+  const [applyTo, setApplyTo] = useState('')
+  const [applyDow, setApplyDow] = useState<number[]>([0, 1, 2, 3, 4, 5, 6])
+  const [applySaving, setApplySaving] = useState(false)
+  const [applyMsg, setApplyMsg] = useState<string | null>(null)
+
+  function previewApplyPrice(): number | null {
+    if (!cmpStats) return null
+    const base = cmpStats[applyBasis]
+    return Math.round(base * (1 + (parseFloat(applyOffset) || 0) / 100))
+  }
+
+  async function applyToPricing() {
+    if (!cmpStats) return
+    const targets = applyProps.length ? applyProps : properties.map(p => p.id)
+    if (!targets.length) { setApplyMsg('沒有房型可套用'); return }
+    if (!applyFrom || !applyTo || applyFrom > applyTo) { setApplyMsg('請選擇有效日期區間'); return }
+    const adjusted = previewApplyPrice()
+    if (adjusted == null) return
+    const dates = getDateRange(applyFrom, applyTo, applyDow)
+    if (!dates.length) { setApplyMsg('區間內沒有符合星期的日期'); return }
+    setApplySaving(true); setApplyMsg(null)
+    try {
+      // 先抓區間內既有設定，套用時只覆蓋價格，保留 booking_status / 押金 / 加床等欄位
+      const exRes = await fetch(`/api/booking/pricing?from=${applyFrom}&to=${applyTo}`)
+      const exD = await exRes.json()
+      const exMap = new Map<string, {
+        booking_status?: string; deposit?: number | null; notes?: string | null
+        extra_person_fee?: number | null; extra_large_bed?: number | null; extra_small_bed?: number | null
+      }>()
+      for (const s of exD.settings ?? []) exMap.set(`${s.property_id}:${s.date}`, s)
+      const settings = targets.flatMap(pid => dates.map(date => {
+        const ex = exMap.get(`${pid}:${date}`)
+        return {
+          property_id: pid, date, price_override: adjusted,
+          booking_status: ex?.booking_status ?? 'open',
+          deposit: ex?.deposit ?? null,
+          extra_person_fee: ex?.extra_person_fee ?? null,
+          extra_large_bed: ex?.extra_large_bed ?? null,
+          extra_small_bed: ex?.extra_small_bed ?? null,
+          notes: ex?.notes ?? null,
+        }
+      }))
+      const res = await fetch('/api/booking/pricing', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings }),
+      })
+      if (!res.ok) { const d = await res.json(); setApplyMsg(d.error ?? '套用失敗') }
+      else { setApplyMsg(`已套用 NT$ ${adjusted.toLocaleString()} → ${targets.length} 房型 × ${dates.length} 天`); fetchData() }
+    } catch (e) {
+      setApplyMsg(String(e))
+    } finally { setApplySaving(false) }
+  }
+
   async function runCompare(force = false) {
     if (!cmpLocation.trim()) { setCmpErr('請輸入地區'); return }
     const key = `${cmpLocation.trim()}|${cmpCheckIn}|${cmpCheckOut}`
@@ -902,6 +960,75 @@ export default function PricingPage() {
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* 套用到動態定價（方案A：手動基準套用）*/}
+          {cmpStats && (
+            <div className="bg-white rounded-xl border p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800">套用到動態定價</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">以本次查到的行情為基準、加減幅度後寫入每日定價（你審核後套用，會覆蓋區間內既有訂價）。</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[11px] text-gray-500">基準</label>
+                  <select value={applyBasis} onChange={e => setApplyBasis(e.target.value as 'median' | 'min' | 'avg')}
+                    className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                    <option value="median">中位數 {cmpStats.median.toLocaleString()}</option>
+                    <option value="min">最低 {cmpStats.min.toLocaleString()}</option>
+                    <option value="avg">平均 {cmpStats.avg.toLocaleString()}</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-gray-500">調整 %</label>
+                  <input type="number" value={applyOffset} onChange={e => setApplyOffset(e.target.value)}
+                    placeholder="-5"
+                    className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-gray-500">起</label>
+                  <input type="date" value={applyFrom} onChange={e => setApplyFrom(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-gray-500">迄</label>
+                  <input type="date" value={applyTo} onChange={e => setApplyTo(e.target.value)}
+                    className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+              </div>
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="text-[11px] text-gray-500 mr-1">星期</span>
+                {DOW.map((d, i) => (
+                  <button key={i} onClick={() => setApplyDow(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])}
+                    className={`w-7 h-7 rounded-lg text-xs font-medium border transition-colors ${applyDow.includes(i) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200'}`}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+              {properties.length > 1 && (
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <span className="text-[11px] text-gray-500 mr-1">房型</span>
+                  {properties.map(p => (
+                    <button key={p.id} onClick={() => setApplyProps(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}
+                      className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${applyProps.includes(p.id) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200'}`}>
+                      {p.name}
+                    </button>
+                  ))}
+                  <span className="text-[11px] text-gray-400">未選＝全部</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2 flex-wrap border-t pt-3">
+                <div className="text-xs text-gray-600">
+                  套用價：<span className="font-bold text-indigo-600 text-base">NT$ {previewApplyPrice()?.toLocaleString() ?? '—'}</span>
+                  <span className="text-gray-400 ml-1">（{applyBasis === 'median' ? '中位數' : applyBasis === 'min' ? '最低' : '平均'} {(parseFloat(applyOffset) || 0) >= 0 ? '+' : ''}{applyOffset || 0}%）</span>
+                </div>
+                <button onClick={applyToPricing} disabled={applySaving}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+                  {applySaving ? '套用中…' : '套用到每日定價'}
+                </button>
+              </div>
+              {applyMsg && <div className="text-xs text-emerald-600">{applyMsg}</div>}
             </div>
           )}
 
