@@ -33,7 +33,7 @@ export default function EmailPage() {
   })
   const [saving, setSaving] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
-  const [folderEdit, setFolderEdit] = useState<{ id: string; label: string } | null>(null)
+  const [folderEdit, setFolderEdit] = useState<{ id: string; label: string; cancel: string } | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -244,29 +244,42 @@ export default function EmailPage() {
                 <div className="flex items-center gap-2 flex-wrap text-[11px]">
                   <span className="text-gray-400">{s.imap_host}:{s.imap_port}</span>
                   <span className={`px-1.5 py-0.5 rounded font-medium ${s.imap_folder.toUpperCase() === 'INBOX' ? 'bg-gray-100 text-gray-500' : 'bg-indigo-100 text-indigo-600'}`}>
-                    {s.imap_folder.toUpperCase() === 'INBOX' ? '自動掃描' : `標籤：${s.imap_folder}`}
+                    {s.imap_folder.toUpperCase() === 'INBOX' ? '自動掃描' : `標籤：${s.imap_folder}${s.cancel_folder ? `＋${s.cancel_folder}` : ''}`}
                   </span>
                   {folderEdit?.id !== s.id && (
-                    <button onClick={() => setFolderEdit({ id: s.id, label: s.imap_folder.toUpperCase() === 'INBOX' ? '訂房' : s.imap_folder })}
+                    <button onClick={() => setFolderEdit({ id: s.id, label: s.imap_folder.toUpperCase() === 'INBOX' ? '訂房' : s.imap_folder, cancel: s.cancel_folder ?? '' })}
                       className="text-indigo-500 hover:underline">變更模式</button>
                   )}
                 </div>
                 {folderEdit?.id === s.id && (
-                  <div className="flex items-center gap-1.5 flex-wrap bg-gray-50 border rounded-lg p-2">
+                  <div className="bg-gray-50 border rounded-lg p-2 space-y-2">
                     <button onClick={() => updateFolder(s, 'INBOX', '')}
-                      className="px-2 py-1 rounded-lg text-[11px] font-medium border bg-white text-gray-600 hover:bg-gray-100">
-                      自動掃描收件匣
+                      className="w-full px-2 py-1.5 rounded-lg text-[11px] font-medium border bg-white text-gray-600 hover:bg-gray-100">
+                      自動掃描整個收件匣（免標籤）
                     </button>
-                    <span className="text-[11px] text-gray-400">或標籤</span>
-                    <input value={folderEdit.label} onChange={e => setFolderEdit({ id: s.id, label: e.target.value })}
-                      placeholder="訂房"
-                      className="w-24 text-[11px] border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <button onClick={() => updateFolder(s, folderEdit.label.trim() || '訂房')}
-                      className="px-2 py-1 rounded-lg text-[11px] font-medium text-white bg-indigo-600 hover:bg-indigo-700">
-                      套用
-                    </button>
-                    <button onClick={() => setFolderEdit(null)}
-                      className="px-2 py-1 rounded-lg text-[11px] text-gray-500 hover:bg-gray-100">取消</button>
+                    <div className="text-[10px] text-gray-400 text-center">— 或使用 Gmail 標籤 —</div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] text-gray-500">訂房標籤</label>
+                        <input value={folderEdit.label} onChange={e => setFolderEdit({ ...folderEdit, label: e.target.value })}
+                          placeholder="訂房"
+                          className="w-full text-[11px] border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] text-gray-500">取消標籤（選填）</label>
+                        <input value={folderEdit.cancel} onChange={e => setFolderEdit({ ...folderEdit, cancel: e.target.value })}
+                          placeholder="留空即可"
+                          className="w-full text-[11px] border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => updateFolder(s, folderEdit.label.trim() || '訂房', folderEdit.cancel.trim())}
+                        className="flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+                        套用標籤
+                      </button>
+                      <button onClick={() => setFolderEdit(null)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] text-gray-500 hover:bg-gray-100">取消</button>
+                    </div>
                   </div>
                 )}
               </div>
