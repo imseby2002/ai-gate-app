@@ -12,6 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
+import { queryBnbCheckin } from '@/lib/cs/checkin-lookup'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -785,9 +786,32 @@ async function getAIReply(
       } catch { return false }
     }
 
-    const externalDataSection = userId
+    // 資料來源偏好（價格／密碼各自切換訂單系統或客服自建資料）
+    let priceFromCalculator = false
+    let passwordFromDatasource = false
+    if (userId) {
+      const { data: prefSrc } = await getServiceClient()
+        .from('cs_data_sources').select('config')
+        .eq('user_id', userId).eq('type', 'source_prefs').maybeSingle()
+      const pc = prefSrc?.config as { priceSource?: string; passwordSource?: string } | null
+      priceFromCalculator = pc?.priceSource === 'pricing_calculator'
+      passwordFromDatasource = pc?.passwordSource === 'datasource'
+    }
+
+    let externalDataSection = userId
       ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName })
       : ''
+
+    // 密碼來源為「訂單系統」時：偵測訂單號 → 查 bnb_daily_records/bookings，結果插到最前確保優先引用
+    if (userId && !passwordFromDatasource) {
+      const orderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
+      if (orderNum) {
+        try {
+          const bnb = await queryBnbCheckin(getServiceClient(), userId, orderNum)
+          if (bnb) externalDataSection = `\n\n${bnb}${externalDataSection}`
+        } catch { /* 不中斷主流程 */ }
+      }
+    }
 
     const bookingCompletion = knowledge.bookingFlowEnabled
       ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
@@ -798,7 +822,10 @@ async function getAIReply(
     let deterministicQuote = ''
     if (knowledge.bookingFlowEnabled && userId) {
       const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
-      const bq = await buildBookingModuleQuote(getServiceClient(), userId, google('gemini-2.5-flash'), convUserText, todayIso)
+      // 價格來源偏好：pricing_calculator 時跳過訂單系統算價，改用定價計算機
+      const bq = priceFromCalculator
+        ? null
+        : await buildBookingModuleQuote(getServiceClient(), userId, google('gemini-2.5-flash'), convUserText, todayIso)
       if (bq) {
         deterministicQuote = bq
       } else if (knowledge.pricingConfigs.length) {
