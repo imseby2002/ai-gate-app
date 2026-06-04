@@ -126,11 +126,9 @@ export default function PricingPage() {
   const [ruleSaving, setRuleSaving] = useState(false)
 
   // 周邊比價（SerpApi Google Hotels）
-  const todayStr = toDateStr(now)
-  const tomorrowStr = toDateStr(new Date(now.getTime() + 86400000))
   const [cmpLocation, setCmpLocation] = useState('')
-  const [cmpCheckIn, setCmpCheckIn] = useState(todayStr)
-  const [cmpCheckOut, setCmpCheckOut] = useState(tomorrowStr)
+  const [cmpCheckIn, setCmpCheckIn] = useState(toDateStr(now))
+  const [cmpCheckOut, setCmpCheckOut] = useState(toDateStr(new Date(now.getTime() + 86400000)))
   const [cmpItems, setCmpItems] = useState<{ name: string; type: string | null; price: number | null; rating: number | null; reviews: number | null }[]>([])
   const [cmpStats, setCmpStats] = useState<{ count: number; min: number; max: number; avg: number; median: number } | null>(null)
   const [cmpLoading, setCmpLoading] = useState(false)
