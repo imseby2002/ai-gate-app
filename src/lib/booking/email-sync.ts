@@ -199,7 +199,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     setting.property_id ?? (properties.length === 1 ? properties[0].id : null)
 
   const rawSources: Array<{ seq: number; source: Buffer }> = []
-  const client = new ImapFlow({
+  const imapOptions = {
     host: setting.imap_host,
     port: setting.imap_port,
     secure: true,
@@ -208,48 +208,65 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 180000,
-  })
+  }
+
+  // 完整連線流程（建立連線 + 偵測信箱 + 取 lock）失敗就換一個全新 client 重試。
+  // 「Connection not available」常發生在 connect 成功後、取 lock 前連線就斷掉，
+  // 所以必須重試整個流程，而非只重試 connect。
+  async function acquireConnection(): Promise<{
+    client: ImapFlow
+    lock: Awaited<ReturnType<ImapFlow['getMailboxLock']>>
+    mailboxToUse: string
+  }> {
+    let lastErr: unknown
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const c = new ImapFlow(imapOptions)
+      try {
+        await c.connect()
+
+        // For Gmail, auto-detect the \All folder (language-independent).
+        let mailboxToUse = setting.imap_folder
+        if (setting.imap_host.toLowerCase().includes('gmail.com')) {
+          try {
+            const mailboxes = await c.list()
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const allMail = mailboxes.find((m: any) => m.specialUse === '\\All' || m.flags?.has('\\All'))
+            if (allMail) mailboxToUse = allMail.path
+          } catch { /* ignore */ }
+        }
+
+        let lock: Awaited<ReturnType<ImapFlow['getMailboxLock']>>
+        if (mailboxToUse !== setting.imap_folder) {
+          try {
+            lock = await c.getMailboxLock(mailboxToUse)
+          } catch {
+            // Auto-detected folder not accessible, fall back to configured folder
+            mailboxToUse = setting.imap_folder
+            lock = await c.getMailboxLock(mailboxToUse)
+          }
+        } else {
+          lock = await c.getMailboxLock(mailboxToUse)
+        }
+
+        return { client: c, lock, mailboxToUse }
+      } catch (e) {
+        lastErr = e
+        try { await c.logout() } catch { try { c.close() } catch {} }
+        if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt))
+      }
+    }
+    throw lastErr
+  }
+
+  let client: ImapFlow
+  let lock: Awaited<ReturnType<ImapFlow['getMailboxLock']>>
+  let mailboxToUse: string
 
   try {
-    // 連線重試：首次同步常因網路抖動或 Gmail 節流而建立連線失敗
-    let connected = false
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await client.connect()
-        connected = true
-        break
-      } catch (e) {
-        if (attempt === 3) throw e
-        await new Promise(r => setTimeout(r, 2000 * attempt))
-      }
-    }
-    if (!connected) throw new Error('Connection not available')
-
-    // For Gmail, auto-detect the \All folder (language-independent).
-    // If the detected folder is not accessible (IMAP disabled in Gmail settings),
-    // fall back to the configured folder (INBOX).
-    let mailboxToUse = setting.imap_folder
-    if (setting.imap_host.toLowerCase().includes('gmail.com')) {
-      try {
-        const mailboxes = await client.list()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const allMail = mailboxes.find((m: any) => m.specialUse === '\\All' || m.flags?.has('\\All'))
-        if (allMail) mailboxToUse = allMail.path
-      } catch { /* ignore */ }
-    }
-
-    let lock: Awaited<ReturnType<typeof client.getMailboxLock>>
-    if (mailboxToUse !== setting.imap_folder) {
-      try {
-        lock = await client.getMailboxLock(mailboxToUse)
-      } catch {
-        // Auto-detected folder not accessible, fall back to configured folder
-        mailboxToUse = setting.imap_folder
-        lock = await client.getMailboxLock(mailboxToUse)
-      }
-    } else {
-      lock = await client.getMailboxLock(mailboxToUse)
-    }
+    const conn = await acquireConnection()
+    client = conn.client
+    lock = conn.lock
+    mailboxToUse = conn.mailboxToUse
 
     try {
       const baseSince = setting.last_synced_at
