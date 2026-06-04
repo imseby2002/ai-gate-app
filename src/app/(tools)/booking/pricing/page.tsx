@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import DailyPricingCalendar from './DailyPricingCalendar'
@@ -136,10 +136,32 @@ export default function PricingPage() {
   const [cmpLoading, setCmpLoading] = useState(false)
   const [cmpErr, setCmpErr] = useState<string | null>(null)
   const [cmpQueried, setCmpQueried] = useState(false)
+  const [cmpFromCache, setCmpFromCache] = useState(false)
+  // 前端 session 快取：同地區+同日期不重複打 SerpApi，省額度。
+  const cmpCache = useRef<Map<string, { items: typeof cmpItems; stats: typeof cmpStats }>>(new Map())
 
-  async function runCompare() {
+  // 自動帶入民宿所在地（縣市+地址）作為預設查詢地區。
+  useEffect(() => {
+    fetch('/api/booking/profile').then(r => r.json()).then(d => {
+      const p = d.profile
+      if (!p) return
+      const loc = [p.city, p.address].filter(Boolean).join(' ').trim()
+      if (loc) setCmpLocation(prev => prev || loc)
+    }).catch(() => {})
+  }, [])
+
+  async function runCompare(force = false) {
     if (!cmpLocation.trim()) { setCmpErr('請輸入地區'); return }
-    setCmpLoading(true); setCmpErr(null)
+    const key = `${cmpLocation.trim()}|${cmpCheckIn}|${cmpCheckOut}`
+    if (!force) {
+      const cached = cmpCache.current.get(key)
+      if (cached) {
+        setCmpItems(cached.items); setCmpStats(cached.stats)
+        setCmpErr(null); setCmpQueried(true); setCmpFromCache(true)
+        return
+      }
+    }
+    setCmpLoading(true); setCmpErr(null); setCmpFromCache(false)
     try {
       const res = await fetch('/api/booking/pricing/compare', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -147,7 +169,10 @@ export default function PricingPage() {
       })
       const d = await res.json()
       if (!res.ok) { setCmpErr(d.error ?? '查詢失敗'); setCmpItems([]); setCmpStats(null) }
-      else { setCmpItems(d.items ?? []); setCmpStats(d.stats ?? null) }
+      else {
+        setCmpItems(d.items ?? []); setCmpStats(d.stats ?? null)
+        cmpCache.current.set(key, { items: d.items ?? [], stats: d.stats ?? null })
+      }
       setCmpQueried(true)
     } catch (e) {
       setCmpErr(String(e))
@@ -728,7 +753,7 @@ export default function PricingPage() {
               <div className="sm:col-span-2 space-y-1">
                 <label className="text-xs font-medium text-gray-600">地區關鍵字</label>
                 <input value={cmpLocation} onChange={e => setCmpLocation(e.target.value)}
-                  placeholder="例：宜蘭礁溪、台南安平、墾丁"
+                  placeholder="自動帶入民宿所在地，或輸入：宜蘭礁溪"
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
@@ -743,14 +768,28 @@ export default function PricingPage() {
               </div>
             </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-[11px] text-gray-400">每次查詢消耗 1 次 SerpApi 額度（免費方案 250 次／月）</p>
-              <button onClick={runCompare} disabled={cmpLoading}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                {cmpLoading ? '查詢中…' : '查詢周邊房價'}
-              </button>
+              <p className="text-[11px] text-gray-400">每次查詢消耗 1 次 SerpApi 額度（免費 250 次／月）；相同地區+日期會用快取，不重複消耗</p>
+              <div className="flex gap-2">
+                {cmpQueried && (
+                  <button onClick={() => runCompare(true)} disabled={cmpLoading}
+                    className="px-3 py-2 rounded-lg text-sm font-medium border text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                    強制重查
+                  </button>
+                )}
+                <button onClick={() => runCompare()} disabled={cmpLoading}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                  {cmpLoading ? '查詢中…' : '查詢周邊房價'}
+                </button>
+              </div>
             </div>
             {cmpErr && <div className="text-xs text-red-500">{cmpErr}</div>}
           </div>
+
+          {cmpFromCache && (
+            <div className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ↺ 此結果來自快取（未消耗額度）。需要最新報價請按「強制重查」。
+            </div>
+          )}
 
           {/* 統計卡 */}
           {cmpStats && (
