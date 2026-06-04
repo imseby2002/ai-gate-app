@@ -26,6 +26,7 @@ export default function EmailPage() {
   const [adding, setAdding]         = useState(false)
   const [showPw, setShowPw]         = useState(false)
   const [preset, setPreset]         = useState('Gmail')
+  const [mode, setMode]             = useState<'label' | 'auto'>('label')
   const [form, setForm] = useState({
     email_address: '', imap_host: 'imap.gmail.com', imap_port: 993,
     imap_user: '', imap_password: '', imap_folder: '訂房', cancel_folder: '', property_id: '',
@@ -46,7 +47,17 @@ export default function EmailPage() {
   function applyPreset(name: string) {
     setPreset(name)
     const p = IMAP_PRESETS[name]
+    setMode(p.folder.toUpperCase() === 'INBOX' ? 'auto' : 'label')
     setForm(f => ({ ...f, imap_host: p.host, imap_port: p.port, imap_folder: p.folder, cancel_folder: p.cancel }))
+  }
+
+  function applyMode(m: 'label' | 'auto') {
+    setMode(m)
+    if (m === 'auto') {
+      setForm(f => ({ ...f, imap_folder: 'INBOX', cancel_folder: '' }))
+    } else {
+      setForm(f => ({ ...f, imap_folder: f.imap_folder.toUpperCase() === 'INBOX' ? '訂房' : f.imap_folder }))
+    }
   }
 
   async function sync(id?: string, reset = false) {
@@ -102,7 +113,7 @@ export default function EmailPage() {
 
   function resetForm() {
     setForm({ email_address: '', imap_host: 'imap.gmail.com', imap_port: 993, imap_user: '', imap_password: '', imap_folder: '訂房', cancel_folder: '', property_id: '' })
-    setPreset('Gmail'); setShowPw(false)
+    setPreset('Gmail'); setMode('label'); setShowPw(false)
   }
 
   async function del(id: string) {
@@ -274,20 +285,37 @@ export default function EmailPage() {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">訂房標籤</label>
-                <input value={form.imap_folder} onChange={e => setForm(f => ({ ...f, imap_folder: e.target.value }))}
-                  placeholder="訂房"
-                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">取消標籤<span className="text-gray-400">（選填）</span></label>
-                <input value={form.cancel_folder} onChange={e => setForm(f => ({ ...f, cancel_folder: e.target.value }))}
-                  placeholder="留空即可"
-                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">擷取模式</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => applyMode('label')}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-colors ${mode === 'label' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                  標籤模式
+                  <span className={`block text-[10px] font-normal ${mode === 'label' ? 'text-indigo-100' : 'text-gray-400'}`}>需在 Gmail 設標籤，較準</span>
+                </button>
+                <button type="button" onClick={() => applyMode('auto')}
+                  className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition-colors ${mode === 'auto' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                  自動掃描
+                  <span className={`block text-[10px] font-normal ${mode === 'auto' ? 'text-indigo-100' : 'text-gray-400'}`}>免設標籤，掃整個收件匣</span>
+                </button>
               </div>
             </div>
+            {mode === 'label' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">訂房標籤</label>
+                  <input value={form.imap_folder} onChange={e => setForm(f => ({ ...f, imap_folder: e.target.value }))}
+                    placeholder="訂房"
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">取消標籤<span className="text-gray-400">（選填）</span></label>
+                  <input value={form.cancel_folder} onChange={e => setForm(f => ({ ...f, cancel_folder: e.target.value }))}
+                    placeholder="留空即可"
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                </div>
+              </div>
+            )}
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">房源<span className="text-gray-400">（選填）</span></label>
               <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
@@ -297,7 +325,9 @@ export default function EmailPage() {
               </select>
             </div>
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-[11px] text-indigo-700 leading-relaxed">
-              標籤模式：在 Gmail 將訂房確認信與取消信都貼上同一個「訂房」標籤，系統會直接抓整個標籤的信，不靠關鍵字猜測，並由 AI 自動判斷每封信是預定或取消。標籤名稱需與 Gmail 完全一致。
+              {mode === 'label'
+                ? '標籤模式：在 Gmail 將訂房確認信與取消信都貼上同一個「訂房」標籤，系統會直接抓整個標籤的信，不靠關鍵字猜測，並由 AI 自動判斷每封信是預定或取消。標籤名稱需與 Gmail 完全一致。'
+                : '自動掃描：免在 Gmail 設標籤，系統直接掃描整個收件匣，靠各訂房平台的寄件者網域與主旨關鍵字判斷訂單，再由 AI 擷取內容。準確度略低於標籤模式，可能漏抓或誤抓非標準格式的信。'}
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={() => { setAdding(false); resetForm() }}
