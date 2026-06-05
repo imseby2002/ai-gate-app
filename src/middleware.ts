@@ -40,9 +40,12 @@ export async function middleware(request: NextRequest) {
     const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
     const sub = host.split('.')[0]
     const SUBDOMAIN_HOME: Record<string, string> = {
-      cs:        '/cs',
-      marketing: '/marketing-auto',
-      booking:   '/booking',
+      cs:        '/cs',            // 客服系統
+      booking:   '/booking',       // 訂房系統
+      marketing: '/marketing-auto',// 行銷系統
+      chat:      '/chat',          // 對話系統
+      work:      '/resume',        // 工作系統
+      www:       '/dashboard',     // 主控台
     }
     const subHome = SUBDOMAIN_HOME[sub]
     const rawPath = request.nextUrl.pathname
