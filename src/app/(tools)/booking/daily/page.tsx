@@ -145,7 +145,7 @@ export default function DailyPage() {
     if (!original || original[field] === (editVal || null)) return
     const newVal = editVal || null
 
-    // 大門密碼全棟共用且向後延續：套用到當日所有房間 + 此日期之後所有日期
+    // 大門密碼：全棟共用，套用到當日所有房間 + 之後所有日期
     if (field === 'gate_password') {
       setRows(prev => prev.map(r => ({ ...r, gate_password: newVal })))
       setSaving(id)
@@ -153,7 +153,24 @@ export default function DailyPage() {
         await fetch('/api/booking/daily', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ forward: true, from_date: date, gate_password: newVal }),
+          body: JSON.stringify({ forward: true, from_date: date, field: 'gate_password', value: newVal }),
+        })
+        await load()
+      } finally {
+        setSaving(null)
+      }
+      return
+    }
+
+    // 房門密碼：每房獨立，套用到「該房間」當天 + 之後所有日期
+    if (field === 'room_password') {
+      setRows(prev => prev.map(r => r.id === id ? { ...r, room_password: newVal } : r))
+      setSaving(id)
+      try {
+        await fetch('/api/booking/daily', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ forward: true, from_date: date, field: 'room_password', value: newVal, room_name: original.room_name }),
         })
       } finally {
         setSaving(null)
@@ -303,7 +320,7 @@ export default function DailyPage() {
       </button>
 
       <p className="mt-4 text-xs text-gray-400">
-        點擊任意格子即可編輯 · 大門密碼填一次會套用到當日所有房間並延續到之後日期（改某天則該天起更新）· 綠色「自動」= 已同步資料 · 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
+        點擊任意格子即可編輯 · 大門密碼填一次套用到當日所有房間並延續之後日期 · 房門密碼套用到該房間之後所有日期 ·（改某天則該天起更新）· 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
       </p>
 
       {/* 未分配訂單 */}

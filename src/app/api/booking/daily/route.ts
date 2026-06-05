@@ -181,14 +181,17 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json()
 
-  // 大門密碼向後套用：更新該用戶 date >= from_date 的所有房間（含當天）。
-  // 之後新建日期會由 GET 的「昨日密碼繼承」自動延續。
-  if (body.forward && body.from_date) {
-    const { error } = await supabase
+  // 密碼向後套用：更新該用戶 date >= from_date 的記錄（含當天）。
+  // 大門密碼(gate_password)套用到所有房間；房門密碼(room_password)只套用同一房間。
+  // 之後新建日期由 GET 的「昨日密碼繼承」自動延續。
+  if (body.forward && body.from_date && (body.field === 'gate_password' || body.field === 'room_password')) {
+    let q = supabase
       .from('bnb_daily_records')
-      .update({ gate_password: body.gate_password ?? null, updated_at: new Date().toISOString() })
+      .update({ [body.field]: body.value ?? null, updated_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .gte('date', body.from_date)
+    if (body.field === 'room_password' && body.room_name) q = q.eq('room_name', body.room_name)
+    const { error } = await q
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   }
