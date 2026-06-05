@@ -496,7 +496,9 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
   const results: string[] = []
   await Promise.all(sources.map(async (src) => {
     let result: string | null = null
-    if (src.type === 'json_pricing') {
+    if (src.type === 'source_prefs') {
+      return // 只是偏好設定，非查詢資料來源
+    } else if (src.type === 'json_pricing') {
       // 預訂流程開啟時直接注入所有定價模組，不依賴訊息關鍵字觸發
       result = bookingFlowEnabled
         ? formatPricingForAI(src.name, src.config as PricingConfig)

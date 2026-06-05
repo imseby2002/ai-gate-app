@@ -705,8 +705,8 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   if (sources?.length) {
     await Promise.all(sources.map(async (src) => {
       let result: string | null = null
-      if (src.type === 'faq') {
-        return // 已單獨處理
+      if (src.type === 'faq' || src.type === 'source_prefs') {
+        return // FAQ 單獨處理；source_prefs 只是偏好設定，非查詢資料來源
       } else if (src.type === 'json_pricing') {
         // 預訂流程開啟時直接注入所有定價模組，不依賴訊息關鍵字觸發
         result = bookingFlowEnabled
@@ -778,9 +778,9 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   // Detect numeric order number and sensitive-data intent
   const detectedOrderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
-  const hasSheetSources = sources?.some(s => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.enabled)
+  const hasSheetSources = sources?.some(s => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.type !== 'source_prefs' && s.enabled)
   const hasNumericSheetSources = sources?.some(s =>
-    s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.enabled &&
+    s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.type !== 'source_prefs' && s.enabled &&
     (s.config as SheetConfig).triggerMode === 'numeric'
   )
 
