@@ -1,10 +1,7 @@
-// 依訂單號碼從「訂單系統」(bnb_daily_records → bookings) 查今日入住資訊與門鎖密碼。
-// cs-chat 沙盒與 cs-webhook 生產共用。
+// 入住時間判斷（民宿資料 check_in_time 可設，預設 15:00）。
+// 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到入住時間一律不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function queryBnbCheckin(supabase: any, userId: string, orderNum: string): Promise<string | null> {
-  const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
-
-  // 入住時間（民宿資料可設，預設 15:00）；未到入住時間不提供密碼
+export async function checkBeforeCheckin(supabase: any, userId: string): Promise<{ before: boolean; checkinTime: string; nowHHMM: string }> {
   const { data: profile } = await supabase
     .from('bnb_profiles')
     .select('check_in_time')
@@ -13,7 +10,17 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
   let checkinTime = ((profile?.check_in_time as string) || '15:00').slice(0, 5)
   if (!/^\d{2}:\d{2}$/.test(checkinTime)) checkinTime = '15:00'
   const nowHHMM = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit' })
-  const beforeCheckin = nowHHMM < checkinTime
+  return { before: nowHHMM < checkinTime, checkinTime, nowHHMM }
+}
+
+// 依訂單號碼從「訂單系統」(bnb_daily_records → bookings) 查今日入住資訊與門鎖密碼。
+// cs-chat 沙盒與 cs-webhook 生產共用。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function queryBnbCheckin(supabase: any, userId: string, orderNum: string): Promise<string | null> {
+  const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+
+  // 入住時間（民宿資料可設，預設 15:00）；未到入住時間不提供密碼
+  const { before: beforeCheckin, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
   const notYetMsg = (label: string) =>
     `【入住資訊查詢結果】\n找到訂單「${orderNum}」${label}，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再輸入訂單號碼查詢房門與大門密碼。\n（嚴禁提供任何密碼或房號數字）`
 

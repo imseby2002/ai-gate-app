@@ -12,7 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -804,13 +804,20 @@ async function getAIReply(
       ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName })
       : ''
 
-    // 密碼來源為「訂單系統」時：偵測訂單號 → 查 bnb_daily_records/bookings，結果插到最前確保優先引用
-    if (userId && !passwordFromDatasource) {
+    // 偵測訂單號 → 提供入住密碼（兩種來源都受入住時間限制）
+    if (userId) {
       const orderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
       if (orderNum) {
         try {
-          const bnb = await queryBnbCheckin(getServiceClient(), userId, orderNum)
-          if (bnb) externalDataSection = `\n\n${bnb}${externalDataSection}`
+          if (!passwordFromDatasource) {
+            // 訂單系統路徑：查 bnb_daily_records/bookings（lib 內已做入住時間 gating）
+            const bnb = await queryBnbCheckin(getServiceClient(), userId, orderNum)
+            if (bnb) externalDataSection = `\n\n${bnb}${externalDataSection}`
+          } else {
+            // 資料來源密碼表路徑：未到入住時間加最高優先禁止指令
+            const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
+            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
+          }
         } catch { /* 不中斷主流程 */ }
       }
     }
