@@ -143,8 +143,28 @@ export default function DailyPage() {
     setEditing(null)
     const original = rows.find(r => r.id === id)
     if (!original || original[field] === (editVal || null)) return
+    const newVal = editVal || null
 
-    const update = { [field]: editVal || null }
+    // 大門密碼全棟共用：編輯時自動同步到當日所有房間，免逐間重複輸入
+    if (field === 'gate_password') {
+      const targets = rows.filter(r => r.gate_password !== newVal)
+      setRows(prev => prev.map(r => ({ ...r, gate_password: newVal })))
+      setSaving(id)
+      try {
+        await Promise.all(targets.map(r =>
+          fetch('/api/booking/daily', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: r.id, gate_password: newVal }),
+          })
+        ))
+      } finally {
+        setSaving(null)
+      }
+      return
+    }
+
+    const update = { [field]: newVal }
     setRows(prev => prev.map(r => r.id === id ? { ...r, ...update } : r))
     setSaving(id)
     try {
@@ -286,7 +306,7 @@ export default function DailyPage() {
       </button>
 
       <p className="mt-4 text-xs text-gray-400">
-        點擊任意格子即可編輯 · 綠色「自動」= 已同步資料 · 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
+        點擊任意格子即可編輯 · 大門密碼填一次會自動套用到當日所有房間 · 綠色「自動」= 已同步資料 · 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
       </p>
 
       {/* 未分配訂單 */}
