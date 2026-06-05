@@ -5180,7 +5180,7 @@ function Unit12CustomerService({
 
   // Breakfast webhook configs (多筆)
   const [breakfastSources, setBreakfastSources] = useState<CsDataSource[]>([])
-  const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string }>({ priceSource: 'booking_system', passwordSource: 'booking_system' })
+  const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string; checkinTime: string }>({ priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '' })
   const [savingPrefs, setSavingPrefs] = useState(false)
   const [editingBreakfast, setEditingBreakfast] = useState<CsDataSource | null | { id: '' }>(null)
   const [editingBreakfastForm, setEditingBreakfastForm] = useState({
@@ -5258,7 +5258,7 @@ function Unit12CustomerService({
     }).catch(() => {})
   }, [])
 
-  async function saveSourcePrefs(next: { priceSource: string; passwordSource: string }) {
+  async function saveSourcePrefs(next: { priceSource: string; passwordSource: string; checkinTime: string }) {
     setSourcePrefs(next)
     setSavingPrefs(true)
     try {
@@ -6890,6 +6890,16 @@ function Unit12CustomerService({
                   <button onClick={() => saveSourcePrefs({ ...sourcePrefs, passwordSource: 'datasource' })} disabled={savingPrefs}
                     className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'datasource' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單密碼表</button>
                 </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t pt-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-gray-700">入住時間</div>
+                  <div className="text-[10px] text-gray-400">未到此時間，AI 不提供密碼／房號（HH:MM）。留空則用民宿資料設定，預設 15:00</div>
+                </div>
+                <input type="time" value={sourcePrefs.checkinTime}
+                  onChange={e => setSourcePrefs({ ...sourcePrefs, checkinTime: e.target.value })}
+                  onBlur={() => saveSourcePrefs(sourcePrefs)} disabled={savingPrefs}
+                  className="text-sm border rounded-lg px-2 py-1.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
           )}

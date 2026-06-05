@@ -2,12 +2,27 @@
 // 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到入住時間一律不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function checkBeforeCheckin(supabase: any, userId: string): Promise<{ before: boolean; checkinTime: string; nowHHMM: string }> {
-  const { data: profile } = await supabase
-    .from('bnb_profiles')
-    .select('check_in_time')
+  let checkinTime = ''
+
+  // 1. 客服系統設定優先（source_prefs.checkinTime）——只有客服系統的用戶在此設定
+  const { data: pref } = await supabase
+    .from('cs_data_sources')
+    .select('config')
     .eq('user_id', userId)
+    .eq('type', 'source_prefs')
     .maybeSingle()
-  let checkinTime = ((profile?.check_in_time as string) || '15:00').slice(0, 5)
+  checkinTime = ((pref?.config as { checkinTime?: string } | null)?.checkinTime || '').slice(0, 5)
+
+  // 2. fallback 訂單系統/民宿資料的 check_in_time
+  if (!checkinTime) {
+    const { data: profile } = await supabase
+      .from('bnb_profiles')
+      .select('check_in_time')
+      .eq('user_id', userId)
+      .maybeSingle()
+    checkinTime = ((profile?.check_in_time as string) || '15:00').slice(0, 5)
+  }
+
   if (!/^\d{2}:\d{2}$/.test(checkinTime)) checkinTime = '15:00'
   const nowHHMM = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit' })
   return { before: nowHHMM < checkinTime, checkinTime, nowHHMM }

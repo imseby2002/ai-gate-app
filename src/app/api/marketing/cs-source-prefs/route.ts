@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-const DEFAULTS = { priceSource: 'booking_system', passwordSource: 'booking_system' }
+const DEFAULTS = { priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '' }
 
 // AI 客服資料來源偏好（價格／密碼各自切換訂單系統或客服自建資料），存於 cs_data_sources type=source_prefs。
 export async function GET() {
@@ -25,9 +25,11 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
+  const rawTime = typeof body.checkinTime === 'string' ? body.checkinTime.trim().slice(0, 5) : ''
   const config = {
     priceSource: body.priceSource === 'pricing_calculator' ? 'pricing_calculator' : 'booking_system',
     passwordSource: body.passwordSource === 'datasource' ? 'datasource' : 'booking_system',
+    checkinTime: /^\d{2}:\d{2}$/.test(rawTime) ? rawTime : '',
   }
 
   const { data: existing } = await supabase
