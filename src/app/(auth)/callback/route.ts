@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const system = searchParams.get('system')
-  const next = searchParams.get('next') ?? (isSystemKey(system) ? SYSTEMS[system].home : '/dashboard')
+  const next = searchParams.get('next') ?? (isSystemKey(system) ? SYSTEMS[system].home : '/apps')
 
   if (code) {
     const supabase = await createClient()

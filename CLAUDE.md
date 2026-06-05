@@ -16,8 +16,7 @@
 - 禁止執行 find / rg / grep 掃描整個專案
 
 ## 模型設定
-- 優先使用 claude-sonnet-4-5 或 claude-opus-4-5
-- 禁止使用 claude-opus-4-6（品質不穩定）
+- 優先使用最新的 Claude 模型（claude-sonnet-4-6、claude-opus-4-8）
 
 ## Auth 參考
 

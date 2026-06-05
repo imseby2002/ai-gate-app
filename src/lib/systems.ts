@@ -12,7 +12,7 @@ export interface SystemDef {
 }
 
 export const SYSTEMS: Record<SystemKey, SystemDef> = {
-  chat:      { key: 'chat',      label: 'AI 對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/dashboard',      prefixes: ['/dashboard', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage'] },
+  chat:      { key: 'chat',      label: 'AI 對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage'] },
   booking:   { key: 'booking',   label: '訂房系統',   desc: '房源、訂單、定價、線上訂房與通路同步', home: '/booking',        prefixes: ['/booking'] },
   cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
   marketing: { key: 'marketing', label: '行銷自動化', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing-auto', '/marketing', '/marketing-pipeline'] },
@@ -26,7 +26,8 @@ export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)
 export const SCOPE_SESSION_KEY = 'ai_gate_scope'
 
 // 不受 scope 限制、任何系統都可存取的共用路徑
-const SHARED_PREFIXES = ['/settings', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/dashboard']
+// /dashboard 不在此列：為 owner 專用總控台，非管理者會被導向 /apps
+const SHARED_PREFIXES = ['/settings', '/api', '/callback', '/login', '/register', '/logout', '/privacy']
 
 export function isSystemKey(s: string | undefined | null): s is SystemKey {
   return !!s && Object.prototype.hasOwnProperty.call(SYSTEMS, s)

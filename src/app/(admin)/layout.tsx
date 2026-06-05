@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .eq('id', user.id)
     .single()
 
-  if (profile?.user_type !== 'admin') redirect('/dashboard')
+  if (profile?.user_type !== 'admin') redirect('/apps')
 
   const navItems = [
     { href: '/admin', label: '總覽', icon: BarChart3 },

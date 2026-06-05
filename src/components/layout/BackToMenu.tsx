@@ -6,20 +6,16 @@ import { Zap, ArrowLeft } from 'lucide-react'
 import { SYSTEMS, SCOPE_SESSION_KEY, isSystemKey, systemForPath } from '@/lib/systems'
 
 interface BackToMenuProps {
-  isAdmin: boolean
   variant?: 'standalone' | 'tools'
 }
 
-export function BackToMenu({ isAdmin, variant = 'standalone' }: BackToMenuProps) {
+export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const pathname = usePathname()
-  const [href, setHref] = useState('/dashboard')
+  const [href, setHref] = useState('/apps')
 
   useEffect(() => {
-    // 管理員自由導航，返回主選單一律回 /dashboard
-    if (isAdmin) return
-
-    // 優先依「目前所在路徑」推回所屬系統首頁——比 per-tab scope 可靠，
-    // 即使用戶是從統一 App 進來（未設定 scope）也能正確返回該功能入口頁。
+    // 管理者與使用者一致：一律依「目前所在路徑」推回所屬功能系統主頁，
+    // 不再回 /dashboard（dashboard 為 owner 專用總控台）。
     // /marketing-auto 同時被行銷與客服系統共用，靠 ?module=cs 區分。
     const isCsMode = typeof window !== 'undefined'
       && new URLSearchParams(window.location.search).get('module') === 'cs'
@@ -32,14 +28,14 @@ export function BackToMenu({ isAdmin, variant = 'standalone' }: BackToMenuProps)
     const sys = systemForPath(pathname)
     if (sys) { setHref(SYSTEMS[sys].home); return }
 
-    // 路徑無法判別時，退回 per-tab scope，最後才是 /dashboard
+    // 路徑無法判別時，退回 per-tab scope，最後才是 /apps
     try {
       const scope = sessionStorage.getItem(SCOPE_SESSION_KEY)
       if (isSystemKey(scope)) setHref(SYSTEMS[scope].home)
     } catch {
-      // sessionStorage 不可用（私密模式等），保持 /dashboard
+      // sessionStorage 不可用（私密模式等），保持 /apps
     }
-  }, [isAdmin, pathname])
+  }, [pathname])
 
   if (variant === 'tools') {
     return (

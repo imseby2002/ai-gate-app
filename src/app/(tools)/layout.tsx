@@ -11,14 +11,13 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name,user_type').eq('id', user.id).single()
-  const isAdmin = profile?.user_type === 'admin'
+  const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       {/* Minimal top bar */}
       <header className="h-11 shrink-0 bg-white border-b flex items-center px-4 gap-3">
-        <BackToMenu isAdmin={isAdmin} variant="tools" />
+        <BackToMenu variant="tools" />
         <div className="h-4 w-px bg-gray-200" />
         <div className="flex items-center gap-1.5">
           <div className="h-5 w-5 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">

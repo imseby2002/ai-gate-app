@@ -31,7 +31,7 @@ type NavItem = {
 }
 
 const MAIN_NAV: NavItem[] = [
-  { labelKey: 'dashboard',   href: '/dashboard',      icon: LayoutDashboard, module: null },
+  { labelKey: 'dashboard',   href: '/apps',           icon: LayoutDashboard, module: null },
   { labelKey: 'assistants',  href: '/assistants',     icon: Bot,             module: 'chat' },
   { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat' },
   { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat' },
@@ -77,7 +77,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
   const chatVisible = isAdmin || (scope ? scope === 'chat' : mods.includes('chat'))
 
   const isActive = (href: string) =>
-    href === '/dashboard' ? pathname === '/dashboard' : pathname === href || pathname.startsWith(href + '/')
+    href === '/apps' ? pathname === '/apps' : pathname === href || pathname.startsWith(href + '/')
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon
@@ -120,14 +120,14 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
         collapsed ? 'justify-center px-3 py-4' : 'justify-between px-4 py-4'
       )}>
         {!collapsed ? (
-          <Link href="/dashboard" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+          <Link href="/apps" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
             <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-sm">
               <Zap className="h-4 w-4 text-white" />
             </div>
             <span className="font-bold text-base tracking-tight">AI GATE</span>
           </Link>
         ) : (
-          <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+          <Link href="/apps" className="hover:opacity-80 transition-opacity">
             <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-sm">
               <Zap className="h-4 w-4 text-white" />
             </div>

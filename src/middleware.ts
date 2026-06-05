@@ -43,9 +43,9 @@ export async function middleware(request: NextRequest) {
       cs:        '/cs',            // 客服系統
       booking:   '/booking',       // 訂房系統
       marketing: '/marketing-auto',// 行銷系統
-      chat:      '/chat',          // 對話系統
+      chat:      '/apps',          // 對話系統（功能選單）
       work:      '/resume',        // 工作系統
-      www:       '/dashboard',     // 主控台
+      www:       '/dashboard',     // owner 主控台
     }
     const subHome = SUBDOMAIN_HOME[sub]
     const rawPath = request.nextUrl.pathname
@@ -85,6 +85,7 @@ export async function middleware(request: NextRequest) {
     const needsProfileCheck = user && (
       pathname.startsWith('/admin') ||
       pathname.startsWith('/cli-proxy') ||
+      pathname.startsWith('/dashboard') ||
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
@@ -100,9 +101,17 @@ export async function middleware(request: NextRequest) {
 
       const isAdmin = profile?.user_type === 'admin'
 
-      // Admin guard — /admin 與 /cli-proxy 僅限總管理員
-      if (!isAdmin && (pathname.startsWith('/admin') || pathname.startsWith('/cli-proxy'))) {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Admin/Owner guard — /admin、/cli-proxy、/dashboard 僅限總管理員
+      // 非管理者一律導向 /apps（功能選單），用 nextUrl 保留原始 host（含子域名）
+      if (!isAdmin && (
+        pathname.startsWith('/admin') ||
+        pathname.startsWith('/cli-proxy') ||
+        pathname.startsWith('/dashboard')
+      )) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/apps'
+        url.search = ''
+        return NextResponse.redirect(url)
       }
 
       // Module guard — 檢查 enabled_modules，admin 跳過
@@ -118,7 +127,10 @@ export async function middleware(request: NextRequest) {
           if (pathname.startsWith(route)) {
             const hasAccess = modules.some(m => enabled.includes(m))
             if (!hasAccess) {
-              return NextResponse.redirect(new URL('/dashboard?blocked=' + modules[0], request.url))
+              const url = request.nextUrl.clone()
+              url.pathname = '/apps'
+              url.search = '?blocked=' + modules[0]
+              return NextResponse.redirect(url)
             }
           }
         }

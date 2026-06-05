@@ -19,7 +19,7 @@ export async function requireModule(moduleId: ModuleId) {
   if (profile.user_type === 'admin') return profile
 
   const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
-  if (!enabled.includes(moduleId)) redirect('/dashboard?blocked=' + moduleId)
+  if (!enabled.includes(moduleId)) redirect('/apps?blocked=' + moduleId)
 
   return profile
 }

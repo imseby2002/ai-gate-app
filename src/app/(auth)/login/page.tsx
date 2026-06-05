@@ -6,12 +6,12 @@ import { SYSTEM_LIST } from '@/lib/systems'
 
 export const dynamic = 'force-dynamic'
 
-// 系統選擇頁（全功能主登入頁）：已登入者一律導回 /dashboard
+// 系統選擇頁（全功能主登入頁）：已登入者一律導回 /apps（功能選單）
 export default async function LoginChooser() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
-    redirect('/dashboard')
+    redirect('/apps')
   }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-10">
