@@ -179,7 +179,21 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, ...updates } = await req.json()
+  const body = await req.json()
+
+  // 大門密碼向後套用：更新該用戶 date >= from_date 的所有房間（含當天）。
+  // 之後新建日期會由 GET 的「昨日密碼繼承」自動延續。
+  if (body.forward && body.from_date) {
+    const { error } = await supabase
+      .from('bnb_daily_records')
+      .update({ gate_password: body.gate_password ?? null, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .gte('date', body.from_date)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  const { id, ...updates } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const { data, error } = await supabase
