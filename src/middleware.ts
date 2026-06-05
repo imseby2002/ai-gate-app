@@ -34,7 +34,22 @@ export async function middleware(request: NextRequest) {
     )
 
     const { data: { user } } = await supabase.auth.getUser()
-    const pathname = request.nextUrl.pathname
+
+    // ── 子域名映射 ────────────────────────────────────────────
+    // cs.im-tourist.com / → /cs 首頁；功能內 /cs/* 路徑在該子域名下照常運作。
+    const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
+    const sub = host.split('.')[0]
+    const SUBDOMAIN_HOME: Record<string, string> = {
+      cs:        '/cs',
+      marketing: '/marketing-auto',
+      booking:   '/booking',
+    }
+    const subHome = SUBDOMAIN_HOME[sub]
+    const rawPath = request.nextUrl.pathname
+    // 子域名根路徑才改寫；其餘路徑（含 /api、/_next、/cs/* 等）維持原樣
+    const needSubRewrite = !!subHome && rawPath === '/'
+    // 後續 auth / guard 一律用「映射後」的路徑判斷
+    const pathname = needSubRewrite ? subHome! : rawPath
 
     // Public routes
     const isPublic =
@@ -105,6 +120,15 @@ export async function middleware(request: NextRequest) {
           }
         }
       }
+    }
+
+    // 子域名根路徑：改寫到對應功能首頁（沿用已通過 auth 的 cookies）
+    if (needSubRewrite) {
+      const url = request.nextUrl.clone()
+      url.pathname = subHome!
+      const rewriteRes = NextResponse.rewrite(url, { request })
+      supabaseResponse.cookies.getAll().forEach(c => rewriteRes.cookies.set(c))
+      return rewriteRes
     }
 
     return supabaseResponse
