@@ -15,12 +15,22 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
   chat:      { key: 'chat',      label: 'AI 對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage'] },
   booking:   { key: 'booking',   label: '訂房系統',   desc: '房源、訂單、定價、線上訂房與通路同步', home: '/booking',        prefixes: ['/booking'] },
   cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
-  marketing: { key: 'marketing', label: '行銷自動化', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing-auto', '/marketing', '/marketing-pipeline'] },
+  marketing: { key: 'marketing', label: '行銷自動化', desc: '行銷內容生成與自動化流水線', home: '/marketing-auto', prefixes: ['/marketing-auto', '/marketing-pipeline'] },
   leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
   resume:    { key: 'resume',    label: '履歷',       desc: '履歷生成與管理', home: '/resume',         prefixes: ['/resume'] },
 }
 
 export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)
+
+// 子域名 → 所屬系統（用於未登入登入導向與 OAuth callback 推斷）
+// 不靠 systemForPath：/marketing-auto 同時屬 cs 與 marketing，路徑反查有歧義
+export const SUBDOMAIN_SYSTEM: Record<string, SystemKey> = {
+  cs:        'cs',
+  booking:   'booking',
+  marketing: 'marketing',
+  chat:      'chat',
+  work:      'resume',
+}
 
 // scope 儲存在 sessionStorage（per-tab），不再用 cookie
 export const SCOPE_SESSION_KEY = 'ai_gate_scope'

@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { systemForPath } from '@/lib/systems'
+import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
 
 
 export async function middleware(request: NextRequest) {
@@ -72,8 +72,9 @@ export async function middleware(request: NextRequest) {
 
     if (!user && !isPublic) {
       const redirectUrl = request.nextUrl.clone()
-      // 導向該路徑所屬系統的登入頁；無對應則導向系統選擇頁
-      const sys = systemForPath(pathname)
+      // 導向登入頁：優先依「子域名」決定系統（避免 /marketing-auto 路徑反查歧義），
+      // 無對應子域時才退回依路徑反查；都無則導向系統選擇頁
+      const sys = SUBDOMAIN_SYSTEM[sub] ?? systemForPath(pathname)
       redirectUrl.pathname = sys ? `/login/${sys}` : '/login'
       redirectUrl.search = ''
       redirectUrl.searchParams.set('redirectedFrom', pathname)
