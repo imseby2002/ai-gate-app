@@ -28,5 +28,5 @@
         "verify",
         "run"
     ],
-    "model": "claude-sonnet-4-5-20251022"
+    "model": "opus"
 }

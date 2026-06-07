@@ -262,8 +262,47 @@ export default function DailyPage() {
         <span className="text-sm text-gray-500 ml-1">{fmtDate(date)}{isToday ? '（今天）' : ''}</span>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-3">
+        {loading ? (
+          <div className="py-12 text-center text-sm text-gray-400">載入中…</div>
+        ) : rows.length === 0 ? (
+          <div className="py-12 text-center text-sm text-gray-400">尚無資料，請手動新增房間</div>
+        ) : (
+          rows.map(row => (
+            <div key={row.id}
+              className={`rounded-2xl border bg-white shadow-sm p-4 space-y-2 ${saving === row.id ? 'opacity-60' : ''}`}>
+              <div className="flex items-start justify-between gap-2 pb-2 border-b">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10px] text-gray-400 mb-0.5">{COLS[0].label}</div>
+                  <Cell row={row} col={COLS[0]} editing={editing} editVal={editVal}
+                    showPasswords={showPasswords} saving={saving} inputRef={inputRef}
+                    onStartEdit={startEdit} onCommitEdit={commitEdit}
+                    onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} />
+                </div>
+                <button onClick={() => deleteRow(row.id)}
+                  className="p-1.5 text-gray-300 hover:text-red-400 rounded shrink-0">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                {COLS.slice(1).map(col => (
+                  <div key={col.key} className={col.key === 'order_number' ? 'col-span-2' : ''}>
+                    <div className="text-[10px] text-gray-400 mb-0.5">{col.label}</div>
+                    <Cell row={row} col={col} editing={editing} editVal={editVal}
+                      showPasswords={showPasswords} saving={saving} inputRef={inputRef}
+                      onStartEdit={startEdit} onCommitEdit={commitEdit}
+                      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Table (desktop) */}
+      <div className="hidden sm:block border rounded-xl overflow-hidden bg-white shadow-sm">
         <div className="grid bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wide"
           style={{ gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 2rem' }}>
           {COLS.map(c => (

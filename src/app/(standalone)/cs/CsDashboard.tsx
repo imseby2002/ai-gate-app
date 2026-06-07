@@ -55,7 +55,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
 
   return (
     <div className="min-h-full bg-slate-50/50 dark:bg-background">
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
         {/* ── Hero Card ── */}
         <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} p-8 text-white shadow-lg`}>
@@ -92,7 +92,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
         </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { label: t('todayMessages'), value: todayMessages, icon: MessageSquare, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/50', extra: null },
             { label: t('openTickets'),   value: openTickets,   icon: Ticket,        color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/50', extra: null },
@@ -105,14 +105,14 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
               extra: connectedPlatforms,
             },
           ].map(stat => (
-            <div key={stat.label} className="bg-card rounded-2xl border p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${stat.bg}`}>
+            <div key={stat.label} className="bg-card rounded-2xl border p-3 sm:p-5 shadow-sm">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className={`h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center shrink-0 ${stat.bg}`}>
                   <stat.icon className={`h-4 w-4 ${stat.color}`} />
                 </div>
-                <span className="text-xs text-muted-foreground font-medium">{stat.label}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-tight">{stat.label}</span>
               </div>
-              <div className="text-3xl font-bold tabular-nums">{stat.value}</div>
+              <div className="text-2xl sm:text-3xl font-bold tabular-nums">{stat.value}</div>
               {stat.extra && stat.extra.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {stat.extra.slice(0, 3).map(p => (
@@ -134,7 +134,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('quickActions')}</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {quickActions.map(action => (
               <Link key={action.label} href={action.href} className="group bg-card rounded-2xl border p-5 shadow-sm hover:border-primary/40 hover:shadow-md transition-all">
                 <div className="flex items-center gap-3 mb-2">
