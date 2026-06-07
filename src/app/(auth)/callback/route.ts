@@ -6,10 +6,14 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const { searchParams, origin } = url
   const code = searchParams.get('code')
-  // ?system= 在 OAuth 來回可能遺失 → 退回用子域名推斷所屬系統，避免錯誤落到 /apps
+  // 系統判定優先序：跨子域 cookie(oauth_sys) > ?system > 子域名推斷。
+  // cookie 不受 OAuth redirect 丟 query / fallback 到 Site URL 影響，最可靠。
+  const cookieSys = request.cookies.get('oauth_sys')?.value
   const system = searchParams.get('system')
   const sub = url.host.split('.')[0]
-  const sysKey = isSystemKey(system) ? system : SUBDOMAIN_SYSTEM[sub]
+  const sysKey = isSystemKey(cookieSys) ? cookieSys
+    : isSystemKey(system) ? system
+    : SUBDOMAIN_SYSTEM[sub]
   const next = searchParams.get('next') ?? (sysKey ? SYSTEMS[sysKey].home : '/apps')
 
   if (code) {
@@ -21,7 +25,11 @@ export async function GET(request: NextRequest) {
       if (sysKey) {
         redirectUrl.searchParams.set('_si', sysKey)
       }
-      return NextResponse.redirect(redirectUrl.toString())
+      const res = NextResponse.redirect(redirectUrl.toString())
+      // 用完即清除一次性 cookie（兩種 domain 都清，確保子域/主域都失效）
+      res.cookies.set('oauth_sys', '', { path: '/', maxAge: 0 })
+      res.cookies.set('oauth_sys', '', { path: '/', maxAge: 0, domain: '.im-tourist.com' })
+      return res
     }
   }
 

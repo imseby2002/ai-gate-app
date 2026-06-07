@@ -94,9 +94,16 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   async function handleGoogle() {
     setGoogleLoading(true); setError('')
     const supabase = createClient()
+    // 用跨子域 cookie 傳系統，redirectTo 不帶 query：
+    // 帶 query 的 redirectTo 比對不到 Supabase allowlist 的精確 `*.im-tourist.com/callback`，
+    // 會 fallback 到 Site URL(www) 且遺失 system → 掉到 /apps。乾淨的 /callback 才命中。
+    const isImTourist = window.location.hostname.endsWith('im-tourist.com')
+    document.cookie =
+      `oauth_sys=${system}; path=/; max-age=600; samesite=lax` +
+      (isImTourist ? '; domain=.im-tourist.com' : '')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/callback?system=${system}` },
+      options: { redirectTo: `${window.location.origin}/callback` },
     })
     if (error) { setError(error.message); setGoogleLoading(false) }
   }
