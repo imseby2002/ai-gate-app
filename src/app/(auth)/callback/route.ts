@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { SYSTEMS, isSystemKey, SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { SYSTEMS, isSystemKey, SUBDOMAIN_SYSTEM, SYSTEM_SUBDOMAIN } from '@/lib/systems'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -20,8 +20,15 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // 功能頁落回對應子域：callback 可能落在 www，依系統重建子域 host。
+      // session cookie 已設 domain=.im-tourist.com 跨子域共享，跳轉後仍保持登入。
+      let base = origin
+      if (sysKey && url.hostname.endsWith('im-tourist.com')) {
+        const targetSub = SYSTEM_SUBDOMAIN[sysKey]
+        if (targetSub) base = `https://${targetSub}.im-tourist.com`
+      }
       // 用 ?_si= 把 system 傳給 client，由 ScopeManager 寫入 sessionStorage（per-tab）
-      const redirectUrl = new URL(`${origin}${next}`)
+      const redirectUrl = new URL(`${base}${next}`)
       if (sysKey) {
         redirectUrl.searchParams.set('_si', sysKey)
       }

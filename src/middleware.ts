@@ -12,10 +12,15 @@ export async function middleware(request: NextRequest) {
   try {
     let supabaseResponse = NextResponse.next({ request })
 
+    // im-tourist 多子域：auth cookie 設 domain=.im-tourist.com 跨子域共享。localhost/preview 不設。
+    const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
+    const cookieDomain = host.endsWith('im-tourist.com') ? '.im-tourist.com' : undefined
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
+        ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
         cookies: {
           getAll() {
             return request.cookies.getAll()
@@ -37,7 +42,6 @@ export async function middleware(request: NextRequest) {
 
     // ── 子域名映射 ────────────────────────────────────────────
     // cs.im-tourist.com / → /cs 首頁；功能內 /cs/* 路徑在該子域名下照常運作。
-    const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
     const sub = host.split('.')[0]
     const SUBDOMAIN_HOME: Record<string, string> = {
       cs:        '/cs',            // 客服系統

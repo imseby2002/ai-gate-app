@@ -32,6 +32,15 @@ export const SUBDOMAIN_SYSTEM: Record<string, SystemKey> = {
   work:      'resume',
 }
 
+// 系統 → 子域名（OAuth callback 後讓功能頁落回對應子域，避免停在 www）
+export const SYSTEM_SUBDOMAIN: Partial<Record<SystemKey, string>> = {
+  cs:        'cs',
+  booking:   'booking',
+  marketing: 'marketing',
+  chat:      'chat',
+  resume:    'work',
+}
+
 // scope 儲存在 sessionStorage（per-tab），不再用 cookie
 export const SCOPE_SESSION_KEY = 'ai_gate_scope'
 
