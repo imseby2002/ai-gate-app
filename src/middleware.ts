@@ -61,6 +61,8 @@ export async function middleware(request: NextRequest) {
     // Public routes
     const isPublic =
       pathname === '/' ||
+      pathname.startsWith('/book/') ||
+      pathname.startsWith('/api/book/') ||
       pathname.startsWith('/login') ||
       pathname.startsWith('/register') ||
       pathname.startsWith('/auth') ||
