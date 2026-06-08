@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { code, num_nights = 1, total_price = 0 } = await req.json()
   if (!code) return NextResponse.json({ valid: false, error: '請輸入優惠碼' })
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
   const { data: promo } = await supabase
     .from('promo_codes')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('code', code.trim().toUpperCase())
     .eq('enabled', true)
     .maybeSingle()

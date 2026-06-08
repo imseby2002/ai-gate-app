@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const from = searchParams.get('from')
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('room_date_settings')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .order('date', { ascending: true })
 
   if (from) query = query.gte('date', from)
@@ -28,8 +29,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { settings } = await req.json()
   if (!Array.isArray(settings) || settings.length === 0)
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     deposit?: number | null; extra_person_fee?: number | null
     extra_large_bed?: number | null; extra_small_bed?: number | null
   }) => ({
-    user_id: user.id,
+    user_id: ctx.ownerId,
     property_id: s.property_id,
     date: s.date,
     booking_status: s.booking_status ?? 'open',
@@ -65,8 +66,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const propertyId = searchParams.get('property_id')
@@ -78,7 +79,7 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabase
     .from('room_date_settings')
     .delete()
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('property_id', propertyId)
     .eq('date', date)
 

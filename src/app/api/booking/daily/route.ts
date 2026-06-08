@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 // GET /api/booking/daily?date=2026-05-30
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const date = req.nextUrl.searchParams.get('date')
     ?? new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   const { data: existing } = await supabase
     .from('bnb_daily_records')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('date', date)
     .order('sort_order')
     .order('room_name')
@@ -26,20 +27,20 @@ export async function GET(req: NextRequest) {
   const { data: properties } = await supabase
     .from('properties')
     .select('id, name')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .order('created_at')
 
   const { data: todayBookings } = await supabase
     .from('bookings')
     .select('property_id, guest_name, platform_booking_id, check_in')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('check_in', date)
     .order('created_at')
 
   const { data: prevRecords } = await supabase
     .from('bnb_daily_records')
     .select('room_name, room_password, gate_password')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('date', prevDate)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
       const booking = bookingByPropId[p.id]
       const yesterday = prevByRoom[p.name]
       return {
-        user_id: user.id,
+        user_id: ctx.ownerId,
         date,
         room_name: p.name,
         room_password: yesterday?.room_password ?? null,
@@ -147,12 +148,12 @@ export async function GET(req: NextRequest) {
 // POST — 批次 upsert
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const rows = (Array.isArray(body) ? body : [body]).map((r, i) => ({
-    user_id: user.id,
+    user_id: ctx.ownerId,
     date: r.date,
     room_name: r.room_name,
     room_password: r.room_password ?? null,
@@ -176,8 +177,8 @@ export async function POST(req: NextRequest) {
 // PATCH — 單筆更新
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
 
@@ -188,7 +189,7 @@ export async function PATCH(req: NextRequest) {
     let q = supabase
       .from('bnb_daily_records')
       .update({ [body.field]: body.value ?? null, updated_at: new Date().toISOString() })
-      .eq('user_id', user.id)
+      .eq('user_id', ctx.ownerId)
       .gte('date', body.from_date)
     if (body.field === 'room_password' && body.room_name) q = q.eq('room_name', body.room_name)
     const { error } = await q
@@ -202,7 +203,7 @@ export async function PATCH(req: NextRequest) {
   const { data, error } = await supabase
     .from('bnb_daily_records')
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id).eq('user_id', user.id)
+    .eq('id', id).eq('user_id', ctx.ownerId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -212,14 +213,14 @@ export async function PATCH(req: NextRequest) {
 // DELETE — 刪除單筆
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await req.json()
   const { error } = await supabase
     .from('bnb_daily_records')
     .delete()
-    .eq('id', id).eq('user_id', user.id)
+    .eq('id', id).eq('user_id', ctx.ownerId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

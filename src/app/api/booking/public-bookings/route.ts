@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 import { Resend } from 'resend'
 import { sendBookingNotification } from '@/lib/booking/notify'
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data, error } = await supabase
     .from('public_bookings').select('*, properties(name)')
-    .eq('host_user_id', user.id).order('created_at', { ascending: false })
+    .eq('host_user_id', ctx.ownerId).order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ bookings: data ?? [] })
@@ -19,8 +20,8 @@ export async function GET() {
 // 確認 / 拒絕線上訂房申請（單一動作：確認＝轉正式訂單＋寄確認信；拒絕＝取消＋寄婉拒信）
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, action } = await req.json()
   if (!id || (action !== 'confirm' && action !== 'reject')) {
@@ -28,14 +29,14 @@ export async function POST(req: NextRequest) {
   }
 
   const { data: pb } = await supabase
-    .from('public_bookings').select('*').eq('id', id).eq('host_user_id', user.id).single()
+    .from('public_bookings').select('*').eq('id', id).eq('host_user_id', ctx.ownerId).single()
   if (!pb) return NextResponse.json({ error: '訂單不存在' }, { status: 404 })
 
   const { data: profile } = await supabase
-    .from('bnb_profiles').select('name,email,phone').eq('user_id', user.id).maybeSingle()
+    .from('bnb_profiles').select('name,email,phone').eq('user_id', ctx.ownerId).maybeSingle()
 
   if (action === 'reject') {
-    await supabase.from('public_bookings').update({ status: 'cancelled' }).eq('id', id).eq('host_user_id', user.id)
+    await supabase.from('public_bookings').update({ status: 'cancelled' }).eq('id', id).eq('host_user_id', ctx.ownerId)
     let emailed = false
     if (pb.guest_email && process.env.RESEND_API_KEY) {
       try {
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
 
   // 1) 轉成正式訂單
   const { data: newBooking, error: insErr } = await supabase.from('bookings').insert({
-    user_id: user.id,
+    user_id: ctx.ownerId,
     property_id: pb.property_id ?? null,
     platform: 'direct',
     guest_name: pb.guest_name,
@@ -85,27 +86,27 @@ export async function POST(req: NextRequest) {
   // 2) 標記 public_booking 已確認並連結
   await supabase.from('public_bookings')
     .update({ status: 'confirmed', converted_booking_id: newBooking.id })
-    .eq('id', id).eq('host_user_id', user.id)
+    .eq('id', id).eq('host_user_id', ctx.ownerId)
 
   // 3) 優惠碼計次（僅在此確認時計一次）
   if (pb.promo_code) {
-    await supabase.rpc('increment_promo_use', { p_user_id: user.id, p_code: pb.promo_code })
+    await supabase.rpc('increment_promo_use', { p_user_id: ctx.ownerId, p_code: pb.promo_code })
   }
 
   // 4) 寄確認信給旅客
-  const mail = await sendBookingNotification(supabase, user.id, newBooking.id, 'confirmation')
+  const mail = await sendBookingNotification(supabase, ctx.ownerId, newBooking.id, 'confirmation')
 
   return NextResponse.json({ ok: true, status: 'confirmed', booking_id: newBooking.id, emailed: mail.ok })
 }
 
 export async function PUT(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, status } = await req.json()
   const { data, error } = await supabase.from('public_bookings')
-    .update({ status }).eq('id', id).eq('host_user_id', user.id).select().single()
+    .update({ status }).eq('id', id).eq('host_user_id', ctx.ownerId).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ booking: data })
@@ -113,11 +114,11 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await req.json()
-  const { error } = await supabase.from('public_bookings').delete().eq('id', id).eq('host_user_id', user.id)
+  const { error } = await supabase.from('public_bookings').delete().eq('id', id).eq('host_user_id', ctx.ownerId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data } = await supabase
     .from('promo_codes')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .order('created_at', { ascending: false })
 
   return NextResponse.json({ promos: data ?? [] })
@@ -17,8 +18,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const { code, name = '', type, value, min_nights = 1, min_amount, valid_from, valid_to, max_uses, enabled = true } = body
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('promo_codes')
-    .insert({ user_id: user.id, code: code.trim().toUpperCase(), name, type, value, min_nights, min_amount: min_amount || null, valid_from: valid_from || null, valid_to: valid_to || null, max_uses: max_uses || null, enabled })
+    .insert({ user_id: ctx.ownerId, code: code.trim().toUpperCase(), name, type, value, min_nights, min_amount: min_amount || null, valid_from: valid_from || null, valid_to: valid_to || null, max_uses: max_uses || null, enabled })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -35,8 +36,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id, ...rest } = await req.json()
   if (!id) return NextResponse.json({ error: 'id 必填' }, { status: 400 })
@@ -49,7 +50,7 @@ export async function PUT(req: NextRequest) {
   const { data, error } = await supabase
     .from('promo_codes')
     .update({ ...rest, updated_at: new Date().toISOString() })
-    .eq('id', id).eq('user_id', user.id)
+    .eq('id', id).eq('user_id', ctx.ownerId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -58,11 +59,11 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await req.json()
-  const { error } = await supabase.from('promo_codes').delete().eq('id', id).eq('user_id', user.id)
+  const { error } = await supabase.from('promo_codes').delete().eq('id', id).eq('user_id', ctx.ownerId)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ ok: true })
 }

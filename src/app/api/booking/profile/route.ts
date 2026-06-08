@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data } = await supabase
     .from('bnb_profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .maybeSingle()
 
   return NextResponse.json({ profile: data })
@@ -17,8 +18,8 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const fields = [
@@ -36,7 +37,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('bnb_profiles')
-    .upsert({ name: '', ...updates, user_id: user.id }, { onConflict: 'user_id' })
+    .upsert({ name: '', ...updates, user_id: ctx.ownerId }, { onConflict: 'user_id' })
     .select()
     .single()
 

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const sp   = req.nextUrl.searchParams
   const year = parseInt(sp.get('year') ?? String(new Date().getFullYear()))
@@ -16,12 +17,12 @@ export async function GET(req: NextRequest) {
     supabase
       .from('bookings')
       .select('check_in, check_out, total_price, currency, platform, property_id, status, properties(name)')
-      .eq('user_id', user.id).gte('check_in', from).lte('check_in', to).neq('status', 'cancelled'),
+      .eq('user_id', ctx.ownerId).gte('check_in', from).lte('check_in', to).neq('status', 'cancelled'),
     supabase
       .from('bookings').select('id')
-      .eq('user_id', user.id).gte('check_in', from).lte('check_in', to).eq('status', 'cancelled'),
+      .eq('user_id', ctx.ownerId).gte('check_in', from).lte('check_in', to).eq('status', 'cancelled'),
     supabase
-      .from('properties').select('room_count').eq('user_id', user.id).eq('status', 'active'),
+      .from('properties').select('room_count').eq('user_id', ctx.ownerId).eq('status', 'active'),
   ])
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

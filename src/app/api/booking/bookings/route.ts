@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const sp = req.nextUrl.searchParams
   const property_id = sp.get('property_id')
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('bookings')
     .select('*, properties(name)')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .order('check_in', { ascending: false })
     .limit(limit)
 
@@ -32,8 +33,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('bookings')
     .insert({
-      user_id: user.id, property_id, platform, platform_booking_id,
+      user_id: ctx.ownerId, property_id, platform, platform_booking_id,
       guest_name, guest_email, guest_phone,
       check_in, check_out, num_guests, total_price, currency,
       status, special_requests, notes, source, extras,
@@ -62,8 +63,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const { id, ...rest } = body
@@ -72,7 +73,7 @@ export async function PUT(req: NextRequest) {
   const { data, error } = await supabase
     .from('bookings')
     .update({ ...rest, updated_at: new Date().toISOString() })
-    .eq('id', id).eq('user_id', user.id)
+    .eq('id', id).eq('user_id', ctx.ownerId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -81,11 +82,11 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await req.json()
-  const { error } = await supabase.from('bookings').delete().eq('id', id).eq('user_id', user.id)
+  const { error } = await supabase.from('bookings').delete().eq('id', id).eq('user_id', ctx.ownerId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

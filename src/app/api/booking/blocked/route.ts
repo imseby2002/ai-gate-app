@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const sp = req.nextUrl.searchParams
   const from = sp.get('from')
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('blocked_dates')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('reason', 'owner_block')
 
   if (from)        q = q.gte('date', from)
@@ -28,15 +29,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { property_id, dates } = await req.json()
   if (!property_id || !Array.isArray(dates) || dates.length === 0)
     return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
 
   const rows = dates.map((d: string) => ({
-    user_id: user.id,
+    user_id: ctx.ownerId,
     property_id,
     date: d,
     reason: 'owner_block',
@@ -55,8 +56,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase)
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { property_id, dates } = await req.json()
   if (!property_id || !Array.isArray(dates) || dates.length === 0)
@@ -65,7 +66,7 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabase
     .from('blocked_dates')
     .delete()
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('property_id', property_id)
     .eq('reason', 'owner_block')
     .in('date', dates)
