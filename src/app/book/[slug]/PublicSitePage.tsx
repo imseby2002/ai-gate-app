@@ -76,7 +76,7 @@ export default function PublicHomePage({
     <div>
       {/* ── Hero ── */}
       <section className="relative w-full overflow-hidden"
-        style={{ minHeight: tpl.heroLayout === 'minimal' ? '50vh' : '70vh' }}>
+        style={heroImg ? { minHeight: tpl.heroLayout === 'minimal' ? '50vh' : '70vh' } : undefined}>
         {heroImg ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
