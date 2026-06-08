@@ -149,7 +149,8 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
           </div>
         </div>
 
-        {/* ── Modules ── */}
+        {/* ── Modules ── 子域 scope 下只有單一系統，毋須再列模組卡片 */}
+        {!scope && (
         <div>
           <div className="flex items-center justify-between mb-4 px-0.5">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('modulesTitle')}</h2>
@@ -192,6 +193,7 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
             })}
           </div>
         </div>
+        )}
 
         {/* ── My Assistants ── */}
         {(isAdmin || enabledModules.includes('chat')) && (
