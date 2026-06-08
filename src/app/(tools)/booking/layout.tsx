@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import BnbSwitcher from './BnbSwitcher'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
@@ -83,6 +84,8 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
           </button>
         </div>
 
+        <BnbSwitcher collapsed={collapsed} />
+
         {/* Scrollable nav */}
         <nav className={`flex-1 overflow-y-auto min-h-0 pb-4 ${collapsed ? 'px-1.5' : 'px-2'}`}>
           {NAV_GROUPS.map((group, gi) => (
@@ -139,6 +142,7 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
+            <div className="px-2 pb-1"><BnbSwitcher /></div>
             <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-5">
               {NAV_GROUPS.map((group, gi) => (
                 <div key={gi} className={gi > 0 ? 'mt-1' : ''}>

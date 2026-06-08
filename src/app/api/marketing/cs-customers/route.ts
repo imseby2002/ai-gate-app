@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 // 客戶追蹤名單：列出此商家的所有 CS 客戶（可依產業／階段篩選）
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const industry = req.nextUrl.searchParams.get('industry')
   const stage = req.nextUrl.searchParams.get('stage')
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('cs_customers')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .order('last_message_at', { ascending: false })
     .limit(limit)
 

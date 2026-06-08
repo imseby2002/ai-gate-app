@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const industry = req.nextUrl.searchParams.get('industry') ?? 'homestay'
   const platform = req.nextUrl.searchParams.get('platform')
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('cs_messages')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('industry', industry)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -27,8 +28,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('cs_messages')
-    .insert({ user_id: user.id, industry, platform, from_id, from_name, message, reply, intent, risk, latency_ms, campaign_id, ticket_id })
+    .insert({ user_id: ctx.ownerId, industry, platform, from_id, from_name, message, reply, intent, risk, latency_ms, campaign_id, ticket_id })
     .select()
     .single()
 

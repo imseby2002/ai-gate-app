@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
@@ -25,15 +26,15 @@ function nanoid() {
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const industry = req.nextUrl.searchParams.get('industry') ?? 'homestay'
 
   const { data: src } = await supabase
     .from('cs_data_sources')
     .select('id, config')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('type', 'faq')
     .eq('industry', industry)
     .maybeSingle()
@@ -44,8 +45,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { q, a, keywords, industry = 'homestay', autoSuggest = false, context = '' } = await req.json()
 
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
   let { data: src } = await supabase
     .from('cs_data_sources')
     .select('id, config')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('type', 'faq')
     .eq('industry', industry)
     .maybeSingle()
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
     const { data: created } = await supabase
       .from('cs_data_sources')
       .insert({
-        user_id: user.id,
+        user_id: ctx.ownerId,
         name: '自動學習 FAQ',
         type: 'faq',
         config: { items: [newItem] },
@@ -135,8 +136,8 @@ export async function POST(req: NextRequest) {
 // DELETE /api/marketing/cs-faq?industry=homestay&itemId=xxx
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const industry = req.nextUrl.searchParams.get('industry') ?? 'homestay'
   const itemId   = req.nextUrl.searchParams.get('itemId')
@@ -145,7 +146,7 @@ export async function DELETE(req: NextRequest) {
   const { data: src } = await supabase
     .from('cs_data_sources')
     .select('id, config')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('type', 'faq')
     .eq('industry', industry)
     .maybeSingle()
@@ -164,15 +165,15 @@ export async function DELETE(req: NextRequest) {
 // PATCH /api/marketing/cs-faq  → update one item
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { industry = 'homestay', itemId, q, a, keywords } = await req.json()
 
   const { data: src } = await supabase
     .from('cs_data_sources')
     .select('id, config')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('type', 'faq')
     .eq('industry', industry)
     .maybeSingle()
