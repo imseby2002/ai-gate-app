@@ -34,7 +34,10 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
   const isAdmin = profile?.user_type === 'admin'
 
   // 潛在客戶已歸類至行銷中心，不在選單格單獨顯示（權限模組仍保留於 MODULES）
-  const visibleModules = MODULES.filter(m => m.id !== 'leads')
+  // 一般使用者只顯示有權限的模組（與左側選單一致）；管理者顯示全部
+  const visibleModules = MODULES.filter(
+    m => m.id !== 'leads' && (isAdmin || enabledModules.includes(m.id))
+  )
 
   const { data: usageData } = await supabase
     .from('usage_daily')
