@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
+import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
 import {
   MessageSquare, Bot, BarChart3, TrendingUp, Lock,
   ArrowRight, Sparkles, ChevronRight, Zap,
@@ -33,11 +35,19 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
   const enabledModules: string[] = profile?.enabled_modules ?? MODULES.map(m => m.id)
   const isAdmin = profile?.user_type === 'admin'
 
+  // 子域 scope：chat.im-tourist.com 等子域只屬於單一系統，主頁僅顯示該系統模組（與左側選單一致）
+  const host = (await headers()).get('host')?.split(':')[0].toLowerCase() ?? ''
+  const sub = host.split('.')[0]
+  const scope = SUBDOMAIN_SYSTEM[sub]
+
   // 潛在客戶已歸類至行銷中心，不在選單格單獨顯示（權限模組仍保留於 MODULES）
-  // 一般使用者只顯示有權限的模組（與左側選單一致）；管理者顯示全部
-  const visibleModules = MODULES.filter(
-    m => m.id !== 'leads' && (isAdmin || enabledModules.includes(m.id))
-  )
+  // 非管理者：帶子域 scope 時只顯示該系統模組，否則只顯示有權限的模組；管理者顯示全部
+  const visibleModules = MODULES.filter(m => {
+    if (m.id === 'leads') return false
+    if (isAdmin) return true
+    if (scope) return m.id === scope
+    return enabledModules.includes(m.id)
+  })
 
   const { data: usageData } = await supabase
     .from('usage_daily')
