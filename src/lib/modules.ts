@@ -36,8 +36,8 @@ export const MODULES = [
   },
   {
     id: 'resume',
-    label: '履歷優化',
-    desc: 'AI 履歷潤稿與職缺媒合',
+    label: '職場助手',
+    desc: 'AI 全方位職場助理 — 求職 × 日常 × 進階',
     href: '/resume',
     emoji: '📄',
     color: 'from-rose-500 to-pink-600',
