@@ -22,6 +22,24 @@ function getServiceClient() {
   )
 }
 
+// LINE 省額度：暫存「AI 未使用」的 reply token 供收件匣 1 分鐘內免費回覆；
+// token 為空字串代表 AI 已用掉 → 清除。表未建立時靜默略過（自動 fallback Push）。
+async function persistLineReplyToken(userId: string, platform: string, fromId: string, replyToken: string) {
+  if (platform !== 'line' && platform !== 'line-oa') return
+  try {
+    const sb = getServiceClient()
+    if (!replyToken) {
+      await sb.from('cs_reply_tokens').delete()
+        .eq('user_id', userId).eq('platform', platform).eq('from_id', fromId)
+    } else {
+      await sb.from('cs_reply_tokens').upsert(
+        { user_id: userId, platform, from_id: fromId, reply_token: replyToken, created_at: new Date().toISOString() },
+        { onConflict: 'user_id,platform,from_id' }
+      )
+    }
+  } catch { /* 表可能尚未建立，不中斷主流程 */ }
+}
+
 // ── 業務顧問 / 客戶認識 / 問價次數 ────────────────────────────────────────────────
 const PRICE_RE = /價格|價錢|價位|多少錢|費用|報價|怎麼算|多少|預算|划算|便宜|折扣|優惠|price|cost|how much|rate|quote|budget|discount/i
 
@@ -1070,6 +1088,8 @@ export async function POST(
 
       const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, imgBuf, imgMime)
       if (reply && token && replyToken) await replyLine(replyToken, reply, token)
+      // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
+      void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
       await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
     }
     return NextResponse.json({ ok: true })

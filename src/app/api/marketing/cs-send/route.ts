@@ -22,12 +22,34 @@ export async function POST(req: NextRequest) {
   if (!platform || !to) return NextResponse.json({ error: '缺少 platform 或 to' }, { status: 400 })
   if (!message) return NextResponse.json({ error: '訊息不可為空' }, { status: 400 })
 
-  // 1. 推回原平台
-  const result = await sendToCustomer(ctx.ownerId, platform, to, message)
-  if (!result.ok) return NextResponse.json({ error: result.error ?? '送訊失敗' }, { status: 502 })
-
   const admin = await createAdminClient()
   const now = new Date().toISOString()
+
+  // LINE 省額度：取客戶最近未用的 reply token，1 分鐘內可走免費 Reply API
+  let lineReplyToken: string | undefined
+  const isLine = platform === 'line' || platform === 'line-oa'
+  if (isLine) {
+    try {
+      const { data: tok } = await admin
+        .from('cs_reply_tokens').select('reply_token, created_at')
+        .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to)
+        .maybeSingle()
+      if (tok?.reply_token && Date.now() - new Date(tok.created_at).getTime() < 60_000) {
+        lineReplyToken = tok.reply_token
+      }
+    } catch { /* 表未建立 → 略過，直接 Push */ }
+  }
+
+  // 1. 推回原平台（LINE 有 token 則優先 Reply API，失敗自動 fallback Push）
+  const result = await sendToCustomer(ctx.ownerId, platform, to, message, { lineReplyToken })
+  if (!result.ok) return NextResponse.json({ error: result.error ?? '送訊失敗' }, { status: 502 })
+
+  // reply token 一次性，無論結果如何用完即刪
+  if (isLine) {
+    admin.from('cs_reply_tokens').delete()
+      .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to)
+      .then(() => {}, () => {})
+  }
 
   // 2. 記錄 agent 回覆（供收件匣 thread 顯示，並計入指標）
   await admin.from('cs_messages').insert({

@@ -37,27 +37,45 @@ export interface SendResult {
  * @param to       客戶在該平台的 id（cs_messages.from_id）
  * @param text     要送出的文字
  */
+export interface SendOptions {
+  /** LINE 專用：客戶傳訊後 ~1 分鐘內的 reply token；提供時優先用免費 Reply API，失敗才 fallback 到 Push。 */
+  lineReplyToken?: string
+}
+
 export async function sendToCustomer(
   userId: string,
   platform: string,
   to: string,
   text: string,
-): Promise<SendResult> {
+  opts: SendOptions = {},
+): Promise<SendResult & { channel?: 'reply' | 'push' }> {
   if (!text.trim()) return { ok: false, error: '訊息不可為空' }
   if (!to) return { ok: false, error: '缺少收件人 id' }
 
   try {
-    // ── LINE（主動推播 push，非 reply token） ──────────────────────────────
+    // ── LINE：1 分鐘內優先用免費 Reply API（reply token），逾時 / 失敗 fallback Push ──
     if (platform === 'line' || platform === 'line-oa') {
       const token = (await loadCredentials(userId, platform)).line_channel_access_token ?? ''
       if (!token) return { ok: false, error: '尚未設定 LINE Channel Access Token' }
+
+      // 先試免費 Reply API（reply token 一次性，可能已過期/被用過 → 失敗就轉 Push）
+      if (opts.lineReplyToken) {
+        const r = await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ replyToken: opts.lineReplyToken, messages: [{ type: 'text', text }] }),
+        })
+        if (r.ok) return { ok: true, channel: 'reply' }
+        // 非 ok（token 失效）→ 落入下方 Push
+      }
+
       const res = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
       })
       if (!res.ok) return { ok: false, error: `LINE 推播失敗（${res.status}）` }
-      return { ok: true }
+      return { ok: true, channel: 'push' }
     }
 
     // ── WhatsApp Cloud / Business（24 小時客服窗口內可主動送） ─────────────
