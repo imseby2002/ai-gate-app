@@ -49,3 +49,5 @@ docker/cli-proxy/logs/
 next-env.d.ts
 
 .vercel
+
+.claude/
