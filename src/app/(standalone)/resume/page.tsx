@@ -875,6 +875,20 @@ function ToolCard({ tool, onClick }: { tool: ToolConfig; onClick: () => void }) 
 export default function WorkerToolsPage() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<typeof CATEGORIES[number]['id']>('job-search')
+  const [userType, setUserType] = useState<string | null>(null)
+
+  // 員工帳號隱藏「求職階段」（公司內部員工不需求職功能）
+  const isEmployee = userType === 'employee'
+  const visibleCategories = CATEGORIES.filter(c => !(isEmployee && c.id === 'job-search'))
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setUserType(d.user_type ?? null)).catch(() => {})
+  }, [])
+
+  // 員工預設停在第一個可見分類，且避免選到被隱藏的求職工具
+  useEffect(() => {
+    if (isEmployee && activeCategory === 'job-search') setActiveCategory('workplace')
+  }, [isEmployee, activeCategory])
 
   const tool = TOOL_CONFIGS.find(t => t.id === selectedTool)
 
@@ -912,7 +926,7 @@ export default function WorkerToolsPage() {
         <>
           {/* Category Tabs */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit mb-6">
-            {CATEGORIES.map(cat => (
+            {visibleCategories.map(cat => (
               <button key={cat.id} type="button" onClick={() => setActiveCategory(cat.id)}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
                 style={activeCategory === cat.id
