@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
 import {
   MessageSquare, Bot, BarChart3, TrendingUp, Lock,
-  ArrowRight, Sparkles, ChevronRight, Zap,
+  ArrowRight, Sparkles, ChevronRight, Zap, Brain,
 } from 'lucide-react'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { MODULES } from '@/lib/modules'
@@ -114,6 +114,13 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
               >
                 <Bot className="h-4 w-4" />
                 {t('myAssistantBtn')}
+              </Link>
+              <Link
+                href="/think"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/70 dark:bg-white/10 border border-white/50 text-sm font-medium hover:bg-white/90 dark:hover:bg-white/15 transition-colors"
+              >
+                <Brain className="h-4 w-4" />
+                思維決策
               </Link>
             </div>
           )}
