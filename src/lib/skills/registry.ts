@@ -3,7 +3,7 @@
 // run() 透過 ctx 取得模型呼叫與圖片生成能力，與既有 marketing 基礎一致。
 import pptxgen from 'pptxgenjs'
 
-export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation' | 'social' | 'decision'
+export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation' | 'social'
 
 export interface SkillField {
   name: string
@@ -42,8 +42,7 @@ export interface SkillDef {
   label: string
   description: string
   category: SkillCategory
-  // 權限模組（對應 enabled_modules）：marketing=行銷中心；chat=基礎，用於「思維決策」
-  module: 'marketing' | 'chat'
+  module: 'marketing'
   // 基礎固定扣點（單位與 credit_transactions.amount_usd 相同）
   priceCredits: number
   fields: SkillField[]
@@ -657,139 +656,6 @@ const liveStreamCopywriter: SkillDef = {
   },
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// 思維決策（module='chat'）—— 用名家思維模型分析你的決策與問題
-// ══════════════════════════════════════════════════════════════════════════
-
-// 14. 多元思維決策（靈感：查理・芒格）
-const mungerMentalModels: SkillDef = {
-  id: 'munger-mental-models',
-  label: '多元思維決策',
-  description: '用多元思維模型與反向思考，拆解你的決策與盲點。',
-  category: 'decision',
-  module: 'chat',
-  priceCredits: 0.03,
-  fields: [
-    { name: 'decision', label: '你要做的決定 / 問題', type: 'textarea', required: true, placeholder: '例：該不該離職創業？要不要接這個案子？' },
-    { name: 'context', label: '背景與限制', type: 'textarea', placeholder: '相關資訊、資源、時間、在意的點…' },
-    { name: 'options', label: '正在考慮的選項', type: 'textarea', placeholder: '列出你目前想到的幾個選擇' },
-  ],
-  async run(input, ctx) {
-    const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system: '你是一位精通多元思維模型的決策顧問，秉持查理・芒格的方法：跨學科思維模型、反向思考（avoid stupidity）、機會成本、誘因偏誤、能力圈。理性、坦率、不灌雞湯，使用繁體中文。',
-      prompt: `請用多元思維模型分析以下決策：①先「反過來想」——什麼會讓這件事失敗 ②套用 3-4 個相關思維模型（如機會成本、誘因、複利、安全邊際、能力圈）逐一分析 ③點出你可能有的認知偏誤 ④給出明確建議與一句話總結。
-
-要做的決定/問題：${str(input, 'decision')}
-背景與限制：${str(input, 'context', '（未提供）')}
-正在考慮的選項：${str(input, 'options', '（未提供，請協助釐清）')}`,
-      maxOutputTokens: 2400,
-    })
-    return { output: text, data: { inputTokens, outputTokens } }
-  },
-}
-
-// 15. 第一性原理拆解（靈感：伊隆・馬斯克）
-const firstPrinciples: SkillDef = {
-  id: 'first-principles',
-  label: '第一性原理拆解',
-  description: '把問題拆解到最根本的事實，再從零重新建構解法。',
-  category: 'decision',
-  module: 'chat',
-  priceCredits: 0.03,
-  fields: [
-    { name: 'problem', label: '要解決的問題', type: 'textarea', required: true, placeholder: '例：如何把這項產品成本降一半？如何快速學會某技能？' },
-    { name: 'assumptions', label: '現有做法 / 既有假設', type: 'textarea', placeholder: '目前大家怎麼做、你預設的限制是什麼…' },
-  ],
-  async run(input, ctx) {
-    const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system: '你是第一性原理思考教練，師法馬斯克：拒絕類比推理，把問題拆到不可再分的基本事實，再從根本重建。犀利、追問本質，使用繁體中文。',
-      prompt: `請用第一性原理分析：①列出此問題的基本事實（不可再分的真實限制）②指出哪些「既有假設」其實只是慣例、可以打破 ③從基本事實重新推導出 2-3 條全新解法 ④下一步該驗證什麼。
-
-要解決的問題：${str(input, 'problem')}
-現有做法/既有假設：${str(input, 'assumptions', '（未提供，請一併推敲）')}`,
-      maxOutputTokens: 2200,
-    })
-    return { output: text, data: { inputTokens, outputTokens } }
-  },
-}
-
-// 16. 價值投資視角（靈感：華倫・巴菲特）
-const valueInvesting: SkillDef = {
-  id: 'value-investing-lens',
-  label: '價值投資視角',
-  description: '用護城河、安全邊際、長期視角評估一筆投資或生意。',
-  category: 'decision',
-  module: 'chat',
-  priceCredits: 0.03,
-  fields: [
-    { name: 'target', label: '標的 / 生意 / 機會', type: 'text', required: true, placeholder: '例：某檔股票、加盟一間店、投資朋友的新創' },
-    { name: 'info', label: '已知資訊', type: 'textarea', required: true, placeholder: '商業模式、財務、競爭、價格、你了解的程度…' },
-    { name: 'concern', label: '最想釐清的問題', type: 'text', placeholder: '例：現在的價格合理嗎？風險在哪？' },
-  ],
-  async run(input, ctx) {
-    const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system: '你是價值投資分析師，秉持巴菲特原則：能力圈、護城河、誠信的管理層、安全邊際、長期持有、別人貪婪我恐懼。穩健、保守、重視風險，使用繁體中文。本內容為思維分析，非投資建議。',
-      prompt: `請用價值投資視角評估：①這是否在一般人的「能力圈」內、你真的懂嗎 ②護城河與長期競爭力 ③主要風險與下行情境 ④是否有「安全邊際」（價格 vs 內在價值的粗略判斷）⑤巴菲特式結論：該出手、觀望、還是避開，並說明理由。最後加一句免責提醒：此為思維框架，非投資建議。
-
-標的/生意/機會：${str(input, 'target')}
-已知資訊：${str(input, 'info')}
-最想釐清的問題：${str(input, 'concern', '（未提供）')}`,
-      maxOutputTokens: 2200,
-    })
-    return { output: text, data: { inputTokens, outputTokens } }
-  },
-}
-
-// 17. 反脆弱風險評估（靈感：納西姆・塔勒布）
-const antifragileRisk: SkillDef = {
-  id: 'antifragile-risk',
-  label: '反脆弱風險評估',
-  description: '評估黑天鵝與下行風險，把決策設計成「跌倒也能受益」。',
-  category: 'decision',
-  module: 'chat',
-  priceCredits: 0.03,
-  fields: [
-    { name: 'decision', label: '要評估的決策 / 計畫', type: 'textarea', required: true, placeholder: '例：把存款 all in 一個項目、辭職全職做某件事' },
-    { name: 'downside', label: '你擔心的最壞情況', type: 'textarea', placeholder: '最糟可能發生什麼、會損失什麼…' },
-  ],
-  async run(input, ctx) {
-    const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system: '你是風險思考顧問，秉持塔勒布的反脆弱哲學：重視尾部風險、不對稱性、槓鈴策略、避免毀滅性風險（別賭上無法承受的）、讓波動為你所用。清醒、反直覺，使用繁體中文。',
-      prompt: `請做反脆弱風險評估：①這個決策的下行風險有多大、有沒有「歸零/毀滅」的可能 ②上行與下行是否對稱（賺有限但虧無限？還是反過來）③如何用「槓鈴策略」重構：大部分保守 + 小部分搏高回報 ④如何設計成「就算失敗也能學到/受益」⑤一條保命底線。
-
-要評估的決策/計畫：${str(input, 'decision')}
-擔心的最壞情況：${str(input, 'downside', '（未提供，請協助推演）')}`,
-      maxOutputTokens: 2200,
-    })
-    return { output: text, data: { inputTokens, outputTokens } }
-  },
-}
-
-// 18. 人生槓桿與選擇（靈感：納瓦爾・拉維坎特）
-const navalLeverage: SkillDef = {
-  id: 'naval-leverage',
-  label: '人生槓桿與選擇',
-  description: '從財富槓桿、長期主義與幸福視角，分析你的人生選擇。',
-  category: 'decision',
-  module: 'chat',
-  priceCredits: 0.03,
-  fields: [
-    { name: 'situation', label: '你的處境', type: 'textarea', required: true, placeholder: '例：30 歲、上班族、想累積資產但不知方向' },
-    { name: 'question', label: '你想釐清的問題', type: 'textarea', required: true, placeholder: '例：該專精一技還是多方嘗試？怎麼建立被動收入？' },
-  ],
-  async run(input, ctx) {
-    const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system: '你是人生與財富思考夥伴，秉持納瓦爾的觀點：靠特定知識 + 槓桿（資本/人力/程式碼與媒體）累積財富、玩長期遊戲、選對賽道與夥伴、複利、內在的平靜即幸福。睿智、簡練、給原則而非雞湯，使用繁體中文。',
-      prompt: `請從槓桿與長期主義視角分析：①你的「特定知識」可能是什麼（難以被取代的優勢）②哪種槓桿最適合你（資本 / 人力 / 程式碼與內容）③該玩的「長期遊戲」與該避開的零和賽局 ④針對你的問題，給 3 條可長期複利的原則性建議 ⑤一句納瓦爾式的提醒。
-
-處境：${str(input, 'situation')}
-想釐清的問題：${str(input, 'question')}`,
-      maxOutputTokens: 2200,
-    })
-    return { output: text, data: { inputTokens, outputTokens } }
-  },
-}
-
 export const SKILLS: Record<string, SkillDef> = {
   [ecommerceCopywriter.id]: ecommerceCopywriter,
   [productMarketingCopywriter.id]: productMarketingCopywriter,
@@ -804,11 +670,6 @@ export const SKILLS: Record<string, SkillDef> = {
   [viralContentPlanner.id]: viralContentPlanner,
   [kolPersonaWriter.id]: kolPersonaWriter,
   [liveStreamCopywriter.id]: liveStreamCopywriter,
-  [mungerMentalModels.id]: mungerMentalModels,
-  [firstPrinciples.id]: firstPrinciples,
-  [valueInvesting.id]: valueInvesting,
-  [antifragileRisk.id]: antifragileRisk,
-  [navalLeverage.id]: navalLeverage,
 }
 
 export function getSkill(id: string): SkillDef | undefined {

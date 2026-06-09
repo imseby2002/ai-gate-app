@@ -32,7 +32,7 @@ type FieldType = 'textarea' | 'input' | 'select'
 interface ToolField { key: string; label: string; type: FieldType; placeholder?: string; required?: boolean; options?: string[] }
 interface ToolConfig {
   id: string
-  category: 'job-search' | 'workplace' | 'advanced'
+  category: 'job-search' | 'workplace' | 'advanced' | 'thinking'
   label: string
   emoji: string
   desc: string
@@ -208,12 +208,67 @@ const TOOL_CONFIGS: ToolConfig[] = [
     ],
     submitLabel: '量化我的工作',
   },
+
+  // 思維決策（名家思維模型）
+  {
+    id: 'munger-mental-models', category: 'thinking', label: '多元思維決策', emoji: '🧩',
+    desc: '芒格式多元思維模型 + 反向思考，拆解你的決策與盲點',
+    color: 'from-amber-500 to-yellow-600',
+    fields: [
+      { key: 'decision', label: '你要做的決定 / 問題', type: 'textarea', placeholder: '例：該不該離職創業？要不要接這個案子？', required: true },
+      { key: 'context', label: '背景與限制', type: 'textarea', placeholder: '相關資訊、資源、時間、在意的點…' },
+      { key: 'options', label: '正在考慮的選項', type: 'textarea', placeholder: '列出你目前想到的幾個選擇' },
+    ],
+    submitLabel: '開始分析',
+  },
+  {
+    id: 'first-principles', category: 'thinking', label: '第一性原理拆解', emoji: '⚛️',
+    desc: '馬斯克式思考：拆到根本事實，再從零重建解法',
+    color: 'from-slate-500 to-gray-700',
+    fields: [
+      { key: 'problem', label: '要解決的問題', type: 'textarea', placeholder: '例：如何把成本降一半？如何快速學會某技能？', required: true },
+      { key: 'assumptions', label: '現有做法 / 既有假設', type: 'textarea', placeholder: '目前大家怎麼做、你預設的限制是什麼…' },
+    ],
+    submitLabel: '拆解問題',
+  },
+  {
+    id: 'value-investing', category: 'thinking', label: '價值投資視角', emoji: '💎',
+    desc: '巴菲特式評估：能力圈、護城河、安全邊際（非投資建議）',
+    color: 'from-emerald-600 to-green-700',
+    fields: [
+      { key: 'target', label: '標的 / 生意 / 機會', type: 'input', placeholder: '例：某檔股票、加盟一間店、投資朋友的新創', required: true },
+      { key: 'info', label: '已知資訊', type: 'textarea', placeholder: '商業模式、財務、競爭、價格、你了解的程度…', required: true },
+      { key: 'concern', label: '最想釐清的問題', type: 'input', placeholder: '例：現在的價格合理嗎？風險在哪？' },
+    ],
+    submitLabel: '評估機會',
+  },
+  {
+    id: 'antifragile-risk', category: 'thinking', label: '反脆弱風險評估', emoji: '🦢',
+    desc: '塔勒布式風險思考：下行風險、不對稱性、保命底線',
+    color: 'from-zinc-600 to-slate-700',
+    fields: [
+      { key: 'decision', label: '要評估的決策 / 計畫', type: 'textarea', placeholder: '例：把存款 all in 一個項目、辭職全職做某件事', required: true },
+      { key: 'downside', label: '你擔心的最壞情況', type: 'textarea', placeholder: '最糟可能發生什麼、會損失什麼…' },
+    ],
+    submitLabel: '評估風險',
+  },
+  {
+    id: 'naval-leverage', category: 'thinking', label: '人生槓桿與選擇', emoji: '🧭',
+    desc: '納瓦爾式視角：特定知識、槓桿、長期主義與選擇',
+    color: 'from-indigo-500 to-violet-700',
+    fields: [
+      { key: 'situation', label: '你的處境', type: 'textarea', placeholder: '例：30 歲、上班族、想累積資產但不知方向', required: true },
+      { key: 'question', label: '你想釐清的問題', type: 'textarea', placeholder: '例：該專精一技還是多方嘗試？怎麼建立被動收入？', required: true },
+    ],
+    submitLabel: '給我方向',
+  },
 ]
 
 const CATEGORIES = [
   { id: 'job-search', label: '🔍 求職階段', desc: '履歷、求職信、面試、薪資談判' },
   { id: 'workplace', label: '💼 職場日常', desc: 'Email、報告、簡報、會議記錄' },
   { id: 'advanced', label: '🧠 進階場景', desc: '話術、績效、升職、工作量化' },
+  { id: 'thinking', label: '🎯 思維決策', desc: '名家思維模型拆解你的決策與難題' },
 ] as const
 
 // ─── Constants ───────────────────────────────────────────────────

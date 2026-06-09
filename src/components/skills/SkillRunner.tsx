@@ -34,7 +34,6 @@ const CATEGORY_LABEL: Record<string, string> = {
   audio: '語音',
   presentation: '簡報',
   social: '社群',
-  decision: '決策',
 }
 
 /**
