@@ -5,7 +5,7 @@ import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles } from 'luci
 import { useState } from 'react'
 
 const NAV = [
-  { href: '/marketing',                  label: '行銷中心',      icon: LayoutDashboard },
+  { href: '/marketing-auto',             label: '行銷自動化',    icon: LayoutDashboard },
   { href: '/marketing/product-designer', label: '產品設計師',    icon: Palette },
   { href: '/marketing/skills',           label: 'AI Skills',     icon: Sparkles },
   { href: '/prospect-call',              label: '潛在客戶行銷',  icon: Phone },
