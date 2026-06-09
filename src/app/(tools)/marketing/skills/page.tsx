@@ -110,7 +110,7 @@ export default function SkillsPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-indigo-600" />
-          <h1 className="text-lg font-bold text-gray-800">AI Skills</h1>
+          <h1 className="text-lg font-bold text-gray-800">專家模式</h1>
         </div>
         {balance != null && (
           <div className="flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full">
