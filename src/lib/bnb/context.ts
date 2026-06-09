@@ -25,7 +25,8 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
  *   驗證失敗則安全退回自己的民宿
  */
 export async function getBnbContext(
-  supabase?: SupabaseClient
+  supabase?: SupabaseClient,
+  scope: 'booking' | 'cs' = 'booking'
 ): Promise<BnbContext | null> {
   const sb = supabase ?? (await createClient())
   const {
@@ -40,12 +41,14 @@ export async function getBnbContext(
     return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true }
   }
 
+  // 依模組（scope）驗證協作授權：booking 助理未必有 cs 權限，反之亦然
   const { data: member } = await sb
     .from('bnb_members')
     .select('role, status')
     .eq('owner_id', requested)
     .eq('member_id', user.id)
     .eq('status', 'active')
+    .eq('scope', scope)
     .maybeSingle()
 
   if (!member) {
