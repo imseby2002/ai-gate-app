@@ -4,6 +4,21 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 const ROLES = ['admin', 'manager', 'viewer'] as const
 type Role = (typeof ROLES)[number]
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const DEFAULT_MODULES = ['chat', 'marketing', 'cs', 'leads', 'resume']
+
+type SB = Awaited<ReturnType<typeof createClient>>
+
+// 取得此用戶可自用的模組（admin 視為全部）。純協助者不可邀請成員。
+async function selfUsable(supabase: SB, userId: string) {
+  const { data: p } = await supabase
+    .from('profiles').select('user_type, enabled_modules').eq('id', userId).single()
+  const isAdmin = p?.user_type === 'admin'
+  const enabled: string[] = p?.enabled_modules ?? DEFAULT_MODULES
+  return {
+    canUse: (scope: string) => isAdmin || enabled.includes(scope),
+    canUseAny: isAdmin || enabled.includes('booking') || enabled.includes('cs'),
+  }
+}
 
 async function profileMap(ids: string[]) {
   const uniq = [...new Set(ids.filter(Boolean))]
