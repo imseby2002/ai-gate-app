@@ -77,6 +77,30 @@ const TOOL_CONFIGS: ToolConfig[] = [
     ],
     submitLabel: '生成談判話術',
   },
+  {
+    id: 'resume-clinic', category: 'job-search', label: '履歷健檢診斷', emoji: '🩺',
+    desc: '像 HR 一樣直說：這份 JD 該不該投、勝算幾成、卡在哪、怎麼補',
+    color: 'from-sky-500 to-blue-600',
+    fields: [
+      { key: 'jd', label: '目標職缺 JD', type: 'textarea', placeholder: '貼上職缺描述…', required: true },
+      { key: 'background', label: '你的背景 / 履歷重點', type: 'textarea', placeholder: '學歷、年資、主要技能、代表作…', required: true },
+      { key: 'company', label: '目標公司（選填）', type: 'input', placeholder: '例如：某外商、新創、上市公司…' },
+    ],
+    submitLabel: '開始健檢',
+  },
+  {
+    id: 'career-advisor', category: 'job-search', label: '升學擇業顧問', emoji: '🧭',
+    desc: '接地氣分析科系、行業、城市選擇，給實用不灌雞湯的建議',
+    color: 'from-cyan-500 to-teal-600',
+    fields: [
+      { key: 'situation', label: '你的處境', type: 'select', required: true,
+        options: ['高中生選科系', '大學生選方向/轉系', '應屆畢業選行業', '在職轉職', '考研/考公猶豫'] },
+      { key: 'background', label: '背景條件', type: 'textarea', placeholder: '科系、成績/級分、年資、所在城市、家庭考量…', required: true },
+      { key: 'options', label: '正在考慮的選項', type: 'textarea', placeholder: '例如：資工 vs 電機、留在台北 vs 回中部…' },
+      { key: 'concern', label: '最在意的點', type: 'input', placeholder: '例如：薪資、穩定性、興趣、發展性…' },
+    ],
+    submitLabel: '給我建議',
+  },
 
   // 職場日常
   {
@@ -138,6 +162,18 @@ const TOOL_CONFIGS: ToolConfig[] = [
       { key: 'goal', label: '期望達到的結果', type: 'textarea', placeholder: '你希望這次溝通達成什麼目標…' },
     ],
     submitLabel: '生成話術建議',
+  },
+  {
+    id: 'workplace-relationship', category: 'advanced', label: '職場關係軍師', emoji: '🤝',
+    desc: '讀懂主管／同事／下屬的動機，給相處與向上管理策略',
+    color: 'from-rose-500 to-pink-600',
+    fields: [
+      { key: 'role', label: '對象', type: 'select', required: true,
+        options: ['直屬主管', '老闆 / 高層', '平行同事', '下屬', '前輩 / 導師', '跨部門窗口'] },
+      { key: 'situation', label: '具體情況', type: 'textarea', placeholder: '描述對方的行為、你們的互動、目前的卡點…', required: true },
+      { key: 'goal', label: '你想達成的目標', type: 'textarea', placeholder: '例如：取得信任、爭取資源、化解誤會、保護自己…' },
+    ],
+    submitLabel: '分析關係策略',
   },
   {
     id: 'performance-review', category: 'advanced', label: '績效自評撰寫', emoji: '⭐',

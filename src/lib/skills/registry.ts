@@ -3,7 +3,7 @@
 // run() 透過 ctx 取得模型呼叫與圖片生成能力，與既有 marketing 基礎一致。
 import pptxgen from 'pptxgenjs'
 
-export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation'
+export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation' | 'social'
 
 export interface SkillField {
   name: string
@@ -512,6 +512,150 @@ const pptGenerator: SkillDef = {
   },
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// 10. 社群帳號運營教練（靈感：X 導師）
+// ──────────────────────────────────────────────────────────────────────────
+const socialAccountCoach: SkillDef = {
+  id: 'social-account-coach',
+  label: '社群帳號運營教練',
+  description: '分析你的帳號定位與受眾，產出貼文方向、成長診斷與可執行待辦。',
+  category: 'social',
+  module: 'marketing',
+  priceCredits: 0.03,
+  fields: [
+    { name: 'platform', label: '平台', type: 'select', default: 'threads', options: [
+      { value: 'threads', label: 'Threads' },
+      { value: 'x', label: 'X / Twitter' },
+      { value: 'instagram', label: 'Instagram' },
+      { value: 'facebook', label: 'Facebook' },
+      { value: 'xiaohongshu', label: '小紅書' },
+    ] },
+    { name: 'niche', label: '帳號定位 / 主題', type: 'text', required: true, placeholder: '例：居家收納教學、個人理財' },
+    { name: 'recent', label: '近期內容或數據（選填）', type: 'textarea', placeholder: '貼上幾則近期貼文、追蹤數、互動率等，分析更精準' },
+    { name: 'goal', label: '當前目標', type: 'select', default: 'growth', options: [
+      { value: 'growth', label: '漲粉 / 觸及' },
+      { value: 'engagement', label: '互動 / 留言' },
+      { value: 'conversion', label: '導購 / 變現' },
+    ] },
+  ],
+  async run(input, ctx) {
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是頂尖社群帳號運營導師，擅長帳號診斷、選題策略與漲粉手法。回覆需具體可執行、條理分明，避免空泛口號，符合台灣／繁體中文社群語境。',
+      prompt: `請為以下社群帳號做運營診斷，輸出：①帳號定位一句話 ②受眾輪廓 ③5 個高潛力貼文選題（含鉤子標題）④目前最該改的 3 個問題 ⑤本週可執行的 5 項待辦清單。
+
+平台：${str(input, 'platform', 'threads')}
+帳號定位/主題：${str(input, 'niche')}
+近期內容或數據：${str(input, 'recent', '（未提供，請依定位推估）')}
+當前目標：${str(input, 'goal', 'growth')}`,
+      maxOutputTokens: 2200,
+    })
+    return { output: text, data: { inputTokens, outputTokens } }
+  },
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 11. 病毒內容企劃師（靈感：MrBeast 增長黑客）
+// ──────────────────────────────────────────────────────────────────────────
+const viralContentPlanner: SkillDef = {
+  id: 'viral-content-planner',
+  label: '病毒內容企劃師',
+  description: '用增長黑客思維規劃高傳播選題：鉤子、留存結構與分享誘因。',
+  category: 'social',
+  module: 'marketing',
+  priceCredits: 0.03,
+  fields: [
+    { name: 'topic', label: '內容領域 / 主題', type: 'text', required: true, placeholder: '例：平價美食開箱、職場成長' },
+    { name: 'format', label: '內容形式', type: 'select', default: 'short_video', options: [
+      { value: 'short_video', label: '短影音' },
+      { value: 'long_video', label: '長影片' },
+      { value: 'thread', label: '圖文 / 串文' },
+    ] },
+    { name: 'audience', label: '目標受眾', type: 'text', placeholder: '例：25-35 歲上班族' },
+    { name: 'goal', label: '傳播目標', type: 'text', placeholder: '例：漲粉、品牌曝光、導流' },
+  ],
+  async run(input, ctx) {
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是病毒內容操盤手，深諳「好奇缺口、高情緒、可分享性、前 3 秒留人」等傳播心理。輸出需大膽、具體、可直接拍攝/發佈。',
+      prompt: `請以增長黑客思維，為以下主題規劃可能爆款的內容：①10 個高傳播選題（標題即鉤子）②挑 1 個最佳選題展開：前 3 秒鉤子 3 版、中段留存結構、結尾分享/收藏誘因 ③為何會被分享的傳播原理一句話。
+
+內容領域/主題：${str(input, 'topic')}
+內容形式：${str(input, 'format', 'short_video')}
+目標受眾：${str(input, 'audience', '一般大眾')}
+傳播目標：${str(input, 'goal', '漲粉與曝光')}`,
+      maxOutputTokens: 2200,
+    })
+    return { output: text, data: { inputTokens, outputTokens } }
+  },
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 12. 社群人設文案（靈感：博主 / 內娛人格蒸餾）
+// ──────────────────────────────────────────────────────────────────────────
+const kolPersonaWriter: SkillDef = {
+  id: 'kol-persona-writer',
+  label: '社群人設文案',
+  description: '依你的語氣樣本與人設，產出風格一致的社群貼文。',
+  category: 'social',
+  module: 'marketing',
+  priceCredits: 0.02,
+  fields: [
+    { name: 'persona', label: '人設 / 語氣描述', type: 'textarea', required: true, placeholder: '例：理性溫暖的理財部落客，講話像朋友、不說教；或直接貼上你過往幾則貼文當風格樣本' },
+    { name: 'topic', label: '這篇要寫什麼', type: 'text', required: true, placeholder: '例：分享一個記帳 App、宣傳新課程' },
+    { name: 'platform', label: '平台', type: 'select', default: 'instagram', options: [
+      { value: 'instagram', label: 'Instagram' },
+      { value: 'threads', label: 'Threads' },
+      { value: 'facebook', label: 'Facebook' },
+      { value: 'xiaohongshu', label: '小紅書' },
+    ] },
+  ],
+  async run(input, ctx) {
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是社群人設文案高手，能精準模仿給定的語氣與人設，產出自然、不像廣告、符合平台調性的貼文。先在心中歸納語氣特徵，再據此寫作。',
+      prompt: `請依以下人設與語氣，為指定主題撰寫貼文：①2 版完整貼文（風格一致、長度符合平台）②每版搭配的開頭鉤子 ③建議 hashtag。請勿偏離人設語氣。
+
+人設/語氣描述或樣本：${str(input, 'persona')}
+這篇要寫什麼：${str(input, 'topic')}
+平台：${str(input, 'platform', 'instagram')}`,
+      maxOutputTokens: 1800,
+    })
+    return { output: text, data: { inputTokens, outputTokens } }
+  },
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// 13. 開播／直播文案（靈感：永雛塔菲 虛擬偶像營業語境）
+// ──────────────────────────────────────────────────────────────────────────
+const liveStreamCopywriter: SkillDef = {
+  id: 'live-stream-copywriter',
+  label: '開播／直播文案',
+  description: '產出開播預告、直播口播與粉絲互動話術，帶營業感與節目效果。',
+  category: 'social',
+  module: 'marketing',
+  priceCredits: 0.02,
+  fields: [
+    { name: 'persona', label: '主播 / 暱稱與風格', type: 'text', required: true, placeholder: '例：暱稱小帆，活潑戲精、會跟粉絲撒嬌互動' },
+    { name: 'occasion', label: '用途', type: 'select', default: 'preview', options: [
+      { value: 'preview', label: '開播預告' },
+      { value: 'voiceover', label: '短視頻口播' },
+      { value: 'interaction', label: '直播互動 / 留言回覆' },
+      { value: 'post', label: '動態文案' },
+    ] },
+    { name: 'points', label: '本次重點 / 內容', type: 'textarea', required: true, placeholder: '例：今晚 8 點開播玩新遊戲、抽周邊、感謝粉絲應援' },
+  ],
+  async run(input, ctx) {
+    const { text, inputTokens, outputTokens } = await ctx.callModel({
+      system: '你是虛擬偶像／直播主的文案企劃，語言帶偶像感與主播營業感、有戲劇播報節奏與節目效果，懂得拿捏與粉絲的互動分寸。輸出活潑、有記憶點，但不油膩。',
+      prompt: `請依主播風格與用途產出文案：①主文案 2-3 版（符合用途與平台節奏）②一句吸睛標題/開場 ③一組與粉絲互動的話術或 CTA。
+
+主播/暱稱與風格：${str(input, 'persona')}
+用途：${str(input, 'occasion', 'preview')}
+本次重點/內容：${str(input, 'points')}`,
+      maxOutputTokens: 1600,
+    })
+    return { output: text, data: { inputTokens, outputTokens } }
+  },
+}
+
 export const SKILLS: Record<string, SkillDef> = {
   [ecommerceCopywriter.id]: ecommerceCopywriter,
   [productMarketingCopywriter.id]: productMarketingCopywriter,
@@ -522,6 +666,10 @@ export const SKILLS: Record<string, SkillDef> = {
   [ecommerceVideoMarketing.id]: ecommerceVideoMarketing,
   [ttsVoiceSynthesis.id]: ttsVoiceSynthesis,
   [pptGenerator.id]: pptGenerator,
+  [socialAccountCoach.id]: socialAccountCoach,
+  [viralContentPlanner.id]: viralContentPlanner,
+  [kolPersonaWriter.id]: kolPersonaWriter,
+  [liveStreamCopywriter.id]: liveStreamCopywriter,
 }
 
 export function getSkill(id: string): SkillDef | undefined {
