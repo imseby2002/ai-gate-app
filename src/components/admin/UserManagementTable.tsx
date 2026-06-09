@@ -163,14 +163,16 @@ export function UserManagementTable({ users }: Props) {
                         >
                           {user.is_active ? '停用' : '啟用'}
                         </button>
-                        {user.user_type !== 'admin' && (
-                          <button
-                            onClick={() => patch(user.id, { user_type: 'admin' })}
-                            className="text-xs px-2.5 py-1 rounded-md border border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors"
-                          >
-                            設管理員
-                          </button>
-                        )}
+                        <select
+                          value={user.user_type}
+                          onChange={e => patch(user.id, { user_type: e.target.value })}
+                          className="text-xs px-2 py-1 rounded-md border bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                          title="變更帳號類型"
+                        >
+                          <option value="external">外部</option>
+                          <option value="employee">員工</option>
+                          <option value="admin">管理員</option>
+                        </select>
                         <button
                           onClick={() => setExpandedUser(isExpanded ? null : user.id)}
                           className="text-xs px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-1"
