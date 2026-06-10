@@ -27,7 +27,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/booking/properties',  label: '房型管理', icon: BedDouble },
       { href: '/booking/pricing',     label: '定價管理', icon: Tag },
       { href: '/booking/promos',      label: '優惠碼',   icon: Percent },
-      { href: '/booking/members',     label: '協作成員', icon: Users },
+      { href: '/team',                label: '協作成員', icon: Users },
     ],
   },
   {

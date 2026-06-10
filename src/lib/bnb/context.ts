@@ -14,6 +14,8 @@ export interface BnbContext {
   isOwner: boolean
   /** owner / admin / manager 可寫，viewer 唯讀 */
   canWrite: boolean
+  /** owner / admin 可改設定（房源、定價規則、通路、模板…）；manager 不可 */
+  canSettings: boolean
 }
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -38,7 +40,7 @@ export async function getBnbContext(
   const requested = cookieStore.get(ACTIVE_BNB_COOKIE)?.value
 
   if (!requested || requested === user.id) {
-    return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true }
+    return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true }
   }
 
   // 依模組（scope）驗證協作授權：booking 助理未必有 cs 權限，反之亦然
@@ -53,7 +55,7 @@ export async function getBnbContext(
 
   if (!member) {
     // 無效的切換目標 → 退回自己的民宿
-    return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true }
+    return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true }
   }
 
   const role = member.role as BnbRole
@@ -63,5 +65,6 @@ export async function getBnbContext(
     role,
     isOwner: false,
     canWrite: role === 'admin' || role === 'manager',
+    canSettings: role === 'admin',
   }
 }

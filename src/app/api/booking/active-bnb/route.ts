@@ -29,15 +29,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ownerId: user.id, role: 'owner' })
   }
 
-  // 驗證對該 owner 有 active membership
-  const { data: member } = await supabase
+  // 驗證對該 owner 有 active membership（任一模組即可切換；可能有 booking/cs 多列）
+  const { data: members } = await supabase
     .from('bnb_members')
     .select('role')
     .eq('owner_id', ownerId)
     .eq('member_id', user.id)
     .eq('status', 'active')
-    .maybeSingle()
 
+  const member = members?.[0]
   if (!member) return NextResponse.json({ error: '無權管理此民宿' }, { status: 403 })
 
   cookieStore.set(ACTIVE_BNB_COOKIE, ownerId, opts)
