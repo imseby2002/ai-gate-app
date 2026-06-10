@@ -280,6 +280,50 @@
       "direct": "Đặt trực tiếp",
       "other": "Khác"
     },
+    "promos": {
+      "title": "Quản lý mã khuyến mãi",
+      "subtitle": "Tạo mã giảm giá để áp dụng trực tiếp khi tạo đơn",
+      "add": "Thêm mã khuyến mãi",
+      "empty": "Chưa tạo mã khuyến mãi nào",
+      "deleteConfirm": "Xóa mã khuyến mãi này?",
+      "editTitle": "Sửa mã khuyến mãi",
+      "addTitle": "Thêm mã khuyến mãi",
+      "percentOff": "Giảm {value}%",
+      "fixedOff": "− NT$ {value}",
+      "minNightsShort": "tối thiểu {count} đêm",
+      "unlimited": "Không giới hạn",
+      "status": {
+        "disabled": "Tắt",
+        "notStarted": "Chưa bắt đầu",
+        "expired": "Đã hết hạn",
+        "usedUp": "Đã dùng hết",
+        "active": "Đang hiệu lực"
+      },
+      "col": {
+        "code": "Mã",
+        "discount": "Giảm giá",
+        "validity": "Hiệu lực",
+        "uses": "Lượt dùng",
+        "status": "Trạng thái"
+      },
+      "form": {
+        "code": "Mã khuyến mãi",
+        "name": "Tên/Mô tả",
+        "namePlaceholder": "Khuyến mãi hè",
+        "type": "Loại giảm giá",
+        "percent": "Phần trăm",
+        "fixed": "Số tiền cố định",
+        "valuePercent": "Giảm %",
+        "valueFixed": "Số tiền giảm (NT$)",
+        "minNights": "Số đêm tối thiểu",
+        "validFrom": "Hiệu lực từ",
+        "validTo": "Hiệu lực đến",
+        "maxUses": "Giới hạn lượt dùng",
+        "blankUnlimited": "Trống = không giới hạn",
+        "minAmount": "Giá trị đơn tối thiểu",
+        "enableNow": "Bật ngay"
+      }
+    },
     "ical": {
       "subtitle": "Tự động nhập đơn từ các nền tảng lớn, đồng bộ mỗi giờ",
       "platformOther": "Nền tảng khác",

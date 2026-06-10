@@ -281,6 +281,50 @@
       "direct": "Direct",
       "other": "Other"
     },
+    "promos": {
+      "title": "Promo Codes",
+      "subtitle": "Create discount codes to apply directly when filling bookings",
+      "add": "Add Promo Code",
+      "empty": "No promo codes created yet",
+      "deleteConfirm": "Delete this promo code?",
+      "editTitle": "Edit Promo Code",
+      "addTitle": "Add Promo Code",
+      "percentOff": "{value}% off",
+      "fixedOff": "− NT$ {value}",
+      "minNightsShort": "min {count} nights",
+      "unlimited": "No expiry",
+      "status": {
+        "disabled": "Disabled",
+        "notStarted": "Not started",
+        "expired": "Expired",
+        "usedUp": "Used up",
+        "active": "Active"
+      },
+      "col": {
+        "code": "Code",
+        "discount": "Discount",
+        "validity": "Validity",
+        "uses": "Uses",
+        "status": "Status"
+      },
+      "form": {
+        "code": "Promo Code",
+        "name": "Name/Description",
+        "namePlaceholder": "Summer Promo",
+        "type": "Discount Type",
+        "percent": "Percentage",
+        "fixed": "Fixed Amount",
+        "valuePercent": "Discount %",
+        "valueFixed": "Discount Amount (NT$)",
+        "minNights": "Minimum Nights",
+        "validFrom": "Valid From",
+        "validTo": "Valid To",
+        "maxUses": "Max Uses",
+        "blankUnlimited": "Blank = unlimited",
+        "minAmount": "Min Order Amount",
+        "enableNow": "Enable now"
+      }
+    },
     "ical": {
       "subtitle": "Automatically import bookings from major platforms, synced hourly",
       "platformOther": "Other Platform",

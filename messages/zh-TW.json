@@ -281,6 +281,50 @@
       "direct": "直訂",
       "other": "其他"
     },
+    "promos": {
+      "title": "優惠碼管理",
+      "subtitle": "建立折扣碼，填寫訂單時直接套用",
+      "add": "新增優惠碼",
+      "empty": "尚未建立任何優惠碼",
+      "deleteConfirm": "確定刪除此優惠碼？",
+      "editTitle": "編輯優惠碼",
+      "addTitle": "新增優惠碼",
+      "percentOff": "{value}% 折扣",
+      "fixedOff": "折 NT$ {value}",
+      "minNightsShort": "最少 {count} 晚",
+      "unlimited": "無限期",
+      "status": {
+        "disabled": "停用",
+        "notStarted": "未開始",
+        "expired": "已過期",
+        "usedUp": "已用盡",
+        "active": "生效中"
+      },
+      "col": {
+        "code": "優惠碼",
+        "discount": "折扣",
+        "validity": "有效期",
+        "uses": "使用次數",
+        "status": "狀態"
+      },
+      "form": {
+        "code": "優惠碼",
+        "name": "名稱/說明",
+        "namePlaceholder": "暑假優惠",
+        "type": "折扣類型",
+        "percent": "百分比折扣",
+        "fixed": "固定折扣金額",
+        "valuePercent": "折扣 %",
+        "valueFixed": "折扣金額（NT$）",
+        "minNights": "最少入住晚數",
+        "validFrom": "有效開始",
+        "validTo": "有效結束",
+        "maxUses": "使用次數上限",
+        "blankUnlimited": "空白 = 無限制",
+        "minAmount": "最低訂單金額",
+        "enableNow": "立即啟用"
+      }
+    },
     "ical": {
       "subtitle": "自動從各大平台匯入訂單，每小時同步一次",
       "platformOther": "其他平台",

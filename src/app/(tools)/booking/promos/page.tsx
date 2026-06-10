@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createPortal } from 'react-dom'
 import { Plus, Edit2, Trash2, Percent, ToggleLeft, ToggleRight } from 'lucide-react'
 
@@ -19,6 +20,7 @@ const EMPTY_FORM = {
 }
 
 export default function PromosPage() {
+  const t = useTranslations('Booking')
   const [promos, setPromos]   = useState<Promo[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Promo | null>(null)
@@ -84,7 +86,7 @@ export default function PromosPage() {
   }
 
   async function del(id: string) {
-    if (!confirm('確定刪除此優惠碼？')) return
+    if (!confirm(t('promos.deleteConfirm'))) return
     await fetch('/api/booking/promos', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setPromos(prev => prev.filter(p => p.id !== id))
   }
@@ -93,43 +95,43 @@ export default function PromosPage() {
   const today = new Date().toISOString().slice(0, 10)
 
   function promoStatus(p: Promo) {
-    if (!p.enabled) return { label: '停用', color: 'bg-gray-100 text-gray-500' }
-    if (p.valid_from && p.valid_from > today) return { label: '未開始', color: 'bg-amber-100 text-amber-700' }
-    if (p.valid_to && p.valid_to < today) return { label: '已過期', color: 'bg-red-100 text-red-600' }
-    if (p.max_uses && p.used_count >= p.max_uses) return { label: '已用盡', color: 'bg-orange-100 text-orange-700' }
-    return { label: '生效中', color: 'bg-green-100 text-green-700' }
+    if (!p.enabled) return { label: t('promos.status.disabled'), color: 'bg-gray-100 text-gray-500' }
+    if (p.valid_from && p.valid_from > today) return { label: t('promos.status.notStarted'), color: 'bg-amber-100 text-amber-700' }
+    if (p.valid_to && p.valid_to < today) return { label: t('promos.status.expired'), color: 'bg-red-100 text-red-600' }
+    if (p.max_uses && p.used_count >= p.max_uses) return { label: t('promos.status.usedUp'), color: 'bg-orange-100 text-orange-700' }
+    return { label: t('promos.status.active'), color: 'bg-green-100 text-green-700' }
   }
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-4xl">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">優惠碼管理</h1>
-          <p className="text-sm text-gray-500 mt-0.5">建立折扣碼，填寫訂單時直接套用</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('promos.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('promos.subtitle')}</p>
         </div>
         <button onClick={openAdd}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
-          <Plus className="h-4 w-4" /> 新增優惠碼
+          <Plus className="h-4 w-4" /> {t('promos.add')}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">載入中…</div>
+        <div className="text-center py-16 text-gray-400">{t('common.loading')}</div>
       ) : promos.length === 0 ? (
         <div className="text-center py-16 text-gray-400 space-y-2">
           <Percent className="h-10 w-10 mx-auto opacity-30" />
-          <p className="text-sm">尚未建立任何優惠碼</p>
+          <p className="text-sm">{t('promos.empty')}</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">優惠碼</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 hidden sm:table-cell">折扣</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 hidden md:table-cell">有效期</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 hidden md:table-cell">使用次數</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">狀態</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">{t('promos.col.code')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 hidden sm:table-cell">{t('promos.col.discount')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 hidden md:table-cell">{t('promos.col.validity')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 hidden md:table-cell">{t('promos.col.uses')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">{t('promos.col.status')}</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
@@ -142,19 +144,19 @@ export default function PromosPage() {
                       <div className="font-mono font-bold text-gray-900 text-sm">{p.code}</div>
                       {p.name && <div className="text-xs text-gray-400 mt-0.5">{p.name}</div>}
                       <div className="sm:hidden text-xs text-gray-500 mt-0.5">
-                        {p.type === 'percent' ? `${p.value}% 折扣` : `折 NT$ ${p.value}`}
+                        {p.type === 'percent' ? t('promos.percentOff', { value: p.value }) : t('promos.fixedOff', { value: p.value })}
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       <span className="font-semibold text-indigo-700">
                         {p.type === 'percent' ? `${p.value}%` : `NT$ ${p.value}`}
                       </span>
-                      {p.min_nights > 1 && <div className="text-[11px] text-gray-400">最少 {p.min_nights} 晚</div>}
+                      {p.min_nights > 1 && <div className="text-[11px] text-gray-400">{t('promos.minNightsShort', { count: p.min_nights })}</div>}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 hidden md:table-cell">
                       {p.valid_from || p.valid_to
                         ? `${p.valid_from ?? '—'} ~ ${p.valid_to ?? '—'}`
-                        : <span className="text-gray-400">無限期</span>}
+                        : <span className="text-gray-400">{t('promos.unlimited')}</span>}
                     </td>
                     <td className="px-4 py-3 text-xs hidden md:table-cell">
                       <span className="text-gray-700">{p.used_count}</span>
@@ -165,7 +167,7 @@ export default function PromosPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => toggleEnabled(p)} title={p.enabled ? '停用' : '啟用'}
+                        <button onClick={() => toggleEnabled(p)} title={p.enabled ? t('notif.disabled') : t('notif.enabled')}
                           className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
                           {p.enabled ? <ToggleRight className="h-4 w-4 text-green-500" /> : <ToggleLeft className="h-4 w-4" />}
                         </button>
@@ -189,32 +191,32 @@ export default function PromosPage() {
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
           onClick={e => { if (e.target === e.currentTarget) { setAdding(false); setEditing(null) } }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md max-h-[92dvh] overflow-y-auto p-5 space-y-3">
-            <h3 className="font-bold text-gray-900">{editing ? '編輯優惠碼' : '新增優惠碼'}</h3>
+            <h3 className="font-bold text-gray-900">{editing ? t('promos.editTitle') : t('promos.addTitle')}</h3>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">優惠碼 <span className="text-red-500">*</span></label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.code')} <span className="text-red-500">*</span></label>
                 <input value={form.code}
                   onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
                   placeholder="SUMMER20"
                   className="w-full text-sm font-mono border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 uppercase" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">名稱/說明</label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.name')}</label>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="暑假優惠"
+                  placeholder={t('promos.form.namePlaceholder')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">折扣類型</label>
+              <label className="text-xs font-medium text-gray-600">{t('promos.form.type')}</label>
               <div className="flex gap-2">
-                {(['percent','fixed'] as const).map(t => (
-                  <button key={t} type="button" onClick={() => setForm(f => ({ ...f, type: t }))}
+                {(['percent','fixed'] as const).map(pt => (
+                  <button key={pt} type="button" onClick={() => setForm(f => ({ ...f, type: pt }))}
                     className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors
-                      ${form.type === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
-                    {t === 'percent' ? '百分比折扣' : '固定折扣金額'}
+                      ${form.type === pt ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
+                    {pt === 'percent' ? t('promos.form.percent') : t('promos.form.fixed')}
                   </button>
                 ))}
               </div>
@@ -223,7 +225,7 @@ export default function PromosPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">
-                  {form.type === 'percent' ? '折扣 %' : '折扣金額（NT$）'} <span className="text-red-500">*</span>
+                  {form.type === 'percent' ? t('promos.form.valuePercent') : t('promos.form.valueFixed')} <span className="text-red-500">*</span>
                 </label>
                 <input type="number" min={0} value={form.value}
                   onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
@@ -231,7 +233,7 @@ export default function PromosPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">最少入住晚數</label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.minNights')}</label>
                 <input type="number" min={1} value={form.min_nights}
                   onChange={e => setForm(f => ({ ...f, min_nights: parseInt(e.target.value) || 1 }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
@@ -240,12 +242,12 @@ export default function PromosPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">有效開始</label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.validFrom')}</label>
                 <input type="date" value={form.valid_from} onChange={e => setForm(f => ({ ...f, valid_from: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">有效結束</label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.validTo')}</label>
                 <input type="date" value={form.valid_to} onChange={e => setForm(f => ({ ...f, valid_to: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
@@ -253,17 +255,17 @@ export default function PromosPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">使用次數上限</label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.maxUses')}</label>
                 <input type="number" min={1} value={form.max_uses}
                   onChange={e => setForm(f => ({ ...f, max_uses: e.target.value }))}
-                  placeholder="空白 = 無限制"
+                  placeholder={t('promos.form.blankUnlimited')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">最低訂單金額</label>
+                <label className="text-xs font-medium text-gray-600">{t('promos.form.minAmount')}</label>
                 <input type="number" min={0} value={form.min_amount}
                   onChange={e => setForm(f => ({ ...f, min_amount: e.target.value }))}
-                  placeholder="空白 = 無限制"
+                  placeholder={t('promos.form.blankUnlimited')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
@@ -272,15 +274,15 @@ export default function PromosPage() {
               <input type="checkbox" checked={form.enabled}
                 onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}
                 className="rounded" />
-              <span className="text-sm text-gray-700">立即啟用</span>
+              <span className="text-sm text-gray-700">{t('promos.form.enableNow')}</span>
             </label>
 
             <div className="flex gap-2 pt-1">
               <button onClick={() => { setAdding(false); setEditing(null) }}
-                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={save} disabled={!form.code || !form.value || saving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                {saving ? '儲存中…' : '儲存'}
+                {saving ? t('bookings.form.saving') : t('detail.save')}
               </button>
             </div>
           </div>
