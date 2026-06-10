@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getLocale } from 'next-intl/server'
 import { Zap } from 'lucide-react'
 import { BackToMenu } from '@/components/layout/BackToMenu'
 import { ToolsUserMenu } from '@/components/layout/ToolsUserMenu'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +14,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   if (authError || !user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+  const locale = await getLocale()
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
@@ -26,6 +29,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
           <span className="text-xs font-bold text-gray-800">AI GATE</span>
         </div>
         <div className="flex-1" />
+        <LanguageSwitcher currentLocale={locale} />
         <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} />
       </header>
 
