@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import {
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
@@ -16,9 +17,9 @@ type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped' | 'waitin
 
 interface PipelineStepDef {
   unitId: number
-  name: string
+  nameKey: string
   icon: React.ElementType
-  desc: string
+  descKey: string
   canAuto: boolean
 }
 
@@ -48,17 +49,17 @@ interface PipelineConfig {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEP_DEFS: PipelineStepDef[] = [
-  { unitId: 1,  name: '蒐集資訊',  icon: Search,     desc: '新聞/網頁/地圖/評論',  canAuto: true  },
-  { unitId: 2,  name: '公司資料',  icon: Building2,  desc: '來自行銷自動化專案',    canAuto: false },
-  { unitId: 3,  name: '分析資料',  icon: BarChart3,  desc: 'SWOT/競爭對手/市場',   canAuto: true  },
-  { unitId: 4,  name: '文案產出',  icon: PenLine,    desc: '多平台行銷文案',        canAuto: true  },
-  { unitId: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '視覺腳本生成',          canAuto: true  },
-  { unitId: 6,  name: '圖片產出',  icon: ImageIcon,  desc: 'AI 圖片生成',           canAuto: true  },
-  { unitId: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',          canAuto: true  },
-  { unitId: 8,  name: '影片產出',  icon: Video,      desc: 'AI 影片生成',           canAuto: true  },
-  { unitId: 9,  name: '上傳平台',  icon: Upload,     desc: '自動上傳各平台',         canAuto: true  },
-  { unitId: 10, name: '潛在客戶行銷', icon: Phone,   desc: '電話 / Email 批次行銷',  canAuto: true  },
-  { unitId: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 主播影片',        canAuto: true  },
+  { unitId: 1,  nameKey: 'steps.1.name',  icon: Search,     descKey: 'steps.1.desc',  canAuto: true  },
+  { unitId: 2,  nameKey: 'steps.2.name',  icon: Building2,  descKey: 'steps.2.desc',  canAuto: false },
+  { unitId: 3,  nameKey: 'steps.3.name',  icon: BarChart3,  descKey: 'steps.3.desc',  canAuto: true  },
+  { unitId: 4,  nameKey: 'steps.4.name',  icon: PenLine,    descKey: 'steps.4.desc',  canAuto: true  },
+  { unitId: 5,  nameKey: 'steps.5.name',  icon: ImageIcon,  descKey: 'steps.5.desc',  canAuto: true  },
+  { unitId: 6,  nameKey: 'steps.6.name',  icon: ImageIcon,  descKey: 'steps.6.desc',  canAuto: true  },
+  { unitId: 7,  nameKey: 'steps.7.name',  icon: Film,       descKey: 'steps.7.desc',  canAuto: true  },
+  { unitId: 8,  nameKey: 'steps.8.name',  icon: Video,      descKey: 'steps.8.desc',  canAuto: true  },
+  { unitId: 9,  nameKey: 'steps.9.name',  icon: Upload,     descKey: 'steps.9.desc',  canAuto: true  },
+  { unitId: 10, nameKey: 'steps.10.name', icon: Phone,      descKey: 'steps.10.desc', canAuto: true  },
+  { unitId: 11, nameKey: 'steps.11.name', icon: Mic,        descKey: 'steps.11.desc', canAuto: true  },
 ]
 
 const DEFAULT_SCHEDULE: PipelineSchedule = {
@@ -98,6 +99,8 @@ function loadResultsFromLS(): Record<string, unknown> {
 }
 
 export default function MarketingPipelinePage() {
+  const t = useTranslations('Pipeline')
+  const locale = useLocale()
   const searchParams = useSearchParams()
 
   const [campaignData, setCampaignData] = useState<Record<string, unknown>>(() => {
@@ -172,7 +175,7 @@ export default function MarketingPipelinePage() {
           activityName: campaign.title ?? prev.activityName,
         }))
 
-        setSourceCampaign({ id: campaignId, title: campaign.title ?? '未命名專案', loadedUnits })
+        setSourceCampaign({ id: campaignId, title: campaign.title ?? t('untitledCampaign'), loadedUnits })
       } catch { /* ignore */ } finally {
         setLoadingCampaign(false)
       }
@@ -210,8 +213,8 @@ export default function MarketingPipelinePage() {
   }, [])
 
   const log = useCallback((msg: string) =>
-    setRunLog(p => [...p, `[${new Date().toLocaleTimeString('zh-TW')}] ${msg}`])
-  , [])
+    setRunLog(p => [...p, `[${new Date().toLocaleTimeString(locale)}] ${msg}`])
+  , [locale])
 
   const updateStep = useCallback((unitId: number, status: StepStatus, output = '') =>
     setStepRuns(p => p.map(s => s.unitId === unitId ? { ...s, status, output,
@@ -271,7 +274,7 @@ export default function MarketingPipelinePage() {
     // Pre-loaded data → skip re-execution (units 1–8)
     const SKIPPABLE = [1, 3, 4, 5, 6, 7, 8]
     if (SKIPPABLE.includes(unitId) && ud[unitId] != null) {
-      return { ok: true, output: '已從行銷專案載入，略過重新執行', data: ud[unitId] }
+      return { ok: true, output: t('out.loadedSkip'), data: ud[unitId] }
     }
 
     // Extract context from campaign data
@@ -299,8 +302,8 @@ export default function MarketingPipelinePage() {
           limit: 8,
         }),
       })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '蒐集失敗') }
-      return { ok: true, output: `蒐集完成 · ${String(data.summary ?? '').slice(0, 100)}…`, data }
+      if (!res.ok) return { ok: false, output: String(data.error ?? t('out.collectFailed')) }
+      return { ok: true, output: `${t('out.collectDone')} · ${String(data.summary ?? '').slice(0, 100)}…`, data }
     }
 
     if (unitId === 3) {
@@ -313,7 +316,7 @@ export default function MarketingPipelinePage() {
           companyData: u2d,
         }),
       })
-      if (!res.ok) return { ok: false, output: String(data.error ?? `分析失敗（HTTP ${res.status}）`) }
+      if (!res.ok) return { ok: false, output: String(data.error ?? t('out.analyzeFailed', { status: res.status })) }
 
       // Run consumer simulation alongside analysis
       let simulation = null
@@ -333,7 +336,7 @@ export default function MarketingPipelinePage() {
 
       return {
         ok: true,
-        output: `分析完成${simulation ? ' · 消費者模擬完成' : ''}`,
+        output: `${t('out.analyzeDone')}${simulation ? ` · ${t('out.simDone')}` : ''}`,
         data: { ...data, simulation },
       }
     }
@@ -345,9 +348,9 @@ export default function MarketingPipelinePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ copyTypes, companyData: u2d, analysisData: u3d, collectedSummary: u1d?.summary }),
       })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '文案生成失敗') }
+      if (!res.ok) return { ok: false, output: String(data.error ?? t('out.copyFailed')) }
       const count = data.results ? Object.keys(data.results as object).length : 0
-      return { ok: true, output: `文案完成 · ${count} 份`, data }
+      return { ok: true, output: t('out.copyDone', { count }), data }
     }
 
     if (unitId === 5) {
@@ -356,13 +359,13 @@ export default function MarketingPipelinePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count: 3, platforms: ['instagram', 'facebook'], companyData: u2d, analysisData: u3d, copyData: u4d, collectedSummary: u1d?.summary }),
       })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '圖片腳本失敗') }
-      return { ok: true, output: `圖片腳本完成 · ${(data.scripts as unknown[])?.length ?? 0} 份`, data }
+      if (!res.ok) return { ok: false, output: String(data.error ?? t('out.imgScriptFailed')) }
+      return { ok: true, output: t('out.imgScriptDone', { count: (data.scripts as unknown[])?.length ?? 0 }), data }
     }
 
     if (unitId === 6) {
       const scripts = (u5d?.scripts ?? []) as string[]
-      if (scripts.length === 0) return { ok: false, output: '無圖片腳本，請先執行單元 5' }
+      if (scripts.length === 0) return { ok: false, output: t('out.noImgScript') }
       const images: { url: string; prompt: string }[] = []
       for (const prompt of scripts.slice(0, 2)) {
         if (abortRef.current) break
@@ -373,7 +376,7 @@ export default function MarketingPipelinePage() {
         })
         if (res.ok && data.imageUrl) images.push({ url: String(data.imageUrl), prompt: prompt.slice(0, 60) })
       }
-      return { ok: true, output: `圖片生成完成 · ${images.length} 張`, data: { images } }
+      return { ok: true, output: t('out.imgDone', { count: images.length }), data: { images } }
     }
 
     if (unitId === 7) {
@@ -382,33 +385,33 @@ export default function MarketingPipelinePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count: 1, duration: 30, videoTypes: ['brand_story'], platforms: ['youtube', 'facebook'], companyData: u2d, analysisData: u3d, copyData: u4d, collectedSummary: u1d?.summary }),
       })
-      if (!res.ok) return { ok: false, output: String(data.error ?? '影片腳本失敗') }
-      return { ok: true, output: `影片腳本完成 · ${(data.scripts as unknown[])?.length ?? 0} 份`, data }
+      if (!res.ok) return { ok: false, output: String(data.error ?? t('out.videoScriptFailed')) }
+      return { ok: true, output: t('out.videoScriptDone', { count: (data.scripts as unknown[])?.length ?? 0 }), data }
     }
 
     if (unitId === 8) {
       const scriptObjs = (ud[7] as { scripts?: { id: number; content: string }[] } | undefined)?.scripts ?? []
-      if (scriptObjs.length === 0) return { ok: false, output: '無影片腳本，請先執行單元 7' }
+      if (scriptObjs.length === 0) return { ok: false, output: t('out.noVideoScript') }
       const prompt = scriptObjs[0].content.slice(0, 500)
       const { res: submitRes, data: submit } = await safeFetch('/api/marketing/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'kling-standard', prompt }),
       })
-      if (!submitRes.ok) return { ok: false, output: String(submit.error ?? '影片提交失敗') }
+      if (!submitRes.ok) return { ok: false, output: String(submit.error ?? t('out.videoSubmitFailed')) }
       for (let i = 0; i < 75; i++) {
-        if (abortRef.current) return { ok: false, output: '已中止' }
+        if (abortRef.current) return { ok: false, output: t('out.aborted') }
         await new Promise(r => setTimeout(r, 8000))
         const { data: poll } = await safeFetch(`/api/marketing/generate-video?requestId=${submit.requestId}&model=kling-standard`, {})
-        if (poll.status === 'completed' && poll.videoUrl) return { ok: true, output: '影片生成完成', data: { videos: [{ url: poll.videoUrl }] } }
-        if (poll.status === 'failed') return { ok: false, output: '影片生成失敗' }
+        if (poll.status === 'completed' && poll.videoUrl) return { ok: true, output: t('out.videoDone'), data: { videos: [{ url: poll.videoUrl }] } }
+        if (poll.status === 'failed') return { ok: false, output: t('out.videoFailed') }
       }
-      return { ok: false, output: '影片生成逾時' }
+      return { ok: false, output: t('out.videoTimeout') }
     }
 
     if (unitId === 9) {
       const allPlatforms = u9d?.lastUpload?.platforms ?? u9d?.platforms ?? []
-      if (allPlatforms.length === 0) return { ok: false, output: '無上傳平台設定，請在行銷自動化中設定 Unit 9 平台' }
+      if (allPlatforms.length === 0) return { ok: false, output: t('out.noUploadPlatforms') }
 
       const VIDEO_PLATFORMS = ['FB Reels', 'IG Reels', 'YouTube Shorts', 'TikTok']
       const imagePlatforms = allPlatforms.filter((p: string) => !VIDEO_PLATFORMS.includes(p))
@@ -425,16 +428,16 @@ export default function MarketingPipelinePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ platforms: imagePlatforms, copies, images }),
         })
-        if (!res.ok) return { ok: false, output: String(data.error ?? '上傳失敗') }
+        if (!res.ok) return { ok: false, output: String(data.error ?? t('out.uploadFailed')) }
         uploadResults.push(imagePlatforms.join('、'))
       }
 
       // Video platforms: will be uploaded by Unit 11 after video is generated
       if (videoPlatforms.length > 0) {
-        uploadResults.push(`${videoPlatforms.join('、')}（等待主播影片生成後上傳）`)
+        uploadResults.push(t('out.waitAnchorUpload', { platforms: videoPlatforms.join('、') }))
       }
 
-      return { ok: true, output: `上傳完成 · ${uploadResults.join(' | ')}`, data: { imagePlatforms, videoPlatforms, copies, images } }
+      return { ok: true, output: `${t('out.uploadDone')} · ${uploadResults.join(' | ')}`, data: { imagePlatforms, videoPlatforms, copies, images } }
     }
 
     if (unitId === 10) {
@@ -443,14 +446,14 @@ export default function MarketingPipelinePage() {
       // Phone marketing
       const phones = (u10d as { phones?: string[] } | undefined)?.phones ?? []
       if (phones.length > 0) {
-        const script = u4d?.results?.line_message ?? u4d?.results?.facebook_post ?? '您好，感謝您對我們的關注。'
+        const script = u4d?.results?.line_message ?? u4d?.results?.facebook_post ?? t('out.defaultCallScript')
         const { res, data } = await safeFetch('/api/marketing/phone-call', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'batch', phones, script, voiceId: (u10d as { voiceId?: string } | undefined)?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL', birdCallerId: (u10d as { callerId?: string } | undefined)?.callerId }),
         })
-        if (res.ok) outputs.push(`電話：${data.success}/${data.total} 成功`)
-        else outputs.push(`電話失敗：${data.error}`)
+        if (res.ok) outputs.push(t('out.phoneResult', { success: String(data.success), total: String(data.total) }))
+        else outputs.push(t('out.phoneFailed', { error: String(data.error) }))
       }
 
       // Email marketing
@@ -462,28 +465,28 @@ export default function MarketingPipelinePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             recipients: emailRecipients,
-            defaultSubject: u4d?.results?.email_subject ?? '行銷訊息',
+            defaultSubject: u4d?.results?.email_subject ?? t('out.defaultEmailSubject'),
             defaultBody: u4d?.results?.email_body ?? '',
           }),
         })
-        if (res.ok) outputs.push(`Email：${data.success}/${data.total} 成功`)
-        else outputs.push(`Email 失敗：${data.error}`)
+        if (res.ok) outputs.push(t('out.emailResult', { success: String(data.success), total: String(data.total) }))
+        else outputs.push(t('out.emailFailed', { error: String(data.error) }))
       }
 
-      if (outputs.length === 0) return { ok: false, output: '無電話或 Email 名單，請在行銷自動化中設定 Unit 10' }
-      return { ok: true, output: `潛在客戶行銷完成 · ${outputs.join(' | ')}` }
+      if (outputs.length === 0) return { ok: false, output: t('out.noLeadsList') }
+      return { ok: true, output: `${t('out.leadsDone')} · ${outputs.join(' | ')}` }
     }
 
     if (unitId === 11) {
       const avatarId = u11d?.avatarId
       const voiceId  = u11d?.voiceId
-      if (!avatarId || !voiceId) return { ok: false, output: '無主播設定，請在行銷自動化中設定 Unit 11 Avatar & Voice ID' }
+      if (!avatarId || !voiceId) return { ok: false, output: t('out.noAnchorConfig') }
 
       // Script: use Unit 4 anchor_script; if missing, auto-generate using Unit 4's duration settings
       let anchorScript = (u4d?.results as Record<string, string> | undefined)?.anchor_script ?? ''
       if (!anchorScript) {
         const duration = (ud[4] as { anchorDuration?: number } | undefined)?.anchorDuration ?? 60
-        const style    = (ud[4] as { anchorStyle?: string } | undefined)?.anchorStyle ?? '專業親切'
+        const style    = (ud[4] as { anchorStyle?: string } | undefined)?.anchorStyle ?? t('out.defaultAnchorStyle')
         const genRes = await safeFetch('/api/marketing/avatar-script', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -498,7 +501,7 @@ export default function MarketingPipelinePage() {
           }),
         })
         anchorScript = (genRes.data.scripts as string[] | undefined)?.[0] ?? ''
-        if (!anchorScript) return { ok: false, output: `主播腳本自動生成失敗：${String(genRes.data.error ?? '未知錯誤')}` }
+        if (!anchorScript) return { ok: false, output: t('out.anchorScriptGenFailed', { error: String(genRes.data.error ?? t('out.unknownError')) }) }
       }
       const script = anchorScript
 
@@ -507,10 +510,10 @@ export default function MarketingPipelinePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarId, voiceId, script: script.slice(0, 500) }),
       })
-      if (!submitRes.ok) return { ok: false, output: String(submit.error ?? 'HeyGen 提交失敗') }
+      if (!submitRes.ok) return { ok: false, output: String(submit.error ?? t('out.heygenSubmitFailed')) }
 
       for (let i = 0; i < 75; i++) {
-        if (abortRef.current) return { ok: false, output: '已中止' }
+        if (abortRef.current) return { ok: false, output: t('out.aborted') }
         await new Promise(r => setTimeout(r, 8000))
         const { data: poll } = await safeFetch(`/api/marketing/heygen-avatar?videoId=${submit.videoId}`, {})
 
@@ -534,24 +537,24 @@ export default function MarketingPipelinePage() {
               }),
             })
             uploadNote = upRes.ok
-              ? ` · 已上傳至 ${videoPlatforms.join('、')}`
-              : ` · 上傳失敗：${String(upData.error ?? '').slice(0, 60)}`
+              ? ` · ${t('out.uploadedTo', { platforms: videoPlatforms.join('、') })}`
+              : ` · ${t('out.uploadFailedShort', { error: String(upData.error ?? '').slice(0, 60) })}`
           }
 
           return {
             ok: true,
-            output: `主播影片完成${uploadNote}`,
+            output: `${t('out.anchorVideoDone')}${uploadNote}`,
             data: { videos: [{ videoId: submit.videoId, videoUrl }] },
           }
         }
 
-        if (poll.status === 'failed') return { ok: false, output: '主播影片生成失敗' }
+        if (poll.status === 'failed') return { ok: false, output: t('out.anchorVideoFailed') }
       }
-      return { ok: false, output: 'HeyGen 逾時' }
+      return { ok: false, output: t('out.heygenTimeout') }
     }
 
-    return { ok: false, output: `Unit ${unitId} 不支援自動執行` }
-  }, [])
+    return { ok: false, output: t('out.unitNotSupported', { unitId }) }
+  }, [t])
 
   // ── Start pipeline ───────────────────────────────────────────────────────
   const startPipeline = useCallback(async () => {
@@ -570,7 +573,7 @@ export default function MarketingPipelinePage() {
       const def = STEP_DEFS.find(d => d.unitId === stepCfg.unitId)!
       setCurrentIdx(i)
       updateStep(stepCfg.unitId, 'running')
-      log(`▶ 開始執行：${def.name}`)
+      log(`▶ ${t('log.start', { name: t(def.nameKey) })}`)
 
       try {
         const result = await runUnit(stepCfg.unitId, ud)
@@ -581,40 +584,40 @@ export default function MarketingPipelinePage() {
 
         if (!result.ok) {
           updateStep(stepCfg.unitId, 'error', result.output)
-          log(`✗ ${def.name} 失敗：${result.output}`)
+          log(`✗ ${t('log.stepFailed', { name: t(def.nameKey), output: result.output })}`)
           break
         }
 
-        log(`✓ ${def.name} 完成：${result.output}`)
+        log(`✓ ${t('log.stepDone', { name: t(def.nameKey), output: result.output })}`)
 
         if (stepCfg.notify) {
           updateStep(stepCfg.unitId, 'waiting', result.output)
           pendingFeedbackRef.current = null
           const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
           const lines = result.output.split('\n')
-          const notifyMsg = [`🤖 <b>AI GATE 流程確認</b>`, ``, `步驟完成：${esc(def.name)}`, `結果：${esc(lines[0])}`, ``, `請選擇操作：`].join('\n')
+          const notifyMsg = [`🤖 <b>${t('tg.title')}</b>`, ``, t('tg.stepDone', { name: esc(t(def.nameKey)) }), t('tg.result', { result: esc(lines[0]) }), ``, t('tg.chooseAction')].join('\n')
           const approvalId = await sendTelegramApproval(notifyMsg, { unitId: stepCfg.unitId })
-          log(`🔔 已發送 Telegram 通知${approvalId ? '（含互動按鈕）' : ''}，等待確認…`)
+          log(`🔔 ${t('log.tgSent', { btn: approvalId ? t('log.withButtons') : '' })}`)
           await waitConfirm(stepCfg.unitId, approvalId ?? undefined)
           const fb = pendingFeedbackRef.current
-          if (fb) log(`📱 Telegram 回饋：${fb}`)
-          log(`→ 已確認，繼續執行`)
+          if (fb) log(`📱 ${t('log.tgFeedback', { fb })}`)
+          log(`→ ${t('log.confirmedContinue')}`)
         }
 
         updateStep(stepCfg.unitId, 'done', result.output)
       } catch (e) {
         updateStep(stepCfg.unitId, 'error', String(e))
-        log(`✗ ${def.name} 發生錯誤：${String(e)}`)
+        log(`✗ ${t('log.stepError', { name: t(def.nameKey), error: String(e) })}`)
         break
       }
     }
 
     setIsRunning(false)
     setCurrentIdx(-1)
-    log(`── 流程結束 ──`)
-  }, [config, campaignData, runUnit, saveUnit, sendTelegramApproval, updateStep, waitConfirm, log])
+    log(`── ${t('log.flowEnd')} ──`)
+  }, [config, campaignData, runUnit, saveUnit, sendTelegramApproval, updateStep, waitConfirm, log, t])
 
-  function stopPipeline() { abortRef.current = true; setIsRunning(false); log('⏹ 已手動停止') }
+  function stopPipeline() { abortRef.current = true; setIsRunning(false); log(`⏹ ${t('log.stopped')}`) }
 
   const enabledSteps = config.steps.filter(s => {
     const def = STEP_DEFS.find(d => d.unitId === s.unitId)
@@ -629,29 +632,29 @@ export default function MarketingPipelinePage() {
       <aside className="w-64 shrink-0 border-r bg-white flex flex-col">
         <div className="p-4 border-b">
           <a href="/marketing-auto" className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 mb-3">
-            <ArrowLeft className="h-3.5 w-3.5" /> 返回行銷自動化
+            <ArrowLeft className="h-3.5 w-3.5" /> {t('backToAuto')}
           </a>
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
-            <h1 className="font-bold text-sm text-gray-800">自動化流程</h1>
+            <h1 className="font-bold text-sm text-gray-800">{t('title')}</h1>
           </div>
-          <p className="text-[10px] text-gray-400 mt-0.5">勾選要執行的步驟，一鍵全自動</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{t('subtitle')}</p>
         </div>
 
         {/* Source campaign banner */}
         {loadingCampaign && (
           <div className="px-3 py-2 bg-amber-50 border-b border-amber-100 flex items-center gap-2 text-[10px] text-amber-600">
-            <Loader2 className="h-3 w-3 animate-spin" /> 載入專案資料中…
+            <Loader2 className="h-3 w-3 animate-spin" /> {t('loadingCampaign')}
           </div>
         )}
         {sourceCampaign && !loadingCampaign && (
           <div className="px-3 py-2 bg-green-50 border-b border-green-100 space-y-0.5">
             <div className="flex items-center gap-1.5 text-[10px] font-semibold text-green-700">
-              <Link2 className="h-3 w-3" /> 已串接行銷專案
+              <Link2 className="h-3 w-3" /> {t('linkedCampaign')}
             </div>
             <div className="text-[10px] text-green-600 font-medium truncate">《{sourceCampaign.title}》</div>
             <div className="text-[10px] text-green-500">
-              已載入：{sourceCampaign.loadedUnits.sort((a,b)=>a-b).map(n => `U${n}`).join('、') || '無'}
+              {t('loadedUnits', { units: sourceCampaign.loadedUnits.sort((a,b)=>a-b).map(n => `U${n}`).join('、') || t('none') })}
             </div>
           </div>
         )}
@@ -662,7 +665,7 @@ export default function MarketingPipelinePage() {
             type="text"
             value={config.activityName}
             onChange={e => setConfig(c => ({ ...c, activityName: e.target.value }))}
-            placeholder="流程名稱"
+            placeholder={t('flowName')}
             className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
           />
         </div>
@@ -697,17 +700,17 @@ export default function MarketingPipelinePage() {
                    <Icon className="h-3.5 w-3.5 text-gray-400" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-gray-700 truncate">{def.unitId}. {def.name}</div>
+                  <div className="text-xs font-medium text-gray-700 truncate">{def.unitId}. {t(def.nameKey)}</div>
                   <div className="text-[10px] truncate">
                     {hasData
-                      ? <span className="text-green-500">✓ 已備資料</span>
-                      : <span className="text-gray-400">{def.desc}</span>
+                      ? <span className="text-green-500">{t('dataReady')}</span>
+                      : <span className="text-gray-400">{t(def.descKey)}</span>
                     }
                   </div>
                 </div>
                 {def.canAuto && stepCfg.enabled && (
                   <button onClick={() => setStepNotify(def.unitId, !stepCfg.notify)}
-                    title={stepCfg.notify ? '通知後繼續' : '自動繼續'}
+                    title={stepCfg.notify ? t('notifyThenContinue') : t('autoContinue')}
                     className={`shrink-0 p-1 rounded ${stepCfg.notify ? 'text-amber-500' : 'text-gray-300'}`}>
                     {stepCfg.notify ? <Bell className="h-3 w-3" /> : <BellOff className="h-3 w-3" />}
                   </button>
@@ -719,8 +722,8 @@ export default function MarketingPipelinePage() {
 
         {/* Legend */}
         <div className="p-3 border-t text-[10px] text-gray-400 space-y-1">
-          <div className="flex items-center gap-1.5"><Bell className="h-3 w-3 text-amber-400" /> 完成後通知並等待確認</div>
-          <div className="flex items-center gap-1.5"><BellOff className="h-3 w-3 text-gray-300" /> 完成後自動繼續</div>
+          <div className="flex items-center gap-1.5"><Bell className="h-3 w-3 text-amber-400" /> {t('legendNotify')}</div>
+          <div className="flex items-center gap-1.5"><BellOff className="h-3 w-3 text-gray-300" /> {t('legendAuto')}</div>
         </div>
       </aside>
 
@@ -730,11 +733,11 @@ export default function MarketingPipelinePage() {
         {/* Header */}
         <div className="bg-white border-b px-6 py-3 flex items-center gap-3">
           <div className="flex-1">
-            <div className="text-sm font-semibold text-gray-700">{config.activityName || '自動化流程'}</div>
+            <div className="text-sm font-semibold text-gray-700">{config.activityName || t('title')}</div>
             <div className="text-[10px] text-gray-400">
-              {enabledSteps.length > 0 ? `${enabledSteps.length} 個步驟已勾選` : '請勾選左側步驟'}
+              {enabledSteps.length > 0 ? t('stepsChecked', { count: enabledSteps.length }) : t('pleaseCheck')}
               {Object.keys(campaignData).filter(k => !isNaN(Number(k))).length > 0 &&
-                ` · 已備 ${Object.keys(campaignData).filter(k => !isNaN(Number(k))).length} 個單元資料`}
+                ` · ${t('unitsReady', { count: Object.keys(campaignData).filter(k => !isNaN(Number(k))).length })}`}
             </div>
           </div>
           <button onClick={() => setShowSchedule(s => !s)}
@@ -744,24 +747,24 @@ export default function MarketingPipelinePage() {
                 : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}>
             <Clock className="h-3.5 w-3.5" />
-            {config.schedule.enabled ? '定時已啟用' : '定時排程'}
+            {config.schedule.enabled ? t('scheduleEnabled') : t('schedule')}
           </button>
           <div className="flex gap-2">
             {isRunning
               ? <button onClick={stopPipeline}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-red-500">
-                  <Pause className="h-4 w-4" />停止
+                  <Pause className="h-4 w-4" />{t('stop')}
                 </button>
               : <button onClick={startPipeline} disabled={enabledSteps.length === 0}
                   className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-40 shadow-sm"
                   style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                  <Zap className="h-4 w-4" />開始執行
+                  <Zap className="h-4 w-4" />{t('start')}
                 </button>
             }
             {stepRuns.length > 0 && !isRunning && (
               <button onClick={() => { setStepRuns([]); setRunLog([]); setCurrentIdx(-1) }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-gray-500 bg-gray-100 hover:bg-gray-200">
-                <RotateCcw className="h-3.5 w-3.5" />重置
+                <RotateCcw className="h-3.5 w-3.5" />{t('reset')}
               </button>
             )}
           </div>
@@ -773,10 +776,10 @@ export default function MarketingPipelinePage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-amber-600" />
-                <span className="font-bold text-sm text-amber-800">定時自動執行</span>
+                <span className="font-bold text-sm text-amber-800">{t('scheduledRun')}</span>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
-                <span className="text-xs text-amber-700">{config.schedule.enabled ? '已啟用' : '已停用'}</span>
+                <span className="text-xs text-amber-700">{config.schedule.enabled ? t('enabled') : t('disabled')}</span>
                 <div onClick={() => setConfig(c => ({ ...c, schedule: { ...c.schedule, enabled: !c.schedule.enabled } }))}
                   className={`w-10 h-5 rounded-full transition-colors cursor-pointer relative ${config.schedule.enabled ? 'bg-amber-500' : 'bg-gray-300'}`}>
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.schedule.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
@@ -786,56 +789,56 @@ export default function MarketingPipelinePage() {
             {config.schedule.enabled && (
               <div className="flex flex-wrap gap-4 items-end">
                 <div>
-                  <label className="text-xs text-amber-700 block mb-1">頻率</label>
+                  <label className="text-xs text-amber-700 block mb-1">{t('frequency')}</label>
                   <select value={config.schedule.frequency}
                     onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, frequency: e.target.value as 'daily'|'weekly'|'monthly' } }))}
                     className="text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
-                    <option value="daily">每日</option>
-                    <option value="weekly">每週</option>
-                    <option value="monthly">每月</option>
+                    <option value="daily">{t('freqDaily')}</option>
+                    <option value="weekly">{t('freqWeekly')}</option>
+                    <option value="monthly">{t('freqMonthly')}</option>
                   </select>
                 </div>
                 {config.schedule.frequency === 'weekly' && (
                   <div>
-                    <label className="text-xs text-amber-700 block mb-1">星期幾</label>
+                    <label className="text-xs text-amber-700 block mb-1">{t('weekday')}</label>
                     <select value={config.schedule.weekday}
                       onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, weekday: Number(e.target.value) } }))}
                       className="text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
-                      {['日','一','二','三','四','五','六'].map((d, i) => <option key={i} value={i}>星期{d}</option>)}
+                      {[0,1,2,3,4,5,6].map(i => <option key={i} value={i}>{t(`weekdayOpt.${i}`)}</option>)}
                     </select>
                   </div>
                 )}
                 {config.schedule.frequency === 'monthly' && (
                   <div>
-                    <label className="text-xs text-amber-700 block mb-1">每月第幾日</label>
+                    <label className="text-xs text-amber-700 block mb-1">{t('monthDay')}</label>
                     <input type="number" min={1} max={28} value={config.schedule.monthDay}
                       onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, monthDay: Number(e.target.value) } }))}
                       className="w-20 text-sm border border-amber-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300" />
                   </div>
                 )}
                 <div>
-                  <label className="text-xs text-amber-700 block mb-1">執行時間</label>
+                  <label className="text-xs text-amber-700 block mb-1">{t('runTime')}</label>
                   <div className="flex gap-1.5">
                     <select value={config.schedule.hour}
                       onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, hour: Number(e.target.value) } }))}
                       className="text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
-                      {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{String(i).padStart(2,'0')}時</option>)}
+                      {Array.from({ length: 24 }, (_, i) => <option key={i} value={i}>{t('hourUnit', { h: String(i).padStart(2,'0') })}</option>)}
                     </select>
                     <select value={config.schedule.minute}
                       onChange={e => setConfig(c => ({ ...c, schedule: { ...c.schedule, minute: Number(e.target.value) } }))}
                       className="w-20 text-sm border border-amber-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300">
-                      <option value={0}>00分</option>
-                      <option value={30}>30分</option>
+                      <option value={0}>{t('minUnit', { m: '00' })}</option>
+                      <option value={30}>{t('minUnit', { m: '30' })}</option>
                     </select>
                   </div>
                 </div>
                 <div className="text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3 w-3" />設定已自動儲存
+                  <CheckCircle2 className="h-3 w-3" />{t('autoSaved')}
                 </div>
               </div>
             )}
             <p className="text-[10px] text-amber-600 mt-2">
-              排程由 Vercel Cron 每小時檢查。需設定環境變數：
+              {t('cronNote')}
               <code className="bg-amber-100 px-1 rounded mx-1">CRON_SECRET</code>
               <code className="bg-amber-100 px-1 rounded">NEXT_PUBLIC_APP_URL</code>
             </p>
@@ -848,7 +851,7 @@ export default function MarketingPipelinePage() {
           {/* Stepper */}
           <div className="w-52 shrink-0 border-r bg-white overflow-y-auto py-3">
             {enabledSteps.length === 0
-              ? <p className="text-xs text-gray-400 text-center py-12 px-4">請勾選左側步驟</p>
+              ? <p className="text-xs text-gray-400 text-center py-12 px-4">{t('pleaseCheck')}</p>
               : enabledSteps.map((stepCfg, i) => {
                   const def = STEP_DEFS.find(d => d.unitId === stepCfg.unitId)!
                   const run = stepRuns.find(r => r.unitId === stepCfg.unitId)
@@ -876,9 +879,9 @@ export default function MarketingPipelinePage() {
                         )}
                       </div>
                       <div className="min-w-0 pb-2">
-                        <div className={`text-xs font-medium ${isCurrent ? 'text-blue-600' : 'text-gray-700'}`}>{def.name}</div>
+                        <div className={`text-xs font-medium ${isCurrent ? 'text-blue-600' : 'text-gray-700'}`}>{t(def.nameKey)}</div>
                         {run?.output && <div className="text-[10px] text-gray-400 truncate mt-0.5">{run.output}</div>}
-                        {stepCfg.notify && <div className="flex items-center gap-1 mt-0.5"><Bell className="h-2.5 w-2.5 text-amber-400" /><span className="text-[10px] text-amber-500">通知</span></div>}
+                        {stepCfg.notify && <div className="flex items-center gap-1 mt-0.5"><Bell className="h-2.5 w-2.5 text-amber-400" /><span className="text-[10px] text-amber-500">{t('notify')}</span></div>}
                       </div>
                     </div>
                   )
@@ -895,19 +898,17 @@ export default function MarketingPipelinePage() {
                   <Bell className="h-5 w-5 text-amber-500 shrink-0" />
                   <div>
                     <div className="font-bold text-sm text-amber-800">
-                      {STEP_DEFS.find(d => d.unitId === waitingUnitId)?.name} 已完成
+                      {t('stepCompleted', { name: t(STEP_DEFS.find(d => d.unitId === waitingUnitId)?.nameKey ?? 'steps.1.name') })}
                     </div>
                     <div className="text-xs text-amber-600 mt-0.5">
-                      {telegramApprovalId
-                        ? '📱 已發送 Telegram 按鈕通知，可在手機點擊確認，或在此點擊繼續。'
-                        : '確認結果後點擊繼續。'}
+                      {telegramApprovalId ? t('tgWaitHint') : t('confirmHint')}
                     </div>
                   </div>
                 </div>
                 <button onClick={handleConfirm}
                   className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-sm font-bold text-white whitespace-nowrap"
                   style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
-                  <ChevronRight className="h-4 w-4" />確認繼續
+                  <ChevronRight className="h-4 w-4" />{t('confirmContinue')}
                 </button>
               </div>
             )}
@@ -916,8 +917,8 @@ export default function MarketingPipelinePage() {
               {runLog.length === 0
                 ? <div className="text-gray-500 text-center pt-16">
                     <Zap className="h-8 w-8 text-gray-700 mx-auto mb-3" />
-                    <div>勾選步驟後點擊「開始執行」</div>
-                    <div className="text-gray-600 mt-1 text-[10px]">所有設定已從行銷自動化專案帶入</div>
+                    <div>{t('logEmpty')}</div>
+                    <div className="text-gray-600 mt-1 text-[10px]">{t('logEmptyHint')}</div>
                   </div>
                 : runLog.map((line, i) => (
                     <div key={i} className={`leading-relaxed ${
@@ -935,9 +936,9 @@ export default function MarketingPipelinePage() {
 
             {stepRuns.length > 0 && (
               <div className="flex gap-4 text-xs text-gray-500 shrink-0">
-                <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />{stepRuns.filter(r => r.status === 'done').length} 完成</span>
-                <span className="flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5 text-red-400" />{stepRuns.filter(r => r.status === 'error').length} 失敗</span>
-                <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5 text-gray-400" />{stepRuns.filter(r => r.status === 'pending').length} 待執行</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-green-500" />{t('statDone', { count: stepRuns.filter(r => r.status === 'done').length })}</span>
+                <span className="flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5 text-red-400" />{t('statError', { count: stepRuns.filter(r => r.status === 'error').length })}</span>
+                <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5 text-gray-400" />{t('statPending', { count: stepRuns.filter(r => r.status === 'pending').length })}</span>
               </div>
             )}
           </div>
