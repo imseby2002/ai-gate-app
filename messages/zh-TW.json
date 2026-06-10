@@ -466,6 +466,31 @@
       "rejectedEmailed": "已婉拒，並通知旅客",
       "rejectedNoEmail": "已婉拒（通知信未寄出）"
     },
+    "daily": {
+      "title": "每日入住記錄",
+      "subtitle": "房號 · 密碼 · 旅客資訊",
+      "hidePw": "隱藏密碼",
+      "showPw": "顯示密碼",
+      "refresh": "重新整理",
+      "backToToday": "回今天",
+      "todayParen": "（今天）",
+      "empty": "尚無資料，請手動新增房間",
+      "addRoom": "新增房間",
+      "roomN": "房間 {n}",
+      "clickToFill": "點擊填入",
+      "autoTag": "自動",
+      "orderTag": "訂單",
+      "hint": "點擊任意格子即可編輯 · 大門密碼填一次套用到當日所有房間並延續之後日期 · 房門密碼套用到該房間之後所有日期 ·（改某天則該天起更新）· 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏",
+      "unmatchedTitle": "今日訂單（未對應房間，共 {count} 筆）",
+      "unmatchedHint": "⚠ 這些訂單的房型尚未對應，請至「訂單」頁面手動指定房型後即可自動帶入",
+      "cols": {
+        "room_name": "房號",
+        "room_password": "房門密碼",
+        "gate_password": "大門密碼",
+        "order_number": "訂單號碼",
+        "guest_name": "旅客姓名"
+      }
+    },
     "nav": {
       "overview": "總覽",
       "profile": "民宿資料",

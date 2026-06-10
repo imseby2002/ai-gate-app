@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Plus, Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
 
 interface DailyRecord {
@@ -16,12 +17,12 @@ interface DailyRecord {
 
 type EditableField = 'room_name' | 'room_password' | 'gate_password' | 'order_number' | 'guest_name'
 
-const COLS: { key: EditableField; label: string; width: string; sensitive?: boolean }[] = [
-  { key: 'room_name',     label: '房號',     width: 'w-24' },
-  { key: 'room_password', label: '房門密碼', width: 'w-32', sensitive: true },
-  { key: 'gate_password', label: '大門密碼', width: 'w-32', sensitive: true },
-  { key: 'order_number',  label: '訂單號碼', width: 'w-36' },
-  { key: 'guest_name',    label: '旅客姓名', width: 'w-32' },
+const COLS: { key: EditableField; labelKey: string; width: string; sensitive?: boolean }[] = [
+  { key: 'room_name',     labelKey: 'daily.cols.room_name',     width: 'w-24' },
+  { key: 'room_password', labelKey: 'daily.cols.room_password', width: 'w-32', sensitive: true },
+  { key: 'gate_password', labelKey: 'daily.cols.gate_password', width: 'w-32', sensitive: true },
+  { key: 'order_number',  labelKey: 'daily.cols.order_number',  width: 'w-36' },
+  { key: 'guest_name',    labelKey: 'daily.cols.guest_name',    width: 'w-32' },
 ]
 
 function todayTW() {
@@ -59,6 +60,7 @@ interface CellProps {
 }
 
 function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange }: CellProps) {
+  const t = useTranslations('Booking')
   const val = row[col.key]
   const isEditing = editing?.id === row.id && editing?.field === col.key
   const masked = col.sensitive && !showPasswords && val
@@ -87,18 +89,19 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
         ${!val ? 'text-gray-300' : 'text-gray-800'}
         ${saving === row.id ? 'opacity-60' : ''}`}
     >
-      {masked ? '••••••' : (val || '點擊填入')}
+      {masked ? '••••••' : (val || t('daily.clickToFill'))}
       {row.source === 'traiwan' && col.key === 'order_number' && val && (
-        <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">自動</span>
+        <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
       )}
       {row.source === 'booking' && col.key === 'order_number' && val && (
-        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">訂單</span>
+        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">{t('daily.orderTag')}</span>
       )}
     </div>
   )
 }
 
 export default function DailyPage() {
+  const t = useTranslations('Booking')
   const [date, setDate] = useState(todayTW)
   const [rows, setRows] = useState<DailyRecord[]>([])
   const [unmatched, setUnmatched] = useState<UnmatchedBooking[]>([])
@@ -196,7 +199,7 @@ export default function DailyPage() {
     const res = await fetch('/api/booking/daily', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, room_name: `房間 ${rows.length + 1}`, source: 'manual', sort_order: rows.length }),
+      body: JSON.stringify({ date, room_name: t('daily.roomN', { n: rows.length + 1 }), source: 'manual', sort_order: rows.length }),
     })
     const [created] = await res.json()
     if (created) {
@@ -221,20 +224,20 @@ export default function DailyPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">每日入住記錄</h1>
-          <p className="text-sm text-gray-500 mt-0.5">房號 · 密碼 · 旅客資訊</p>
+          <h1 className="text-lg font-semibold text-gray-900">{t('daily.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('daily.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowPasswords(v => !v)}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-gray-600">
             {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            {showPasswords ? '隱藏密碼' : '顯示密碼'}
+            {showPasswords ? t('daily.hidePw') : t('daily.showPw')}
           </button>
           <button onClick={load} disabled={loading}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-gray-600 disabled:opacity-50">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            重新整理
+            {t('daily.refresh')}
           </button>
         </div>
       </div>
@@ -257,24 +260,24 @@ export default function DailyPage() {
         </button>
         {!isToday && (
           <button onClick={() => setDate(todayTW())}
-            className="text-xs text-indigo-600 hover:underline ml-1">回今天</button>
+            className="text-xs text-indigo-600 hover:underline ml-1">{t('daily.backToToday')}</button>
         )}
-        <span className="text-sm text-gray-500 ml-1">{fmtDate(date)}{isToday ? '（今天）' : ''}</span>
+        <span className="text-sm text-gray-500 ml-1">{fmtDate(date)}{isToday ? t('daily.todayParen') : ''}</span>
       </div>
 
       {/* Mobile cards */}
       <div className="sm:hidden space-y-3">
         {loading ? (
-          <div className="py-12 text-center text-sm text-gray-400">載入中…</div>
+          <div className="py-12 text-center text-sm text-gray-400">{t('common.loading')}</div>
         ) : rows.length === 0 ? (
-          <div className="py-12 text-center text-sm text-gray-400">尚無資料，請手動新增房間</div>
+          <div className="py-12 text-center text-sm text-gray-400">{t('daily.empty')}</div>
         ) : (
           rows.map(row => (
             <div key={row.id}
               className={`rounded-2xl border bg-white shadow-sm p-4 space-y-2 ${saving === row.id ? 'opacity-60' : ''}`}>
               <div className="flex items-start justify-between gap-2 pb-2 border-b">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] text-gray-400 mb-0.5">{COLS[0].label}</div>
+                  <div className="text-[10px] text-gray-400 mb-0.5">{t(COLS[0].labelKey)}</div>
                   <Cell row={row} col={COLS[0]} editing={editing} editVal={editVal}
                     showPasswords={showPasswords} saving={saving} inputRef={inputRef}
                     onStartEdit={startEdit} onCommitEdit={commitEdit}
@@ -288,7 +291,7 @@ export default function DailyPage() {
               <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                 {COLS.slice(1).map(col => (
                   <div key={col.key} className={col.key === 'order_number' ? 'col-span-2' : ''}>
-                    <div className="text-[10px] text-gray-400 mb-0.5">{col.label}</div>
+                    <div className="text-[10px] text-gray-400 mb-0.5">{t(col.labelKey)}</div>
                     <Cell row={row} col={col} editing={editing} editVal={editVal}
                       showPasswords={showPasswords} saving={saving} inputRef={inputRef}
                       onStartEdit={startEdit} onCommitEdit={commitEdit}
@@ -306,16 +309,16 @@ export default function DailyPage() {
         <div className="grid bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wide"
           style={{ gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 2rem' }}>
           {COLS.map(c => (
-            <div key={c.key} className="px-3 py-2.5">{c.label}</div>
+            <div key={c.key} className="px-3 py-2.5">{t(c.labelKey)}</div>
           ))}
           <div />
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-sm text-gray-400">載入中…</div>
+          <div className="py-12 text-center text-sm text-gray-400">{t('common.loading')}</div>
         ) : rows.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-gray-400 mb-3">尚無資料，請手動新增房間</p>
+            <p className="text-sm text-gray-400 mb-3">{t('daily.empty')}</p>
           </div>
         ) : (
           rows.map((row, i) => (
@@ -355,24 +358,24 @@ export default function DailyPage() {
       <button onClick={addRow}
         className="mt-3 flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
         <Plus className="h-4 w-4" />
-        新增房間
+        {t('daily.addRoom')}
       </button>
 
       <p className="mt-4 text-xs text-gray-400">
-        點擊任意格子即可編輯 · 大門密碼填一次套用到當日所有房間並延續之後日期 · 房門密碼套用到該房間之後所有日期 ·（改某天則該天起更新）· 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏
+        {t('daily.hint')}
       </p>
 
       {/* 未分配訂單 */}
       {unmatched.length > 0 && (
         <div className="mt-6">
           <h2 className="text-sm font-semibold text-gray-600 mb-2">
-            今日訂單（未對應房間，共 {unmatched.length} 筆）
+            {t('daily.unmatchedTitle', { count: unmatched.length })}
           </h2>
           <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
             <div className="grid bg-amber-50 border-b text-xs font-semibold text-amber-700 uppercase tracking-wide"
               style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <div className="px-3 py-2.5">旅客姓名</div>
-              <div className="px-3 py-2.5">訂單號碼</div>
+              <div className="px-3 py-2.5">{t('daily.cols.guest_name')}</div>
+              <div className="px-3 py-2.5">{t('daily.cols.order_number')}</div>
             </div>
             {unmatched.map((b, i) => (
               <div key={i} className="grid border-b last:border-0 text-sm"
@@ -383,7 +386,7 @@ export default function DailyPage() {
             ))}
           </div>
           <p className="mt-1.5 text-xs text-amber-600">
-            ⚠ 這些訂單的房型尚未對應，請至「訂單」頁面手動指定房型後即可自動帶入
+            {t('daily.unmatchedHint')}
           </p>
         </div>
       )}

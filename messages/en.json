@@ -466,6 +466,31 @@
       "rejectedEmailed": "Declined and guest notified",
       "rejectedNoEmail": "Declined (notification email not sent)"
     },
+    "daily": {
+      "title": "Daily Check-in Records",
+      "subtitle": "Room · Password · Guest Info",
+      "hidePw": "Hide Passwords",
+      "showPw": "Show Passwords",
+      "refresh": "Refresh",
+      "backToToday": "Back to Today",
+      "todayParen": " (Today)",
+      "empty": "No data yet, please add rooms manually",
+      "addRoom": "Add Room",
+      "roomN": "Room {n}",
+      "clickToFill": "Click to fill",
+      "autoTag": "Auto",
+      "orderTag": "Booking",
+      "hint": "Click any cell to edit · Gate password applies to all rooms that day and forward · Room password applies to that room forward · (editing a day updates from that day) · Blue \"Booking\" = imported from booking system · Passwords hidden by default",
+      "unmatchedTitle": "Today's bookings (unmatched rooms, {count} total)",
+      "unmatchedHint": "⚠ These bookings have no assigned room type. Assign a room type on the \"Bookings\" page to auto-import.",
+      "cols": {
+        "room_name": "Room",
+        "room_password": "Room Password",
+        "gate_password": "Gate Password",
+        "order_number": "Order Number",
+        "guest_name": "Guest Name"
+      }
+    },
     "nav": {
       "overview": "Overview",
       "profile": "Property Info",
