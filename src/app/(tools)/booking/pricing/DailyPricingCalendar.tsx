@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Save, Check } from 'lucide-react'
 
 interface Property {
@@ -16,8 +17,6 @@ const EMPTY: DayPricing = {
   extra_large_bed: '', extra_small_bed: '', status: 'open',
 }
 
-const DOW_LABELS = ['一','二','三','四','五','六','日']
-
 function toDateStr(y: number, m: number, d: number) {
   return `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
 }
@@ -30,12 +29,6 @@ function getDowIdx(dateStr: string) {
 }
 
 type TabType = 'daily' | 'calendar' | 'rules' | 'compare'
-const VIEW_TABS: { t: TabType; label: string }[] = [
-  { t: 'daily',    label: '每日定價' },
-  { t: 'calendar', label: '格狀視圖' },
-  { t: 'rules',    label: '定價規則' },
-  { t: 'compare',  label: '周邊比價' },
-]
 
 interface Props {
   year: number; month: number
@@ -46,6 +39,15 @@ interface Props {
 }
 
 export default function DailyPricingCalendar({ year, month, onPrev, onNext, properties, tab, onTabChange }: Props) {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const DOW_LABELS = [0,1,2,3,4,5,6].map(i => t(`pricing.weekdays.${i}`))
+  const VIEW_TABS: { t: TabType; label: string }[] = [
+    { t: 'daily',    label: t('pricing.tabs.daily') },
+    { t: 'calendar', label: t('pricing.tabs.calendar') },
+    { t: 'rules',    label: t('pricing.tabs.rules') },
+    { t: 'compare',  label: t('pricing.tabs.compare') },
+  ]
   const [propId, setPropId]       = useState(properties[0]?.id ?? '')
   const [edits, setEdits]         = useState<LocalEdits>({})
   const [orig, setOrig]           = useState<LocalEdits>({})
@@ -152,14 +154,14 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
 
   const today = new Date().toISOString().slice(0, 10)
-  const monthName = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
+  const monthName = new Date(year, month, 1).toLocaleDateString(locale, { year: 'numeric', month: 'long' })
 
   const FIELDS: { key: keyof DayPricing; label: string }[] = [
-    { key: 'price',           label: '房價' },
-    { key: 'deposit',         label: '訂金' },
-    { key: 'extra_person',    label: '加人價' },
-    { key: 'extra_large_bed', label: '加大床' },
-    { key: 'extra_small_bed', label: '加小床' },
+    { key: 'price',           label: t('pricing.fields.price') },
+    { key: 'deposit',         label: t('pricing.fields.deposit') },
+    { key: 'extra_person',    label: t('pricing.fields.extraPerson') },
+    { key: 'extra_large_bed', label: t('pricing.fields.largeBed') },
+    { key: 'extra_small_bed', label: t('pricing.fields.smallBed') },
   ]
 
   return (
@@ -172,7 +174,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
         <div className="flex items-center gap-3 flex-wrap">
           {properties.length > 1 && (
             <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-500 shrink-0">房型：</span>
+              <span className="text-xs text-gray-500 shrink-0">{t('pricing.roomLabel')}</span>
               <select value={propId} onChange={e => { setPropId(e.target.value); setSavedOk(false) }}
                 className="text-sm border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none">
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -184,7 +186,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
             <span className="text-sm font-bold min-w-[88px] text-center">{monthName}</span>
             <button onClick={onNext} className="p-1.5 rounded hover:bg-gray-100"><ChevronRight className="h-4 w-4" /></button>
           </div>
-          <span className="text-xs text-gray-400 hidden sm:block">（粉紅底為週五～日；國定假日請於「定價規則」另設）</span>
+          <span className="text-xs text-gray-400 hidden sm:block">{t('pricing.weekendNote')}</span>
           <div className="ml-auto flex items-center gap-2">
             {/* View switcher */}
             <div className="flex rounded-lg border overflow-hidden text-xs font-medium shrink-0">
@@ -198,25 +200,25 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
             </div>
             {savedOk && !hasPending && (
               <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                <Check className="h-3.5 w-3.5" /> 已儲存
+                <Check className="h-3.5 w-3.5" /> {t('website.saved')}
               </span>
             )}
             <button onClick={save} disabled={!hasPending || saving}
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600 disabled:opacity-40 transition-colors">
-              <Save className="h-3.5 w-3.5" /> {saving ? '儲存中…' : '儲存'}
+              <Save className="h-3.5 w-3.5" /> {saving ? t('bookings.form.saving') : t('detail.save')}
             </button>
           </div>
         </div>
 
         {/* Row 2: Quick-fill template + currency display */}
         <div className="flex items-center gap-2 flex-wrap bg-sky-50 rounded-lg px-3 py-2">
-          <span className="text-xs font-semibold text-sky-700 shrink-0">快速填入</span>
+          <span className="text-xs font-semibold text-sky-700 shrink-0">{t('pricing.quickFill')}</span>
           {[
-            { label: '房價',   val: qPrice,       set: setQPrice },
-            { label: '訂金',   val: qDeposit,     set: setQDeposit },
-            { label: '加人價', val: qExtraPerson,  set: setQExtraPerson },
-            { label: '加大床', val: qLargeBed,    set: setQLargeBed },
-            { label: '加小床', val: qSmallBed,    set: setQSmallBed },
+            { label: t('pricing.fields.price'),       val: qPrice,       set: setQPrice },
+            { label: t('pricing.fields.deposit'),     val: qDeposit,     set: setQDeposit },
+            { label: t('pricing.fields.extraPerson'), val: qExtraPerson,  set: setQExtraPerson },
+            { label: t('pricing.fields.largeBed'),    val: qLargeBed,    set: setQLargeBed },
+            { label: t('pricing.fields.smallBed'),    val: qSmallBed,    set: setQSmallBed },
           ].map(({ label, val, set: setFn }) => (
             <div key={label} className="flex items-center gap-1">
               <span className="text-[11px] text-sky-600 shrink-0">{label}</span>
@@ -227,10 +229,10 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
           ))}
           <button onClick={applyQuickFill}
             className="px-3 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-semibold hover:bg-sky-600 transition-colors">
-            套用全月
+            {t('pricing.applyMonth')}
           </button>
           <span className="ml-auto text-xs text-gray-400 shrink-0">
-            使用貨幣：{selectedProp?.currency ?? 'TWD'} 新台幣
+            {t('pricing.usingCurrency', { currency: selectedProp?.currency ?? 'TWD' })}
           </span>
         </div>
       </div>
@@ -238,19 +240,19 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
       {/* Calendar */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">載入中…</div>
+          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">{t('common.loading')}</div>
         ) : properties.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">尚無房型</div>
+          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">{t('pricing.noRooms')}</div>
         ) : (
           <table className="border-collapse" style={{ minWidth: 900, width: '100%' }}>
             <thead>
               <tr className="bg-sky-500 text-white text-xs sticky top-0 z-10">
-                <th className="border border-sky-400 px-2 py-2 w-12 text-center font-medium">單位: 新台幣</th>
+                <th className="border border-sky-400 px-2 py-2 w-12 text-center font-medium">{t('pricing.unitTwd')}</th>
                 {DOW_LABELS.map((d, i) => (
-                  <th key={d} className={`border border-sky-400 px-1 py-2 text-center font-medium
+                  <th key={i} className={`border border-sky-400 px-1 py-2 text-center font-medium
                     ${i >= 4 ? 'bg-red-400' : ''}`}
                     style={{ minWidth: 130 }}>
-                    週{d}
+                    {d}
                   </th>
                 ))}
               </tr>
@@ -259,7 +261,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
               {weeks.map((week, wi) => (
                 <tr key={wi}>
                   <td className="border border-gray-200 bg-white text-center text-xs text-gray-500 font-semibold align-middle w-12">
-                    第{wi + 1}週
+                    {t('pricing.weekN', { n: wi + 1 })}
                   </td>
                   {week.map((date, di) => {
                     if (!date) {
@@ -278,7 +280,7 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
                         <div className={`text-xs font-bold mb-1 flex items-center gap-1
                           ${isToday ? 'text-sky-600' : isWkend ? 'text-red-500' : 'text-gray-700'}`}>
                           {day}
-                          {isClosed && <span className="text-[10px] text-red-500 font-medium">（關閉）</span>}
+                          {isClosed && <span className="text-[10px] text-red-500 font-medium">{t('pricing.closedTag')}</span>}
                         </div>
 
                         {/* Price fields */}
@@ -298,16 +300,16 @@ export default function DailyPricingCalendar({ year, month, onPrev, onNext, prop
 
                         {/* Status */}
                         <div className="flex items-center gap-1 mt-1">
-                          <span className="text-[10px] text-gray-400 w-11 shrink-0">狀態</span>
+                          <span className="text-[10px] text-gray-400 w-11 shrink-0">{t('pricing.statusLabel')}</span>
                           <select value={e.status}
                             onChange={ev => set(date, 'status', ev.target.value)}
                             className={`flex-1 w-0 min-w-0 text-[10px] border rounded px-0.5 py-0.5 focus:outline-none bg-white
                               ${e.status === 'closed' ? 'border-red-300 text-red-600' :
                                 e.status === 'admin_only' ? 'border-amber-300 text-amber-600' :
                                 'border-gray-200'}`}>
-                            <option value="open">開放</option>
-                            <option value="closed">關閉</option>
-                            <option value="admin_only">後台</option>
+                            <option value="open">{t('pricing.statusOpen')}</option>
+                            <option value="closed">{t('pricing.statusClosed')}</option>
+                            <option value="admin_only">{t('pricing.statusAdmin')}</option>
                           </select>
                         </div>
                       </td>

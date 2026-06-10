@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import DailyPricingCalendar from './DailyPricingCalendar'
@@ -26,23 +27,14 @@ interface PricingRule {
 }
 
 // ── Constants ────────────────────────────────────────────────
-const STATUS_CFG = {
-  open:       { label: '開放', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-  closed:     { label: '關閉', color: 'bg-red-100 text-red-700 border-red-300' },
-  admin_only: { label: '後台', color: 'bg-amber-100 text-amber-700 border-amber-300' },
-} as const
-
-const RULE_TYPE_CFG: Record<RuleType, { label: string; icon: string }> = {
-  weekend:         { label: '週末',              icon: '📅' },
-  holiday:         { label: '假日',              icon: '🎉' },
-  seasonal:        { label: '季節性',            icon: '🌸' },
-  occupancy:       { label: '住房率',            icon: '📊' },
-  advance_booking: { label: '臨時訂（N天內）',   icon: '⚡' },
-  early_bird:      { label: '早鳥訂（N天以上）', icon: '🐦' },
-  market:          { label: '市場跟隨（排程自動）', icon: '📈' },
+const STATUS_KEY: Record<BookingStatus, string> = {
+  open: 'pricing.statusOpen', closed: 'pricing.statusClosed', admin_only: 'pricing.statusAdmin',
 }
 
-const DOW = ['日','一','二','三','四','五','六']
+const RULE_TYPE_ICON: Record<RuleType, string> = {
+  weekend: '📅', holiday: '🎉', seasonal: '🌸', occupancy: '📊',
+  advance_booking: '⚡', early_bird: '🐦', market: '📈',
+}
 
 // ── Helpers ──────────────────────────────────────────────────
 function toDateStr(d: Date) { return d.toISOString().slice(0, 10) }
@@ -90,6 +82,11 @@ function computeEffectivePrice(
 
 // ── Page ─────────────────────────────────────────────────────
 export default function PricingPage() {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const DOW = [0,1,2,3,4,5,6].map(i => t(`roomgrid.day.${i}`))
+  const statusLabel = (s: BookingStatus) => t(STATUS_KEY[s])
+  const ruleCfg = (type: RuleType) => ({ icon: RULE_TYPE_ICON[type], label: t(`pricing.ruleTypes.${type}`) })
   const now = new Date()
   const [tab, setTab] = useState<'daily' | 'calendar' | 'rules' | 'compare'>('daily')
   const [year, setYear] = useState(now.getFullYear())
@@ -215,12 +212,12 @@ export default function PricingPage() {
   async function applyToPricing() {
     if (!cmpStats) return
     const targets = applyProps.length ? applyProps : properties.map(p => p.id)
-    if (!targets.length) { setApplyMsg('沒有房型可套用'); return }
-    if (!applyFrom || !applyTo || applyFrom > applyTo) { setApplyMsg('請選擇有效日期區間'); return }
+    if (!targets.length) { setApplyMsg(t('pricing.applyNoProps')); return }
+    if (!applyFrom || !applyTo || applyFrom > applyTo) { setApplyMsg(t('pricing.applyInvalidRange')); return }
     const adjusted = previewApplyPrice()
     if (adjusted == null) return
     const dates = getDateRange(applyFrom, applyTo, applyDow)
-    if (!dates.length) { setApplyMsg('區間內沒有符合星期的日期'); return }
+    if (!dates.length) { setApplyMsg(t('pricing.applyNoDates')); return }
     setApplySaving(true); setApplyMsg(null)
     try {
       // 先抓區間內既有設定，套用時只覆蓋價格，保留 booking_status / 押金 / 加床等欄位
@@ -247,8 +244,8 @@ export default function PricingPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings }),
       })
-      if (!res.ok) { const d = await res.json(); setApplyMsg(d.error ?? '套用失敗') }
-      else { setApplyMsg(`已套用 NT$ ${adjusted.toLocaleString()} → ${targets.length} 房型 × ${dates.length} 天`); fetchData() }
+      if (!res.ok) { const d = await res.json(); setApplyMsg(d.error ?? t('pricing.applyFailed')) }
+      else { setApplyMsg(t('pricing.applyDone', { price: adjusted.toLocaleString(), props: targets.length, days: dates.length })); fetchData() }
     } catch (e) {
       setApplyMsg(String(e))
     } finally { setApplySaving(false) }
@@ -262,15 +259,15 @@ export default function PricingPage() {
     try {
       const res = await fetch('/api/booking/pricing/market-run', { method: 'POST' })
       const d = await res.json()
-      if (!res.ok) setMarketRunMsg(d.error ?? '執行失敗')
-      else { setMarketRunMsg(`完成：抓取 ${d.snapshots} 天行情、套用 ${d.applied} 筆定價（消耗 API ${d.apiCalls} 次）`); fetchData() }
+      if (!res.ok) setMarketRunMsg(d.error ?? t('pricing.marketRunFailed'))
+      else { setMarketRunMsg(t('pricing.marketRunDone', { snapshots: d.snapshots, applied: d.applied, apiCalls: d.apiCalls })); fetchData() }
     } catch (e) {
       setMarketRunMsg(String(e))
     } finally { setMarketRunning(false) }
   }
 
   async function runCompare(force = false) {
-    if (!cmpLocation.trim()) { setCmpErr('請輸入地區'); return }
+    if (!cmpLocation.trim()) { setCmpErr(t('pricing.enterLocation')); return }
     const key = `${cmpLocation.trim()}|${cmpCheckIn}|${cmpCheckOut}`
     if (!force) {
       const cached = cmpCache.current.get(key)
@@ -287,7 +284,7 @@ export default function PricingPage() {
         body: JSON.stringify({ location: cmpLocation.trim(), check_in: cmpCheckIn, check_out: cmpCheckOut, force }),
       })
       const d = await res.json()
-      if (!res.ok) { setCmpErr(d.error ?? '查詢失敗'); setCmpItems([]); setCmpStats(null) }
+      if (!res.ok) { setCmpErr(d.error ?? t('pricing.queryFailed')); setCmpItems([]); setCmpStats(null) }
       else {
         setCmpItems(d.items ?? []); setCmpStats(d.stats ?? null)
         setCmpFromCache(!!d.cached)
@@ -373,7 +370,7 @@ export default function PricingPage() {
 
   const daysInMonth = getDaysInMonth(year, month)
   const todayStr = toDateStr(now)
-  const monthName = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
+  const monthName = new Date(year, month, 1).toLocaleDateString(locale, { year: 'numeric', month: 'long' })
   const visibleProps = filterProp ? properties.filter(p => p.id === filterProp) : properties
 
   // ── Grid selection helpers ───────────────────────────────
@@ -458,7 +455,7 @@ export default function PricingPage() {
 
   async function applyBatch() {
     const dates = getAllSelectedDates()
-    if (dates.length === 0) { alert('沒有符合條件的日期'); return }
+    if (dates.length === 0) { alert(t('pricing.noMatchingDates')); return }
     setBatchSaving(true)
     try {
       const targetProps = batchProps.length > 0 ? batchProps : properties.map(p => p.id)
@@ -518,7 +515,7 @@ export default function PricingPage() {
   }
 
   async function deleteRule(id: string) {
-    if (!confirm('確定刪除此規則？')) return
+    if (!confirm(t('pricing.deleteRuleConfirm'))) return
     await fetch(`/api/booking/pricing/rules?id=${id}`, { method: 'DELETE' })
     fetchData()
   }
@@ -532,19 +529,19 @@ export default function PricingPage() {
   }
 
   const VIEW_TABS_CFG = [
-    { t: 'daily'    as const, label: '每日定價' },
-    { t: 'calendar' as const, label: '格狀視圖' },
-    { t: 'rules'    as const, label: '定價規則' },
-    { t: 'compare'  as const, label: '周邊比價' },
+    { t: 'daily'    as const, label: t('pricing.tabs.daily') },
+    { t: 'calendar' as const, label: t('pricing.tabs.calendar') },
+    { t: 'rules'    as const, label: t('pricing.tabs.rules') },
+    { t: 'compare'  as const, label: t('pricing.tabs.compare') },
   ]
 
   function ViewSwitcher() {
     return (
       <div className="flex rounded-lg border overflow-hidden text-xs font-medium shrink-0">
-        {VIEW_TABS_CFG.map(({ t, label }) => (
-          <button key={t} onClick={() => setTab(t)}
+        {VIEW_TABS_CFG.map(({ t: tabId, label }) => (
+          <button key={tabId} onClick={() => setTab(tabId)}
             className={`px-2.5 py-1.5 transition-colors whitespace-nowrap
-              ${tab === t ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              ${tab === tabId ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
             {label}
           </button>
         ))}
@@ -572,7 +569,7 @@ export default function PricingPage() {
             {properties.length > 1 && (
               <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
                 className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none bg-white">
-                <option value="">全部房源</option>
+                <option value="">{t('calendar.allProperties')}</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             )}
@@ -583,31 +580,31 @@ export default function PricingPage() {
             </div>
             <div className="flex items-center gap-1.5 ml-auto">
               {selectedCells.size > 0 && (
-                <span className="text-xs text-indigo-600 font-semibold shrink-0">{selectedCells.size} 格</span>
+                <span className="text-xs text-indigo-600 font-semibold shrink-0">{t('pricing.cellsCount', { count: selectedCells.size })}</span>
               )}
               <button onClick={selectAllVisible}
                 className="text-xs px-2.5 py-1 rounded-lg border hover:bg-gray-50 text-gray-600 whitespace-nowrap">
-                全選
+                {t('pricing.selectAll')}
               </button>
               {selectedCells.size > 0 && (
                 <button onClick={clearSelection}
                   className="text-xs px-2.5 py-1 rounded-lg border hover:bg-gray-50 text-gray-600 whitespace-nowrap">
-                  清除
+                  {t('pricing.clear')}
                 </button>
               )}
               <button onClick={() => { setBatchProps(properties.map(p => p.id)); setShowBatch(true) }}
                 className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 whitespace-nowrap font-medium">
                 <CalendarRange className="h-3.5 w-3.5" />
-                批次定價
+                {t('pricing.batchPricing')}
               </button>
             </div>
           </div>
 
           {/* Grid */}
           {loading ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">載入中…</div>
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">{t('common.loading')}</div>
           ) : visibleProps.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">尚未建立房型</div>
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">{t('pricing.noRoomTypes')}</div>
           ) : (
             <div className="flex-1 overflow-auto">
               <table className="border-collapse" style={{ minWidth: 'max-content' }}>
@@ -615,7 +612,7 @@ export default function PricingPage() {
                   <tr>
                     {/* Room column header */}
                     <th className="sticky left-0 z-20 bg-white border-b border-r px-2.5 py-2 text-left text-xs font-semibold text-gray-500 min-w-[80px]">
-                      <span className="text-[10px] text-gray-400">點房名全選列</span>
+                      <span className="text-[10px] text-gray-400">{t('pricing.clickRowHint')}</span>
                     </th>
                     {/* Date headers — click to toggle whole column */}
                     {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -631,7 +628,7 @@ export default function PricingPage() {
                             ${colAllSel ? 'bg-sky-100' : 'bg-white hover:bg-gray-50'}`}
                           style={{ minWidth: 48 }}>
                           <div className={`text-[10px] leading-none mb-0.5 ${isSun ? 'text-red-400' : isSat ? 'text-blue-400' : 'text-gray-400'}`}>
-                            {DOW[dow]}
+                            {t(`roomgrid.day.${dow}`)}
                           </div>
                           <div className={`text-xs font-bold mx-auto w-5 h-5 flex items-center justify-center rounded-full
                             ${isToday ? 'bg-sky-500 text-white' : isSun ? 'text-red-600' : isSat ? 'text-blue-600' : 'text-gray-700'}`}>
@@ -653,7 +650,7 @@ export default function PricingPage() {
                             ${rowAllSel ? 'bg-sky-100' : 'bg-white hover:bg-gray-50'}`}
                           style={{ height: 44 }}>
                           <div className="truncate max-w-[110px]">{p.name}</div>
-                          {p.dynamic_pricing_enabled && <span className="text-amber-500 text-[10px]">⚡動態</span>}
+                          {p.dynamic_pricing_enabled && <span className="text-amber-500 text-[10px]">{t('pricing.dynamicTag')}</span>}
                         </td>
                         {/* Date cells */}
                         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -688,7 +685,7 @@ export default function PricingPage() {
                               {status !== 'open' && (
                                 <div className={`text-[9px] font-bold leading-none mt-0.5
                                   ${status === 'closed' ? 'text-red-500' : 'text-amber-600'}`}>
-                                  {STATUS_CFG[status].label}
+                                  {statusLabel(status)}
                                 </div>
                               )}
                             </td>
@@ -709,11 +706,11 @@ export default function PricingPage() {
           <div className="flex justify-end"><ViewSwitcher /></div>
           {/* Dynamic pricing toggle per property */}
           <div>
-            <h2 className="font-bold text-gray-900 mb-3">動態定價開關</h2>
+            <h2 className="font-bold text-gray-900 mb-3">{t('pricing.dynamicToggle')}</h2>
             {loading ? (
-              <div className="text-sm text-gray-400">載入中…</div>
+              <div className="text-sm text-gray-400">{t('common.loading')}</div>
             ) : properties.length === 0 ? (
-              <div className="text-sm text-gray-400">尚未建立房型</div>
+              <div className="text-sm text-gray-400">{t('pricing.noRoomTypes')}</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {properties.map(p => (
@@ -721,12 +718,12 @@ export default function PricingPage() {
                     <div>
                       <div className="font-semibold text-sm text-gray-900">{p.name}</div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        基本價 NT$ {p.base_price ? Number(p.base_price).toLocaleString() : '未設定'}
+                        {t('pricing.basePriceLabel')} NT$ {p.base_price ? Number(p.base_price).toLocaleString() : t('pricing.notSet')}
                       </div>
                       {p.dynamic_pricing_enabled && (
                         <div className="flex items-center gap-1 mt-1">
                           <Zap className="h-3 w-3 text-amber-500" />
-                          <span className="text-[10px] text-amber-600 font-semibold">動態定價中</span>
+                          <span className="text-[10px] text-amber-600 font-semibold">{t('pricing.dynamicOn')}</span>
                         </div>
                       )}
                     </div>
@@ -746,22 +743,22 @@ export default function PricingPage() {
           <div>
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <div>
-                <h2 className="font-bold text-gray-900">定價規則</h2>
-                <p className="text-xs text-gray-400 mt-0.5">規則僅對已開啟動態定價的房型生效</p>
+                <h2 className="font-bold text-gray-900">{t('nav.pricing')}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{t('pricing.rulesNote')}</p>
               </div>
               <div className="flex items-center gap-2">
                 {rules.some(r => r.rule_type === 'market') && (
                   <button onClick={runMarketNow} disabled={marketRunning}
-                    title="立即抓周邊行情並依市場規則更新每日定價"
+                    title={t('pricing.marketRunTitle')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border text-indigo-600 border-indigo-300 hover:bg-indigo-50 disabled:opacity-50">
-                    📈 {marketRunning ? '執行中…' : '立即執行市場跟隨'}
+                    📈 {marketRunning ? t('pricing.running') : t('pricing.runMarketNow')}
                   </button>
                 )}
                 <button
                   onClick={() => setRuleModal({ enabled: true, adjustment_type: 'percent', adjustment_value: 0, priority: 0, conditions: {} })}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
                   <Plus className="h-3.5 w-3.5" />
-                  新增規則
+                  {t('pricing.addRule')}
                 </button>
               </div>
             </div>
@@ -769,10 +766,10 @@ export default function PricingPage() {
               <div className="mb-3 text-xs bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 text-indigo-700">{marketRunMsg}</div>
             )}
             {loading ? (
-              <div className="text-sm text-gray-400">載入中…</div>
+              <div className="text-sm text-gray-400">{t('common.loading')}</div>
             ) : rules.length === 0 ? (
               <div className="bg-white rounded-xl border py-12 text-center text-sm text-gray-400">
-                尚無定價規則，點擊「新增規則」開始建立
+                {t('pricing.noRules')}
               </div>
             ) : (
               <>
@@ -783,7 +780,7 @@ export default function PricingPage() {
                     const adj = rule.adjustment_type === 'percent'
                       ? `${rule.adjustment_value > 0 ? '+' : ''}${rule.adjustment_value}%`
                       : `${rule.adjustment_value > 0 ? '+' : ''}NT$ ${Math.abs(Number(rule.adjustment_value)).toLocaleString()}`
-                    const cfg = RULE_TYPE_CFG[rule.rule_type]
+                    const cfg = ruleCfg(rule.rule_type)
                     return (
                       <div key={rule.id} className="bg-white rounded-xl border p-3.5">
                         <div className="flex items-start justify-between gap-2">
@@ -792,8 +789,8 @@ export default function PricingPage() {
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
                               <span className="text-xs text-gray-500">{cfg?.icon} {cfg?.label}</span>
                               <span className={`text-xs font-semibold ${rule.adjustment_value >= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{adj}</span>
-                              <span className="text-[10px] text-gray-400">{prop ? prop.name : '全部房型'}</span>
-                              <span className="text-[10px] text-gray-400">優先級 {rule.priority}</span>
+                              <span className="text-[10px] text-gray-400">{prop ? prop.name : t('pricing.allRoomTypes')}</span>
+                              <span className="text-[10px] text-gray-400">{t('pricing.priorityShort', { n: rule.priority })}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -820,12 +817,12 @@ export default function PricingPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">規則名稱</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">類型</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">調整幅度</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">套用房型</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">狀態</th>
-                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">操作</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">{t('pricing.col.ruleName')}</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">{t('pricing.col.type')}</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">{t('pricing.col.adjust')}</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">{t('pricing.col.applyRoom')}</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">{t('pricing.col.status')}</th>
+                        <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500">{t('pricing.col.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -834,18 +831,18 @@ export default function PricingPage() {
                         const adj = rule.adjustment_type === 'percent'
                           ? `${rule.adjustment_value > 0 ? '+' : ''}${rule.adjustment_value}%`
                           : `${rule.adjustment_value > 0 ? '+' : ''}NT$ ${Math.abs(Number(rule.adjustment_value)).toLocaleString()}`
-                        const cfg = RULE_TYPE_CFG[rule.rule_type]
+                        const cfg = ruleCfg(rule.rule_type)
                         return (
                           <tr key={rule.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3">
                               <div className="font-medium text-gray-900">{rule.name}</div>
-                              <div className="text-[10px] text-gray-400 mt-0.5">優先級 {rule.priority}</div>
+                              <div className="text-[10px] text-gray-400 mt-0.5">{t('pricing.priorityShort', { n: rule.priority })}</div>
                             </td>
                             <td className="px-3 py-3 text-center text-sm">{cfg?.icon} {cfg?.label}</td>
                             <td className="px-3 py-3 text-center">
                               <span className={rule.adjustment_value >= 0 ? 'text-rose-600 font-semibold' : 'text-emerald-600 font-semibold'}>{adj}</span>
                             </td>
-                            <td className="px-3 py-3 text-center text-gray-600 text-xs">{prop ? prop.name : '全部房型'}</td>
+                            <td className="px-3 py-3 text-center text-gray-600 text-xs">{prop ? prop.name : t('pricing.allRoomTypes')}</td>
                             <td className="px-3 py-3 text-center">
                               <button onClick={() => toggleRule(rule.id, !rule.enabled)}
                                 className={`relative inline-flex w-9 h-5 rounded-full transition-colors ${rule.enabled ? 'bg-indigo-600' : 'bg-gray-200'}`}>
@@ -873,8 +870,8 @@ export default function PricingPage() {
         <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h2 className="font-bold text-gray-900">周邊比價</h2>
-              <p className="text-xs text-gray-400 mt-0.5">查詢同地區其他飯店／民宿在指定入住日的房價（Google Hotels）</p>
+              <h2 className="font-bold text-gray-900">{t('pricing.tabs.compare')}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{t('pricing.compareSubtitle')}</p>
             </div>
             <ViewSwitcher />
           </div>
@@ -883,34 +880,34 @@ export default function PricingPage() {
           <div className="bg-white rounded-xl border p-4 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="sm:col-span-2 space-y-1">
-                <label className="text-xs font-medium text-gray-600">地區關鍵字</label>
+                <label className="text-xs font-medium text-gray-600">{t('pricing.locationKeyword')}</label>
                 <input value={cmpLocation} onChange={e => setCmpLocation(e.target.value)}
-                  placeholder="自動帶入民宿所在地，或輸入：宜蘭礁溪"
+                  placeholder={t('pricing.locationPlaceholder')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">入住日</label>
+                <label className="text-xs font-medium text-gray-600">{t('pricing.checkInDate')}</label>
                 <input type="date" value={cmpCheckIn} onChange={e => setCmpCheckIn(e.target.value)}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">退房日</label>
+                <label className="text-xs font-medium text-gray-600">{t('pricing.checkOutDate')}</label>
                 <input type="date" value={cmpCheckOut} onChange={e => setCmpCheckOut(e.target.value)}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <p className="text-[11px] text-gray-400">每次查詢消耗 1 次 SerpApi 額度（免費 250 次／月）；相同地區+日期會用快取，不重複消耗</p>
+              <p className="text-[11px] text-gray-400">{t('pricing.quotaNote')}</p>
               <div className="flex gap-2">
                 {cmpQueried && (
                   <button onClick={() => runCompare(true)} disabled={cmpLoading}
                     className="px-3 py-2 rounded-lg text-sm font-medium border text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-                    強制重查
+                    {t('pricing.forceRequery')}
                   </button>
                 )}
                 <button onClick={() => runCompare()} disabled={cmpLoading}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-                  {cmpLoading ? '查詢中…' : '查詢周邊房價'}
+                  {cmpLoading ? t('pricing.querying') : t('pricing.queryNearby')}
                 </button>
               </div>
             </div>
@@ -920,16 +917,16 @@ export default function PricingPage() {
           {/* 關注競品 */}
           <div className="bg-white rounded-xl border p-4 space-y-3">
             <div>
-              <h3 className="text-sm font-semibold text-gray-800">關注競品</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">指定要特別盯的飯店／民宿，查價後會在清單中標示並置頂；周邊未涵蓋的可單獨精準查。</p>
+              <h3 className="text-sm font-semibold text-gray-800">{t('pricing.watchlist')}</h3>
+              <p className="text-[11px] text-gray-400 mt-0.5">{t('pricing.watchlistHint')}</p>
             </div>
             <div className="flex gap-2">
               <input value={watchInput} onChange={e => setWatchInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addWatch() }}
-                placeholder="輸入飯店／民宿名稱"
+                placeholder={t('pricing.watchPlaceholder')}
                 className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               <button onClick={addWatch}
-                className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-800 text-white hover:bg-gray-900">加入</button>
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-gray-800 text-white hover:bg-gray-900">{t('bookings.add')}</button>
             </div>
             {watchlist.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -945,7 +942,7 @@ export default function PricingPage() {
 
           {cmpFromCache && (
             <div className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              ↺ 此結果來自快取（未消耗額度）。需要最新報價請按「強制重查」。
+              {t('pricing.cacheNote')}
             </div>
           )}
 
@@ -953,10 +950,10 @@ export default function PricingPage() {
           {cmpStats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: '最低', v: cmpStats.min },
-                { label: '中位數', v: cmpStats.median },
-                { label: '平均', v: cmpStats.avg },
-                { label: '最高', v: cmpStats.max },
+                { label: t('pricing.statMin'), v: cmpStats.min },
+                { label: t('pricing.statMedian'), v: cmpStats.median },
+                { label: t('pricing.statAvg'), v: cmpStats.avg },
+                { label: t('pricing.statMax'), v: cmpStats.max },
               ].map(s => (
                 <div key={s.label} className="bg-white rounded-xl border p-3 text-center">
                   <div className="text-[11px] text-gray-400">{s.label}</div>
@@ -969,7 +966,7 @@ export default function PricingPage() {
           {/* 你的定價對比 */}
           {cmpStats && properties.some(p => p.base_price != null) && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
-              <div className="text-sm font-semibold text-indigo-800">你的定價 vs 周邊中位數（NT$ {cmpStats.median.toLocaleString()}）</div>
+              <div className="text-sm font-semibold text-indigo-800">{t('pricing.yourVsMedian', { median: cmpStats.median.toLocaleString() })}</div>
               <div className="space-y-1.5">
                 {properties.filter(p => p.base_price != null).map(p => {
                   const base = Number(p.base_price)
@@ -981,7 +978,7 @@ export default function PricingPage() {
                       <span className="tabular-nums text-gray-700">
                         NT$ {base.toLocaleString()}
                         <span className={`ml-2 font-semibold ${diff > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {diff > 0 ? '高' : '低'} {Math.abs(pct)}%
+                          {diff > 0 ? t('pricing.higher') : t('pricing.lower')} {Math.abs(pct)}%
                         </span>
                       </span>
                     </div>
@@ -995,38 +992,38 @@ export default function PricingPage() {
           {cmpStats && (
             <div className="bg-white rounded-xl border p-4 space-y-3">
               <div>
-                <h3 className="text-sm font-semibold text-gray-800">套用到動態定價</h3>
-                <p className="text-[11px] text-gray-400 mt-0.5">以本次查到的行情為基準、加減幅度後寫入每日定價（你審核後套用，會覆蓋區間內既有訂價）。</p>
+                <h3 className="text-sm font-semibold text-gray-800">{t('pricing.applyToDynamic')}</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">{t('pricing.applyToDynamicHint')}</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[11px] text-gray-500">基準</label>
+                  <label className="text-[11px] text-gray-500">{t('pricing.basis')}</label>
                   <select value={applyBasis} onChange={e => setApplyBasis(e.target.value as 'median' | 'min' | 'avg')}
                     className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                    <option value="median">中位數 {cmpStats.median.toLocaleString()}</option>
-                    <option value="min">最低 {cmpStats.min.toLocaleString()}</option>
-                    <option value="avg">平均 {cmpStats.avg.toLocaleString()}</option>
+                    <option value="median">{t('pricing.statMedian')} {cmpStats.median.toLocaleString()}</option>
+                    <option value="min">{t('pricing.statMin')} {cmpStats.min.toLocaleString()}</option>
+                    <option value="avg">{t('pricing.statAvg')} {cmpStats.avg.toLocaleString()}</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-gray-500">調整 %</label>
+                  <label className="text-[11px] text-gray-500">{t('pricing.adjustPct')}</label>
                   <input type="number" value={applyOffset} onChange={e => setApplyOffset(e.target.value)}
                     placeholder="-5"
                     className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-gray-500">起</label>
+                  <label className="text-[11px] text-gray-500">{t('pricing.from')}</label>
                   <input type="date" value={applyFrom} onChange={e => setApplyFrom(e.target.value)}
                     className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] text-gray-500">迄</label>
+                  <label className="text-[11px] text-gray-500">{t('pricing.to')}</label>
                   <input type="date" value={applyTo} onChange={e => setApplyTo(e.target.value)}
                     className="w-full text-sm border rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[11px] text-gray-500 mr-1">星期</span>
+                <span className="text-[11px] text-gray-500 mr-1">{t('pricing.weekday')}</span>
                 {DOW.map((d, i) => (
                   <button key={i} onClick={() => setApplyDow(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])}
                     className={`w-7 h-7 rounded-lg text-xs font-medium border transition-colors ${applyDow.includes(i) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200'}`}>
@@ -1036,24 +1033,24 @@ export default function PricingPage() {
               </div>
               {properties.length > 1 && (
                 <div className="flex flex-wrap gap-1.5 items-center">
-                  <span className="text-[11px] text-gray-500 mr-1">房型</span>
+                  <span className="text-[11px] text-gray-500 mr-1">{t('pricing.roomType')}</span>
                   {properties.map(p => (
                     <button key={p.id} onClick={() => setApplyProps(prev => prev.includes(p.id) ? prev.filter(x => x !== p.id) : [...prev, p.id])}
                       className={`px-2 py-1 rounded-lg text-xs font-medium border transition-colors ${applyProps.includes(p.id) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200'}`}>
                       {p.name}
                     </button>
                   ))}
-                  <span className="text-[11px] text-gray-400">未選＝全部</span>
+                  <span className="text-[11px] text-gray-400">{t('pricing.noneEqualsAll')}</span>
                 </div>
               )}
               <div className="flex items-center justify-between gap-2 flex-wrap border-t pt-3">
                 <div className="text-xs text-gray-600">
-                  套用價：<span className="font-bold text-indigo-600 text-base">NT$ {previewApplyPrice()?.toLocaleString() ?? '—'}</span>
-                  <span className="text-gray-400 ml-1">（{applyBasis === 'median' ? '中位數' : applyBasis === 'min' ? '最低' : '平均'} {(parseFloat(applyOffset) || 0) >= 0 ? '+' : ''}{applyOffset || 0}%）</span>
+                  {t('pricing.applyPriceLabel')}<span className="font-bold text-indigo-600 text-base">NT$ {previewApplyPrice()?.toLocaleString() ?? '—'}</span>
+                  <span className="text-gray-400 ml-1">（{applyBasis === 'median' ? t('pricing.statMedian') : applyBasis === 'min' ? t('pricing.statMin') : t('pricing.statAvg')} {(parseFloat(applyOffset) || 0) >= 0 ? '+' : ''}{applyOffset || 0}%）</span>
                 </div>
                 <button onClick={applyToPricing} disabled={applySaving}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                  {applySaving ? '套用中…' : '套用到每日定價'}
+                  {applySaving ? t('pricing.applying') : t('pricing.applyToDaily')}
                 </button>
               </div>
               {applyMsg && <div className="text-xs text-emerald-600">{applyMsg}</div>}
@@ -1066,10 +1063,10 @@ export default function PricingPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">名稱</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500">類型</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-500">每晚</th>
-                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500">評分</th>
+                    <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500">{t('pricing.colName')}</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500">{t('pricing.col.type')}</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-500">{t('pricing.perNight')}</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-gray-500">{t('pricing.colRating')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -1090,7 +1087,7 @@ export default function PricingPage() {
               </table>
             </div>
           ) : cmpQueried && !cmpLoading && !cmpErr ? (
-            <div className="bg-white rounded-xl border py-12 text-center text-sm text-gray-400">查無資料，換個地區關鍵字試試</div>
+            <div className="bg-white rounded-xl border py-12 text-center text-sm text-gray-400">{t('pricing.noCompareData')}</div>
           ) : null}
 
           {/* 關注競品：周邊清單未涵蓋者 */}
@@ -1099,8 +1096,8 @@ export default function PricingPage() {
             if (missing.length === 0) return null
             return (
               <div className="bg-white rounded-xl border p-4 space-y-2">
-                <div className="text-sm font-semibold text-gray-800">關注競品（周邊清單未涵蓋）</div>
-                <p className="text-[11px] text-gray-400">這些名稱未出現在周邊結果，可單獨精準查（每次耗 1 額度，有快取）。</p>
+                <div className="text-sm font-semibold text-gray-800">{t('pricing.watchMissingTitle')}</div>
+                <p className="text-[11px] text-gray-400">{t('pricing.watchMissingHint')}</p>
                 <div className="space-y-1.5 pt-1">
                   {missing.map(name => {
                     const wp = watchPrices[name]
@@ -1111,15 +1108,15 @@ export default function PricingPage() {
                           {wp === undefined ? (
                             <button onClick={() => queryWatch(name)} disabled={watchQuerying === name}
                               className="px-2 py-1 rounded-lg border text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-                              {watchQuerying === name ? '查詢中…' : '精準查價'}
+                              {watchQuerying === name ? t('pricing.querying') : t('pricing.preciseQuery')}
                             </button>
                           ) : wp === null ? (
-                            <span className="text-gray-400">查無
-                              <button onClick={() => queryWatch(name)} className="text-indigo-500 hover:underline ml-1">重試</button>
+                            <span className="text-gray-400">{t('pricing.notFound')}
+                              <button onClick={() => queryWatch(name)} className="text-indigo-500 hover:underline ml-1">{t('pricing.retry')}</button>
                             </span>
                           ) : (
                             <span className="tabular-nums font-semibold text-gray-900">
-                              {wp.price != null ? `NT$ ${wp.price.toLocaleString()}` : '無報價'}
+                              {wp.price != null ? `NT$ ${wp.price.toLocaleString()}` : t('pricing.noQuote')}
                               {wp.rating != null && <span className="ml-2 text-gray-500 font-normal">⭐{wp.rating}</span>}
                             </span>
                           )}
@@ -1141,26 +1138,26 @@ export default function PricingPage() {
             <div className="flex items-center gap-2 flex-wrap max-w-4xl mx-auto">
               <button onClick={() => { setShowPriceInput(false); setPendingPrice('') }}
                 className="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none shrink-0">×</button>
-              <span className="text-sm font-medium text-gray-700 shrink-0">覆蓋價 NT$</span>
+              <span className="text-sm font-medium text-gray-700 shrink-0">{t('pricing.overridePrice')} NT$</span>
               <input type="number" value={pendingPrice} onChange={e => setPendingPrice(e.target.value)}
-                placeholder="空白=清除覆蓋" autoFocus
+                placeholder={t('pricing.blankClearOverride')} autoFocus
                 className="flex-1 min-w-0 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               <button onClick={async () => { await applyPrice(pendingPrice ? parseFloat(pendingPrice) : null); setShowPriceInput(false); setPendingPrice('') }}
                 disabled={applyingSaving}
                 className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
-                {applyingSaving ? '套用中…' : '套用'}
+                {applyingSaving ? t('pricing.applying') : t('bookings.form.apply')}
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-3 flex-wrap max-w-4xl mx-auto">
               <button onClick={clearSelection}
                 className="text-gray-400 hover:text-gray-600 font-bold text-xl leading-none shrink-0">×</button>
-              <span className="text-sm font-semibold text-indigo-700 shrink-0">已選 {selectedCells.size} 格</span>
+              <span className="text-sm font-semibold text-indigo-700 shrink-0">{t('pricing.selectedCount', { count: selectedCells.size })}</span>
               <div className="flex gap-2 flex-wrap ml-auto">
                 {([
-                  { status: 'open' as BookingStatus,      label: '開放訂房', cls: 'bg-emerald-600 hover:bg-emerald-700' },
-                  { status: 'admin_only' as BookingStatus, label: '僅後台',   cls: 'bg-amber-500 hover:bg-amber-600' },
-                  { status: 'closed' as BookingStatus,     label: '不可訂',   cls: 'bg-red-600 hover:bg-red-700' },
+                  { status: 'open' as BookingStatus,      label: t('pricing.openBooking'), cls: 'bg-emerald-600 hover:bg-emerald-700' },
+                  { status: 'admin_only' as BookingStatus, label: t('pricing.adminOnly'),   cls: 'bg-amber-500 hover:bg-amber-600' },
+                  { status: 'closed' as BookingStatus,     label: t('pricing.notBookable'), cls: 'bg-red-600 hover:bg-red-700' },
                 ] as const).map(({ status, label, cls }) => (
                   <button key={status} onClick={() => applyStatus(status)} disabled={applyingSaving}
                     className={`px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 ${cls}`}>
@@ -1169,7 +1166,7 @@ export default function PricingPage() {
                 ))}
                 <button onClick={() => setShowPriceInput(true)}
                   className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
-                  設定價格
+                  {t('pricing.setPrice')}
                 </button>
               </div>
             </div>
@@ -1185,8 +1182,8 @@ export default function PricingPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-gray-900">批次設定房價</h3>
-                <p className="text-xs text-gray-400 mt-0.5">可多選假期，或手動輸入日期範圍</p>
+                <h3 className="font-bold text-gray-900">{t('pricing.batchTitle')}</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{t('pricing.batchSubtitle')}</p>
               </div>
               <button onClick={() => { setShowBatch(false); setSelectedHolidays(new Set()) }} className="p-1.5 hover:bg-gray-100 rounded-lg">
                 <X className="h-4 w-4 text-gray-500" />
@@ -1196,24 +1193,24 @@ export default function PricingPage() {
             {/* Holiday presets */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <div className="text-xs font-semibold text-gray-700">快速選取假期</div>
+                <div className="text-xs font-semibold text-gray-700">{t('pricing.quickHolidays')}</div>
                 {selectedHolidays.size > 0 && (
-                  <span className="text-[11px] text-indigo-600 font-semibold">已選 {selectedHolidays.size} 個假期</span>
+                  <span className="text-[11px] text-indigo-600 font-semibold">{t('pricing.holidaysSelected', { count: selectedHolidays.size })}</span>
                 )}
                 {holidaysLoading && (
-                  <span className="text-[11px] text-gray-400 animate-pulse">AI 擷取中…</span>
+                  <span className="text-[11px] text-gray-400 animate-pulse">{t('pricing.aiFetching')}</span>
                 )}
               </div>
-              <p className="text-[11px] text-gray-400">可多選，點選後日期會自動合併</p>
+              <p className="text-[11px] text-gray-400">{t('pricing.multiSelectHint')}</p>
               {!holidaysLoading && holidays.length === 0 && (
-                <div className="text-[11px] text-gray-400">無法取得假期資料</div>
+                <div className="text-[11px] text-gray-400">{t('pricing.noHolidayData')}</div>
               )}
               {holidays.length > 0 && (
                 <div className="space-y-2">
                   {/* 連續假期 */}
                   {holidays.filter(h => h.type === 'holiday').length > 0 && (
                     <div>
-                      <div className="text-[10px] text-gray-400 mb-1">🎉 連續假期</div>
+                      <div className="text-[10px] text-gray-400 mb-1">{t('pricing.consecutiveHolidays')}</div>
                       <div className="flex flex-wrap gap-1.5">
                         {holidays.filter(h => h.type === 'holiday').map(h => {
                           const active = selectedHolidays.has(holidayKey(h))
@@ -1235,7 +1232,7 @@ export default function PricingPage() {
                   {/* 寒假 / 暑假 */}
                   {holidays.filter(h => h.type !== 'holiday').length > 0 && (
                     <div>
-                      <div className="text-[10px] text-gray-400 mb-1">🏫 學期假期</div>
+                      <div className="text-[10px] text-gray-400 mb-1">{t('pricing.schoolHolidays')}</div>
                       <div className="flex flex-wrap gap-1.5">
                         {holidays.filter(h => h.type !== 'holiday').map(h => {
                           const active = selectedHolidays.has(holidayKey(h))
@@ -1260,24 +1257,22 @@ export default function PricingPage() {
 
             {/* Date range */}
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-gray-700">額外手動日期範圍（選填）</div>
+              <div className="text-xs font-semibold text-gray-700">{t('pricing.manualRange')}</div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] text-gray-500 mb-1 block">起始日</label>
+                  <label className="text-[11px] text-gray-500 mb-1 block">{t('pricing.startDate')}</label>
                   <input type="date" value={batchFrom} onChange={e => setBatchFrom(e.target.value)}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
                 <div>
-                  <label className="text-[11px] text-gray-500 mb-1 block">結束日</label>
+                  <label className="text-[11px] text-gray-500 mb-1 block">{t('pricing.endDate')}</label>
                   <input type="date" value={batchTo} onChange={e => setBatchTo(e.target.value)}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
               </div>
               {getAllSelectedDates().length > 0 && (
                 <div className="text-[11px] text-gray-400">
-                  合計：<span className="text-indigo-600 font-semibold">
-                    {getAllSelectedDates().length}
-                  </span> 天（假期+手動日期合併，星期篩選後）
+                  {t('pricing.totalDays', { count: getAllSelectedDates().length })}
                 </div>
               )}
             </div>
@@ -1285,11 +1280,11 @@ export default function PricingPage() {
             {/* DOW filter */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-gray-700">套用星期</div>
+                <div className="text-xs font-semibold text-gray-700">{t('pricing.applyWeekday')}</div>
                 <div className="flex gap-2 text-xs text-indigo-600">
-                  <button onClick={() => setBatchDow([0,1,2,3,4,5,6])} className="hover:underline">全部</button>
-                  <button onClick={() => setBatchDow([1,2,3,4,5])} className="hover:underline">平日</button>
-                  <button onClick={() => setBatchDow([0,6])} className="hover:underline">週末</button>
+                  <button onClick={() => setBatchDow([0,1,2,3,4,5,6])} className="hover:underline">{t('pricing.dowAll')}</button>
+                  <button onClick={() => setBatchDow([1,2,3,4,5])} className="hover:underline">{t('pricing.dowWeekday')}</button>
+                  <button onClick={() => setBatchDow([0,6])} className="hover:underline">{t('pricing.dowWeekend')}</button>
                 </div>
               </div>
               <div className="flex gap-1.5 flex-wrap">
@@ -1311,10 +1306,10 @@ export default function PricingPage() {
             {properties.length > 1 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold text-gray-700">套用房型</div>
+                  <div className="text-xs font-semibold text-gray-700">{t('pricing.applyRoomType')}</div>
                   <button onClick={() => setBatchProps(p => p.length === properties.length ? [] : properties.map(x => x.id))}
                     className="text-xs text-indigo-600 hover:underline">
-                    {batchProps.length === properties.length ? '取消全選' : '全選'}
+                    {batchProps.length === properties.length ? t('pricing.deselectAll') : t('pricing.selectAll')}
                   </button>
                 </div>
                 <div className="space-y-1.5">
@@ -1324,7 +1319,7 @@ export default function PricingPage() {
                         onChange={e => setBatchProps(prev => e.target.checked ? [...prev, p.id] : prev.filter(id => id !== p.id))}
                         className="rounded border-gray-300 text-indigo-600" />
                       <span className="text-sm text-gray-700">{p.name}</span>
-                      {p.base_price && <span className="text-xs text-gray-400">基本價 {Number(p.base_price).toLocaleString()}</span>}
+                      {p.base_price && <span className="text-xs text-gray-400">{t('pricing.basePriceLabel')} {Number(p.base_price).toLocaleString()}</span>}
                     </label>
                   ))}
                 </div>
@@ -1333,11 +1328,11 @@ export default function PricingPage() {
 
             {/* Price */}
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-gray-700">覆蓋房價</div>
+              <div className="text-xs font-semibold text-gray-700">{t('pricing.overrideRoomPrice')}</div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 shrink-0">NT$</span>
                 <input type="number" min="0" value={batchPrice} onChange={e => setBatchPrice(e.target.value)}
-                  placeholder="空白 = 不更改"
+                  placeholder={t('pricing.blankNoChange')}
                   className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 {batchPrice && (
                   <button onClick={() => setBatchPrice('')} className="text-gray-400 hover:text-gray-600 shrink-0">
@@ -1345,18 +1340,18 @@ export default function PricingPage() {
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-gray-400">設定後會覆蓋各日期的基本價與動態定價</p>
+              <p className="text-[11px] text-gray-400">{t('pricing.overrideNote')}</p>
             </div>
 
             {/* Status */}
             <div className="space-y-2">
-              <div className="text-xs font-semibold text-gray-700">訂購狀態（選填）</div>
+              <div className="text-xs font-semibold text-gray-700">{t('pricing.bookingStatusOptional')}</div>
               <div className="flex gap-2 flex-wrap">
                 {([
-                  { v: '' as const,           label: '不更改', cls: 'border-gray-200 text-gray-500 bg-white' },
-                  { v: 'open' as const,        label: '開放訂房', cls: 'border-emerald-300 text-emerald-700 bg-emerald-50' },
-                  { v: 'admin_only' as const,  label: '僅供後台', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
-                  { v: 'closed' as const,      label: '不可訂房', cls: 'border-red-300 text-red-700 bg-red-50' },
+                  { v: '' as const,           label: t('pricing.noChange'),    cls: 'border-gray-200 text-gray-500 bg-white' },
+                  { v: 'open' as const,        label: t('pricing.openBooking'), cls: 'border-emerald-300 text-emerald-700 bg-emerald-50' },
+                  { v: 'admin_only' as const,  label: t('pricing.adminOnlyFull'), cls: 'border-amber-300 text-amber-700 bg-amber-50' },
+                  { v: 'closed' as const,      label: t('pricing.notBookableFull'), cls: 'border-red-300 text-red-700 bg-red-50' },
                 ]).map(({ v, label, cls }) => (
                   <button key={v} onClick={() => setBatchStatus(v)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
@@ -1373,12 +1368,12 @@ export default function PricingPage() {
                 setBatchFrom(''); setBatchTo(''); setBatchPrice(''); setBatchStatus(''); setBatchDow([0,1,2,3,4,5,6])
                 setSelectedHolidays(new Set())
               }}
-                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button
                 onClick={applyBatch}
                 disabled={getAllSelectedDates().length === 0 || (!batchPrice && !batchStatus) || batchSaving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                {batchSaving ? '套用中…' : `套用 ${getAllSelectedDates().length} 天`}
+                {batchSaving ? t('pricing.applying') : t('pricing.applyDays', { count: getAllSelectedDates().length })}
               </button>
             </div>
           </div>
@@ -1392,47 +1387,47 @@ export default function PricingPage() {
           onClick={e => { if (e.target === e.currentTarget) setRuleModal(null) }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-gray-900">{ruleModal.id ? '編輯規則' : '新增定價規則'}</h3>
+              <h3 className="font-bold text-gray-900">{ruleModal.id ? t('pricing.editRule') : t('pricing.addRuleTitle')}</h3>
               <button onClick={() => setRuleModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">規則名稱 *</label>
+                <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.ruleNameLabel')}</label>
                 <input value={ruleModal.name ?? ''} onChange={e => setRuleModal(p => ({ ...p, name: e.target.value }))}
-                  placeholder="例：週末加價 20%"
+                  placeholder={t('pricing.ruleNamePlaceholder')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">規則類型 *</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.ruleTypeLabel')}</label>
                   <select value={ruleModal.rule_type ?? ''} onChange={e => setRuleModal(p => ({ ...p, rule_type: e.target.value as RuleType }))}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
-                    <option value="">選擇類型</option>
-                    {Object.entries(RULE_TYPE_CFG).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+                    <option value="">{t('pricing.selectType')}</option>
+                    {(Object.keys(RULE_TYPE_ICON) as RuleType[]).map(k => <option key={k} value={k}>{RULE_TYPE_ICON[k]} {t(`pricing.ruleTypes.${k}`)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">套用房型</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.col.applyRoom')}</label>
                   <select value={ruleModal.property_id ?? ''} onChange={e => setRuleModal(p => ({ ...p, property_id: e.target.value || null }))}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
-                    <option value="">全部房型</option>
+                    <option value="">{t('pricing.allRoomTypes')}</option>
                     {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">調整方式</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.adjustType')}</label>
                   <select value={ruleModal.adjustment_type ?? 'percent'} onChange={e => setRuleModal(p => ({ ...p, adjustment_type: e.target.value as AdjType }))}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
-                    <option value="percent">百分比 (%)</option>
-                    <option value="fixed">固定金額 (NT$)</option>
+                    <option value="percent">{t('pricing.adjustPercent')}</option>
+                    <option value="fixed">{t('pricing.adjustFixed')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">調整值（正數加價，負數折扣）</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.adjustValue')}</label>
                   <input type="number" value={ruleModal.adjustment_value ?? 0}
                     onChange={e => setRuleModal(p => ({ ...p, adjustment_value: parseFloat(e.target.value) || 0 }))}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
@@ -1441,13 +1436,13 @@ export default function PricingPage() {
               {ruleModal.rule_type === 'seasonal' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">開始月日 (MM-DD)</label>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.startMmdd')}</label>
                     <input value={(ruleModal.conditions as Record<string, string>)?.start_mmdd ?? ''}
                       onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, start_mmdd: e.target.value } }))}
                       placeholder="07-01" className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">結束月日 (MM-DD)</label>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.endMmdd')}</label>
                     <input value={(ruleModal.conditions as Record<string, string>)?.end_mmdd ?? ''}
                       onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, end_mmdd: e.target.value } }))}
                       placeholder="08-31" className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
@@ -1456,7 +1451,7 @@ export default function PricingPage() {
               )}
               {ruleModal.rule_type === 'holiday' && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">指定日期（逗號或換行分隔，格式 YYYY-MM-DD）</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.specifyDates')}</label>
                   <textarea rows={4}
                     value={((ruleModal.conditions as Record<string, string[]>)?.dates ?? []).join(', ')}
                     onChange={e => {
@@ -1469,7 +1464,7 @@ export default function PricingPage() {
               )}
               {ruleModal.rule_type === 'occupancy' && (
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">觸發住房率門檻（0.0 ~ 1.0）</label>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.occupancyThreshold')}</label>
                   <input type="number" step="0.05" min="0" max="1"
                     value={(ruleModal.conditions as Record<string, number>)?.threshold ?? 0.8}
                     onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, threshold: parseFloat(e.target.value) } }))}
@@ -1479,10 +1474,10 @@ export default function PricingPage() {
               {ruleModal.rule_type === 'advance_booking' && (
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">
-                    ⚡ 臨時訂：入住前 N 天內訂房才觸發
+                    {t('pricing.advanceLabel')}
                   </label>
                   <p className="text-[11px] text-gray-400 mb-1.5">
-                    例：N=0 → 當天訂當天住才有效（空房最後出清）；N=7 → 7天內訂房都算
+                    {t('pricing.advanceHint')}
                   </p>
                   <input type="number" min="0"
                     value={(ruleModal.conditions as Record<string, number>)?.days_before ?? 7}
@@ -1493,10 +1488,10 @@ export default function PricingPage() {
               {ruleModal.rule_type === 'early_bird' && (
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">
-                    🐦 早鳥訂：入住前至少 N 天訂房才觸發
+                    {t('pricing.earlyBirdLabel')}
                   </label>
                   <p className="text-[11px] text-gray-400 mb-1.5">
-                    例：N=90 → 90 天以前訂房才算早鳥；N=30 → 30 天以前訂都算
+                    {t('pricing.earlyBirdHint')}
                   </p>
                   <input type="number" min="1"
                     value={(ruleModal.conditions as Record<string, number>)?.days_before ?? 90}
@@ -1507,50 +1502,50 @@ export default function PricingPage() {
               {ruleModal.rule_type === 'market' && (
                 <div className="space-y-2">
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2.5 text-[11px] text-indigo-700 leading-relaxed">
-                    📈 市場跟隨：排程每天自動抓周邊行情，以「基準價 ＋ 上方調整幅度」算出價格寫入每日定價（夾在下／上限之間）。需先在「周邊比價」確認民宿所在地已填。
+                    {t('pricing.marketRuleHint')}
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-600 block mb-1">基準</label>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.basis')}</label>
                     <select value={(ruleModal.conditions as Record<string, string>)?.basis ?? 'median'}
                       onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, basis: e.target.value } }))}
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white">
-                      <option value="median">周邊中位數</option>
-                      <option value="min">周邊最低</option>
-                      <option value="avg">周邊平均</option>
+                      <option value="median">{t('pricing.nearbyMedian')}</option>
+                      <option value="min">{t('pricing.nearbyMin')}</option>
+                      <option value="avg">{t('pricing.nearbyAvg')}</option>
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1">價格下限（選填）</label>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.priceFloor')}</label>
                       <input type="number"
                         value={(ruleModal.conditions as Record<string, number | null>)?.floor ?? ''}
                         onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, floor: e.target.value === '' ? null : parseInt(e.target.value) } }))}
-                        placeholder="不低於"
+                        placeholder={t('pricing.notBelow')}
                         className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1">價格上限（選填）</label>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.priceCeil')}</label>
                       <input type="number"
                         value={(ruleModal.conditions as Record<string, number | null>)?.ceil ?? ''}
                         onChange={e => setRuleModal(p => ({ ...p, conditions: { ...p?.conditions, ceil: e.target.value === '' ? null : parseInt(e.target.value) } }))}
-                        placeholder="不高於"
+                        placeholder={t('pricing.notAbove')}
                         className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
                     </div>
                   </div>
                 </div>
               )}
               <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">優先級（數字越大越先套用）</label>
+                <label className="text-xs font-medium text-gray-600 block mb-1">{t('pricing.priorityLabel')}</label>
                 <input type="number" value={ruleModal.priority ?? 0}
                   onChange={e => setRuleModal(p => ({ ...p, priority: parseInt(e.target.value) || 0 }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setRuleModal(null)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button onClick={() => setRuleModal(null)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={saveRule} disabled={!ruleModal.name || !ruleModal.rule_type || ruleSaving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                {ruleSaving ? '儲存中…' : '儲存規則'}
+                {ruleSaving ? t('bookings.form.saving') : t('pricing.saveRule')}
               </button>
             </div>
           </div>
