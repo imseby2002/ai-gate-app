@@ -176,6 +176,33 @@
     "emptyTitle": "Start a new conversation",
     "emptySubtitle": "Choose a model or assistant to begin"
   },
+  "CsCustomers": {
+    "title": "Customer Tracking",
+    "refresh": "Refresh",
+    "all": "All",
+    "empty1": "No customer data yet.",
+    "empty2": "Customers appear here automatically after chatting via LINE and other channels.",
+    "footer": "{count} customers · more price inquiries mean closer to a deal; prioritize following up on negotiating customers.",
+    "stages": { "new": "New", "inquiring": "Inquiring", "quoted": "Quoted", "negotiating": "Negotiating", "won": "Won", "lost": "Lost" },
+    "col": { "customer": "Customer", "stage": "Stage", "priceAsk": "Inquiries", "messages": "Messages", "lastIntent": "Last Intent", "lastContact": "Last Contact" }
+  },
+  "CsInbox": {
+    "title": "Unified Inbox",
+    "refresh": "Refresh",
+    "sendFailed": "Failed to send",
+    "networkError": "Network error, please retry",
+    "emptyList1": "No conversations yet.",
+    "emptyList2": "Customers appear here automatically after messaging via LINE / WhatsApp and other channels.",
+    "humanTag": "Human",
+    "selectPrompt": "Select a conversation on the left to start replying",
+    "takeoverOn": "Human Takeover",
+    "aiAuto": "AI Auto-reply",
+    "noMessages": "No message history",
+    "agentLabel": "Human Agent",
+    "sendNote": "After sending, it switches to \"Human Takeover\" and AI pauses auto-reply.",
+    "replyPlaceholder": "Reply to {name}… (Enter to send, Shift+Enter for newline)",
+    "stages": { "new": "New", "inquiring": "Inquiring", "quoted": "Quoted", "negotiating": "Negotiating", "won": "Won", "lost": "Lost" }
+  },
   "CsDashboard": {
     "running": "System Running",
     "workbench": "{name} CS Workbench",

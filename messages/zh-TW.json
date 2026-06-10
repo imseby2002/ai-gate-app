@@ -176,6 +176,33 @@
     "emptyTitle": "開始新對話",
     "emptySubtitle": "選擇模型或助理，開始使用 AI"
   },
+  "CsCustomers": {
+    "title": "客戶追蹤",
+    "refresh": "重新整理",
+    "all": "全部",
+    "empty1": "尚無客戶資料。",
+    "empty2": "客戶透過 LINE 等通路對話後會自動出現在這裡。",
+    "footer": "共 {count} 位客戶 · 問價次數越多代表越接近成交，建議優先跟進議價中的客戶。",
+    "stages": { "new": "新客", "inquiring": "洽詢中", "quoted": "已報價", "negotiating": "議價中", "won": "已成交", "lost": "流失" },
+    "col": { "customer": "客戶", "stage": "階段", "priceAsk": "問價", "messages": "訊息", "lastIntent": "最後洽詢", "lastContact": "最後聯絡" }
+  },
+  "CsInbox": {
+    "title": "統一收件匣",
+    "refresh": "重新整理",
+    "sendFailed": "送出失敗",
+    "networkError": "網路錯誤，請重試",
+    "emptyList1": "尚無對話。",
+    "emptyList2": "客戶透過 LINE / WhatsApp 等通路傳訊後會自動出現在這裡。",
+    "humanTag": "真人",
+    "selectPrompt": "從左側選擇一個對話開始回覆",
+    "takeoverOn": "真人接管中",
+    "aiAuto": "AI 自動回覆",
+    "noMessages": "尚無訊息紀錄",
+    "agentLabel": "真人客服",
+    "sendNote": "送出訊息後將自動切換為「真人接管」，AI 暫停自動回覆。",
+    "replyPlaceholder": "回覆 {name}…（Enter 送出，Shift+Enter 換行）",
+    "stages": { "new": "新客", "inquiring": "洽詢中", "quoted": "已報價", "negotiating": "議價中", "won": "已成交", "lost": "流失" }
+  },
   "CsDashboard": {
     "running": "系統運行中",
     "workbench": "{name} 客服工作台",

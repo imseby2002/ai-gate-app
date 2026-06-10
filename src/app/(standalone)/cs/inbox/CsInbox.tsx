@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft } from 'lucide-react'
 
@@ -13,14 +14,10 @@ const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
   telegram:           { name: 'Telegram', emoji: '✈️' },
   zalo:               { name: 'Zalo',    emoji: '🔵' },
   'zalo-oa':          { name: 'Zalo',    emoji: '🔵' },
-  wechat:             { name: '微信',    emoji: '🟢' },
+  wechat:             { name: 'WeChat',  emoji: '🟢' },
   test:               { name: 'Test',    emoji: '🧪' },
 }
 const plat = (p: string) => PLATFORM_LABELS[p] ?? { name: p, emoji: '🔗' }
-
-const STAGE_LABEL: Record<string, string> = {
-  new: '新客', inquiring: '洽詢中', quoted: '已報價', negotiating: '議價中', won: '已成交', lost: '流失',
-}
 
 interface Conversation {
   platform: string
@@ -38,18 +35,18 @@ interface Bubble {
   at: string
 }
 
-function fmtTime(ts: string) {
-  try {
-    return new Date(ts).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
-  } catch { return ts }
-}
-function fmtClock(ts: string) {
-  try {
-    return new Date(ts).toLocaleString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })
-  } catch { return '' }
-}
-
 export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
+  const t = useTranslations('CsInbox')
+  const locale = useLocale()
+  const stageLabel = (s: string) => t.has(`stages.${s}`) ? t(`stages.${s}`) : ''
+  const fmtTime = (ts: string) => {
+    try { return new Date(ts).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) }
+    catch { return ts }
+  }
+  const fmtClock = (ts: string) => {
+    try { return new Date(ts).toLocaleString(locale, { hour: '2-digit', minute: '2-digit', hour12: false }) }
+    catch { return '' }
+  }
   const industry = initialIndustry
   const [convos, setConvos] = useState<Conversation[]>([])
   const [loadingList, setLoadingList] = useState(true)
@@ -128,7 +125,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        setErr(data.error ?? '送出失敗')
+        setErr(data.error ?? t('sendFailed'))
         setBubbles(prev => prev.filter(b => b !== optimistic))
         setDraft(text)
       } else {
@@ -136,7 +133,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
         loadThread(active, true)
       }
     } catch {
-      setErr('網路錯誤，請重試')
+      setErr(t('networkError'))
       setBubbles(prev => prev.filter(b => b !== optimistic))
       setDraft(text)
     } finally {
@@ -169,12 +166,12 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
             <Link href="/cs" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
             <div className="flex items-center gap-2">
               <Inbox className="h-6 w-6 text-blue-500" />
-              <h1 className="text-xl font-bold">統一收件匣</h1>
+              <h1 className="text-xl font-bold">{t('title')}</h1>
             </div>
           </div>
           <button onClick={() => { loadList(); if (active) loadThread(active) }}
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <RefreshCw className={`h-4 w-4 ${loadingList ? 'animate-spin' : ''}`} /> 重新整理
+            <RefreshCw className={`h-4 w-4 ${loadingList ? 'animate-spin' : ''}`} /> {t('refresh')}
           </button>
         </div>
 
@@ -187,8 +184,8 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                 <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
               ) : convos.length === 0 ? (
                 <div className="text-center py-16 px-6 text-muted-foreground text-sm">
-                  尚無對話。<br />
-                  <span className="text-xs">客戶透過 LINE / WhatsApp 等通路傳訊後會自動出現在這裡。</span>
+                  {t('emptyList1')}<br />
+                  <span className="text-xs">{t('emptyList2')}</span>
                 </div>
               ) : convos.map(c => {
                 const p = plat(c.platform)
@@ -205,12 +202,12 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                     </div>
                     <div className="flex items-center gap-1.5 mt-1 pl-6">
                       <span className="text-[11px] text-muted-foreground">{p.name}</span>
-                      {STAGE_LABEL[c.stage] && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{STAGE_LABEL[c.stage]}</span>
+                      {stageLabel(c.stage) && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{stageLabel(c.stage)}</span>
                       )}
                       {c.takeover && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 inline-flex items-center gap-0.5">
-                          <UserRound className="h-2.5 w-2.5" /> 真人
+                          <UserRound className="h-2.5 w-2.5" /> {t('humanTag')}
                         </span>
                       )}
                     </div>
@@ -225,7 +222,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
             {!active ? (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2">
                 <Inbox className="h-10 w-10 opacity-30" />
-                <p className="text-sm">從左側選擇一個對話開始回覆</p>
+                <p className="text-sm">{t('selectPrompt')}</p>
               </div>
             ) : (
               <>
@@ -245,7 +242,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                         ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400'
                         : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400'
                     }`}>
-                    {takeover ? <><UserRound className="h-3.5 w-3.5" /> 真人接管中</> : <><Bot className="h-3.5 w-3.5" /> AI 自動回覆</>}
+                    {takeover ? <><UserRound className="h-3.5 w-3.5" /> {t('takeoverOn')}</> : <><Bot className="h-3.5 w-3.5" /> {t('aiAuto')}</>}
                   </button>
                 </div>
 
@@ -254,13 +251,13 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                   {loadingThread ? (
                     <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                   ) : bubbles.length === 0 ? (
-                    <div className="text-center py-16 text-muted-foreground text-sm">尚無訊息紀錄</div>
+                    <div className="text-center py-16 text-muted-foreground text-sm">{t('noMessages')}</div>
                   ) : bubbles.map((b, i) => (
                     <div key={i} className={`flex ${b.side === 'out' ? 'justify-end' : 'justify-start'}`}>
                       <div className="max-w-[78%]">
                         {b.side === 'out' && (
                           <div className={`text-[10px] mb-0.5 text-right ${b.sender === 'agent' ? 'text-amber-600' : 'text-blue-500'}`}>
-                            {b.sender === 'agent' ? '真人客服' : 'AI'}
+                            {b.sender === 'agent' ? t('agentLabel') : 'AI'}
                           </div>
                         )}
                         <div className={`rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap break-words ${
@@ -283,7 +280,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                   {err && <div className="text-xs text-rose-600 mb-2 px-1">{err}</div>}
                   {!takeover && (
                     <div className="text-[11px] text-muted-foreground mb-2 px-1">
-                      送出訊息後將自動切換為「真人接管」，AI 暫停自動回覆。
+                      {t('sendNote')}
                     </div>
                   )}
                   <div className="flex items-end gap-2">
@@ -291,7 +288,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                       value={draft}
                       onChange={e => setDraft(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                      placeholder={`回覆 ${active.name || active.from_id}…（Enter 送出，Shift+Enter 換行）`}
+                      placeholder={t('replyPlaceholder', { name: active.name || active.from_id })}
                       rows={1}
                       className="flex-1 resize-none rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 max-h-32"
                     />

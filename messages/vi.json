@@ -175,6 +175,33 @@
     "emptyTitle": "Bắt đầu cuộc trò chuyện mới",
     "emptySubtitle": "Chọn mô hình hoặc trợ lý để bắt đầu"
   },
+  "CsCustomers": {
+    "title": "Theo dõi khách hàng",
+    "refresh": "Làm mới",
+    "all": "Tất cả",
+    "empty1": "Chưa có dữ liệu khách hàng.",
+    "empty2": "Khách hàng sẽ tự xuất hiện ở đây sau khi trò chuyện qua LINE và các kênh khác.",
+    "footer": "{count} khách hàng · càng hỏi giá nhiều càng gần chốt đơn; nên ưu tiên theo dõi khách đang thương lượng.",
+    "stages": { "new": "Khách mới", "inquiring": "Đang hỏi", "quoted": "Đã báo giá", "negotiating": "Đang thương lượng", "won": "Đã chốt", "lost": "Đã mất" },
+    "col": { "customer": "Khách", "stage": "Giai đoạn", "priceAsk": "Hỏi giá", "messages": "Tin nhắn", "lastIntent": "Hỏi gần nhất", "lastContact": "Liên hệ gần nhất" }
+  },
+  "CsInbox": {
+    "title": "Hộp thư thống nhất",
+    "refresh": "Làm mới",
+    "sendFailed": "Gửi thất bại",
+    "networkError": "Lỗi mạng, vui lòng thử lại",
+    "emptyList1": "Chưa có cuộc trò chuyện.",
+    "emptyList2": "Khách sẽ tự xuất hiện ở đây sau khi nhắn tin qua LINE / WhatsApp và các kênh khác.",
+    "humanTag": "Người thật",
+    "selectPrompt": "Chọn một cuộc trò chuyện bên trái để bắt đầu trả lời",
+    "takeoverOn": "Người thật tiếp quản",
+    "aiAuto": "AI tự trả lời",
+    "noMessages": "Chưa có lịch sử tin nhắn",
+    "agentLabel": "Nhân viên",
+    "sendNote": "Sau khi gửi sẽ chuyển sang \"Người thật tiếp quản\" và AI tạm dừng tự trả lời.",
+    "replyPlaceholder": "Trả lời {name}… (Enter để gửi, Shift+Enter xuống dòng)",
+    "stages": { "new": "Khách mới", "inquiring": "Đang hỏi", "quoted": "Đã báo giá", "negotiating": "Đang thương lượng", "won": "Đã chốt", "lost": "Đã mất" }
+  },
   "CsDashboard": {
     "running": "Hệ thống đang hoạt động",
     "workbench": "Bàn làm việc CS {name}",

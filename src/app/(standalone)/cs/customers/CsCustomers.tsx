@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { ArrowLeft, RefreshCw, Loader2, Users } from 'lucide-react'
 
@@ -19,23 +20,26 @@ interface Customer {
   first_seen_at: string
 }
 
-const STAGES: { key: string; label: string; cls: string }[] = [
-  { key: 'new',         label: '新客',    cls: 'bg-gray-100 text-gray-600' },
-  { key: 'inquiring',   label: '洽詢中',  cls: 'bg-blue-100 text-blue-700' },
-  { key: 'quoted',      label: '已報價',  cls: 'bg-amber-100 text-amber-700' },
-  { key: 'negotiating', label: '議價中',  cls: 'bg-orange-100 text-orange-700' },
-  { key: 'won',         label: '已成交',  cls: 'bg-emerald-100 text-emerald-700' },
-  { key: 'lost',        label: '流失',    cls: 'bg-rose-100 text-rose-700' },
-]
-const stageOf = (s: string) => STAGES.find(x => x.key === s) ?? STAGES[0]
-
-function fmt(ts: string) {
-  try {
-    return new Date(ts).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
-  } catch { return ts }
+const STAGE_CLS: Record<string, string> = {
+  new: 'bg-gray-100 text-gray-600',
+  inquiring: 'bg-blue-100 text-blue-700',
+  quoted: 'bg-amber-100 text-amber-700',
+  negotiating: 'bg-orange-100 text-orange-700',
+  won: 'bg-emerald-100 text-emerald-700',
+  lost: 'bg-rose-100 text-rose-700',
 }
+const STAGE_KEYS = ['new', 'inquiring', 'quoted', 'negotiating', 'won', 'lost']
 
 export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
+  const t = useTranslations('CsCustomers')
+  const locale = useLocale()
+  const stageLabel = (s: string) => t.has(`stages.${s}`) ? t(`stages.${s}`) : t('stages.new')
+  const stageCls = (s: string) => STAGE_CLS[s] ?? STAGE_CLS.new
+  const fmt = (ts: string) => {
+    try {
+      return new Date(ts).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+    } catch { return ts }
+  }
   const [rows, setRows] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [stage, setStage] = useState<string>('')
@@ -68,11 +72,11 @@ export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
             <Link href="/cs" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
             <div className="flex items-center gap-2">
               <Users className="h-6 w-6 text-rose-500" />
-              <h1 className="text-xl font-bold">客戶追蹤</h1>
+              <h1 className="text-xl font-bold">{t('title')}</h1>
             </div>
           </div>
           <button onClick={load} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> 重新整理
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> {t('refresh')}
           </button>
         </div>
 
@@ -80,12 +84,12 @@ export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setStage('')}
             className={`px-3 py-1.5 rounded-full text-xs font-medium border ${stage === '' ? 'bg-foreground text-background' : 'bg-card hover:bg-accent'}`}>
-            全部
+            {t('all')}
           </button>
-          {STAGES.map(s => (
-            <button key={s.key} onClick={() => setStage(s.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border ${stage === s.key ? 'bg-foreground text-background' : 'bg-card hover:bg-accent'}`}>
-              {s.label}
+          {STAGE_KEYS.map(k => (
+            <button key={k} onClick={() => setStage(k)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border ${stage === k ? 'bg-foreground text-background' : 'bg-card hover:bg-accent'}`}>
+              {stageLabel(k)}
             </button>
           ))}
         </div>
@@ -96,32 +100,31 @@ export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
             <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : rows.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm">
-              尚無客戶資料。<br />
-              <span className="text-xs">客戶透過 LINE 等通路對話後會自動出現在這裡。</span>
+              {t('empty1')}<br />
+              <span className="text-xs">{t('empty2')}</span>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-muted-foreground border-b bg-muted/30">
-                    <th className="px-4 py-3 font-medium">客戶</th>
-                    <th className="px-4 py-3 font-medium">階段</th>
-                    <th className="px-4 py-3 font-medium text-center">問價</th>
-                    <th className="px-4 py-3 font-medium text-center">訊息</th>
-                    <th className="px-4 py-3 font-medium">最後洽詢</th>
-                    <th className="px-4 py-3 font-medium">最後聯絡</th>
+                    <th className="px-4 py-3 font-medium">{t('col.customer')}</th>
+                    <th className="px-4 py-3 font-medium">{t('col.stage')}</th>
+                    <th className="px-4 py-3 font-medium text-center">{t('col.priceAsk')}</th>
+                    <th className="px-4 py-3 font-medium text-center">{t('col.messages')}</th>
+                    <th className="px-4 py-3 font-medium">{t('col.lastIntent')}</th>
+                    <th className="px-4 py-3 font-medium">{t('col.lastContact')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map(r => {
-                    const st = stageOf(r.stage)
                     return (
                       <tr key={r.id} className="border-b last:border-0 hover:bg-accent/40">
                         <td className="px-4 py-3">
                           <div className="font-medium">{r.name || r.from_id}</div>
                           <div className="text-[11px] text-muted-foreground">{r.platform}{r.summary ? ` · ${r.summary}` : ''}</div>
                         </td>
-                        <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${st.cls}`}>{st.label}</span></td>
+                        <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${stageCls(r.stage)}`}>{stageLabel(r.stage)}</span></td>
                         <td className="px-4 py-3 text-center tabular-nums">{r.price_ask_count}</td>
                         <td className="px-4 py-3 text-center tabular-nums">{r.message_count}</td>
                         <td className="px-4 py-3 text-muted-foreground text-xs">{r.last_intent ?? '—'}</td>
@@ -136,7 +139,7 @@ export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
         </div>
 
         {rows.length > 0 && (
-          <p className="text-xs text-muted-foreground text-center">共 {rows.length} 位客戶 · 問價次數越多代表越接近成交，建議優先跟進議價中的客戶。</p>
+          <p className="text-xs text-muted-foreground text-center">{t('footer', { count: rows.length })}</p>
         )}
       </div>
     </div>
