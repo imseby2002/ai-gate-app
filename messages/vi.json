@@ -277,7 +277,40 @@
     },
     "platform": {
       "manual": "Thủ công",
-      "direct": "Đặt trực tiếp"
+      "direct": "Đặt trực tiếp",
+      "other": "Khác"
+    },
+    "reports": {
+      "title": "Tổng quan phân tích",
+      "yearUnit": "Năm {year}",
+      "exportCsv": "Xuất CSV",
+      "monthlyTrend": "Xu hướng theo tháng",
+      "byPlatform": "Theo kênh",
+      "byRoom": "Theo loại phòng",
+      "noData": "Không có dữ liệu",
+      "ordersUnit": "{count} đơn",
+      "kpi": {
+        "revenue": "Doanh thu",
+        "avgPrice": "Giá phòng TB",
+        "occupancy": "Tỷ lệ lấp đầy",
+        "bookings": "Số đơn",
+        "nights": "Số đêm phòng",
+        "avgStay": "Số đêm ở TB",
+        "cancelRate": "Tỷ lệ hủy"
+      },
+      "mode": {
+        "revenue": "Doanh thu",
+        "bookings": "Đơn",
+        "nights": "Số đêm",
+        "occupancy": "Lấp đầy"
+      },
+      "csv": {
+        "month": "Tháng",
+        "revenue": "Doanh thu",
+        "bookings": "Số đơn",
+        "nights": "Số đêm phòng",
+        "filename": "bao-cao-don_{year}.csv"
+      }
     },
     "dashboard": {
       "title": "Tổng quan đặt phòng",

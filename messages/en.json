@@ -278,7 +278,40 @@
     },
     "platform": {
       "manual": "Manual",
-      "direct": "Direct"
+      "direct": "Direct",
+      "other": "Other"
+    },
+    "reports": {
+      "title": "Analytics Overview",
+      "yearUnit": "{year}",
+      "exportCsv": "Export CSV",
+      "monthlyTrend": "Monthly Trend",
+      "byPlatform": "By Channel",
+      "byRoom": "By Room Type",
+      "noData": "No data",
+      "ordersUnit": "{count} orders",
+      "kpi": {
+        "revenue": "Revenue",
+        "avgPrice": "Avg. Room Rate",
+        "occupancy": "Occupancy",
+        "bookings": "Bookings",
+        "nights": "Room Nights",
+        "avgStay": "Avg. Stay",
+        "cancelRate": "Cancel Rate"
+      },
+      "mode": {
+        "revenue": "Revenue",
+        "bookings": "Bookings",
+        "nights": "Nights",
+        "occupancy": "Occupancy"
+      },
+      "csv": {
+        "month": "Month",
+        "revenue": "Revenue",
+        "bookings": "Bookings",
+        "nights": "Room Nights",
+        "filename": "bookings-report_{year}.csv"
+      }
     },
     "dashboard": {
       "title": "Booking Overview",

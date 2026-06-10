@@ -4,6 +4,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts'
+import { useTranslations, useLocale } from 'next-intl'
 import { TrendingUp, BedDouble, CalendarDays, DollarSign, Download, Percent, Users } from 'lucide-react'
 
 interface ReportData {
@@ -14,16 +15,17 @@ interface ReportData {
   avgStay: number; cancelRate: number; cancelledCount: number; occupancyRate: number; revPAR: number; year: number
 }
 
-const PLATFORM_NAMES: Record<string, string> = {
-  booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
-  trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
-  manual: '手動', direct: '直訂', other: '其他',
-}
 const PIE_COLORS = ['#6366f1','#22d3ee','#f59e0b','#10b981','#f43f5e','#a855f7','#84cc16','#fb923c']
 
-function fmt(n: number) { return n.toLocaleString('zh-TW') }
-
 export default function ReportsPage() {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const PLATFORM_NAMES: Record<string, string> = {
+    booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
+    trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
+    manual: t('platform.manual'), direct: t('platform.direct'), other: t('platform.other'),
+  }
+  const fmt = (n: number) => n.toLocaleString(locale)
   const year = new Date().getFullYear()
   const [selYear, setSelYear]     = useState(year)
   const [data, setData]           = useState<ReportData | null>(null)
@@ -39,46 +41,46 @@ export default function ReportsPage() {
   function exportCSV() {
     if (!data) return
     const rows = [
-      ['月份','營收','訂單數','住房晚數'],
+      [t('reports.csv.month'),t('reports.csv.revenue'),t('reports.csv.bookings'),t('reports.csv.nights')],
       ...data.monthly.map(m => [m.month, m.revenue, m.bookings, m.nights]),
     ]
     const csv = rows.map(r => r.join(',')).join('\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a'); a.href = url; a.download = `訂單報表_${selYear}.csv`; a.click()
+    const a    = document.createElement('a'); a.href = url; a.download = t('reports.csv.filename', { year: selYear }); a.click()
     URL.revokeObjectURL(url)
   }
 
   const kpis = data ? [
-    { label: '交易額',    value: `NT$ ${fmt(data.totalRevenue)}`, icon: DollarSign,  color: 'text-indigo-600 bg-indigo-50' },
-    { label: '平均房價',  value: `NT$ ${fmt(data.avgPrice)}`,     icon: TrendingUp,  color: 'text-sky-600 bg-sky-50' },
-    { label: '住房率',    value: `${data.occupancyRate}%`,         icon: Percent,     color: 'text-emerald-600 bg-emerald-50' },
-    { label: '訂單數',    value: fmt(data.totalBookings),          icon: CalendarDays, color: 'text-amber-600 bg-amber-50' },
-    { label: '住房晚數',  value: fmt(data.totalNights),            icon: BedDouble,   color: 'text-purple-600 bg-purple-50' },
-    { label: '平均入住晚', value: `${data.avgStay} 晚`,            icon: Users,       color: 'text-rose-600 bg-rose-50' },
-    { label: '取消率',    value: `${data.cancelRate}%`,            icon: CalendarDays, color: 'text-gray-600 bg-gray-50' },
+    { label: t('reports.kpi.revenue'),  value: `NT$ ${fmt(data.totalRevenue)}`, icon: DollarSign,  color: 'text-indigo-600 bg-indigo-50' },
+    { label: t('reports.kpi.avgPrice'), value: `NT$ ${fmt(data.avgPrice)}`,     icon: TrendingUp,  color: 'text-sky-600 bg-sky-50' },
+    { label: t('reports.kpi.occupancy'), value: `${data.occupancyRate}%`,        icon: Percent,     color: 'text-emerald-600 bg-emerald-50' },
+    { label: t('reports.kpi.bookings'), value: fmt(data.totalBookings),          icon: CalendarDays, color: 'text-amber-600 bg-amber-50' },
+    { label: t('reports.kpi.nights'),   value: fmt(data.totalNights),            icon: BedDouble,   color: 'text-purple-600 bg-purple-50' },
+    { label: t('reports.kpi.avgStay'),  value: t('detail.nights', { nights: data.avgStay }), icon: Users, color: 'text-rose-600 bg-rose-50' },
+    { label: t('reports.kpi.cancelRate'), value: `${data.cancelRate}%`,          icon: CalendarDays, color: 'text-gray-600 bg-gray-50' },
     { label: 'RevPAR',   value: `NT$ ${fmt(data.revPAR)}`,        icon: TrendingUp,  color: 'text-cyan-600 bg-cyan-50' },
   ] : []
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">數據分析總覽</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('reports.title')}</h1>
         <div className="flex items-center gap-2">
           <select value={selYear} onChange={e => setSelYear(parseInt(e.target.value))}
             className="border rounded-lg px-3 py-1.5 bg-white text-sm focus:outline-none">
-            {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y} 年</option>)}
+            {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{t('reports.yearUnit', { year: y })}</option>)}
           </select>
           <button onClick={exportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg bg-white text-sm text-gray-600 hover:bg-gray-50">
             <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">匯出 CSV</span>
+            <span className="hidden sm:inline">{t('reports.exportCsv')}</span>
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-20 text-gray-400">載入中…</div>
+        <div className="text-center py-20 text-gray-400">{t('common.loading')}</div>
       ) : !data ? null : (
         <>
           {/* KPI Cards */}
@@ -102,9 +104,9 @@ export default function ReportsPage() {
           {/* Monthly Chart */}
           <div className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h2 className="font-semibold text-gray-900">月度趨勢</h2>
+              <h2 className="font-semibold text-gray-900">{t('reports.monthlyTrend')}</h2>
               <div className="flex gap-1">
-                {([['revenue','營收'],['bookings','訂單'],['nights','晚數'],['occupancyRate','住房率']] as const).map(([k, l]) => (
+                {([['revenue',t('reports.mode.revenue')],['bookings',t('reports.mode.bookings')],['nights',t('reports.mode.nights')],['occupancyRate',t('reports.mode.occupancy')]] as const).map(([k, l]) => (
                   <button key={k} onClick={() => setChartMode(k)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${chartMode === k ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                     {l}
@@ -127,13 +129,13 @@ export default function ReportsPage() {
           {/* Pie Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { title: '各通路分析', items: data.byPlatform.map(p => ({ ...p, name: PLATFORM_NAMES[p.name] ?? p.name })), colorOffset: 0 },
-              { title: '各房型分析', items: data.byRoom, colorOffset: 3 },
+              { title: t('reports.byPlatform'), items: data.byPlatform.map(p => ({ ...p, name: PLATFORM_NAMES[p.name] ?? p.name })), colorOffset: 0 },
+              { title: t('reports.byRoom'), items: data.byRoom, colorOffset: 3 },
             ].map(({ title, items, colorOffset }) => (
               <div key={title} className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
                 <h2 className="font-semibold text-gray-900">{title}</h2>
                 {items.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm">無資料</div>
+                  <div className="text-center py-8 text-gray-400 text-sm">{t('reports.noData')}</div>
                 ) : (
                   <>
                     <ResponsiveContainer width="100%" height={180}>
@@ -155,7 +157,7 @@ export default function ReportsPage() {
                               style={{ background: PIE_COLORS[(i + colorOffset) % PIE_COLORS.length] }} />
                             <span className="truncate">{item.name}</span>
                           </div>
-                          <span className="shrink-0 ml-2">{item.bookings} 單 · NT$ {fmt(item.revenue)}</span>
+                          <span className="shrink-0 ml-2">{t('reports.ordersUnit', { count: item.bookings })} · NT$ {fmt(item.revenue)}</span>
                         </div>
                       ))}
                     </div>

@@ -278,7 +278,40 @@
     },
     "platform": {
       "manual": "手動",
-      "direct": "直訂"
+      "direct": "直訂",
+      "other": "其他"
+    },
+    "reports": {
+      "title": "數據分析總覽",
+      "yearUnit": "{year} 年",
+      "exportCsv": "匯出 CSV",
+      "monthlyTrend": "月度趨勢",
+      "byPlatform": "各通路分析",
+      "byRoom": "各房型分析",
+      "noData": "無資料",
+      "ordersUnit": "{count} 單",
+      "kpi": {
+        "revenue": "交易額",
+        "avgPrice": "平均房價",
+        "occupancy": "住房率",
+        "bookings": "訂單數",
+        "nights": "住房晚數",
+        "avgStay": "平均入住晚",
+        "cancelRate": "取消率"
+      },
+      "mode": {
+        "revenue": "營收",
+        "bookings": "訂單",
+        "nights": "晚數",
+        "occupancy": "住房率"
+      },
+      "csv": {
+        "month": "月份",
+        "revenue": "營收",
+        "bookings": "訂單數",
+        "nights": "住房晚數",
+        "filename": "訂單報表_{year}.csv"
+      }
     },
     "dashboard": {
       "title": "訂房總覽",
