@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { ChevronLeft, ChevronRight, Lock, Unlock, Plus, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
@@ -27,6 +28,7 @@ function addDays(dateStr: string, n: number) {
 const DAYS = 21
 
 export default function RoomGridPage() {
+  const t = useTranslations('Booking')
   const [from, setFrom]     = useState(() => toDateStr(new Date()))
   const [data, setData]     = useState<GridData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -82,17 +84,17 @@ export default function RoomGridPage() {
       const occupied = (data?.bookings ?? []).some(o =>
         o.id !== bk.id && o.property_id === newPropId && ['pending', 'confirmed'].includes(o.status) && o.check_in <= d && o.check_out > d)
         || (data?.blocked ?? []).some(b => b.property_id === newPropId && b.date === d)
-      if (occupied) { setMsg('目標日期已被占用，無法移動'); setTimeout(() => setMsg(null), 2500); return }
+      if (occupied) { setMsg(t('roomgrid.occupied')); setTimeout(() => setMsg(null), 2500); return }
     }
-    if (!window.confirm(`將「${bk.guest_name ?? '訂單'}」移到 ${newCheckIn} ~ ${newCheckOut}？`)) return
+    if (!window.confirm(t('roomgrid.moveConfirm', { name: bk.guest_name ?? t('roomgrid.orderFallback'), in: newCheckIn, out: newCheckOut }))) return
     setSaving(true)
     try {
       const res = await fetch('/api/booking/bookings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: bk.id, property_id: newPropId, check_in: newCheckIn, check_out: newCheckOut }),
       })
-      if (!res.ok) { setMsg('改期失敗，請重試'); setTimeout(() => setMsg(null), 2500); return }
-      setMsg('已完成換房/改期'); setTimeout(() => setMsg(null), 2000)
+      if (!res.ok) { setMsg(t('roomgrid.moveFailed')); setTimeout(() => setMsg(null), 2500); return }
+      setMsg(t('roomgrid.moveDone')); setTimeout(() => setMsg(null), 2000)
       load()
     } finally { setSaving(false) }
   }
@@ -123,7 +125,7 @@ export default function RoomGridPage() {
     ))
     setSaving(false)
     setSelected([])
-    setMsg('已關閉選取日期')
+    setMsg(t('roomgrid.closedDates'))
     setTimeout(() => setMsg(null), 2000)
     load()
   }
@@ -145,7 +147,7 @@ export default function RoomGridPage() {
     ))
     setSaving(false)
     setSelected([])
-    setMsg('已開放選取日期')
+    setMsg(t('roomgrid.openedDates'))
     setTimeout(() => setMsg(null), 2000)
     load()
   }
@@ -165,17 +167,17 @@ export default function RoomGridPage() {
   })()
 
   const today = toDateStr(new Date())
-  const dayLabels = ['日','一','二','三','四','五','六']
+  const dayLabels = [0,1,2,3,4,5,6].map(i => t(`roomgrid.day.${i}`))
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-gray-50">
       {/* Top bar */}
       <div className="shrink-0 flex items-center gap-3 px-5 py-3 bg-white border-b">
-        <h1 className="text-base font-bold text-gray-900 mr-2">空房表</h1>
+        <h1 className="text-base font-bold text-gray-900 mr-2">{t('nav.roomgrid')}</h1>
         <button onClick={() => setFrom(f => addDays(f, -7))}
           className="p-1.5 rounded hover:bg-gray-100"><ChevronLeft className="h-4 w-4" /></button>
         <button onClick={() => setFrom(toDateStr(new Date()))}
-          className="px-3 py-1 text-xs rounded-lg border hover:bg-gray-50 font-medium">今日</button>
+          className="px-3 py-1 text-xs rounded-lg border hover:bg-gray-50 font-medium">{t('roomgrid.today')}</button>
         <span className="text-sm text-gray-600 min-w-[120px]">{from} ~ {addDays(from, DAYS - 1)}</span>
         <button onClick={() => setFrom(f => addDays(f, 7))}
           className="p-1.5 rounded hover:bg-gray-100"><ChevronRight className="h-4 w-4" /></button>
@@ -184,19 +186,19 @@ export default function RoomGridPage() {
         </button>
 
         <div className="ml-auto flex items-center gap-3 text-xs text-gray-500">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-white border" /> 可訂</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-cyan-200" /> 已訂</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-300" /> 關閉</span>
-          <span className="hidden md:inline text-gray-400">· 拖曳訂單可換房／改期</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-white border" /> {t('roomgrid.available')}</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-cyan-200" /> {t('roomgrid.booked')}</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-300" /> {t('roomgrid.blocked')}</span>
+          <span className="hidden md:inline text-gray-400">{t('roomgrid.dragHint')}</span>
         </div>
       </div>
 
       {/* Grid */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-gray-400">載入中…</div>
+          <div className="flex items-center justify-center h-32 text-gray-400">{t('common.loading')}</div>
         ) : !data || data.properties.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-gray-400">尚無房型資料</div>
+          <div className="flex items-center justify-center h-32 text-gray-400">{t('roomgrid.noRooms')}</div>
         ) : (
           <table className="border-collapse text-xs" style={{ tableLayout: 'fixed' }}>
             <colgroup>
@@ -206,7 +208,7 @@ export default function RoomGridPage() {
             <thead>
               <tr className="bg-white sticky top-0 z-10 shadow-sm">
                 <th className="border border-gray-200 px-2 py-2 text-left font-semibold text-gray-700 bg-white sticky left-0 z-20">
-                  房型
+                  {t('roomgrid.roomCol')}
                 </th>
                 {dates.map(d => {
                   const dt = new Date(d + 'T00:00:00')
@@ -228,7 +230,7 @@ export default function RoomGridPage() {
                   <td className="border border-gray-200 px-2 py-2 font-medium text-gray-800 bg-white sticky left-0 z-10 whitespace-nowrap overflow-hidden text-ellipsis">
                     <div>{prop.name}</div>
                     {prop.room_count > 1 && (
-                      <div className="text-gray-400 font-normal">{prop.room_count} 間</div>
+                      <div className="text-gray-400 font-normal">{t('roomgrid.roomsUnit', { count: prop.room_count })}</div>
                     )}
                   </td>
                   {dates.map(date => {
@@ -257,7 +259,7 @@ export default function RoomGridPage() {
                               onDragEnd={() => setDragBk(null)}
                               onClick={e => e.stopPropagation()}
                               className="block truncate text-cyan-800 font-medium text-xs leading-tight hover:underline px-0.5 cursor-move"
-                              title="拖拉可換房／改期">
+                              title={t('roomgrid.dragTitle')}>
                               {bk.guest_name ?? '—'}
                             </Link>
                           ) : null
@@ -284,26 +286,26 @@ export default function RoomGridPage() {
           <button onClick={clearSelection}
             className="text-gray-400 hover:text-gray-600 font-bold text-lg leading-none">×</button>
           <span className="text-sm font-medium text-gray-700">
-            已選 {selected.length} 格
+            {t('roomgrid.selectedCount', { count: selected.length })}
           </span>
 
           <div className="flex gap-2 ml-auto">
             {selectedProps.length === 1 && selectionHasAvailable && (
               <Link href={`/booking/bookings${bookingQueryStr}`}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
-                <Plus className="h-4 w-4" /> 填寫訂單
+                <Plus className="h-4 w-4" /> {t('roomgrid.fillBooking')}
               </Link>
             )}
             {selectionHasAvailable && (
               <button onClick={blockSelected} disabled={saving}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gray-700 text-white text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-                <Lock className="h-4 w-4" /> 關閉訂房
+                <Lock className="h-4 w-4" /> {t('roomgrid.closeBooking')}
               </button>
             )}
             {selectionHasBlocked && (
               <button onClick={unblockSelected} disabled={saving}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-                <Unlock className="h-4 w-4" /> 開放訂房
+                <Unlock className="h-4 w-4" /> {t('roomgrid.openBooking')}
               </button>
             )}
           </div>
