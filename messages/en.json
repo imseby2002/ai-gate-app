@@ -491,6 +491,61 @@
         "guest_name": "Guest Name"
       }
     },
+    "properties": {
+      "title": "Room Types",
+      "subtitle": "Set up rooms and platform aliases for automatic matching during email sync",
+      "add": "Add Room Type",
+      "empty": "No room types created yet",
+      "active": "Active",
+      "inactive": "Inactive",
+      "roomsGuests": "{rooms} rooms · max {guests} guests",
+      "perNight": "/night",
+      "editTitle": "Edit Room Type",
+      "addTitle": "Add Room Type",
+      "deleteConfirm": "Confirm delete?",
+      "tabBasic": "Basic Info",
+      "tabAmenities": "Amenities",
+      "tabPhotos": "Photos",
+      "amenitiesHint": "Select amenities this room type provides",
+      "photosHint": "Upload photos for this room type; the first is the cover",
+      "cover": "Cover",
+      "setCover": "Set as cover",
+      "uploading": "Uploading…",
+      "addPhoto": "Add Photo",
+      "form": {
+        "name": "Room Type Name (internal name)",
+        "namePlaceholder": "e.g. Sea View Room, Standard Double",
+        "aliases": "Platform Aliases",
+        "aliasesHint": " (foreign-language names shown on each platform, used for email matching)",
+        "aliasPlaceholder": "e.g. Sea View Double Room (press Enter to add)",
+        "addAlias": "Add",
+        "description": "Description",
+        "roomCount": "Rooms",
+        "maxGuests": "Max Guests",
+        "basePrice": "Base/night",
+        "extraFee": "Extra/guest/night"
+      }
+    },
+    "amenityGroups": {
+      "view": "View",
+      "outdoor": "Outdoor Space",
+      "bed": "Bed Type",
+      "room": "Room Facilities",
+      "bath": "Bathroom",
+      "public": "Common Facilities",
+      "dining": "Dining Services",
+      "other": "Other Services"
+    },
+    "amenities": {
+      "海景": "Sea View", "山景": "Mountain View", "河景": "River View", "市景": "City View", "無邊際泳池": "Infinity Pool", "私人泳池": "Private Pool",
+      "露台": "Terrace", "陽台": "Balcony", "私人花園": "Private Garden", "庭院": "Courtyard", "BBQ 區": "BBQ Area",
+      "雙人床": "Double Bed", "加大雙人床": "King Bed", "兩張單人床": "Twin Beds", "上下鋪": "Bunk Bed", "沙發床": "Sofa Bed",
+      "冷氣": "Air Conditioning", "電視": "TV", "第四台/串流": "Cable/Streaming", "冰箱": "Fridge", "保險箱": "Safe", "書桌": "Desk", "沙發": "Sofa",
+      "獨立衛浴": "Private Bathroom", "浴缸": "Bathtub", "淋浴間": "Shower", "吹風機": "Hair Dryer", "盥洗用品": "Toiletries", "免治馬桶": "Bidet Toilet",
+      "WiFi": "WiFi", "停車位": "Parking", "廚房": "Kitchen", "公共廚房": "Shared Kitchen", "洗衣機": "Washer", "烘衣機": "Dryer",
+      "早餐": "Breakfast", "下午茶": "Afternoon Tea", "迷你吧": "Minibar", "咖啡/茶": "Coffee/Tea",
+      "24H 入住": "24H Check-in", "行李寄存": "Luggage Storage", "機場接送": "Airport Transfer", "腳踏車租借": "Bike Rental"
+    },
     "nav": {
       "overview": "Overview",
       "profile": "Property Info",

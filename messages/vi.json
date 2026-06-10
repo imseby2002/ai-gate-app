@@ -490,6 +490,61 @@
         "guest_name": "Tên khách"
       }
     },
+    "properties": {
+      "title": "Quản lý loại phòng",
+      "subtitle": "Thiết lập phòng và bí danh nền tảng để tự động khớp khi đồng bộ email",
+      "add": "Thêm loại phòng",
+      "empty": "Chưa tạo loại phòng nào",
+      "active": "Đang mở",
+      "inactive": "Đã đóng",
+      "roomsGuests": "{rooms} phòng · tối đa {guests} khách",
+      "perNight": "/đêm",
+      "editTitle": "Sửa loại phòng",
+      "addTitle": "Thêm loại phòng",
+      "deleteConfirm": "Xác nhận xóa?",
+      "tabBasic": "Thông tin cơ bản",
+      "tabAmenities": "Tiện nghi",
+      "tabPhotos": "Hình ảnh",
+      "amenitiesHint": "Chọn tiện nghi mà loại phòng này cung cấp",
+      "photosHint": "Tải ảnh cho loại phòng này; ảnh đầu tiên là ảnh bìa",
+      "cover": "Ảnh bìa",
+      "setCover": "Đặt làm ảnh bìa",
+      "uploading": "Đang tải…",
+      "addPhoto": "Thêm ảnh",
+      "form": {
+        "name": "Tên loại phòng (tên nội bộ)",
+        "namePlaceholder": "VD: Phòng hướng biển, Phòng đôi tiêu chuẩn",
+        "aliases": "Bí danh nền tảng",
+        "aliasesHint": " (tên ngoại ngữ hiển thị trên từng nền tảng, dùng để khớp email)",
+        "aliasPlaceholder": "VD: Sea View Double Room (nhấn Enter để thêm)",
+        "addAlias": "Thêm",
+        "description": "Mô tả",
+        "roomCount": "Số phòng",
+        "maxGuests": "Số khách tối đa",
+        "basePrice": "Giá gốc/đêm",
+        "extraFee": "Phụ thu/khách/đêm"
+      }
+    },
+    "amenityGroups": {
+      "view": "Tầm nhìn",
+      "outdoor": "Không gian ngoài trời",
+      "bed": "Loại giường",
+      "room": "Tiện nghi phòng",
+      "bath": "Phòng tắm",
+      "public": "Tiện ích chung",
+      "dining": "Dịch vụ ăn uống",
+      "other": "Dịch vụ khác"
+    },
+    "amenities": {
+      "海景": "Hướng biển", "山景": "Hướng núi", "河景": "Hướng sông", "市景": "Hướng thành phố", "無邊際泳池": "Hồ bơi vô cực", "私人泳池": "Hồ bơi riêng",
+      "露台": "Sân thượng", "陽台": "Ban công", "私人花園": "Vườn riêng", "庭院": "Sân trong", "BBQ 區": "Khu BBQ",
+      "雙人床": "Giường đôi", "加大雙人床": "Giường King", "兩張單人床": "Hai giường đơn", "上下鋪": "Giường tầng", "沙發床": "Giường sofa",
+      "冷氣": "Điều hòa", "電視": "TV", "第四台/串流": "Truyền hình cáp/Streaming", "冰箱": "Tủ lạnh", "保險箱": "Két sắt", "書桌": "Bàn làm việc", "沙發": "Sofa",
+      "獨立衛浴": "Phòng tắm riêng", "浴缸": "Bồn tắm", "淋浴間": "Vòi sen", "吹風機": "Máy sấy tóc", "盥洗用品": "Đồ vệ sinh", "免治馬桶": "Bồn cầu thông minh",
+      "WiFi": "WiFi", "停車位": "Chỗ đậu xe", "廚房": "Bếp", "公共廚房": "Bếp chung", "洗衣機": "Máy giặt", "烘衣機": "Máy sấy",
+      "早餐": "Bữa sáng", "下午茶": "Trà chiều", "迷你吧": "Minibar", "咖啡/茶": "Cà phê/Trà",
+      "24H 入住": "Nhận phòng 24H", "行李寄存": "Giữ hành lý", "機場接送": "Đưa đón sân bay", "腳踏車租借": "Thuê xe đạp"
+    },
     "nav": {
       "overview": "Tổng quan",
       "profile": "Thông tin nhà nghỉ",

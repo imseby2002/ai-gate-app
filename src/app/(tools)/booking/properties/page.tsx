@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createPortal } from 'react-dom'
 import { Plus, Edit2, Trash2, BedDouble, X, ImagePlus, Loader2 } from 'lucide-react'
 
@@ -16,20 +17,24 @@ const EMPTY_FORM = {
   amenities: [] as string[], images: [] as string[],
 }
 
+// 設施值以中文為標準儲存值（DB 內容），顯示時透過 t('amenities.<值>') 翻譯
 const AMENITY_GROUPS = [
-  { group: '景觀', items: ['海景', '山景', '河景', '市景', '無邊際泳池', '私人泳池'] },
-  { group: '戶外空間', items: ['露台', '陽台', '私人花園', '庭院', 'BBQ 區'] },
-  { group: '床型', items: ['雙人床', '加大雙人床', '兩張單人床', '上下鋪', '沙發床'] },
-  { group: '房間設施', items: ['冷氣', '電視', '第四台/串流', '冰箱', '保險箱', '書桌', '沙發'] },
-  { group: '衛浴', items: ['獨立衛浴', '浴缸', '淋浴間', '吹風機', '盥洗用品', '免治馬桶'] },
-  { group: '公共設施', items: ['WiFi', '停車位', '廚房', '公共廚房', '洗衣機', '烘衣機'] },
-  { group: '餐飲服務', items: ['早餐', '下午茶', '迷你吧', '咖啡/茶'] },
-  { group: '其他服務', items: ['24H 入住', '行李寄存', '機場接送', '腳踏車租借'] },
+  { groupKey: 'view',    items: ['海景', '山景', '河景', '市景', '無邊際泳池', '私人泳池'] },
+  { groupKey: 'outdoor', items: ['露台', '陽台', '私人花園', '庭院', 'BBQ 區'] },
+  { groupKey: 'bed',     items: ['雙人床', '加大雙人床', '兩張單人床', '上下鋪', '沙發床'] },
+  { groupKey: 'room',    items: ['冷氣', '電視', '第四台/串流', '冰箱', '保險箱', '書桌', '沙發'] },
+  { groupKey: 'bath',    items: ['獨立衛浴', '浴缸', '淋浴間', '吹風機', '盥洗用品', '免治馬桶'] },
+  { groupKey: 'public',  items: ['WiFi', '停車位', '廚房', '公共廚房', '洗衣機', '烘衣機'] },
+  { groupKey: 'dining',  items: ['早餐', '下午茶', '迷你吧', '咖啡/茶'] },
+  { groupKey: 'other',   items: ['24H 入住', '行李寄存', '機場接送', '腳踏車租借'] },
 ]
 
-type ModalTab = '基本資料' | '設施' | '照片'
+type ModalTab = 'basic' | 'amenities' | 'photos'
 
 export default function PropertiesPage() {
+  const t = useTranslations('Booking')
+  // 設施顯示：有翻譯用翻譯，無則回退原始（中文）值，確保舊資料也能顯示
+  const amenityLabel = (v: string) => t.has(`amenities.${v}`) ? t(`amenities.${v}`) : v
   const [properties, setProperties] = useState<Property[]>([])
   const [loading, setLoading]   = useState(true)
   const [editing, setEditing]   = useState<Property | null>(null)
@@ -37,7 +42,7 @@ export default function PropertiesPage() {
   const [form, setForm]         = useState(EMPTY_FORM)
   const [aliasInput, setAliasInput] = useState('')
   const [saving, setSaving]     = useState(false)
-  const [modalTab, setModalTab] = useState<ModalTab>('基本資料')
+  const [modalTab, setModalTab] = useState<ModalTab>('basic')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -60,14 +65,14 @@ export default function PropertiesPage() {
       images: p.images ?? [],
     })
     setAliasInput('')
-    setModalTab('基本資料')
+    setModalTab('basic')
   }
 
   function openAdd() {
     setAdding(true)
     setForm(EMPTY_FORM)
     setAliasInput('')
-    setModalTab('基本資料')
+    setModalTab('basic')
   }
 
   function addAlias() {
@@ -141,33 +146,37 @@ export default function PropertiesPage() {
   }
 
   async function del(id: string) {
-    if (!confirm('確定刪除？')) return
+    if (!confirm(t('properties.deleteConfirm'))) return
     await fetch('/api/booking/properties', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setProperties(prev => prev.filter(p => p.id !== id))
   }
 
   const isOpen = adding || editing !== null
-  const TABS: ModalTab[] = ['基本資料', '設施', '照片']
+  const TABS: { key: ModalTab; label: string }[] = [
+    { key: 'basic',     label: t('properties.tabBasic') },
+    { key: 'amenities', label: t('properties.tabAmenities') },
+    { key: 'photos',    label: t('properties.tabPhotos') },
+  ]
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-3xl">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">房型管理</h1>
-          <p className="text-sm text-gray-500 mt-0.5">設定各房間及平台別名，Email 同步時自動比對</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('properties.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('properties.subtitle')}</p>
         </div>
         <button onClick={openAdd}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
-          <Plus className="h-4 w-4" /> 新增房型
+          <Plus className="h-4 w-4" /> {t('properties.add')}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">載入中…</div>
+        <div className="text-center py-16 text-gray-400">{t('common.loading')}</div>
       ) : properties.length === 0 ? (
         <div className="text-center py-16 text-gray-400 space-y-2">
           <BedDouble className="h-10 w-10 mx-auto opacity-30" />
-          <p className="text-sm">尚未建立任何房型</p>
+          <p className="text-sm">{t('properties.empty')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
@@ -185,17 +194,17 @@ export default function PropertiesPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-gray-900">{p.name}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {p.status === 'active' ? '上架' : '下架'}
+                    {p.status === 'active' ? t('properties.active') : t('properties.inactive')}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">
-                  {p.room_count} 間 · 最多 {p.max_guests} 人
-                  {p.base_price && ` · ${p.currency} ${Number(p.base_price).toLocaleString()}/晚`}
+                  {t('properties.roomsGuests', { rooms: p.room_count, guests: p.max_guests })}
+                  {p.base_price && ` · ${p.currency} ${Number(p.base_price).toLocaleString()}${t('properties.perNight')}`}
                 </div>
                 {(p.amenities ?? []).length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {p.amenities.slice(0, 6).map(a => (
-                      <span key={a} className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-600 border rounded-full">{a}</span>
+                      <span key={a} className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-600 border rounded-full">{amenityLabel(a)}</span>
                     ))}
                     {p.amenities.length > 6 && (
                       <span className="text-[10px] px-1.5 py-0.5 bg-gray-50 text-gray-400 border rounded-full">+{p.amenities.length - 6}</span>
@@ -231,14 +240,14 @@ export default function PropertiesPage() {
 
             {/* Modal header */}
             <div className="px-5 pt-5 pb-0 shrink-0">
-              <h3 className="font-bold text-gray-900 mb-3">{editing ? '編輯房型' : '新增房型'}</h3>
+              <h3 className="font-bold text-gray-900 mb-3">{editing ? t('properties.editTitle') : t('properties.addTitle')}</h3>
               {/* Tabs */}
               <div className="flex border-b gap-1">
-                {TABS.map(t => (
-                  <button key={t} onClick={() => setModalTab(t)}
+                {TABS.map(tab => (
+                  <button key={tab.key} onClick={() => setModalTab(tab.key)}
                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px
-                      ${modalTab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                    {t}
+                      ${modalTab === tab.key ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                    {tab.label}
                   </button>
                 ))}
               </div>
@@ -248,28 +257,28 @@ export default function PropertiesPage() {
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
 
               {/* ── 基本資料 ── */}
-              {modalTab === '基本資料' && <>
+              {modalTab === 'basic' && <>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">房型名稱（中文內部名稱）<span className="text-red-500">*</span></label>
+                  <label className="text-xs font-medium text-gray-600">{t('properties.form.name')}<span className="text-red-500">*</span></label>
                   <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                    placeholder="例：海景房、標準雙人房"
+                    placeholder={t('properties.form.namePlaceholder')}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-gray-600">
-                    平台別名
-                    <span className="ml-1 font-normal text-gray-400">（各平台顯示的外語名稱，用於 Email 自動比對）</span>
+                    {t('properties.form.aliases')}
+                    <span className="ml-1 font-normal text-gray-400">{t('properties.form.aliasesHint')}</span>
                   </label>
                   <div className="flex gap-2">
                     <input value={aliasInput}
                       onChange={e => setAliasInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlias() } }}
-                      placeholder="如：Sea View Double Room（按 Enter 新增）"
+                      placeholder={t('properties.form.aliasPlaceholder')}
                       className="flex-1 text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                     <button onClick={addAlias} type="button"
                       className="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm hover:bg-sky-700">
-                      新增
+                      {t('properties.form.addAlias')}
                     </button>
                   </div>
                   {form.name_aliases.length > 0 && (
@@ -287,33 +296,33 @@ export default function PropertiesPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">描述</label>
+                  <label className="text-xs font-medium text-gray-600">{t('properties.form.description')}</label>
                   <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
                     rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">間數</label>
+                    <label className="text-xs font-medium text-gray-600">{t('properties.form.roomCount')}</label>
                     <input type="number" min={1} value={form.room_count}
                       onChange={e => setForm(p => ({ ...p, room_count: parseInt(e.target.value) }))}
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">最多人數</label>
+                    <label className="text-xs font-medium text-gray-600">{t('properties.form.maxGuests')}</label>
                     <input type="number" min={1} value={form.max_guests}
                       onChange={e => setForm(p => ({ ...p, max_guests: parseInt(e.target.value) }))}
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">底價/晚</label>
+                    <label className="text-xs font-medium text-gray-600">{t('properties.form.basePrice')}</label>
                     <input type="number" value={form.base_price}
                       onChange={e => setForm(p => ({ ...p, base_price: e.target.value }))}
                       placeholder="2000"
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">超額/人/晚</label>
+                    <label className="text-xs font-medium text-gray-600">{t('properties.form.extraFee')}</label>
                     <input type="number" value={form.extra_guest_fee}
                       onChange={e => setForm(p => ({ ...p, extra_guest_fee: e.target.value }))}
                       placeholder="500"
@@ -323,12 +332,12 @@ export default function PropertiesPage() {
               </>}
 
               {/* ── 設施 ── */}
-              {modalTab === '設施' && (
+              {modalTab === 'amenities' && (
                 <div className="space-y-4">
-                  <p className="text-xs text-gray-500">勾選此房型提供的設施</p>
-                  {AMENITY_GROUPS.map(({ group, items }) => (
-                    <div key={group}>
-                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{group}</div>
+                  <p className="text-xs text-gray-500">{t('properties.amenitiesHint')}</p>
+                  {AMENITY_GROUPS.map(({ groupKey, items }) => (
+                    <div key={groupKey}>
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t(`amenityGroups.${groupKey}`)}</div>
                       <div className="flex flex-wrap gap-2">
                         {items.map(item => {
                           const checked = form.amenities.includes(item)
@@ -338,7 +347,7 @@ export default function PropertiesPage() {
                                 ${checked
                                   ? 'bg-indigo-600 text-white border-indigo-600'
                                   : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
-                              {item}
+                              {amenityLabel(item)}
                             </button>
                           )
                         })}
@@ -349,19 +358,19 @@ export default function PropertiesPage() {
               )}
 
               {/* ── 照片 ── */}
-              {modalTab === '照片' && (
+              {modalTab === 'photos' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-gray-500">上傳此房型的照片，第一張為封面</p>
+                  <p className="text-xs text-gray-500">{t('properties.photosHint')}</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {form.images.map((url, i) => (
                       <div key={url} className="relative aspect-square rounded-xl overflow-hidden border group">
                         <img src={url} alt={`photo-${i}`} className="w-full h-full object-cover" />
                         {i === 0 ? (
-                          <span className="absolute top-1 left-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">封面</span>
+                          <span className="absolute top-1 left-1 text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">{t('properties.cover')}</span>
                         ) : (
                           <button type="button" onClick={() => setCover(url)}
                             className="absolute bottom-1 left-1 right-1 text-[10px] bg-black/60 text-white py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                            設為封面
+                            {t('properties.setCover')}
                           </button>
                         )}
                         <button onClick={() => removePhoto(url)}
@@ -376,7 +385,7 @@ export default function PropertiesPage() {
                       {uploading
                         ? <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
                         : <ImagePlus className="h-5 w-5 text-gray-400" />}
-                      <span className="text-[10px] text-gray-400">{uploading ? '上傳中…' : '新增照片'}</span>
+                      <span className="text-[10px] text-gray-400">{uploading ? t('properties.uploading') : t('properties.addPhoto')}</span>
                     </button>
                   </div>
                   <input ref={fileRef} type="file" accept="image/*" className="hidden"
@@ -388,10 +397,10 @@ export default function PropertiesPage() {
             {/* Footer buttons */}
             <div className="shrink-0 flex gap-2 px-5 py-4 border-t">
               <button onClick={() => { setAdding(false); setEditing(null) }}
-                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={save} disabled={!form.name.trim() || saving}
                 className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                {saving ? '儲存中…' : '儲存'}
+                {saving ? t('bookings.form.saving') : t('detail.save')}
               </button>
             </div>
           </div>
