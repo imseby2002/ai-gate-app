@@ -1304,5 +1304,133 @@
       "industryTags": "Thẻ ngành",
       "trendingTags": "Thẻ xu hướng"
     }
+  },
+  "Resume": {
+    "back": "Quay lại",
+    "pageTitle": "WORK Trợ lý công sở",
+    "pageSubtitle": "Trợ lý công sở AI toàn diện — tìm việc × hàng ngày × tình huống nâng cao",
+    "selectPlaceholder": "Vui lòng chọn…",
+    "resultTitle": "Kết quả AI",
+    "resultDesc": "Nội dung đã tối ưu sẽ hiển thị ở đây",
+    "copied": "Đã sao chép",
+    "copy": "Sao chép",
+    "generating": "Đang tạo…",
+    "aiGenerating": "AI đang tạo…",
+    "waitingFor": "Chờ tạo {label}",
+    "genericEmptyPre": "Điền biểu mẫu bên trái và nhấn \"{submit}\"",
+    "genericEmptyPost": "AI sẽ tạo ngay cho bạn",
+    "phaseAnalyze": "DeepSeek-R1 phân tích",
+    "phaseWrite": "Claude viết",
+    "categories": {
+      "job-search": { "label": "🔍 Tìm việc", "desc": "Hồ sơ, thư xin việc, phỏng vấn, đàm phán lương" },
+      "workplace": { "label": "💼 Công sở hàng ngày", "desc": "Email, báo cáo, thuyết trình, biên bản họp" },
+      "advanced": { "label": "🧠 Tình huống nâng cao", "desc": "Ứng đối, đánh giá, thăng chức, lượng hóa công việc" },
+      "thinking": { "label": "🎯 Ra quyết định", "desc": "Mô hình tư duy của các bậc thầy để mổ xẻ quyết định" }
+    },
+    "optimize": {
+      "cardDesc": "Chọn cách điền; càng chi tiết kết quả càng chính xác",
+      "modeUpload": "Tải tệp", "modeForm": "Điền thủ công", "modeBoth": "Cả hai",
+      "jdLabel": "JD công việc mục tiêu", "jdPlaceholder": "Dán mô tả công việc…",
+      "processing": "Đang xử lý…",
+      "emptyTitle": "Cộng tác hai mô hình", "emptyDesc1": "DeepSeek-R1 phân tích khoảng cách", "emptyDesc2": "Claude Sonnet viết hồ sơ tối ưu"
+    },
+    "cover": {
+      "cardDesc": "Chọn mẫu và điền JD cùng kinh nghiệm",
+      "selectTemplate": "Chọn mẫu thư xin việc", "loadingTemplates": "Đang tải mẫu…",
+      "freeform": "✨ Tự do (không dùng mẫu)", "freeformDesc": "AI tự quyết định cấu trúc thư xin việc phù hợp nhất",
+      "jdLabel": "JD công việc mục tiêu", "jdPlaceholder": "Dán mô tả công việc…",
+      "expLabel": "Kinh nghiệm trước đây", "expPlaceholder": "Mô tả kinh nghiệm, kỹ năng và thành tích của bạn…",
+      "extraLabel": "Yêu cầu thêm (tùy chọn)", "extraPlaceholder": "VD: viết bằng tiếng Anh, giọng điệu thoải mái…",
+      "emptyTitle": "Chưa có thư xin việc", "emptyDesc1": "Chọn mẫu và điền JD cùng kinh nghiệm", "emptyDesc2": "Claude sẽ viết thư xin việc cho bạn"
+    },
+    "form": {
+      "basicSection": "1. Thông tin cơ bản", "name": "Họ tên", "phone": "Điện thoại", "email": "Email", "targetPosition": "Vị trí ứng tuyển",
+      "eduSection": "2. Học vấn & Chứng chỉ", "eduN": "Học vấn {n}", "school": "Tên trường", "major": "Chuyên ngành", "degree": "Cử nhân/Thạc sĩ", "eduPeriod": "Thời gian", "addEdu": "Thêm học vấn", "certs": "Chứng chỉ liên quan, kỳ thi ngôn ngữ…",
+      "expSection": "3. Kinh nghiệm làm việc/thực tập", "expN": "Kinh nghiệm {n}", "company": "Công ty", "jobTitle": "Chức danh", "expPeriod": "Thời gian", "expDesc": "Kết quả chính (nên lượng hóa)", "addExp": "Thêm kinh nghiệm",
+      "skillsSection": "4. Kỹ năng & Ngôn ngữ", "skills": "Kỹ năng: Python, Excel, Figma…", "languages": "Ngôn ngữ: Tiếng Trung (bản ngữ), Tiếng Anh (TOEIC 880)…",
+      "otherSection": "5. Khác (tùy chọn)", "selfIntro": "Tự giới thiệu (3–5 dòng)", "otherField": "Điểm cộng khác"
+    },
+    "upload": {
+      "onlyTypes": "Chỉ hỗ trợ JPG, PDF, Word",
+      "tooLarge": "Kích thước tệp không được vượt 10 MB",
+      "dropHint": "Nhấn để tải lên hoặc kéo hồ sơ vào đây",
+      "supports": "Hỗ trợ JPG · PDF · Word (tối đa 10 MB)",
+      "imageNote": "✓ Ảnh JPG sẽ được Claude nhận diện hình ảnh phân tích"
+    },
+    "tools": {
+      "resume-optimize": { "label": "Tối ưu hồ sơ", "desc": "Dán JD; AI hai mô hình phân tích và viết lại hồ sơ tối ưu ATS", "submit": "Bắt đầu tối ưu" },
+      "cover-letter": { "label": "Viết thư xin việc", "desc": "Chọn mẫu, nhập JD và kinh nghiệm; Claude tạo thư xin việc hoàn chỉnh", "submit": "Tạo thư xin việc" },
+      "interview-practice": { "label": "Luyện phỏng vấn", "desc": "Mô phỏng câu hỏi phỏng vấn thường gặp + gợi ý trả lời theo STAR", "submit": "Tạo câu hỏi", "fields": {
+        "jd": { "label": "JD công việc mục tiêu", "placeholder": "Dán mô tả công việc để chính xác hơn…" },
+        "background": { "label": "Bối cảnh cá nhân", "placeholder": "Mô tả ngắn học vấn, số năm kinh nghiệm, kỹ năng chính…" } } },
+      "salary-negotiation": { "label": "Đàm phán lương", "desc": "Cung cấp kịch bản đàm phán hoàn chỉnh giúp bạn đạt mức lương xứng đáng", "submit": "Tạo kịch bản", "fields": {
+        "position": { "label": "Vị trí & Ngành mục tiêu", "placeholder": "VD: Marketing / Công nghệ" },
+        "currentSalary": { "label": "Lương hiện tại (tháng)", "placeholder": "VD: 35,000" },
+        "targetSalary": { "label": "Lương mong muốn (tháng)", "placeholder": "VD: 45,000" },
+        "highlights": { "label": "Điểm nổi bật & Thành tích", "placeholder": "Năng lực cạnh tranh, thành quả, kỹ năng đặc biệt…" } } },
+      "resume-clinic": { "label": "Khám sức khỏe hồ sơ", "desc": "Nói thẳng như HR: có nên ứng tuyển, tỷ lệ thắng, vướng ở đâu, cách khắc phục", "submit": "Bắt đầu khám", "fields": {
+        "jd": { "label": "JD công việc mục tiêu", "placeholder": "Dán mô tả công việc…" },
+        "background": { "label": "Bối cảnh / Điểm chính hồ sơ", "placeholder": "Học vấn, kinh nghiệm, kỹ năng chính, tác phẩm tiêu biểu…" },
+        "company": { "label": "Công ty mục tiêu (tùy chọn)", "placeholder": "VD: công ty đa quốc gia, startup, công ty niêm yết…" } } },
+      "career-advisor": { "label": "Cố vấn học & nghề", "desc": "Phân tích thực tế về ngành học, nghề, chọn thành phố — thiết thực, không sáo rỗng", "submit": "Cho tôi lời khuyên", "fields": {
+        "situation": { "label": "Hoàn cảnh của bạn", "options": ["Học sinh THPT chọn ngành", "Sinh viên chọn hướng/chuyển ngành", "Sinh viên mới ra trường chọn ngành nghề", "Chuyển việc", "Phân vân thi cao học/công chức"] },
+        "background": { "label": "Điều kiện nền tảng", "placeholder": "Ngành, điểm số, kinh nghiệm, thành phố, yếu tố gia đình…" },
+        "options": { "label": "Các lựa chọn đang cân nhắc", "placeholder": "VD: CNTT vs Điện, ở Đài Bắc vs về quê…" },
+        "concern": { "label": "Điều bạn quan tâm nhất", "placeholder": "VD: lương, ổn định, sở thích, tiềm năng…" } } },
+      "email-draft": { "label": "Soạn Email", "desc": "Thư xin lỗi, nhắc nợ, giao tiếp liên phòng — tạo email lịch sự chỉ một nhấp", "submit": "Tạo Email", "fields": {
+        "type": { "label": "Loại Email", "options": ["Xin lỗi", "Nhắc/đòi nợ", "Yêu cầu hỗ trợ liên phòng", "Từ chối yêu cầu", "Báo cáo tiến độ", "Cảm ơn", "Khác"] },
+        "relationship": { "label": "Người nhận & Quan hệ", "placeholder": "VD: quản lý (trực tiếp), khách hàng, đồng nghiệp liên phòng…" },
+        "context": { "label": "Bối cảnh", "placeholder": "Mô tả bối cảnh và mục tiêu bạn muốn đạt…" },
+        "keyPoints": { "label": "Điểm cần nhấn mạnh (tùy chọn)", "placeholder": "VD: thể hiện thành ý, chuyên nghiệp nhưng không hạ mình…" } } },
+      "report-writing": { "label": "Viết báo cáo/đề xuất", "desc": "Nhập chủ đề và điểm chính; AI tạo cấu trúc và nội dung báo cáo hoàn chỉnh", "submit": "Tạo báo cáo", "fields": {
+        "topic": { "label": "Chủ đề báo cáo", "placeholder": "VD: Phân tích kết quả bán hàng Q3" },
+        "context": { "label": "Bối cảnh", "placeholder": "Giải thích mục đích và bối cảnh báo cáo…" },
+        "mainPoints": { "label": "Luận điểm/Dữ liệu chính", "placeholder": "Liệt kê dữ liệu, kết luận hoặc luận điểm bạn có…" },
+        "audience": { "label": "Đối tượng", "placeholder": "VD: lãnh đạo cấp cao, khách hàng, toàn thể nhân viên…" } } },
+      "presentation-outline": { "label": "Dàn ý thuyết trình", "desc": "Chủ đề + đối tượng → AI tạo dàn ý từng slide và gợi ý trực quan hóa", "submit": "Tạo dàn ý", "fields": {
+        "topic": { "label": "Chủ đề thuyết trình", "placeholder": "VD: Kế hoạch chiến lược thương hiệu 2025" },
+        "audience": { "label": "Đối tượng", "placeholder": "VD: hội đồng quản trị, khách hàng tiềm năng…" },
+        "coreMessage": { "label": "Thông điệp cốt lõi (điều khán giả nên nhớ)", "placeholder": "Nói thông điệp chính trong một câu…" },
+        "duration": { "label": "Thời lượng", "placeholder": "VD: 10 phút, 30 phút" } } },
+      "meeting-minutes": { "label": "Biên bản họp", "desc": "Dán ghi chú họp lộn xộn; tự sắp xếp thành tài liệu có cấu trúc", "submit": "Sắp xếp biên bản", "fields": {
+        "rawNotes": { "label": "Ghi chú họp gốc", "placeholder": "Dán ghi chú họp (có thể lộn xộn)…" } } },
+      "workplace-phrases": { "label": "Ứng đối công sở", "desc": "Sếp khó tính, từ chối việc thêm… cung cấp nhiều kịch bản ứng đối", "submit": "Tạo gợi ý", "fields": {
+        "scenario": { "label": "Loại tình huống", "options": ["Bị sếp làm khó", "Từ chối việc thêm", "Quản lý cấp trên", "Đối phó đồng nghiệp giành công", "Nêu ý kiến phản đối", "Đề cập tăng lương", "Khác"] },
+        "context": { "label": "Mô tả tình huống cụ thể", "placeholder": "Giải thích cụ thể đã xảy ra chuyện gì…" },
+        "goal": { "label": "Kết quả mong muốn", "placeholder": "Bạn mong cuộc trao đổi này đạt được gì…" } } },
+      "workplace-relationship": { "label": "Cố vấn quan hệ công sở", "desc": "Hiểu động cơ của sếp/đồng nghiệp/cấp dưới; đưa chiến lược hòa hợp và quản lý cấp trên", "submit": "Phân tích chiến lược", "fields": {
+        "role": { "label": "Đối tượng", "options": ["Quản lý trực tiếp", "Sếp / Cấp cao", "Đồng nghiệp ngang hàng", "Cấp dưới", "Tiền bối / Cố vấn", "Đầu mối liên phòng"] },
+        "situation": { "label": "Tình huống cụ thể", "placeholder": "Mô tả hành vi của họ, tương tác giữa hai bên, điểm vướng hiện tại…" },
+        "goal": { "label": "Mục tiêu của bạn", "placeholder": "VD: lấy lòng tin, giành nguồn lực, hóa giải hiểu lầm, bảo vệ bản thân…" } } },
+      "performance-review": { "label": "Viết tự đánh giá", "desc": "Nhập công việc và kết quả; AI viết bản tự đánh giá thuyết phục", "submit": "Tạo tự đánh giá", "fields": {
+        "position": { "label": "Vị trí & Phòng ban", "placeholder": "VD: Phòng Marketing, Chuyên viên Marketing số" },
+        "workContent": { "label": "Công việc chính kỳ này", "placeholder": "Liệt kê công việc chính bạn phụ trách…" },
+        "achievements": { "label": "Kết quả chính (kèm số liệu)", "placeholder": "VD: hoàn thành dự án XX, tăng XX%…" },
+        "challenges": { "label": "Thách thức đã vượt qua (tùy chọn)", "placeholder": "Giải thích khó khăn và cách giải quyết…" } } },
+      "promotion-letter": { "label": "Thư xin thăng chức", "desc": "Viết thư xin thăng chức mạnh mẽ, làm nổi bật đóng góp và giá trị của bạn", "submit": "Tạo thư", "fields": {
+        "positions": { "label": "Vị trí hiện tại → Vị trí xin", "placeholder": "VD: Chuyên viên KD → Trưởng nhóm KD" },
+        "background": { "label": "Bối cảnh & Thâm niên", "placeholder": "VD: làm việc 3 năm, nền tảng kỹ thuật…" },
+        "achievements": { "label": "Đóng góp & Thành tích chính", "placeholder": "Liệt kê đóng góp cụ thể (có số liệu càng tốt)…" },
+        "reason": { "label": "Lý do xin", "placeholder": "Vì sao bạn là người phù hợp nhất cho vị trí này…" } } },
+      "quantify-work": { "label": "Lượng hóa công việc", "desc": "Biến \"Tôi phụ trách XXX\" thành câu nổi bật có số liệu, có sức ảnh hưởng", "submit": "Lượng hóa công việc", "fields": {
+        "jobContent": { "label": "Mô tả công việc (mỗi dòng một mục)", "placeholder": "VD:\nQuản lý mạng xã hội\nHỗ trợ tổ chức sự kiện thường niên\nXử lý khiếu nại khách hàng" } } },
+      "munger-mental-models": { "label": "Tư duy đa mô hình", "desc": "Mô hình tư duy đa ngành kiểu Munger + tư duy đảo ngược, mổ xẻ quyết định và điểm mù", "submit": "Bắt đầu phân tích", "fields": {
+        "decision": { "label": "Quyết định / Vấn đề", "placeholder": "VD: Có nên nghỉ việc khởi nghiệp? Nhận dự án này?" },
+        "context": { "label": "Bối cảnh & Ràng buộc", "placeholder": "Thông tin, nguồn lực, thời gian, điều bạn quan tâm…" },
+        "options": { "label": "Lựa chọn đang cân nhắc", "placeholder": "Liệt kê các lựa chọn bạn đang nghĩ tới" } } },
+      "first-principles": { "label": "Phân rã nguyên lý gốc", "desc": "Tư duy kiểu Musk: phân rã đến sự thật cơ bản, rồi xây lại giải pháp từ số 0", "submit": "Phân rã vấn đề", "fields": {
+        "problem": { "label": "Vấn đề cần giải", "placeholder": "VD: Làm sao giảm một nửa chi phí? Học nhanh một kỹ năng?" },
+        "assumptions": { "label": "Cách làm hiện tại / Giả định", "placeholder": "Hiện mọi người làm thế nào, ràng buộc bạn mặc định là gì…" } } },
+      "value-investing": { "label": "Góc nhìn đầu tư giá trị", "desc": "Đánh giá kiểu Buffett: vòng tròn năng lực, hào kinh tế, biên an toàn (không phải lời khuyên đầu tư)", "submit": "Đánh giá cơ hội", "fields": {
+        "target": { "label": "Đối tượng / Việc kinh doanh / Cơ hội", "placeholder": "VD: một mã cổ phiếu, nhượng quyền một cửa hàng, đầu tư startup của bạn bè" },
+        "info": { "label": "Thông tin đã biết", "placeholder": "Mô hình kinh doanh, tài chính, cạnh tranh, giá, mức độ bạn hiểu…" },
+        "concern": { "label": "Câu hỏi muốn làm rõ nhất", "placeholder": "VD: Giá hiện tại có hợp lý? Rủi ro ở đâu?" } } },
+      "antifragile-risk": { "label": "Đánh giá rủi ro phản mong manh", "desc": "Tư duy rủi ro kiểu Taleb: rủi ro giảm, bất đối xứng, ngưỡng sống còn", "submit": "Đánh giá rủi ro", "fields": {
+        "decision": { "label": "Quyết định / Kế hoạch cần đánh giá", "placeholder": "VD: dồn hết tiền vào một dự án, nghỉ việc làm toàn thời gian việc gì đó" },
+        "downside": { "label": "Tình huống xấu nhất bạn lo", "placeholder": "Điều tệ nhất có thể xảy ra, bạn sẽ mất gì…" } } },
+      "naval-leverage": { "label": "Đòn bẩy & Lựa chọn cuộc đời", "desc": "Góc nhìn kiểu Naval: kiến thức đặc thù, đòn bẩy, tư duy dài hạn và lựa chọn", "submit": "Cho tôi hướng đi", "fields": {
+        "situation": { "label": "Hoàn cảnh của bạn", "placeholder": "VD: 30 tuổi, nhân viên văn phòng, muốn tích lũy tài sản nhưng chưa rõ hướng" },
+        "question": { "label": "Câu hỏi muốn làm rõ", "placeholder": "VD: Nên chuyên sâu một kỹ năng hay thử nhiều? Làm sao tạo thu nhập thụ động?" } } }
+    }
   }
 }

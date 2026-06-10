@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, ReactNode } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Loader2, Sparkles, FileText, Upload, X, ClipboardCopy, Check,
   Brain, Pencil, Mail, FileCheck, ChevronDown, ChevronUp, Plus, Trash2,
@@ -42,234 +43,80 @@ interface ToolConfig {
   custom?: boolean  // uses dedicated component
 }
 
-// ─── Tool Configs ────────────────────────────────────────────────
-const TOOL_CONFIGS: ToolConfig[] = [
-  // 求職階段
-  {
-    id: 'resume-optimize', category: 'job-search', label: '履歷優化', emoji: '📄',
-    desc: '貼入 JD，AI 雙模型分析並重寫 ATS 優化履歷',
-    color: 'from-blue-500 to-indigo-600', fields: [], submitLabel: '開始優化', custom: true,
-  },
-  {
-    id: 'cover-letter', category: 'job-search', label: '求職信撰寫', emoji: '✉️',
-    desc: '選模板、輸入 JD 與經歷，Claude 生成完整求職信',
-    color: 'from-blue-400 to-cyan-500', fields: [], submitLabel: '生成求職信', custom: true,
-  },
-  {
-    id: 'interview-practice', category: 'job-search', label: '面試問題練習', emoji: '🎯',
-    desc: '模擬面試常見問題 + STAR 框架建議回答',
-    color: 'from-violet-500 to-purple-600',
-    fields: [
-      { key: 'jd', label: '目標職缺 JD', type: 'textarea', placeholder: '貼入職缺描述，AI 更精準…', required: true },
-      { key: 'background', label: '個人背景簡述', type: 'textarea', placeholder: '簡述你的學歷、工作年資、主要技能…' },
-    ],
-    submitLabel: '生成面試題',
-  },
-  {
-    id: 'salary-negotiation', category: 'job-search', label: '薪資談判話術', emoji: '💰',
-    desc: '提供完整談判劇本，幫你爭取應得的薪資',
-    color: 'from-green-500 to-emerald-600',
-    fields: [
-      { key: 'position', label: '目標職位與產業', type: 'input', placeholder: '例如：行銷企劃／科技業', required: true },
-      { key: 'currentSalary', label: '目前薪資（月薪）', type: 'input', placeholder: '例如：35,000' },
-      { key: 'targetSalary', label: '期望薪資（月薪）', type: 'input', placeholder: '例如：45,000', required: true },
-      { key: 'highlights', label: '個人亮點與成就', type: 'textarea', placeholder: '你的競爭力、過去成果、特殊技能…' },
-    ],
-    submitLabel: '生成談判話術',
-  },
-  {
-    id: 'resume-clinic', category: 'job-search', label: '履歷健檢診斷', emoji: '🩺',
-    desc: '像 HR 一樣直說：這份 JD 該不該投、勝算幾成、卡在哪、怎麼補',
-    color: 'from-sky-500 to-blue-600',
-    fields: [
-      { key: 'jd', label: '目標職缺 JD', type: 'textarea', placeholder: '貼上職缺描述…', required: true },
-      { key: 'background', label: '你的背景 / 履歷重點', type: 'textarea', placeholder: '學歷、年資、主要技能、代表作…', required: true },
-      { key: 'company', label: '目標公司（選填）', type: 'input', placeholder: '例如：某外商、新創、上市公司…' },
-    ],
-    submitLabel: '開始健檢',
-  },
-  {
-    id: 'career-advisor', category: 'job-search', label: '升學擇業顧問', emoji: '🧭',
-    desc: '接地氣分析科系、行業、城市選擇，給實用不灌雞湯的建議',
-    color: 'from-cyan-500 to-teal-600',
-    fields: [
-      { key: 'situation', label: '你的處境', type: 'select', required: true,
-        options: ['高中生選科系', '大學生選方向/轉系', '應屆畢業選行業', '在職轉職', '考研/考公猶豫'] },
-      { key: 'background', label: '背景條件', type: 'textarea', placeholder: '科系、成績/級分、年資、所在城市、家庭考量…', required: true },
-      { key: 'options', label: '正在考慮的選項', type: 'textarea', placeholder: '例如：資工 vs 電機、留在台北 vs 回中部…' },
-      { key: 'concern', label: '最在意的點', type: 'input', placeholder: '例如：薪資、穩定性、興趣、發展性…' },
-    ],
-    submitLabel: '給我建議',
-  },
+type Translate = ReturnType<typeof useTranslations>
 
-  // 職場日常
-  {
-    id: 'email-draft', category: 'workplace', label: 'Email 草稿', emoji: '📧',
-    desc: '道歉信、催款、跨部門溝通，一鍵生成得體 Email',
-    color: 'from-orange-400 to-amber-500',
-    fields: [
-      { key: 'type', label: 'Email 類型', type: 'select', required: true,
-        options: ['道歉信', '催款/追款', '跨部門請求協助', '拒絕請求', '匯報進度', '感謝信', '其他'] },
-      { key: 'relationship', label: '收件人與關係', type: 'input', placeholder: '例如：主管（直屬）、客戶、跨部門同事…' },
-      { key: 'context', label: '情境說明', type: 'textarea', placeholder: '描述事情背景與你想達到的目的…', required: true },
-      { key: 'keyPoints', label: '需強調的重點（選填）', type: 'textarea', placeholder: '例如：強調誠意、保持專業但不卑微…' },
-    ],
-    submitLabel: '生成 Email',
-  },
-  {
-    id: 'report-writing', category: 'workplace', label: '報告／提案撰寫', emoji: '📊',
-    desc: '輸入主題與重點，AI 生成完整報告結構與內容',
-    color: 'from-teal-500 to-cyan-600',
-    fields: [
-      { key: 'topic', label: '報告主題', type: 'input', placeholder: '例如：Q3 銷售成果分析', required: true },
-      { key: 'context', label: '背景情境', type: 'textarea', placeholder: '說明報告的目的與背景…' },
-      { key: 'mainPoints', label: '主要論點／數據', type: 'textarea', placeholder: '列出你有的數據、結論或論點…', required: true },
-      { key: 'audience', label: '目標受眾', type: 'input', placeholder: '例如：高階主管、客戶、全體員工…' },
-    ],
-    submitLabel: '生成報告',
-  },
-  {
-    id: 'presentation-outline', category: 'workplace', label: '簡報大綱生成', emoji: '🖥️',
-    desc: '主題 + 受眾 → AI 生成每頁大綱與視覺化建議',
-    color: 'from-pink-500 to-rose-600',
-    fields: [
-      { key: 'topic', label: '簡報主題', type: 'input', placeholder: '例如：2025 年品牌策略規劃', required: true },
-      { key: 'audience', label: '目標受眾', type: 'input', placeholder: '例如：董事會、潛在客戶…' },
-      { key: 'coreMessage', label: '核心訊息（聽眾應記住的）', type: 'textarea', placeholder: '用一句話說出你最想傳達的訊息…', required: true },
-      { key: 'duration', label: '簡報時長', type: 'input', placeholder: '例如：10 分鐘、30 分鐘' },
-    ],
-    submitLabel: '生成簡報大綱',
-  },
-  {
-    id: 'meeting-minutes', category: 'workplace', label: '會議記錄整理', emoji: '📝',
-    desc: '貼入雜亂的會議記錄，自動整理成結構化文件',
-    color: 'from-slate-500 to-gray-600',
-    fields: [
-      { key: 'rawNotes', label: '原始會議記錄', type: 'textarea', placeholder: '貼入你的會議記錄文字（可以很雜亂）…', required: true },
-    ],
-    submitLabel: '整理會議記錄',
-  },
-
-  // 進階場景
-  {
-    id: 'workplace-phrases', category: 'advanced', label: '職場話術', emoji: '🗣️',
-    desc: '被刁難主管、拒絕額外工作…提供多套應對話術',
-    color: 'from-red-500 to-orange-600',
-    fields: [
-      { key: 'scenario', label: '場景類型', type: 'select', required: true,
-        options: ['被主管刁難', '拒絕額外工作', '向上管理', '應對搶功同事', '提出反對意見', '談論加薪', '其他'] },
-      { key: 'context', label: '具體情境描述', type: 'textarea', placeholder: '說明具體發生了什麼事…', required: true },
-      { key: 'goal', label: '期望達到的結果', type: 'textarea', placeholder: '你希望這次溝通達成什麼目標…' },
-    ],
-    submitLabel: '生成話術建議',
-  },
-  {
-    id: 'workplace-relationship', category: 'advanced', label: '職場關係軍師', emoji: '🤝',
-    desc: '讀懂主管／同事／下屬的動機，給相處與向上管理策略',
-    color: 'from-rose-500 to-pink-600',
-    fields: [
-      { key: 'role', label: '對象', type: 'select', required: true,
-        options: ['直屬主管', '老闆 / 高層', '平行同事', '下屬', '前輩 / 導師', '跨部門窗口'] },
-      { key: 'situation', label: '具體情況', type: 'textarea', placeholder: '描述對方的行為、你們的互動、目前的卡點…', required: true },
-      { key: 'goal', label: '你想達成的目標', type: 'textarea', placeholder: '例如：取得信任、爭取資源、化解誤會、保護自己…' },
-    ],
-    submitLabel: '分析關係策略',
-  },
-  {
-    id: 'performance-review', category: 'advanced', label: '績效自評撰寫', emoji: '⭐',
-    desc: '輸入工作內容與成果，AI 幫你寫出有說服力的自評',
-    color: 'from-yellow-500 to-amber-600',
-    fields: [
-      { key: 'position', label: '職位與部門', type: 'input', placeholder: '例如：行銷部 數位行銷專員', required: true },
-      { key: 'workContent', label: '本期主要工作內容', type: 'textarea', placeholder: '列出你這期負責的主要工作項目…', required: true },
-      { key: 'achievements', label: '重要成果（盡量含數字）', type: 'textarea', placeholder: '例如：完成 XX 項目，成長 XX%…' },
-      { key: 'challenges', label: '克服的挑戰（選填）', type: 'textarea', placeholder: '說明你遇到的困難與如何解決…' },
-    ],
-    submitLabel: '生成績效自評',
-  },
-  {
-    id: 'promotion-letter', category: 'advanced', label: '升職申請信', emoji: '🚀',
-    desc: '撰寫有力的升職申請信，突出你的貢獻與價值',
-    color: 'from-purple-500 to-violet-600',
-    fields: [
-      { key: 'positions', label: '目前職位 → 申請職位', type: 'input', placeholder: '例如：業務專員 → 業務主任', required: true },
-      { key: 'background', label: '個人背景與年資', type: 'input', placeholder: '例如：在職 3 年，理工背景…' },
-      { key: 'achievements', label: '重要貢獻與成就', type: 'textarea', placeholder: '列出你對公司的具體貢獻（含數字更好）…', required: true },
-      { key: 'reason', label: '申請理由', type: 'textarea', placeholder: '為什麼你是這個職位的最佳人選…' },
-    ],
-    submitLabel: '生成升職申請信',
-  },
-  {
-    id: 'quantify-work', category: 'advanced', label: '工作內容量化', emoji: '📈',
-    desc: '把「我負責 XXX」變成有數字、有影響力的亮點句',
-    color: 'from-indigo-500 to-blue-600',
-    fields: [
-      { key: 'jobContent', label: '工作描述（每行一條）', type: 'textarea', placeholder: '例如：\n負責社群媒體管理\n協助舉辦年度活動\n處理客戶投訴', required: true },
-    ],
-    submitLabel: '量化我的工作',
-  },
-
-  // 思維決策（名家思維模型）
-  {
-    id: 'munger-mental-models', category: 'thinking', label: '多元思維決策', emoji: '🧩',
-    desc: '芒格式多元思維模型 + 反向思考，拆解你的決策與盲點',
-    color: 'from-amber-500 to-yellow-600',
-    fields: [
-      { key: 'decision', label: '你要做的決定 / 問題', type: 'textarea', placeholder: '例：該不該離職創業？要不要接這個案子？', required: true },
-      { key: 'context', label: '背景與限制', type: 'textarea', placeholder: '相關資訊、資源、時間、在意的點…' },
-      { key: 'options', label: '正在考慮的選項', type: 'textarea', placeholder: '列出你目前想到的幾個選擇' },
-    ],
-    submitLabel: '開始分析',
-  },
-  {
-    id: 'first-principles', category: 'thinking', label: '第一性原理拆解', emoji: '⚛️',
-    desc: '馬斯克式思考：拆到根本事實，再從零重建解法',
-    color: 'from-slate-500 to-gray-700',
-    fields: [
-      { key: 'problem', label: '要解決的問題', type: 'textarea', placeholder: '例：如何把成本降一半？如何快速學會某技能？', required: true },
-      { key: 'assumptions', label: '現有做法 / 既有假設', type: 'textarea', placeholder: '目前大家怎麼做、你預設的限制是什麼…' },
-    ],
-    submitLabel: '拆解問題',
-  },
-  {
-    id: 'value-investing', category: 'thinking', label: '價值投資視角', emoji: '💎',
-    desc: '巴菲特式評估：能力圈、護城河、安全邊際（非投資建議）',
-    color: 'from-emerald-600 to-green-700',
-    fields: [
-      { key: 'target', label: '標的 / 生意 / 機會', type: 'input', placeholder: '例：某檔股票、加盟一間店、投資朋友的新創', required: true },
-      { key: 'info', label: '已知資訊', type: 'textarea', placeholder: '商業模式、財務、競爭、價格、你了解的程度…', required: true },
-      { key: 'concern', label: '最想釐清的問題', type: 'input', placeholder: '例：現在的價格合理嗎？風險在哪？' },
-    ],
-    submitLabel: '評估機會',
-  },
-  {
-    id: 'antifragile-risk', category: 'thinking', label: '反脆弱風險評估', emoji: '🦢',
-    desc: '塔勒布式風險思考：下行風險、不對稱性、保命底線',
-    color: 'from-zinc-600 to-slate-700',
-    fields: [
-      { key: 'decision', label: '要評估的決策 / 計畫', type: 'textarea', placeholder: '例：把存款 all in 一個項目、辭職全職做某件事', required: true },
-      { key: 'downside', label: '你擔心的最壞情況', type: 'textarea', placeholder: '最糟可能發生什麼、會損失什麼…' },
-    ],
-    submitLabel: '評估風險',
-  },
-  {
-    id: 'naval-leverage', category: 'thinking', label: '人生槓桿與選擇', emoji: '🧭',
-    desc: '納瓦爾式視角：特定知識、槓桿、長期主義與選擇',
-    color: 'from-indigo-500 to-violet-700',
-    fields: [
-      { key: 'situation', label: '你的處境', type: 'textarea', placeholder: '例：30 歲、上班族、想累積資產但不知方向', required: true },
-      { key: 'question', label: '你想釐清的問題', type: 'textarea', placeholder: '例：該專精一技還是多方嘗試？怎麼建立被動收入？', required: true },
-    ],
-    submitLabel: '給我方向',
-  },
+// ─── Tool Configs（顯示文字以 t 解析；此處只存結構） ──────────────
+interface ToolDef {
+  id: string
+  category: ToolConfig['category']
+  emoji: string
+  color: string
+  custom?: boolean
+  fields: { key: string; type: FieldType; required?: boolean; hasOptions?: boolean }[]
+}
+const TOOL_DEFS: ToolDef[] = [
+  { id: 'resume-optimize',       category: 'job-search', emoji: '📄', color: 'from-blue-500 to-indigo-600', custom: true, fields: [] },
+  { id: 'cover-letter',          category: 'job-search', emoji: '✉️', color: 'from-blue-400 to-cyan-500',  custom: true, fields: [] },
+  { id: 'interview-practice',    category: 'job-search', emoji: '🎯', color: 'from-violet-500 to-purple-600', fields: [
+    { key: 'jd', type: 'textarea', required: true }, { key: 'background', type: 'textarea' } ] },
+  { id: 'salary-negotiation',    category: 'job-search', emoji: '💰', color: 'from-green-500 to-emerald-600', fields: [
+    { key: 'position', type: 'input', required: true }, { key: 'currentSalary', type: 'input' }, { key: 'targetSalary', type: 'input', required: true }, { key: 'highlights', type: 'textarea' } ] },
+  { id: 'resume-clinic',         category: 'job-search', emoji: '🩺', color: 'from-sky-500 to-blue-600', fields: [
+    { key: 'jd', type: 'textarea', required: true }, { key: 'background', type: 'textarea', required: true }, { key: 'company', type: 'input' } ] },
+  { id: 'career-advisor',        category: 'job-search', emoji: '🧭', color: 'from-cyan-500 to-teal-600', fields: [
+    { key: 'situation', type: 'select', required: true, hasOptions: true }, { key: 'background', type: 'textarea', required: true }, { key: 'options', type: 'textarea' }, { key: 'concern', type: 'input' } ] },
+  { id: 'email-draft',           category: 'workplace', emoji: '📧', color: 'from-orange-400 to-amber-500', fields: [
+    { key: 'type', type: 'select', required: true, hasOptions: true }, { key: 'relationship', type: 'input' }, { key: 'context', type: 'textarea', required: true }, { key: 'keyPoints', type: 'textarea' } ] },
+  { id: 'report-writing',        category: 'workplace', emoji: '📊', color: 'from-teal-500 to-cyan-600', fields: [
+    { key: 'topic', type: 'input', required: true }, { key: 'context', type: 'textarea' }, { key: 'mainPoints', type: 'textarea', required: true }, { key: 'audience', type: 'input' } ] },
+  { id: 'presentation-outline',  category: 'workplace', emoji: '🖥️', color: 'from-pink-500 to-rose-600', fields: [
+    { key: 'topic', type: 'input', required: true }, { key: 'audience', type: 'input' }, { key: 'coreMessage', type: 'textarea', required: true }, { key: 'duration', type: 'input' } ] },
+  { id: 'meeting-minutes',       category: 'workplace', emoji: '📝', color: 'from-slate-500 to-gray-600', fields: [
+    { key: 'rawNotes', type: 'textarea', required: true } ] },
+  { id: 'workplace-phrases',     category: 'advanced', emoji: '🗣️', color: 'from-red-500 to-orange-600', fields: [
+    { key: 'scenario', type: 'select', required: true, hasOptions: true }, { key: 'context', type: 'textarea', required: true }, { key: 'goal', type: 'textarea' } ] },
+  { id: 'workplace-relationship',category: 'advanced', emoji: '🤝', color: 'from-rose-500 to-pink-600', fields: [
+    { key: 'role', type: 'select', required: true, hasOptions: true }, { key: 'situation', type: 'textarea', required: true }, { key: 'goal', type: 'textarea' } ] },
+  { id: 'performance-review',    category: 'advanced', emoji: '⭐', color: 'from-yellow-500 to-amber-600', fields: [
+    { key: 'position', type: 'input', required: true }, { key: 'workContent', type: 'textarea', required: true }, { key: 'achievements', type: 'textarea' }, { key: 'challenges', type: 'textarea' } ] },
+  { id: 'promotion-letter',      category: 'advanced', emoji: '🚀', color: 'from-purple-500 to-violet-600', fields: [
+    { key: 'positions', type: 'input', required: true }, { key: 'background', type: 'input' }, { key: 'achievements', type: 'textarea', required: true }, { key: 'reason', type: 'textarea' } ] },
+  { id: 'quantify-work',         category: 'advanced', emoji: '📈', color: 'from-indigo-500 to-blue-600', fields: [
+    { key: 'jobContent', type: 'textarea', required: true } ] },
+  { id: 'munger-mental-models',  category: 'thinking', emoji: '🧩', color: 'from-amber-500 to-yellow-600', fields: [
+    { key: 'decision', type: 'textarea', required: true }, { key: 'context', type: 'textarea' }, { key: 'options', type: 'textarea' } ] },
+  { id: 'first-principles',      category: 'thinking', emoji: '⚛️', color: 'from-slate-500 to-gray-700', fields: [
+    { key: 'problem', type: 'textarea', required: true }, { key: 'assumptions', type: 'textarea' } ] },
+  { id: 'value-investing',       category: 'thinking', emoji: '💎', color: 'from-emerald-600 to-green-700', fields: [
+    { key: 'target', type: 'input', required: true }, { key: 'info', type: 'textarea', required: true }, { key: 'concern', type: 'input' } ] },
+  { id: 'antifragile-risk',      category: 'thinking', emoji: '🦢', color: 'from-zinc-600 to-slate-700', fields: [
+    { key: 'decision', type: 'textarea', required: true }, { key: 'downside', type: 'textarea' } ] },
+  { id: 'naval-leverage',        category: 'thinking', emoji: '🧭', color: 'from-indigo-500 to-violet-700', fields: [
+    { key: 'situation', type: 'textarea', required: true }, { key: 'question', type: 'textarea', required: true } ] },
 ]
 
-const CATEGORIES = [
-  { id: 'job-search', label: '🔍 求職階段', desc: '履歷、求職信、面試、薪資談判' },
-  { id: 'workplace', label: '💼 職場日常', desc: 'Email、報告、簡報、會議記錄' },
-  { id: 'advanced', label: '🧠 進階場景', desc: '話術、績效、升職、工作量化' },
-  { id: 'thinking', label: '🎯 思維決策', desc: '名家思維模型拆解你的決策與難題' },
-] as const
+// 把結構 + i18n 解析為完整 ToolConfig（含翻譯後的 label/desc/fields）
+function buildTool(def: ToolDef, t: Translate): ToolConfig {
+  return {
+    id: def.id, category: def.category, emoji: def.emoji, color: def.color, custom: def.custom,
+    label: t(`tools.${def.id}.label`),
+    desc: t(`tools.${def.id}.desc`),
+    submitLabel: t(`tools.${def.id}.submit`),
+    fields: def.fields.map(f => ({
+      key: f.key, type: f.type, required: f.required,
+      label: t(`tools.${def.id}.fields.${f.key}.label`),
+      placeholder: f.type === 'select' ? undefined : t(`tools.${def.id}.fields.${f.key}.placeholder`),
+      options: f.hasOptions ? (t.raw(`tools.${def.id}.fields.${f.key}.options`) as string[]) : undefined,
+    })),
+  }
+}
+
+const CATEGORY_DEFS = [
+  { id: 'job-search' as const },
+  { id: 'workplace' as const },
+  { id: 'advanced' as const },
+  { id: 'thinking' as const },
+]
 
 // ─── Constants ───────────────────────────────────────────────────
 const ACCEPTED_TYPES = [
@@ -368,6 +215,7 @@ async function streamSSE(
 function FieldInput({ field, value, onChange, disabled }: {
   field: ToolField; value: string; onChange: (v: string) => void; disabled?: boolean
 }) {
+  const t = useTranslations('Resume')
   if (field.type === 'textarea') {
     return (
       <Textarea value={value} onChange={e => onChange(e.target.value)} rows={4} disabled={disabled}
@@ -378,7 +226,7 @@ function FieldInput({ field, value, onChange, disabled }: {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} disabled={disabled}
         className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 disabled:opacity-50 bg-white">
-        <option value="">請選擇…</option>
+        <option value="">{t('selectPlaceholder')}</option>
         {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     )
@@ -441,6 +289,7 @@ function ResultPanel({ result, loading, emptyIcon, emptyTitle, emptyDesc }: {
   result: string; loading: boolean
   emptyIcon: ReactNode; emptyTitle: string; emptyDesc: ReactNode
 }) {
+  const t = useTranslations('Resume')
   const [copied, setCopied] = useState(false)
   const copy = async () => { await navigator.clipboard.writeText(result); setCopied(true); setTimeout(() => setCopied(false), 2000) }
   return (
@@ -448,12 +297,12 @@ function ResultPanel({ result, loading, emptyIcon, emptyTitle, emptyDesc }: {
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-base">AI 生成結果</CardTitle>
-            <CardDescription className="mt-1">優化後的內容將顯示於此</CardDescription>
+            <CardTitle className="text-base">{t('resultTitle')}</CardTitle>
+            <CardDescription className="mt-1">{t('resultDesc')}</CardDescription>
           </div>
           {result && (
             <Button variant="outline" size="sm" onClick={copy} className="shrink-0 gap-1.5 text-xs">
-              {copied ? <><Check className="h-3.5 w-3.5 text-green-600" />已複製</> : <><ClipboardCopy className="h-3.5 w-3.5" />複製</>}
+              {copied ? <><Check className="h-3.5 w-3.5 text-green-600" />{t('copied')}</> : <><ClipboardCopy className="h-3.5 w-3.5" />{t('copy')}</>}
             </Button>
           )}
         </div>
@@ -472,7 +321,7 @@ function ResultPanel({ result, loading, emptyIcon, emptyTitle, emptyDesc }: {
               className="resize-none text-sm leading-relaxed bg-gray-50 cursor-default focus-visible:ring-0 border-gray-200" />
             {loading && (
               <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" />生成中…
+                <Loader2 className="h-3 w-3 animate-spin" />{t('generating')}
               </p>
             )}
           </div>
@@ -493,6 +342,7 @@ function ResultPanel({ result, loading, emptyIcon, emptyTitle, emptyDesc }: {
 
 // ─── Generic Tool View ────────────────────────────────────────────
 function GenericToolView({ tool }: { tool: ToolConfig }) {
+  const t = useTranslations('Resume')
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [phase, setPhase]   = useState<Phase>('idle')
   const [result, setResult] = useState('')
@@ -537,28 +387,29 @@ function GenericToolView({ tool }: { tool: ToolConfig }) {
           {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
           <Button onClick={handleSubmit} disabled={!canSubmit} className="w-full py-5 text-sm font-semibold rounded-xl" size="lg">
             {isLoading
-              ? <><Loader2 className="h-4 w-4 animate-spin" />AI 生成中…</>
+              ? <><Loader2 className="h-4 w-4 animate-spin" />{t('aiGenerating')}</>
               : <><Sparkles className="h-4 w-4" />{tool.submitLabel}</>}
           </Button>
         </CardContent>
       </Card>
       <ResultPanel result={result} loading={isLoading}
         emptyIcon={<div className="text-4xl">{tool.emoji}</div>}
-        emptyTitle={`等待生成 ${tool.label}`}
-        emptyDesc={<>填寫左側資料，點擊「{tool.submitLabel}」<br />AI 將立即為你生成</>} />
+        emptyTitle={t('waitingFor', { label: tool.label })}
+        emptyDesc={<>{t('genericEmptyPre', { submit: tool.submitLabel })}<br />{t('genericEmptyPost')}</>} />
     </div>
   )
 }
 
 // ─── File Upload Zone ─────────────────────────────────────────────
 function FileUploadZone({ file, onFile, disabled }: { file: File | null; onFile: (f: File | null) => void; disabled?: boolean }) {
+  const t = useTranslations('Resume')
   const [error, setError] = useState('')
   const ref = useRef<HTMLInputElement>(null)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sel = e.target.files?.[0]; setError('')
     if (!sel) return
-    if (!ACCEPTED_TYPES.includes(sel.type)) { setError('僅支援 JPG、PDF、Word'); e.target.value = ''; return }
-    if (sel.size > 10 * 1024 * 1024) { setError('檔案大小不可超過 10 MB'); e.target.value = ''; return }
+    if (!ACCEPTED_TYPES.includes(sel.type)) { setError(t('upload.onlyTypes')); e.target.value = ''; return }
+    if (sel.size > 10 * 1024 * 1024) { setError(t('upload.tooLarge')); e.target.value = ''; return }
     onFile(sel)
   }
   const remove = () => { onFile(null); if (ref.current) ref.current.value = '' }
@@ -575,12 +426,12 @@ function FileUploadZone({ file, onFile, disabled }: { file: File | null; onFile:
           : <>
               <Upload className="h-6 w-6 text-gray-400" />
               <div className="text-center">
-                <p className="text-sm text-gray-600 font-medium">點擊上傳或拖曳履歷至此</p>
-                <p className="text-xs text-gray-400 mt-0.5">支援 JPG · PDF · Word（最大 10 MB）</p>
+                <p className="text-sm text-gray-600 font-medium">{t('upload.dropHint')}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('upload.supports')}</p>
               </div>
             </>}
       </div>
-      {file && file.type.startsWith('image/') && <p className="text-xs text-blue-600">✓ JPG 圖片將由 Claude 視覺辨識分析</p>}
+      {file && file.type.startsWith('image/') && <p className="text-xs text-blue-600">{t('upload.imageNote')}</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   )
@@ -590,6 +441,7 @@ function FileUploadZone({ file, onFile, disabled }: { file: File | null; onFile:
 function StructuredForm({ data, onChange, disabled }: {
   data: ResumeForm; onChange: (d: ResumeForm) => void; disabled?: boolean
 }) {
+  const t = useTranslations('Resume')
   const [open, setOpen] = useState<Record<string, boolean>>({ basic: true, edu: false, exp: false, skills: false, other: false })
   const toggle = (k: string) => setOpen(o => ({ ...o, [k]: !o[k] }))
   const set = <K extends keyof ResumeForm>(key: K, val: ResumeForm[K]) => onChange({ ...data, [key]: val })
@@ -603,72 +455,72 @@ function StructuredForm({ data, onChange, disabled }: {
   }
   return (
     <div className="space-y-2">
-      <SectionBlock icon={<User className="h-4 w-4" style={{ color: 'var(--primary)' }} />} title="一、基本資料" open={open.basic} onToggle={() => toggle('basic')}>
+      <SectionBlock icon={<User className="h-4 w-4" style={{ color: 'var(--primary)' }} />} title={t('form.basicSection')} open={open.basic} onToggle={() => toggle('basic')}>
         <div className="grid grid-cols-2 gap-2">
-          <InputEl value={data.name} onChange={v => set('name', v)} placeholder="姓名" disabled={disabled} />
-          <InputEl value={data.phone} onChange={v => set('phone', v)} placeholder="聯絡電話" disabled={disabled} />
-          <InputEl value={data.email} onChange={v => set('email', v)} placeholder="電子郵件" disabled={disabled} className="col-span-2" />
-          <InputEl value={data.targetPosition} onChange={v => set('targetPosition', v)} placeholder="應徵職位" disabled={disabled} className="col-span-2" />
+          <InputEl value={data.name} onChange={v => set('name', v)} placeholder={t('form.name')} disabled={disabled} />
+          <InputEl value={data.phone} onChange={v => set('phone', v)} placeholder={t('form.phone')} disabled={disabled} />
+          <InputEl value={data.email} onChange={v => set('email', v)} placeholder={t('form.email')} disabled={disabled} className="col-span-2" />
+          <InputEl value={data.targetPosition} onChange={v => set('targetPosition', v)} placeholder={t('form.targetPosition')} disabled={disabled} className="col-span-2" />
         </div>
       </SectionBlock>
-      <SectionBlock icon={<GraduationCap className="h-4 w-4 text-blue-500" />} title="二、學歷與證照" open={open.edu} onToggle={() => toggle('edu')}>
+      <SectionBlock icon={<GraduationCap className="h-4 w-4 text-blue-500" />} title={t('form.eduSection')} open={open.edu} onToggle={() => toggle('edu')}>
         {data.education.map((e, i) => (
           <div key={i} className="p-3 rounded-xl bg-gray-50 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500">學歷 {i + 1}</span>
+              <span className="text-xs font-medium text-gray-500">{t('form.eduN', { n: i + 1 })}</span>
               {i > 0 && <button type="button" onClick={() => set('education', data.education.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>}
             </div>
-            <InputEl value={e.school} onChange={v => setEdu(i, 'school', v)} placeholder="學校名稱" disabled={disabled} />
+            <InputEl value={e.school} onChange={v => setEdu(i, 'school', v)} placeholder={t('form.school')} disabled={disabled} />
             <div className="grid grid-cols-2 gap-2">
-              <InputEl value={e.major} onChange={v => setEdu(i, 'major', v)} placeholder="科系" disabled={disabled} />
-              <InputEl value={e.degree} onChange={v => setEdu(i, 'degree', v)} placeholder="學士／碩士" disabled={disabled} />
+              <InputEl value={e.major} onChange={v => setEdu(i, 'major', v)} placeholder={t('form.major')} disabled={disabled} />
+              <InputEl value={e.degree} onChange={v => setEdu(i, 'degree', v)} placeholder={t('form.degree')} disabled={disabled} />
             </div>
-            <InputEl value={e.period} onChange={v => setEdu(i, 'period', v)} placeholder="就讀期間" disabled={disabled} />
+            <InputEl value={e.period} onChange={v => setEdu(i, 'period', v)} placeholder={t('form.eduPeriod')} disabled={disabled} />
           </div>
         ))}
         {data.education.length < 3 && (
           <button type="button" disabled={disabled} onClick={() => set('education', [...data.education, { ...BLANK_EDU }])}
             className="w-full py-2 rounded-xl border-2 border-dashed text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1">
-            <Plus className="h-3.5 w-3.5" />新增學歷
+            <Plus className="h-3.5 w-3.5" />{t('form.addEdu')}
           </button>
         )}
         <Textarea value={data.certifications} onChange={e => set('certifications', e.target.value)} rows={2} disabled={disabled}
-          placeholder="相關證照、語言考試…" className="resize-none text-sm" />
+          placeholder={t('form.certs')} className="resize-none text-sm" />
       </SectionBlock>
-      <SectionBlock icon={<Briefcase className="h-4 w-4 text-orange-500" />} title="三、工作／實習經驗" open={open.exp} onToggle={() => toggle('exp')}>
+      <SectionBlock icon={<Briefcase className="h-4 w-4 text-orange-500" />} title={t('form.expSection')} open={open.exp} onToggle={() => toggle('exp')}>
         {data.experience.map((e, i) => (
           <div key={i} className="p-3 rounded-xl bg-gray-50 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-500">經歷 {i + 1}</span>
+              <span className="text-xs font-medium text-gray-500">{t('form.expN', { n: i + 1 })}</span>
               {i > 0 && <button type="button" onClick={() => set('experience', data.experience.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>}
             </div>
-            <InputEl value={e.company} onChange={v => setExp(i, 'company', v)} placeholder="公司名稱" disabled={disabled} />
+            <InputEl value={e.company} onChange={v => setExp(i, 'company', v)} placeholder={t('form.company')} disabled={disabled} />
             <div className="grid grid-cols-2 gap-2">
-              <InputEl value={e.title} onChange={v => setExp(i, 'title', v)} placeholder="職稱" disabled={disabled} />
-              <InputEl value={e.period} onChange={v => setExp(i, 'period', v)} placeholder="期間" disabled={disabled} />
+              <InputEl value={e.title} onChange={v => setExp(i, 'title', v)} placeholder={t('form.jobTitle')} disabled={disabled} />
+              <InputEl value={e.period} onChange={v => setExp(i, 'period', v)} placeholder={t('form.expPeriod')} disabled={disabled} />
             </div>
             <Textarea value={e.description} onChange={ev => setExp(i, 'description', ev.target.value)} rows={3} disabled={disabled}
-              placeholder="重點成果（建議量化）" className="resize-none text-sm" />
+              placeholder={t('form.expDesc')} className="resize-none text-sm" />
           </div>
         ))}
         {data.experience.length < 5 && (
           <button type="button" disabled={disabled} onClick={() => set('experience', [...data.experience, { ...BLANK_EXP }])}
             className="w-full py-2 rounded-xl border-2 border-dashed text-xs text-gray-400 hover:text-gray-600 flex items-center justify-center gap-1">
-            <Plus className="h-3.5 w-3.5" />新增經歷
+            <Plus className="h-3.5 w-3.5" />{t('form.addExp')}
           </button>
         )}
       </SectionBlock>
-      <SectionBlock icon={<Wrench className="h-4 w-4 text-green-500" />} title="四、技能與語言" open={open.skills} onToggle={() => toggle('skills')}>
+      <SectionBlock icon={<Wrench className="h-4 w-4 text-green-500" />} title={t('form.skillsSection')} open={open.skills} onToggle={() => toggle('skills')}>
         <Textarea value={data.skills} onChange={e => set('skills', e.target.value)} rows={3} disabled={disabled}
-          placeholder="專業技能：Python、Excel、Figma…" className="resize-none text-sm" />
+          placeholder={t('form.skills')} className="resize-none text-sm" />
         <Textarea value={data.languages} onChange={e => set('languages', e.target.value)} rows={2} disabled={disabled}
-          placeholder="語言能力：中文（母語）、英文（多益 880）…" className="resize-none text-sm" />
+          placeholder={t('form.languages')} className="resize-none text-sm" />
       </SectionBlock>
-      <SectionBlock icon={<Star className="h-4 w-4 text-yellow-500" />} title="五、其他（選填）" open={open.other} onToggle={() => toggle('other')}>
+      <SectionBlock icon={<Star className="h-4 w-4 text-yellow-500" />} title={t('form.otherSection')} open={open.other} onToggle={() => toggle('other')}>
         <Textarea value={data.selfIntro} onChange={e => set('selfIntro', e.target.value)} rows={4} disabled={disabled}
-          placeholder="自我介紹（3–5 行）" className="resize-none text-sm" />
+          placeholder={t('form.selfIntro')} className="resize-none text-sm" />
         <Textarea value={data.other} onChange={e => set('other', e.target.value)} rows={2} disabled={disabled}
-          placeholder="其他加分項目" className="resize-none text-sm" />
+          placeholder={t('form.otherField')} className="resize-none text-sm" />
       </SectionBlock>
     </div>
   )
@@ -676,10 +528,11 @@ function StructuredForm({ data, onChange, disabled }: {
 
 // ─── Phase Indicator ──────────────────────────────────────────────
 function PhaseIndicator({ phase }: { phase: Phase }) {
+  const t = useTranslations('Resume')
   if (phase === 'idle') return null
   const steps = [
-    { key: 'analyzing' as Phase, icon: Brain,  label: 'DeepSeek-R1 分析' },
-    { key: 'writing'   as Phase, icon: Pencil, label: 'Claude 撰寫' },
+    { key: 'analyzing' as Phase, icon: Brain,  label: t('phaseAnalyze') },
+    { key: 'writing'   as Phase, icon: Pencil, label: t('phaseWrite') },
   ]
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl border bg-gray-50 mb-3">
@@ -707,6 +560,7 @@ function PhaseIndicator({ phase }: { phase: Phase }) {
 
 // ─── Resume Optimizer (custom) ────────────────────────────────────
 function ResumeOptimizeView() {
+  const t = useTranslations('Resume')
   const [mode, setMode]         = useState<InputMode>('form')
   const [jd, setJd]             = useState('')
   const [file, setFile]         = useState<File | null>(null)
@@ -740,25 +594,25 @@ function ResumeOptimizeView() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       <Card className="rounded-2xl shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">📄 履歷優化</CardTitle>
-          <CardDescription>選擇填寫方式，越詳細結果越精準</CardDescription>
+          <CardTitle className="text-base">📄 {t('tools.resume-optimize.label')}</CardTitle>
+          <CardDescription>{t('optimize.cardDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
-            <ModeBtn active={mode === 'upload'} onClick={() => setMode('upload')}><span className="flex items-center justify-center gap-1.5"><Upload className="h-3.5 w-3.5" />上傳檔案</span></ModeBtn>
-            <ModeBtn active={mode === 'form'} onClick={() => setMode('form')}><span className="flex items-center justify-center gap-1.5"><Pencil className="h-3.5 w-3.5" />手動填寫</span></ModeBtn>
-            <ModeBtn active={mode === 'both'} onClick={() => setMode('both')}><span className="flex items-center justify-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />兩者皆有</span></ModeBtn>
+            <ModeBtn active={mode === 'upload'} onClick={() => setMode('upload')}><span className="flex items-center justify-center gap-1.5"><Upload className="h-3.5 w-3.5" />{t('optimize.modeUpload')}</span></ModeBtn>
+            <ModeBtn active={mode === 'form'} onClick={() => setMode('form')}><span className="flex items-center justify-center gap-1.5"><Pencil className="h-3.5 w-3.5" />{t('optimize.modeForm')}</span></ModeBtn>
+            <ModeBtn active={mode === 'both'} onClick={() => setMode('both')}><span className="flex items-center justify-center gap-1.5"><Sparkles className="h-3.5 w-3.5" />{t('optimize.modeBoth')}</span></ModeBtn>
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium">目標職缺 JD</label>
+            <label className="block text-sm font-medium">{t('optimize.jdLabel')}</label>
             <Textarea value={jd} onChange={e => setJd(e.target.value)} rows={4} disabled={isLoading}
-              placeholder="貼上職缺描述（Job Description）…" className="resize-none text-sm" />
+              placeholder={t('optimize.jdPlaceholder')} className="resize-none text-sm" />
           </div>
           {(mode === 'upload' || mode === 'both') && <FileUploadZone file={file} onFile={setFile} disabled={isLoading} />}
           {(mode === 'form' || mode === 'both') && <StructuredForm data={formData} onChange={setFormData} disabled={isLoading} />}
           {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
           <Button onClick={handleSubmit} disabled={(!jd.trim() && !hasContent()) || isLoading} className="w-full py-5 text-sm font-semibold rounded-xl" size="lg">
-            {isLoading ? <><Loader2 className="h-4 w-4 animate-spin" />處理中…</> : <><Sparkles className="h-4 w-4" />開始優化</>}
+            {isLoading ? <><Loader2 className="h-4 w-4 animate-spin" />{t('optimize.processing')}</> : <><Sparkles className="h-4 w-4" />{t('tools.resume-optimize.submit')}</>}
           </Button>
         </CardContent>
       </Card>
@@ -766,7 +620,7 @@ function ResumeOptimizeView() {
         <PhaseIndicator phase={phase} />
         <ResultPanel result={result} loading={isLoading}
           emptyIcon={<div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50"><Brain className="h-5 w-5 text-blue-500" /></div><div className="text-gray-300 text-lg">→</div><div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}><Pencil className="h-5 w-5" style={{ color: 'var(--primary)' }} /></div></div>}
-          emptyTitle="雙模型協作" emptyDesc={<>DeepSeek-R1 分析落差<br />Claude Sonnet 撰寫優化履歷</>} />
+          emptyTitle={t('optimize.emptyTitle')} emptyDesc={<>{t('optimize.emptyDesc1')}<br />{t('optimize.emptyDesc2')}</>} />
       </div>
     </div>
   )
@@ -774,6 +628,7 @@ function ResumeOptimizeView() {
 
 // ─── Cover Letter (custom) ────────────────────────────────────────
 function CoverLetterView() {
+  const t = useTranslations('Resume')
   const [jd, setJd]                 = useState('')
   const [experience, setExperience] = useState('')
   const [selectedTemplate, setTpl]  = useState('')
@@ -804,20 +659,20 @@ function CoverLetterView() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       <Card className="rounded-2xl shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">✉️ 求職信撰寫</CardTitle>
-          <CardDescription>選擇模板並填寫 JD 與經歷</CardDescription>
+          <CardTitle className="text-base">✉️ {t('tools.cover-letter.label')}</CardTitle>
+          <CardDescription>{t('cover.cardDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="space-y-2">
-            <label className="block text-sm font-medium">選擇求職信模板</label>
+            <label className="block text-sm font-medium">{t('cover.selectTemplate')}</label>
             {templatesLoading
-              ? <div className="flex items-center gap-2 text-xs text-gray-400 py-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />載入模板中…</div>
+              ? <div className="flex items-center gap-2 text-xs text-gray-400 py-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('cover.loadingTemplates')}</div>
               : <div className="grid grid-cols-1 gap-2">
                   <button type="button" onClick={() => setTpl('')}
                     className="text-left px-3 py-2.5 rounded-xl border-2 transition-all"
                     style={!selectedTemplate ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 5%, transparent)' } : {}}>
-                    <div className="text-sm font-medium">✨ 自由發揮（不使用模板）</div>
-                    <div className="text-xs text-gray-400 mt-0.5">AI 自主決定最適合的求職信結構</div>
+                    <div className="text-sm font-medium">{t('cover.freeform')}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{t('cover.freeformDesc')}</div>
                   </button>
                   {templates.map(t => (
                     <button key={t.id} type="button" onClick={() => setTpl(t.id)}
@@ -833,26 +688,26 @@ function CoverLetterView() {
                 </div>}
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium">目標職缺 JD <span className="text-red-500">*</span></label>
-            <Textarea value={jd} onChange={e => setJd(e.target.value)} rows={5} disabled={isLoading} placeholder="貼上職缺描述…" className="resize-none text-sm" />
+            <label className="block text-sm font-medium">{t('cover.jdLabel')} <span className="text-red-500">*</span></label>
+            <Textarea value={jd} onChange={e => setJd(e.target.value)} rows={5} disabled={isLoading} placeholder={t('cover.jdPlaceholder')} className="resize-none text-sm" />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium">過往經歷 <span className="text-red-500">*</span></label>
-            <Textarea value={experience} onChange={e => setExperience(e.target.value)} rows={5} disabled={isLoading} placeholder="描述您的工作經歷、技能與成就…" className="resize-none text-sm" />
+            <label className="block text-sm font-medium">{t('cover.expLabel')} <span className="text-red-500">*</span></label>
+            <Textarea value={experience} onChange={e => setExperience(e.target.value)} rows={5} disabled={isLoading} placeholder={t('cover.expPlaceholder')} className="resize-none text-sm" />
           </div>
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-gray-500">額外要求（選填）</label>
-            <Textarea value={customInstructions} onChange={e => setCI(e.target.value)} rows={2} disabled={isLoading} placeholder="例如：請用英文撰寫、語氣偏輕鬆…" className="resize-none text-sm" />
+            <label className="block text-sm font-medium text-gray-500">{t('cover.extraLabel')}</label>
+            <Textarea value={customInstructions} onChange={e => setCI(e.target.value)} rows={2} disabled={isLoading} placeholder={t('cover.extraPlaceholder')} className="resize-none text-sm" />
           </div>
           {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
           <Button onClick={handleSubmit} disabled={(!jd.trim() && !experience.trim()) || isLoading} className="w-full py-5 text-sm font-semibold rounded-xl" size="lg">
-            {isLoading ? <><Loader2 className="h-4 w-4 animate-spin" />生成中…</> : <><Mail className="h-4 w-4" />生成求職信</>}
+            {isLoading ? <><Loader2 className="h-4 w-4 animate-spin" />{t('generating')}</> : <><Mail className="h-4 w-4" />{t('tools.cover-letter.submit')}</>}
           </Button>
         </CardContent>
       </Card>
       <ResultPanel result={result} loading={isLoading}
         emptyIcon={<div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}><Mail className="h-6 w-6" style={{ color: 'var(--primary)' }} /></div>}
-        emptyTitle="尚無求職信" emptyDesc={<>選擇模板並填寫 JD 與經歷<br />Claude 將為你撰寫求職信</>} />
+        emptyTitle={t('cover.emptyTitle')} emptyDesc={<>{t('cover.emptyDesc1')}<br />{t('cover.emptyDesc2')}</>} />
     </div>
   )
 }
@@ -873,8 +728,11 @@ function ToolCard({ tool, onClick }: { tool: ToolConfig; onClick: () => void }) 
 
 // ─── Main Page ────────────────────────────────────────────────────
 export default function WorkerToolsPage() {
+  const t = useTranslations('Resume')
+  const TOOL_CONFIGS = TOOL_DEFS.map(d => buildTool(d, t))
+  const CATEGORIES = CATEGORY_DEFS.map(c => ({ id: c.id, label: t(`categories.${c.id}.label`), desc: t(`categories.${c.id}.desc`) }))
   const [selectedTool, setSelectedTool] = useState<string | null>(null)
-  const [activeCategory, setActiveCategory] = useState<typeof CATEGORIES[number]['id']>('job-search')
+  const [activeCategory, setActiveCategory] = useState<typeof CATEGORY_DEFS[number]['id']>('job-search')
   const [userType, setUserType] = useState<string | null>(null)
 
   // 員工帳號隱藏「求職階段」（公司內部員工不需求職功能）
@@ -906,15 +764,15 @@ export default function WorkerToolsPage() {
         {selectedTool && (
           <button type="button" onClick={() => setSelectedTool(null)}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
-            <ArrowLeft className="h-4 w-4" />返回
+            <ArrowLeft className="h-4 w-4" />{t('back')}
           </button>
         )}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Zap className="h-6 w-6" style={{ color: 'var(--primary)' }} />
-            WORK 職場助手
+            {t('pageTitle')}
           </h1>
-          {!selectedTool && <p className="text-gray-500 text-sm mt-1">AI 全方位職場助理 — 求職 × 日常 × 進階場景</p>}
+          {!selectedTool && <p className="text-gray-500 text-sm mt-1">{t('pageSubtitle')}</p>}
           {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
         </div>
       </div>

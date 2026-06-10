@@ -1305,5 +1305,133 @@
       "industryTags": "Industry Tags",
       "trendingTags": "Trending Tags"
     }
+  },
+  "Resume": {
+    "back": "Back",
+    "pageTitle": "WORK Workplace Assistant",
+    "pageSubtitle": "All-in-one AI workplace assistant — job search × daily × advanced scenarios",
+    "selectPlaceholder": "Please select…",
+    "resultTitle": "AI Result",
+    "resultDesc": "The optimized content will appear here",
+    "copied": "Copied",
+    "copy": "Copy",
+    "generating": "Generating…",
+    "aiGenerating": "AI generating…",
+    "waitingFor": "Waiting to generate {label}",
+    "genericEmptyPre": "Fill in the form on the left and click \"{submit}\"",
+    "genericEmptyPost": "AI will generate it for you instantly",
+    "phaseAnalyze": "DeepSeek-R1 Analysis",
+    "phaseWrite": "Claude Writing",
+    "categories": {
+      "job-search": { "label": "🔍 Job Search", "desc": "Resume, cover letter, interview, salary negotiation" },
+      "workplace": { "label": "💼 Workplace", "desc": "Email, reports, presentations, meeting minutes" },
+      "advanced": { "label": "🧠 Advanced", "desc": "Phrasing, performance, promotion, work quantification" },
+      "thinking": { "label": "🎯 Decision Making", "desc": "Expert mental models to break down your decisions" }
+    },
+    "optimize": {
+      "cardDesc": "Choose how to fill in; the more detail, the more precise",
+      "modeUpload": "Upload File", "modeForm": "Fill Manually", "modeBoth": "Both",
+      "jdLabel": "Target Job JD", "jdPlaceholder": "Paste the job description…",
+      "processing": "Processing…",
+      "emptyTitle": "Dual-Model Collaboration", "emptyDesc1": "DeepSeek-R1 analyzes the gap", "emptyDesc2": "Claude Sonnet writes the optimized resume"
+    },
+    "cover": {
+      "cardDesc": "Choose a template and fill in JD and experience",
+      "selectTemplate": "Select Cover Letter Template", "loadingTemplates": "Loading templates…",
+      "freeform": "✨ Freeform (no template)", "freeformDesc": "AI decides the most suitable cover letter structure",
+      "jdLabel": "Target Job JD", "jdPlaceholder": "Paste the job description…",
+      "expLabel": "Past Experience", "expPlaceholder": "Describe your work experience, skills, and achievements…",
+      "extraLabel": "Extra Requirements (optional)", "extraPlaceholder": "e.g. write in English, casual tone…",
+      "emptyTitle": "No Cover Letter Yet", "emptyDesc1": "Choose a template and fill in JD and experience", "emptyDesc2": "Claude will write your cover letter"
+    },
+    "form": {
+      "basicSection": "1. Basic Info", "name": "Name", "phone": "Phone", "email": "Email", "targetPosition": "Target Position",
+      "eduSection": "2. Education & Certifications", "eduN": "Education {n}", "school": "School Name", "major": "Major", "degree": "Bachelor's/Master's", "eduPeriod": "Period", "addEdu": "Add Education", "certs": "Relevant certifications, language exams…",
+      "expSection": "3. Work/Internship Experience", "expN": "Experience {n}", "company": "Company", "jobTitle": "Title", "expPeriod": "Period", "expDesc": "Key results (quantify if possible)", "addExp": "Add Experience",
+      "skillsSection": "4. Skills & Languages", "skills": "Skills: Python, Excel, Figma…", "languages": "Languages: Chinese (native), English (TOEIC 880)…",
+      "otherSection": "5. Other (optional)", "selfIntro": "Self-introduction (3–5 lines)", "otherField": "Other highlights"
+    },
+    "upload": {
+      "onlyTypes": "Only JPG, PDF, Word supported",
+      "tooLarge": "File size cannot exceed 10 MB",
+      "dropHint": "Click to upload or drag your resume here",
+      "supports": "Supports JPG · PDF · Word (max 10 MB)",
+      "imageNote": "✓ JPG images are analyzed by Claude's vision recognition"
+    },
+    "tools": {
+      "resume-optimize": { "label": "Resume Optimization", "desc": "Paste a JD; AI dual-model analyzes and rewrites an ATS-optimized resume", "submit": "Start Optimizing" },
+      "cover-letter": { "label": "Cover Letter", "desc": "Choose a template, enter JD and experience; Claude generates a complete cover letter", "submit": "Generate Cover Letter" },
+      "interview-practice": { "label": "Interview Practice", "desc": "Simulate common interview questions + STAR framework suggested answers", "submit": "Generate Questions", "fields": {
+        "jd": { "label": "Target Job JD", "placeholder": "Paste the job description for more precision…" },
+        "background": { "label": "Personal Background", "placeholder": "Briefly describe your education, years of experience, key skills…" } } },
+      "salary-negotiation": { "label": "Salary Negotiation", "desc": "Provides a complete negotiation script to help you get the salary you deserve", "submit": "Generate Script", "fields": {
+        "position": { "label": "Target Position & Industry", "placeholder": "e.g. Marketing Planner / Tech" },
+        "currentSalary": { "label": "Current Salary (monthly)", "placeholder": "e.g. 35,000" },
+        "targetSalary": { "label": "Target Salary (monthly)", "placeholder": "e.g. 45,000" },
+        "highlights": { "label": "Highlights & Achievements", "placeholder": "Your competitiveness, past results, special skills…" } } },
+      "resume-clinic": { "label": "Resume Health Check", "desc": "Straight talk like HR: should you apply, your odds, what's blocking you, how to fix it", "submit": "Start Check", "fields": {
+        "jd": { "label": "Target Job JD", "placeholder": "Paste the job description…" },
+        "background": { "label": "Your Background / Resume Highlights", "placeholder": "Education, experience, key skills, signature work…" },
+        "company": { "label": "Target Company (optional)", "placeholder": "e.g. a multinational, startup, listed company…" } } },
+      "career-advisor": { "label": "Career & Study Advisor", "desc": "Down-to-earth analysis of majors, industries, city choices — practical, no fluff", "submit": "Give Me Advice", "fields": {
+        "situation": { "label": "Your Situation", "options": ["High schooler choosing a major", "University student choosing direction/transferring", "New grad choosing an industry", "Career change", "Hesitating over grad school/civil exam"] },
+        "background": { "label": "Background", "placeholder": "Major, grades, experience, city, family considerations…" },
+        "options": { "label": "Options You're Considering", "placeholder": "e.g. CS vs EE, stay in Taipei vs move home…" },
+        "concern": { "label": "What You Care About Most", "placeholder": "e.g. salary, stability, interest, growth…" } } },
+      "email-draft": { "label": "Email Draft", "desc": "Apology, payment reminder, cross-team communication — generate a tactful email in one click", "submit": "Generate Email", "fields": {
+        "type": { "label": "Email Type", "options": ["Apology", "Payment reminder", "Cross-team request", "Decline a request", "Progress report", "Thank-you", "Other"] },
+        "relationship": { "label": "Recipient & Relationship", "placeholder": "e.g. manager (direct), client, cross-team colleague…" },
+        "context": { "label": "Context", "placeholder": "Describe the background and your goal…" },
+        "keyPoints": { "label": "Key Points to Emphasize (optional)", "placeholder": "e.g. show sincerity, stay professional but not subservient…" } } },
+      "report-writing": { "label": "Report/Proposal Writing", "desc": "Enter the topic and key points; AI generates a complete report structure and content", "submit": "Generate Report", "fields": {
+        "topic": { "label": "Report Topic", "placeholder": "e.g. Q3 sales results analysis" },
+        "context": { "label": "Background", "placeholder": "Explain the report's purpose and background…" },
+        "mainPoints": { "label": "Main Arguments/Data", "placeholder": "List your data, conclusions, or arguments…" },
+        "audience": { "label": "Target Audience", "placeholder": "e.g. senior management, clients, all staff…" } } },
+      "presentation-outline": { "label": "Presentation Outline", "desc": "Topic + audience → AI generates per-slide outline and visualization suggestions", "submit": "Generate Outline", "fields": {
+        "topic": { "label": "Presentation Topic", "placeholder": "e.g. 2025 brand strategy planning" },
+        "audience": { "label": "Target Audience", "placeholder": "e.g. board, potential clients…" },
+        "coreMessage": { "label": "Core Message (what they should remember)", "placeholder": "Say your key message in one sentence…" },
+        "duration": { "label": "Duration", "placeholder": "e.g. 10 min, 30 min" } } },
+      "meeting-minutes": { "label": "Meeting Minutes", "desc": "Paste messy meeting notes; auto-organize into a structured document", "submit": "Organize Minutes", "fields": {
+        "rawNotes": { "label": "Raw Meeting Notes", "placeholder": "Paste your meeting notes (can be messy)…" } } },
+      "workplace-phrases": { "label": "Workplace Phrasing", "desc": "Difficult bosses, declining extra work… provides multiple response scripts", "submit": "Generate Suggestions", "fields": {
+        "scenario": { "label": "Scenario Type", "options": ["Difficult boss", "Decline extra work", "Manage up", "Deal with credit-stealing colleague", "Raise an objection", "Discuss a raise", "Other"] },
+        "context": { "label": "Specific Situation", "placeholder": "Explain what specifically happened…" },
+        "goal": { "label": "Desired Outcome", "placeholder": "What you hope this communication achieves…" } } },
+      "workplace-relationship": { "label": "Workplace Relationship Advisor", "desc": "Understand the motives of bosses/colleagues/subordinates; get rapport and manage-up strategies", "submit": "Analyze Strategy", "fields": {
+        "role": { "label": "Target Person", "options": ["Direct manager", "Boss / Executive", "Peer colleague", "Subordinate", "Senior / Mentor", "Cross-team contact"] },
+        "situation": { "label": "Specific Situation", "placeholder": "Describe their behavior, your interactions, the current sticking point…" },
+        "goal": { "label": "Your Goal", "placeholder": "e.g. gain trust, secure resources, resolve misunderstanding, protect yourself…" } } },
+      "performance-review": { "label": "Performance Self-Review", "desc": "Enter your work and results; AI writes a persuasive self-review", "submit": "Generate Self-Review", "fields": {
+        "position": { "label": "Position & Department", "placeholder": "e.g. Marketing Dept, Digital Marketing Specialist" },
+        "workContent": { "label": "Main Work This Period", "placeholder": "List the main work you were responsible for…" },
+        "achievements": { "label": "Key Results (include numbers)", "placeholder": "e.g. completed XX project, grew XX%…" },
+        "challenges": { "label": "Challenges Overcome (optional)", "placeholder": "Explain the difficulties and how you solved them…" } } },
+      "promotion-letter": { "label": "Promotion Request Letter", "desc": "Write a strong promotion request letter highlighting your contributions and value", "submit": "Generate Letter", "fields": {
+        "positions": { "label": "Current → Applied Position", "placeholder": "e.g. Sales Specialist → Sales Supervisor" },
+        "background": { "label": "Background & Tenure", "placeholder": "e.g. 3 years on the job, STEM background…" },
+        "achievements": { "label": "Key Contributions & Achievements", "placeholder": "List your concrete contributions (numbers help)…" },
+        "reason": { "label": "Reason for Application", "placeholder": "Why you are the best fit for this position…" } } },
+      "quantify-work": { "label": "Quantify Your Work", "desc": "Turn \"I was responsible for XXX\" into impactful, number-backed highlight statements", "submit": "Quantify My Work", "fields": {
+        "jobContent": { "label": "Job Description (one per line)", "placeholder": "e.g.\nManaged social media\nHelped organize the annual event\nHandled customer complaints" } } },
+      "munger-mental-models": { "label": "Multidisciplinary Decision", "desc": "Munger-style mental models + inversion to break down your decisions and blind spots", "submit": "Start Analysis", "fields": {
+        "decision": { "label": "Decision / Question", "placeholder": "e.g. Should I quit to start a business? Take this project?" },
+        "context": { "label": "Background & Constraints", "placeholder": "Relevant info, resources, time, what you care about…" },
+        "options": { "label": "Options You're Considering", "placeholder": "List the choices you have in mind" } } },
+      "first-principles": { "label": "First-Principles Breakdown", "desc": "Musk-style thinking: break down to fundamental facts, then rebuild the solution from zero", "submit": "Break Down", "fields": {
+        "problem": { "label": "Problem to Solve", "placeholder": "e.g. How to halve costs? How to learn a skill fast?" },
+        "assumptions": { "label": "Current Approach / Assumptions", "placeholder": "How everyone does it now, what constraints you assume…" } } },
+      "value-investing": { "label": "Value-Investing Lens", "desc": "Buffett-style evaluation: circle of competence, moat, margin of safety (not investment advice)", "submit": "Evaluate Opportunity", "fields": {
+        "target": { "label": "Target / Business / Opportunity", "placeholder": "e.g. a stock, franchising a store, investing in a friend's startup" },
+        "info": { "label": "Known Information", "placeholder": "Business model, finances, competition, price, how well you understand it…" },
+        "concern": { "label": "Key Question to Clarify", "placeholder": "e.g. Is the current price reasonable? Where's the risk?" } } },
+      "antifragile-risk": { "label": "Antifragile Risk Assessment", "desc": "Taleb-style risk thinking: downside risk, asymmetry, survival floor", "submit": "Assess Risk", "fields": {
+        "decision": { "label": "Decision / Plan to Assess", "placeholder": "e.g. go all-in on one project, quit to do something full-time" },
+        "downside": { "label": "Worst Case You Worry About", "placeholder": "What could go worst, what you'd lose…" } } },
+      "naval-leverage": { "label": "Leverage & Life Choices", "desc": "Naval-style lens: specific knowledge, leverage, long-term thinking and choices", "submit": "Give Me Direction", "fields": {
+        "situation": { "label": "Your Situation", "placeholder": "e.g. 30, office worker, want to build assets but lack direction" },
+        "question": { "label": "Question to Clarify", "placeholder": "e.g. Specialize in one skill or try many? How to build passive income?" } } }
+    }
   }
 }

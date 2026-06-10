@@ -1305,5 +1305,133 @@
       "industryTags": "行業標籤",
       "trendingTags": "熱門標籤"
     }
+  },
+  "Resume": {
+    "back": "返回",
+    "pageTitle": "WORK 職場助手",
+    "pageSubtitle": "AI 全方位職場助理 — 求職 × 日常 × 進階場景",
+    "selectPlaceholder": "請選擇…",
+    "resultTitle": "AI 生成結果",
+    "resultDesc": "優化後的內容將顯示於此",
+    "copied": "已複製",
+    "copy": "複製",
+    "generating": "生成中…",
+    "aiGenerating": "AI 生成中…",
+    "waitingFor": "等待生成 {label}",
+    "genericEmptyPre": "填寫左側資料，點擊「{submit}」",
+    "genericEmptyPost": "AI 將立即為你生成",
+    "phaseAnalyze": "DeepSeek-R1 分析",
+    "phaseWrite": "Claude 撰寫",
+    "categories": {
+      "job-search": { "label": "🔍 求職階段", "desc": "履歷、求職信、面試、薪資談判" },
+      "workplace": { "label": "💼 職場日常", "desc": "Email、報告、簡報、會議記錄" },
+      "advanced": { "label": "🧠 進階場景", "desc": "話術、績效、升職、工作量化" },
+      "thinking": { "label": "🎯 思維決策", "desc": "名家思維模型拆解你的決策與難題" }
+    },
+    "optimize": {
+      "cardDesc": "選擇填寫方式，越詳細結果越精準",
+      "modeUpload": "上傳檔案", "modeForm": "手動填寫", "modeBoth": "兩者皆有",
+      "jdLabel": "目標職缺 JD", "jdPlaceholder": "貼上職缺描述（Job Description）…",
+      "processing": "處理中…",
+      "emptyTitle": "雙模型協作", "emptyDesc1": "DeepSeek-R1 分析落差", "emptyDesc2": "Claude Sonnet 撰寫優化履歷"
+    },
+    "cover": {
+      "cardDesc": "選擇模板並填寫 JD 與經歷",
+      "selectTemplate": "選擇求職信模板", "loadingTemplates": "載入模板中…",
+      "freeform": "✨ 自由發揮（不使用模板）", "freeformDesc": "AI 自主決定最適合的求職信結構",
+      "jdLabel": "目標職缺 JD", "jdPlaceholder": "貼上職缺描述…",
+      "expLabel": "過往經歷", "expPlaceholder": "描述您的工作經歷、技能與成就…",
+      "extraLabel": "額外要求（選填）", "extraPlaceholder": "例如：請用英文撰寫、語氣偏輕鬆…",
+      "emptyTitle": "尚無求職信", "emptyDesc1": "選擇模板並填寫 JD 與經歷", "emptyDesc2": "Claude 將為你撰寫求職信"
+    },
+    "form": {
+      "basicSection": "一、基本資料", "name": "姓名", "phone": "聯絡電話", "email": "電子郵件", "targetPosition": "應徵職位",
+      "eduSection": "二、學歷與證照", "eduN": "學歷 {n}", "school": "學校名稱", "major": "科系", "degree": "學士／碩士", "eduPeriod": "就讀期間", "addEdu": "新增學歷", "certs": "相關證照、語言考試…",
+      "expSection": "三、工作／實習經驗", "expN": "經歷 {n}", "company": "公司名稱", "jobTitle": "職稱", "expPeriod": "期間", "expDesc": "重點成果（建議量化）", "addExp": "新增經歷",
+      "skillsSection": "四、技能與語言", "skills": "專業技能：Python、Excel、Figma…", "languages": "語言能力：中文（母語）、英文（多益 880）…",
+      "otherSection": "五、其他（選填）", "selfIntro": "自我介紹（3–5 行）", "otherField": "其他加分項目"
+    },
+    "upload": {
+      "onlyTypes": "僅支援 JPG、PDF、Word",
+      "tooLarge": "檔案大小不可超過 10 MB",
+      "dropHint": "點擊上傳或拖曳履歷至此",
+      "supports": "支援 JPG · PDF · Word（最大 10 MB）",
+      "imageNote": "✓ JPG 圖片將由 Claude 視覺辨識分析"
+    },
+    "tools": {
+      "resume-optimize": { "label": "履歷優化", "desc": "貼入 JD，AI 雙模型分析並重寫 ATS 優化履歷", "submit": "開始優化" },
+      "cover-letter": { "label": "求職信撰寫", "desc": "選模板、輸入 JD 與經歷，Claude 生成完整求職信", "submit": "生成求職信" },
+      "interview-practice": { "label": "面試問題練習", "desc": "模擬面試常見問題 + STAR 框架建議回答", "submit": "生成面試題", "fields": {
+        "jd": { "label": "目標職缺 JD", "placeholder": "貼入職缺描述，AI 更精準…" },
+        "background": { "label": "個人背景簡述", "placeholder": "簡述你的學歷、工作年資、主要技能…" } } },
+      "salary-negotiation": { "label": "薪資談判話術", "desc": "提供完整談判劇本，幫你爭取應得的薪資", "submit": "生成談判話術", "fields": {
+        "position": { "label": "目標職位與產業", "placeholder": "例如：行銷企劃／科技業" },
+        "currentSalary": { "label": "目前薪資（月薪）", "placeholder": "例如：35,000" },
+        "targetSalary": { "label": "期望薪資（月薪）", "placeholder": "例如：45,000" },
+        "highlights": { "label": "個人亮點與成就", "placeholder": "你的競爭力、過去成果、特殊技能…" } } },
+      "resume-clinic": { "label": "履歷健檢診斷", "desc": "像 HR 一樣直說：這份 JD 該不該投、勝算幾成、卡在哪、怎麼補", "submit": "開始健檢", "fields": {
+        "jd": { "label": "目標職缺 JD", "placeholder": "貼上職缺描述…" },
+        "background": { "label": "你的背景 / 履歷重點", "placeholder": "學歷、年資、主要技能、代表作…" },
+        "company": { "label": "目標公司（選填）", "placeholder": "例如：某外商、新創、上市公司…" } } },
+      "career-advisor": { "label": "升學擇業顧問", "desc": "接地氣分析科系、行業、城市選擇，給實用不灌雞湯的建議", "submit": "給我建議", "fields": {
+        "situation": { "label": "你的處境", "options": ["高中生選科系", "大學生選方向/轉系", "應屆畢業選行業", "在職轉職", "考研/考公猶豫"] },
+        "background": { "label": "背景條件", "placeholder": "科系、成績/級分、年資、所在城市、家庭考量…" },
+        "options": { "label": "正在考慮的選項", "placeholder": "例如：資工 vs 電機、留在台北 vs 回中部…" },
+        "concern": { "label": "最在意的點", "placeholder": "例如：薪資、穩定性、興趣、發展性…" } } },
+      "email-draft": { "label": "Email 草稿", "desc": "道歉信、催款、跨部門溝通，一鍵生成得體 Email", "submit": "生成 Email", "fields": {
+        "type": { "label": "Email 類型", "options": ["道歉信", "催款/追款", "跨部門請求協助", "拒絕請求", "匯報進度", "感謝信", "其他"] },
+        "relationship": { "label": "收件人與關係", "placeholder": "例如：主管（直屬）、客戶、跨部門同事…" },
+        "context": { "label": "情境說明", "placeholder": "描述事情背景與你想達到的目的…" },
+        "keyPoints": { "label": "需強調的重點（選填）", "placeholder": "例如：強調誠意、保持專業但不卑微…" } } },
+      "report-writing": { "label": "報告／提案撰寫", "desc": "輸入主題與重點，AI 生成完整報告結構與內容", "submit": "生成報告", "fields": {
+        "topic": { "label": "報告主題", "placeholder": "例如：Q3 銷售成果分析" },
+        "context": { "label": "背景情境", "placeholder": "說明報告的目的與背景…" },
+        "mainPoints": { "label": "主要論點／數據", "placeholder": "列出你有的數據、結論或論點…" },
+        "audience": { "label": "目標受眾", "placeholder": "例如：高階主管、客戶、全體員工…" } } },
+      "presentation-outline": { "label": "簡報大綱生成", "desc": "主題 + 受眾 → AI 生成每頁大綱與視覺化建議", "submit": "生成簡報大綱", "fields": {
+        "topic": { "label": "簡報主題", "placeholder": "例如：2025 年品牌策略規劃" },
+        "audience": { "label": "目標受眾", "placeholder": "例如：董事會、潛在客戶…" },
+        "coreMessage": { "label": "核心訊息（聽眾應記住的）", "placeholder": "用一句話說出你最想傳達的訊息…" },
+        "duration": { "label": "簡報時長", "placeholder": "例如：10 分鐘、30 分鐘" } } },
+      "meeting-minutes": { "label": "會議記錄整理", "desc": "貼入雜亂的會議記錄，自動整理成結構化文件", "submit": "整理會議記錄", "fields": {
+        "rawNotes": { "label": "原始會議記錄", "placeholder": "貼入你的會議記錄文字（可以很雜亂）…" } } },
+      "workplace-phrases": { "label": "職場話術", "desc": "被刁難主管、拒絕額外工作…提供多套應對話術", "submit": "生成話術建議", "fields": {
+        "scenario": { "label": "場景類型", "options": ["被主管刁難", "拒絕額外工作", "向上管理", "應對搶功同事", "提出反對意見", "談論加薪", "其他"] },
+        "context": { "label": "具體情境描述", "placeholder": "說明具體發生了什麼事…" },
+        "goal": { "label": "期望達到的結果", "placeholder": "你希望這次溝通達成什麼目標…" } } },
+      "workplace-relationship": { "label": "職場關係軍師", "desc": "讀懂主管／同事／下屬的動機，給相處與向上管理策略", "submit": "分析關係策略", "fields": {
+        "role": { "label": "對象", "options": ["直屬主管", "老闆 / 高層", "平行同事", "下屬", "前輩 / 導師", "跨部門窗口"] },
+        "situation": { "label": "具體情況", "placeholder": "描述對方的行為、你們的互動、目前的卡點…" },
+        "goal": { "label": "你想達成的目標", "placeholder": "例如：取得信任、爭取資源、化解誤會、保護自己…" } } },
+      "performance-review": { "label": "績效自評撰寫", "desc": "輸入工作內容與成果，AI 幫你寫出有說服力的自評", "submit": "生成績效自評", "fields": {
+        "position": { "label": "職位與部門", "placeholder": "例如：行銷部 數位行銷專員" },
+        "workContent": { "label": "本期主要工作內容", "placeholder": "列出你這期負責的主要工作項目…" },
+        "achievements": { "label": "重要成果（盡量含數字）", "placeholder": "例如：完成 XX 項目，成長 XX%…" },
+        "challenges": { "label": "克服的挑戰（選填）", "placeholder": "說明你遇到的困難與如何解決…" } } },
+      "promotion-letter": { "label": "升職申請信", "desc": "撰寫有力的升職申請信，突出你的貢獻與價值", "submit": "生成升職申請信", "fields": {
+        "positions": { "label": "目前職位 → 申請職位", "placeholder": "例如：業務專員 → 業務主任" },
+        "background": { "label": "個人背景與年資", "placeholder": "例如：在職 3 年，理工背景…" },
+        "achievements": { "label": "重要貢獻與成就", "placeholder": "列出你對公司的具體貢獻（含數字更好）…" },
+        "reason": { "label": "申請理由", "placeholder": "為什麼你是這個職位的最佳人選…" } } },
+      "quantify-work": { "label": "工作內容量化", "desc": "把「我負責 XXX」變成有數字、有影響力的亮點句", "submit": "量化我的工作", "fields": {
+        "jobContent": { "label": "工作描述（每行一條）", "placeholder": "例如：\n負責社群媒體管理\n協助舉辦年度活動\n處理客戶投訴" } } },
+      "munger-mental-models": { "label": "多元思維決策", "desc": "芒格式多元思維模型 + 反向思考，拆解你的決策與盲點", "submit": "開始分析", "fields": {
+        "decision": { "label": "你要做的決定 / 問題", "placeholder": "例：該不該離職創業？要不要接這個案子？" },
+        "context": { "label": "背景與限制", "placeholder": "相關資訊、資源、時間、在意的點…" },
+        "options": { "label": "正在考慮的選項", "placeholder": "列出你目前想到的幾個選擇" } } },
+      "first-principles": { "label": "第一性原理拆解", "desc": "馬斯克式思考：拆到根本事實，再從零重建解法", "submit": "拆解問題", "fields": {
+        "problem": { "label": "要解決的問題", "placeholder": "例：如何把成本降一半？如何快速學會某技能？" },
+        "assumptions": { "label": "現有做法 / 既有假設", "placeholder": "目前大家怎麼做、你預設的限制是什麼…" } } },
+      "value-investing": { "label": "價值投資視角", "desc": "巴菲特式評估：能力圈、護城河、安全邊際（非投資建議）", "submit": "評估機會", "fields": {
+        "target": { "label": "標的 / 生意 / 機會", "placeholder": "例：某檔股票、加盟一間店、投資朋友的新創" },
+        "info": { "label": "已知資訊", "placeholder": "商業模式、財務、競爭、價格、你了解的程度…" },
+        "concern": { "label": "最想釐清的問題", "placeholder": "例：現在的價格合理嗎？風險在哪？" } } },
+      "antifragile-risk": { "label": "反脆弱風險評估", "desc": "塔勒布式風險思考：下行風險、不對稱性、保命底線", "submit": "評估風險", "fields": {
+        "decision": { "label": "要評估的決策 / 計畫", "placeholder": "例：把存款 all in 一個項目、辭職全職做某件事" },
+        "downside": { "label": "你擔心的最壞情況", "placeholder": "最糟可能發生什麼、會損失什麼…" } } },
+      "naval-leverage": { "label": "人生槓桿與選擇", "desc": "納瓦爾式視角：特定知識、槓桿、長期主義與選擇", "submit": "給我方向", "fields": {
+        "situation": { "label": "你的處境", "placeholder": "例：30 歲、上班族、想累積資產但不知方向" },
+        "question": { "label": "你想釐清的問題", "placeholder": "例：該專精一技還是多方嘗試？怎麼建立被動收入？" } } }
+    }
   }
 }
