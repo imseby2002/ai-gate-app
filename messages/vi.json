@@ -280,6 +280,33 @@
       "direct": "Đặt trực tiếp",
       "other": "Khác"
     },
+    "calendar": {
+      "allProperties": "Tất cả nhà nghỉ",
+      "full": "Hết",
+      "emptyLabel": "Trống",
+      "soldLabel": "Đã bán",
+      "roomUnit": "phòng",
+      "noRoomTypes": "Chưa tạo loại phòng",
+      "noBookings": "Không có đơn trong ngày này",
+      "add": "Thêm",
+      "quickTitle": "Thêm đơn",
+      "confirmAdd": "Xác nhận thêm",
+      "col": {
+        "room": "Loại phòng",
+        "price": "Giá phòng",
+        "avail": "Phòng trống",
+        "booked": "Đã đặt",
+        "order": "Đặt"
+      },
+      "bcol": {
+        "room": "Tên loại phòng",
+        "price": "Giá",
+        "booker": "Người đặt",
+        "phone": "Điện thoại",
+        "source": "Nguồn",
+        "status": "Trạng thái"
+      }
+    },
     "roomgrid": {
       "today": "Hôm nay",
       "available": "Còn trống",

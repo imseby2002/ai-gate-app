@@ -281,6 +281,33 @@
       "direct": "Direct",
       "other": "Other"
     },
+    "calendar": {
+      "allProperties": "All Properties",
+      "full": "Full",
+      "emptyLabel": "Avail",
+      "soldLabel": "Sold",
+      "roomUnit": "rooms",
+      "noRoomTypes": "No room types yet",
+      "noBookings": "No bookings this day",
+      "add": "Add",
+      "quickTitle": "Add Booking",
+      "confirmAdd": "Confirm",
+      "col": {
+        "room": "Room Type",
+        "price": "Rate",
+        "avail": "Available",
+        "booked": "Booked",
+        "order": "Add"
+      },
+      "bcol": {
+        "room": "Room Type",
+        "price": "Price",
+        "booker": "Booker",
+        "phone": "Phone",
+        "source": "Source",
+        "status": "Status"
+      }
+    },
     "roomgrid": {
       "today": "Today",
       "available": "Available",

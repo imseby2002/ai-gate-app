@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -20,17 +21,12 @@ const PROP_PALETTE = [
   'bg-indigo-600','bg-emerald-600','bg-amber-600','bg-rose-600',
   'bg-violet-600','bg-teal-600','bg-orange-600','bg-pink-600',
 ]
-const PLATFORM_NAMES: Record<string, string> = {
-  booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
-  trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
-  manual: '手動', direct: '直訂',
-}
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  confirmed: { label: '已確認', color: 'bg-green-100 text-green-700' },
-  pending:   { label: '待確認', color: 'bg-amber-100 text-amber-700' },
-  cancelled: { label: '已取消', color: 'bg-red-100 text-red-600' },
-  completed: { label: '已完成', color: 'bg-gray-100 text-gray-600' },
-  no_show:   { label: '未到訪', color: 'bg-orange-100 text-orange-700' },
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: 'bg-green-100 text-green-700',
+  pending:   'bg-amber-100 text-amber-700',
+  cancelled: 'bg-red-100 text-red-600',
+  completed: 'bg-gray-100 text-gray-600',
+  no_show:   'bg-orange-100 text-orange-700',
 }
 
 function toDateStr(d: Date) { return d.toISOString().slice(0, 10) }
@@ -46,6 +42,20 @@ interface QuickForm {
 }
 
 export default function CalendarPage() {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const PLATFORM_NAMES: Record<string, string> = {
+    booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
+    trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
+    manual: t('platform.manual'), direct: t('platform.direct'),
+  }
+  const STATUS_MAP: Record<string, { label: string; color: string }> = {
+    confirmed: { label: t('status.confirmed'), color: STATUS_COLORS.confirmed },
+    pending:   { label: t('status.pending'),   color: STATUS_COLORS.pending },
+    cancelled: { label: t('status.cancelled'), color: STATUS_COLORS.cancelled },
+    completed: { label: t('status.completed'), color: STATUS_COLORS.completed },
+    no_show:   { label: t('status.no_show'),   color: STATUS_COLORS.no_show },
+  }
   const now = new Date()
   const [year, setYear]   = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -115,7 +125,7 @@ export default function CalendarPage() {
   const daysInMonth   = getDaysInMonth(year, month)
   const firstDay      = getFirstDayOfWeek(year, month)
   const todayStr      = toDateStr(now)
-  const monthName     = new Date(year, month, 1).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })
+  const monthName     = new Date(year, month, 1).toLocaleDateString(locale, { year: 'numeric', month: 'long' })
   const showAllProps  = !filterProp && properties.length > 1
   const selectedBookings = dateBookings[selected] ?? []
 
@@ -156,7 +166,7 @@ export default function CalendarPage() {
   }
 
   const selLabel = selected
-    ? new Date(selected + 'T00:00:00').toLocaleDateString('zh-TW', { month: 'long', day: 'numeric', weekday: 'short' })
+    ? new Date(selected + 'T00:00:00').toLocaleDateString(locale, { month: 'long', day: 'numeric', weekday: 'short' })
     : ''
 
   // ── Shared sub-panels ───────────────────────────────────
@@ -169,7 +179,7 @@ export default function CalendarPage() {
           {properties.length > 0 && (
             <select value={filterProp} onChange={e => { setFilterProp(e.target.value); setSelected(todayStr) }}
               className="border rounded-lg px-2 py-1.5 bg-white text-sm focus:outline-none flex-1 min-w-0">
-              <option value="">全部房源</option>
+              <option value="">{t('calendar.allProperties')}</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
@@ -193,12 +203,12 @@ export default function CalendarPage() {
 
       {/* Grid */}
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">載入中…</div>
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">{t('common.loading')}</div>
       ) : (
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-7 border-b bg-gray-50">
-            {['日','一','二','三','四','五','六'].map(d => (
-              <div key={d} className="text-center text-xs font-medium text-gray-500 py-2">{d}</div>
+            {[0,1,2,3,4,5,6].map(i => (
+              <div key={i} className="text-center text-xs font-medium text-gray-500 py-2">{t(`roomgrid.day.${i}`)}</div>
             ))}
           </div>
           <div className="grid grid-cols-7">
@@ -224,7 +234,7 @@ export default function CalendarPage() {
                       ${isToday ? 'bg-sky-500 text-white' : ''}`}>{day}</span>
                     {avail !== null && totalRooms > 0 && (
                       <span className={`text-[9px] font-bold leading-none px-1 py-0.5 rounded ${isFull ? 'text-red-600' : 'text-gray-400'}`}>
-                        {isFull ? '滿' : `${avail}/${totalRooms}`}
+                        {isFull ? t('calendar.full') : `${avail}/${totalRooms}`}
                       </span>
                     )}
                   </div>
@@ -262,21 +272,21 @@ export default function CalendarPage() {
       <div className="bg-white border-b">
         <div className="bg-sky-500 text-white px-4 py-3 text-sm font-semibold flex items-center gap-3">
           <span>{selLabel}</span>
-          <span className="ml-auto">空 <span className="text-xl font-bold">{availableCount(selected)}</span> 間</span>
+          <span className="ml-auto">{t('calendar.emptyLabel')} <span className="text-xl font-bold">{availableCount(selected)}</span> {t('calendar.roomUnit')}</span>
         </div>
         {loading ? (
-          <div className="py-8 text-center text-sm text-gray-400">載入中…</div>
+          <div className="py-8 text-center text-sm text-gray-400">{t('common.loading')}</div>
         ) : visibleProps.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">尚未建立房型</div>
+          <div className="py-8 text-center text-sm text-gray-400">{t('calendar.noRoomTypes')}</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b text-xs text-gray-500">
               <tr>
-                <th className="text-left px-4 py-2.5">房型</th>
-                <th className="px-3 py-2.5 text-center">房價</th>
-                <th className="px-3 py-2.5 text-center">空房</th>
-                <th className="px-3 py-2.5 text-center hidden sm:table-cell">訂房</th>
-                <th className="px-3 py-2.5 text-center">訂購</th>
+                <th className="text-left px-4 py-2.5">{t('calendar.col.room')}</th>
+                <th className="px-3 py-2.5 text-center">{t('calendar.col.price')}</th>
+                <th className="px-3 py-2.5 text-center">{t('calendar.col.avail')}</th>
+                <th className="px-3 py-2.5 text-center hidden sm:table-cell">{t('calendar.col.booked')}</th>
+                <th className="px-3 py-2.5 text-center">{t('calendar.col.order')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -294,7 +304,7 @@ export default function CalendarPage() {
                     <td className="px-3 py-3 text-center">
                       <button disabled={av === 0} onClick={() => openQuick(p, selected)}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 text-white hover:bg-sky-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                        加入
+                        {t('calendar.add')}
                       </button>
                     </td>
                   </tr>
@@ -309,12 +319,12 @@ export default function CalendarPage() {
       <div className="bg-white flex-1">
         <div className="bg-rose-500 text-white px-4 py-3 text-sm font-semibold flex items-center gap-3">
           <span>{selLabel}</span>
-          <span className="ml-auto">售 <span className="text-xl font-bold">{selectedBookings.length}</span> 間</span>
+          <span className="ml-auto">{t('calendar.soldLabel')} <span className="text-xl font-bold">{selectedBookings.length}</span> {t('calendar.roomUnit')}</span>
         </div>
         {loading ? (
-          <div className="py-8 text-center text-sm text-gray-400">載入中…</div>
+          <div className="py-8 text-center text-sm text-gray-400">{t('common.loading')}</div>
         ) : selectedBookings.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">此日無訂單</div>
+          <div className="py-8 text-center text-sm text-gray-400">{t('calendar.noBookings')}</div>
         ) : (
           <>
             {/* Mobile booking cards */}
@@ -346,12 +356,12 @@ export default function CalendarPage() {
             <table className="hidden sm:table w-full text-sm">
               <thead className="bg-gray-50 border-b text-xs text-gray-500">
                 <tr>
-                  <th className="text-left px-5 py-2.5">房型名稱</th>
-                  <th className="text-left px-3 py-2.5">價格</th>
-                  <th className="text-left px-3 py-2.5">預訂人</th>
-                  <th className="text-left px-3 py-2.5">電話</th>
-                  <th className="text-left px-3 py-2.5">來源</th>
-                  <th className="text-left px-3 py-2.5">狀態</th>
+                  <th className="text-left px-5 py-2.5">{t('calendar.bcol.room')}</th>
+                  <th className="text-left px-3 py-2.5">{t('calendar.bcol.price')}</th>
+                  <th className="text-left px-3 py-2.5">{t('calendar.bcol.booker')}</th>
+                  <th className="text-left px-3 py-2.5">{t('calendar.bcol.phone')}</th>
+                  <th className="text-left px-3 py-2.5">{t('calendar.bcol.source')}</th>
+                  <th className="text-left px-3 py-2.5">{t('calendar.bcol.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -393,12 +403,12 @@ export default function CalendarPage() {
         <button onClick={() => setMobileView('calendar')}
           className={`flex-1 py-3 text-sm font-semibold transition-colors border-b-2
             ${mobileView === 'calendar' ? 'text-sky-600 border-sky-500' : 'text-gray-500 border-transparent'}`}>
-          日曆
+          {t('nav.calendar')}
         </button>
         <button onClick={() => setMobileView('detail')}
           className={`flex-1 py-3 text-sm font-semibold transition-colors border-b-2
             ${mobileView === 'detail' ? 'text-sky-600 border-sky-500' : 'text-gray-500 border-transparent'}`}>
-          {selLabel || '訂單詳情'}
+          {selLabel || t('detail.title')}
         </button>
       </div>
 
@@ -419,7 +429,7 @@ export default function CalendarPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-gray-900">加入訂單</h3>
+                <h3 className="font-bold text-gray-900">{t('calendar.quickTitle')}</h3>
                 <div className="text-xs text-gray-400 mt-0.5">{quickProp.name}　{quickForm.check_in}</div>
               </div>
               <button onClick={() => setQuickProp(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
@@ -428,13 +438,13 @@ export default function CalendarPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">旅客姓名 *</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.guestName')}</label>
                 <input value={quickForm.guest_name} onChange={e => setQuickForm(f => ({ ...f, guest_name: e.target.value }))}
-                  placeholder="王小明"
+                  placeholder={t('bookings.form.guestNamePlaceholder')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">電話</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.phone')}</label>
                 <input value={quickForm.guest_phone} onChange={e => setQuickForm(f => ({ ...f, guest_phone: e.target.value }))}
                   placeholder="0912-345-678"
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
@@ -442,32 +452,32 @@ export default function CalendarPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">入住</label>
+                <label className="text-xs font-medium text-gray-600">{t('detail.checkIn')}</label>
                 <input type="date" value={quickForm.check_in} onChange={e => setQuickForm(f => ({ ...f, check_in: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">退房</label>
+                <label className="text-xs font-medium text-gray-600">{t('detail.checkOut')}</label>
                 <input type="date" value={quickForm.check_out} onChange={e => setQuickForm(f => ({ ...f, check_out: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">人數</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.guests')}</label>
                 <input type="number" min={1} value={quickForm.num_guests}
                   onChange={e => setQuickForm(f => ({ ...f, num_guests: parseInt(e.target.value) }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">金額</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.amount')}</label>
                 <input type="number" value={quickForm.total_price}
                   onChange={e => setQuickForm(f => ({ ...f, total_price: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">通路</label>
+              <label className="text-xs font-medium text-gray-600">{t('bookings.form.platform')}</label>
               <select value={quickForm.platform} onChange={e => setQuickForm(f => ({ ...f, platform: e.target.value }))}
                 className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
                 {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -475,10 +485,10 @@ export default function CalendarPage() {
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={() => setQuickProp(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={saveQuick} disabled={!quickForm.guest_name || saving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-sky-500 hover:bg-sky-600 disabled:opacity-50">
-                {saving ? '儲存中…' : '確認加入'}
+                {saving ? t('bookings.form.saving') : t('calendar.confirmAdd')}
               </button>
             </div>
           </div>

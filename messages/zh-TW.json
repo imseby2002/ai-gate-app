@@ -281,6 +281,33 @@
       "direct": "直訂",
       "other": "其他"
     },
+    "calendar": {
+      "allProperties": "全部房源",
+      "full": "滿",
+      "emptyLabel": "空",
+      "soldLabel": "售",
+      "roomUnit": "間",
+      "noRoomTypes": "尚未建立房型",
+      "noBookings": "此日無訂單",
+      "add": "加入",
+      "quickTitle": "加入訂單",
+      "confirmAdd": "確認加入",
+      "col": {
+        "room": "房型",
+        "price": "房價",
+        "avail": "空房",
+        "booked": "訂房",
+        "order": "訂購"
+      },
+      "bcol": {
+        "room": "房型名稱",
+        "price": "價格",
+        "booker": "預訂人",
+        "phone": "電話",
+        "source": "來源",
+        "status": "狀態"
+      }
+    },
     "roomgrid": {
       "today": "今日",
       "available": "可訂",
