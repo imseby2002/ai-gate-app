@@ -432,6 +432,39 @@
       "specialRequests": "Yêu cầu đặc biệt của khách",
       "internalNotes": "Ghi chú nội bộ"
     },
+    "role": {
+      "owner": "Chủ sở hữu",
+      "admin": "Quản trị viên",
+      "manager": "Quản lý",
+      "viewer": "Chỉ xem"
+    },
+    "switcher": {
+      "myBnb": "Nhà nghỉ của tôi",
+      "collabBnb": "Nhà nghỉ cộng tác"
+    },
+    "public": {
+      "title": "Yêu cầu đặt phòng trực tuyến",
+      "subtitle": "Yêu cầu đặt phòng do khách gửi qua trang web. \"Xác nhận đặt phòng\" sẽ tự động chuyển thành đơn chính thức và gửi email xác nhận cho khách.",
+      "pendingCount": "{count} chờ xác nhận",
+      "all": "Tất cả",
+      "loadError": "Tải thất bại. Vui lòng làm mới trang hoặc thử lại sau.",
+      "empty": "Chưa có yêu cầu đặt phòng",
+      "persons": "{count} khách",
+      "convertedOrder": "✓ Đã tạo đơn chính thức",
+      "processing": "Đang xử lý…",
+      "confirmBooking": "Xác nhận đặt phòng",
+      "reject": "Từ chối",
+      "cancelBooking": "Hủy đặt phòng",
+      "restorePending": "Khôi phục chờ xác nhận",
+      "sendEmail": "Gửi email",
+      "discount": "− NT$ {amount}",
+      "actionFailed": "Thao tác thất bại",
+      "deleteConfirm": "Xóa yêu cầu của \"{name}\"? Hành động này không thể hoàn tác.",
+      "confirmedEmailed": "Đã xác nhận và gửi email xác nhận cho khách",
+      "confirmedNoEmail": "Đã xác nhận (email xác nhận chưa gửi, vui lòng kiểm tra cài đặt email)",
+      "rejectedEmailed": "Đã từ chối và thông báo cho khách",
+      "rejectedNoEmail": "Đã từ chối (email thông báo chưa gửi)"
+    },
     "nav": {
       "overview": "Tổng quan",
       "profile": "Thông tin nhà nghỉ",

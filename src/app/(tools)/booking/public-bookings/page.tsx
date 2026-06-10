@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { CheckCircle, XCircle, Clock, Trash2, ExternalLink } from 'lucide-react'
 
 interface PubBooking {
@@ -11,21 +12,26 @@ interface PubBooking {
   properties?: { name: string } | null
 }
 
-const STATUS = {
-  pending:   { label: '待確認', color: 'text-amber-600 bg-amber-50',   icon: Clock },
-  confirmed: { label: '已確認', color: 'text-emerald-600 bg-emerald-50', icon: CheckCircle },
-  cancelled: { label: '已取消', color: 'text-gray-500 bg-gray-100',    icon: XCircle },
+const STATUS_META = {
+  pending:   { color: 'text-amber-600 bg-amber-50',   icon: Clock },
+  confirmed: { color: 'text-emerald-600 bg-emerald-50', icon: CheckCircle },
+  cancelled: { color: 'text-gray-500 bg-gray-100',    icon: XCircle },
 }
 
-function fmtDate(s: string) {
-  return new Date(s).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' })
-}
 function nights(ci: string, co: string) {
   return Math.max(1, Math.round((new Date(co).getTime() - new Date(ci).getTime()) / 86400000))
 }
-function fmt(n: number) { return n.toLocaleString('zh-TW') }
 
 export default function PublicBookingsPage() {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const STATUS = {
+    pending:   { label: t('status.pending'),   ...STATUS_META.pending },
+    confirmed: { label: t('status.confirmed'), ...STATUS_META.confirmed },
+    cancelled: { label: t('status.cancelled'), ...STATUS_META.cancelled },
+  }
+  const fmtDate = (s: string) => new Date(s).toLocaleDateString(locale, { month: '2-digit', day: '2-digit' })
+  const fmt = (n: number) => n.toLocaleString(locale)
   const [bookings, setBookings] = useState<PubBooking[]>([])
   const [loading, setLoading]   = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -55,17 +61,17 @@ export default function PublicBookingsPage() {
         body: JSON.stringify({ id: b.id, action }),
       })
       const d = await res.json()
-      if (!res.ok) { notify(false, d.error ?? '操作失敗'); return }
+      if (!res.ok) { notify(false, d.error ?? t('public.actionFailed')); return }
       setBookings(prev => prev.map(x => x.id === b.id
         ? { ...x, status: action === 'confirm' ? 'confirmed' : 'cancelled', converted_booking_id: d.booking_id ?? x.converted_booking_id }
         : x))
       if (action === 'confirm') {
-        notify(true, d.emailed ? '已確認，並寄出確認信給旅客' : '已確認（確認信未寄出，請檢查 Email 設定）')
+        notify(true, d.emailed ? t('public.confirmedEmailed') : t('public.confirmedNoEmail'))
       } else {
-        notify(true, d.emailed ? '已婉拒，並通知旅客' : '已婉拒（通知信未寄出）')
+        notify(true, d.emailed ? t('public.rejectedEmailed') : t('public.rejectedNoEmail'))
       }
     } catch {
-      notify(false, '網路錯誤，請稍後再試')
+      notify(false, t('bookings.toast.networkError'))
     } finally { setBusy(null) }
   }
 
@@ -78,25 +84,25 @@ export default function PublicBookingsPage() {
         body: JSON.stringify({ id: b.id, status }),
       })
       const d = await res.json()
-      if (!res.ok || !d.booking) { notify(false, d.error ?? '操作失敗'); return }
+      if (!res.ok || !d.booking) { notify(false, d.error ?? t('public.actionFailed')); return }
       setBookings(prev => prev.map(x => x.id === b.id ? d.booking : x))
     } catch {
-      notify(false, '網路錯誤，請稍後再試')
+      notify(false, t('bookings.toast.networkError'))
     } finally { setBusy(null) }
   }
 
   async function remove(b: PubBooking) {
-    if (!window.confirm(`確定刪除「${b.guest_name}」的這筆申請？此動作無法復原。`)) return
+    if (!window.confirm(t('public.deleteConfirm', { name: b.guest_name }))) return
     setBusy(b.id)
     try {
       const res = await fetch('/api/booking/public-bookings', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: b.id }),
       })
-      if (!res.ok) { const d = await res.json(); notify(false, d.error ?? '刪除失敗'); return }
+      if (!res.ok) { const d = await res.json(); notify(false, d.error ?? t('bookings.toast.deleteFailed')); return }
       setBookings(prev => prev.filter(x => x.id !== b.id))
     } catch {
-      notify(false, '網路錯誤，請稍後再試')
+      notify(false, t('bookings.toast.networkError'))
     } finally { setBusy(null) }
   }
 
@@ -106,11 +112,11 @@ export default function PublicBookingsPage() {
     <div className="p-4 md:p-6 pb-16 max-w-4xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">線上訂房申請</h1>
-          <p className="text-sm text-gray-500 mt-0.5">旅客透過前台頁面提交的訂房申請。「確認訂房」會自動轉為正式訂單並寄確認信給旅客。</p>
+          <h1 className="text-xl font-bold text-gray-900">{t('public.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('public.subtitle')}</p>
         </div>
         <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
-          共 {bookings.filter(b => b.status === 'pending').length} 筆待確認
+          {t('public.pendingCount', { count: bookings.filter(b => b.status === 'pending').length })}
         </span>
       </div>
 
@@ -124,19 +130,19 @@ export default function PublicBookingsPage() {
         {(['all','pending','confirmed','cancelled'] as const).map(s => (
           <button key={s} onClick={() => setFilter(s)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${filter === s ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {s === 'all' ? `全部 (${bookings.length})` : `${STATUS[s].label} (${bookings.filter(b => b.status === s).length})`}
+            {s === 'all' ? `${t('public.all')} (${bookings.length})` : `${STATUS[s].label} (${bookings.filter(b => b.status === s).length})`}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="text-center py-20 text-gray-400">載入中…</div>
+        <div className="text-center py-20 text-gray-400">{t('common.loading')}</div>
       ) : loadError ? (
         <div className="text-center py-20 text-rose-500 text-sm">
-          載入失敗，請重新整理頁面或稍後再試。
+          {t('public.loadError')}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-gray-400 text-sm">尚無訂房申請</div>
+        <div className="text-center py-20 text-gray-400 text-sm">{t('public.empty')}</div>
       ) : (
         <div className="space-y-3">
           {filtered.map(b => {
@@ -163,19 +169,19 @@ export default function PublicBookingsPage() {
                   {b.total_price && (
                     <div className="text-right">
                       <div className="font-bold text-gray-900">NT$ {fmt(b.total_price)}</div>
-                      {b.promo_discount && <div className="text-xs text-emerald-600">折 NT$ {fmt(b.promo_discount)}</div>}
+                      {b.promo_discount && <div className="text-xs text-emerald-600">{t('public.discount', { amount: fmt(b.promo_discount) })}</div>}
                     </div>
                   )}
                 </div>
 
                 <div className="flex flex-wrap gap-3 text-sm text-gray-700">
                   <span className="flex items-center gap-1">
-                    📅 {fmtDate(b.check_in)} → {fmtDate(b.check_out)}（{n} 晚）
+                    📅 {fmtDate(b.check_in)} → {fmtDate(b.check_out)}（{t('detail.nights', { nights: n })}）
                   </span>
-                  <span>👥 {b.num_guests} 人</span>
+                  <span>👥 {t('public.persons', { count: b.num_guests })}</span>
                   {b.properties?.name && <span>🏠 {b.properties.name}</span>}
                   {b.status === 'confirmed' && b.converted_booking_id && (
-                    <span className="text-xs text-emerald-600">✓ 已建立正式訂單</span>
+                    <span className="text-xs text-emerald-600">{t('public.convertedOrder')}</span>
                   )}
                 </div>
 
@@ -188,29 +194,29 @@ export default function PublicBookingsPage() {
                     <>
                       <button onClick={() => decide(b, 'confirm')} disabled={isBusy}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
-                        <CheckCircle className="h-3.5 w-3.5" /> {isBusy ? '處理中…' : '確認訂房'}
+                        <CheckCircle className="h-3.5 w-3.5" /> {isBusy ? t('public.processing') : t('public.confirmBooking')}
                       </button>
                       <button onClick={() => decide(b, 'reject')} disabled={isBusy}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border text-rose-500 border-rose-200 hover:bg-rose-50 disabled:opacity-50">
-                        <XCircle className="h-3.5 w-3.5" /> 拒絕
+                        <XCircle className="h-3.5 w-3.5" /> {t('public.reject')}
                       </button>
                     </>
                   )}
                   {b.status === 'confirmed' && (
                     <button onClick={() => setStatus(b, 'cancelled')} disabled={isBusy}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border text-gray-500 hover:bg-gray-50 disabled:opacity-50">
-                      取消訂房
+                      {t('public.cancelBooking')}
                     </button>
                   )}
                   {b.status === 'cancelled' && (
                     <button onClick={() => setStatus(b, 'pending')} disabled={isBusy}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border text-gray-500 hover:bg-gray-50 disabled:opacity-50">
-                      恢復待確認
+                      {t('public.restorePending')}
                     </button>
                   )}
                   <a href={`mailto:${b.guest_email}`}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs border text-indigo-600 border-indigo-200 hover:bg-indigo-50">
-                    <ExternalLink className="h-3.5 w-3.5" /> 寄信
+                    <ExternalLink className="h-3.5 w-3.5" /> {t('public.sendEmail')}
                   </a>
                   <button onClick={() => remove(b)} disabled={isBusy} className="ml-auto p-1.5 rounded-lg border text-rose-400 hover:bg-rose-50 disabled:opacity-50">
                     <Trash2 className="h-3.5 w-3.5" />

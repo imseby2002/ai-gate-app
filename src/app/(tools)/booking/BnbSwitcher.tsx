@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Building2, ChevronDown, Check, Loader2 } from 'lucide-react'
 
 interface Membership {
@@ -15,10 +16,6 @@ interface Option {
   role: string
 }
 
-const ROLE_LABEL: Record<string, string> = {
-  owner: '擁有者', admin: '管理員', manager: '一般管理', viewer: '唯讀',
-}
-
 function readCookie(name: string): string {
   if (typeof document === 'undefined') return ''
   const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
@@ -26,6 +23,10 @@ function readCookie(name: string): string {
 }
 
 export default function BnbSwitcher({ collapsed = false }: { collapsed?: boolean }) {
+  const t = useTranslations('Booking')
+  const ROLE_LABEL: Record<string, string> = {
+    owner: t('role.owner'), admin: t('role.admin'), manager: t('role.manager'), viewer: t('role.viewer'),
+  }
   const [options, setOptions] = useState<Option[]>([])
   const [activeId, setActiveId] = useState<string>('')
   const [open, setOpen] = useState(false)
@@ -42,10 +43,10 @@ export default function BnbSwitcher({ collapsed = false }: { collapsed?: boolean
         const self = data.self as { id: string; email: string | null }
         const memberships = (data.memberships ?? []) as Membership[]
         const opts: Option[] = [
-          { ownerId: self.id, label: '我的民宿', isSelf: true, role: 'owner' },
+          { ownerId: self.id, label: t('switcher.myBnb'), isSelf: true, role: 'owner' },
           ...memberships.map(m => ({
             ownerId: m.owner_id,
-            label: m.owner?.full_name || m.owner?.email || '協作民宿',
+            label: m.owner?.full_name || m.owner?.email || t('switcher.collabBnb'),
             isSelf: false,
             role: m.role,
           })),

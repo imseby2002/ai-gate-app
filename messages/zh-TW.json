@@ -433,6 +433,39 @@
       "specialRequests": "旅客特殊需求",
       "internalNotes": "內部備註"
     },
+    "role": {
+      "owner": "擁有者",
+      "admin": "管理員",
+      "manager": "一般管理",
+      "viewer": "唯讀"
+    },
+    "switcher": {
+      "myBnb": "我的民宿",
+      "collabBnb": "協作民宿"
+    },
+    "public": {
+      "title": "線上訂房申請",
+      "subtitle": "旅客透過前台頁面提交的訂房申請。「確認訂房」會自動轉為正式訂單並寄確認信給旅客。",
+      "pendingCount": "共 {count} 筆待確認",
+      "all": "全部",
+      "loadError": "載入失敗，請重新整理頁面或稍後再試。",
+      "empty": "尚無訂房申請",
+      "persons": "{count} 人",
+      "convertedOrder": "✓ 已建立正式訂單",
+      "processing": "處理中…",
+      "confirmBooking": "確認訂房",
+      "reject": "拒絕",
+      "cancelBooking": "取消訂房",
+      "restorePending": "恢復待確認",
+      "sendEmail": "寄信",
+      "discount": "折 NT$ {amount}",
+      "actionFailed": "操作失敗",
+      "deleteConfirm": "確定刪除「{name}」的這筆申請？此動作無法復原。",
+      "confirmedEmailed": "已確認，並寄出確認信給旅客",
+      "confirmedNoEmail": "已確認（確認信未寄出，請檢查 Email 設定）",
+      "rejectedEmailed": "已婉拒，並通知旅客",
+      "rejectedNoEmail": "已婉拒（通知信未寄出）"
+    },
     "nav": {
       "overview": "總覽",
       "profile": "民宿資料",

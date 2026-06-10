@@ -433,6 +433,39 @@
       "specialRequests": "Guest Special Requests",
       "internalNotes": "Internal Notes"
     },
+    "role": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "manager": "Manager",
+      "viewer": "Viewer"
+    },
+    "switcher": {
+      "myBnb": "My Property",
+      "collabBnb": "Shared Property"
+    },
+    "public": {
+      "title": "Online Booking Requests",
+      "subtitle": "Booking requests submitted by guests via the front-end page. \"Confirm Booking\" automatically converts to a formal booking and sends a confirmation email to the guest.",
+      "pendingCount": "{count} pending",
+      "all": "All",
+      "loadError": "Failed to load. Please refresh the page or try again later.",
+      "empty": "No booking requests yet",
+      "persons": "{count} guests",
+      "convertedOrder": "✓ Formal booking created",
+      "processing": "Processing…",
+      "confirmBooking": "Confirm Booking",
+      "reject": "Reject",
+      "cancelBooking": "Cancel Booking",
+      "restorePending": "Restore to Pending",
+      "sendEmail": "Send Email",
+      "discount": "− NT$ {amount}",
+      "actionFailed": "Action failed",
+      "deleteConfirm": "Delete the request from \"{name}\"? This action cannot be undone.",
+      "confirmedEmailed": "Confirmed and confirmation email sent to guest",
+      "confirmedNoEmail": "Confirmed (confirmation email not sent, please check email settings)",
+      "rejectedEmailed": "Declined and guest notified",
+      "rejectedNoEmail": "Declined (notification email not sent)"
+    },
     "nav": {
       "overview": "Overview",
       "profile": "Property Info",
