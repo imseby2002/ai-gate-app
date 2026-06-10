@@ -280,6 +280,29 @@
       "direct": "Đặt trực tiếp",
       "other": "Khác"
     },
+    "notif": {
+      "title": "Cài đặt thông báo",
+      "subtitle": "Thiết lập mẫu email thông báo và gửi cho khách chỉ với một nhấp từ trang Đơn",
+      "helpTitle": "Hướng dẫn cài đặt",
+      "helpEnv": "Cần đặt RESEND_API_KEY và RESEND_FROM_EMAIL trong biến môi trường Vercel (địa chỉ gửi phải thuộc tên miền đã xác minh trong Resend).",
+      "helpPlaceholders": "Nội dung mẫu có thể dùng các trình giữ chỗ bên dưới để tự điền dữ liệu đơn.",
+      "enabled": "Bật",
+      "disabled": "Tắt",
+      "subjectPrefix": "Tiêu đề: {subject}",
+      "edit": "Sửa",
+      "setup": "Thiết lập",
+      "placeholdersTitle": "Trình giữ chỗ khả dụng",
+      "emailSubject": "Tiêu đề email",
+      "emailBody": "Nội dung email (HTML)",
+      "bodyPlaceholder": "Để trống để dùng mẫu mặc định…",
+      "enableThis": "Bật mẫu này",
+      "types": {
+        "confirmation": { "label": "Email xác nhận đặt phòng", "desc": "Gửi thủ công cho khách sau khi tạo đơn" },
+        "reminder": { "label": "Nhắc nhận phòng", "desc": "Gửi 1–2 ngày trước khi nhận phòng" },
+        "checkout": { "label": "Nhắc trả phòng", "desc": "Gửi vào ngày trả phòng" },
+        "cancellation": { "label": "Thông báo hủy", "desc": "Gửi khi đơn bị hủy" }
+      }
+    },
     "reports": {
       "title": "Tổng quan phân tích",
       "yearUnit": "Năm {year}",

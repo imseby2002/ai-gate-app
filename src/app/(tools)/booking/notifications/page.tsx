@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createPortal } from 'react-dom'
 import { Bell, Edit2, Save, Loader2, ToggleLeft, ToggleRight } from 'lucide-react'
 
@@ -8,10 +9,10 @@ interface EmailTemplate {
 }
 
 const TEMPLATE_TYPES = [
-  { type: 'confirmation', label: '訂房確認信', desc: '訂單建立後，手動發送給旅客', icon: '✅' },
-  { type: 'reminder',     label: '入住提醒信', desc: '入住前 1–2 天發送',           icon: '🔔' },
-  { type: 'checkout',     label: '退房提醒',   desc: '退房當天發送',                icon: '🏠' },
-  { type: 'cancellation', label: '取消通知',   desc: '訂單取消時發送',              icon: '❌' },
+  { type: 'confirmation', icon: '✅' },
+  { type: 'reminder',     icon: '🔔' },
+  { type: 'checkout',     icon: '🏠' },
+  { type: 'cancellation', icon: '❌' },
 ]
 
 const DEFAULT_SUBJECT: Record<string, string> = {
@@ -29,6 +30,7 @@ const PLACEHOLDERS = [
 ]
 
 export default function NotificationsPage() {
+  const t = useTranslations('Booking')
   const [templates, setTemplates] = useState<Record<string, EmailTemplate>>({})
   const [loading, setLoading]     = useState(true)
   const [editing, setEditing]     = useState<string | null>(null)
@@ -46,11 +48,11 @@ export default function NotificationsPage() {
   }, [])
 
   function openEdit(type: string) {
-    const t = templates[type]
+    const tpl = templates[type]
     setForm({
-      subject:  t?.subject  ?? DEFAULT_SUBJECT[type] ?? '',
-      body_html: t?.body_html ?? '',
-      enabled:  t?.enabled  ?? true,
+      subject:  tpl?.subject  ?? DEFAULT_SUBJECT[type] ?? '',
+      body_html: tpl?.body_html ?? '',
+      enabled:  tpl?.enabled  ?? true,
     })
     setEditing(type)
   }
@@ -70,53 +72,53 @@ export default function NotificationsPage() {
   }
 
   async function toggleEnabled(type: string) {
-    const t = templates[type]
-    const next = !(t?.enabled ?? true)
+    const tpl = templates[type]
+    const next = !(tpl?.enabled ?? true)
     const res = await fetch('/api/booking/notifications/templates', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, subject: t?.subject ?? DEFAULT_SUBJECT[type] ?? '', body_html: t?.body_html ?? '', enabled: next }),
+      body: JSON.stringify({ type, subject: tpl?.subject ?? DEFAULT_SUBJECT[type] ?? '', body_html: tpl?.body_html ?? '', enabled: next }),
     })
     const d = await res.json()
     if (d.template) setTemplates(prev => ({ ...prev, [type]: d.template }))
   }
 
-  if (loading) return <div className="p-6 text-gray-400 text-sm">載入中…</div>
+  if (loading) return <div className="p-6 text-gray-400 text-sm">{t('common.loading')}</div>
 
   return (
     <div className="p-4 md:p-6 pb-16 max-w-2xl space-y-5">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">通知信設定</h1>
-        <p className="text-sm text-gray-500 mt-0.5">設定各類通知信模板，在訂單管理中一鍵發送給旅客</p>
+        <h1 className="text-xl font-bold text-gray-900">{t('notif.title')}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{t('notif.subtitle')}</p>
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 space-y-1">
-        <p className="font-semibold">設定說明</p>
-        <p>需在 Vercel 環境變數設定 <code className="bg-amber-100 px-1 rounded">RESEND_API_KEY</code> 及 <code className="bg-amber-100 px-1 rounded">RESEND_FROM_EMAIL</code>（寄件地址需在 Resend 驗證網域）。</p>
-        <p>模板內容可使用下方佔位符自動填入訂單資料。</p>
+        <p className="font-semibold">{t('notif.helpTitle')}</p>
+        <p>{t('notif.helpEnv')}</p>
+        <p>{t('notif.helpPlaceholders')}</p>
       </div>
 
       <div className="space-y-3">
-        {TEMPLATE_TYPES.map(({ type, label, desc, icon }) => {
-          const t = templates[type]
-          const isEnabled = t?.enabled ?? true
+        {TEMPLATE_TYPES.map(({ type, icon }) => {
+          const tpl = templates[type]
+          const isEnabled = tpl?.enabled ?? true
           return (
             <div key={type} className="bg-white rounded-xl border p-4 flex items-start gap-4">
               <div className="text-2xl shrink-0 mt-0.5">{icon}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-gray-900 text-sm">{label}</span>
-                  {t && (
+                  <span className="font-semibold text-gray-900 text-sm">{t(`notif.types.${type}.label`)}</span>
+                  {tpl && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {isEnabled ? '啟用' : '停用'}
+                      {isEnabled ? t('notif.enabled') : t('notif.disabled')}
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">{desc}</div>
-                {t?.subject && <div className="text-xs text-gray-500 mt-1 truncate">主旨：{t.subject}</div>}
+                <div className="text-xs text-gray-400 mt-0.5">{t(`notif.types.${type}.desc`)}</div>
+                {tpl?.subject && <div className="text-xs text-gray-500 mt-1 truncate">{t('notif.subjectPrefix', { subject: tpl.subject })}</div>}
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {t && (
-                  <button onClick={() => toggleEnabled(type)} title={isEnabled ? '停用' : '啟用'}
+                {tpl && (
+                  <button onClick={() => toggleEnabled(type)} title={isEnabled ? t('notif.disabled') : t('notif.enabled')}
                     className="p-1.5 rounded hover:bg-gray-100">
                     {isEnabled
                       ? <ToggleRight className="h-4 w-4 text-green-500" />
@@ -125,7 +127,7 @@ export default function NotificationsPage() {
                 )}
                 <button onClick={() => openEdit(type)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border hover:bg-indigo-50 text-indigo-600 border-indigo-200">
-                  <Edit2 className="h-3 w-3" /> {t ? '編輯' : '設定'}
+                  <Edit2 className="h-3 w-3" /> {tpl ? t('notif.edit') : t('notif.setup')}
                 </button>
               </div>
             </div>
@@ -136,7 +138,7 @@ export default function NotificationsPage() {
       {/* Placeholder reference */}
       <section className="bg-white rounded-xl border p-4 space-y-2">
         <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-          <Bell className="h-4 w-4 text-indigo-500" /> 可用的佔位符
+          <Bell className="h-4 w-4 text-indigo-500" /> {t('notif.placeholdersTitle')}
         </h2>
         <div className="flex flex-wrap gap-1.5">
           {PLACEHOLDERS.map(p => (
@@ -152,23 +154,23 @@ export default function NotificationsPage() {
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl max-h-[92dvh] flex flex-col">
             <div className="px-5 pt-5 pb-3 shrink-0 border-b">
               <h3 className="font-bold text-gray-900">
-                {TEMPLATE_TYPES.find(t => t.type === editing)?.label}
+                {t(`notif.types.${editing}.label`)}
               </h3>
             </div>
 
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">郵件主旨</label>
+                <label className="text-xs font-medium text-gray-600">{t('notif.emailSubject')}</label>
                 <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
                   placeholder={DEFAULT_SUBJECT[editing] ?? ''}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">郵件內容（HTML）</label>
+                <label className="text-xs font-medium text-gray-600">{t('notif.emailBody')}</label>
                 <textarea value={form.body_html}
                   onChange={e => setForm(f => ({ ...f, body_html: e.target.value }))}
-                  rows={14} placeholder="留空則使用預設模板…"
+                  rows={14} placeholder={t('notif.bodyPlaceholder')}
                   className="w-full text-xs font-mono border rounded-lg px-3 py-2 resize-y focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
 
@@ -185,17 +187,17 @@ export default function NotificationsPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.enabled}
                   onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} className="rounded" />
-                <span className="text-sm text-gray-700">啟用此模板</span>
+                <span className="text-sm text-gray-700">{t('notif.enableThis')}</span>
               </label>
             </div>
 
             <div className="shrink-0 flex gap-2 px-5 py-4 border-t">
               <button onClick={() => setEditing(null)}
-                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={save} disabled={saving}
                 className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saving ? '儲存中…' : '儲存'}
+                {saving ? t('bookings.form.saving') : t('detail.save')}
               </button>
             </div>
           </div>

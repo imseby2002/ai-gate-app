@@ -281,6 +281,29 @@
       "direct": "直訂",
       "other": "其他"
     },
+    "notif": {
+      "title": "通知信設定",
+      "subtitle": "設定各類通知信模板，在訂單管理中一鍵發送給旅客",
+      "helpTitle": "設定說明",
+      "helpEnv": "需在 Vercel 環境變數設定 RESEND_API_KEY 及 RESEND_FROM_EMAIL（寄件地址需在 Resend 驗證網域）。",
+      "helpPlaceholders": "模板內容可使用下方佔位符自動填入訂單資料。",
+      "enabled": "啟用",
+      "disabled": "停用",
+      "subjectPrefix": "主旨：{subject}",
+      "edit": "編輯",
+      "setup": "設定",
+      "placeholdersTitle": "可用的佔位符",
+      "emailSubject": "郵件主旨",
+      "emailBody": "郵件內容（HTML）",
+      "bodyPlaceholder": "留空則使用預設模板…",
+      "enableThis": "啟用此模板",
+      "types": {
+        "confirmation": { "label": "訂房確認信", "desc": "訂單建立後，手動發送給旅客" },
+        "reminder": { "label": "入住提醒信", "desc": "入住前 1–2 天發送" },
+        "checkout": { "label": "退房提醒", "desc": "退房當天發送" },
+        "cancellation": { "label": "取消通知", "desc": "訂單取消時發送" }
+      }
+    },
     "reports": {
       "title": "數據分析總覽",
       "yearUnit": "{year} 年",
