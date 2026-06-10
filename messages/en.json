@@ -281,6 +281,23 @@
       "direct": "Direct",
       "other": "Other"
     },
+    "ical": {
+      "subtitle": "Automatically import bookings from major platforms, synced hourly",
+      "platformOther": "Other Platform",
+      "syncDone": "Sync complete, {count} bookings updated",
+      "deleteConfirm": "Delete this iCal setting?",
+      "syncAll": "Sync All Now",
+      "sync": "Sync",
+      "empty": "No iCal sync set up yet",
+      "addFirst": "+ Add the first one",
+      "lastPrefix": "Last: {date}",
+      "normal": "OK",
+      "addTitle": "Add iCal Sync",
+      "platform": "Platform",
+      "propertyOptional": "Room (optional)",
+      "urlHint": "Get it from the platform's \"Calendar Settings\" or \"iCal Export\"",
+      "interval": "Sync Interval (minutes)"
+    },
     "notif": {
       "title": "Notification Settings",
       "subtitle": "Set up notification email templates and send them to guests with one click from Bookings",

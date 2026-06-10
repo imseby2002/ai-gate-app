@@ -280,6 +280,23 @@
       "direct": "Đặt trực tiếp",
       "other": "Khác"
     },
+    "ical": {
+      "subtitle": "Tự động nhập đơn từ các nền tảng lớn, đồng bộ mỗi giờ",
+      "platformOther": "Nền tảng khác",
+      "syncDone": "Đồng bộ xong, đã cập nhật {count} đơn",
+      "deleteConfirm": "Xóa cài đặt iCal này?",
+      "syncAll": "Đồng bộ tất cả ngay",
+      "sync": "Đồng bộ",
+      "empty": "Chưa thiết lập đồng bộ iCal",
+      "addFirst": "+ Thêm cái đầu tiên",
+      "lastPrefix": "Lần trước: {date}",
+      "normal": "Bình thường",
+      "addTitle": "Thêm đồng bộ iCal",
+      "platform": "Nền tảng",
+      "propertyOptional": "Phòng (tùy chọn)",
+      "urlHint": "Lấy từ \"Cài đặt lịch\" hoặc \"Xuất iCal\" trong trang quản trị nền tảng",
+      "interval": "Khoảng đồng bộ (phút)"
+    },
     "notif": {
       "title": "Cài đặt thông báo",
       "subtitle": "Thiết lập mẫu email thông báo và gửi cho khách chỉ với một nhấp từ trang Đơn",

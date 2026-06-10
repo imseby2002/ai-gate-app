@@ -281,6 +281,23 @@
       "direct": "直訂",
       "other": "其他"
     },
+    "ical": {
+      "subtitle": "自動從各大平台匯入訂單，每小時同步一次",
+      "platformOther": "其他平台",
+      "syncDone": "同步完成，共更新 {count} 筆訂單",
+      "deleteConfirm": "確定刪除此 iCal 設定？",
+      "syncAll": "立即同步全部",
+      "sync": "同步",
+      "empty": "尚未設定任何 iCal 同步",
+      "addFirst": "+ 新增第一個",
+      "lastPrefix": "上次：{date}",
+      "normal": "正常",
+      "addTitle": "新增 iCal 同步",
+      "platform": "平台",
+      "propertyOptional": "房源（選填）",
+      "urlHint": "從平台後台的「行事曆設定」或「iCal 匯出」取得",
+      "interval": "同步間隔（分鐘）"
+    },
     "notif": {
       "title": "通知信設定",
       "subtitle": "設定各類通知信模板，在訂單管理中一鍵發送給旅客",
