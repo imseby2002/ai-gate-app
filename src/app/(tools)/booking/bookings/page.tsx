@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { createPortal } from 'react-dom'
 import { Plus, Search, Filter, Download, ChevronDown, ChevronUp, Send, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -15,20 +16,29 @@ interface Property { id: string; name: string }
 interface AddonService { id: string; name: string; enabled: boolean; price: number; unit: string; note: string }
 interface ProfileExtras { breakfast: { type: string; price_per_person: number }; addon_services: AddonService[] }
 
-const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  confirmed: { label: '已確認', color: 'bg-green-100 text-green-700' },
-  pending:   { label: '待確認', color: 'bg-amber-100 text-amber-700' },
-  cancelled: { label: '已取消', color: 'bg-red-100 text-red-600' },
-  completed: { label: '已完成', color: 'bg-gray-100 text-gray-600' },
-  no_show:   { label: '未到訪', color: 'bg-orange-100 text-orange-700' },
-}
-const PLATFORM_NAMES: Record<string, string> = {
-  booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
-  trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
-  manual: '手動', direct: '直訂',
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: 'bg-green-100 text-green-700',
+  pending:   'bg-amber-100 text-amber-700',
+  cancelled: 'bg-red-100 text-red-600',
+  completed: 'bg-gray-100 text-gray-600',
+  no_show:   'bg-orange-100 text-orange-700',
 }
 
 export default function BookingsPage() {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const STATUS_MAP: Record<string, { label: string; color: string }> = {
+    confirmed: { label: t('status.confirmed'), color: STATUS_COLORS.confirmed },
+    pending:   { label: t('status.pending'),   color: STATUS_COLORS.pending },
+    cancelled: { label: t('status.cancelled'), color: STATUS_COLORS.cancelled },
+    completed: { label: t('status.completed'), color: STATUS_COLORS.completed },
+    no_show:   { label: t('status.no_show'),   color: STATUS_COLORS.no_show },
+  }
+  const PLATFORM_NAMES: Record<string, string> = {
+    booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
+    trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
+    manual: t('platform.manual'), direct: t('platform.direct'),
+  }
   const [bookings, setBookings]       = useState<Booking[]>([])
   const [properties, setProperties]   = useState<Property[]>([])
   const [profileExtras, setProfileExtras] = useState<ProfileExtras | null>(null)
@@ -116,18 +126,18 @@ export default function BookingsPage() {
 
   function exportCSV() {
     const rows = [
-      ['旅客','電話','房型','入住','退房','人數','金額','來源','確認碼','狀態','建立日期'],
+      [t('bookings.csv.guest'),t('bookings.csv.phone'),t('bookings.csv.room'),t('bookings.csv.checkIn'),t('bookings.csv.checkOut'),t('bookings.csv.guests'),t('bookings.csv.amount'),t('bookings.csv.source'),t('bookings.csv.confirmCode'),t('bookings.csv.status'),t('bookings.csv.created')],
       ...filtered.map(b => [
         b.guest_name, b.guest_phone, b.properties?.name ?? '', b.check_in, b.check_out,
         b.num_guests, b.total_price ?? '', PLATFORM_NAMES[b.platform] ?? b.platform,
         b.platform_booking_id ?? '', STATUS_MAP[b.status]?.label ?? b.status,
-        new Date(b.created_at).toLocaleDateString('zh-TW'),
+        new Date(b.created_at).toLocaleDateString(locale),
       ]),
     ]
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
     const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a'); a.href = url; a.download = '訂單匯出.csv'; a.click()
+    const a    = document.createElement('a'); a.href = url; a.download = t('bookings.csv.filename'); a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -139,8 +149,8 @@ export default function BookingsPage() {
         body: JSON.stringify({ booking_id: bookingId, type: 'confirmation' }),
       })
       const d = await res.json()
-      if (d.ok) notify(true, `確認信已發送至 ${d.sent_to}`)
-      else notify(false, d.error ?? '發送失敗')
+      if (d.ok) notify(true, t('bookings.toast.confirmSentTo', { to: d.sent_to }))
+      else notify(false, d.error ?? t('bookings.toast.sendFailed'))
     } finally { setSendingNotif(null) }
   }
 
@@ -149,21 +159,21 @@ export default function BookingsPage() {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),
     })
-    if (!res.ok) { notify(false, '狀態更新失敗，請重試'); return }
+    if (!res.ok) { notify(false, t('bookings.toast.statusUpdateFailed')); return }
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
   }
 
   async function removeBooking(id: string) {
-    if (!window.confirm('確定刪除此訂單？此動作無法復原。')) return
+    if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
     try {
       const res = await fetch('/api/booking/bookings', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       })
-      if (!res.ok) { const d = await res.json(); notify(false, d.error ?? '刪除失敗'); return }
+      if (!res.ok) { const d = await res.json(); notify(false, d.error ?? t('bookings.toast.deleteFailed')); return }
       setBookings(prev => prev.filter(b => b.id !== id))
-      notify(true, '已刪除訂單')
-    } catch { notify(false, '網路錯誤，請稍後再試') }
+      notify(true, t('bookings.toast.deleted'))
+    } catch { notify(false, t('bookings.toast.networkError')) }
   }
 
   async function checkPromo() {
@@ -197,8 +207,8 @@ export default function BookingsPage() {
         setAdding(false)
         setPromoInput(''); setPromoResult(null)
         setForm({ property_id: '', guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', num_guests: 1, total_price: '', currency: 'TWD', status: 'confirmed', platform: 'direct', notes: '', special_requests: '', extras: { breakfast: false, services: [] } })
-        notify(true, '訂單已新增')
-      } else notify(false, d.error ?? '新增失敗')
+        notify(true, t('bookings.toast.added'))
+      } else notify(false, d.error ?? t('bookings.toast.addFailed'))
     } finally { setSaving(false) }
   }
 
@@ -206,18 +216,18 @@ export default function BookingsPage() {
     <div className="p-4 md:p-6 pb-16 space-y-4 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-bold text-gray-900">訂單管理</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('bookings.title')}</h1>
         <div className="flex gap-2">
           <button onClick={exportCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg bg-white text-sm text-gray-600 hover:bg-gray-50">
             <Download className="h-4 w-4" />
-            <span className="hidden sm:inline">匯出</span>
+            <span className="hidden sm:inline">{t('bookings.export')}</span>
           </button>
           <button onClick={() => setAdding(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">手動新增</span>
-            <span className="sm:hidden">新增</span>
+            <span className="hidden sm:inline">{t('bookings.addManual')}</span>
+            <span className="sm:hidden">{t('bookings.add')}</span>
           </button>
         </div>
       </div>
@@ -234,27 +244,27 @@ export default function BookingsPage() {
           <div className="flex items-center gap-1.5 border rounded-lg px-3 py-1.5 bg-white text-sm flex-1 min-w-0">
             <Search className="h-4 w-4 text-gray-400 shrink-0" />
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="搜尋姓名、電話…"
+              placeholder={t('bookings.searchPlaceholder')}
               className="flex-1 outline-none text-sm min-w-0" />
           </div>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
             className="border rounded-lg px-2 py-1.5 bg-white text-sm focus:outline-none">
-            <option value="">全部狀態</option>
+            <option value="">{t('bookings.allStatus')}</option>
             {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
           {properties.length > 0 && (
             <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
               className="border rounded-lg px-2 py-1.5 bg-white text-sm focus:outline-none hidden sm:block">
-              <option value="">全部房型</option>
+              <option value="">{t('bookings.allProperties')}</option>
               {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
           <button onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm ${showFilters ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
             <Filter className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">進階</span>
+            <span className="hidden sm:inline">{t('bookings.advanced')}</span>
           </button>
-          <span className="flex items-center text-xs text-gray-400 px-1">{filtered.length} 筆</span>
+          <span className="flex items-center text-xs text-gray-400 px-1">{t('bookings.count', { count: filtered.length })}</span>
         </div>
 
         {showFilters && (
@@ -262,33 +272,33 @@ export default function BookingsPage() {
             {properties.length > 0 && (
               <select value={filterProp} onChange={e => setFilterProp(e.target.value)}
                 className="sm:hidden border rounded-lg px-2.5 py-1 bg-white text-sm focus:outline-none">
-                <option value="">全部房型</option>
+                <option value="">{t('bookings.allProperties')}</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             )}
             <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
-              <span className="text-xs whitespace-nowrap text-gray-500">入住日期</span>
+              <span className="text-xs whitespace-nowrap text-gray-500">{t('bookings.checkInDate')}</span>
               <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
                 className="border rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 flex-1 min-w-0" />
-              <span className="text-xs text-gray-500">至</span>
+              <span className="text-xs text-gray-500">{t('bookings.to')}</span>
               <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)}
                 className="border rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 flex-1 min-w-0" />
             </div>
             <select value={filterPlatform} onChange={e => setFilterPlatform(e.target.value)}
               className="border rounded-lg px-2.5 py-1 bg-white text-sm focus:outline-none">
-              <option value="">全部通路</option>
+              <option value="">{t('bookings.allPlatforms')}</option>
               {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
             <button onClick={() => { setFilterFrom(''); setFilterTo(''); setFilterPlatform(''); setSearch(''); setFilterStatus(''); setFilterProp('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">清除篩選</button>
+              className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">{t('bookings.clearFilters')}</button>
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="text-center py-16 text-gray-400">載入中…</div>
+        <div className="text-center py-16 text-gray-400">{t('common.loading')}</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">無符合的訂單</div>
+        <div className="text-center py-16 text-gray-400">{t('bookings.noMatch')}</div>
       ) : (
         <>
           {/* Mobile cards */}
@@ -300,7 +310,7 @@ export default function BookingsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <Link href={`/booking/bookings/${b.id}`}
-                        className="font-semibold text-indigo-600 block truncate">{b.guest_name || '(無名)'}</Link>
+                        className="font-semibold text-indigo-600 block truncate">{b.guest_name || t('bookings.noName')}</Link>
                       {b.guest_phone && <div className="text-xs text-gray-400 mt-0.5">{b.guest_phone}</div>}
                     </div>
                     <select value={b.status} onChange={e => updateStatus(b.id, e.target.value)}
@@ -313,21 +323,21 @@ export default function BookingsPage() {
                     <div className="text-gray-700 text-right font-medium">
                       {b.total_price ? `NT$ ${Number(b.total_price).toLocaleString()}` : '—'}
                     </div>
-                    <div className="text-gray-500">入住 {b.check_in}</div>
-                    <div className="text-gray-500 text-right">退房 {b.check_out}</div>
-                    <div className="text-gray-400">{PLATFORM_NAMES[b.platform] ?? b.platform} · {b.num_guests}人</div>
+                    <div className="text-gray-500">{t('bookings.checkInPrefix')} {b.check_in}</div>
+                    <div className="text-gray-500 text-right">{t('bookings.checkOutPrefix')} {b.check_out}</div>
+                    <div className="text-gray-400">{PLATFORM_NAMES[b.platform] ?? b.platform} · {t('bookings.guestsCount', { count: b.num_guests })}</div>
                     {b.notes && <div className="text-amber-600 text-right truncate" title={b.notes}>⚠ {b.notes}</div>}
                   </div>
                   <div className="flex items-center gap-2 pt-1 border-t">
                     {b.guest_email && (
                       <button onClick={() => sendConfirmation(b.id)} disabled={sendingNotif === b.id}
                         className="flex items-center gap-1 text-xs text-indigo-600 disabled:opacity-50">
-                        <Send className="h-3.5 w-3.5" /> 確認信
+                        <Send className="h-3.5 w-3.5" /> {t('bookings.confirmationLetter')}
                       </button>
                     )}
                     <button onClick={() => removeBooking(b.id)}
                       className="flex items-center gap-1 text-xs text-rose-500 ml-auto">
-                      <Trash2 className="h-3.5 w-3.5" /> 刪除
+                      <Trash2 className="h-3.5 w-3.5" /> {t('bookings.delete')}
                     </button>
                   </div>
                 </div>
@@ -340,18 +350,18 @@ export default function BookingsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">旅客</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">房型</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.guest')}</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.room')}</th>
                   <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('check_in')}>
-                    入住 <SortIcon k="check_in" />
+                    {t('bookings.col.checkIn')} <SortIcon k="check_in" />
                   </th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">退房</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">人數</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">金額</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">來源</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">狀態</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.checkOut')}</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.guests')}</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.amount')}</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.source')}</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500">{t('bookings.col.status')}</th>
                   <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 cursor-pointer select-none" onClick={() => toggleSort('created_at')}>
-                    建立 <SortIcon k="created_at" />
+                    {t('bookings.col.created')} <SortIcon k="created_at" />
                   </th>
                   <th className="px-3 py-2.5" />
                 </tr>
@@ -364,7 +374,7 @@ export default function BookingsPage() {
                       <td className="px-3 py-2.5">
                         <Link href={`/booking/bookings/${b.id}`}
                           className="font-medium text-indigo-600 group-hover:underline">
-                          {b.guest_name || '(無名)'}
+                          {b.guest_name || t('bookings.noName')}
                         </Link>
                         {b.guest_phone && <div className="text-xs text-gray-400">{b.guest_phone}</div>}
                       </td>
@@ -383,7 +393,7 @@ export default function BookingsPage() {
                         </select>
                       </td>
                       <td className="px-3 py-2.5 text-xs text-gray-400">
-                        <div>{new Date(b.created_at).toLocaleDateString('zh-TW')}</div>
+                        <div>{new Date(b.created_at).toLocaleDateString(locale)}</div>
                         {b.notes && (
                           <div className="text-[10px] text-amber-600 mt-0.5 max-w-[100px] truncate" title={b.notes}>⚠ {b.notes}</div>
                         )}
@@ -392,12 +402,12 @@ export default function BookingsPage() {
                         <div className="flex items-center gap-0.5">
                           {b.guest_email && (
                             <button onClick={() => sendConfirmation(b.id)} disabled={sendingNotif === b.id}
-                              title="發送確認信" className="p-1.5 rounded hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 disabled:opacity-50">
+                              title={t('bookings.sendConfirmTitle')} className="p-1.5 rounded hover:bg-indigo-50 text-indigo-400 hover:text-indigo-600 disabled:opacity-50">
                               <Send className="h-3.5 w-3.5" />
                             </button>
                           )}
                           <button onClick={() => removeBooking(b.id)}
-                            title="刪除訂單" className="p-1.5 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-500">
+                            title={t('bookings.deleteTitle')} className="p-1.5 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-500">
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
@@ -416,11 +426,11 @@ export default function BookingsPage() {
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
           onClick={e => { if (e.target === e.currentTarget) setAdding(false) }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto p-5 space-y-3">
-            <h3 className="font-bold text-gray-900">新增訂單</h3>
+            <h3 className="font-bold text-gray-900">{t('bookings.addModalTitle')}</h3>
             {[
-              { label: '旅客姓名 *', key: 'guest_name', placeholder: '王小明' },
-              { label: '電話',       key: 'guest_phone', placeholder: '0912-345-678' },
-              { label: 'Email',      key: 'guest_email', placeholder: 'guest@example.com' },
+              { label: t('bookings.form.guestName'), key: 'guest_name', placeholder: t('bookings.form.guestNamePlaceholder') },
+              { label: t('bookings.form.phone'),     key: 'guest_phone', placeholder: '0912-345-678' },
+              { label: 'Email',                      key: 'guest_email', placeholder: 'guest@example.com' },
             ].map(f => (
               <div key={f.key} className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">{f.label}</label>
@@ -432,24 +442,24 @@ export default function BookingsPage() {
             ))}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">入住 *</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.checkIn')}</label>
                 <input type="date" value={form.check_in} onChange={e => setForm(p => ({ ...p, check_in: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">退房 *</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.checkOut')}</label>
                 <input type="date" value={form.check_out} onChange={e => setForm(p => ({ ...p, check_out: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">人數</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.guests')}</label>
                 <input type="number" min={1} value={form.num_guests} onChange={e => setForm(p => ({ ...p, num_guests: parseInt(e.target.value) }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">金額</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.amount')}</label>
                 <input type="number" value={form.total_price} onChange={e => setForm(p => ({ ...p, total_price: e.target.value }))}
                   placeholder="5000"
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
@@ -457,15 +467,15 @@ export default function BookingsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">房型</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.room')}</label>
                 <select value={form.property_id} onChange={e => setForm(p => ({ ...p, property_id: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                  <option value="">-- 未指定 --</option>
+                  <option value="">{t('bookings.form.unspecified')}</option>
                   {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">通路</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.platform')}</label>
                 <select value={form.platform} onChange={e => setForm(p => ({ ...p, platform: e.target.value }))}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                   {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -475,16 +485,16 @@ export default function BookingsPage() {
             {/* 加購服務 */}
             {profileExtras && (profileExtras.breakfast?.type === 'optional' || profileExtras.addon_services.some(s => s.enabled)) && (
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-gray-600">加購服務</label>
+                <label className="text-xs font-medium text-gray-600">{t('bookings.form.addons')}</label>
                 <div className="rounded-lg border divide-y">
                   {profileExtras.breakfast?.type === 'optional' && (
                     <label className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50">
                       <input type="checkbox" checked={form.extras.breakfast}
                         onChange={e => setForm(p => ({ ...p, extras: { ...p.extras, breakfast: e.target.checked } }))}
                         className="rounded" />
-                      <span className="text-sm text-gray-700">早餐</span>
+                      <span className="text-sm text-gray-700">{t('bookings.form.breakfast')}</span>
                       {profileExtras.breakfast.price_per_person > 0 && (
-                        <span className="text-xs text-gray-400 ml-auto">NT$ {profileExtras.breakfast.price_per_person}/人</span>
+                        <span className="text-xs text-gray-400 ml-auto">NT$ {profileExtras.breakfast.price_per_person}{t('bookings.form.perPerson')}</span>
                       )}
                     </label>
                   )}
@@ -505,7 +515,7 @@ export default function BookingsPage() {
                       {svc.note && <span className="text-xs text-gray-400 truncate">{svc.note}</span>}
                       {svc.price > 0 && (
                         <span className="text-xs text-gray-400 ml-auto shrink-0">
-                          NT$ {svc.price}/{svc.unit === 'per_trip' ? '趟' : svc.unit === 'per_stay' ? '次' : svc.unit === 'per_person' ? '人' : '晚'}
+                          NT$ {svc.price}/{svc.unit === 'per_trip' ? t('units.perTrip') : svc.unit === 'per_stay' ? t('units.perStay') : svc.unit === 'per_person' ? t('units.perPerson') : t('units.perNight')}
                         </span>
                       )}
                     </label>
@@ -516,36 +526,36 @@ export default function BookingsPage() {
 
             {/* 優惠碼 */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">優惠碼</label>
+              <label className="text-xs font-medium text-gray-600">{t('bookings.form.promoCode')}</label>
               <div className="flex gap-2">
                 <input value={promoInput} onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoResult(null) }}
                   onKeyDown={e => e.key === 'Enter' && checkPromo()}
-                  placeholder="輸入優惠碼"
+                  placeholder={t('bookings.form.promoPlaceholder')}
                   className="flex-1 text-sm font-mono border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 <button type="button" onClick={checkPromo} disabled={!promoInput || promoChecking}
                   className="px-3 py-2 rounded-lg border text-sm text-indigo-600 border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 whitespace-nowrap">
-                  {promoChecking ? '…' : '套用'}
+                  {promoChecking ? '…' : t('bookings.form.apply')}
                 </button>
               </div>
               {promoResult && (
                 <div className={`text-xs px-2 py-1 rounded ${promoResult.valid ? 'text-green-700 bg-green-50' : 'text-red-600 bg-red-50'}`}>
                   {promoResult.valid
-                    ? `✓ ${promoResult.name || promoInput} 折扣 NT$ ${promoResult.discount?.toLocaleString()}`
+                    ? `✓ ${t('bookings.form.promoDiscount', { name: promoResult.name || promoInput, discount: promoResult.discount?.toLocaleString() ?? '' })}`
                     : `✗ ${promoResult.error}`}
                 </div>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">備註</label>
+              <label className="text-xs font-medium text-gray-600">{t('bookings.form.notes')}</label>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                 rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setAdding(false)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+              <button onClick={() => setAdding(false)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={save} disabled={!form.guest_name || !form.check_in || !form.check_out || saving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-                {saving ? '儲存中…' : '新增'}
+                {saving ? t('bookings.form.saving') : t('bookings.add')}
               </button>
             </div>
           </div>
