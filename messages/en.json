@@ -1176,5 +1176,28 @@
       "guest": "Guest Interaction",
       "data": "Data & Sync"
     }
+  },
+  "Marketing": {
+    "center": "Marketing Center",
+    "heroBadge": "AI GATE Marketing Center",
+    "heroSubtitle": "A complete AI-driven marketing toolchain — from strategy and content creation to automated execution, all in one place",
+    "coreFeatures": "Core Features",
+    "integratedFeatures": "Integrated Features",
+    "enter": "Enter",
+    "nav": {
+      "auto": "Marketing Automation",
+      "designer": "Product Designer",
+      "expert": "Expert Mode",
+      "prospect": "Prospect Marketing"
+    },
+    "features": {
+      "auto": { "title": "Marketing Automation", "desc": "End-to-end automated marketing — from data gathering, competitor analysis, copywriting, image/video production, to platform uploads", "badge": "Full Feature", "tags": ["Data Gathering", "Copywriting", "Image/Video", "Auto Upload"] },
+      "designer": { "title": "AI Product Marketing Designer", "desc": "Upload a product image; AI generates marketing strategy, content sets, market analysis, and SEO content strategy — a complete marketing package in 4 steps", "badge": "New", "tags": ["Strategy", "Content Sets", "Market Analysis", "SEO Strategy"] },
+      "pipeline": { "title": "Marketing Pipeline", "desc": "Visual scheduling and progress tracking of marketing tasks; manage execution status across campaigns and Telegram approval flows", "badge": "Advanced", "tags": ["Scheduling", "Progress Tracking", "Telegram Approval", "Multi-campaign"] },
+      "prospect": { "title": "Prospect Marketing", "desc": "Auto-gather organizations → AI filter & classify → distance calc → phone calls / emails to proactively develop prospects", "badge": "Dev Tool", "tags": ["Auto Gather", "AI Filter", "Phone Marketing", "Email Marketing"] },
+      "swot": { "title": "Market & Competitor Analysis", "desc": "SWOT analysis, competitor monitoring, consumer behavior insights — AI deep analysis for data-driven decisions", "badge": "In Marketing Automation", "tags": ["SWOT", "Competitor Monitoring", "Consumer Insights", "AI Analysis"] },
+      "audience": { "title": "Target Audience Simulation", "desc": "Multi-dimensional consumer simulation engine predicting how different audiences respond and convert", "badge": "In Marketing Automation", "tags": ["Audience Simulation", "Conversion Prediction", "Sentiment Analysis", "Strategy Optimization"] },
+      "brand": { "title": "Brand Database", "desc": "Centrally manage brand assets, company data, and marketing knowledge base; AI caching saves token cost on every call", "badge": "Managed in Settings", "tags": ["Asset Management", "Company Data", "AI Cache", "Token Saving"] }
+    }
   }
 }

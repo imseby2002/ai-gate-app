@@ -1,25 +1,27 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
-  { href: '/marketing-auto',             label: '行銷自動化',    icon: LayoutDashboard },
-  { href: '/marketing/product-designer', label: '產品設計師',    icon: Palette },
-  { href: '/marketing/skills',           label: '專家模式',      icon: Sparkles },
-  { href: '/prospect-call',              label: '潛在客戶行銷',  icon: Phone },
+  { href: '/marketing-auto',             labelKey: 'nav.auto',     icon: LayoutDashboard },
+  { href: '/marketing/product-designer', labelKey: 'nav.designer', icon: Palette },
+  { href: '/marketing/skills',           labelKey: 'nav.expert',   icon: Sparkles },
+  { href: '/prospect-call',              labelKey: 'nav.prospect', icon: Phone },
 ]
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const t = useTranslations('Marketing')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const navContent = (
     <>
       <div className="flex items-center gap-2 px-2 pb-4">
         <Megaphone className="h-4 w-4 text-indigo-600" />
-        <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">行銷中心</span>
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">{t('center')}</span>
       </div>
       {NAV.map(n => {
         const Icon = n.icon
@@ -29,7 +31,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors
               ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}`}>
             <Icon className="h-4 w-4" />
-            {n.label}
+            {t(n.labelKey)}
           </Link>
         )
       })}
@@ -49,7 +51,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <button onClick={() => setDrawerOpen(true)} className="p-1.5 rounded-lg hover:bg-gray-100">
             <Menu className="h-5 w-5 text-gray-600" />
           </button>
-          <span className="text-sm font-semibold text-gray-800">行銷中心</span>
+          <span className="text-sm font-semibold text-gray-800">{t('center')}</span>
         </div>
         <main className="flex-1 overflow-auto">{children}</main>
       </div>

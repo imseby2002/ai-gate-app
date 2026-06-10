@@ -1175,5 +1175,28 @@
       "guest": "Tương tác khách",
       "data": "Dữ liệu & Đồng bộ"
     }
+  },
+  "Marketing": {
+    "center": "Trung tâm Marketing",
+    "heroBadge": "Trung tâm Marketing AI GATE",
+    "heroSubtitle": "Bộ công cụ marketing hoàn chỉnh do AI điều khiển — từ chiến lược, sáng tạo nội dung đến thực thi tự động, tất cả trong một",
+    "coreFeatures": "Tính năng cốt lõi",
+    "integratedFeatures": "Tính năng tích hợp",
+    "enter": "Vào",
+    "nav": {
+      "auto": "Tự động hóa Marketing",
+      "designer": "Nhà thiết kế sản phẩm",
+      "expert": "Chế độ chuyên gia",
+      "prospect": "Marketing khách tiềm năng"
+    },
+    "features": {
+      "auto": { "title": "Tự động hóa Marketing", "desc": "Marketing tự động đầu-cuối — từ thu thập dữ liệu, phân tích đối thủ, viết nội dung, sản xuất ảnh/video, đến tải lên nền tảng", "badge": "Đầy đủ tính năng", "tags": ["Thu thập dữ liệu", "Viết nội dung", "Ảnh/Video", "Tự động tải lên"] },
+      "designer": { "title": "Nhà thiết kế Marketing sản phẩm AI", "desc": "Tải ảnh sản phẩm; AI tạo chiến lược marketing, bộ nội dung, phân tích thị trường và chiến lược SEO — gói marketing hoàn chỉnh trong 4 bước", "badge": "Mới", "tags": ["Chiến lược", "Bộ nội dung", "Phân tích thị trường", "Chiến lược SEO"] },
+      "pipeline": { "title": "Dây chuyền Marketing", "desc": "Lập lịch trực quan và theo dõi tiến độ nhiệm vụ marketing; quản lý trạng thái thực thi nhiều chiến dịch và quy trình duyệt Telegram", "badge": "Nâng cao", "tags": ["Lập lịch", "Theo dõi tiến độ", "Duyệt Telegram", "Đa chiến dịch"] },
+      "prospect": { "title": "Marketing khách tiềm năng", "desc": "Tự thu thập tổ chức → AI lọc & phân loại → tính khoảng cách → gọi điện / gửi Email để chủ động phát triển khách tiềm năng", "badge": "Công cụ phát triển", "tags": ["Tự thu thập", "AI lọc", "Marketing điện thoại", "Marketing Email"] },
+      "swot": { "title": "Phân tích thị trường & đối thủ", "desc": "Phân tích SWOT, giám sát đối thủ, hiểu hành vi người tiêu dùng — AI phân tích sâu cho quyết định có cơ sở", "badge": "Trong Tự động hóa Marketing", "tags": ["SWOT", "Giám sát đối thủ", "Hiểu khách hàng", "Phân tích AI"] },
+      "audience": { "title": "Mô phỏng nhóm khách mục tiêu", "desc": "Engine mô phỏng người tiêu dùng đa chiều, dự đoán phản ứng và tỷ lệ chuyển đổi của các nhóm khách khác nhau", "badge": "Trong Tự động hóa Marketing", "tags": ["Mô phỏng khách", "Dự đoán chuyển đổi", "Phân tích cảm xúc", "Tối ưu chiến lược"] },
+      "brand": { "title": "Cơ sở dữ liệu thương hiệu", "desc": "Quản lý tập trung tài sản thương hiệu, dữ liệu công ty và cơ sở tri thức marketing; bộ nhớ đệm AI tiết kiệm chi phí token mỗi lần gọi", "badge": "Quản lý trong Cài đặt", "tags": ["Quản lý tài sản", "Dữ liệu công ty", "Bộ nhớ đệm AI", "Tiết kiệm token"] }
+    }
   }
 }
