@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import {
   ChevronLeft, Upload, Sparkles, CheckCircle2, Loader2,
@@ -70,10 +71,10 @@ interface ContentStrategy {
 // ─── Step Config ───────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 1, label: '策略規劃', icon: Sparkles, desc: '分析產品，生成 3 條行銷路線' },
-  { id: 2, label: '內容組合', icon: LayoutGrid, desc: '8 件 AIDA 行銷素材' },
-  { id: 3, label: '市場分析', icon: BarChart3, desc: '競品、受眾、市場定位' },
-  { id: 4, label: '內容策略', icon: FileText, desc: 'SEO、CTA、排程計畫' },
+  { id: 1, labelKey: 'pd.steps.1', icon: Sparkles },
+  { id: 2, labelKey: 'pd.steps.2', icon: LayoutGrid },
+  { id: 3, labelKey: 'pd.steps.3', icon: BarChart3 },
+  { id: 4, labelKey: 'pd.steps.4', icon: FileText },
 ]
 
 const AIDA_COLORS: Record<string, string> = {
@@ -85,6 +86,7 @@ const AIDA_COLORS: Record<string, string> = {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function ProductDesignerPage() {
+  const t = useTranslations('Marketing')
   const [activeStep, setActiveStep] = useState(1)
 
   // Form state
@@ -134,7 +136,7 @@ export default function ProductDesignerPage() {
 
   // Phase 1 — Analyze
   const runPhase1 = async () => {
-    if (!productName.trim()) { setPhaseError(1, '請輸入產品名稱'); return }
+    if (!productName.trim()) { setPhaseError(1, t('pd.errProductName')); return }
     setPhaseLoading(1, true); setPhaseError(1, '')
     try {
       let imageBase64: string | undefined
@@ -162,7 +164,7 @@ export default function ProductDesignerPage() {
 
   // Phase 2 — Content Plan
   const runPhase2 = async () => {
-    if (selectedRouteIdx === null) { setPhaseError(2, '請先選擇行銷路線'); return }
+    if (selectedRouteIdx === null) { setPhaseError(2, t('pd.errSelectRoute')); return }
     setPhaseLoading(2, true); setPhaseError(2, '')
     try {
       const res = await fetch('/api/marketing/product-designer/plan', {
@@ -251,14 +253,14 @@ export default function ProductDesignerPage() {
       <div className="shrink-0 border-b bg-white dark:bg-card px-4 py-3 flex items-center gap-3">
         <Link href="/marketing" className="flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors">
           <ChevronLeft className="h-4 w-4" />
-          行銷中心
+          {t('center')}
         </Link>
         <span className="text-muted-foreground">/</span>
         <div className="flex items-center gap-2">
           <div className="h-6 w-6 rounded-md bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
             <Sparkles className="h-3.5 w-3.5 text-white" />
           </div>
-          <span className="font-semibold text-sm">AI 產品行銷設計師</span>
+          <span className="font-semibold text-sm">{t('features.designer.title')}</span>
         </div>
       </div>
 
@@ -292,7 +294,7 @@ export default function ProductDesignerPage() {
                     {idx + 1}
                   </span>
                 )}
-                <span className="hidden sm:block">{step.label}</span>
+                <span className="hidden sm:block">{t(step.labelKey)}</span>
                 <Icon className="h-3.5 w-3.5 sm:hidden" />
               </button>
             )
@@ -308,34 +310,34 @@ export default function ProductDesignerPage() {
           {activeStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-bold">第一步：策略規劃</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">輸入產品資訊，AI 生成 3 條截然不同的行銷路線</p>
+                <h2 className="text-lg font-bold">{t('pd.step1Title')}</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{t('pd.step1Desc')}</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left: Form */}
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium mb-1 block">產品名稱 *</label>
-                    <Input value={productName} onChange={e => setProductName(e.target.value)} placeholder="例：AIR MAX 跑鞋" />
+                    <label className="text-sm font-medium mb-1 block">{t('pd.productName')}</label>
+                    <Input value={productName} onChange={e => setProductName(e.target.value)} placeholder={t('pd.productNamePh')} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">產業類別</label>
-                    <Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="例：運動用品、美妝保養、食品飲料" />
+                    <label className="text-sm font-medium mb-1 block">{t('pd.industry')}</label>
+                    <Input value={industry} onChange={e => setIndustry(e.target.value)} placeholder={t('pd.industryPh')} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">產品描述</label>
-                    <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="描述產品特點、功能、材質、使用情境..." rows={3} />
+                    <label className="text-sm font-medium mb-1 block">{t('pd.description')}</label>
+                    <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder={t('pd.descriptionPh')} rows={3} />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">目標客群</label>
-                    <Input value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder="例：25-40 歲都市女性白領" />
+                    <label className="text-sm font-medium mb-1 block">{t('pd.targetAudience')}</label>
+                    <Input value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder={t('pd.targetAudiencePh')} />
                   </div>
                 </div>
 
                 {/* Right: Image upload */}
                 <div>
-                  <label className="text-sm font-medium mb-1 block">產品圖片（選填，提升分析準確度）</label>
+                  <label className="text-sm font-medium mb-1 block">{t('pd.productImage')}</label>
                   <div
                     onClick={() => fileRef.current?.click()}
                     className={cn(
@@ -349,14 +351,14 @@ export default function ProductDesignerPage() {
                     ) : (
                       <>
                         <Upload className="h-8 w-8 text-muted-foreground" />
-                        <p className="text-sm font-medium">點擊上傳產品圖</p>
-                        <p className="text-xs text-muted-foreground">JPG / PNG / WebP，建議 1:1</p>
+                        <p className="text-sm font-medium">{t('pd.uploadHint')}</p>
+                        <p className="text-xs text-muted-foreground">{t('pd.uploadFormats')}</p>
                       </>
                     )}
                   </div>
                   <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
                   {imagePreview && (
-                    <button className="text-xs text-muted-foreground mt-1 hover:text-foreground" onClick={() => { setImageFile(null); setImagePreview(null) }}>移除圖片</button>
+                    <button className="text-xs text-muted-foreground mt-1 hover:text-foreground" onClick={() => { setImageFile(null); setImagePreview(null) }}>{t('pd.removeImage')}</button>
                   )}
                 </div>
               </div>
@@ -365,7 +367,7 @@ export default function ProductDesignerPage() {
 
               <Button onClick={runPhase1} disabled={loading[1]} className="gap-2">
                 {loading[1] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {loading[1] ? '分析中...' : '生成行銷策略'}
+                {loading[1] ? t('pd.analyzing') : t('pd.genStrategy')}
               </Button>
 
               {/* Results: 3 routes */}
@@ -373,8 +375,8 @@ export default function ProductDesignerPage() {
                 <div className="space-y-4">
                   {productAnalysis && (
                     <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
-                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-1">產品分析完成</p>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-400">核心價值：{productAnalysis.core_value}</p>
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-1">{t('pd.analysisComplete')}</p>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">{t('pd.coreValuePrefix', { value: productAnalysis.core_value })}</p>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {productAnalysis.key_features.map(f => (
                           <span key={f} className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">{f}</span>
@@ -383,7 +385,7 @@ export default function ProductDesignerPage() {
                     </div>
                   )}
 
-                  <h3 className="font-semibold">選擇行銷路線</h3>
+                  <h3 className="font-semibold">{t('pd.selectRoute')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {routes.map((route, idx) => (
                       <RouteCard
@@ -398,11 +400,11 @@ export default function ProductDesignerPage() {
                   {selectedRouteIdx !== null && (
                     <div className="flex gap-3 pt-2">
                       <Button onClick={() => setActiveStep(2)} className="gap-2">
-                        下一步：內容組合
+                        {t('pd.nextContent')}
                         <Sparkles className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" onClick={() => setActiveStep(3)} className="gap-2">
-                        跳至：市場分析
+                        {t('pd.jumpMarket')}
                       </Button>
                     </div>
                   )}
@@ -416,12 +418,12 @@ export default function ProductDesignerPage() {
             <div className="space-y-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-lg font-bold">第二步：內容組合</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">根據選定路線生成 8 件 AIDA 行銷素材</p>
+                  <h2 className="text-lg font-bold">{t('pd.step2Title')}</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">{t('pd.step2Desc')}</p>
                 </div>
                 {selectedRouteIdx !== null && routes[selectedRouteIdx] && (
                   <div className="text-right text-sm">
-                    <p className="text-muted-foreground text-xs">使用路線</p>
+                    <p className="text-muted-foreground text-xs">{t('pd.usingRoute')}</p>
                     <p className="font-semibold">{routes[selectedRouteIdx].route_name}</p>
                   </div>
                 )}
@@ -431,7 +433,7 @@ export default function ProductDesignerPage() {
 
               <Button onClick={runPhase2} disabled={loading[2]} className="gap-2">
                 {loading[2] ? <Loader2 className="h-4 w-4 animate-spin" /> : <LayoutGrid className="h-4 w-4" />}
-                {loading[2] ? '生成中...' : contentItems.length > 0 ? '重新生成' : '生成內容組合'}
+                {loading[2] ? t('pd.generating') : contentItems.length > 0 ? t('pd.regenerate') : t('pd.genContent')}
               </Button>
 
               {contentItems.length > 0 && (
@@ -444,7 +446,7 @@ export default function ProductDesignerPage() {
 
               {contentItems.length > 0 && (
                 <Button variant="outline" onClick={() => setActiveStep(3)} className="gap-2">
-                  下一步：市場分析 <BarChart3 className="h-4 w-4" />
+                  {t('pd.nextMarket')} <BarChart3 className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -454,22 +456,22 @@ export default function ProductDesignerPage() {
           {activeStep === 3 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-bold">第三步：市場分析</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">競品分析、買家畫像、市場定位</p>
+                <h2 className="text-lg font-bold">{t('pd.step3Title')}</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{t('pd.step3Desc')}</p>
               </div>
 
               {error[3] && <p className="text-sm text-red-500">{error[3]}</p>}
 
               <Button onClick={runPhase3} disabled={loading[3]} className="gap-2">
                 {loading[3] ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
-                {loading[3] ? '分析中...' : marketAnalysis ? '重新分析' : '執行市場分析'}
+                {loading[3] ? t('pd.analyzing') : marketAnalysis ? t('pd.reanalyze') : t('pd.runMarket')}
               </Button>
 
               {marketAnalysis && <MarketAnalysisView data={marketAnalysis} />}
 
               {marketAnalysis && (
                 <Button variant="outline" onClick={() => setActiveStep(4)} className="gap-2">
-                  下一步：內容策略 <FileText className="h-4 w-4" />
+                  {t('pd.nextStrategy')} <FileText className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -479,23 +481,23 @@ export default function ProductDesignerPage() {
           {activeStep === 4 && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-bold">第四步：內容策略</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">SEO 主題、發文行事曆、CTA 變體、AI Studio 提示詞</p>
+                <h2 className="text-lg font-bold">{t('pd.step4Title')}</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{t('pd.step4Desc')}</p>
               </div>
 
               {error[4] && <p className="text-sm text-red-500">{error[4]}</p>}
 
               <Button onClick={runPhase4} disabled={loading[4]} className="gap-2">
                 {loading[4] ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                {loading[4] ? '生成中...' : contentStrategy ? '重新生成' : '生成內容策略'}
+                {loading[4] ? t('pd.generating') : contentStrategy ? t('pd.regenerate') : t('pd.genStrategy2')}
               </Button>
 
               {contentStrategy && <ContentStrategyView data={contentStrategy} />}
 
               {contentStrategy && (
                 <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 rounded-xl text-sm text-emerald-700 dark:text-emerald-400">
-                  <p className="font-semibold mb-1">完成！</p>
-                  <p>所有 4 個階段已完成。前往<Link href="/marketing-auto" className="underline mx-1">行銷自動化</Link>將素材投入全流程自動化執行。</p>
+                  <p className="font-semibold mb-1">{t('pd.allDone')}</p>
+                  <p>{t('pd.allDonePre')}<Link href="/marketing-auto" className="underline mx-1">{t('nav.auto')}</Link>{t('pd.allDonePost')}</p>
                 </div>
               )}
             </div>
@@ -510,6 +512,7 @@ export default function ProductDesignerPage() {
 // ─── Sub Components ────────────────────────────────────────────────────────────
 
 function RouteCard({ route, selected, onSelect }: { route: MarketingRoute; selected: boolean; onSelect: () => void }) {
+  const t = useTranslations('Marketing')
   const [expanded, setExpanded] = useState(false)
   return (
     <div
@@ -528,23 +531,23 @@ function RouteCard({ route, selected, onSelect }: { route: MarketingRoute; selec
       <p className="font-bold text-sm mb-0.5">{route.route_name}</p>
       <p className="text-primary font-semibold text-sm mb-1">{route.headline}</p>
       <p className="text-xs text-muted-foreground mb-2">{route.subhead}</p>
-      <p className="text-xs text-muted-foreground">受眾：{route.target_audience}</p>
+      <p className="text-xs text-muted-foreground">{t('pd.audiencePrefix', { audience: route.target_audience })}</p>
 
       <button
         onClick={e => { e.stopPropagation(); setExpanded(!expanded) }}
         className="flex items-center gap-1 text-xs text-muted-foreground mt-2 hover:text-foreground"
       >
         {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        {expanded ? '收合' : '查看詳情'}
+        {expanded ? t('pd.collapse') : t('pd.viewDetails')}
       </button>
 
       {expanded && (
         <div className="mt-2 space-y-1.5 text-xs text-muted-foreground border-t pt-2">
-          <p><span className="font-medium text-foreground">訴求：</span>{route.key_message}</p>
-          <p><span className="font-medium text-foreground">視覺：</span>{route.visual_style}</p>
-          <p><span className="font-medium text-foreground">說服角度：</span>{route.persuasion_angle}</p>
+          <p><span className="font-medium text-foreground">{t('pd.appeal')}</span>{route.key_message}</p>
+          <p><span className="font-medium text-foreground">{t('pd.visual')}</span>{route.visual_style}</p>
+          <p><span className="font-medium text-foreground">{t('pd.persuasion')}</span>{route.persuasion_angle}</p>
           <div>
-            <p className="font-medium text-foreground mb-1">圖片提示詞：</p>
+            <p className="font-medium text-foreground mb-1">{t('pd.imagePrompts')}</p>
             {route.image_prompts.map((p, i) => (
               <p key={i} className="bg-slate-100 dark:bg-slate-800 rounded px-2 py-1 mb-1">{p}</p>
             ))}
@@ -556,8 +559,9 @@ function RouteCard({ route, selected, onSelect }: { route: MarketingRoute; selec
 }
 
 function ContentItemCard({ item, onGenerateImage }: { item: ContentItem; onGenerateImage: () => void }) {
+  const t = useTranslations('Marketing')
   const [showPrompt, setShowPrompt] = useState(false)
-  const aidaLabel = item.aida_stage === 'A' ? '注意' : item.aida_stage === 'I' ? '興趣' : item.aida_stage === 'D' ? '慾望' : '行動'
+  const aidaLabel = item.aida_stage === 'A' ? t('pd.aida.A') : item.aida_stage === 'I' ? t('pd.aida.I') : item.aida_stage === 'D' ? t('pd.aida.D') : t('pd.aida.action')
   const aidaColor = AIDA_COLORS[item.aida_stage] ?? 'bg-blue-100 text-blue-700'
 
   return (
@@ -587,7 +591,7 @@ function ContentItemCard({ item, onGenerateImage }: { item: ContentItem; onGener
         <div className="flex gap-2">
           <Button size="sm" variant="outline" className="flex-1 h-7 text-xs gap-1" onClick={onGenerateImage} disabled={item.generatingImage}>
             {item.generatingImage ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImageIcon className="h-3 w-3" />}
-            生成圖片
+            {t('pd.genImage')}
           </Button>
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setShowPrompt(!showPrompt)}>
             {showPrompt ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -596,7 +600,7 @@ function ContentItemCard({ item, onGenerateImage }: { item: ContentItem; onGener
 
         {showPrompt && (
           <div className="mt-2 text-xs bg-slate-50 dark:bg-slate-800 rounded p-2 relative">
-            <p className="text-muted-foreground mb-1 font-medium">圖片提示詞：</p>
+            <p className="text-muted-foreground mb-1 font-medium">{t('pd.imagePrompts')}</p>
             <p className="leading-relaxed pr-6">{item.visual_prompt_en}</p>
             <button
               onClick={() => navigator.clipboard.writeText(item.visual_prompt_en)}
@@ -604,7 +608,7 @@ function ContentItemCard({ item, onGenerateImage }: { item: ContentItem; onGener
             >
               <Copy className="h-3 w-3" />
             </button>
-            <p className="text-muted-foreground mt-2 font-medium">視覺摘要：</p>
+            <p className="text-muted-foreground mt-2 font-medium">{t('pd.visualSummary')}</p>
             <p>{item.visual_summary}</p>
           </div>
         )}
@@ -614,11 +618,12 @@ function ContentItemCard({ item, onGenerateImage }: { item: ContentItem; onGener
 }
 
 function MarketAnalysisView({ data }: { data: MarketAnalysis }) {
+  const t = useTranslations('Marketing')
   return (
     <div className="space-y-4">
       {/* Core value */}
       <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 rounded-xl p-4">
-        <p className="font-semibold text-violet-800 dark:text-violet-300 mb-1">核心價值主張</p>
+        <p className="font-semibold text-violet-800 dark:text-violet-300 mb-1">{t('pd.coreValueProp')}</p>
         <p className="text-sm font-bold text-violet-700 dark:text-violet-400 mb-2">{data.core_value?.statement}</p>
         <div className="flex flex-wrap gap-1.5">
           {data.core_value?.differentiators?.map(d => (
@@ -629,35 +634,35 @@ function MarketAnalysisView({ data }: { data: MarketAnalysis }) {
 
       {/* Market positioning */}
       <div className="border rounded-xl p-4">
-        <p className="font-semibold mb-2">市場定位</p>
+        <p className="font-semibold mb-2">{t('pd.marketPositioning')}</p>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div><p className="text-muted-foreground text-xs">市場類別</p><p className="font-medium">{data.market_positioning?.category}</p></div>
-          <div><p className="text-muted-foreground text-xs">價格區間</p><p className="font-medium">{data.market_positioning?.price_tier}</p></div>
-          <div className="col-span-2"><p className="text-muted-foreground text-xs">定位宣言</p><p className="font-medium">{data.market_positioning?.positioning_statement}</p></div>
-          <div><p className="text-muted-foreground text-xs">市場規模</p><p className="font-medium">{data.market_positioning?.market_size_estimate}</p></div>
-          <div><p className="text-muted-foreground text-xs">趨勢</p><p className="font-medium">{data.market_positioning?.growth_trend}</p></div>
+          <div><p className="text-muted-foreground text-xs">{t('pd.mCategory')}</p><p className="font-medium">{data.market_positioning?.category}</p></div>
+          <div><p className="text-muted-foreground text-xs">{t('pd.priceTier')}</p><p className="font-medium">{data.market_positioning?.price_tier}</p></div>
+          <div className="col-span-2"><p className="text-muted-foreground text-xs">{t('pd.positioningStatement')}</p><p className="font-medium">{data.market_positioning?.positioning_statement}</p></div>
+          <div><p className="text-muted-foreground text-xs">{t('pd.marketSize')}</p><p className="font-medium">{data.market_positioning?.market_size_estimate}</p></div>
+          <div><p className="text-muted-foreground text-xs">{t('pd.trend')}</p><p className="font-medium">{data.market_positioning?.growth_trend}</p></div>
         </div>
       </div>
 
       {/* Competitors */}
       {data.competitors?.length > 0 && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">競爭對手分析</p>
+          <p className="font-semibold mb-3">{t('pd.competitorAnalysis')}</p>
           <div className="space-y-3">
             {data.competitors.map((c, i) => (
               <div key={i} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
                 <p className="font-semibold text-sm mb-1">{c.name}</p>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <p className="text-emerald-600 font-medium mb-0.5">優勢</p>
+                    <p className="text-emerald-600 font-medium mb-0.5">{t('pd.strengths')}</p>
                     {c.strengths?.map(s => <p key={s} className="text-muted-foreground">• {s}</p>)}
                   </div>
                   <div>
-                    <p className="text-red-500 font-medium mb-0.5">弱點</p>
+                    <p className="text-red-500 font-medium mb-0.5">{t('pd.weaknesses')}</p>
                     {c.weaknesses?.map(w => <p key={w} className="text-muted-foreground">• {w}</p>)}
                   </div>
                   <div>
-                    <p className="text-primary font-medium mb-0.5">我方優勢</p>
+                    <p className="text-primary font-medium mb-0.5">{t('pd.ourAdvantage')}</p>
                     <p className="text-muted-foreground">{c.our_advantage}</p>
                   </div>
                 </div>
@@ -670,17 +675,17 @@ function MarketAnalysisView({ data }: { data: MarketAnalysis }) {
       {/* Buyer personas */}
       {data.buyer_personas?.length > 0 && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">買家畫像</p>
+          <p className="font-semibold mb-3">{t('pd.buyerPersonas')}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {data.buyer_personas.map((p, i) => (
               <div key={i} className="border rounded-lg p-3 text-sm">
                 <p className="font-bold mb-0.5">{p.name}</p>
                 <p className="text-xs text-muted-foreground mb-2">{p.age_range} · {p.occupation}</p>
-                <p className="text-xs font-medium text-red-500 mb-0.5">痛點</p>
+                <p className="text-xs font-medium text-red-500 mb-0.5">{t('pd.painPoints')}</p>
                 {p.pain_points?.map(pt => <p key={pt} className="text-xs text-muted-foreground">• {pt}</p>)}
-                <p className="text-xs font-medium text-emerald-600 mt-1.5 mb-0.5">動機</p>
+                <p className="text-xs font-medium text-emerald-600 mt-1.5 mb-0.5">{t('pd.motivations')}</p>
                 {p.motivations?.map(m => <p key={m} className="text-xs text-muted-foreground">• {m}</p>)}
-                <p className="text-xs font-medium text-primary mt-1.5 mb-0.5">搜尋關鍵字</p>
+                <p className="text-xs font-medium text-primary mt-1.5 mb-0.5">{t('pd.searchKeywords')}</p>
                 <div className="flex flex-wrap gap-1">
                   {p.search_keywords?.map(k => <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">{k}</span>)}
                 </div>
@@ -694,22 +699,23 @@ function MarketAnalysisView({ data }: { data: MarketAnalysis }) {
 }
 
 function ContentStrategyView({ data }: { data: ContentStrategy }) {
+  const t = useTranslations('Marketing')
   return (
     <div className="space-y-4">
       {/* SEO Topics */}
       {data.seo_topics?.length > 0 && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">SEO 文章主題</p>
+          <p className="font-semibold mb-3">{t('pd.seoTopics')}</p>
           <div className="space-y-3">
-            {data.seo_topics.map((t, i) => (
+            {data.seo_topics.map((topic, i) => (
               <div key={i} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
                 <div className="flex items-start justify-between mb-1">
-                  <p className="font-semibold text-sm">{t.title}</p>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-2 shrink-0">{t.search_intent}</span>
+                  <p className="font-semibold text-sm">{topic.title}</p>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-2 shrink-0">{topic.search_intent}</span>
                 </div>
-                <p className="text-xs text-primary mb-1">關鍵字：{t.keyword} · {t.estimated_volume}</p>
+                <p className="text-xs text-primary mb-1">{t('pd.keywordPrefix', { keyword: topic.keyword, volume: topic.estimated_volume })}</p>
                 <div className="text-xs text-muted-foreground space-y-0.5">
-                  {t.outline?.map((o, j) => <p key={j}>• {o}</p>)}
+                  {topic.outline?.map((o, j) => <p key={j}>• {o}</p>)}
                 </div>
               </div>
             ))}
@@ -720,7 +726,7 @@ function ContentStrategyView({ data }: { data: ContentStrategy }) {
       {/* CTA Variants */}
       {data.cta_variants?.length > 0 && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">CTA 行動呼籲變體</p>
+          <p className="font-semibold mb-3">{t('pd.ctaVariants')}</p>
           <div className="space-y-2">
             {data.cta_variants.map((c, i) => (
               <div key={i} className="flex items-start gap-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
@@ -741,11 +747,11 @@ function ContentStrategyView({ data }: { data: ContentStrategy }) {
       {/* Content Calendar */}
       {data.content_calendar?.length > 0 && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">發文行事曆（4 週）</p>
+          <p className="font-semibold mb-3">{t('pd.contentCalendar')}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {data.content_calendar.map((w, i) => (
               <div key={i} className="border rounded-lg p-3">
-                <p className="text-xs text-muted-foreground">第 {w.week} 週</p>
+                <p className="text-xs text-muted-foreground">{t('pd.weekN', { n: w.week })}</p>
                 <p className="font-semibold text-sm mb-1">{w.theme}</p>
                 <p className="text-xs text-muted-foreground mb-1.5">{w.key_message}</p>
                 <div className="flex flex-wrap gap-1">
@@ -761,7 +767,7 @@ function ContentStrategyView({ data }: { data: ContentStrategy }) {
       {/* AI Studio Prompts */}
       {data.ai_studio_prompts?.length > 0 && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">AI Studio 登陸頁提示詞</p>
+          <p className="font-semibold mb-3">{t('pd.aiStudioPrompts')}</p>
           <div className="space-y-3">
             {data.ai_studio_prompts.map((p, i) => (
               <div key={i} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3">
@@ -781,12 +787,12 @@ function ContentStrategyView({ data }: { data: ContentStrategy }) {
       {/* Hashtags */}
       {data.hashtag_strategy && (
         <div className="border rounded-xl p-4">
-          <p className="font-semibold mb-3">Hashtag 策略</p>
+          <p className="font-semibold mb-3">{t('pd.hashtagStrategy')}</p>
           <div className="space-y-2">
             {[
-              { label: '品牌標籤', tags: data.hashtag_strategy.brand_tags, color: 'bg-violet-100 text-violet-700' },
-              { label: '行業標籤', tags: data.hashtag_strategy.industry_tags, color: 'bg-blue-100 text-blue-700' },
-              { label: '熱門標籤', tags: data.hashtag_strategy.trending_tags, color: 'bg-orange-100 text-orange-700' },
+              { label: t('pd.brandTags'), tags: data.hashtag_strategy.brand_tags, color: 'bg-violet-100 text-violet-700' },
+              { label: t('pd.industryTags'), tags: data.hashtag_strategy.industry_tags, color: 'bg-blue-100 text-blue-700' },
+              { label: t('pd.trendingTags'), tags: data.hashtag_strategy.trending_tags, color: 'bg-orange-100 text-orange-700' },
             ].map(group => (
               <div key={group.label}>
                 <p className="text-xs text-muted-foreground mb-1">{group.label}</p>
