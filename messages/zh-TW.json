@@ -269,5 +269,54 @@
     "fg_int_kb_label": "知識庫搜尋", "fg_int_kb_desc": "客服輸入關鍵字，AI 即時推薦相關答案",
     "fg_int_pricing_label": "定價計算機", "fg_int_pricing_desc": "AI 自動套公式計算並告知客戶報價",
     "fg_int_close_label": "自動結案", "fg_int_close_desc": "問題解決後自動發滿意度問卷，無回應自動關閉"
+  },
+  "Booking": {
+    "title": "訂房管理",
+    "common": {
+      "viewAll": "查看全部",
+      "loading": "載入中…"
+    },
+    "platform": {
+      "manual": "手動",
+      "direct": "直訂"
+    },
+    "dashboard": {
+      "title": "訂房總覽",
+      "loadError": "資料載入失敗，請重新整理頁面或稍後再試。",
+      "checkInToday": "今日入住",
+      "checkOutToday": "今日退房",
+      "within7": "7天內入住",
+      "pending": "待確認",
+      "onlineRequests": "線上訂房申請",
+      "unknownGuest": "(未知旅客)",
+      "checkOutLabel": "退房",
+      "next7Title": "未來 7 天訂單",
+      "noUpcoming": "未來 7 天無新訂單"
+    },
+    "nav": {
+      "overview": "總覽",
+      "profile": "民宿資料",
+      "website": "官網編輯器",
+      "properties": "房型管理",
+      "pricing": "定價管理",
+      "promos": "優惠碼",
+      "team": "協作成員",
+      "daily": "每日入住",
+      "bookings": "訂單",
+      "publicBookings": "線上訂房",
+      "calendar": "日曆",
+      "roomgrid": "空房表",
+      "notifications": "通知信",
+      "reviews": "評價管理",
+      "reports": "數據報表",
+      "ical": "iCal 同步",
+      "email": "Email 擷取"
+    },
+    "group": {
+      "property": "民宿設定",
+      "orders": "訂單管理",
+      "guest": "旅客互動",
+      "data": "數據與同步"
+    }
   }
 }

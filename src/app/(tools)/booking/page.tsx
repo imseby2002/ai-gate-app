@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { CalendarDays, Users, AlertCircle, CheckCircle2, Globe } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,13 +18,15 @@ const PLATFORM_COLORS: Record<string, string> = {
   manual:      'bg-gray-100 text-gray-700',
   direct:      'bg-green-100 text-green-800',
 }
-const PLATFORM_NAMES: Record<string, string> = {
-  booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
-  trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
-  manual: '手動', direct: '直訂',
-}
 
 export default function BookingDashboard() {
+  const t = useTranslations('Booking')
+  const locale = useLocale()
+  const PLATFORM_NAMES: Record<string, string> = {
+    booking_com: 'Booking.com', agoda: 'Agoda', airbnb: 'Airbnb',
+    trip_com: 'Trip.com', asiayo: 'AsiaYo', easytravel: 'EasyTravel',
+    manual: t('platform.manual'), direct: t('platform.direct'),
+  }
   const [bookings, setBookings] = useState<Booking[]>([])
   const [pendingOnline, setPendingOnline] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -47,25 +50,25 @@ export default function BookingDashboard() {
   const upcoming = bookings.filter(b => b.check_in > today && b.check_in <= in7 && b.status === 'confirmed')
 
   const stats = [
-    { label: '今日入住',    value: checkingInToday.length,                              icon: Users,        color: 'bg-green-50 text-green-700 border-green-200',  href: null },
-    { label: '今日退房',    value: checkingOutToday.length,                             icon: CheckCircle2, color: 'bg-blue-50 text-blue-700 border-blue-200',    href: null },
-    { label: '7天內入住',   value: upcoming.length,                                      icon: CalendarDays, color: 'bg-indigo-50 text-indigo-700 border-indigo-200', href: null },
-    { label: '待確認',      value: bookings.filter(b => b.status === 'pending').length,  icon: AlertCircle,  color: 'bg-amber-50 text-amber-700 border-amber-200',  href: null },
-    { label: '線上訂房申請', value: pendingOnline,                                       icon: Globe,        color: 'bg-rose-50 text-rose-700 border-rose-200',     href: '/booking/public-bookings' },
+    { label: t('dashboard.checkInToday'),  value: checkingInToday.length,                              icon: Users,        color: 'bg-green-50 text-green-700 border-green-200',  href: null },
+    { label: t('dashboard.checkOutToday'), value: checkingOutToday.length,                             icon: CheckCircle2, color: 'bg-blue-50 text-blue-700 border-blue-200',    href: null },
+    { label: t('dashboard.within7'),       value: upcoming.length,                                      icon: CalendarDays, color: 'bg-indigo-50 text-indigo-700 border-indigo-200', href: null },
+    { label: t('dashboard.pending'),       value: bookings.filter(b => b.status === 'pending').length,  icon: AlertCircle,  color: 'bg-amber-50 text-amber-700 border-amber-200',  href: null },
+    { label: t('dashboard.onlineRequests'), value: pendingOnline,                                      icon: Globe,        color: 'bg-rose-50 text-rose-700 border-rose-200',     href: '/booking/public-bookings' },
   ]
 
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-5xl">
       <div>
-        <h1 className="text-xl font-bold text-gray-900">訂房總覽</h1>
+        <h1 className="text-xl font-bold text-gray-900">{t('dashboard.title')}</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          {new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+          {new Date().toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
         </p>
       </div>
 
       {loadError && (
         <div className="bg-rose-50 border border-rose-200 text-rose-600 text-sm rounded-lg px-3 py-2">
-          資料載入失敗，請重新整理頁面或稍後再試。
+          {t('dashboard.loadError')}
         </div>
       )}
 
@@ -91,13 +94,13 @@ export default function BookingDashboard() {
       {/* Today check-ins */}
       {checkingInToday.length > 0 && (
         <div className="bg-white rounded-xl border p-4 space-y-3">
-          <h2 className="font-semibold text-sm text-gray-800">今日入住</h2>
+          <h2 className="font-semibold text-sm text-gray-800">{t('dashboard.checkInToday')}</h2>
           <div className="space-y-2">
             {checkingInToday.map(b => (
               <div key={b.id} className="flex items-center justify-between gap-2 p-3 bg-green-50 rounded-lg border border-green-100">
                 <div className="min-w-0">
-                  <div className="font-medium text-sm text-gray-900 truncate">{b.guest_name || '(未知旅客)'}</div>
-                  <div className="text-xs text-gray-500">{b.properties?.name} · 退房 {b.check_out}</div>
+                  <div className="font-medium text-sm text-gray-900 truncate">{b.guest_name || t('dashboard.unknownGuest')}</div>
+                  <div className="text-xs text-gray-500">{b.properties?.name} · {t('dashboard.checkOutLabel')} {b.check_out}</div>
                 </div>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${PLATFORM_COLORS[b.platform] ?? 'bg-gray-100 text-gray-600'}`}>
                   {PLATFORM_NAMES[b.platform] ?? b.platform}
@@ -111,19 +114,19 @@ export default function BookingDashboard() {
       {/* Upcoming 7 days */}
       <div className="bg-white rounded-xl border p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-sm text-gray-800">未來 7 天訂單</h2>
-          <Link href="/booking/bookings" className="text-xs text-indigo-600 hover:underline">查看全部</Link>
+          <h2 className="font-semibold text-sm text-gray-800">{t('dashboard.next7Title')}</h2>
+          <Link href="/booking/bookings" className="text-xs text-indigo-600 hover:underline">{t('common.viewAll')}</Link>
         </div>
         {loading ? (
-          <div className="text-sm text-gray-400 py-4 text-center">載入中…</div>
+          <div className="text-sm text-gray-400 py-4 text-center">{t('common.loading')}</div>
         ) : upcoming.length === 0 ? (
-          <div className="text-sm text-gray-400 py-4 text-center">未來 7 天無新訂單</div>
+          <div className="text-sm text-gray-400 py-4 text-center">{t('dashboard.noUpcoming')}</div>
         ) : (
           <div className="divide-y">
             {upcoming.slice(0, 10).map(b => (
               <div key={b.id} className="flex items-center justify-between gap-2 py-2.5">
                 <div className="min-w-0">
-                  <div className="font-medium text-sm text-gray-900 truncate">{b.guest_name || '(未知旅客)'}</div>
+                  <div className="font-medium text-sm text-gray-900 truncate">{b.guest_name || t('dashboard.unknownGuest')}</div>
                   <div className="text-xs text-gray-500 truncate">{b.properties?.name} · {b.check_in} → {b.check_out}</div>
                 </div>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${PLATFORM_COLORS[b.platform] ?? 'bg-gray-100 text-gray-600'}`}>

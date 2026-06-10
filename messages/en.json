@@ -269,5 +269,54 @@
     "fg_int_kb_label": "Knowledge Base Search", "fg_int_kb_desc": "Agents type a keyword; AI instantly recommends relevant answers",
     "fg_int_pricing_label": "Pricing Calculator", "fg_int_pricing_desc": "AI auto-applies formulas and quotes customers",
     "fg_int_close_label": "Auto Close", "fg_int_close_desc": "Auto-send satisfaction survey after resolution; auto-close if no response"
+  },
+  "Booking": {
+    "title": "Booking Management",
+    "common": {
+      "viewAll": "View all",
+      "loading": "Loading…"
+    },
+    "platform": {
+      "manual": "Manual",
+      "direct": "Direct"
+    },
+    "dashboard": {
+      "title": "Booking Overview",
+      "loadError": "Failed to load data. Please refresh the page or try again later.",
+      "checkInToday": "Check-ins Today",
+      "checkOutToday": "Check-outs Today",
+      "within7": "Check-ins in 7 Days",
+      "pending": "Pending",
+      "onlineRequests": "Online Booking Requests",
+      "unknownGuest": "(Unknown guest)",
+      "checkOutLabel": "Check-out",
+      "next7Title": "Bookings in Next 7 Days",
+      "noUpcoming": "No new bookings in the next 7 days"
+    },
+    "nav": {
+      "overview": "Overview",
+      "profile": "Property Info",
+      "website": "Website Editor",
+      "properties": "Room Types",
+      "pricing": "Pricing",
+      "promos": "Promo Codes",
+      "team": "Collaborators",
+      "daily": "Daily Check-ins",
+      "bookings": "Bookings",
+      "publicBookings": "Online Bookings",
+      "calendar": "Calendar",
+      "roomgrid": "Availability",
+      "notifications": "Notifications",
+      "reviews": "Reviews",
+      "reports": "Reports",
+      "ical": "iCal Sync",
+      "email": "Email Import"
+    },
+    "group": {
+      "property": "Property Settings",
+      "orders": "Order Management",
+      "guest": "Guest Interaction",
+      "data": "Data & Sync"
+    }
   }
 }

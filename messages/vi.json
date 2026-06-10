@@ -268,5 +268,54 @@
     "fg_int_kb_label": "Tìm kiếm cơ sở tri thức", "fg_int_kb_desc": "Nhân viên nhập từ khóa; AI gợi ý câu trả lời ngay",
     "fg_int_pricing_label": "Máy tính giá", "fg_int_pricing_desc": "AI tự tính theo công thức và báo giá cho khách",
     "fg_int_close_label": "Tự động đóng", "fg_int_close_desc": "Tự gửi khảo sát sau giải quyết; tự đóng nếu không phản hồi"
+  },
+  "Booking": {
+    "title": "Quản lý đặt phòng",
+    "common": {
+      "viewAll": "Xem tất cả",
+      "loading": "Đang tải…"
+    },
+    "platform": {
+      "manual": "Thủ công",
+      "direct": "Đặt trực tiếp"
+    },
+    "dashboard": {
+      "title": "Tổng quan đặt phòng",
+      "loadError": "Tải dữ liệu thất bại. Vui lòng làm mới trang hoặc thử lại sau.",
+      "checkInToday": "Nhận phòng hôm nay",
+      "checkOutToday": "Trả phòng hôm nay",
+      "within7": "Nhận phòng trong 7 ngày",
+      "pending": "Chờ xác nhận",
+      "onlineRequests": "Yêu cầu đặt phòng trực tuyến",
+      "unknownGuest": "(Khách không rõ)",
+      "checkOutLabel": "Trả phòng",
+      "next7Title": "Đơn đặt trong 7 ngày tới",
+      "noUpcoming": "Không có đơn mới trong 7 ngày tới"
+    },
+    "nav": {
+      "overview": "Tổng quan",
+      "profile": "Thông tin nhà nghỉ",
+      "website": "Trình sửa website",
+      "properties": "Loại phòng",
+      "pricing": "Quản lý giá",
+      "promos": "Mã khuyến mãi",
+      "team": "Thành viên cộng tác",
+      "daily": "Nhận phòng hàng ngày",
+      "bookings": "Đơn đặt",
+      "publicBookings": "Đặt phòng trực tuyến",
+      "calendar": "Lịch",
+      "roomgrid": "Bảng phòng trống",
+      "notifications": "Thông báo",
+      "reviews": "Đánh giá",
+      "reports": "Báo cáo",
+      "ical": "Đồng bộ iCal",
+      "email": "Trích xuất Email"
+    },
+    "group": {
+      "property": "Cài đặt nhà nghỉ",
+      "orders": "Quản lý đơn",
+      "guest": "Tương tác khách",
+      "data": "Dữ liệu & Đồng bộ"
+    }
   }
 }
