@@ -46,8 +46,18 @@ export default function TeamPage() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [active, setActive] = useState('')
+  // ?scope=cs / ?scope=booking → 只處理單一模組（客服或訂房單獨邀請）
+  const [scopeParam, setScopeParam] = useState<Scope | ''>('')
 
-  useEffect(() => { setActive(readActiveOwner()) }, [])
+  useEffect(() => {
+    setActive(readActiveOwner())
+    const sp = new URLSearchParams(window.location.search).get('scope')
+    if (sp === 'cs' || sp === 'booking') setScopeParam(sp)
+  }, [])
+
+  const visibleModules = scopeParam ? ownerModules.filter(m => m === scopeParam) : ownerModules
+  const onlyScope: Scope[] = scopeParam ? [scopeParam] : (['booking', 'cs'] as Scope[])
+  const visibleManaging = scopeParam ? managing.filter(m => m.scopes[scopeParam]) : managing
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -70,7 +80,7 @@ export default function TeamPage() {
     setErr(''); setBusy(true)
     try {
       const modules: Partial<Record<Scope, Role>> = {}
-      for (const s of ownerModules) if (pick[s].on) modules[s] = pick[s].role
+      for (const s of visibleModules) if (pick[s].on) modules[s] = pick[s].role
       if (Object.keys(modules).length === 0) throw new Error('請至少勾選一個模組')
       const r = await fetch('/api/collab/members', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -123,9 +133,15 @@ export default function TeamPage() {
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
       <div>
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <Users className="h-5 w-5" />協作成員
+          <Users className="h-5 w-5" />{scopeParam ? `${MODULE_LABEL[scopeParam]}協作成員` : '協作成員'}
         </h1>
-        <p className="text-sm text-gray-500 mt-1">邀請夥伴一起管理你的訂房與客服；可分別授權，也可切換到你協助的對象。</p>
+        <p className="text-sm text-gray-500 mt-1">
+          {scopeParam === 'cs'
+            ? '邀請夥伴一起回覆客服收件匣；可分權管理，也可切換到你協助的對象。'
+            : scopeParam === 'booking'
+            ? '邀請夥伴一起管理訂房；可分權管理，也可切換到你協助的對象。'
+            : '邀請夥伴一起管理你的訂房與客服；可分別授權，也可切換到你協助的對象。'}
+        </p>
       </div>
 
       {/* 我參與協作的對象（切換器） */}
@@ -163,14 +179,14 @@ export default function TeamPage() {
       {/* 邀請表單 */}
       <section className="bg-white border rounded-xl p-4">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">邀請協作者</h2>
-        {ownerModules.length === 0 ? (
-          <p className="text-sm text-gray-400">你目前沒有可邀請協作的模組（需先開通訂房或客服）。</p>
+        {visibleModules.length === 0 ? (
+          <p className="text-sm text-gray-400">你目前沒有可邀請協作的模組（需先開通{scopeParam ? MODULE_LABEL[scopeParam] : '訂房或客服'}）。</p>
         ) : (
           <form onSubmit={invite} className="space-y-3">
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
               placeholder="對方 Email" className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
             <div className="space-y-2">
-              {ownerModules.map(s => (
+              {visibleModules.map(s => (
                 <div key={s} className="flex items-center gap-3">
                   <label className="flex items-center gap-2 w-24 text-sm cursor-pointer">
                     <input type="checkbox" checked={pick[s].on}
@@ -191,8 +207,8 @@ export default function TeamPage() {
               className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}送出邀請
             </button>
-            {ownerModules.length === 1 && (
-              <p className="text-xs text-gray-400">你目前只有「{MODULE_LABEL[ownerModules[0]]}」模組，因此只能邀請此模組的協作。</p>
+            {visibleModules.length === 1 && (
+              <p className="text-xs text-gray-400">此處只邀請「{MODULE_LABEL[visibleModules[0]]}」模組的協作。</p>
             )}
             <p className="text-xs text-gray-400">對方用此 Email 登入後會自動加入。尚未註冊也可先邀請。</p>
             {err && <p className="text-xs text-red-500">{err}</p>}
@@ -205,11 +221,11 @@ export default function TeamPage() {
         <h2 className="text-sm font-semibold text-gray-700 mb-3">協作者</h2>
         {loading ? (
           <div className="text-sm text-gray-400 py-6 text-center">載入中…</div>
-        ) : managing.length === 0 ? (
+        ) : visibleManaging.length === 0 ? (
           <div className="text-sm text-gray-400 py-6 text-center">尚無協作者，邀請第一位夥伴吧。</div>
         ) : (
           <div className="divide-y">
-            {managing.map(m => {
+            {visibleManaging.map(m => {
               const anyActive = Object.values(m.scopes).some(s => s?.status === 'active')
               return (
                 <div key={m.email} className="py-3 space-y-2">
@@ -228,7 +244,7 @@ export default function TeamPage() {
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2 pl-0">
-                    {(['booking', 'cs'] as Scope[]).map(s => {
+                    {onlyScope.map(s => {
                       const info = m.scopes[s]
                       if (!info) return null
                       return (

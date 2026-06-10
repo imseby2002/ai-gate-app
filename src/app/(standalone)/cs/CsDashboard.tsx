@@ -47,7 +47,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
     { icon: Inbox,       label: t('actionInboxLabel'),     desc: t('actionInboxDesc'),     href: csUrl, color: 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400' },
     { icon: FlaskConical,label: t('actionTestLabel'),      desc: t('actionTestDesc'),      href: csUrl, color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' },
     { icon: Users,       label: '客戶追蹤',                 desc: '每位客戶的階段、問價次數與最後聯絡', href: `/cs/customers?industry=${industry}`, color: 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' },
-    { icon: UserPlus,    label: '協作成員',                 desc: '邀請夥伴一起回覆客服收件匣，可分權管理', href: '/team', color: 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400' },
+    { icon: UserPlus,    label: '協作成員',                 desc: '邀請夥伴一起回覆客服收件匣，可分權管理', href: '/team?scope=cs', color: 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400' },
     { icon: Database,    label: t('actionDsLabel'),        desc: t('actionDsDesc'),        href: csUrl, color: 'bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400' },
     { icon: BarChart3,   label: t('actionAnalyticsLabel'), desc: t('actionAnalyticsDesc'), href: csUrl, color: 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' },
   ]
