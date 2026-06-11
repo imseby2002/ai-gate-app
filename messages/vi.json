@@ -1672,6 +1672,24 @@
       "reanalyze": "Phân tích lại",
       "simTitle": "Mô phỏng người tiêu dùng tiếp thị", "simHint": "Mô phỏng phản ứng của các nhóm tiêu dùng, va chạm phe nhóm, phát hiện khủng hoảng PR",
       "simulating": "Đang mô phỏng…", "runSim": "Chạy mô phỏng người tiêu dùng"
+    },
+    "u4": {
+      "errTypes": "Vui lòng chọn ít nhất một loại nội dung", "anchorGenFailed": "Tạo kịch bản MC thất bại: {error}",
+      "ctxCollect": "Dữ liệu thu thập", "ctxCompany": "Dữ liệu công ty", "ctxAnalysis": "Dữ liệu phân tích",
+      "selectTypes": "Chọn loại nội dung",
+      "group": { "social": "Mạng xã hội", "video": "Video", "ad": "Quảng cáo", "email": "Email", "other": "Khác", "anchor": "MC" },
+      "copy": {
+        "facebook_post": "Bài Facebook", "instagram_caption": "Chú thích Instagram", "threads_post": "Bài Threads", "line_message": "Tin nhắn LINE", "twitter_post": "Bài Twitter/X", "linkedin_post": "Bài LinkedIn", "youtube_description": "Mô tả YouTube", "ad_headline": "Bộ tiêu đề quảng cáo", "email_subject": "Tiêu đề Email", "email_body": "Nội dung Email", "press_release": "Thông cáo báo chí", "anchor_script": "🎙️ Kịch bản MC"
+      },
+      "anchorTitle": "Cài đặt kịch bản MC", "anchorSubtitle": "(Kịch bản này dùng trực tiếp cho tạo video MC ở Unit 11)",
+      "videoDuration": "Thời lượng video", "durationOpt": "{s} giây (~{chars} chữ)",
+      "anchorStyle": "Phong cách nói",
+      "style": { "專業親切": "Chuyên nghiệp & thân thiện", "熱情活力": "Nhiệt huyết & năng động", "沉穩信任": "Điềm tĩnh & đáng tin", "輕鬆幽默": "Thoải mái & hài hước", "商務正式": "Trang trọng kinh doanh" },
+      "anchorNote": "Sau khi tạo, Unit 11 Tiếp thị MC sẽ tự dùng kịch bản này, không cần nhập lại.",
+      "userRules": "Quy định riêng của người dùng", "userRulesHint": "(tùy chọn; có thể chỉ định phong cách, từ cấm, thông điệp bắt buộc, v.v.)",
+      "userRulesPlaceholder": "VD: không dùng từ phóng đại như \"tốt nhất\", \"mạnh nhất\"; phải nhắc ưu đãi có hạn; nội dung cần tạo cảm giác cấp bách…",
+      "generating": "Claude đang tạo…", "generate": "Tạo nội dung", "editableHint": " — Claude Sonnet · chỉnh sửa trực tiếp", "regenerate": "Tạo lại",
+      "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ nội dung", "feedbackPlaceholder": "VD: giọng quá trang trọng, đổi sang thoải mái sinh động; thêm cảm giác ưu đãi có hạn…", "regenAll": "Tạo lại"
     }
   }
 }

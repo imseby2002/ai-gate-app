@@ -1159,19 +1159,19 @@ interface Unit4Data {
   anchorStyle?: string
 }
 
-const COPY_TYPE_DEFS: { id: CopyType; label: string; group: string }[] = [
-  { id: 'facebook_post',       label: 'Facebook 貼文',    group: '社群' },
-  { id: 'instagram_caption',   label: 'Instagram 說明',   group: '社群' },
-  { id: 'threads_post',        label: 'Threads 貼文',     group: '社群' },
-  { id: 'line_message',        label: 'LINE 訊息',        group: '社群' },
-  { id: 'twitter_post',        label: 'Twitter/X 推文',  group: '社群' },
-  { id: 'linkedin_post',       label: 'LinkedIn 貼文',    group: '社群' },
-  { id: 'youtube_description', label: 'YouTube 說明欄',   group: '影片' },
-  { id: 'ad_headline',         label: '廣告標題組',        group: '廣告' },
-  { id: 'email_subject',       label: 'Email 主旨',       group: '電郵' },
-  { id: 'email_body',          label: 'Email 內文',       group: '電郵' },
-  { id: 'press_release',       label: '新聞稿',           group: '其他' },
-  { id: 'anchor_script',       label: '🎙️ 主播口播腳本',  group: '主播' },
+const COPY_TYPE_DEFS: { id: CopyType; group: string }[] = [
+  { id: 'facebook_post',       group: 'social' },
+  { id: 'instagram_caption',   group: 'social' },
+  { id: 'threads_post',        group: 'social' },
+  { id: 'line_message',        group: 'social' },
+  { id: 'twitter_post',        group: 'social' },
+  { id: 'linkedin_post',       group: 'social' },
+  { id: 'youtube_description', group: 'video' },
+  { id: 'ad_headline',         group: 'ad' },
+  { id: 'email_subject',       group: 'email' },
+  { id: 'email_body',          group: 'email' },
+  { id: 'press_release',       group: 'other' },
+  { id: 'anchor_script',       group: 'anchor' },
 ]
 
 function Unit4Copy({
@@ -1203,6 +1203,8 @@ function Unit4Copy({
   // Anchor script settings (only relevant when anchor_script is selected)
   const [anchorDuration, setAnchorDuration] = useState(savedData?.anchorDuration ?? 60)
   const [anchorStyle, setAnchorStyle] = useState(savedData?.anchorStyle ?? '專業親切')
+  const t = useTranslations('MA')
+  const styleLabel = (s: string) => t.has(`u4.style.${s}`) ? t(`u4.style.${s}`) : s
 
   // Persist types + anchor settings immediately when they change (don't wait for run())
   const unit4InitRef = useRef(false)
@@ -1222,14 +1224,14 @@ function Unit4Copy({
     if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
   }, [result, activeTab])
 
-  const toggleType = (t: CopyType) =>
-    setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  const toggleType = (ty: CopyType) =>
+    setSelectedTypes(prev => prev.includes(ty) ? prev.filter(x => x !== ty) : [...prev, ty])
 
   const run = async (fb?: string) => {
-    if (selectedTypes.length === 0) { setError('請至少選一種文案類型'); return }
+    if (selectedTypes.length === 0) { setError(t('u4.errTypes')); return }
     setRunning(true); setError('')
     try {
-      const regularTypes = selectedTypes.filter(t => t !== 'anchor_script')
+      const regularTypes = selectedTypes.filter(ty => ty !== 'anchor_script')
       const needAnchor   = selectedTypes.includes('anchor_script')
       let results: Record<string, string> = {}
 
@@ -1271,7 +1273,7 @@ function Unit4Copy({
         if (data.scripts?.[0]) {
           results['anchor_script'] = data.scripts[0]
         } else if (data.error) {
-          throw new Error(`主播文案生成失敗：${data.error}`)
+          throw new Error(t('u4.anchorGenFailed', { error: data.error }))
         }
       }
 
@@ -1304,9 +1306,9 @@ function Unit4Copy({
       {/* Context status */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { label: '蒐集資料', ok: !!unit1Data?.summary },
-          { label: '公司資料', ok: !!unit2Data?.companyName },
-          { label: '分析資料', ok: !!unit3Data?.results },
+          { label: t('u4.ctxCollect'), ok: !!unit1Data?.summary },
+          { label: t('u4.ctxCompany'), ok: !!unit2Data?.companyName },
+          { label: t('u4.ctxAnalysis'), ok: !!unit3Data?.results },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
             s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
@@ -1319,10 +1321,10 @@ function Unit4Copy({
 
       {/* Copy type selector */}
       <div>
-        <label className="block text-sm font-semibold mb-3">選擇文案類型</label>
+        <label className="block text-sm font-semibold mb-3">{t('u4.selectTypes')}</label>
         {groups.map(g => (
           <div key={g} className="mb-3">
-            <div className="text-xs font-medium text-gray-400 mb-1.5">{g}</div>
+            <div className="text-xs font-medium text-gray-400 mb-1.5">{t(`u4.group.${g}`)}</div>
             <div className="flex flex-wrap gap-2">
               {COPY_TYPE_DEFS.filter(d => d.group === g).map(d => {
                 const sel = selectedTypes.includes(d.id)
@@ -1332,7 +1334,7 @@ function Unit4Copy({
                     style={sel
                       ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                       : {}}>
-                    {d.label}
+                    {t(`u4.copy.${d.id}`)}
                   </button>
                 )
               })}
@@ -1346,31 +1348,31 @@ function Unit4Copy({
         <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-3 bg-indigo-50">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-indigo-600" />
-            <span className="font-semibold text-sm text-indigo-800">🎙️ 主播口播腳本設定</span>
-            <span className="text-[10px] text-indigo-500 ml-1">（此腳本將直接用於 Unit 11 主播影片生成）</span>
+            <span className="font-semibold text-sm text-indigo-800">🎙️ {t('u4.anchorTitle')}</span>
+            <span className="text-[10px] text-indigo-500 ml-1">{t('u4.anchorSubtitle')}</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-indigo-700 block mb-1">影片時長</label>
+              <label className="text-xs text-indigo-700 block mb-1">{t('u4.videoDuration')}</label>
               <select value={anchorDuration} onChange={e => setAnchorDuration(Number(e.target.value))}
                 className="w-full text-sm border border-indigo-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                 {[15,30,60,90,120,180,300].map(s => (
-                  <option key={s} value={s}>{s} 秒（約 {Math.round(s * 4.5)} 字）</option>
+                  <option key={s} value={s}>{t('u4.durationOpt', { s, chars: Math.round(s * 4.5) })}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs text-indigo-700 block mb-1">口播風格</label>
+              <label className="text-xs text-indigo-700 block mb-1">{t('u4.anchorStyle')}</label>
               <select value={anchorStyle} onChange={e => setAnchorStyle(e.target.value)}
                 className="w-full text-sm border border-indigo-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                 {['專業親切','熱情活力','沉穩信任','輕鬆幽默','商務正式'].map(s => (
-                  <option key={s}>{s}</option>
+                  <option key={s} value={s}>{styleLabel(s)}</option>
                 ))}
               </select>
             </div>
           </div>
           <p className="text-[10px] text-indigo-600">
-            生成後 Unit 11 主播行銷會自動使用此腳本，無需重新輸入。
+            {t('u4.anchorNote')}
           </p>
         </div>
       )}
@@ -1378,12 +1380,12 @@ function Unit4Copy({
       {/* User instructions */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">
-          使用者特別規定
-          <span className="ml-2 text-xs font-normal text-gray-400">（選填，可指定風格、禁用字詞、必帶訊息等）</span>
+          {t('u4.userRules')}
+          <span className="ml-2 text-xs font-normal text-gray-400">{t('u4.userRulesHint')}</span>
         </label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
-          placeholder="例如：禁止使用『最好』『最強』等誇大字眼；必須提及限時優惠；文案要帶有緊迫感…" />
+          placeholder={t('u4.userRulesPlaceholder')} />
       </div>
 
       {error && (
@@ -1395,7 +1397,7 @@ function Unit4Copy({
       <button onClick={() => run()} disabled={running}
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
-        {running ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成中…</> : <><PenLine className="h-4 w-4" />產生文案</>}
+        {running ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u4.generating')}</> : <><PenLine className="h-4 w-4" />{t('u4.generate')}</>}
       </button>
 
       {/* Results */}
@@ -1403,17 +1405,14 @@ function Unit4Copy({
         <div className="space-y-3">
           {/* Tab bar */}
           <div className="flex gap-1.5 flex-wrap border-b pb-2">
-            {result.types?.map(t => {
-              const def = COPY_TYPE_DEFS.find(d => d.id === t)
-              return (
-                <button key={t} onClick={() => setActiveTab(t)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    activeTab === t ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}>
-                  {def?.label ?? t}
-                </button>
-              )
-            })}
+            {result.types?.map(ty => (
+              <button key={ty} onClick={() => setActiveTab(ty)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  activeTab === ty ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}>
+                {t.has(`u4.copy.${ty}`) ? t(`u4.copy.${ty}`) : ty}
+              </button>
+            ))}
           </div>
 
           {/* Active copy editor */}
@@ -1421,11 +1420,11 @@ function Unit4Copy({
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">
-                  {COPY_TYPE_DEFS.find(d => d.id === activeTab)?.label} — Claude Sonnet · 可直接編輯
+                  {t.has(`u4.copy.${activeTab}`) ? t(`u4.copy.${activeTab}`) : activeTab}{t('u4.editableHint')}
                 </span>
                 <button onClick={() => run()} disabled={running}
                   className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-                  <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+                  <RefreshCw className="h-3.5 w-3.5" /> {t('u4.regenerate')}
                 </button>
               </div>
               <textarea
@@ -1439,17 +1438,17 @@ function Unit4Copy({
 
           {/* Feedback & regenerate */}
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
-            <div className="text-xs font-semibold text-amber-800">輸入修改意見，重新生成所有文案</div>
+            <div className="text-xs font-semibold text-amber-800">{t('u4.feedbackTitle')}</div>
             <div className="flex gap-2">
               <input value={feedback} onChange={e => setFeedback(e.target.value)}
                 className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
-                placeholder="例如：語調太正式，改成輕鬆活潑；加入限時優惠感…"
+                placeholder={t('u4.feedbackPlaceholder')}
                 onKeyDown={e => e.key === 'Enter' && feedback.trim() && run(feedback)}
               />
               <button onClick={() => run(feedback)} disabled={!feedback.trim() || running}
                 className="px-4 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                 style={{ background: 'var(--primary)' }}>
-                重生成
+                {t('u4.regenAll')}
               </button>
             </div>
           </div>

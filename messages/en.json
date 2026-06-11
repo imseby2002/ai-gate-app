@@ -1672,6 +1672,24 @@
       "reanalyze": "Re-analyze",
       "simTitle": "Marketing Consumer Simulation", "simHint": "Simulate reactions of different consumer groups, faction clashes, PR crisis detection",
       "simulating": "Simulating…", "runSim": "Run Consumer Simulation"
+    },
+    "u4": {
+      "errTypes": "Please select at least one copy type", "anchorGenFailed": "Anchor script generation failed: {error}",
+      "ctxCollect": "Collected Data", "ctxCompany": "Company Data", "ctxAnalysis": "Analysis Data",
+      "selectTypes": "Select Copy Types",
+      "group": { "social": "Social", "video": "Video", "ad": "Ad", "email": "Email", "other": "Other", "anchor": "Anchor" },
+      "copy": {
+        "facebook_post": "Facebook Post", "instagram_caption": "Instagram Caption", "threads_post": "Threads Post", "line_message": "LINE Message", "twitter_post": "Twitter/X Post", "linkedin_post": "LinkedIn Post", "youtube_description": "YouTube Description", "ad_headline": "Ad Headline Set", "email_subject": "Email Subject", "email_body": "Email Body", "press_release": "Press Release", "anchor_script": "🎙️ Anchor Script"
+      },
+      "anchorTitle": "Anchor Script Settings", "anchorSubtitle": "(This script feeds directly into Unit 11 anchor video generation)",
+      "videoDuration": "Video Duration", "durationOpt": "{s} sec (~{chars} chars)",
+      "anchorStyle": "Speaking Style",
+      "style": { "專業親切": "Professional & friendly", "熱情活力": "Passionate & energetic", "沉穩信任": "Calm & trustworthy", "輕鬆幽默": "Relaxed & humorous", "商務正式": "Business formal" },
+      "anchorNote": "Once generated, Unit 11 Anchor Marketing will use this script automatically — no need to re-enter.",
+      "userRules": "Special User Rules", "userRulesHint": "(optional; specify style, banned words, required messages, etc.)",
+      "userRulesPlaceholder": "e.g. don't use exaggerations like \"best\" or \"strongest\"; must mention the limited-time offer; copy should feel urgent…",
+      "generating": "Claude generating…", "generate": "Generate Copy", "editableHint": " — Claude Sonnet · editable directly", "regenerate": "Regenerate",
+      "feedbackTitle": "Enter revisions to regenerate all copy", "feedbackPlaceholder": "e.g. tone too formal, make it relaxed and lively; add a limited-time-offer feel…", "regenAll": "Regenerate"
     }
   }
 }
