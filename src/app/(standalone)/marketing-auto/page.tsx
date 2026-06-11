@@ -836,13 +836,9 @@ interface Unit3Data {
   simulation?: SimulationResult
 }
 
-const ANALYSIS_TYPE_DEFS: { id: AnalysisType; label: string; desc: string }[] = [
-  { id: 'swot',                  label: 'SWOT 分析',         desc: '優勢/劣勢/機會/威脅全面評估' },
-  { id: 'company',               label: '公司分析',           desc: '業態、規模、營業情況、風險' },
-  { id: 'competitor_activity',   label: '競爭對手活動分析',    desc: '競品行銷手法、渠道、內容' },
-  { id: 'competitor_performance',label: '競爭對手業績分析',    desc: '市場份額、定價、客戶口碑' },
-  { id: 'content',               label: '影片/文案擷取分析',   desc: '競品內容策略、高績效內容特徵' },
-  { id: 'marketing',             label: '行銷文案分析',        desc: '文案風格趨勢、訴求點、關鍵字' },
+const ANALYSIS_TYPE_DEFS: { id: AnalysisType }[] = [
+  { id: 'swot' }, { id: 'company' }, { id: 'competitor_activity' },
+  { id: 'competitor_performance' }, { id: 'content' }, { id: 'marketing' },
 ]
 
 function Unit3Analyze({
@@ -872,13 +868,14 @@ function Unit3Analyze({
   const [simRunning, setSimRunning] = useState(false)
   const [simError, setSimError] = useState('')
   const [simResult, setSimResult] = useState<SimulationResult | null>(savedData?.simulation ?? null)
+  const t = useTranslations('MA')
 
   useEffect(() => {
     if (result?.types?.length && !activeTab) setActiveTab(result.types[0])
   }, [result, activeTab])
 
-  const toggleType = (t: AnalysisType) =>
-    setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  const toggleType = (ty: AnalysisType) =>
+    setSelectedTypes(prev => prev.includes(ty) ? prev.filter(x => x !== ty) : [...prev, ty])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
@@ -901,7 +898,7 @@ function Unit3Analyze({
   }
 
   const run = async () => {
-    if (selectedTypes.length === 0) { setError('請至少選一種分析類型'); return }
+    if (selectedTypes.length === 0) { setError(t('u3.errTypes')); return }
     setRunning(true); setError('')
     try {
       const extraContext = uploadedFiles.length
@@ -969,11 +966,11 @@ function Unit3Analyze({
       <div className="flex gap-3">
         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${hasUnit1 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
           {hasUnit1 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
-          單元1 蒐集資料 {hasUnit1 ? '已載入' : '尚未執行'}
+          {t('u3.unit1')} {hasUnit1 ? t('u3.loaded') : t('u3.notRun')}
         </div>
         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${hasUnit2 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
           {hasUnit2 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
-          單元2 公司資料 {hasUnit2 ? `(${unit2Data?.companyName})` : '尚未填寫'}
+          {t('u3.unit2')} {hasUnit2 ? `(${unit2Data?.companyName})` : t('u3.notFilled')}
         </div>
       </div>
 
@@ -981,14 +978,14 @@ function Unit3Analyze({
       <div className="p-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold">補充參考資料（選填）</div>
-            <div className="text-xs text-gray-400 mt-0.5">上傳企劃案、新聞文章、競品報告等，AI 分析時會一併參考</div>
+            <div className="text-sm font-semibold">{t('u3.extraTitle')}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('u3.extraHint')}</div>
           </div>
           <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer transition-opacity ${uploadingFile ? 'opacity-50 pointer-events-none' : ''}`}
             style={{ background: 'var(--primary)' }}>
             {uploadingFile
-              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中…</>
-              : <><Upload className="h-3.5 w-3.5" />選擇檔案</>}
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('u3.uploading')}</>
+              : <><Upload className="h-3.5 w-3.5" />{t('u3.chooseFile')}</>}
             <input type="file" className="hidden" multiple
               accept=".pdf,.docx,.xlsx,.xls,.csv,.txt"
               onChange={handleFileUpload} />
@@ -1009,7 +1006,7 @@ function Unit3Analyze({
 
       {/* Analysis type selector */}
       <div>
-        <label className="block text-sm font-semibold mb-3">選擇分析項目</label>
+        <label className="block text-sm font-semibold mb-3">{t('u3.selectItems')}</label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {ANALYSIS_TYPE_DEFS.map(at => {
             const selected = selectedTypes.includes(at.id)
@@ -1024,8 +1021,8 @@ function Unit3Analyze({
                   {selected && <CheckCircle2 className="h-4 w-4 text-white" />}
                 </div>
                 <div>
-                  <div className="text-sm font-medium">{at.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{at.desc}</div>
+                  <div className="text-sm font-medium">{t(`u3.type.${at.id}.label`)}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{t(`u3.type.${at.id}.desc`)}</div>
                 </div>
               </button>
             )
@@ -1042,7 +1039,7 @@ function Unit3Analyze({
       <button onClick={run} disabled={running}
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
-        {running ? <><Loader2 className="h-4 w-4 animate-spin" />Gemini 分析中，請稍候…</> : <><BarChart3 className="h-4 w-4" />開始分析</>}
+        {running ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u3.analyzing')}</> : <><BarChart3 className="h-4 w-4" />{t('u3.startAnalyze')}</>}
       </button>
 
       {/* Results */}
@@ -1052,10 +1049,10 @@ function Unit3Analyze({
           {result.metrics && (
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: '市場機會指數', value: `${result.metrics.opportunity}/100`, color: 'text-green-600' },
-                { label: '競品數量',     value: `${result.metrics.competitors} 家`,  color: 'text-blue-600' },
-                { label: '目標受眾',     value: result.metrics.audience,             color: 'text-purple-600' },
-                { label: '競爭力評分',   value: `${result.metrics.score}/100`,       color: 'text-amber-600' },
+                { label: t('u3.mOpportunity'), value: `${result.metrics.opportunity}/100`, color: 'text-green-600' },
+                { label: t('u3.mCompetitors'), value: t('u3.nCompetitors', { n: result.metrics.competitors }),  color: 'text-blue-600' },
+                { label: t('u3.mAudience'),    value: result.metrics.audience,             color: 'text-purple-600' },
+                { label: t('u3.mScore'),       value: `${result.metrics.score}/100`,       color: 'text-amber-600' },
               ].map(m => (
                 <div key={m.label} className="p-3 rounded-xl bg-gray-50 text-center border">
                   <div className={`text-lg font-bold ${m.color}`}>{m.value}</div>
@@ -1068,17 +1065,14 @@ function Unit3Analyze({
           {/* Tab selector */}
           {result.types && result.types.length > 1 && (
             <div className="flex gap-1.5 flex-wrap border-b pb-2">
-              {result.types.map(t => {
-                const def = ANALYSIS_TYPE_DEFS.find(d => d.id === t)
-                return (
-                  <button key={t} onClick={() => setActiveTab(t)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      activeTab === t ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}>
-                    {def?.label ?? t}
-                  </button>
-                )
-              })}
+              {result.types.map(ty => (
+                <button key={ty} onClick={() => setActiveTab(ty)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    activeTab === ty ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}>
+                  {t.has(`u3.type.${ty}.label`) ? t(`u3.type.${ty}.label`) : ty}
+                </button>
+              ))}
             </div>
           )}
 
@@ -1087,11 +1081,11 @@ function Unit3Analyze({
             <div className="p-5 rounded-xl bg-gray-50 border max-h-[550px] overflow-y-auto">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-gray-500">
-                  {ANALYSIS_TYPE_DEFS.find(d => d.id === activeTab)?.label} — Gemini 1.5 Flash
+                  {t.has(`u3.type.${activeTab}.label`) ? t(`u3.type.${activeTab}.label`) : activeTab} — Gemini 1.5 Flash
                 </span>
                 <button onClick={run} disabled={running}
                   className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-                  <RefreshCw className="h-3.5 w-3.5" /> 重新分析
+                  <RefreshCw className="h-3.5 w-3.5" /> {t('u3.reanalyze')}
                 </button>
               </div>
               <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
@@ -1110,10 +1104,10 @@ function Unit3Analyze({
               <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
                 <Zap className="h-3 w-3 text-amber-600" />
               </span>
-              行銷消費者模擬
+              {t('u3.simTitle')}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5 ml-7">
-              模擬不同消費族群反應、陣營對撞、公關危機偵測
+              {t('u3.simHint')}
             </p>
           </div>
           {!simResult && (
@@ -1123,8 +1117,8 @@ function Unit3Analyze({
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all bg-amber-500 hover:bg-amber-600"
             >
               {simRunning
-                ? <><Loader2 className="h-4 w-4 animate-spin" />模擬中…</>
-                : <><BarChart3 className="h-4 w-4" />執行消費者模擬</>
+                ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u3.simulating')}</>
+                : <><BarChart3 className="h-4 w-4" />{t('u3.runSim')}</>
               }
             </button>
           )}

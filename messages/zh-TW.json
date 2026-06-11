@@ -1652,6 +1652,26 @@
       "overview": "資料概覽", "companyNameShort": "公司名稱", "industryShort": "產業",
       "branchCount": "門市數量", "nBranches": "{n} 間", "withCoords": "含經緯度",
       "uploadedFiles": "上傳檔案", "nFiles": "{n} 份", "textMaterials": "文字素材", "nExtracted": "{n} 份已萃取"
+    },
+    "u3": {
+      "errTypes": "請至少選一種分析類型",
+      "type": {
+        "swot": { "label": "SWOT 分析", "desc": "優勢/劣勢/機會/威脅全面評估" },
+        "company": { "label": "公司分析", "desc": "業態、規模、營業情況、風險" },
+        "competitor_activity": { "label": "競爭對手活動分析", "desc": "競品行銷手法、渠道、內容" },
+        "competitor_performance": { "label": "競爭對手業績分析", "desc": "市場份額、定價、客戶口碑" },
+        "content": { "label": "影片/文案擷取分析", "desc": "競品內容策略、高績效內容特徵" },
+        "marketing": { "label": "行銷文案分析", "desc": "文案風格趨勢、訴求點、關鍵字" }
+      },
+      "unit1": "單元1 蒐集資料", "loaded": "已載入", "notRun": "尚未執行",
+      "unit2": "單元2 公司資料", "notFilled": "尚未填寫",
+      "extraTitle": "補充參考資料（選填）", "extraHint": "上傳企劃案、新聞文章、競品報告等，AI 分析時會一併參考",
+      "uploading": "上傳中…", "chooseFile": "選擇檔案",
+      "selectItems": "選擇分析項目", "analyzing": "Gemini 分析中，請稍候…", "startAnalyze": "開始分析",
+      "mOpportunity": "市場機會指數", "mCompetitors": "競品數量", "nCompetitors": "{n} 家", "mAudience": "目標受眾", "mScore": "競爭力評分",
+      "reanalyze": "重新分析",
+      "simTitle": "行銷消費者模擬", "simHint": "模擬不同消費族群反應、陣營對撞、公關危機偵測",
+      "simulating": "模擬中…", "runSim": "執行消費者模擬"
     }
   }
 }

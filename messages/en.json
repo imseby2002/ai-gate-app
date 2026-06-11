@@ -1652,6 +1652,26 @@
       "overview": "Data Overview", "companyNameShort": "Company", "industryShort": "Industry",
       "branchCount": "Store Count", "nBranches": "{n}", "withCoords": "With Coordinates",
       "uploadedFiles": "Uploaded Files", "nFiles": "{n}", "textMaterials": "Text Materials", "nExtracted": "{n} extracted"
+    },
+    "u3": {
+      "errTypes": "Please select at least one analysis type",
+      "type": {
+        "swot": { "label": "SWOT Analysis", "desc": "Full assessment of strengths/weaknesses/opportunities/threats" },
+        "company": { "label": "Company Analysis", "desc": "Business model, scale, operations, risks" },
+        "competitor_activity": { "label": "Competitor Activity Analysis", "desc": "Competitor marketing tactics, channels, content" },
+        "competitor_performance": { "label": "Competitor Performance Analysis", "desc": "Market share, pricing, customer reputation" },
+        "content": { "label": "Video/Copy Extraction Analysis", "desc": "Competitor content strategy, high-performing content traits" },
+        "marketing": { "label": "Marketing Copy Analysis", "desc": "Copy style trends, appeal points, keywords" }
+      },
+      "unit1": "Unit 1 Collected Data", "loaded": "loaded", "notRun": "not run yet",
+      "unit2": "Unit 2 Company Data", "notFilled": "not filled yet",
+      "extraTitle": "Extra Reference Material (optional)", "extraHint": "Upload proposals, news articles, competitor reports, etc.; AI will reference them during analysis",
+      "uploading": "Uploading…", "chooseFile": "Choose File",
+      "selectItems": "Select Analysis Items", "analyzing": "Gemini analyzing, please wait…", "startAnalyze": "Start Analysis",
+      "mOpportunity": "Market Opportunity Index", "mCompetitors": "Competitor Count", "nCompetitors": "{n}", "mAudience": "Target Audience", "mScore": "Competitiveness Score",
+      "reanalyze": "Re-analyze",
+      "simTitle": "Marketing Consumer Simulation", "simHint": "Simulate reactions of different consumer groups, faction clashes, PR crisis detection",
+      "simulating": "Simulating…", "runSim": "Run Consumer Simulation"
     }
   }
 }

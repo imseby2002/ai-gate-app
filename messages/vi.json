@@ -1652,6 +1652,26 @@
       "overview": "Tổng quan dữ liệu", "companyNameShort": "Công ty", "industryShort": "Ngành",
       "branchCount": "Số cửa hàng", "nBranches": "{n}", "withCoords": "Có tọa độ",
       "uploadedFiles": "Tệp đã tải", "nFiles": "{n}", "textMaterials": "Tài liệu văn bản", "nExtracted": "{n} đã trích xuất"
+    },
+    "u3": {
+      "errTypes": "Vui lòng chọn ít nhất một loại phân tích",
+      "type": {
+        "swot": { "label": "Phân tích SWOT", "desc": "Đánh giá toàn diện điểm mạnh/yếu/cơ hội/thách thức" },
+        "company": { "label": "Phân tích công ty", "desc": "Mô hình, quy mô, tình hình kinh doanh, rủi ro" },
+        "competitor_activity": { "label": "Phân tích hoạt động đối thủ", "desc": "Cách tiếp thị, kênh, nội dung của đối thủ" },
+        "competitor_performance": { "label": "Phân tích hiệu quả đối thủ", "desc": "Thị phần, định giá, uy tín khách hàng" },
+        "content": { "label": "Phân tích trích xuất video/nội dung", "desc": "Chiến lược nội dung đối thủ, đặc điểm nội dung hiệu quả cao" },
+        "marketing": { "label": "Phân tích nội dung tiếp thị", "desc": "Xu hướng phong cách, điểm thu hút, từ khóa" }
+      },
+      "unit1": "Đơn vị 1 Dữ liệu thu thập", "loaded": "đã tải", "notRun": "chưa chạy",
+      "unit2": "Đơn vị 2 Dữ liệu công ty", "notFilled": "chưa điền",
+      "extraTitle": "Tài liệu tham khảo bổ sung (tùy chọn)", "extraHint": "Tải lên đề án, bài báo, báo cáo đối thủ, v.v.; AI sẽ tham khảo khi phân tích",
+      "uploading": "Đang tải lên…", "chooseFile": "Chọn tệp",
+      "selectItems": "Chọn mục phân tích", "analyzing": "Gemini đang phân tích, vui lòng đợi…", "startAnalyze": "Bắt đầu phân tích",
+      "mOpportunity": "Chỉ số cơ hội thị trường", "mCompetitors": "Số đối thủ", "nCompetitors": "{n}", "mAudience": "Khách hàng mục tiêu", "mScore": "Điểm cạnh tranh",
+      "reanalyze": "Phân tích lại",
+      "simTitle": "Mô phỏng người tiêu dùng tiếp thị", "simHint": "Mô phỏng phản ứng của các nhóm tiêu dùng, va chạm phe nhóm, phát hiện khủng hoảng PR",
+      "simulating": "Đang mô phỏng…", "runSim": "Chạy mô phỏng người tiêu dùng"
     }
   }
 }
