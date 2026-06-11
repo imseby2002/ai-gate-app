@@ -41,24 +41,22 @@ interface Campaign {
 
 interface UnitDef {
   id: number
-  name: string
   icon: React.ElementType
-  desc: string
   implemented: boolean
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const UNITS: UnitDef[] = [
-  { id: 1,  name: '蒐集資訊',  icon: Search,     desc: '新聞、網頁、地圖、評論',         implemented: true  },
-  { id: 3,  name: '分析資料',  icon: BarChart3,  desc: '市場、競爭對手、影片/文案分析',   implemented: true  },
-  { id: 4,  name: '文案產出',  icon: PenLine,    desc: '行銷文案 AI 生成',              implemented: true  },
-  { id: 5,  name: '圖片腳本',  icon: ImageIcon,  desc: '圖片描述腳本生成',              implemented: true  },
-  { id: 6,  name: '圖片產出',  icon: ImageIcon,  desc: '行銷圖片 AI 生成',              implemented: true  },
-  { id: 7,  name: '影片腳本',  icon: Film,       desc: '分鏡腳本生成',                 implemented: true  },
-  { id: 8,  name: '影片產出',  icon: Video,      desc: '行銷影片 AI 生成',              implemented: true  },
-  { id: 9,  name: '上傳平台',  icon: Upload,     desc: 'FB/IG/YouTube 等自動上傳',      implemented: true  },
-  { id: 11, name: '主播行銷',  icon: Mic,        desc: 'HeyGen 虛擬主播影片',          implemented: true  },
+  { id: 1,  icon: Search,     implemented: true  },
+  { id: 3,  icon: BarChart3,  implemented: true  },
+  { id: 4,  icon: PenLine,    implemented: true  },
+  { id: 5,  icon: ImageIcon,  implemented: true  },
+  { id: 6,  icon: ImageIcon,  implemented: true  },
+  { id: 7,  icon: Film,       implemented: true  },
+  { id: 8,  icon: Video,      implemented: true  },
+  { id: 9,  icon: Upload,     implemented: true  },
+  { id: 11, icon: Mic,        implemented: true  },
 ]
 
 const SIDE_TOOLS: (UnitDef & { href: string | null })[] = []
@@ -7668,31 +7666,31 @@ function Unit12CustomerService({
           })()}
 
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">對話記錄</span>
-            <span className="text-xs text-gray-400">{logs.length} 筆</span>
+            <span className="text-sm font-medium text-gray-700">{t('u12.convLog')}</span>
+            <span className="text-xs text-gray-400">{t('u12.nRecords', { n: logs.length })}</span>
           </div>
           {logs.length === 0 ? (
-            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">尚無對話記錄</div>
+            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">{t('u12.noConvLog')}</div>
           ) : (
             <div className="space-y-2">
               {logs.map((log, i) => (
                 <div key={i} className="border rounded-xl p-3 space-y-1.5 bg-gray-50">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(log.risk)}`}>
-                      {log.risk === 'high' ? '高風險' : log.risk === 'medium' ? '中風險' : '低風險'}
+                      {log.risk === 'high' ? t('u12.riskHigh') : log.risk === 'medium' ? t('u12.riskMedium') : t('u12.riskLow')}
                     </span>
                     <span className="text-[10px] text-gray-500">{log.intent}</span>
                     <span className={`text-[10px] font-medium ${log.provider === 'Claude' ? 'text-orange-500' : 'text-blue-500'}`}>
                       {log.provider}
                     </span>
                     <span className="text-[10px] text-gray-400">{log.latencyMs}ms</span>
-                    <span className="text-[10px] text-gray-400 ml-auto">{new Date(log.ts).toLocaleString('zh-TW')}</span>
+                    <span className="text-[10px] text-gray-400 ml-auto">{new Date(log.ts).toLocaleString(locale)}</span>
                   </div>
                   <div className="text-xs text-gray-700">
-                    <span className="font-medium text-gray-500">客戶：</span>{log.message}
+                    <span className="font-medium text-gray-500">{t('u12.customerLabel')}</span>{log.message}
                   </div>
                   <div className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
-                    <span className="font-medium text-indigo-500">AI：</span>{log.reply.slice(0, 120)}{log.reply.length > 120 ? '…' : ''}
+                    <span className="font-medium text-indigo-500">{t('u12.aiLabel')}</span>{log.reply.slice(0, 120)}{log.reply.length > 120 ? '…' : ''}
                   </div>
                 </div>
               ))}
@@ -7705,7 +7703,7 @@ function Unit12CustomerService({
       {tab === 'tickets' && (
         <div className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">工單系統</span>
+            <span className="text-sm font-semibold text-gray-800">{t('u12.ticketSystem')}</span>
             <div className="flex gap-1.5 ml-auto flex-wrap">
               {['all', 'open', 'in_progress', 'resolved', 'closed'].map(s => (
                 <button key={s} onClick={() => setTicketFilter(s)}
@@ -7713,7 +7711,7 @@ function Unit12CustomerService({
                     ticketFilter === s ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
                   }`}
                   style={ticketFilter === s ? { background: 'var(--primary)' } : {}}>
-                  {s === 'all' ? '全部' : ticketStatusLabel(s)}
+                  {s === 'all' ? t('u12.filterAll') : ticketStatusLabel(s)}
                   {s !== 'all' && ` (${tickets.filter(t => t.status === s).length})`}
                 </button>
               ))}
@@ -7726,13 +7724,13 @@ function Unit12CustomerService({
 
           <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-xs text-orange-700 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            切換到「測試」Tab，與 AI 對話後點「建立工單」即可轉入工單系統
+            {t('u12.ticketTip')}
           </div>
 
           {ticketsLoading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
           ) : tickets.length === 0 ? (
-            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">尚無工單</div>
+            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">{t('u12.noTickets')}</div>
           ) : (
             <div className="space-y-2">
               {tickets
@@ -7744,11 +7742,11 @@ function Unit12CustomerService({
                         {ticketStatusLabel(ticket.status)}
                       </span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ticketPriorityColor(ticket.priority)}`}>
-                        {ticketPriorityLabel(ticket.priority)}優先
+                        {t('u12.priorityLabel', { p: ticketPriorityLabel(ticket.priority) })}
                       </span>
                       <span className="text-[10px] text-gray-500">{platformEmoji(ticket.platform)} {ticket.platform}</span>
                       {ticket.intent && <span className="text-[10px] text-gray-400">{ticket.intent}</span>}
-                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(ticket.created_at).toLocaleString('zh-TW')}</span>
+                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(ticket.created_at).toLocaleString(locale)}</span>
                     </div>
                     <div className="text-xs font-semibold text-gray-800">{ticket.subject}</div>
                     <div className="text-[11px] text-gray-500 line-clamp-2">{ticket.description.slice(0, 120)}{ticket.description.length > 120 ? '…' : ''}</div>
@@ -7769,7 +7767,7 @@ function Unit12CustomerService({
                       <button
                         onClick={() => setFaqDialog({ open: true, q: ticket.subject || ticket.description.slice(0, 80), a: '', keywords: '', saving: false })}
                         className="ml-auto text-[10px] px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 flex items-center gap-1">
-                        📚 加入知識庫
+                        📚 {t('u12.addToKb')}
                       </button>
                     </div>
                   </div>
@@ -7783,7 +7781,7 @@ function Unit12CustomerService({
       {tab === 'inbox' && (
         <div className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">統一收件匣</span>
+            <span className="text-sm font-semibold text-gray-800">{t('u12.unifiedInbox')}</span>
             <div className="flex gap-1.5 ml-auto flex-wrap">
               {['all', 'line', 'whatsapp', 'telegram', 'test'].map(p => (
                 <button key={p} onClick={() => { setInboxPlatformFilter(p); }}
@@ -7791,7 +7789,7 @@ function Unit12CustomerService({
                     inboxPlatformFilter === p ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
                   }`}
                   style={inboxPlatformFilter === p ? { background: 'var(--primary)' } : {}}>
-                  {p === 'all' ? '全部' : `${platformEmoji(p)} ${p.toUpperCase()}`}
+                  {p === 'all' ? t('u12.filterAll') : `${platformEmoji(p)} ${p.toUpperCase()}`}
                 </button>
               ))}
               <button onClick={loadInbox} disabled={inboxLoading}
@@ -7802,17 +7800,17 @@ function Unit12CustomerService({
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
-            <div className="font-medium">來源說明</div>
-            <div>• 🧪 測試：透過「測試」Tab 的對話自動儲存</div>
-            <div>• 💬 LINE / 📱 WhatsApp / ✈️ Telegram：實際平台 Webhook 訊息（需先在「平台」Tab 設定）</div>
+            <div className="font-medium">{t('u12.sourceNote')}</div>
+            <div>• {t('u12.sourceTest')}</div>
+            <div>• {t('u12.sourcePlatforms')}</div>
           </div>
 
           {inboxLoading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
           ) : inboxMessages.length === 0 ? (
             <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">
-              <div className="mb-2">尚無訊息記錄</div>
-              <div className="text-[11px]">先在「測試」Tab 發送幾則訊息，即可在此查看</div>
+              <div className="mb-2">{t('u12.noInbox')}</div>
+              <div className="text-[11px]">{t('u12.noInboxHint')}</div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -7826,19 +7824,19 @@ function Unit12CustomerService({
                       </span>
                       {msg.risk && (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.risk)}`}>
-                          {msg.risk === 'high' ? '高風險' : msg.risk === 'medium' ? '中風險' : '低風險'}
+                          {msg.risk === 'high' ? t('u12.riskHigh') : msg.risk === 'medium' ? t('u12.riskMedium') : t('u12.riskLow')}
                         </span>
                       )}
                       {msg.intent && <span className="text-[10px] text-gray-400">{msg.intent}</span>}
                       {msg.latency_ms && <span className="text-[10px] text-gray-300">{msg.latency_ms}ms</span>}
-                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(msg.created_at).toLocaleString('zh-TW')}</span>
+                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(msg.created_at).toLocaleString(locale)}</span>
                     </div>
                     <div className="text-xs text-gray-700">
-                      <span className="font-medium text-gray-500">客戶：</span>{msg.message}
+                      <span className="font-medium text-gray-500">{t('u12.customerLabel')}</span>{msg.message}
                     </div>
                     {msg.reply && (
                       <div className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
-                        <span className="font-medium text-indigo-500">AI：</span>{msg.reply.slice(0, 120)}{msg.reply.length > 120 ? '…' : ''}
+                        <span className="font-medium text-indigo-500">{t('u12.aiLabel')}</span>{msg.reply.slice(0, 120)}{msg.reply.length > 120 ? '…' : ''}
                       </div>
                     )}
                   </div>
@@ -7855,7 +7853,7 @@ function Unit12CustomerService({
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base text-gray-800">報名資料填寫</h3>
+                <h3 className="font-bold text-base text-gray-800">{t('u12.bookingFormTitle')}</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{bookingFormConfig.packageName}</p>
               </div>
               <button onClick={() => setBookingFormOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
@@ -7864,16 +7862,16 @@ function Unit12CustomerService({
             {/* 參加人員 */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-gray-700">參加人員</label>
+                <label className="text-sm font-semibold text-gray-700">{t('u12.participants')}</label>
                 <div className="flex gap-1.5">
                   <button onClick={() => setBookingParticipants(p => [...p, { name: '', birthday: '', idNumber: '' }])}
                     className="text-xs px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200">
-                    + 新增
+                    + {t('u12.add')}
                   </button>
                   {bookingParticipants.length > 1 && (
                     <button onClick={() => setBookingParticipants(p => p.slice(0, -1))}
                       className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
-                      − 移除
+                      − {t('u12.remove')}
                     </button>
                   )}
                 </div>
@@ -7883,34 +7881,35 @@ function Unit12CustomerService({
                 const cat = age >= 0 ? getAgeCategory(age) : null
                 const isInfant = cat === '幼兒'
                 const catColor = cat === '成人' ? 'bg-blue-100 text-blue-700' : cat === '小孩' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                const catText = cat === '成人' ? t('u12.ageAdult') : cat === '小孩' ? t('u12.ageChild') : t('u12.ageInfant')
                 return (
                   <div key={i} className="p-3 bg-gray-50 rounded-xl border space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-gray-500 w-4">{i + 1}.</span>
-                      {cat && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${catColor}`}>{cat}{age >= 0 ? `（${age}歲）` : ''}</span>}
+                      {cat && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${catColor}`}>{catText}{age >= 0 ? t('u12.ageYears', { age }) : ''}</span>}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-gray-500">姓名 <span className="text-red-500">*</span></label>
+                        <label className="text-[10px] text-gray-500">{t('u12.pName')} <span className="text-red-500">*</span></label>
                         <input value={p.name} onChange={e => setBookingParticipants(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
                           placeholder="王小明"
                           className="w-full mt-0.5 text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                       </div>
                       <div>
-                        <label className="text-[10px] text-gray-500">生日 <span className="text-red-500">*</span></label>
+                        <label className="text-[10px] text-gray-500">{t('u12.pBirthday')} <span className="text-red-500">*</span></label>
                         <input type="date" value={p.birthday} onChange={e => setBookingParticipants(prev => prev.map((x, j) => j === i ? { ...x, birthday: e.target.value } : x))}
                           className="w-full mt-0.5 text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                       </div>
                     </div>
                     {bookingFormConfig.requirePassengerId && !isInfant && (
                       <div>
-                        <label className="text-[10px] text-gray-500">身分證號 <span className="text-red-500">*</span></label>
+                        <label className="text-[10px] text-gray-500">{t('u12.pIdNumber')} <span className="text-red-500">*</span></label>
                         <input value={p.idNumber} onChange={e => setBookingParticipants(prev => prev.map((x, j) => j === i ? { ...x, idNumber: e.target.value.toUpperCase() } : x))}
                           placeholder="A123456789"
                           className="w-full mt-0.5 text-sm border rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-300 font-mono" />
                       </div>
                     )}
-                    {isInfant && <p className="text-[10px] text-orange-600">幼兒（3歲以下）免填身分證</p>}
+                    {isInfant && <p className="text-[10px] text-orange-600">{t('u12.infantExempt')}</p>}
                   </div>
                 )
               })}
@@ -7918,8 +7917,8 @@ function Unit12CustomerService({
 
             {/* 聯絡電話 */}
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">聯絡電話 <span className="text-red-500">*</span></label>
-              <p className="text-[10px] text-gray-400">填寫其中一位參加者的聯絡電話</p>
+              <label className="text-sm font-semibold text-gray-700">{t('u12.contactPhone')} <span className="text-red-500">*</span></label>
+              <p className="text-[10px] text-gray-400">{t('u12.contactPhoneHint')}</p>
               <input value={bookingContactPhone} onChange={e => setBookingContactPhone(e.target.value)}
                 placeholder="0912-345-678"
                 type="tel"
@@ -7929,7 +7928,7 @@ function Unit12CustomerService({
             {/* Submit */}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setBookingFormOpen(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2.5 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">{t('u12.cancel')}</button>
               <button
                 disabled={bookingSubmitting || bookingParticipants.some(p => !p.name.trim() || !p.birthday) || !bookingContactPhone.trim()}
                 onClick={async () => {
@@ -7949,14 +7948,14 @@ function Unit12CustomerService({
                     setBookingFormOpen(false)
                     setTestHistory(prev => [...prev, {
                       role: 'assistant',
-                      content: '感謝您的報名！客服會盡快與您聯繫，請保持電話暢通。',
+                      content: t('u12.bookingThanks'),
                     }])
                   } finally {
                     setBookingSubmitting(false)
                   }
                 }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                {bookingSubmitting ? '送出中…' : '確認送出'}
+                {bookingSubmitting ? t('u12.submitting2') : t('u12.confirmSubmit')}
               </button>
             </div>
           </div>
@@ -7968,31 +7967,31 @@ function Unit12CustomerService({
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) setFaqDialog(p => ({ ...p, open: false })) }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4">
-            <div className="font-bold text-gray-900">📚 加入知識庫</div>
+            <div className="font-bold text-gray-900">📚 {t('u12.addToKb')}</div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">客戶問題（Q）</label>
+              <label className="text-xs font-medium text-gray-600">{t('u12.faqQ')}</label>
               <textarea rows={2} value={faqDialog.q}
                 onChange={e => setFaqDialog(p => ({ ...p, q: e.target.value }))}
-                placeholder="例：幾點可以入住？"
+                placeholder={t('u12.faqQPh')}
                 className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">標準答案（A）<span className="text-red-500 ml-0.5">*</span></label>
+              <label className="text-xs font-medium text-gray-600">{t('u12.faqA')}<span className="text-red-500 ml-0.5">*</span></label>
               <textarea rows={4} value={faqDialog.a}
                 onChange={e => setFaqDialog(p => ({ ...p, a: e.target.value }))}
-                placeholder="輸入正確的客服回覆內容…"
+                placeholder={t('u12.faqAPh')}
                 className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">觸發關鍵字（逗號分隔，留空由 AI 自動建議）</label>
+              <label className="text-xs font-medium text-gray-600">{t('u12.faqKw')}</label>
               <input value={faqDialog.keywords}
                 onChange={e => setFaqDialog(p => ({ ...p, keywords: e.target.value }))}
-                placeholder="例：入住,幾點,check in"
+                placeholder={t('u12.faqKwPh')}
                 className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
             </div>
             <div className="flex gap-2 pt-1">
               <button onClick={() => setFaqDialog(p => ({ ...p, open: false }))}
-                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">取消</button>
+                className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('u12.cancel')}</button>
               <button
                 disabled={!faqDialog.a.trim() || faqDialog.saving}
                 onClick={async () => {
@@ -8018,7 +8017,7 @@ function Unit12CustomerService({
                   }
                 }}
                 className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                {faqDialog.saving ? <><Loader2 className="h-4 w-4 animate-spin" />AI 分析中…</> : '儲存至知識庫'}
+                {faqDialog.saving ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u12.aiAnalyzing')}</> : t('u12.saveToKb')}
               </button>
             </div>
           </div>
@@ -8032,6 +8031,7 @@ function Unit12CustomerService({
 // ─── Coming Soon ──────────────────────────────────────────────────────────────
 
 function ComingSoon({ unit }: { unit: UnitDef }) {
+  const t = useTranslations('MA')
   const Icon = unit.icon
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -8039,10 +8039,10 @@ function ComingSoon({ unit }: { unit: UnitDef }) {
         style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}>
         <Icon className="h-8 w-8" style={{ color: 'var(--primary)' }} />
       </div>
-      <h3 className="text-lg font-bold text-gray-800 mb-1">{unit.name}</h3>
-      <p className="text-sm text-gray-500 mb-4">{unit.desc}</p>
+      <h3 className="text-lg font-bold text-gray-800 mb-1">{t(`unit.${unit.id}.name`)}</h3>
+      <p className="text-sm text-gray-500 mb-4">{t(`unit.${unit.id}.desc`)}</p>
       <span className="px-4 py-1.5 rounded-full text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700">
-        建設中，敬請期待
+        {t('comingSoon')}
       </span>
     </div>
   )
@@ -8051,9 +8051,11 @@ function ComingSoon({ unit }: { unit: UnitDef }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function MarketingAutoPage() {
+  const t = useTranslations('MA')
+  const locale = useLocale()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignId, setCampaignId] = useState<string | null>(null)
-  const [campaignTitle, setCampaignTitle] = useState('未命名行銷專案')
+  const [campaignTitle, setCampaignTitle] = useState(t('mp.untitled'))
   const [showCampaigns, setShowCampaigns] = useState(false)
   const [creating, setCreating] = useState(false)
   const [campaignMenu, setCampaignMenu] = useState<string | null>(null) // campaign id with open "..." menu
@@ -8137,7 +8139,7 @@ export default function MarketingAutoPage() {
             const c = (await r.json()).campaign
             if (c) {
               setCampaignId(c.id)
-              setCampaignTitle(c.title ?? '未命名行銷專案')
+              setCampaignTitle(c.title ?? t('mp.untitled'))
               setUnitStatuses(c.unit_statuses ?? {})
               setUnitData(c.unit_data ?? {})
               return
@@ -8163,7 +8165,7 @@ export default function MarketingAutoPage() {
         const c = (await r.json()).campaign
         if (!c) return
         setCampaignId(c.id)
-        setCampaignTitle(c.title ?? '未命名行銷專案')
+        setCampaignTitle(c.title ?? t('mp.untitled'))
         setUnitStatuses(c.unit_statuses ?? {})
         setUnitData(c.unit_data ?? {})
         if (typeof window !== 'undefined') localStorage.setItem('aigate_last_campaign', c.id)
@@ -8176,8 +8178,8 @@ export default function MarketingAutoPage() {
     setCreating(true)
     // In CS mode, auto-name by industry and tag with industry field
     const isCs = csMode && csIndustry
-    const industryLabel = csIndustry ? (CS_INDUSTRY_TEMPLATES[csIndustry]?.label ?? csIndustry) : ''
-    const title = isCs ? `${industryLabel} 客服設定` : campaignTitle
+    const indLabel = csIndustry ? (t.has(`u12.industry.${csIndustry}`) ? t(`u12.industry.${csIndustry}`) : (CS_INDUSTRY_TEMPLATES[csIndustry]?.label ?? csIndustry)) : ''
+    const title = isCs ? t('mp.csConfigTitle', { name: indLabel }) : campaignTitle
     const res = await fetch('/api/marketing/campaign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -8204,7 +8206,7 @@ export default function MarketingAutoPage() {
     if (!res.ok) return
     const c = (await res.json()).campaign
     setCampaignId(c.id)
-    setCampaignTitle(c.title ?? '未命名行銷專案')
+    setCampaignTitle(c.title ?? t('mp.untitled'))
     setUnitStatuses(c.unit_statuses ?? {})
     setUnitData(c.unit_data ?? {})
     setDriveFolders(c.drive_folders ?? {})
@@ -8300,7 +8302,7 @@ export default function MarketingAutoPage() {
     if (cid) await patchCampaign(cid, { drive_folders: next })
   }, [ensureCampaign, driveFolders])
 
-  const currentUnit = UNITS.find(u => u.id === activeUnit) ?? SIDE_TOOLS.find(t => t.id === activeUnit) ?? UNITS[0]
+  const currentUnit = UNITS.find(u => u.id === activeUnit) ?? SIDE_TOOLS.find(st => st.id === activeUnit) ?? UNITS[0]
 
   // CS-only mode: no sidebar, full-width customer service
   // null = still detecting (avoid SSR flash), true = cs mode, false = full page
@@ -8312,7 +8314,7 @@ export default function MarketingAutoPage() {
         <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur border-b">
           <a href="/cs" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            返回客服統整頁
+            {t('mp.backToCs')}
           </a>
         </div>
         <Unit12CustomerService
@@ -8338,17 +8340,17 @@ export default function MarketingAutoPage() {
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border bg-white text-left hover:bg-gray-50 transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium text-gray-800 truncate">{campaignTitle}</div>
-                <div className="text-[10px] text-gray-400">{campaignId ? '已儲存' : '尚未建立'}</div>
+                <div className="text-[10px] text-gray-400">{campaignId ? t('mp.saved') : t('mp.notCreated')}</div>
               </div>
               <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
             </button>
 
             {showCampaigns && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg z-50 overflow-hidden max-h-60 overflow-y-auto">
-                <button onClick={() => { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false) }}
+                <button onClick={() => { setCampaignId(null); setCampaignTitle(t('mp.untitled')); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false) }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 text-left border-b"
                   style={{ color: 'var(--primary)' }}>
-                  <Plus className="h-3.5 w-3.5" /> 新建專案
+                  <Plus className="h-3.5 w-3.5" /> {t('mp.newProject')}
                 </button>
                 {campaigns.map(c => (
                   <div key={c.id} className={`relative flex items-center group ${c.id === campaignId ? 'bg-gray-50 font-medium' : ''}`}>
@@ -8384,7 +8386,7 @@ export default function MarketingAutoPage() {
                         className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-gray-50 text-left">
                         <div className="flex-1 min-w-0">
                           <div className="truncate">{c.title}</div>
-                          <div className="text-gray-400 text-[10px]">{new Date(c.updated_at).toLocaleDateString('zh-TW')}</div>
+                          <div className="text-gray-400 text-[10px]">{new Date(c.updated_at).toLocaleDateString(locale)}</div>
                         </div>
                         {c.id === campaignId && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
                       </button>
@@ -8402,16 +8404,16 @@ export default function MarketingAutoPage() {
                           <div className="absolute right-0 top-full mt-0.5 w-24 bg-white border rounded-lg shadow-lg z-50 overflow-hidden text-xs">
                             <button onClick={() => { setRenamingId(c.id); setRenameValue(c.title); setCampaignMenu(null) }}
                               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
-                              <Pencil className="h-3 w-3" /> 更名
+                              <Pencil className="h-3 w-3" /> {t('mp.rename')}
                             </button>
                             <button onClick={async () => {
-                              if (!confirm(`確定刪除「${c.title}」？`)) return
+                              if (!confirm(t('mp.confirmDelete', { title: c.title }))) return
                               await fetch(`/api/marketing/campaign/${c.id}`, { method: 'DELETE' })
-                              if (c.id === campaignId) { setCampaignId(null); setCampaignTitle('未命名行銷專案'); setUnitStatuses({}); setUnitData({}) }
+                              if (c.id === campaignId) { setCampaignId(null); setCampaignTitle(t('mp.untitled')); setUnitStatuses({}); setUnitData({}) }
                               setCampaigns(prev => prev.filter(x => x.id !== c.id))
                               setCampaignMenu(null)
                             }} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 text-red-600 text-left">
-                              <Trash2 className="h-3 w-3" /> 刪除
+                              <Trash2 className="h-3 w-3" /> {t('mp.delete')}
                             </button>
                           </div>
                         )}
@@ -8419,7 +8421,7 @@ export default function MarketingAutoPage() {
                     )}
                   </div>
                 ))}
-                {campaigns.length === 0 && <div className="px-3 py-3 text-xs text-gray-400 text-center">尚無專案</div>}
+                {campaigns.length === 0 && <div className="px-3 py-3 text-xs text-gray-400 text-center">{t('mp.noProjects')}</div>}
               </div>
             )}
           </div>
@@ -8427,14 +8429,14 @@ export default function MarketingAutoPage() {
           <input value={campaignTitle} onChange={e => setCampaignTitle(e.target.value)}
             onBlur={() => { if (campaignId) patchCampaign(campaignId, { title: campaignTitle }) }}
             className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-1 bg-white"
-            placeholder="專案名稱…" />
+            placeholder={t('mp.projectNamePh')} />
 
           {!campaignId && (
             <button onClick={createCampaign} disabled={creating}
               className="w-full flex items-center justify-center gap-1 h-8 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
               style={{ background: 'var(--primary)' }}>
               {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-              {creating ? '建立中…' : '建立專案'}
+              {creating ? t('mp.creating') : t('mp.createProject')}
             </button>
           )}
         </div>
@@ -8459,8 +8461,8 @@ export default function MarketingAutoPage() {
                     style={isActive ? { color: 'var(--primary)' } : { color: '#9ca3af' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate">{unit.name}</div>
-                  {!unit.implemented && <div className="text-[10px] text-gray-400">建設中</div>}
+                  <div className="text-xs font-medium truncate">{t(`unit.${unit.id}.name`)}</div>
+                  {!unit.implemented && <div className="text-[10px] text-gray-400">{t('mp.underConstruction')}</div>}
                 </div>
                 {status === 'done'    && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />}
                 {status === 'running' && <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin flex-shrink-0" />}
@@ -8471,11 +8473,11 @@ export default function MarketingAutoPage() {
         </nav>
 
         <div className="p-3 border-t space-y-1">
-          <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase tracking-wide">其他工具</div>
+          <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase tracking-wide">{t('mp.otherTools')}</div>
           <a href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
-            <Zap className="h-3.5 w-3.5" /> 自動化流程
-            {campaignId && <span className="ml-auto text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">串接中</span>}
+            <Zap className="h-3.5 w-3.5" /> {t('mp.automation')}
+            {campaignId && <span className="ml-auto text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">{t('mp.linked')}</span>}
           </a>
           {SIDE_TOOLS.map(tool => {
             const Icon = tool.icon
@@ -8483,14 +8485,14 @@ export default function MarketingAutoPage() {
             return tool.href ? (
               <a key={tool.id} href={tool.href}
                 className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
-                <Icon className="h-3.5 w-3.5" /> {tool.name}
+                <Icon className="h-3.5 w-3.5" /> {t(`unit.${tool.id}.name`)}
               </a>
             ) : (
               <button key={tool.id} onClick={() => setActiveUnit(tool.id)}
                 className={`w-full flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-left ${
                   isActive ? 'bg-blue-50 text-blue-600' : 'text-blue-600 hover:bg-blue-50'
                 }`}>
-                <Icon className="h-3.5 w-3.5" /> {tool.name}
+                <Icon className="h-3.5 w-3.5" /> {t(`unit.${tool.id}.name`)}
               </button>
             )
           })}
@@ -8499,11 +8501,11 @@ export default function MarketingAutoPage() {
         <div className="p-3 border-t space-y-1">
           <a href="/settings#company"
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
-            <Building2 className="h-3.5 w-3.5" /> 公司資料設定
+            <Building2 className="h-3.5 w-3.5" /> {t('mp.companySettings')}
           </a>
           <a href="/settings"
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-            <Settings className="h-3.5 w-3.5" /> 平台連結設定
+            <Settings className="h-3.5 w-3.5" /> {t('u12.platformSettings')}
           </a>
         </div>
       </aside>
@@ -8516,8 +8518,8 @@ export default function MarketingAutoPage() {
             <currentUnit.icon className="h-5 w-5" style={{ color: 'var(--primary)' }} />
           </div>
           <div>
-            <h1 className="font-bold text-base text-gray-900">{UNITS.find(u => u.id === activeUnit) ? `${currentUnit.id}. ` : ''}{currentUnit.name}</h1>
-            <p className="text-xs text-gray-400">{currentUnit.desc}</p>
+            <h1 className="font-bold text-base text-gray-900">{UNITS.find(u => u.id === activeUnit) ? `${currentUnit.id}. ` : ''}{t(`unit.${currentUnit.id}.name`)}</h1>
+            <p className="text-xs text-gray-400">{t(`unit.${currentUnit.id}.desc`)}</p>
           </div>
           <div className="ml-auto">
             <StatusBadge status={unitStatuses[activeUnit] ?? 'idle'} />

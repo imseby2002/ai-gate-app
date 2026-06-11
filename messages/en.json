@@ -1893,7 +1893,32 @@
       "smartDraft": "Smart Draft", "draftFor": "Draft reply for \"{msg}\"", "adoptSend": "Adopt & send", "discard": "Discard", "imageSelected": "Image selected", "remove": "Remove", "uploadImage": "Upload image", "send": "Send",
       "autoCloseCountdown": "Auto-close countdown", "autoCloseIn": "auto-close ticket in {time}", "caseAutoClosed": "Ticket auto-closed", "convSummary": "Conversation Summary", "quickPhrases": "Quick test phrases:",
       "autoLearnFaq": "Auto-learning FAQ", "autoLearnFaqHint": "After an agent answers, add it to the KB; next time AI cites the standard answer for similar questions", "manualAdd": "Add manually", "noFaqRecords": "No learning records yet. In the \"Test\" tab, click \"📚 Add to KB\" next to an AI reply to add one.",
-      "totalConv": "Total conversations", "avgSpeed": "Avg response speed", "highRiskConv": "High-risk conversations", "claudeEscalated": "Claude escalations", "riskDist": "Risk distribution", "hotIntents": "Top 5 hot intents", "sentimentTrend": "Sentiment trend (last 7 days)"
+      "totalConv": "Total conversations", "avgSpeed": "Avg response speed", "highRiskConv": "High-risk conversations", "claudeEscalated": "Claude escalations", "riskDist": "Risk distribution", "hotIntents": "Top 5 hot intents", "sentimentTrend": "Sentiment trend (last 7 days)",
+      "convLog": "Conversation Log", "nRecords": "{n}", "noConvLog": "No conversation records yet", "customerLabel": "Customer: ", "aiLabel": "AI: ",
+      "ticketSystem": "Ticket System", "filterAll": "All", "ticketTip": "Go to the \"Test\" tab, chat with AI, then click \"Create ticket\" to move it into the ticket system", "noTickets": "No tickets yet", "priorityLabel": "{p} priority",
+      "unifiedInbox": "Unified Inbox", "sourceNote": "Source guide", "sourceTest": "🧪 Test: auto-saved from chats in the \"Test\" tab", "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram: actual platform Webhook messages (set up in the \"Platforms\" tab first)", "noInbox": "No message records yet", "noInboxHint": "Send a few messages in the \"Test\" tab to see them here",
+      "bookingFormTitle": "Booking Details", "participants": "Participants", "ageAdult": "Adult", "ageChild": "Child", "ageInfant": "Infant", "ageYears": " ({age} yrs)", "pName": "Name", "pBirthday": "Birthday", "pIdNumber": "ID number", "infantExempt": "Infants (under 3) exempt from ID",
+      "contactPhone": "Contact phone", "contactPhoneHint": "Enter the contact phone of one participant", "bookingThanks": "Thank you for your booking! Our team will contact you shortly — please keep your phone available.", "submitting2": "Submitting…", "confirmSubmit": "Confirm & submit",
+      "faqQ": "Customer question (Q)", "faqQPh": "E.g. What time is check-in?", "faqA": "Standard answer (A)", "faqAPh": "Enter the correct support reply…", "faqKw": "Trigger keywords (comma-separated; blank = AI auto-suggests)", "faqKwPh": "E.g. check-in,what time,check in", "aiAnalyzing": "AI analyzing…", "saveToKb": "Save to Knowledge Base",
+      "platformSettings": "Platform Connection Settings"
+    },
+    "comingSoon": "Under construction, stay tuned",
+    "unit": {
+      "1": { "name": "Collect Info", "desc": "News, web, maps, reviews" },
+      "3": { "name": "Analyze Data", "desc": "Market, competitors, video/copy analysis" },
+      "4": { "name": "Copy Generation", "desc": "AI-generated marketing copy" },
+      "5": { "name": "Image Scripts", "desc": "Generate image description scripts" },
+      "6": { "name": "Image Generation", "desc": "AI-generated marketing images" },
+      "7": { "name": "Video Scripts", "desc": "Generate storyboard scripts" },
+      "8": { "name": "Video Generation", "desc": "AI-generated marketing videos" },
+      "9": { "name": "Upload to Platforms", "desc": "Auto-upload to FB/IG/YouTube, etc." },
+      "11": { "name": "Anchor Marketing", "desc": "HeyGen virtual anchor videos" }
+    },
+    "mp": {
+      "untitled": "Untitled Marketing Project", "csConfigTitle": "{name} CS Config", "backToCs": "Back to CS overview",
+      "saved": "Saved", "notCreated": "Not created", "newProject": "New project", "rename": "Rename", "confirmDelete": "Delete \"{title}\"?", "delete": "Delete",
+      "noProjects": "No projects yet", "projectNamePh": "Project name…", "creating": "Creating…", "createProject": "Create project", "underConstruction": "Under construction",
+      "otherTools": "Other tools", "automation": "Automation pipeline", "linked": "Linked", "companySettings": "Company Data Settings"
     }
   }
 }

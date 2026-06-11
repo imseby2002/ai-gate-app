@@ -1893,7 +1893,32 @@
       "smartDraft": "Bản nháp thông minh", "draftFor": "Bản nháp trả lời cho \"{msg}\"", "adoptSend": "Dùng & gửi", "discard": "Bỏ", "imageSelected": "Đã chọn hình", "remove": "Xóa", "uploadImage": "Tải hình", "send": "Gửi",
       "autoCloseCountdown": "Đếm ngược tự đóng", "autoCloseIn": "tự đóng phiếu sau {time}", "caseAutoClosed": "Phiếu đã tự đóng", "convSummary": "Tóm tắt hội thoại", "quickPhrases": "Câu thử nhanh:",
       "autoLearnFaq": "FAQ tự học", "autoLearnFaqHint": "Sau khi CSKH trả lời, thêm vào kho tri thức; lần sau AI trích câu trả lời chuẩn cho câu hỏi tương tự", "manualAdd": "Thêm thủ công", "noFaqRecords": "Chưa có bản ghi học. Ở tab \"Kiểm thử\", nhấn \"📚 Thêm vào kho tri thức\" cạnh phản hồi AI để thêm.",
-      "totalConv": "Tổng hội thoại", "avgSpeed": "Tốc độ phản hồi TB", "highRiskConv": "Hội thoại rủi ro cao", "claudeEscalated": "Claude nâng cấp", "riskDist": "Phân bố rủi ro", "hotIntents": "Top 5 vấn đề nóng", "sentimentTrend": "Xu hướng cảm xúc (7 ngày qua)"
+      "totalConv": "Tổng hội thoại", "avgSpeed": "Tốc độ phản hồi TB", "highRiskConv": "Hội thoại rủi ro cao", "claudeEscalated": "Claude nâng cấp", "riskDist": "Phân bố rủi ro", "hotIntents": "Top 5 vấn đề nóng", "sentimentTrend": "Xu hướng cảm xúc (7 ngày qua)",
+      "convLog": "Nhật ký hội thoại", "nRecords": "{n}", "noConvLog": "Chưa có bản ghi hội thoại", "customerLabel": "Khách: ", "aiLabel": "AI: ",
+      "ticketSystem": "Hệ thống phiếu", "filterAll": "Tất cả", "ticketTip": "Sang tab \"Kiểm thử\", chat với AI rồi nhấn \"Tạo phiếu\" để chuyển vào hệ thống phiếu", "noTickets": "Chưa có phiếu", "priorityLabel": "Ưu tiên {p}",
+      "unifiedInbox": "Hộp thư hợp nhất", "sourceNote": "Giải thích nguồn", "sourceTest": "🧪 Kiểm thử: tự lưu từ hội thoại ở tab \"Kiểm thử\"", "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram: tin Webhook nền tảng thực (cần thiết lập ở tab \"Nền tảng\" trước)", "noInbox": "Chưa có bản ghi tin nhắn", "noInboxHint": "Gửi vài tin ở tab \"Kiểm thử\" để xem tại đây",
+      "bookingFormTitle": "Điền thông tin đặt", "participants": "Người tham gia", "ageAdult": "Người lớn", "ageChild": "Trẻ em", "ageInfant": "Em bé", "ageYears": " ({age} tuổi)", "pName": "Họ tên", "pBirthday": "Ngày sinh", "pIdNumber": "Số CMND", "infantExempt": "Em bé (dưới 3 tuổi) miễn CMND",
+      "contactPhone": "Điện thoại liên hệ", "contactPhoneHint": "Điền điện thoại liên hệ của một người tham gia", "bookingThanks": "Cảm ơn bạn đã đặt! CSKH sẽ liên hệ sớm, vui lòng giữ điện thoại liên lạc được.", "submitting2": "Đang gửi…", "confirmSubmit": "Xác nhận gửi",
+      "faqQ": "Câu hỏi khách (Q)", "faqQPh": "VD: Mấy giờ được nhận phòng?", "faqA": "Câu trả lời chuẩn (A)", "faqAPh": "Nhập nội dung trả lời CSKH chính xác…", "faqKw": "Từ khóa kích hoạt (phân tách bằng dấu phẩy; để trống AI tự gợi ý)", "faqKwPh": "VD: nhận phòng,mấy giờ,check in", "aiAnalyzing": "AI đang phân tích…", "saveToKb": "Lưu vào kho tri thức",
+      "platformSettings": "Cài đặt kết nối nền tảng"
+    },
+    "comingSoon": "Đang xây dựng, vui lòng đón chờ",
+    "unit": {
+      "1": { "name": "Thu thập thông tin", "desc": "Tin tức, web, bản đồ, đánh giá" },
+      "3": { "name": "Phân tích dữ liệu", "desc": "Thị trường, đối thủ, phân tích video/nội dung" },
+      "4": { "name": "Tạo nội dung", "desc": "AI tạo nội dung tiếp thị" },
+      "5": { "name": "Kịch bản hình", "desc": "Tạo kịch bản mô tả hình" },
+      "6": { "name": "Tạo hình", "desc": "AI tạo hình tiếp thị" },
+      "7": { "name": "Kịch bản video", "desc": "Tạo kịch bản storyboard" },
+      "8": { "name": "Tạo video", "desc": "AI tạo video tiếp thị" },
+      "9": { "name": "Tải lên nền tảng", "desc": "Tự tải lên FB/IG/YouTube, v.v." },
+      "11": { "name": "Tiếp thị MC", "desc": "Video MC ảo HeyGen" }
+    },
+    "mp": {
+      "untitled": "Dự án tiếp thị chưa đặt tên", "csConfigTitle": "Cấu hình CSKH {name}", "backToCs": "Về trang tổng CSKH",
+      "saved": "Đã lưu", "notCreated": "Chưa tạo", "newProject": "Dự án mới", "rename": "Đổi tên", "confirmDelete": "Xóa \"{title}\"?", "delete": "Xóa",
+      "noProjects": "Chưa có dự án", "projectNamePh": "Tên dự án…", "creating": "Đang tạo…", "createProject": "Tạo dự án", "underConstruction": "Đang xây dựng",
+      "otherTools": "Công cụ khác", "automation": "Quy trình tự động", "linked": "Đang liên kết", "companySettings": "Cài đặt dữ liệu công ty"
     }
   }
 }

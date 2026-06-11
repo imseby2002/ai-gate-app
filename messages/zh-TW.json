@@ -1893,7 +1893,32 @@
       "smartDraft": "智慧草稿", "draftFor": "針對「{msg}」的草稿回覆", "adoptSend": "採用送出", "discard": "捨棄", "imageSelected": "圖片已選取", "remove": "移除", "uploadImage": "上傳圖片", "send": "送出",
       "autoCloseCountdown": "自動結案倒數", "autoCloseIn": "{time} 後自動關閉工單", "caseAutoClosed": "工單已自動結案", "convSummary": "對話摘要", "quickPhrases": "快速測試語句：",
       "autoLearnFaq": "自動學習 FAQ", "autoLearnFaqHint": "客服回答後加入知識庫，AI 下次遇到類似問題直接引用標準答案", "manualAdd": "手動新增", "noFaqRecords": "尚無學習記錄。在「測試」Tab 的 AI 回覆旁點「📚 加入知識庫」即可新增。",
-      "totalConv": "總對話數", "avgSpeed": "平均回應速度", "highRiskConv": "高風險對話", "claudeEscalated": "Claude 升級處理", "riskDist": "風險分佈", "hotIntents": "熱點問題 TOP 5", "sentimentTrend": "情緒趨勢（近 7 天）"
+      "totalConv": "總對話數", "avgSpeed": "平均回應速度", "highRiskConv": "高風險對話", "claudeEscalated": "Claude 升級處理", "riskDist": "風險分佈", "hotIntents": "熱點問題 TOP 5", "sentimentTrend": "情緒趨勢（近 7 天）",
+      "convLog": "對話記錄", "nRecords": "{n} 筆", "noConvLog": "尚無對話記錄", "customerLabel": "客戶：", "aiLabel": "AI：",
+      "ticketSystem": "工單系統", "filterAll": "全部", "ticketTip": "切換到「測試」Tab，與 AI 對話後點「建立工單」即可轉入工單系統", "noTickets": "尚無工單", "priorityLabel": "{p}優先",
+      "unifiedInbox": "統一收件匣", "sourceNote": "來源說明", "sourceTest": "🧪 測試：透過「測試」Tab 的對話自動儲存", "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram：實際平台 Webhook 訊息（需先在「平台」Tab 設定）", "noInbox": "尚無訊息記錄", "noInboxHint": "先在「測試」Tab 發送幾則訊息，即可在此查看",
+      "bookingFormTitle": "報名資料填寫", "participants": "參加人員", "ageAdult": "成人", "ageChild": "小孩", "ageInfant": "幼兒", "ageYears": "（{age}歲）", "pName": "姓名", "pBirthday": "生日", "pIdNumber": "身分證號", "infantExempt": "幼兒（3歲以下）免填身分證",
+      "contactPhone": "聯絡電話", "contactPhoneHint": "填寫其中一位參加者的聯絡電話", "bookingThanks": "感謝您的報名！客服會盡快與您聯繫，請保持電話暢通。", "submitting2": "送出中…", "confirmSubmit": "確認送出",
+      "faqQ": "客戶問題（Q）", "faqQPh": "例：幾點可以入住？", "faqA": "標準答案（A）", "faqAPh": "輸入正確的客服回覆內容…", "faqKw": "觸發關鍵字（逗號分隔，留空由 AI 自動建議）", "faqKwPh": "例：入住,幾點,check in", "aiAnalyzing": "AI 分析中…", "saveToKb": "儲存至知識庫",
+      "platformSettings": "平台連結設定"
+    },
+    "comingSoon": "建設中，敬請期待",
+    "unit": {
+      "1": { "name": "蒐集資訊", "desc": "新聞、網頁、地圖、評論" },
+      "3": { "name": "分析資料", "desc": "市場、競爭對手、影片/文案分析" },
+      "4": { "name": "文案產出", "desc": "行銷文案 AI 生成" },
+      "5": { "name": "圖片腳本", "desc": "圖片描述腳本生成" },
+      "6": { "name": "圖片產出", "desc": "行銷圖片 AI 生成" },
+      "7": { "name": "影片腳本", "desc": "分鏡腳本生成" },
+      "8": { "name": "影片產出", "desc": "行銷影片 AI 生成" },
+      "9": { "name": "上傳平台", "desc": "FB/IG/YouTube 等自動上傳" },
+      "11": { "name": "主播行銷", "desc": "HeyGen 虛擬主播影片" }
+    },
+    "mp": {
+      "untitled": "未命名行銷專案", "csConfigTitle": "{name} 客服設定", "backToCs": "返回客服統整頁",
+      "saved": "已儲存", "notCreated": "尚未建立", "newProject": "新建專案", "rename": "更名", "confirmDelete": "確定刪除「{title}」？", "delete": "刪除",
+      "noProjects": "尚無專案", "projectNamePh": "專案名稱…", "creating": "建立中…", "createProject": "建立專案", "underConstruction": "建設中",
+      "otherTools": "其他工具", "automation": "自動化流程", "linked": "串接中", "companySettings": "公司資料設定"
     }
   }
 }
