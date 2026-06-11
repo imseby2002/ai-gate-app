@@ -1872,7 +1872,18 @@
       "recommendedSheets": "建議設定的 Google Sheets（{name}）", "sheetN": "表格 {n}", "queryColumn": "查詢欄位：", "returnColExample": "回傳欄位範例：", "triggerWord": "觸發詞：", "triggerMode": "觸發模式：", "tmNumeric": "數字觸發", "tmBoth": "關鍵字+數字", "tmKeyword": "關鍵字觸發",
       "dsTip1": "<b>定價查詢</b>請到「定價計算機」分頁設定 — 這裡只放需要即時查詢的非定價資料（訂單、排班、時段）", "dsTip2": "依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID",
       "loadingShort": "載入中…", "noDataSources": "尚無資料來源。點擊「新增」設定 Google Sheets 查詢。", "toolDivision": "工具分工說明", "toolSheets": "<b>Google Sheets（此頁）</b>：訂單查詢、排班、可用時段等即時動態資料", "toolPricing": "<b>定價計算機</b>：房型/療程/套餐等定價計算，AI 自動套公式報價", "toolKb": "<b>知識庫</b>：FAQ、政策說明、靜態產品介紹",
-      "enable": "啟用", "disable": "停用"
+      "enable": "啟用", "disable": "停用",
+      "editSource": "編輯資料來源", "addSource": "新增資料來源", "dsName": "名稱", "dsNamePh": "例：訂單密碼表、房型定價", "dsSpreadsheetPh": "1BxiMVs0...（網址列中間那段）", "dsSheetName": "工作表名稱（Sheet Name）", "dsSheetNamePh": "工作表1 或 Sheet1", "dsKeyColumn": "查詢欄位名稱（標題列的欄名）", "dsKeyColumnPh": "例：訂單編號、房型名稱",
+      "dsReturnCols": "回傳欄位（每行一個，留空回傳所有欄位）", "dsReturnColsPh": "房號\n大門密碼\n房間密碼", "dsReturnColsHint": "每行填一個欄位名稱（需與 Google Sheets 標題列完全一致）",
+      "dsTriggerMode": "觸發方式", "dsTmKeyword": "關鍵字觸發（客戶訊息含特定詞）", "dsTmNumeric": "數字觸發（客戶輸入8位以上訂單號，自動精確比對）", "dsTmBoth": "兩者皆可", "dsNumericHint": "偵測 8 位以上純數字（非 0 開頭、非 + 開頭），精確比對「查詢欄位」後只回覆對應那筆資料。",
+      "dsTriggerKw": "觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）", "dsTriggerKwPh": "例：訂單,密碼,查詢",
+      "howToGetId": "如何取得 Spreadsheet ID：", "howToGetIdBody": "從 Google Sheets 網址複製：docs.google.com/spreadsheets/d/<b>【這段】</b>/edit", "sheetsPermHint": "Google Sheets 需設為「知道連結的人可以查看」，並啟用 Sheets API。",
+      "usageNotes": "使用說明", "usage1": "每位使用者可新增多個資料來源，各自填入自己的 Google API Key 與試算表。", "usage2": "「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。", "usage3": "「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。", "usage4": "回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。",
+      "shopTitle": "民宿購物設定", "shopHint": "客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets（舉例：早餐預訂、備品補充、活動報名）", "noShopConfig": "尚無購物設定。點擊「新增」加入早餐、備品等項目。", "shopMeta": "截止：{cutoff}　送達：{delivery}　選項：{count} 項",
+      "editShopConfig": "編輯購物設定", "addShopConfig": "新增購物設定", "shopName": "名稱", "shopNamePh": "例：早餐預訂、備品補充、活動報名", "appsScriptUrl": "Apps Script Web App 網址", "appsScriptHint": "部署 Apps Script 為 Web App 後取得的 /exec 網址",
+      "cutoffTime": "截止時間", "deliveryTime": "預計送達時間", "roomList": "房間列表（每行一間，格式：房號 房型名稱）", "itemMenu": "物品選單（每行一個選項）", "itemMenuHint": "AI 點餐時會直接列出這些選項給客人選擇",
+      "orderFlowTitle": "設定完成後 AI 的點餐流程：", "orderFlow1": "1. 客人詢問相關服務 → AI 確認房號 → 列出上方選單", "orderFlow2": "2. 客人選好品項與份數 → AI 整理確認清單", "orderFlow3": "3. 客人確認 → 系統自動 POST 到 Apps Script → Script 推 LINE 群組 + 存 Sheets",
+      "pricingHint": "AI 查詢定價時精確套用數字，不會自行估算", "pcTour": "行程", "pcAccommodation": "住宿", "pcCustom": "自訂", "noPricing": "尚無定價設定", "noPricingHint": "選擇上方按鈕新增行程或住宿定價"
     }
   }
 }

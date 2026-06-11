@@ -6841,26 +6841,14 @@ function Unit12CustomerService({
 
           {editingDs !== null && (
             <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
-              <div className="font-medium text-sm text-gray-700">{editingDs.id ? '編輯資料來源' : '新增資料來源'}</div>
+              <div className="font-medium text-sm text-gray-700">{editingDs.id ? t('u12.editSource') : t('u12.addSource')}</div>
 
               {[
-                { key: 'name', label: '名稱', placeholder:
-                    industry === 'ecommerce' ? '例：訂單查詢表、商品目錄' :
-                    industry === 'restaurant' ? '例：菜單定價、訂位時段表' :
-                    industry === 'clinic' ? '例：療程費用表、醫師排班' :
-                    industry === 'beauty' ? '例：服務價目表、設計師排班' :
-                    industry === 'education' ? '例：課程學費表、試聽時段' :
-                    '例：訂單密碼表、房型定價', secret: false },
+                { key: 'name', label: t('u12.dsName'), placeholder: t('u12.dsNamePh'), secret: false },
                 { key: 'apiKey', label: 'Google Sheets API Key', placeholder: 'AIzaSy...', secret: true },
-                { key: 'spreadsheetId', label: 'Spreadsheet ID', placeholder: '1BxiMVs0...（網址列中間那段）', secret: false },
-                { key: 'sheetName', label: '工作表名稱（Sheet Name）', placeholder: '工作表1 或 Sheet1', secret: false },
-                { key: 'keyColumn', label: '查詢欄位名稱（標題列的欄名）', placeholder:
-                    industry === 'ecommerce' ? '例：訂單編號、商品名稱' :
-                    industry === 'restaurant' ? '例：套餐名稱、日期' :
-                    industry === 'clinic' ? '例：療程名稱、醫師姓名' :
-                    industry === 'beauty' ? '例：服務名稱、設計師姓名' :
-                    industry === 'education' ? '例：課程名稱' :
-                    '例：訂單編號、房型名稱', secret: false },
+                { key: 'spreadsheetId', label: 'Spreadsheet ID', placeholder: t('u12.dsSpreadsheetPh'), secret: false },
+                { key: 'sheetName', label: t('u12.dsSheetName'), placeholder: t('u12.dsSheetNamePh'), secret: false },
+                { key: 'keyColumn', label: t('u12.dsKeyColumn'), placeholder: t('u12.dsKeyColumnPh'), secret: false },
               ].map(({ key, label, placeholder, secret }) => (
                 <div key={key}>
                   <label className="text-[10px] text-gray-500 block mb-1">{label}</label>
@@ -6875,48 +6863,41 @@ function Unit12CustomerService({
               ))}
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">回傳欄位（每行一個，留空回傳所有欄位）</label>
+                <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsReturnCols')}</label>
                 <textarea
                   rows={4}
-                  placeholder={
-                    industry === 'ecommerce' ? '訂單編號\n商品名稱\n物流單號\n配送狀態\n預計到貨日' :
-                    industry === 'restaurant' ? '套餐名稱\n內容\n價格\n適合人數' :
-                    industry === 'clinic' ? '療程名稱\n費用\n療程時間\n效果持續' :
-                    industry === 'beauty' ? '服務名稱\n短髮價\n長髮價\n所需時間' :
-                    industry === 'education' ? '課程名稱\n適合年級\n月繳\n季繳\n年繳' :
-                    '房號\n大門密碼\n房間密碼'
-                  }
+                  placeholder={t('u12.dsReturnColsPh')}
                   value={editingDsForm.returnColumns.join('\n')}
                   onChange={e => setEditingDsForm(prev => ({ ...prev, returnColumns: e.target.value.split('\n').map(s => s.trim()).filter(Boolean) }))}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
                 />
-                <div className="text-[10px] text-gray-400 mt-0.5">每行填一個欄位名稱（需與 Google Sheets 標題列完全一致）</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{t('u12.dsReturnColsHint')}</div>
               </div>
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">觸發方式</label>
+                <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsTriggerMode')}</label>
                 <select
                   value={editingDsForm.triggerMode ?? 'keyword'}
                   onChange={e => setEditingDsForm(prev => ({ ...prev, triggerMode: e.target.value as 'keyword' | 'numeric' | 'both' }))}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                 >
-                  <option value="keyword">關鍵字觸發（客戶訊息含特定詞）</option>
-                  <option value="numeric">數字觸發（客戶輸入8位以上訂單號，自動精確比對）</option>
-                  <option value="both">兩者皆可</option>
+                  <option value="keyword">{t('u12.dsTmKeyword')}</option>
+                  <option value="numeric">{t('u12.dsTmNumeric')}</option>
+                  <option value="both">{t('u12.dsTmBoth')}</option>
                 </select>
                 {editingDsForm.triggerMode === 'numeric' && (
                   <div className="text-[10px] text-indigo-600 mt-1 bg-indigo-50 px-2 py-1 rounded">
-                    偵測 8 位以上純數字（非 0 開頭、非 + 開頭），精確比對「查詢欄位」後只回覆對應那筆資料。
+                    {t('u12.dsNumericHint')}
                   </div>
                 )}
               </div>
 
               {(editingDsForm.triggerMode === 'keyword' || editingDsForm.triggerMode === 'both' || !editingDsForm.triggerMode) && (
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）</label>
+                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsTriggerKw')}</label>
                   <input
                     type="text"
-                    placeholder="例：訂單,密碼,查詢"
+                    placeholder={t('u12.dsTriggerKwPh')}
                     value={editingDsForm.triggerKeywords.join(',')}
                     onChange={e => setEditingDsForm(prev => ({ ...prev, triggerKeywords: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
                     className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
@@ -6925,52 +6906,52 @@ function Unit12CustomerService({
               )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
-                <div className="font-medium">如何取得 Spreadsheet ID：</div>
-                <div>從 Google Sheets 網址複製：docs.google.com/spreadsheets/d/<strong>【這段】</strong>/edit</div>
-                <div className="font-medium mt-1">Google Sheets 需設為「知道連結的人可以查看」，並啟用 Sheets API。</div>
+                <div className="font-medium">{t('u12.howToGetId')}</div>
+                <div>{t.rich('u12.howToGetIdBody', { b: (c) => <strong>{c}</strong> })}</div>
+                <div className="font-medium mt-1">{t('u12.sheetsPermHint')}</div>
               </div>
 
               <div className="flex gap-2 pt-1">
                 <button onClick={saveDs} disabled={savingDs}
                   className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-70"
                   style={{ background: 'var(--primary)' }}>
-                  {savingDs ? '儲存中…' : '儲存'}
+                  {savingDs ? t('u12.saving') : t('u12.save')}
                 </button>
                 <button onClick={() => setEditingDs(null)}
                   className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
-                  取消
+                  {t('u12.cancel')}
                 </button>
               </div>
             </div>
           )}
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
-            <div className="font-medium">使用說明</div>
-            <div>• 每位使用者可新增多個資料來源，各自填入自己的 Google API Key 與試算表。</div>
-            <div>• 「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。</div>
-            <div>• 「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。</div>
-            <div>• 回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。</div>
+            <div className="font-medium">{t('u12.usageNotes')}</div>
+            <div>• {t('u12.usage1')}</div>
+            <div>• {t('u12.usage2')}</div>
+            <div>• {t('u12.usage3')}</div>
+            <div>• {t('u12.usage4')}</div>
           </div>
 
           {/* ── 民宿購物設定 ── */}
           <div className="border-t pt-5 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-gray-700">🍱 民宿購物設定</div>
-                <div className="text-xs text-gray-400 mt-0.5">客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets（舉例：早餐預訂、備品補充、活動報名）</div>
+                <div className="text-sm font-medium text-gray-700">🍱 {t('u12.shopTitle')}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{t('u12.shopHint')}</div>
               </div>
               {editingBreakfast === null && (
                 <button onClick={openAddBreakfast}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1 flex-shrink-0"
                   style={{ background: 'var(--primary)' }}>
-                  <Plus className="h-3.5 w-3.5" />新增
+                  <Plus className="h-3.5 w-3.5" />{t('u12.add')}
                 </button>
               )}
             </div>
 
             {breakfastSources.length === 0 && editingBreakfast === null && (
               <div className="border-2 border-dashed rounded-xl p-5 text-center text-xs text-gray-400">
-                尚無購物設定。點擊「新增」加入早餐、備品等項目。
+                {t('u12.noShopConfig')}
               </div>
             )}
 
@@ -6981,17 +6962,17 @@ function Unit12CustomerService({
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-800 truncate">{src.name}</div>
                       <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                        截止：{src.config.cutoffTime ?? '--'}　送達：{src.config.deliveryTime ?? '--'}　選項：{(src.config.menu ?? []).length} 項
+                        {t('u12.shopMeta', { cutoff: src.config.cutoffTime ?? '--', delivery: src.config.deliveryTime ?? '--', count: (src.config.menu ?? []).length })}
                       </div>
                     </div>
                     <button onClick={() => toggleBreakfast(src)}
                       className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {src.enabled ? '啟用' : '停用'}
+                      {src.enabled ? t('u12.enable') : t('u12.disable')}
                     </button>
                     <button onClick={() => openEditBreakfast(src)}
-                      className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                      className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
                     <button onClick={() => deleteBreakfast(src.id)}
-                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
                   </div>
                 ))}
               </div>
@@ -7000,14 +6981,14 @@ function Unit12CustomerService({
             {editingBreakfast !== null && (
               <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
                 <div className="font-medium text-sm text-gray-700">
-                  {(editingBreakfast as CsDataSource).id ? '編輯購物設定' : '新增購物設定'}
+                  {(editingBreakfast as CsDataSource).id ? t('u12.editShopConfig') : t('u12.addShopConfig')}
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">名稱 <span className="text-red-400">*</span></label>
+                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.shopName')} <span className="text-red-400">*</span></label>
                   <input
                     type="text"
-                    placeholder="例：早餐預訂、備品補充、活動報名"
+                    placeholder={t('u12.shopNamePh')}
                     value={editingBreakfastForm.name}
                     onChange={e => setEditingBreakfastForm(p => ({ ...p, name: e.target.value }))}
                     className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
@@ -7015,7 +6996,7 @@ function Unit12CustomerService({
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">Apps Script Web App 網址 <span className="text-red-400">*</span></label>
+                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.appsScriptUrl')} <span className="text-red-400">*</span></label>
                   <input
                     type="text"
                     placeholder="https://script.google.com/macros/s/XXXXX/exec"
@@ -7023,12 +7004,12 @@ function Unit12CustomerService({
                     onChange={e => setEditingBreakfastForm(p => ({ ...p, webhookUrl: e.target.value }))}
                     className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                   />
-                  <div className="text-[10px] text-gray-400 mt-0.5">部署 Apps Script 為 Web App 後取得的 /exec 網址</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{t('u12.appsScriptHint')}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">截止時間</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">{t('u12.cutoffTime')}</label>
                     <input
                       type="text"
                       placeholder="22:00"
@@ -7038,7 +7019,7 @@ function Unit12CustomerService({
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">預計送達時間</label>
+                    <label className="text-[10px] text-gray-500 block mb-1">{t('u12.deliveryTime')}</label>
                     <input
                       type="text"
                       placeholder="07:50"
@@ -7050,7 +7031,7 @@ function Unit12CustomerService({
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">房間列表（每行一間，格式：房號 房型名稱）</label>
+                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.roomList')}</label>
                   <textarea
                     rows={5}
                     placeholder={'201 龜山加大床房\n202 蘭博雙人房\n301 海景加大床房\n302 山景雙人房\n401 露臺雙人房'}
@@ -7061,7 +7042,7 @@ function Unit12CustomerService({
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">物品選單（每行一個選項）</label>
+                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.itemMenu')}</label>
                   <textarea
                     rows={6}
                     placeholder={'SET A 薯餅起司堡\nSET B (全素)綜合蔬食總匯\nSET C 厚切牛肉起司堡\nSET D (奶蛋素)松露薯泥堡\nSET E 中華拼盤'}
@@ -7069,14 +7050,14 @@ function Unit12CustomerService({
                     onChange={e => setEditingBreakfastForm(p => ({ ...p, menu: e.target.value }))}
                     className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
                   />
-                  <div className="text-[10px] text-gray-400 mt-0.5">AI 點餐時會直接列出這些選項給客人選擇</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{t('u12.itemMenuHint')}</div>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
-                  <div className="font-medium">設定完成後 AI 的點餐流程：</div>
-                  <div>1. 客人詢問相關服務 → AI 確認房號 → 列出上方選單</div>
-                  <div>2. 客人選好品項與份數 → AI 整理確認清單</div>
-                  <div>3. 客人確認 → 系統自動 POST 到 Apps Script → Script 推 LINE 群組 + 存 Sheets</div>
+                  <div className="font-medium">{t('u12.orderFlowTitle')}</div>
+                  <div>{t('u12.orderFlow1')}</div>
+                  <div>{t('u12.orderFlow2')}</div>
+                  <div>{t('u12.orderFlow3')}</div>
                 </div>
 
                 <div className="flex gap-2 pt-1">
@@ -7087,12 +7068,12 @@ function Unit12CustomerService({
                     style={{ background: 'var(--primary)' }}
                   >
                     {savingBreakfast
-                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />儲存中…</>
-                      : <><CheckCircle2 className="h-3.5 w-3.5" />儲存</>}
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('u12.saving')}</>
+                      : <><CheckCircle2 className="h-3.5 w-3.5" />{t('u12.save')}</>}
                   </button>
                   <button onClick={() => setEditingBreakfast(null)}
                     className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
-                    取消
+                    {t('u12.cancel')}
                   </button>
                 </div>
               </div>
@@ -7106,14 +7087,14 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700">定價計算機</div>
-              <div className="text-xs text-gray-400 mt-0.5">AI 查詢定價時精確套用數字，不會自行估算</div>
+              <div className="text-sm font-medium text-gray-700">{t('u12.tabPricing')}</div>
+              <div className="text-xs text-gray-400 mt-0.5">{t('u12.pricingHint')}</div>
             </div>
             {!editingPc && (
               <div className="flex gap-1.5 flex-wrap">
                 {(industry && CS_INDUSTRY_TEMPLATES[industry]
                   ? CS_INDUSTRY_TEMPLATES[industry].pricingButtons
-                  : [{ key: 'tour', label: '+ 行程' }, { key: 'accommodation', label: '+ 住宿' }, { key: 'custom', label: '+ 自訂' }]
+                  : [{ key: 'tour', label: `+ ${t('u12.pcTour')}` }, { key: 'accommodation', label: `+ ${t('u12.pcAccommodation')}` }, { key: 'custom', label: `+ ${t('u12.pcCustom')}` }]
                 ).map(({ key, label }, idx) => (
                   <button key={idx} onClick={() => openAddPc(key)}
                     className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
@@ -7127,8 +7108,8 @@ function Unit12CustomerService({
 
           {pricingConfigs.length === 0 && !editingPc && (
             <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
-              <div className="mb-2">尚無定價設定</div>
-              <div className="text-xs">選擇上方按鈕新增行程或住宿定價</div>
+              <div className="mb-2">{t('u12.noPricing')}</div>
+              <div className="text-xs">{t('u12.noPricingHint')}</div>
             </div>
           )}
 
@@ -7136,7 +7117,7 @@ function Unit12CustomerService({
             <div className="space-y-2">
               {pricingConfigs.map((pc) => {
                 const cfg = pc.config as { productType?: string; triggerKeywords?: string[] }
-                const typeLabel = cfg.productType === 'tour' ? '行程' : cfg.productType === 'accommodation' ? '住宿' : '自訂'
+                const typeLabel = cfg.productType === 'tour' ? t('u12.pcTour') : cfg.productType === 'accommodation' ? t('u12.pcAccommodation') : t('u12.pcCustom')
                 return (
                   <div key={pc.id} className="border rounded-xl p-3 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
