@@ -1804,6 +1804,22 @@
       "genVoice": "Đang tạo giọng…", "previewVoice": "Nghe thử giọng",
       "phoneList": "Danh sách số điện thoại", "recognizedPhones": "Đã nhận diện {n}", "phoneHint": "Mỗi dòng một số, hoặc phân tách bằng dấu phẩy; hỗ trợ định dạng quốc tế (kèm mã quốc gia)",
       "callingN": "Đang gọi… ({n})", "startCallN": "Bắt đầu gọi {n} số", "callResult": "Kết quả gọi", "callOk": "Gọi thành công"
+    },
+    "u11": {
+      "ratio": { "16:9": "Ngang 16:9", "9:16": "Dọc 9:16", "1:1": "Vuông 1:1" },
+      "ratioDesc": { "youtube": "YouTube / Quảng cáo", "reels": "Reels / TikTok", "ig": "Instagram" },
+      "bg": { "white": "Trắng", "black": "Đen", "lightBlue": "Xanh nhạt", "lightOrange": "Cam nhạt", "lightGreen": "Lục nhạt" },
+      "errAvatar": "Vui lòng chọn MC Avatar", "errVoice": "Vui lòng chọn giọng", "errScript": "Hãy tick \"🎙️ Kịch bản MC\" ở Unit 4 và tạo trước", "submitFailed": "Gửi thất bại",
+      "title": "Tiếp thị MC", "subtitle": "Tạo video tiếp thị bằng MC ảo HeyGen", "aiAvatarVideo": "Video AI Avatar", "autoSave": "Tự lưu vào Supabase",
+      "loadAssets": "Tải tài nguyên MC HeyGen", "loading": "Đang tải…", "reloadAssets": "Tải lại danh sách MC & giọng",
+      "selectAvatar": "Chọn MC Avatar", "nAvailable": "{n} khả dụng", "selectVoice": "Chọn giọng", "chooseVoice": "— Chọn giọng —",
+      "formatBg": "Định dạng video & nền", "bgColor": "Màu nền:", "customColor": "Màu tùy chỉnh",
+      "anchorScript": "Kịch bản MC", "durStyle": "{dur} giây · {style}", "fromUnit4": "Từ Unit 4 ({n} ký tự) · cần sửa thì quay lại Unit 4 tạo lại",
+      "noScript": "Chưa có kịch bản MC", "noScriptHint": "Vào Unit 4 → tick \"🎙️ Kịch bản MC\" → đặt số giây → tạo nội dung",
+      "submitting": "Đang gửi…", "genVideo": "Tạo video MC",
+      "videoLog": "Nhật ký video MC", "nVideos": "{n}",
+      "stDone": "✓ Hoàn tất", "stFailed": "✗ Thất bại", "stProcessing": "⏳ Đang tạo", "downloadVideo": "Tải video",
+      "envHint": "Cần cài biến môi trường:"
     }
   }
 }

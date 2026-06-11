@@ -4166,17 +4166,17 @@ interface Unit11Data {
 }
 
 const AVATAR_RATIOS = [
-  { value: '16:9', label: '橫式 16:9', desc: 'YouTube / 廣告' },
-  { value: '9:16', label: '直式 9:16', desc: 'Reels / TikTok' },
-  { value: '1:1',  label: '方形 1:1',  desc: 'Instagram' },
+  { value: '16:9', descKey: 'youtube' },
+  { value: '9:16', descKey: 'reels' },
+  { value: '1:1',  descKey: 'ig' },
 ]
 
 const BG_PRESETS = [
-  { value: '#FFFFFF', label: '白色' },
-  { value: '#000000', label: '黑色' },
-  { value: '#F0F4FF', label: '淡藍' },
-  { value: '#FFF8F0', label: '淡橙' },
-  { value: '#F0FFF4', label: '淡綠' },
+  { value: '#FFFFFF', key: 'white' },
+  { value: '#000000', key: 'black' },
+  { value: '#F0F4FF', key: 'lightBlue' },
+  { value: '#FFF8F0', key: 'lightOrange' },
+  { value: '#F0FFF4', key: 'lightGreen' },
 ]
 
 function Unit11AvatarMarketing({
@@ -4192,6 +4192,8 @@ function Unit11AvatarMarketing({
   unit4Data?: Unit4Data
   onDone: (data: Unit11Data) => void
 }) {
+  const t = useTranslations('MA')
+  const locale = useLocale()
   // Avatars / voices
   const [avatars, setAvatars] = useState<HeyGenAvatar[]>([])
   const [voices, setVoices] = useState<HeyGenVoice[]>([])
@@ -4297,9 +4299,9 @@ function Unit11AvatarMarketing({
   // ── Submit video generation ───────────────────────────────────────────────
   async function submitVideo() {
     const anchorScript = unit4Data?.results?.anchor_script ?? ''
-    if (!selectedAvatar) { setSubmitError('請選擇主播 Avatar'); return }
-    if (!selectedVoice)  { setSubmitError('請選擇聲音'); return }
-    if (!anchorScript)   { setSubmitError('請先在 Unit 4 文案產出中勾選「🎙️ 主播口播腳本」並生成'); return }
+    if (!selectedAvatar) { setSubmitError(t('u11.errAvatar')); return }
+    if (!selectedVoice)  { setSubmitError(t('u11.errVoice')); return }
+    if (!anchorScript)   { setSubmitError(t('u11.errScript')); return }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -4315,7 +4317,7 @@ function Unit11AvatarMarketing({
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setSubmitError(data.error ?? '提交失敗'); return }
+      if (!res.ok) { setSubmitError(data.error ?? t('u11.submitFailed')); return }
 
       const newVideo: AvatarVideo = {
         videoId: data.videoId,
@@ -4343,15 +4345,15 @@ function Unit11AvatarMarketing({
         <div>
           <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
             <Mic className="h-4 w-4" style={{ color: 'var(--primary)' }} />
-            主播行銷
+            {t('u11.title')}
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">使用 HeyGen 虛擬主播生成行銷影片</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t('u11.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border rounded-lg px-3 py-2">
           <span className="font-medium text-indigo-600">HeyGen</span>
-          <span>AI Avatar 影片</span>
+          <span>{t('u11.aiAvatarVideo')}</span>
           <span className="text-gray-300">·</span>
-          <span>自動存入 Supabase</span>
+          <span>{t('u11.autoSave')}</span>
         </div>
       </div>
 
@@ -4360,14 +4362,14 @@ function Unit11AvatarMarketing({
         <div className="border rounded-xl p-5 space-y-3 bg-indigo-50 border-indigo-200">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-indigo-600" />
-            <span className="font-medium text-indigo-800 text-sm">載入 HeyGen 主播資源</span>
+            <span className="font-medium text-indigo-800 text-sm">{t('u11.loadAssets')}</span>
           </div>
           {loadingAssets
-            ? <div className="flex items-center gap-2 text-sm text-indigo-600"><Loader2 className="h-4 w-4 animate-spin" />載入中…</div>
+            ? <div className="flex items-center gap-2 text-sm text-indigo-600"><Loader2 className="h-4 w-4 animate-spin" />{t('u11.loading')}</div>
             : <button onClick={loadAssets}
                 className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                 style={{ background: 'var(--primary)' }}>
-                重新載入主播 &amp; 聲音清單
+                {t('u11.reloadAssets')}
               </button>
           }
         </div>
@@ -4380,8 +4382,8 @@ function Unit11AvatarMarketing({
             {/* Avatar selector */}
             <div className="border rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-sm text-gray-700">選擇主播 Avatar</span>
-                <span className="text-xs text-gray-400">{avatars.length} 個可用</span>
+                <span className="font-medium text-sm text-gray-700">{t('u11.selectAvatar')}</span>
+                <span className="text-xs text-gray-400">{t('u11.nAvailable', { n: avatars.length })}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                 {avatars.map(av => (
@@ -4408,13 +4410,13 @@ function Unit11AvatarMarketing({
             {/* Voice selector */}
             <div className="border rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-sm text-gray-700">選擇聲音</span>
-                <span className="text-xs text-gray-400">{voices.length} 個可用</span>
+                <span className="font-medium text-sm text-gray-700">{t('u11.selectVoice')}</span>
+                <span className="text-xs text-gray-400">{t('u11.nAvailable', { n: voices.length })}</span>
               </div>
               <select value={selectedVoice?.id ?? ''}
                 onChange={e => setSelectedVoice(voices.find(v => v.id === e.target.value) ?? null)}
                 className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <option value="">— 選擇聲音 —</option>
+                <option value="">{t('u11.chooseVoice')}</option>
                 {voices.map(v => (
                   <option key={v.id} value={v.id}>
                     {v.name} ({v.language} · {v.gender})
@@ -4428,30 +4430,30 @@ function Unit11AvatarMarketing({
 
             {/* Ratio & Background */}
             <div className="border rounded-xl p-4 space-y-3">
-              <span className="font-medium text-sm text-gray-700">影片格式 &amp; 背景</span>
+              <span className="font-medium text-sm text-gray-700">{t('u11.formatBg')}</span>
               <div className="flex gap-2">
                 {AVATAR_RATIOS.map(r => (
                   <button key={r.value} onClick={() => setRatio(r.value)}
                     className={`flex-1 text-center py-2 px-2 rounded-lg border text-xs transition-all ${
                       ratio === r.value ? 'border-indigo-400 bg-indigo-50 font-medium text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
                     }`}>
-                    <div className="font-medium">{r.label}</div>
-                    <div className="text-[10px] text-gray-400">{r.desc}</div>
+                    <div className="font-medium">{t(`u11.ratio.${r.value}`)}</div>
+                    <div className="text-[10px] text-gray-400">{t(`u11.ratioDesc.${r.descKey}`)}</div>
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-500">背景色：</span>
+                <span className="text-xs text-gray-500">{t('u11.bgColor')}</span>
                 {BG_PRESETS.map(b => (
                   <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg('') }}
-                    title={b.label}
+                    title={t(`u11.bg.${b.key}`)}
                     className={`w-6 h-6 rounded-full border-2 transition-all ${background === b.value && !customBg ? 'border-indigo-400 scale-110' : 'border-gray-200'}`}
                     style={{ background: b.value }} />
                 ))}
                 <input type="color" value={customBg || background}
                   onChange={e => setCustomBg(e.target.value)}
                   className="w-6 h-6 rounded-full border border-gray-300 cursor-pointer"
-                  title="自訂顏色" />
+                  title={t('u11.customColor')} />
                 <div className="w-5 h-5 rounded border" style={{ background: bgFinal }} />
                 <span className="text-[10px] text-gray-400">{bgFinal}</span>
               </div>
@@ -4463,10 +4465,10 @@ function Unit11AvatarMarketing({
             <div className="border-2 rounded-xl p-4 space-y-3 border-indigo-200 bg-indigo-50">
               <div className="flex items-center gap-2">
                 <Mic className="h-4 w-4 text-indigo-600" />
-                <span className="font-semibold text-sm text-indigo-800">主播口播腳本</span>
+                <span className="font-semibold text-sm text-indigo-800">{t('u11.anchorScript')}</span>
                 {unit4Data?.anchorDuration && (
                   <span className="text-[10px] bg-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full">
-                    {unit4Data.anchorDuration}秒 · {unit4Data.anchorStyle ?? ''}
+                    {t('u11.durStyle', { dur: unit4Data.anchorDuration, style: unit4Data.anchorStyle ?? '' })}
                   </span>
                 )}
               </div>
@@ -4474,8 +4476,7 @@ function Unit11AvatarMarketing({
                 <>
                   <div className="text-[10px] text-indigo-500 flex items-center gap-1.5">
                     <CheckCircle2 className="h-3 w-3" />
-                    來自 Unit 4 文案產出（{unit4Data.results.anchor_script.length} 字）
-                    · 如需修改請返回 Unit 4 重新生成
+                    {t('u11.fromUnit4', { n: unit4Data.results.anchor_script.length })}
                   </div>
                   <div className="bg-white border border-indigo-100 rounded-lg px-3 py-2.5 text-sm text-gray-700 leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
                     {unit4Data.results.anchor_script}
@@ -4483,9 +4484,9 @@ function Unit11AvatarMarketing({
                 </>
               ) : (
                 <div className="text-center py-6 space-y-2">
-                  <div className="text-sm text-indigo-700 font-medium">尚無主播腳本</div>
+                  <div className="text-sm text-indigo-700 font-medium">{t('u11.noScript')}</div>
                   <div className="text-xs text-indigo-500">
-                    請前往 <span className="font-semibold">Unit 4 文案產出</span> → 勾選「🎙️ 主播口播腳本」→ 設定秒數 → 產生文案
+                    {t('u11.noScriptHint')}
                   </div>
                 </div>
               )}
@@ -4501,7 +4502,7 @@ function Unit11AvatarMarketing({
             <button onClick={submitVideo} disabled={submitting}
               className="w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm"
               style={{ background: 'var(--primary)' }}>
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" />提交生成中…</> : <><Film className="h-4 w-4" />生成主播影片</>}
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u11.submitting')}</> : <><Film className="h-4 w-4" />{t('u11.genVideo')}</>}
             </button>
           </div>
         </div>
@@ -4511,8 +4512,8 @@ function Unit11AvatarMarketing({
       {videos.length > 0 && (
         <div className="border rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-sm text-gray-700">主播影片記錄</span>
-            <span className="text-xs text-gray-400">{videos.length} 部</span>
+            <span className="font-medium text-sm text-gray-700">{t('u11.videoLog')}</span>
+            <span className="text-xs text-gray-400">{t('u11.nVideos', { n: videos.length })}</span>
           </div>
           <div className="space-y-3">
             {videos.map(v => (
@@ -4525,7 +4526,7 @@ function Unit11AvatarMarketing({
                         v.status === 'failed'    ? 'bg-red-100 text-red-700' :
                         'bg-amber-100 text-amber-700'
                       }`}>
-                        {v.status === 'completed' ? '✓ 完成' : v.status === 'failed' ? '✗ 失敗' : '⏳ 生成中'}
+                        {v.status === 'completed' ? t('u11.stDone') : v.status === 'failed' ? t('u11.stFailed') : t('u11.stProcessing')}
                       </span>
                       <span className="text-[10px] text-gray-500">{v.avatarName}</span>
                       <span className="text-[10px] text-gray-400">·</span>
@@ -4534,7 +4535,7 @@ function Unit11AvatarMarketing({
                       <span className="text-[10px] text-gray-500">{v.ratio}</span>
                     </div>
                     <p className="text-xs text-gray-600 truncate">{v.script}</p>
-                    <p className="text-[10px] text-gray-400">{new Date(v.createdAt).toLocaleString('zh-TW')}</p>
+                    <p className="text-[10px] text-gray-400">{new Date(v.createdAt).toLocaleString(locale)}</p>
                   </div>
                   {v.status === 'processing' && <Loader2 className="h-4 w-4 animate-spin text-amber-500 shrink-0 mt-0.5" />}
                 </div>
@@ -4543,7 +4544,7 @@ function Unit11AvatarMarketing({
                     <video src={v.videoUrl} controls className="w-full max-h-48 rounded-lg bg-black" />
                     <a href={v.videoUrl} download target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800">
-                      <Download className="h-3.5 w-3.5" />下載影片
+                      <Download className="h-3.5 w-3.5" />{t('u11.downloadVideo')}
                     </a>
                   </div>
                 )}
@@ -4555,7 +4556,7 @@ function Unit11AvatarMarketing({
 
       {/* Env var hint */}
       <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-500 space-y-1">
-        <div className="font-medium text-gray-600">需要設定的環境變數：</div>
+        <div className="font-medium text-gray-600">{t('u11.envHint')}</div>
         <div className="flex gap-2 flex-wrap">
           <code className="bg-indigo-100 px-1.5 py-0.5 rounded">HEYGEN_API_KEY</code>
         </div>

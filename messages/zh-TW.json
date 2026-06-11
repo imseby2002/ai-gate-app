@@ -1804,6 +1804,22 @@
       "genVoice": "生成語音中…", "previewVoice": "試聽語音",
       "phoneList": "電話號碼清單", "recognizedPhones": "已識別 {n} 個", "phoneHint": "每行一個號碼，或用逗號分隔，支援國際格式（需含國碼）",
       "callingN": "撥打中…（{n} 通）", "startCallN": "開始撥打 {n} 通電話", "callResult": "撥打結果", "callOk": "撥出成功"
+    },
+    "u11": {
+      "ratio": { "16:9": "橫式 16:9", "9:16": "直式 9:16", "1:1": "方形 1:1" },
+      "ratioDesc": { "youtube": "YouTube / 廣告", "reels": "Reels / TikTok", "ig": "Instagram" },
+      "bg": { "white": "白色", "black": "黑色", "lightBlue": "淡藍", "lightOrange": "淡橙", "lightGreen": "淡綠" },
+      "errAvatar": "請選擇主播 Avatar", "errVoice": "請選擇聲音", "errScript": "請先在 Unit 4 文案產出中勾選「🎙️ 主播口播腳本」並生成", "submitFailed": "提交失敗",
+      "title": "主播行銷", "subtitle": "使用 HeyGen 虛擬主播生成行銷影片", "aiAvatarVideo": "AI Avatar 影片", "autoSave": "自動存入 Supabase",
+      "loadAssets": "載入 HeyGen 主播資源", "loading": "載入中…", "reloadAssets": "重新載入主播 & 聲音清單",
+      "selectAvatar": "選擇主播 Avatar", "nAvailable": "{n} 個可用", "selectVoice": "選擇聲音", "chooseVoice": "— 選擇聲音 —",
+      "formatBg": "影片格式 & 背景", "bgColor": "背景色：", "customColor": "自訂顏色",
+      "anchorScript": "主播口播腳本", "durStyle": "{dur}秒 · {style}", "fromUnit4": "來自 Unit 4 文案產出（{n} 字）· 如需修改請返回 Unit 4 重新生成",
+      "noScript": "尚無主播腳本", "noScriptHint": "請前往 Unit 4 文案產出 → 勾選「🎙️ 主播口播腳本」→ 設定秒數 → 產生文案",
+      "submitting": "提交生成中…", "genVideo": "生成主播影片",
+      "videoLog": "主播影片記錄", "nVideos": "{n} 部",
+      "stDone": "✓ 完成", "stFailed": "✗ 失敗", "stProcessing": "⏳ 生成中", "downloadVideo": "下載影片",
+      "envHint": "需要設定的環境變數："
     }
   }
 }

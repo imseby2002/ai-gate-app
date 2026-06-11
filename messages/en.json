@@ -1804,6 +1804,22 @@
       "genVoice": "Generating voice…", "previewVoice": "Preview Voice",
       "phoneList": "Phone Number List", "recognizedPhones": "{n} recognized", "phoneHint": "One number per line, or comma-separated; international format supported (with country code)",
       "callingN": "Calling… ({n})", "startCallN": "Start calling {n} numbers", "callResult": "Call Result", "callOk": "Call succeeded"
+    },
+    "u11": {
+      "ratio": { "16:9": "Landscape 16:9", "9:16": "Portrait 9:16", "1:1": "Square 1:1" },
+      "ratioDesc": { "youtube": "YouTube / Ads", "reels": "Reels / TikTok", "ig": "Instagram" },
+      "bg": { "white": "White", "black": "Black", "lightBlue": "Light Blue", "lightOrange": "Light Orange", "lightGreen": "Light Green" },
+      "errAvatar": "Please select an avatar", "errVoice": "Please select a voice", "errScript": "First check \"🎙️ Anchor Script\" in Unit 4 Copy and generate it", "submitFailed": "Submission failed",
+      "title": "Anchor Marketing", "subtitle": "Generate marketing videos with HeyGen virtual anchors", "aiAvatarVideo": "AI Avatar Video", "autoSave": "Auto-saved to Supabase",
+      "loadAssets": "Load HeyGen anchor assets", "loading": "Loading…", "reloadAssets": "Reload avatar & voice list",
+      "selectAvatar": "Select Avatar", "nAvailable": "{n} available", "selectVoice": "Select Voice", "chooseVoice": "— Select voice —",
+      "formatBg": "Video Format & Background", "bgColor": "Background:", "customColor": "Custom color",
+      "anchorScript": "Anchor Script", "durStyle": "{dur}s · {style}", "fromUnit4": "From Unit 4 Copy ({n} chars) · to edit, return to Unit 4 and regenerate",
+      "noScript": "No anchor script yet", "noScriptHint": "Go to Unit 4 Copy → check \"🎙️ Anchor Script\" → set duration → generate copy",
+      "submitting": "Submitting…", "genVideo": "Generate Anchor Video",
+      "videoLog": "Anchor Video Log", "nVideos": "{n}",
+      "stDone": "✓ Done", "stFailed": "✗ Failed", "stProcessing": "⏳ Processing", "downloadVideo": "Download video",
+      "envHint": "Environment variables required:"
     }
   }
 }
