@@ -1690,6 +1690,17 @@
       "userRulesPlaceholder": "VD: không dùng từ phóng đại như \"tốt nhất\", \"mạnh nhất\"; phải nhắc ưu đãi có hạn; nội dung cần tạo cảm giác cấp bách…",
       "generating": "Claude đang tạo…", "generate": "Tạo nội dung", "editableHint": " — Claude Sonnet · chỉnh sửa trực tiếp", "regenerate": "Tạo lại",
       "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ nội dung", "feedbackPlaceholder": "VD: giọng quá trang trọng, đổi sang thoải mái sinh động; thêm cảm giác ưu đãi có hạn…", "regenAll": "Tạo lại"
+    },
+    "u5": {
+      "ctxCopy": "Dữ liệu nội dung", "imageCount": "Số lượng hình", "targetPlatforms": "Nền tảng đăng mục tiêu",
+      "specialRules": "Quy định riêng", "specialRulesHint": "(tùy chọn; chỉ định phong cách hình, yếu tố cấm, thông tin bắt buộc, v.v.)",
+      "specialRulesPlaceholder": "VD: phải có ảnh sản phẩm; phong cách sang trọng cao cấp; cấm dùng màu đỏ; chừa chỗ cho logo thương hiệu…",
+      "refImage": "Hình tham khảo (tùy chọn)", "enable": "Bật", "drivePickLabel": "Lấy ngẫu nhiên hình từ Google Drive; kịch bản sẽ khớp với hình này",
+      "generatingScript": "Claude đang tạo kịch bản…", "genWithRef": "Tạo kịch bản theo hình tham khảo", "genScript": "Tạo kịch bản hình",
+      "imageN": "Hình {n}", "scriptTitle": "Kịch bản hình ảnh {n} — Claude Sonnet", "totalImages": "Tổng {n}",
+      "refImageLabel": "Hình tham khảo", "refGenerated": "Kịch bản đã tạo theo phong cách hình này",
+      "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ kịch bản", "feedbackPlaceholder": "VD: đổi phong cách trẻ trung sinh động hơn; thêm chi tiết sản phẩm; đổi sang tông màu ấm…",
+      "tipTitle": "Mẹo dùng", "tipBody": "<b>Prompt tạo AI</b> ở cuối mỗi kịch bản có thể sao chép trực tiếp vào Midjourney, DALL-E 3, Stable Diffusion, v.v. để tạo hình. Xong rồi vào <b>Unit 6 Tạo hình</b> để tạo bằng AI."
     }
   }
 }

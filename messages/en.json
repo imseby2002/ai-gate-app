@@ -1690,6 +1690,17 @@
       "userRulesPlaceholder": "e.g. don't use exaggerations like \"best\" or \"strongest\"; must mention the limited-time offer; copy should feel urgent…",
       "generating": "Claude generating…", "generate": "Generate Copy", "editableHint": " — Claude Sonnet · editable directly", "regenerate": "Regenerate",
       "feedbackTitle": "Enter revisions to regenerate all copy", "feedbackPlaceholder": "e.g. tone too formal, make it relaxed and lively; add a limited-time-offer feel…", "regenAll": "Regenerate"
+    },
+    "u5": {
+      "ctxCopy": "Copy Data", "imageCount": "Number of Images", "targetPlatforms": "Target Platforms",
+      "specialRules": "Special Rules", "specialRulesHint": "(optional; specify image style, banned elements, required info, etc.)",
+      "specialRulesPlaceholder": "e.g. must include product photo; high-end luxury style; no red; leave space for brand logo…",
+      "refImage": "Reference Image (optional)", "enable": "Enable", "drivePickLabel": "Pick a random image from Google Drive; the script will match this image",
+      "generatingScript": "Claude generating script…", "genWithRef": "Generate Script with Reference", "genScript": "Generate Image Script",
+      "imageN": "Image {n}", "scriptTitle": "Image {n} Visual Script — Claude Sonnet", "totalImages": "{n} total",
+      "refImageLabel": "Reference Image", "refGenerated": "Script generated based on this image's style",
+      "feedbackTitle": "Enter revisions to regenerate all scripts", "feedbackPlaceholder": "e.g. make the style younger and livelier; add more product detail; switch to warm tones…",
+      "tipTitle": "Tip", "tipBody": "The <b>AI Generation Prompt</b> at the end of each script can be copied directly into Midjourney, DALL-E 3, Stable Diffusion, etc. to generate images. When done, go to <b>Unit 6 Image Generation</b> for AI generation."
     }
   }
 }

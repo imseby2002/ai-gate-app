@@ -1520,6 +1520,7 @@ function Unit5ImageScript({
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit5Data | null>(savedData?.scripts?.length ? savedData : null)
   const [activeScript, setActiveScript] = useState(1)
+  const t = useTranslations('MA')
 
   const togglePlatform = (p: string) =>
     setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
@@ -1572,10 +1573,10 @@ function Unit5ImageScript({
       {/* Context status */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { label: '蒐集資料', ok: !!unit1Data?.summary },
-          { label: '公司資料', ok: hasUnit2 },
-          { label: '分析資料', ok: !!unit3Data?.results },
-          { label: '文案資料', ok: hasUnit4 },
+          { label: t('u4.ctxCollect'), ok: !!unit1Data?.summary },
+          { label: t('u4.ctxCompany'), ok: hasUnit2 },
+          { label: t('u4.ctxAnalysis'), ok: !!unit3Data?.results },
+          { label: t('u5.ctxCopy'), ok: hasUnit4 },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
             s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
@@ -1588,7 +1589,7 @@ function Unit5ImageScript({
 
       {/* Count selector */}
       <div>
-        <label className="block text-sm font-semibold mb-2">產出圖片數量</label>
+        <label className="block text-sm font-semibold mb-2">{t('u5.imageCount')}</label>
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5, 6, 8, 10].map(n => (
             <button key={n} type="button" onClick={() => setCount(n)}
@@ -1604,7 +1605,7 @@ function Unit5ImageScript({
 
       {/* Platform selector */}
       <div>
-        <label className="block text-sm font-semibold mb-2">目標發布平台</label>
+        <label className="block text-sm font-semibold mb-2">{t('u5.targetPlatforms')}</label>
         <div className="flex flex-wrap gap-2">
           {IMAGE_PLATFORM_OPTIONS.map(p => {
             const sel = platforms.includes(p.id)
@@ -1624,22 +1625,22 @@ function Unit5ImageScript({
       {/* User instructions */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">
-          特別規定
-          <span className="ml-2 text-xs font-normal text-gray-400">（選填，可指定圖片風格、禁止元素、必帶資訊等）</span>
+          {t('u5.specialRules')}
+          <span className="ml-2 text-xs font-normal text-gray-400">{t('u5.specialRulesHint')}</span>
         </label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
-          placeholder="例如：必須包含產品照片；風格要高端奢華；禁止使用紅色；圖片要帶有品牌 Logo 位置…" />
+          placeholder={t('u5.specialRulesPlaceholder')} />
       </div>
 
       {/* Drive reference image */}
       <div className="p-4 rounded-xl border border-dashed border-gray-300 space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold">搭配參考圖片（選填）</label>
+          <label className="text-sm font-semibold">{t('u5.refImage')}</label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={useRefImage} onChange={e => setUseRefImage(e.target.checked)}
               className="w-4 h-4 rounded accent-blue-600" />
-            <span className="text-xs text-gray-600">啟用</span>
+            <span className="text-xs text-gray-600">{t('u5.enable')}</span>
           </label>
         </div>
         {useRefImage && (
@@ -1649,7 +1650,7 @@ function Unit5ImageScript({
             onFolderChange={onDriveFolderChange}
             onImagePicked={onDriveImagePicked}
             pickedImage={drivePickedImage ?? null}
-            label="從 Google Drive 隨機取圖，腳本將配合此圖片生成"
+            label={t('u5.drivePickLabel')}
           />
         )}
       </div>
@@ -1664,8 +1665,8 @@ function Unit5ImageScript({
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
         {running
-          ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
-          : <><ImageIcon className="h-4 w-4" />{useRefImage && drivePickedImage ? '以參考圖片產生腳本' : '產生圖片腳本'}</>}
+          ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u5.generatingScript')}</>
+          : <><ImageIcon className="h-4 w-4" />{useRefImage && drivePickedImage ? t('u5.genWithRef') : t('u5.genScript')}</>}
       </button>
 
       {/* Results */}
@@ -1678,12 +1679,12 @@ function Unit5ImageScript({
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   activeScript === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}>
-                圖片 {s.id}
+                {t('u5.imageN', { n: s.id })}
               </button>
             ))}
             <button onClick={() => run()} disabled={running}
               className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-              <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+              <RefreshCw className="h-3.5 w-3.5" /> {t('u4.regenerate')}
             </button>
           </div>
 
@@ -1692,10 +1693,10 @@ function Unit5ImageScript({
             <div className="p-5 rounded-xl bg-gray-50 border">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-gray-500">
-                  圖片 {activeScript} 視覺腳本 — Claude Sonnet
+                  {t('u5.scriptTitle', { n: activeScript })}
                 </span>
                 <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
-                  共 {result.scripts.length} 張
+                  {t('u5.totalImages', { n: result.scripts.length })}
                 </span>
               </div>
               {useRefImage && drivePickedImage && (
@@ -1704,9 +1705,9 @@ function Unit5ImageScript({
                   <img src={drivePickedImage.dataUrl} alt={drivePickedImage.name}
                     className="w-24 h-24 object-cover rounded-lg border shrink-0" />
                   <div className="text-xs text-gray-500">
-                    <div className="font-medium text-gray-700 mb-0.5">參考圖片</div>
+                    <div className="font-medium text-gray-700 mb-0.5">{t('u5.refImageLabel')}</div>
                     <div className="truncate">{drivePickedImage.name}</div>
-                    <div className="text-gray-400 mt-1">腳本已根據此圖片風格生成</div>
+                    <div className="text-gray-400 mt-1">{t('u5.refGenerated')}</div>
                   </div>
                 </div>
               )}
@@ -1718,27 +1719,26 @@ function Unit5ImageScript({
 
           {/* Feedback */}
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
-            <div className="text-xs font-semibold text-amber-800">輸入修改意見，重新生成所有腳本</div>
+            <div className="text-xs font-semibold text-amber-800">{t('u5.feedbackTitle')}</div>
             <div className="flex gap-2">
               <input value={feedback} onChange={e => setFeedback(e.target.value)}
                 className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
-                placeholder="例如：風格改成更年輕活潑；加入更多產品細節；色調改為暖色系…"
+                placeholder={t('u5.feedbackPlaceholder')}
                 onKeyDown={e => e.key === 'Enter' && feedback.trim() && run(feedback)}
               />
               <button onClick={() => run(feedback)} disabled={!feedback.trim() || running}
                 className="px-4 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                 style={{ background: 'var(--primary)' }}>
-                重生成
+                {t('u4.regenAll')}
               </button>
             </div>
           </div>
 
           {/* Copy AI prompt hint */}
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
-            <div className="text-xs text-blue-700 font-medium mb-1">💡 使用提示</div>
+            <div className="text-xs text-blue-700 font-medium mb-1">💡 {t('u5.tipTitle')}</div>
             <div className="text-xs text-blue-600">
-              每張腳本末尾的 <strong>AI 生成 Prompt</strong> 可直接複製至 Midjourney、DALL-E 3、Stable Diffusion 等工具生成圖片。
-              完成後前往 <strong>單元6 圖片產出</strong> 進行 AI 生成。
+              {t.rich('u5.tipBody', { b: (c) => <strong>{c}</strong> })}
             </div>
           </div>
         </div>

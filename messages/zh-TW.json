@@ -1690,6 +1690,17 @@
       "userRulesPlaceholder": "例如：禁止使用『最好』『最強』等誇大字眼；必須提及限時優惠；文案要帶有緊迫感…",
       "generating": "Claude 生成中…", "generate": "產生文案", "editableHint": " — Claude Sonnet · 可直接編輯", "regenerate": "重新生成",
       "feedbackTitle": "輸入修改意見，重新生成所有文案", "feedbackPlaceholder": "例如：語調太正式，改成輕鬆活潑；加入限時優惠感…", "regenAll": "重生成"
+    },
+    "u5": {
+      "ctxCopy": "文案資料", "imageCount": "產出圖片數量", "targetPlatforms": "目標發布平台",
+      "specialRules": "特別規定", "specialRulesHint": "（選填，可指定圖片風格、禁止元素、必帶資訊等）",
+      "specialRulesPlaceholder": "例如：必須包含產品照片；風格要高端奢華；禁止使用紅色；圖片要帶有品牌 Logo 位置…",
+      "refImage": "搭配參考圖片（選填）", "enable": "啟用", "drivePickLabel": "從 Google Drive 隨機取圖，腳本將配合此圖片生成",
+      "generatingScript": "Claude 生成腳本中…", "genWithRef": "以參考圖片產生腳本", "genScript": "產生圖片腳本",
+      "imageN": "圖片 {n}", "scriptTitle": "圖片 {n} 視覺腳本 — Claude Sonnet", "totalImages": "共 {n} 張",
+      "refImageLabel": "參考圖片", "refGenerated": "腳本已根據此圖片風格生成",
+      "feedbackTitle": "輸入修改意見，重新生成所有腳本", "feedbackPlaceholder": "例如：風格改成更年輕活潑；加入更多產品細節；色調改為暖色系…",
+      "tipTitle": "使用提示", "tipBody": "每張腳本末尾的 <b>AI 生成 Prompt</b> 可直接複製至 Midjourney、DALL-E 3、Stable Diffusion 等工具生成圖片。完成後前往 <b>單元6 圖片產出</b> 進行 AI 生成。"
     }
   }
 }
