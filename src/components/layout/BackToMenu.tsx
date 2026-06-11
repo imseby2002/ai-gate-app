@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Zap, ArrowLeft } from 'lucide-react'
-import { SYSTEMS, SCOPE_SESSION_KEY, isSystemKey, systemForPath } from '@/lib/systems'
+import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath } from '@/lib/systems'
 
 interface BackToMenuProps {
   variant?: 'standalone' | 'tools'
@@ -28,7 +28,17 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     const sys = systemForPath(pathname)
     if (sys) { setHref(SYSTEMS[sys].home); return }
 
-    // 路徑無法判別時，退回 per-tab scope，最後才是 /apps
+    // 路徑無法判別（如 /team、/apps 等共用頁）時，
+    // 優先依「目前子域」回該系統首頁，確保停留在所在子域，不跳到通用 /apps。
+    try {
+      const sub = window.location.hostname.split('.')[0]
+      const bySub = SUBDOMAIN_SYSTEM[sub]
+      if (bySub) { setHref(SYSTEMS[bySub].home); return }
+    } catch {
+      // window 不可用時往下退回
+    }
+
+    // 再退回 per-tab scope，最後才是 /apps
     try {
       const scope = sessionStorage.getItem(SCOPE_SESSION_KEY)
       if (isSystemKey(scope)) setHref(SYSTEMS[scope].home)
