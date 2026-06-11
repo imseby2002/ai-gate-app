@@ -1883,7 +1883,17 @@
       "editShopConfig": "編輯購物設定", "addShopConfig": "新增購物設定", "shopName": "名稱", "shopNamePh": "例：早餐預訂、備品補充、活動報名", "appsScriptUrl": "Apps Script Web App 網址", "appsScriptHint": "部署 Apps Script 為 Web App 後取得的 /exec 網址",
       "cutoffTime": "截止時間", "deliveryTime": "預計送達時間", "roomList": "房間列表（每行一間，格式：房號 房型名稱）", "itemMenu": "物品選單（每行一個選項）", "itemMenuHint": "AI 點餐時會直接列出這些選項給客人選擇",
       "orderFlowTitle": "設定完成後 AI 的點餐流程：", "orderFlow1": "1. 客人詢問相關服務 → AI 確認房號 → 列出上方選單", "orderFlow2": "2. 客人選好品項與份數 → AI 整理確認清單", "orderFlow3": "3. 客人確認 → 系統自動 POST 到 Apps Script → Script 推 LINE 群組 + 存 Sheets",
-      "pricingHint": "AI 查詢定價時精確套用數字，不會自行估算", "pcTour": "行程", "pcAccommodation": "住宿", "pcCustom": "自訂", "noPricing": "尚無定價設定", "noPricingHint": "選擇上方按鈕新增行程或住宿定價"
+      "pricingHint": "AI 查詢定價時精確套用數字，不會自行估算", "pcTour": "行程", "pcAccommodation": "住宿", "pcCustom": "自訂", "noPricing": "尚無定價設定", "noPricingHint": "選擇上方按鈕新增行程或住宿定價",
+      "editPricing": "編輯定價設定", "addPricing": "新增定價設定", "pcNamePh": "例：訂房定價、行程定價", "pricingJson": "定價 JSON（直接修改數字即可）", "loadTourTpl": "載入行程模板", "loadAccTpl": "載入住宿模板", "loadCustomTpl": "載入自訂模板",
+      "jsonFields": "JSON 欄位說明", "jfTrigger": "：客戶訊息含這些詞時觸發，例：[\"賞鯨\",\"行程\"]", "jfPrice": "：平日 / 假日價格（數字，不含逗號）", "jfPackages": "：套餐方案，AI 會優先推薦", "jfGroup": "：團體折扣規則", "jfCancel": "：取消政策說明",
+      "pcUsage1": "日後新增產品：點「+ 自訂」按鈕，填入觸發詞和價格說明即可。", "pcUsage2": "AI 收到含觸發詞的訊息時，會自動帶入定價表並逐步計算，不會自行估算。", "pcUsage3": "賞鯨 / 住宿同時設定不會衝突，AI 會根據訊息內容選擇對應的定價表。",
+      "testChat": "客服測試對話", "testRouting": "Gemini + Claude 路由", "draftMode": "草稿模式", "on": "開", "off": "關", "summary": "摘要", "createTicket": "建立工單", "closeCase": "結案", "clear": "清除",
+      "testEmptyHint": "在下方輸入框模擬客戶訊息，測試 AI 客服回覆。", "vipPriority": "VIP 客戶 — 優先處理", "churnWarning": "流失預警：客戶可能考慮取消或離開",
+      "riskHigh": "高風險", "riskMedium": "中風險", "riskLow": "低風險", "addToKb": "加入知識庫", "aiDrafting": "AI 生成草稿中…", "aiThinking": "AI 思考中…",
+      "smartDraft": "智慧草稿", "draftFor": "針對「{msg}」的草稿回覆", "adoptSend": "採用送出", "discard": "捨棄", "imageSelected": "圖片已選取", "remove": "移除", "uploadImage": "上傳圖片", "send": "送出",
+      "autoCloseCountdown": "自動結案倒數", "autoCloseIn": "{time} 後自動關閉工單", "caseAutoClosed": "工單已自動結案", "convSummary": "對話摘要", "quickPhrases": "快速測試語句：",
+      "autoLearnFaq": "自動學習 FAQ", "autoLearnFaqHint": "客服回答後加入知識庫，AI 下次遇到類似問題直接引用標準答案", "manualAdd": "手動新增", "noFaqRecords": "尚無學習記錄。在「測試」Tab 的 AI 回覆旁點「📚 加入知識庫」即可新增。",
+      "totalConv": "總對話數", "avgSpeed": "平均回應速度", "highRiskConv": "高風險對話", "claudeEscalated": "Claude 升級處理", "riskDist": "風險分佈", "hotIntents": "熱點問題 TOP 5", "sentimentTrend": "情緒趨勢（近 7 天）"
     }
   }
 }

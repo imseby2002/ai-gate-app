@@ -7136,7 +7136,7 @@ function Unit12CustomerService({
                     <button onClick={() => openEditPc(pc)}
                       className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
                     <button onClick={() => deletePc(pc.id)}
-                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
                   </div>
                 )
               })}
@@ -7145,20 +7145,13 @@ function Unit12CustomerService({
 
           {editingPc !== null && (
             <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
-              <div className="font-medium text-sm text-gray-700">{editingPc.id ? '編輯定價設定' : '新增定價設定'}</div>
+              <div className="font-medium text-sm text-gray-700">{editingPc.id ? t('u12.editPricing') : t('u12.addPricing')}</div>
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">名稱</label>
+                <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsName')}</label>
                 <input
                   type="text"
-                  placeholder={
-                    industry === 'ecommerce' ? '例：商品定價、運費方案' :
-                    industry === 'restaurant' ? '例：套餐定價、包廂費用' :
-                    industry === 'clinic' ? '例：療程費用表、套療方案' :
-                    industry === 'beauty' ? '例：服務價目表、組合優惠' :
-                    industry === 'education' ? '例：學費方案、課程定價' :
-                    '例：訂房定價、行程定價'
-                  }
+                  placeholder={t('u12.pcNamePh')}
                   value={editingPc.name}
                   onChange={e => setEditingPc(prev => prev ? { ...prev, name: e.target.value } : prev)}
                   className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
@@ -7167,12 +7160,12 @@ function Unit12CustomerService({
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10px] text-gray-500">定價 JSON（直接修改數字即可）</label>
+                  <label className="text-[10px] text-gray-500">{t('u12.pricingJson')}</label>
                   <div className="flex gap-1">
                     {(['tour', 'accommodation', 'custom'] as const).map(k => (
                       <button key={k} onClick={() => setEditingPc(prev => prev ? { ...prev, jsonText: JSON.stringify(PRICING_TEMPLATES[k], null, 2) } : prev)}
                         className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
-                        {k === 'tour' ? '載入行程模板' : k === 'accommodation' ? '載入住宿模板' : '載入自訂模板'}
+                        {k === 'tour' ? t('u12.loadTourTpl') : k === 'accommodation' ? t('u12.loadAccTpl') : t('u12.loadCustomTpl')}
                       </button>
                     ))}
                   </div>
@@ -7188,33 +7181,33 @@ function Unit12CustomerService({
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
-                <div className="font-medium">JSON 欄位說明</div>
-                <div>• <code>triggerKeywords</code>：客戶訊息含這些詞時觸發，例：["賞鯨","行程"]</div>
-                <div>• <code>weekdayPrice</code> / <code>weekendPrice</code>：平日 / 假日價格（數字，不含逗號）</div>
-                <div>• <code>packages</code>：套餐方案，AI 會優先推薦</div>
-                <div>• <code>groupDiscounts</code>：團體折扣規則</div>
-                <div>• <code>cancellationPolicy</code>：取消政策說明</div>
+                <div className="font-medium">{t('u12.jsonFields')}</div>
+                <div>• <code>triggerKeywords</code>{t('u12.jfTrigger')}</div>
+                <div>• <code>weekdayPrice</code> / <code>weekendPrice</code>{t('u12.jfPrice')}</div>
+                <div>• <code>packages</code>{t('u12.jfPackages')}</div>
+                <div>• <code>groupDiscounts</code>{t('u12.jfGroup')}</div>
+                <div>• <code>cancellationPolicy</code>{t('u12.jfCancel')}</div>
               </div>
 
               <div className="flex gap-2 pt-1">
                 <button onClick={savePc} disabled={savingPc || !editingPc.name.trim()}
                   className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-70"
                   style={{ background: 'var(--primary)' }}>
-                  {savingPc ? '儲存中…' : '儲存'}
+                  {savingPc ? t('u12.saving') : t('u12.save')}
                 </button>
                 <button onClick={() => { setEditingPc(null); setPcJsonError('') }}
                   className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
-                  取消
+                  {t('u12.cancel')}
                 </button>
               </div>
             </div>
           )}
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
-            <div className="font-medium">使用說明</div>
-            <div>• 日後新增產品：點「+ 自訂」按鈕，填入觸發詞和價格說明即可。</div>
-            <div>• AI 收到含觸發詞的訊息時，會自動帶入定價表並逐步計算，不會自行估算。</div>
-            <div>• 賞鯨 / 住宿同時設定不會衝突，AI 會根據訊息內容選擇對應的定價表。</div>
+            <div className="font-medium">{t('u12.usageNotes')}</div>
+            <div>• {t('u12.pcUsage1')}</div>
+            <div>• {t('u12.pcUsage2')}</div>
+            <div>• {t('u12.pcUsage3')}</div>
           </div>
         </div>
       )}
@@ -7226,8 +7219,8 @@ function Unit12CustomerService({
             {/* Chat header */}
             <div className="bg-gray-50 border-b px-4 py-2.5 flex items-center gap-2 flex-wrap">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-xs font-medium text-gray-700">客服測試對話</span>
-              <span className="text-[10px] text-gray-400">Gemini + Claude 路由</span>
+              <span className="text-xs font-medium text-gray-700">{t('u12.testChat')}</span>
+              <span className="text-[10px] text-gray-400">{t('u12.testRouting')}</span>
 
               <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                 {/* 智慧草稿 toggle */}
@@ -7237,14 +7230,14 @@ function Unit12CustomerService({
                     draftMode ? 'bg-violet-50 border-violet-300 text-violet-700 font-medium' : 'border-gray-200 text-gray-400 hover:text-gray-600'
                   }`}>
                   <Wand2 className="h-3 w-3" />
-                  草稿模式{draftMode ? '開' : '關'}
+                  {t('u12.draftMode')}{draftMode ? t('u12.on') : t('u12.off')}
                 </button>
                 {/* 對話摘要 */}
                 {testHistory.length > 1 && (
                   <button onClick={summarizeConversation} disabled={summarizing}
                     className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-50">
                     {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <ClipboardList className="h-3 w-3" />}
-                    摘要
+                    {t('u12.summary')}
                   </button>
                 )}
                 {/* 建立工單 */}
@@ -7252,7 +7245,7 @@ function Unit12CustomerService({
                   <button onClick={createTicketFromConversation} disabled={creatingTicket}
                     className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-orange-600 hover:border-orange-300 disabled:opacity-50">
                     {creatingTicket ? <Loader2 className="h-3 w-3 animate-spin" /> : <ClipboardList className="h-3 w-3" />}
-                    建立工單
+                    {t('u12.createTicket')}
                   </button>
                 )}
                 {/* 結案 */}
@@ -7260,14 +7253,14 @@ function Unit12CustomerService({
                   <button onClick={closeCase}
                     className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-300">
                     <ThumbsUp className="h-3 w-3" />
-                    結案
+                    {t('u12.closeCase')}
                   </button>
                 )}
                 {/* 清除 */}
                 {testHistory.length > 0 && (
                   <button onClick={() => { setTestHistory([]); setSummary(''); setCaseClosed(false); setDraftText(''); setDraftMeta(null) }}
                     className="text-[10px] text-gray-400 hover:text-gray-600">
-                    清除
+                    {t('u12.clear')}
                   </button>
                 )}
               </div>
@@ -7277,7 +7270,7 @@ function Unit12CustomerService({
             <div className="h-80 overflow-y-auto p-4 space-y-3 bg-white">
               {testHistory.length === 0 && (
                 <div className="text-center text-xs text-gray-400 py-10">
-                  在下方輸入框模擬客戶訊息，測試 AI 客服回覆。
+                  {t('u12.testEmptyHint')}
                 </div>
               )}
               {testHistory.map((msg, i) => {
@@ -7290,14 +7283,14 @@ function Unit12CustomerService({
                       {isVip && (
                         <div className="flex items-center gap-1 text-[10px] text-amber-600 font-medium px-1">
                           <Star className="h-3 w-3" />
-                          VIP 客戶 — 優先處理
+                          {t('u12.vipPriority')}
                         </div>
                       )}
                       {/* 流失預警 */}
                       {churn && (
                         <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium px-1">
                           <AlertTriangle className="h-3 w-3" />
-                          流失預警：客戶可能考慮取消或離開
+                          {t('u12.churnWarning')}
                         </div>
                       )}
                       <div className={`px-3 py-2 rounded-2xl text-sm ${
@@ -7319,7 +7312,7 @@ function Unit12CustomerService({
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={imgUrl}
-                                  alt={`圖片 ${idx + 1}`}
+                                  alt=""
                                   className="max-w-full rounded-xl border border-gray-200 shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
                                   style={{ maxHeight: 200 }}
                                 />
@@ -7336,7 +7329,7 @@ function Unit12CustomerService({
                       {msg.role === 'assistant' && msg.meta && (
                         <div className="flex items-center gap-1.5 px-1 flex-wrap">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.meta.risk ?? 'low')}`}>
-                            {msg.meta.risk === 'high' ? '高風險' : msg.meta.risk === 'medium' ? '中風險' : '低風險'}
+                            {msg.meta.risk === 'high' ? t('u12.riskHigh') : msg.meta.risk === 'medium' ? t('u12.riskMedium') : t('u12.riskLow')}
                           </span>
                           <span className="text-[10px] text-gray-400">{msg.meta.intent}</span>
                           <span className="text-[10px] text-gray-300">·</span>
@@ -7349,7 +7342,7 @@ function Unit12CustomerService({
                               setFaqDialog({ open: true, q: prevUser?.content ?? '', a: msg.content, keywords: '', saving: false })
                             }}
                             className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1">
-                            📚 加入知識庫
+                            📚 {t('u12.addToKb')}
                           </button>
                         </div>
                       )}
@@ -7361,7 +7354,7 @@ function Unit12CustomerService({
                 <div className="flex justify-start">
                   <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-2 flex items-center gap-2">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
-                    <span className="text-xs text-gray-400">{draftMode ? 'AI 生成草稿中…' : 'AI 思考中…'}</span>
+                    <span className="text-xs text-gray-400">{draftMode ? t('u12.aiDrafting') : t('u12.aiThinking')}</span>
                   </div>
                 </div>
               )}
@@ -7372,16 +7365,16 @@ function Unit12CustomerService({
               <div className="border-t bg-violet-50 px-4 py-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Wand2 className="h-3.5 w-3.5 text-violet-600" />
-                  <span className="text-xs font-medium text-violet-700">智慧草稿</span>
+                  <span className="text-xs font-medium text-violet-700">{t('u12.smartDraft')}</span>
                   {draftMeta && (
                     <>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(draftMeta.risk ?? 'low')}`}>
-                        {draftMeta.risk === 'high' ? '高風險' : draftMeta.risk === 'medium' ? '中風險' : '低風險'}
+                        {draftMeta.risk === 'high' ? t('u12.riskHigh') : draftMeta.risk === 'medium' ? t('u12.riskMedium') : t('u12.riskLow')}
                       </span>
                       <span className="text-[10px] text-gray-500">{draftMeta.intent}</span>
                     </>
                   )}
-                  <span className="text-[10px] text-gray-400 ml-auto">針對「{draftUserMsg}」的草稿回覆</span>
+                  <span className="text-[10px] text-gray-400 ml-auto">{t('u12.draftFor', { msg: draftUserMsg })}</span>
                 </div>
                 <textarea
                   value={draftText}
@@ -7393,11 +7386,11 @@ function Unit12CustomerService({
                   <button onClick={adoptDraft}
                     className="px-4 py-1.5 rounded-lg text-xs font-medium text-white"
                     style={{ background: 'var(--primary)' }}>
-                    採用送出
+                    {t('u12.adoptSend')}
                   </button>
                   <button onClick={discardDraft}
                     className="px-4 py-1.5 rounded-lg text-xs bg-gray-200 text-gray-600">
-                    捨棄
+                    {t('u12.discard')}
                   </button>
                 </div>
               </div>
@@ -7408,15 +7401,15 @@ function Unit12CustomerService({
               <div className="border-t px-3 pt-2 bg-gray-50 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={testImage.preview} alt="preview" className="h-14 w-14 object-cover rounded-lg border" />
-                <span className="text-xs text-gray-500 flex-1">圖片已選取</span>
-                <button onClick={() => setTestImage(null)} className="text-xs text-red-400 hover:text-red-600">移除</button>
+                <span className="text-xs text-gray-500 flex-1">{t('u12.imageSelected')}</span>
+                <button onClick={() => setTestImage(null)} className="text-xs text-red-400 hover:text-red-600">{t('u12.remove')}</button>
               </div>
             )}
 
             {/* Input */}
             <div className="border-t px-3 py-2.5 flex gap-2 bg-gray-50 items-center">
               {/* Image upload button */}
-              <label className="cursor-pointer p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 shrink-0" title="上傳圖片">
+              <label className="cursor-pointer p-1.5 rounded-lg hover:bg-gray-200 text-gray-400 hover:text-gray-600 shrink-0" title={t('u12.uploadImage')}>
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -7444,7 +7437,7 @@ function Unit12CustomerService({
               <button onClick={sendTestMessage} disabled={testLoading || (!testInput.trim() && !testImage)}
                 className="px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50 shrink-0"
                 style={{ background: 'var(--primary)' }}>
-                送出
+                {t('u12.send')}
               </button>
             </div>
           </div>
@@ -7453,15 +7446,15 @@ function Unit12CustomerService({
           {caseClosed && autoCloseSecondsLeft !== null && (
             <div className="border border-green-200 rounded-xl bg-green-50 px-4 py-2.5 flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-green-600" />
-              <span className="text-xs text-green-700 font-medium">自動結案倒數</span>
+              <span className="text-xs text-green-700 font-medium">{t('u12.autoCloseCountdown')}</span>
               <span className="text-xs text-green-600 ml-auto">
-                {Math.floor(autoCloseSecondsLeft / 60)}:{String(autoCloseSecondsLeft % 60).padStart(2, '0')} 後自動關閉工單
+                {t('u12.autoCloseIn', { time: `${Math.floor(autoCloseSecondsLeft / 60)}:${String(autoCloseSecondsLeft % 60).padStart(2, '0')}` })}
               </span>
             </div>
           )}
           {caseClosed && autoCloseSecondsLeft === null && autoCloseMinutes > 0 && (
             <div className="border border-gray-200 rounded-xl bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center">
-              工單已自動結案
+              {t('u12.caseAutoClosed')}
             </div>
           )}
 
@@ -7470,7 +7463,7 @@ function Unit12CustomerService({
             <div className="border border-indigo-200 rounded-xl bg-indigo-50 p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-indigo-600" />
-                <span className="text-xs font-semibold text-indigo-700">對話摘要</span>
+                <span className="text-xs font-semibold text-indigo-700">{t('u12.convSummary')}</span>
                 <button onClick={() => setSummary('')} className="ml-auto text-[10px] text-gray-400 hover:text-gray-600">✕</button>
               </div>
               <pre className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed font-sans">{summary}</pre>
@@ -7479,7 +7472,7 @@ function Unit12CustomerService({
 
           {/* Quick test phrases */}
           <div className="space-y-2">
-            <div className="text-xs text-gray-500 font-medium">快速測試語句：</div>
+            <div className="text-xs text-gray-500 font-medium">{t('u12.quickPhrases')}</div>
             <div className="flex flex-wrap gap-2">
               {(INDUSTRY_TEST_PHRASES[ind] ?? INDUSTRY_TEST_PHRASES.homestay).map(phrase => (
                 <button key={phrase} onClick={() => { setTestInput(phrase); }}
@@ -7497,18 +7490,18 @@ function Unit12CustomerService({
         <div className="space-y-3 mt-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700">📚 自動學習 FAQ</div>
-              <div className="text-xs text-gray-400 mt-0.5">客服回答後加入知識庫，AI 下次遇到類似問題直接引用標準答案</div>
+              <div className="text-sm font-medium text-gray-700">📚 {t('u12.autoLearnFaq')}</div>
+              <div className="text-xs text-gray-400 mt-0.5">{t('u12.autoLearnFaqHint')}</div>
             </div>
             <button
               onClick={() => setFaqDialog({ open: true, q: '', a: '', keywords: '', saving: false })}
               className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="h-3.5 w-3.5" />手動新增
+              <Plus className="h-3.5 w-3.5" />{t('u12.manualAdd')}
             </button>
           </div>
           {faqItems.length === 0 ? (
             <div className="text-center text-xs text-gray-400 py-8 border rounded-xl border-dashed">
-              尚無學習記錄。在「測試」Tab 的 AI 回覆旁點「📚 加入知識庫」即可新增。
+              {t('u12.noFaqRecords')}
             </div>
           ) : (
             <div className="space-y-2">
@@ -7521,7 +7514,7 @@ function Unit12CustomerService({
                         await fetch(`/api/marketing/cs-faq?industry=${industry}&itemId=${item.id}`, { method: 'DELETE' })
                         setFaqItems(prev => prev.filter(f => f.id !== item.id))
                       }}
-                      className="text-[10px] text-red-400 hover:text-red-600 shrink-0">刪除</button>
+                      className="text-[10px] text-red-400 hover:text-red-600 shrink-0">{t('u12.delete')}</button>
                   </div>
                   <div className="text-xs text-gray-600 border-l-2 border-emerald-300 pl-2">A: {item.a.slice(0, 120)}{item.a.length > 120 ? '…' : ''}</div>
                   <div className="flex flex-wrap gap-1">
@@ -7529,7 +7522,7 @@ function Unit12CustomerService({
                       <span key={kw} className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">{kw}</span>
                     ))}
                   </div>
-                  <div className="text-[10px] text-gray-400">{new Date(item.created_at).toLocaleString('zh-TW')}</div>
+                  <div className="text-[10px] text-gray-400">{new Date(item.created_at).toLocaleString(locale)}</div>
                 </div>
               ))}
             </div>
@@ -7563,19 +7556,19 @@ function Unit12CustomerService({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="bg-white border rounded-xl p-3 text-center">
                     <div className="text-lg font-bold text-gray-800">{total}</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">總對話數</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t('u12.totalConv')}</div>
                   </div>
                   <div className="bg-white border rounded-xl p-3 text-center">
                     <div className="text-lg font-bold text-gray-800">{avgLatency}<span className="text-xs text-gray-400 ml-0.5">ms</span></div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">平均回應速度</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t('u12.avgSpeed')}</div>
                   </div>
                   <div className="bg-white border rounded-xl p-3 text-center">
                     <div className="text-lg font-bold text-red-500">{highRisk}</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">高風險對話</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t('u12.highRiskConv')}</div>
                   </div>
                   <div className="bg-white border rounded-xl p-3 text-center">
                     <div className="text-lg font-bold text-orange-500">{claudeCount}</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">Claude 升級處理</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{t('u12.claudeEscalated')}</div>
                   </div>
                 </div>
 
@@ -7583,7 +7576,7 @@ function Unit12CustomerService({
                 <div className="bg-white border rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-2 mb-1">
                     <PieChart className="h-3.5 w-3.5 text-gray-500" />
-                    <span className="text-xs font-semibold text-gray-700">風險分佈</span>
+                    <span className="text-xs font-semibold text-gray-700">{t('u12.riskDist')}</span>
                   </div>
                   <div className="flex gap-1 h-2 rounded-full overflow-hidden">
                     {highRisk > 0 && <div className="bg-red-400 transition-all" style={{ width: `${(highRisk/total)*100}%` }} />}
@@ -7591,9 +7584,9 @@ function Unit12CustomerService({
                     {lowRisk > 0 && <div className="bg-green-400 transition-all" style={{ width: `${(lowRisk/total)*100}%` }} />}
                   </div>
                   <div className="flex gap-4 text-[10px] text-gray-500">
-                    <span><span className="inline-block w-2 h-2 rounded-full bg-red-400 mr-1" />高風險 {highRisk}</span>
-                    <span><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1" />中風險 {medRisk}</span>
-                    <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1" />低風險 {lowRisk}</span>
+                    <span><span className="inline-block w-2 h-2 rounded-full bg-red-400 mr-1" />{t('u12.riskHigh')} {highRisk}</span>
+                    <span><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1" />{t('u12.riskMedium')} {medRisk}</span>
+                    <span><span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1" />{t('u12.riskLow')} {lowRisk}</span>
                     <span className="ml-auto"><span className="text-orange-500 font-medium">Claude</span> {claudeCount} · <span className="text-blue-500 font-medium">Gemini</span> {geminiCount}</span>
                   </div>
                 </div>
@@ -7603,7 +7596,7 @@ function Unit12CustomerService({
                   <div className="bg-white border rounded-xl p-3 space-y-2">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="h-3.5 w-3.5 text-gray-500" />
-                      <span className="text-xs font-semibold text-gray-700">熱點問題 TOP 5</span>
+                      <span className="text-xs font-semibold text-gray-700">{t('u12.hotIntents')}</span>
                     </div>
                     <div className="space-y-1.5">
                       {topIntents.map(([intent, count]) => (
@@ -7626,11 +7619,11 @@ function Unit12CustomerService({
                   const now = new Date()
                   for (let i = 6; i >= 0; i--) {
                     const d = new Date(now); d.setDate(d.getDate() - i)
-                    const key = d.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+                    const key = d.toLocaleDateString(locale, { month: 'numeric', day: 'numeric' })
                     dayMap[key] = { high: 0, medium: 0, low: 0, total: 0 }
                   }
                   logs.forEach(l => {
-                    const key = new Date(l.ts).toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' })
+                    const key = new Date(l.ts).toLocaleDateString(locale, { month: 'numeric', day: 'numeric' })
                     if (dayMap[key]) {
                       dayMap[key].total++
                       if (l.risk === 'high') dayMap[key].high++
@@ -7644,8 +7637,8 @@ function Unit12CustomerService({
                     <div className="bg-white border rounded-xl p-3 space-y-2">
                       <div className="flex items-center gap-2 mb-1">
                         <BarChart3 className="h-3.5 w-3.5 text-gray-500" />
-                        <span className="text-xs font-semibold text-gray-700">情緒趨勢（近 7 天）</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 ml-auto">已上線</span>
+                        <span className="text-xs font-semibold text-gray-700">{t('u12.sentimentTrend')}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 ml-auto">{t('u12.live')}</span>
                       </div>
                       <div className="flex items-end gap-1.5 h-20">
                         {days.map(([date, v]) => (
