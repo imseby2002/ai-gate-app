@@ -6027,17 +6027,17 @@ function Unit12CustomerService({
 
                     {/* Row 2: send test message */}
                     <div className="border-t border-blue-100 pt-2 space-y-1.5">
-                      <p className="text-[10px] text-gray-500">傳送測試訊息（先點「查看錯誤狀態」自動抓取 Chat ID）</p>
+                      <p className="text-[10px] text-gray-500">{t('u12.tgTestHint')}</p>
                       <div className="flex gap-2">
                         <input
                           value={telegramTestChatId}
                           onChange={e => setTelegramTestChatId(e.target.value)}
-                          placeholder="Chat ID，例如 123456789"
+                          placeholder={t('u12.tgChatIdPh')}
                           className="flex-1 text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                         />
                         <button onClick={sendTelegramTestMsg} disabled={telegramTestLoading || !telegramTestChatId.trim()}
                           className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-green-50 text-green-700 border border-green-200 disabled:opacity-50 whitespace-nowrap">
-                          {telegramTestLoading ? '送出中...' : '📨 送出'}
+                          {telegramTestLoading ? t('u12.tgSending') : `📨 ${t('u12.tgSend')}`}
                         </button>
                       </div>
                       {telegramTestResult && (
@@ -6060,22 +6060,22 @@ function Unit12CustomerService({
                       'bg-gray-50 text-gray-500 border border-gray-200'
                     }`}>
                       <span>
-                        {waStatus === 'connected' && waPhone && `✅ 已連線：+${waPhone}`}
-                        {waStatus === 'connected' && !waPhone && '✅ WhatsApp 已連線'}
-                        {waStatus === 'qr' && '📱 請用 WhatsApp 掃描下方 QR Code'}
-                        {waStatus === 'connecting' && '⏳ 連線中...'}
-                        {waStatus === 'reconnecting' && '🔄 重新連線中...'}
-                        {waStatus === 'not_started' && '未連線'}
-                        {waStatus === 'disconnected' && '❌ 已斷線，請重新連線'}
+                        {waStatus === 'connected' && waPhone && `✅ ${t('u12.waConnectedPhone', { phone: waPhone })}`}
+                        {waStatus === 'connected' && !waPhone && `✅ ${t('u12.waConnected')}`}
+                        {waStatus === 'qr' && `📱 ${t('u12.waScanQr')}`}
+                        {waStatus === 'connecting' && `⏳ ${t('u12.waConnecting')}`}
+                        {waStatus === 'reconnecting' && `🔄 ${t('u12.waReconnecting')}`}
+                        {waStatus === 'not_started' && t('u12.waNotConnected')}
+                        {waStatus === 'disconnected' && `❌ ${t('u12.waDisconnected')}`}
                       </span>
                       {waStatus === 'connected'
                         ? <button onClick={disconnectWa} disabled={waLoading}
                             className="text-[10px] px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200">
-                            {waLoading ? '...' : '斷線'}
+                            {waLoading ? '...' : t('u12.waDisconnect')}
                           </button>
                         : <button onClick={startWaSession} disabled={waLoading || waStatus === 'connecting' || waStatus === 'qr'}
                             className="text-[10px] px-2 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
-                            {waLoading ? '啟動中...' : waStatus === 'qr' ? '等待掃描...' : '📱 掃 QR 連線'}
+                            {waLoading ? t('u12.waStarting') : waStatus === 'qr' ? t('u12.waWaiting') : `📱 ${t('u12.waScanConnect')}`}
                           </button>
                       }
                     </div>
@@ -6086,7 +6086,7 @@ function Unit12CustomerService({
                         <img src={waQrData} alt="WhatsApp QR Code"
                           className="w-48 h-48 rounded-xl border-4 border-green-200 shadow" />
                         <p className="text-[10px] text-gray-500 text-center">
-                          打開 WhatsApp → 選「已連結的裝置」→ 掃描此 QR Code
+                          {t('u12.waQrHint')}
                         </p>
                       </div>
                     )}
@@ -6095,7 +6095,7 @@ function Unit12CustomerService({
                       <div className="text-[10px] text-red-600 bg-red-50 rounded-lg px-3 py-2">
                         ❌ {waError}
                         {waError.includes('WHATSAPP_BRIDGE_URL') && (
-                          <div className="mt-1 text-red-500">請先在 Vercel 環境變數設定 WHATSAPP_BRIDGE_URL 和 WHATSAPP_BRIDGE_API_KEY</div>
+                          <div className="mt-1 text-red-500">{t('u12.waBridgeHint')}</div>
                         )}
                       </div>
                     )}
@@ -6113,11 +6113,11 @@ function Unit12CustomerService({
                         <div key={field.key}>
                           <label className="text-[10px] text-gray-500 block mb-1">
                             {field.label}
-                            {isSet && <span className="ml-1 text-green-500">✓ 已設定</span>}
+                            {isSet && <span className="ml-1 text-green-500">{t('u12.fieldSet')}</span>}
                           </label>
                           <input
                             type={field.secret ? 'password' : 'text'}
-                            placeholder={isSet ? '留空保留原值' : field.placeholder}
+                            placeholder={isSet ? t('u12.keepOriginal') : field.placeholder}
                             value={platformCreds[p.id]?.[field.key] ?? ''}
                             onChange={e => setPlatformCreds(prev => ({
                               ...prev,
@@ -6132,11 +6132,11 @@ function Unit12CustomerService({
                       <button onClick={() => savePlatformCreds(p.id)} disabled={savingPlatform === p.id}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium text-white"
                         style={{ background: 'var(--primary)' }}>
-                        {savingPlatform === p.id ? '儲存中...' : '儲存'}
+                        {savingPlatform === p.id ? t('u12.saving') : t('u12.save')}
                       </button>
                       <button onClick={() => setEditingPlatform(null)}
                         className="px-3 py-1.5 rounded-lg text-xs bg-gray-100 text-gray-600">
-                        取消
+                        {t('u12.cancel')}
                       </button>
                     </div>
                   </div>
@@ -6158,8 +6158,8 @@ function Unit12CustomerService({
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{CS_INDUSTRY_TEMPLATES[industry].emoji}</span>
                   <div>
-                    <div className="font-semibold text-sm text-violet-800">{CS_INDUSTRY_TEMPLATES[industry].label} 模板</div>
-                    <div className="text-xs text-violet-500">套用預設系統提示詞與引導流程</div>
+                    <div className="font-semibold text-sm text-violet-800">{t('u12.tplTitle', { name: industryLabel(industry) })}</div>
+                    <div className="text-xs text-violet-500">{t('u12.tplDesc')}</div>
                   </div>
                 </div>
                 <button
@@ -6172,12 +6172,12 @@ function Unit12CustomerService({
                   }}
                   className="px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors"
                 >
-                  套用模板
+                  {t('u12.applyTemplate')}
                 </button>
               </div>
               {!systemPrompt && (
                 <div className="text-xs text-violet-600 bg-violet-100 rounded-lg px-3 py-2">
-                  💡 尚未設定系統提示詞，點「套用模板」快速啟動
+                  💡 {t('u12.noPromptHint')}
                 </div>
               )}
             </div>
@@ -6186,7 +6186,7 @@ function Unit12CustomerService({
           {/* Industry template selector (no industry in URL) */}
           {!industry && !systemPrompt && (
             <div className="border border-dashed border-gray-300 rounded-xl p-4 space-y-2">
-              <div className="text-sm font-medium text-gray-700">快速套用行業模板</div>
+              <div className="text-sm font-medium text-gray-700">{t('u12.quickApplyTpl')}</div>
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(CS_INDUSTRY_TEMPLATES).map(([id, tpl]) => (
                   <button key={id}
@@ -6199,7 +6199,7 @@ function Unit12CustomerService({
                     className="flex items-center gap-1.5 px-2 py-2 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 border border-gray-200 text-xs text-gray-700 transition-colors text-left"
                   >
                     <span>{tpl.emoji}</span>
-                    <span className="truncate">{tpl.label}</span>
+                    <span className="truncate">{industryLabel(id)}</span>
                   </button>
                 ))}
               </div>
@@ -6209,31 +6209,31 @@ function Unit12CustomerService({
           {/* Routing info */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
             <div className="font-medium text-sm text-indigo-800 flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />AI 路由架構
+              <Sparkles className="h-4 w-4" />{t('u12.routingTitle')}
             </div>
             <div className="flex items-center gap-3 text-xs text-indigo-700">
               <div className="flex flex-col items-center gap-1">
                 <div className="px-3 py-1.5 rounded-lg bg-blue-100 border border-blue-300 font-medium">Gemini 2.0 Flash</div>
-                <div className="text-[10px] text-gray-500">意圖分類 · 低/中風險回覆</div>
+                <div className="text-[10px] text-gray-500">{t('u12.routingFlash')}</div>
               </div>
               <div className="text-gray-400 text-lg">→</div>
               <div className="flex flex-col items-center gap-1">
                 <div className="px-3 py-1.5 rounded-lg bg-orange-100 border border-orange-300 font-medium">Claude Sonnet</div>
-                <div className="text-[10px] text-gray-500">高風險升級 · 複雜問題</div>
+                <div className="text-[10px] text-gray-500">{t('u12.routingClaude')}</div>
               </div>
             </div>
             <div className="text-xs text-indigo-600">
-              高風險意圖：<span className="font-medium">退換貨/退款、投訴/抱怨、法律/合約</span>（自動升級至 Claude）
+              {t.rich('u12.routingNote', { b: (c) => <span className="font-medium">{c}</span> })}
             </div>
           </div>
 
           {/* Escalation threshold */}
           <div className="border rounded-xl p-4 space-y-3">
-            <span className="font-medium text-sm text-gray-700">升級閾值</span>
+            <span className="font-medium text-sm text-gray-700">{t('u12.escalationThreshold')}</span>
             <div className="flex gap-3">
               {([
-                { value: 'high', label: '高風險才升級', desc: '僅投訴/退款/法律 → Claude', color: 'red' },
-                { value: 'medium', label: '中風險以上升級', desc: '中+高風險均 → Claude', color: 'amber' },
+                { value: 'high', label: t('u12.escHighLabel'), desc: t('u12.escHighDesc'), color: 'red' },
+                { value: 'medium', label: t('u12.escMedLabel'), desc: t('u12.escMedDesc'), color: 'amber' },
               ] as const).map(opt => (
                 <button key={opt.value} onClick={() => setEscalationThreshold(opt.value)}
                   className={`flex-1 p-3 rounded-xl border text-left transition-all ${
@@ -6250,10 +6250,10 @@ function Unit12CustomerService({
 
           {/* Reply language */}
           <div className="border rounded-xl p-4 space-y-2">
-            <span className="font-medium text-sm text-gray-700">回覆語言</span>
+            <span className="font-medium text-sm text-gray-700">{t('u12.replyLanguage')}</span>
             <select value={replyLanguage} onChange={e => setReplyLanguage(e.target.value)}
               className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="auto">自動偵測（跟隨客戶語言）</option>
+              <option value="auto">{t('u12.autoDetect')}</option>
               <option value="繁體中文">繁體中文</option>
               <option value="简体中文">简体中文</option>
               <option value="English">English</option>
@@ -6269,15 +6269,15 @@ function Unit12CustomerService({
           <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-2 bg-indigo-50/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-sm text-gray-700">系統提示詞（System Prompt）</span>
-                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">AI 角色設定</span>
+                <span className="font-medium text-sm text-gray-700">{t('u12.systemPrompt')}</span>
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">{t('u12.aiRoleTag')}</span>
               </div>
-              <span className="text-xs text-gray-400">{systemPrompt.length} 字</span>
+              <span className="text-xs text-gray-400">{t('u12.nChars', { n: systemPrompt.length })}</span>
             </div>
-            <p className="text-xs text-gray-500">定義 AI 客服的<strong>角色、語氣與行為準則</strong>。例如：「你是 XX 品牌的客服，請用親切語氣回覆」。<br />⚠️ 這裡<strong>不是</strong>放 FAQ 或產品資料，那些請到「知識庫」分頁設定。</p>
+            <p className="text-xs text-gray-500">{t.rich('u12.systemPromptHint', { b: (c) => <strong>{c}</strong>, br: () => <br /> })}</p>
             <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)}
               rows={6}
-              placeholder="例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。"
+              placeholder={t('u12.systemPromptPlaceholder')}
               className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
 
@@ -6285,8 +6285,8 @@ function Unit12CustomerService({
           <div className="border-2 border-emerald-200 rounded-xl p-4 space-y-3 bg-emerald-50/30">
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-sm text-gray-700">預訂引導流程</div>
-                <div className="text-xs text-gray-500 mt-0.5">開啟後 AI 依客人意圖自動觸發對應流程，逐步收集預訂資料</div>
+                <div className="font-medium text-sm text-gray-700">{t('u12.bookingFlow')}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{t('u12.bookingFlowHint')}</div>
               </div>
               <button
                 onClick={() => setBookingFlowEnabled(v => !v)}
@@ -6303,22 +6303,22 @@ function Unit12CustomerService({
                   <div key={flow.id} className="bg-white border border-emerald-200 rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-semibold text-gray-700">{flow.name || `流程 ${fi + 1}`}</span>
-                        {flow.simpleMode && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">快速報名</span>}
+                        <span className="text-xs font-semibold text-gray-700">{flow.name || t('u12.flowN', { n: fi + 1 })}</span>
+                        {flow.simpleMode && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{t('u12.quickBooking')}</span>}
                       </div>
                       <div className="flex gap-1.5">
                         <button onClick={() => setEditingFlow({ ...flow })}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                          className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
                         <button onClick={() => setBookingFlows(prev => prev.filter((_, i) => i !== fi))}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                          className="text-[10px] px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
                       </div>
                     </div>
                     <div className="text-[10px] text-gray-500">
-                      觸發關鍵字：<span className="text-emerald-700 font-medium">{flow.triggerKeywords || '(未設定)'}</span>
+                      {t('u12.triggerKw')}<span className="text-emerald-700 font-medium">{flow.triggerKeywords || t('u12.notConfigured')}</span>
                     </div>
                     {flow.simpleMode
-                      ? <div className="text-[10px] text-blue-600">AI 報價確認後 → 彈出報名表單 → 推送 LINE</div>
-                      : <div className="text-[10px] text-gray-500">收集步驟：{flow.steps.map(s => BOOKING_STEP_LABELS[s]).join(' → ')}</div>
+                      ? <div className="text-[10px] text-blue-600">{t('u12.simpleModeFlow')}</div>
+                      : <div className="text-[10px] text-gray-500">{t('u12.collectSteps')}{flow.steps.map(s => stepLabel(s)).join(' → ')}</div>
                     }
                   </div>
                 ))}
@@ -6327,17 +6327,17 @@ function Unit12CustomerService({
                   onClick={() => setEditingFlow({ id: `flow_${Date.now()}`, name: '', triggerKeywords: '', dataHint: '', steps: ['date_depart', 'timeslot', 'headcount', 'phone'], paymentInfo: '' })}
                   className="w-full py-2 rounded-xl text-xs font-medium border-2 border-dashed border-emerald-300 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5"
                 >
-                  <Plus className="h-3.5 w-3.5" /> 新增預訂類型
+                  <Plus className="h-3.5 w-3.5" /> {t('u12.addBookingType')}
                 </button>
 
                 {/* Global payment info */}
                 <div>
-                  <div className="text-xs font-medium text-gray-600 mb-1">預設付款說明（各流程未設定時使用）</div>
+                  <div className="text-xs font-medium text-gray-600 mb-1">{t('u12.defaultPayment')}</div>
                   <textarea
                     value={paymentInfo}
                     onChange={e => setPaymentInfo(e.target.value)}
                     rows={2}
-                    placeholder="例：請匯款至玉山銀行 123-456789 戶名：OO 公司，匯款後傳收據截圖確認。"
+                    placeholder={t('u12.paymentPlaceholder')}
                     className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
                   />
                 </div>
@@ -6350,33 +6350,33 @@ function Unit12CustomerService({
             <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditingFlow(null) }}>
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-gray-800">設定預訂流程</h3>
+                  <h3 className="font-bold text-sm text-gray-800">{t('u12.flowEditorTitle')}</h3>
                   <button onClick={() => setEditingFlow(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
                 </div>
 
                 {/* Name */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">流程名稱</label>
+                  <label className="text-xs font-medium text-gray-600">{t('u12.flowName')}</label>
                   <input value={editingFlow.name} onChange={e => setEditingFlow(f => f ? { ...f, name: e.target.value } : f)}
-                    placeholder="例：賞鯨行程預訂、訂房、停車"
+                    placeholder={t('u12.flowNamePlaceholder')}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                 </div>
 
                 {/* Trigger keywords */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">觸發關鍵字（逗號分隔）</label>
-                  <p className="text-[10px] text-gray-400">客人說到這些字詞時，AI 自動啟動此流程</p>
+                  <label className="text-xs font-medium text-gray-600">{t('u12.triggerKwLabel')}</label>
+                  <p className="text-[10px] text-gray-400">{t('u12.triggerKwHint')}</p>
                   <input value={editingFlow.triggerKeywords} onChange={e => setEditingFlow(f => f ? { ...f, triggerKeywords: e.target.value } : f)}
-                    placeholder="例：賞鯨,出海,繞島,訂票"
+                    placeholder={t('u12.triggerKwPlaceholder')}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                 </div>
 
                 {/* Data hint */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">關聯資料關鍵字</label>
-                  <p className="text-[10px] text-gray-400">告訴 AI 要從知識庫和定價計算機中找哪一類資料。<br />例：賞鯨行程 → 填「賞鯨」；訂房 → 填「房型」或房間名稱</p>
+                  <label className="text-xs font-medium text-gray-600">{t('u12.dataHintLabel')}</label>
+                  <p className="text-[10px] text-gray-400">{t.rich('u12.dataHintHint', { br: () => <br /> })}</p>
                   <input value={editingFlow.dataHint ?? ''} onChange={e => setEditingFlow(f => f ? { ...f, dataHint: e.target.value } : f)}
-                    placeholder="例：賞鯨、海景大床房、停車"
+                    placeholder={t('u12.dataHintPlaceholder')}
                     className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                 </div>
 
@@ -6386,15 +6386,15 @@ function Unit12CustomerService({
                     <input type="checkbox" checked={editingFlow.simpleMode ?? false}
                       onChange={e => setEditingFlow(f => f ? { ...f, simpleMode: e.target.checked } : f)}
                       className="rounded" />
-                    <span className="text-xs font-semibold text-blue-800">快速報名模式</span>
+                    <span className="text-xs font-semibold text-blue-800">{t('u12.simpleMode')}</span>
                   </label>
-                  <p className="text-[10px] text-blue-600 leading-relaxed">啟用後：AI 只問方案和人數、報價，客人確認後彈出表單收集詳細資料（姓名/生日/身分證），並推送至客服 LINE。</p>
+                  <p className="text-[10px] text-blue-600 leading-relaxed">{t('u12.simpleModeHint')}</p>
                   {editingFlow.simpleMode && (
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={editingFlow.requirePassengerId ?? true}
                         onChange={e => setEditingFlow(f => f ? { ...f, requirePassengerId: e.target.checked } : f)}
                         className="rounded" />
-                      <span className="text-xs text-blue-700">需要填身分證號（幼兒永遠免填）</span>
+                      <span className="text-xs text-blue-700">{t('u12.requireId')}</span>
                     </label>
                   )}
                 </div>
@@ -6402,9 +6402,9 @@ function Unit12CustomerService({
                 {/* Steps — hidden in simple mode */}
                 {!editingFlow.simpleMode && (
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600">收集步驟（拖動 ↑↓ 調整順序）</label>
+                  <label className="text-xs font-medium text-gray-600">{t('u12.collectStepsLabel')}</label>
                   <div className="space-y-1.5">
-                    {(Object.keys(BOOKING_STEP_LABELS) as BookingStep[]).map(step => {
+                    {BOOKING_STEPS.map(step => {
                       const checked = editingFlow.steps.includes(step)
                       const idx = editingFlow.steps.indexOf(step)
                       return (
@@ -6418,7 +6418,7 @@ function Unit12CustomerService({
                               return { ...f, steps }
                             })
                           }} className="rounded" />
-                          <span className="text-xs flex-1">{BOOKING_STEP_LABELS[step]}</span>
+                          <span className="text-xs flex-1">{stepLabel(step)}</span>
                           {checked && (
                             <div className="flex gap-1">
                               <button disabled={idx === 0} onClick={() => setEditingFlow(f => {
@@ -6440,16 +6440,16 @@ function Unit12CustomerService({
 
                 {/* Payment info per flow */}
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">付款說明（此流程專用，留空則用預設）</label>
+                  <label className="text-xs font-medium text-gray-600">{t('u12.flowPaymentLabel')}</label>
                   <textarea value={editingFlow.paymentInfo} onChange={e => setEditingFlow(f => f ? { ...f, paymentInfo: e.target.value } : f)}
                     rows={2}
-                    placeholder="例：請轉帳至 ..."
+                    placeholder={t('u12.flowPaymentPlaceholder')}
                     className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
                 </div>
 
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => setEditingFlow(null)}
-                    className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">取消</button>
+                    className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">{t('u12.cancel')}</button>
                   <button onClick={() => {
                     if (!editingFlow) return
                     setBookingFlows(prev => {
@@ -6459,7 +6459,7 @@ function Unit12CustomerService({
                     setEditingFlow(null)
                   }} className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
                     style={{ background: 'var(--primary)' }}>
-                    儲存此流程
+                    {t('u12.saveFlow')}
                   </button>
                 </div>
               </div>
@@ -6470,13 +6470,13 @@ function Unit12CustomerService({
           <div className="border rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-semibold text-gray-800">AI 促成優惠權限</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">業務工具</span>
+              <span className="text-sm font-semibold text-gray-800">{t('u12.discountTitle')}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">{t('u12.salesTool')}</span>
             </div>
-            <p className="text-xs text-gray-500">設定 AI 在客人猶豫或嫌貴時，可主動提出的折扣與贈品。AI 每次只說一項，不一次全列，自然融入對話。</p>
+            <p className="text-xs text-gray-500">{t('u12.discountDesc')}</p>
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">
-                最大折扣　<span className="font-normal text-gray-400">0 = 不提供折扣</span>
+                {t('u12.maxDiscount')}　<span className="font-normal text-gray-400">{t('u12.maxDiscountHint')}</span>
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -6486,21 +6486,21 @@ function Unit12CustomerService({
                   className="w-20 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400"
                 />
                 <span className="text-sm text-gray-500">%</span>
-                {discountMaxPct > 0 && <span className="text-xs text-purple-600">✓ AI 最多可讓 {discountMaxPct}% 折扣</span>}
+                {discountMaxPct > 0 && <span className="text-xs text-purple-600">{t('u12.maxDiscountOk', { pct: discountMaxPct })}</span>}
               </div>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">
-                可贈送項目　<span className="font-normal text-gray-400">一行一項</span>
+                {t('u12.giftItems')}　<span className="font-normal text-gray-400">{t('u12.onePerLine')}</span>
               </label>
               <textarea
                 value={discountGifts}
                 onChange={e => setDiscountGifts(e.target.value)}
                 rows={4}
-                placeholder={'免費早餐（一人）\n延遲退房至 12 點\n免費停車一天\n升級套房（視空房狀況）'}
+                placeholder={t('u12.giftPlaceholder')}
                 className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none font-mono"
               />
-              <p className="text-[10px] text-gray-400">客人猶豫時 AI 會從清單中挑一項主動提出，確認後列入訂單確認清單。</p>
+              <p className="text-[10px] text-gray-400">{t('u12.giftHint')}</p>
             </div>
           </div>
 
@@ -6508,10 +6508,10 @@ function Unit12CustomerService({
           <div className="border rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-semibold text-gray-800">VIP 客戶名單</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">已上線</span>
+              <span className="text-sm font-semibold text-gray-800">{t('u12.vipTitle')}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{t('u12.live')}</span>
             </div>
-            <p className="text-xs text-gray-500">每行一個關鍵字（客戶名稱、Line 暱稱、手機號後4碼等）。對話中偵測到時，自動顯示「VIP 優先處理」標示。</p>
+            <p className="text-xs text-gray-500">{t('u12.vipDesc')}</p>
             <textarea
               value={vipList}
               onChange={e => setVipList(e.target.value)}
@@ -6525,10 +6525,10 @@ function Unit12CustomerService({
           <div className="border rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-indigo-500" />
-              <span className="text-sm font-semibold text-gray-800">自動結案</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">已上線</span>
+              <span className="text-sm font-semibold text-gray-800">{t('u12.autoClose')}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{t('u12.live')}</span>
             </div>
-            <p className="text-xs text-gray-500">按下「結案」後，若客戶在指定時間內無回應，系統自動關閉工單。設為 0 表示不自動結案。</p>
+            <p className="text-xs text-gray-500">{t('u12.autoCloseDesc')}</p>
             <div className="flex items-center gap-3">
               <input
                 type="number" min={0} max={120}
@@ -6536,18 +6536,18 @@ function Unit12CustomerService({
                 onChange={e => setAutoCloseMinutes(Number(e.target.value))}
                 className="w-24 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
               />
-              <span className="text-sm text-gray-500">分鐘後自動結案</span>
-              {autoCloseMinutes > 0 && <span className="text-xs text-green-600">✓ 已啟用</span>}
+              <span className="text-sm text-gray-500">{t('u12.minutesAutoClose')}</span>
+              {autoCloseMinutes > 0 && <span className="text-xs text-green-600">{t('u12.enabled')}</span>}
             </div>
           </div>
 
           {/* 工單通知設定 */}
           <div className="space-y-3 border-t pt-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-800">工單通知</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">建立工單時自動推播</span>
+              <span className="text-sm font-semibold text-gray-800">{t('u12.ticketNotify')}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{t('u12.ticketNotifyTag')}</span>
             </div>
-            <p className="text-xs text-gray-500">客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。</p>
+            <p className="text-xs text-gray-500">{t('u12.ticketNotifyDesc')}</p>
             {notifyWebhooks.map((wh, idx) => (
               <div key={wh.id} className="flex gap-2 items-start p-3 bg-gray-50 rounded-xl border">
                 <div className="flex-1 space-y-2">

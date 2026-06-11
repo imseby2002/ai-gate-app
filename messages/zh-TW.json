@@ -1839,7 +1839,28 @@
       "tgRegistering": "註冊中...", "tgReregister": "重新註冊 Webhook", "tgQuerying": "查詢中...", "tgCheckStatus": "查看錯誤狀態",
       "tgEndpoint": "Webhook 端點", "tgRedirected": "仍被重導，等待 Vercel 部署完成後再試", "tgAccessible": "正常可存取",
       "tgNotSet": "（未設定）", "tgLastError": "最後錯誤", "tgTime": "時間", "tgHistoricError": "此為歷史錯誤，目前 Webhook 端點已正常（HTTP 200）", "tgWebhookOk": "Webhook 正常，無錯誤紀錄",
-      "tgRecentChats": "最近對話（點選填入）：", "tgAdminId": "管理員 Chat ID", "tgForwardHere": "客戶訊息會轉發至此", "tgNoAdminId": "未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）", "tgBadToken": "Bot Token 無效"
+      "tgRecentChats": "最近對話（點選填入）：", "tgAdminId": "管理員 Chat ID", "tgForwardHere": "客戶訊息會轉發至此", "tgNoAdminId": "未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）", "tgBadToken": "Bot Token 無效",
+      "tgTestHint": "傳送測試訊息（先點「查看錯誤狀態」自動抓取 Chat ID）", "tgChatIdPh": "Chat ID，例如 123456789", "tgSending": "送出中...", "tgSend": "送出",
+      "waConnectedPhone": "已連線：+{phone}", "waConnected": "WhatsApp 已連線", "waScanQr": "請用 WhatsApp 掃描下方 QR Code", "waConnecting": "連線中...", "waReconnecting": "重新連線中...", "waNotConnected": "未連線", "waDisconnected": "已斷線，請重新連線", "waDisconnect": "斷線", "waStarting": "啟動中...", "waWaiting": "等待掃描...", "waScanConnect": "掃 QR 連線", "waQrHint": "打開 WhatsApp → 選「已連結的裝置」→ 掃描此 QR Code", "waBridgeHint": "請先在 Vercel 環境變數設定 WHATSAPP_BRIDGE_URL 和 WHATSAPP_BRIDGE_API_KEY",
+      "fieldSet": "✓ 已設定", "keepOriginal": "留空保留原值", "save": "儲存", "saving": "儲存中...", "cancel": "取消",
+      "tplTitle": "{name} 模板", "tplDesc": "套用預設系統提示詞與引導流程", "applyTemplate": "套用模板", "noPromptHint": "尚未設定系統提示詞，點「套用模板」快速啟動", "quickApplyTpl": "快速套用行業模板",
+      "routingTitle": "AI 路由架構", "routingFlash": "意圖分類 · 低/中風險回覆", "routingClaude": "高風險升級 · 複雜問題", "routingNote": "高風險意圖：<b>退換貨/退款、投訴/抱怨、法律/合約</b>（自動升級至 Claude）",
+      "escalationThreshold": "升級閾值", "escHighLabel": "高風險才升級", "escHighDesc": "僅投訴/退款/法律 → Claude", "escMedLabel": "中風險以上升級", "escMedDesc": "中+高風險均 → Claude",
+      "replyLanguage": "回覆語言", "autoDetect": "自動偵測（跟隨客戶語言）",
+      "systemPrompt": "系統提示詞（System Prompt）", "aiRoleTag": "AI 角色設定", "nChars": "{n} 字", "systemPromptHint": "定義 AI 客服的<b>角色、語氣與行為準則</b>。例如：「你是 XX 品牌的客服，請用親切語氣回覆」。<br></br>⚠️ 這裡<b>不是</b>放 FAQ 或產品資料，那些請到「知識庫」分頁設定。", "systemPromptPlaceholder": "例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。",
+      "bookingFlow": "預訂引導流程", "bookingFlowHint": "開啟後 AI 依客人意圖自動觸發對應流程，逐步收集預訂資料",
+      "flowN": "流程 {n}", "quickBooking": "快速報名", "edit": "編輯", "delete": "刪除", "triggerKw": "觸發關鍵字：", "notConfigured": "(未設定)", "simpleModeFlow": "AI 報價確認後 → 彈出報名表單 → 推送 LINE", "collectSteps": "收集步驟：",
+      "addBookingType": "新增預訂類型", "defaultPayment": "預設付款說明（各流程未設定時使用）", "paymentPlaceholder": "例：請匯款至玉山銀行 123-456789 戶名：OO 公司，匯款後傳收據截圖確認。",
+      "flowEditorTitle": "設定預訂流程", "flowName": "流程名稱", "flowNamePlaceholder": "例：賞鯨行程預訂、訂房、停車",
+      "triggerKwLabel": "觸發關鍵字（逗號分隔）", "triggerKwHint": "客人說到這些字詞時，AI 自動啟動此流程", "triggerKwPlaceholder": "例：賞鯨,出海,繞島,訂票",
+      "dataHintLabel": "關聯資料關鍵字", "dataHintHint": "告訴 AI 要從知識庫和定價計算機中找哪一類資料。<br></br>例：賞鯨行程 → 填「賞鯨」；訂房 → 填「房型」或房間名稱", "dataHintPlaceholder": "例：賞鯨、海景大床房、停車",
+      "simpleMode": "快速報名模式", "simpleModeHint": "啟用後：AI 只問方案和人數、報價，客人確認後彈出表單收集詳細資料（姓名/生日/身分證），並推送至客服 LINE。", "requireId": "需要填身分證號（幼兒永遠免填）",
+      "collectStepsLabel": "收集步驟（拖動 ↑↓ 調整順序）", "flowPaymentLabel": "付款說明（此流程專用，留空則用預設）", "flowPaymentPlaceholder": "例：請轉帳至 ...", "saveFlow": "儲存此流程",
+      "discountTitle": "AI 促成優惠權限", "salesTool": "業務工具", "discountDesc": "設定 AI 在客人猶豫或嫌貴時，可主動提出的折扣與贈品。AI 每次只說一項，不一次全列，自然融入對話。",
+      "maxDiscount": "最大折扣", "maxDiscountHint": "0 = 不提供折扣", "maxDiscountOk": "✓ AI 最多可讓 {pct}% 折扣", "giftItems": "可贈送項目", "onePerLine": "一行一項", "giftPlaceholder": "免費早餐（一人）\n延遲退房至 12 點\n免費停車一天\n升級套房（視空房狀況）", "giftHint": "客人猶豫時 AI 會從清單中挑一項主動提出，確認後列入訂單確認清單。",
+      "vipTitle": "VIP 客戶名單", "live": "已上線", "vipDesc": "每行一個關鍵字（客戶名稱、Line 暱稱、手機號後4碼等）。對話中偵測到時，自動顯示「VIP 優先處理」標示。",
+      "autoClose": "自動結案", "autoCloseDesc": "按下「結案」後，若客戶在指定時間內無回應，系統自動關閉工單。設為 0 表示不自動結案。", "minutesAutoClose": "分鐘後自動結案", "enabled": "✓ 已啟用",
+      "ticketNotify": "工單通知", "ticketNotifyTag": "建立工單時自動推播", "ticketNotifyDesc": "客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。"
     }
   }
 }
