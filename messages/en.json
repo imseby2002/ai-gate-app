@@ -1722,6 +1722,27 @@
       "noUnit5": "<b>Unit 5 (Image Scripts) not run yet</b>; you can enter a custom prompt below to generate images.",
       "manualPrompt": "Manual Prompt", "manualPlaceholder": "Enter an English prompt, e.g. Professional marketing photo of luxury skincare products on white marble...",
       "generatingShort": "Generating…", "successHint": "Generated {n} images, stored in Supabase Storage; you can upload them to platforms in Unit 9."
+    },
+    "u7": {
+      "errTypes": "Please select at least one video type", "errPlatforms": "Please select at least one platform",
+      "platform": { "youtube": "YouTube (regular)" },
+      "ctxImageScript": "Image Scripts",
+      "videoCount": "Number of Videos", "videoDuration": "Video Duration", "durSec": "{s}s",
+      "videoType": "Video Type",
+      "vtype": {
+        "short_video": { "label": "Short Video", "desc": "Eye-catching, fast-paced" },
+        "ad": { "label": "Ad Video", "desc": "AIDA structure, drives conversion" },
+        "tutorial": { "label": "Tutorial Video", "desc": "Demonstrate product/service use" },
+        "testimonial": { "label": "Customer Testimonial", "desc": "Authentic word-of-mouth, builds trust" },
+        "brand_story": { "label": "Brand Story", "desc": "Emotional connection, brand image" }
+      },
+      "refImgTitle": "Reference Image (for Claude Vision)", "useRefImg": "Use reference image", "refImgHint": "When enabled, Claude generates a more fitting script based on the image's scene and style",
+      "unit6Image": "Unit 6 Generated Image", "refImgPickLabel": "Video script reference", "pickUnit6": "Pick an image generated in Unit 6 as reference", "noUnit6Images": "No images generated in Unit 6 yet; complete Unit 6 first or use a Drive image.",
+      "optional": "(optional)", "rulesPlaceholder": "e.g. must show product close-up; narration in Taiwanese; open with a curiosity-piquing question…",
+      "genWithRef": "Generate Script with Reference", "genScript": "Generate Video Script",
+      "videoN": "Video {n}", "scriptTitle": "Video {n} Storyboard — Claude Sonnet · {dur}s", "totalVideos": "{n} total",
+      "feedbackPlaceholder": "e.g. pacing too slow; opening not engaging enough; add more product detail…",
+      "tipBody": "Once scripts are done, go to <b>Unit 8 Video Generation</b> and use KLING (5/10s), Google VEO3 (25s), or SORA (60s) to turn scripts into actual videos."
     }
   }
 }

@@ -2224,22 +2224,18 @@ const VIDEO_PLATFORMS: { id: string; label: string }[] = [
   { id: 'facebook_reels',  label: 'FB Reels' },
   { id: 'youtube_shorts',  label: 'YouTube Shorts' },
   { id: 'tiktok',          label: 'TikTok' },
-  { id: 'youtube',         label: 'YouTube 一般' },
+  { id: 'youtube',         label: '' },
 ]
 
-const VIDEO_TYPES: { id: string; label: string; desc: string }[] = [
-  { id: 'short_video',  label: '短影音',   desc: '直接吸睛，快節奏' },
-  { id: 'ad',           label: '廣告影片', desc: 'AIDA 結構，促轉換' },
-  { id: 'tutorial',     label: '教學影片', desc: '示範產品/服務使用' },
-  { id: 'testimonial',  label: '客戶見證', desc: '真實口碑，建立信任' },
-  { id: 'brand_story',  label: '品牌故事', desc: '情感連結，品牌形象' },
+const VIDEO_TYPES: { id: string }[] = [
+  { id: 'short_video' }, { id: 'ad' }, { id: 'tutorial' }, { id: 'testimonial' }, { id: 'brand_story' },
 ]
 
 const DURATION_OPTIONS = [
-  { value: '5',  label: '5秒',  hint: 'KLING' },
-  { value: '10', label: '10秒', hint: 'KLING' },
-  { value: '25', label: '25秒', hint: 'Google VEO3' },
-  { value: '60', label: '60秒', hint: 'SORA' },
+  { value: '5',  hint: 'KLING' },
+  { value: '10', hint: 'KLING' },
+  { value: '25', hint: 'Google VEO3' },
+  { value: '60', hint: 'SORA' },
 ]
 
 function Unit7VideoScript({
@@ -2286,6 +2282,8 @@ function Unit7VideoScript({
   const [useRefImage, setUseRefImage] = useState(false)
   const [refImageSource, setRefImageSource] = useState<'drive' | 'unit6'>('drive')
   const [selectedUnit6ImageUrl, setSelectedUnit6ImageUrl] = useState('')
+  const t = useTranslations('MA')
+  const platformLabel = (id: string, label: string) => label || (t.has(`u7.platform.${id}`) ? t(`u7.platform.${id}`) : id)
 
   const unit6Images = unit6Data?.images ?? []
 
@@ -2316,8 +2314,8 @@ function Unit7VideoScript({
   }
 
   const run = async (fb?: string) => {
-    if (videoTypes.length === 0) { setError('請至少選一種影片類型'); return }
-    if (platforms.length === 0) { setError('請至少選一個平台'); return }
+    if (videoTypes.length === 0) { setError(t('u7.errTypes')); return }
+    if (platforms.length === 0) { setError(t('u7.errPlatforms')); return }
     setRunning(true); setError('')
     const refImg = await getRefImage()
     try {
@@ -2355,11 +2353,11 @@ function Unit7VideoScript({
       {/* Context status */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { label: '蒐集資料', ok: !!unit1Data?.summary },
-          { label: '公司資料', ok: !!unit2Data?.companyName },
-          { label: '分析資料', ok: !!unit3Data?.results },
-          { label: '文案資料', ok: !!unit4Data?.results },
-          { label: '圖片腳本', ok: !!(unit5Data?.scripts?.length) },
+          { label: t('u4.ctxCollect'), ok: !!unit1Data?.summary },
+          { label: t('u4.ctxCompany'), ok: !!unit2Data?.companyName },
+          { label: t('u4.ctxAnalysis'), ok: !!unit3Data?.results },
+          { label: t('u5.ctxCopy'), ok: !!unit4Data?.results },
+          { label: t('u7.ctxImageScript'), ok: !!(unit5Data?.scripts?.length) },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
             s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
@@ -2372,7 +2370,7 @@ function Unit7VideoScript({
 
       {/* Count */}
       <div>
-        <label className="block text-sm font-semibold mb-2">產出影片數量</label>
+        <label className="block text-sm font-semibold mb-2">{t('u7.videoCount')}</label>
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map(n => (
             <button key={n} onClick={() => setCount(n)}
@@ -2388,7 +2386,7 @@ function Unit7VideoScript({
 
       {/* Duration */}
       <div>
-        <label className="block text-sm font-semibold mb-2">影片時長</label>
+        <label className="block text-sm font-semibold mb-2">{t('u7.videoDuration')}</label>
         <div className="flex gap-2 flex-wrap">
           {DURATION_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setDuration(opt.value)}
@@ -2396,7 +2394,7 @@ function Unit7VideoScript({
               style={duration === opt.value
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                 : { background: 'white' }}>
-              <span className="font-semibold">{opt.label}</span>
+              <span className="font-semibold">{t('u7.durSec', { s: opt.value })}</span>
               <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
             </button>
           ))}
@@ -2405,7 +2403,7 @@ function Unit7VideoScript({
 
       {/* Video type */}
       <div>
-        <label className="block text-sm font-semibold mb-2">影片類型</label>
+        <label className="block text-sm font-semibold mb-2">{t('u7.videoType')}</label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {VIDEO_TYPES.map(vt => {
             const sel = videoTypes.includes(vt.id)
@@ -2420,8 +2418,8 @@ function Unit7VideoScript({
                   {sel && <CheckCircle2 className="h-4 w-4 text-white" />}
                 </div>
                 <div>
-                  <div className="text-xs font-medium">{vt.label}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{vt.desc}</div>
+                  <div className="text-xs font-medium">{t(`u7.vtype.${vt.id}.label`)}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{t(`u7.vtype.${vt.id}.desc`)}</div>
                 </div>
               </button>
             )
@@ -2431,7 +2429,7 @@ function Unit7VideoScript({
 
       {/* Platform */}
       <div>
-        <label className="block text-sm font-semibold mb-2">目標發布平台</label>
+        <label className="block text-sm font-semibold mb-2">{t('u5.targetPlatforms')}</label>
         <div className="flex flex-wrap gap-2">
           {VIDEO_PLATFORMS.map(p => {
             const sel = platforms.includes(p.id)
@@ -2441,7 +2439,7 @@ function Unit7VideoScript({
                 style={sel
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                   : {}}>
-                {p.label}
+                {platformLabel(p.id, p.label)}
               </button>
             )
           })}
@@ -2453,18 +2451,18 @@ function Unit7VideoScript({
         <div className="flex items-center justify-between">
           <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
             <ImageIcon className="w-3.5 h-3.5" />
-            參考圖片（提供給 Claude Vision）
+            {t('u7.refImgTitle')}
           </div>
           <button onClick={() => setUseRefImage(v => !v)}
             className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all"
             style={useRefImage
               ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
               : { background: 'white' }}>
-            {useRefImage ? '已啟用' : '使用參考圖片'}
+            {useRefImage ? t('u6.enabled') : t('u7.useRefImg')}
           </button>
         </div>
         {!useRefImage && (
-          <p className="text-[10px] text-blue-500">啟用後 Claude 會根據圖片場景與風格生成更貼切的腳本</p>
+          <p className="text-[10px] text-blue-500">{t('u7.refImgHint')}</p>
         )}
         {useRefImage && (
           <>
@@ -2482,7 +2480,7 @@ function Unit7VideoScript({
                 style={refImageSource === 'unit6'
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                   : { background: 'white' }}>
-                單元6 生成圖片
+                {t('u7.unit6Image')}
               </button>
             </div>
             {refImageSource === 'drive' && (
@@ -2492,13 +2490,13 @@ function Unit7VideoScript({
                 onFolderChange={onDriveFolderChange}
                 onImagePicked={onDriveImagePicked}
                 pickedImage={drivePickedImage ?? null}
-                label="影片腳本參考圖"
+                label={t('u7.refImgPickLabel')}
               />
             )}
             {refImageSource === 'unit6' && (
               unit6Images.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-[10px] text-blue-600">選擇一張單元6已生成的圖片作為參考</p>
+                  <p className="text-[10px] text-blue-600">{t('u7.pickUnit6')}</p>
                   <div className="flex gap-2 flex-wrap">
                     {unit6Images.map(img => (
                       <button key={img.url} onClick={() => setSelectedUnit6ImageUrl(img.url)}
@@ -2515,7 +2513,7 @@ function Unit7VideoScript({
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-blue-600">尚未在單元6生成圖片，請先完成單元6或改用 Drive 圖片。</p>
+                <p className="text-xs text-blue-600">{t('u7.noUnit6Images')}</p>
               )
             )}
           </>
@@ -2525,12 +2523,12 @@ function Unit7VideoScript({
       {/* Instructions */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">
-          特別規定
-          <span className="ml-2 text-xs font-normal text-gray-400">（選填）</span>
+          {t('u5.specialRules')}
+          <span className="ml-2 text-xs font-normal text-gray-400">{t('u7.optional')}</span>
         </label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
-          placeholder="例如：必須出現產品特寫；旁白要用台語；開頭用問句勾起好奇心…" />
+          placeholder={t('u7.rulesPlaceholder')} />
       </div>
 
       {error && (
@@ -2549,8 +2547,8 @@ function Unit7VideoScript({
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
             style={{ background: 'var(--primary)' }}>
             {running
-              ? <><Loader2 className="h-4 w-4 animate-spin" />Claude 生成腳本中…</>
-              : <><Film className="h-4 w-4" />{hasRef ? '以參考圖片產生腳本' : '產生影片腳本'}</>}
+              ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u5.generatingScript')}</>
+              : <><Film className="h-4 w-4" />{hasRef ? t('u7.genWithRef') : t('u7.genScript')}</>}
           </button>
         )
       })()}
@@ -2565,12 +2563,12 @@ function Unit7VideoScript({
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   activeScript === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}>
-                影片 {s.id}
+                {t('u7.videoN', { n: s.id })}
               </button>
             ))}
             <button onClick={() => run()} disabled={running}
               className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
-              <RefreshCw className="h-3.5 w-3.5" /> 重新生成
+              <RefreshCw className="h-3.5 w-3.5" /> {t('u4.regenerate')}
             </button>
           </div>
 
@@ -2579,10 +2577,10 @@ function Unit7VideoScript({
             <div className="p-5 rounded-xl bg-gray-50 border">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-gray-500">
-                  影片 {activeScript} 分鏡腳本 — Claude Sonnet · {result.duration}秒
+                  {t('u7.scriptTitle', { n: activeScript, dur: result.duration ?? '' })}
                 </span>
                 <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
-                  共 {result.scripts.length} 支
+                  {t('u7.totalVideos', { n: result.scripts.length })}
                 </span>
               </div>
               <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto">
@@ -2593,25 +2591,25 @@ function Unit7VideoScript({
 
           {/* Feedback */}
           <div className="p-4 rounded-xl bg-amber-50 border border-amber-100 space-y-2">
-            <div className="text-xs font-semibold text-amber-800">輸入修改意見，重新生成所有腳本</div>
+            <div className="text-xs font-semibold text-amber-800">{t('u5.feedbackTitle')}</div>
             <div className="flex gap-2">
               <input value={feedback} onChange={e => setFeedback(e.target.value)}
                 className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white"
-                placeholder="例如：節奏太慢；開頭不夠吸引人；加入更多產品細節…"
+                placeholder={t('u7.feedbackPlaceholder')}
                 onKeyDown={e => e.key === 'Enter' && feedback.trim() && run(feedback)}
               />
               <button onClick={() => run(feedback)} disabled={!feedback.trim() || running}
                 className="px-4 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                 style={{ background: 'var(--primary)' }}>
-                重生成
+                {t('u4.regenAll')}
               </button>
             </div>
           </div>
 
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
-            <div className="text-xs text-blue-700 font-medium mb-1">💡 使用提示</div>
+            <div className="text-xs text-blue-700 font-medium mb-1">💡 {t('u5.tipTitle')}</div>
             <div className="text-xs text-blue-600">
-              腳本完成後，前往 <strong>單元8 影片產出</strong> 使用 KLING（5/10秒）、Google VEO3（25秒）或 SORA（60秒）將腳本轉換為實際影片。
+              {t.rich('u7.tipBody', { b: (c) => <strong>{c}</strong> })}
             </div>
           </div>
         </div>

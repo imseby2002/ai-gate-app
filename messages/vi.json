@@ -1722,6 +1722,27 @@
       "noUnit5": "<b>Chưa chạy Unit 5 (Kịch bản hình)</b>; bạn có thể nhập prompt tùy chỉnh bên dưới để tạo hình.",
       "manualPrompt": "Nhập Prompt thủ công", "manualPlaceholder": "Nhập prompt tiếng Anh, VD: Professional marketing photo of luxury skincare products on white marble...",
       "generatingShort": "Đang tạo…", "successHint": "Đã tạo {n} hình, lưu ở Supabase Storage; có thể tải lên các nền tảng ở Unit 9."
+    },
+    "u7": {
+      "errTypes": "Vui lòng chọn ít nhất một loại video", "errPlatforms": "Vui lòng chọn ít nhất một nền tảng",
+      "platform": { "youtube": "YouTube (thường)" },
+      "ctxImageScript": "Kịch bản hình",
+      "videoCount": "Số lượng video", "videoDuration": "Thời lượng video", "durSec": "{s} giây",
+      "videoType": "Loại video",
+      "vtype": {
+        "short_video": { "label": "Video ngắn", "desc": "Bắt mắt, nhịp nhanh" },
+        "ad": { "label": "Video quảng cáo", "desc": "Cấu trúc AIDA, thúc đẩy chuyển đổi" },
+        "tutorial": { "label": "Video hướng dẫn", "desc": "Trình diễn cách dùng sản phẩm/dịch vụ" },
+        "testimonial": { "label": "Khách hàng chứng thực", "desc": "Truyền miệng chân thực, tạo niềm tin" },
+        "brand_story": { "label": "Câu chuyện thương hiệu", "desc": "Kết nối cảm xúc, hình ảnh thương hiệu" }
+      },
+      "refImgTitle": "Hình tham khảo (cho Claude Vision)", "useRefImg": "Dùng hình tham khảo", "refImgHint": "Khi bật, Claude tạo kịch bản sát hơn theo bối cảnh và phong cách của hình",
+      "unit6Image": "Hình tạo ở Unit 6", "refImgPickLabel": "Hình tham khảo kịch bản video", "pickUnit6": "Chọn một hình đã tạo ở Unit 6 làm tham khảo", "noUnit6Images": "Chưa tạo hình ở Unit 6; hãy hoàn tất Unit 6 trước hoặc dùng hình Drive.",
+      "optional": "(tùy chọn)", "rulesPlaceholder": "VD: phải có cận cảnh sản phẩm; lời dẫn bằng tiếng Đài; mở đầu bằng câu hỏi gây tò mò…",
+      "genWithRef": "Tạo kịch bản theo hình tham khảo", "genScript": "Tạo kịch bản video",
+      "videoN": "Video {n}", "scriptTitle": "Storyboard video {n} — Claude Sonnet · {dur} giây", "totalVideos": "Tổng {n}",
+      "feedbackPlaceholder": "VD: nhịp quá chậm; mở đầu chưa hấp dẫn; thêm chi tiết sản phẩm…",
+      "tipBody": "Sau khi xong kịch bản, vào <b>Unit 8 Tạo video</b> dùng KLING (5/10 giây), Google VEO3 (25 giây) hoặc SORA (60 giây) để chuyển kịch bản thành video thực tế."
     }
   }
 }

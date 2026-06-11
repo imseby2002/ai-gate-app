@@ -1722,6 +1722,27 @@
       "noUnit5": "<b>尚未執行單元5（圖片腳本）</b>，可直接在下方輸入自訂 Prompt 生成圖片。",
       "manualPrompt": "手動輸入 Prompt", "manualPlaceholder": "輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble...",
       "generatingShort": "生成中…", "successHint": "已生成 {n} 張圖片，儲存於 Supabase Storage，可於單元9上傳至各平台。"
+    },
+    "u7": {
+      "errTypes": "請至少選一種影片類型", "errPlatforms": "請至少選一個平台",
+      "platform": { "youtube": "YouTube 一般" },
+      "ctxImageScript": "圖片腳本",
+      "videoCount": "產出影片數量", "videoDuration": "影片時長", "durSec": "{s}秒",
+      "videoType": "影片類型",
+      "vtype": {
+        "short_video": { "label": "短影音", "desc": "直接吸睛，快節奏" },
+        "ad": { "label": "廣告影片", "desc": "AIDA 結構，促轉換" },
+        "tutorial": { "label": "教學影片", "desc": "示範產品/服務使用" },
+        "testimonial": { "label": "客戶見證", "desc": "真實口碑，建立信任" },
+        "brand_story": { "label": "品牌故事", "desc": "情感連結，品牌形象" }
+      },
+      "refImgTitle": "參考圖片（提供給 Claude Vision）", "useRefImg": "使用參考圖片", "refImgHint": "啟用後 Claude 會根據圖片場景與風格生成更貼切的腳本",
+      "unit6Image": "單元6 生成圖片", "refImgPickLabel": "影片腳本參考圖", "pickUnit6": "選擇一張單元6已生成的圖片作為參考", "noUnit6Images": "尚未在單元6生成圖片，請先完成單元6或改用 Drive 圖片。",
+      "optional": "（選填）", "rulesPlaceholder": "例如：必須出現產品特寫；旁白要用台語；開頭用問句勾起好奇心…",
+      "genWithRef": "以參考圖片產生腳本", "genScript": "產生影片腳本",
+      "videoN": "影片 {n}", "scriptTitle": "影片 {n} 分鏡腳本 — Claude Sonnet · {dur}秒", "totalVideos": "共 {n} 支",
+      "feedbackPlaceholder": "例如：節奏太慢；開頭不夠吸引人；加入更多產品細節…",
+      "tipBody": "腳本完成後，前往 <b>單元8 影片產出</b> 使用 KLING（5/10秒）、Google VEO3（25秒）或 SORA（60秒）將腳本轉換為實際影片。"
     }
   }
 }
