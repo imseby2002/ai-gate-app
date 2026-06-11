@@ -1577,5 +1577,51 @@
     "email": { "sendTitle": "Email 寄送", "noEmailTitle": "⚠️ 未自動抓到任何 Email", "noEmailHint": "Google 地圖不提供 Email 資料。建議在 Step 1 蒐集管道加選 <b>Facebook</b> 或 <b>網頁</b>，系統會嘗試從廠商資料中萃取 Email。", "manualHint": "您也可以在下方表格手動填入各組織的 Email。", "perOrgEmail": "各組織 Email", "filledCount": "{filled}/{total} 筆已填", "templateLabel": "模板：{name}", "notSet": "未設定", "hasEmail": "{count} 個有 Email", "sending": "寄送中…", "sendN": "寄送 {count} 封", "subjectPrefix": "主旨：" },
     "res": { "success": "✓ 成功 {n}", "fail": "✗ 失敗 {n}" },
     "phone": { "groupTitle": "規則分組撥打", "matchedPhones": "{matched} 家 · {phones} 支有效電話", "calling": "撥打中…", "callN": "撥打 {count} 支", "noScript": "未指定腳本", "scriptPrefix": "腳本：", "noPhone": "無電話", "unmappedCount": "未分配（無匹配規則）{count} 家", "rejectedCount": "淘汰組織 {count} 家（點擊展開）", "selectedListCount": "入選完整列表 {count} 家", "colOrg": "組織", "colCategory": "分類", "colPhone": "電話", "colRule": "規則", "unassigned": "未分配" }
+  },
+  "MA": {
+    "status": { "running": "執行中", "done": "完成", "error": "錯誤" },
+    "ct": {
+      "map": { "label": "地圖搜尋", "desc": "組織: 公司/門市等" },
+      "tiktok": { "label": "TikTok", "desc": "影音搜尋 / 評論" },
+      "facebook": { "label": "Facebook", "desc": "內文 / 評論" },
+      "instagram": { "label": "Instagram", "desc": "內文 / 評論" },
+      "threads": { "label": "Threads", "desc": "內文 / 評論" },
+      "youtube": { "label": "YouTube", "desc": "短影音 / 長影音 / 評論" },
+      "amazon": { "label": "Amazon", "desc": "產品 / 評論" },
+      "shopee": { "label": "Shopee", "desc": "產品 / 評論 (可選國家)" },
+      "ios_android": { "label": "iOS / Android", "desc": "App Store / Google Play 評論" },
+      "news": { "label": "新聞搜尋", "desc": "Google Alerts RSS" },
+      "web": { "label": "網頁搜尋", "desc": "Tavily 深度搜尋" },
+      "competitors": { "label": "競爭對手", "desc": "Tavily 競品分析" },
+      "trend": { "label": "社群熱點", "desc": "Reddit · HN · Polymarket 近30天" },
+      "dcard": { "label": "Dcard", "desc": "台灣最大論壇，旅遊/生活版" },
+      "booking": { "label": "訂房平台評論", "desc": "Booking.com + Airbnb 住客評論" }
+    },
+    "sub": {
+      "map": { "info": "基本資訊 (名稱/地址/電話)", "coordinates": "經緯度/距離計算", "reviews": "MAP 評論", "hours": "營業時間" },
+      "tiktok": { "videos": "影音搜尋", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "facebook": { "posts": "內文", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "instagram": { "posts": "內文", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "threads": { "posts": "內文", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "youtube": { "shorts": "短影音", "videos": "長影音", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "amazon": { "products": "產品", "reviews": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "shopee": { "products": "產品", "reviews": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "ios_android": { "reviews": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
+      "trend": { "reddit": "Reddit 熱門討論", "hackernews": "Hacker News", "polymarket": "Polymarket 市場預測" },
+      "booking": { "booking": "Booking.com 評論", "airbnb": "Airbnb 評論" }
+    },
+    "shopee": { "tw": "台灣", "vn": "越南", "id": "印尼", "ph": "菲律賓", "my": "馬來西亞", "th": "泰國", "sg": "新加坡", "br": "巴西", "mx": "墨西哥", "co": "哥倫比亞" },
+    "u1": {
+      "errKeywords": "請輸入關鍵字", "errTypes": "請至少選一種蒐集類型",
+      "keywords": "關鍵字 / 搜尋主題", "keywordsPlaceholder": "例如：火鍋餐廳、手機殼品牌、健身房...",
+      "selectChannels": "選擇蒐集管道", "mapSettings": "地圖搜尋設定",
+      "locationLabel": "地點 / 城市 / 地址（用於定位搜尋範圍）", "locationPlaceholder": "例如：台北市信義區、新北市板橋區...",
+      "shopeeCountry": "Shopee 國家",
+      "appIdTitle": "App ID（App Store / Google Play，每行一個）", "appIdHint": "App Store: id 開頭數字 ID｜Google Play: package name",
+      "rssTitle": "Google Alerts RSS URL（每行一個）", "rssHint": "前往 google.com/alerts → 管理 → 訂閱 → 選「RSS 訂閱」後複製 URL",
+      "perTypeCount": "每類資料筆數", "countUnit": "{n} 筆", "language": "語言",
+      "collecting": "蒐集中，請稍候…", "startCollect": "開始蒐集",
+      "resultTitle": "蒐集結果", "tabSummary": "AI 摘要", "tabRaw": "原始資料", "recollect": "重新蒐集"
+    }
   }
 }

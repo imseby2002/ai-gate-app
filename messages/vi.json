@@ -1577,5 +1577,51 @@
     "email": { "sendTitle": "Gửi Email", "noEmailTitle": "⚠️ Không tự phát hiện Email nào", "noEmailHint": "Google Maps không cung cấp dữ liệu Email. Hãy thêm <b>Facebook</b> hoặc <b>Trang web</b> vào kênh ở Bước 1, hệ thống sẽ thử trích xuất Email từ dữ liệu nhà cung cấp.", "manualHint": "Bạn cũng có thể nhập thủ công Email từng tổ chức ở bảng dưới.", "perOrgEmail": "Email từng tổ chức", "filledCount": "{filled}/{total} đã điền", "templateLabel": "Mẫu: {name}", "notSet": "Chưa đặt", "hasEmail": "{count} có Email", "sending": "Đang gửi…", "sendN": "Gửi {count}", "subjectPrefix": "Tiêu đề: " },
     "res": { "success": "✓ {n} thành công", "fail": "✗ {n} thất bại" },
     "phone": { "groupTitle": "Gọi theo nhóm quy tắc", "matchedPhones": "{matched} tổ chức · {phones} số hợp lệ", "calling": "Đang gọi…", "callN": "Gọi {count}", "noScript": "Chưa gán kịch bản", "scriptPrefix": "Kịch bản: ", "noPhone": "Không có điện thoại", "unmappedCount": "Chưa phân bổ (không khớp quy tắc) {count}", "rejectedCount": "Tổ chức bị loại {count} (nhấn để mở)", "selectedListCount": "Danh sách được chọn đầy đủ {count}", "colOrg": "Tổ chức", "colCategory": "Phân loại", "colPhone": "Điện thoại", "colRule": "Quy tắc", "unassigned": "Chưa phân bổ" }
+  },
+  "MA": {
+    "status": { "running": "Đang chạy", "done": "Hoàn tất", "error": "Lỗi" },
+    "ct": {
+      "map": { "label": "Tìm trên bản đồ", "desc": "Tổ chức: công ty/cửa hàng, v.v." },
+      "tiktok": { "label": "TikTok", "desc": "Tìm video / bình luận" },
+      "facebook": { "label": "Facebook", "desc": "Bài viết / bình luận" },
+      "instagram": { "label": "Instagram", "desc": "Bài viết / bình luận" },
+      "threads": { "label": "Threads", "desc": "Bài viết / bình luận" },
+      "youtube": { "label": "YouTube", "desc": "Video ngắn / video dài / bình luận" },
+      "amazon": { "label": "Amazon", "desc": "Sản phẩm / đánh giá" },
+      "shopee": { "label": "Shopee", "desc": "Sản phẩm / đánh giá (chọn quốc gia)" },
+      "ios_android": { "label": "iOS / Android", "desc": "Đánh giá App Store / Google Play" },
+      "news": { "label": "Tìm tin tức", "desc": "Google Alerts RSS" },
+      "web": { "label": "Tìm trang web", "desc": "Tavily tìm kiếm sâu" },
+      "competitors": { "label": "Đối thủ", "desc": "Tavily phân tích đối thủ" },
+      "trend": { "label": "Xu hướng cộng đồng", "desc": "Reddit · HN · Polymarket, 30 ngày qua" },
+      "dcard": { "label": "Dcard", "desc": "Diễn đàn lớn nhất Đài Loan, mục du lịch/đời sống" },
+      "booking": { "label": "Đánh giá lưu trú", "desc": "Đánh giá khách Booking.com + Airbnb" }
+    },
+    "sub": {
+      "map": { "info": "Thông tin cơ bản (tên/địa chỉ/điện thoại)", "coordinates": "Tọa độ/tính khoảng cách", "reviews": "Đánh giá MAP", "hours": "Giờ mở cửa" },
+      "tiktok": { "videos": "Tìm video", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "facebook": { "posts": "Bài viết", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "instagram": { "posts": "Bài viết", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "threads": { "posts": "Bài viết", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "youtube": { "shorts": "Video ngắn", "videos": "Video dài", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "amazon": { "products": "Sản phẩm", "reviews": "Đánh giá", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "shopee": { "products": "Sản phẩm", "reviews": "Đánh giá", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "ios_android": { "reviews": "Đánh giá", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
+      "trend": { "reddit": "Thảo luận hot Reddit", "hackernews": "Hacker News", "polymarket": "Dự đoán Polymarket" },
+      "booking": { "booking": "Đánh giá Booking.com", "airbnb": "Đánh giá Airbnb" }
+    },
+    "shopee": { "tw": "Đài Loan", "vn": "Việt Nam", "id": "Indonesia", "ph": "Philippines", "my": "Malaysia", "th": "Thái Lan", "sg": "Singapore", "br": "Brazil", "mx": "Mexico", "co": "Colombia" },
+    "u1": {
+      "errKeywords": "Vui lòng nhập từ khóa", "errTypes": "Vui lòng chọn ít nhất một loại thu thập",
+      "keywords": "Từ khóa / Chủ đề tìm kiếm", "keywordsPlaceholder": "VD: nhà hàng lẩu, thương hiệu ốp điện thoại, phòng gym...",
+      "selectChannels": "Chọn kênh thu thập", "mapSettings": "Cài đặt tìm bản đồ",
+      "locationLabel": "Địa điểm / thành phố / địa chỉ (để khoanh vùng tìm kiếm)", "locationPlaceholder": "VD: Quận Tín Nghĩa Đài Bắc, Quận Bản Kiều Tân Bắc...",
+      "shopeeCountry": "Quốc gia Shopee",
+      "appIdTitle": "App ID (App Store / Google Play, mỗi dòng một cái)", "appIdHint": "App Store: ID số bắt đầu bằng id | Google Play: package name",
+      "rssTitle": "Google Alerts RSS URL (mỗi dòng một cái)", "rssHint": "Vào google.com/alerts → Quản lý → Đăng ký → chọn \"RSS feed\" rồi sao chép URL",
+      "perTypeCount": "Số lượng mỗi loại", "countUnit": "{n} mục", "language": "Ngôn ngữ",
+      "collecting": "Đang thu thập, vui lòng đợi…", "startCollect": "Bắt đầu thu thập",
+      "resultTitle": "Kết quả thu thập", "tabSummary": "Tóm tắt AI", "tabRaw": "Dữ liệu gốc", "recollect": "Thu thập lại"
+    }
   }
 }

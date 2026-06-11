@@ -1577,5 +1577,51 @@
     "email": { "sendTitle": "Email Sending", "noEmailTitle": "⚠️ No email auto-detected", "noEmailHint": "Google Maps doesn't provide email data. Add <b>Facebook</b> or <b>Web</b> to channels in Step 1, and the system will try to extract emails from vendor data.", "manualHint": "You can also enter each org's email manually in the table below.", "perOrgEmail": "Email per Org", "filledCount": "{filled}/{total} filled", "templateLabel": "Template: {name}", "notSet": "Not set", "hasEmail": "{count} with email", "sending": "Sending…", "sendN": "Send {count}", "subjectPrefix": "Subject: " },
     "res": { "success": "✓ {n} succeeded", "fail": "✗ {n} failed" },
     "phone": { "groupTitle": "Call by Rule Group", "matchedPhones": "{matched} orgs · {phones} valid phones", "calling": "Calling…", "callN": "Call {count}", "noScript": "No script assigned", "scriptPrefix": "Script: ", "noPhone": "No phone", "unmappedCount": "Unassigned (no matching rule) {count}", "rejectedCount": "Rejected orgs {count} (click to expand)", "selectedListCount": "Full selected list {count}", "colOrg": "Org", "colCategory": "Category", "colPhone": "Phone", "colRule": "Rule", "unassigned": "Unassigned" }
+  },
+  "MA": {
+    "status": { "running": "Running", "done": "Done", "error": "Error" },
+    "ct": {
+      "map": { "label": "Map Search", "desc": "Orgs: companies/stores, etc." },
+      "tiktok": { "label": "TikTok", "desc": "Video search / comments" },
+      "facebook": { "label": "Facebook", "desc": "Posts / comments" },
+      "instagram": { "label": "Instagram", "desc": "Posts / comments" },
+      "threads": { "label": "Threads", "desc": "Posts / comments" },
+      "youtube": { "label": "YouTube", "desc": "Shorts / long videos / comments" },
+      "amazon": { "label": "Amazon", "desc": "Products / reviews" },
+      "shopee": { "label": "Shopee", "desc": "Products / reviews (country optional)" },
+      "ios_android": { "label": "iOS / Android", "desc": "App Store / Google Play reviews" },
+      "news": { "label": "News Search", "desc": "Google Alerts RSS" },
+      "web": { "label": "Web Search", "desc": "Tavily deep search" },
+      "competitors": { "label": "Competitors", "desc": "Tavily competitor analysis" },
+      "trend": { "label": "Social Trends", "desc": "Reddit · HN · Polymarket, last 30 days" },
+      "dcard": { "label": "Dcard", "desc": "Taiwan's largest forum, travel/life boards" },
+      "booking": { "label": "Lodging Reviews", "desc": "Booking.com + Airbnb guest reviews" }
+    },
+    "sub": {
+      "map": { "info": "Basic info (name/address/phone)", "coordinates": "Coordinates/distance calc", "reviews": "MAP reviews", "hours": "Opening hours" },
+      "tiktok": { "videos": "Video search", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
+      "facebook": { "posts": "Posts", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
+      "instagram": { "posts": "Posts", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
+      "threads": { "posts": "Posts", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
+      "youtube": { "shorts": "Shorts", "videos": "Long videos", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
+      "amazon": { "products": "Products", "reviews": "Reviews", "vendor_info": "Vendor info (name/phone/Email)" },
+      "shopee": { "products": "Products", "reviews": "Reviews", "vendor_info": "Vendor info (name/phone/Email)" },
+      "ios_android": { "reviews": "Reviews", "vendor_info": "Vendor info (name/phone/Email)" },
+      "trend": { "reddit": "Reddit hot discussions", "hackernews": "Hacker News", "polymarket": "Polymarket predictions" },
+      "booking": { "booking": "Booking.com reviews", "airbnb": "Airbnb reviews" }
+    },
+    "shopee": { "tw": "Taiwan", "vn": "Vietnam", "id": "Indonesia", "ph": "Philippines", "my": "Malaysia", "th": "Thailand", "sg": "Singapore", "br": "Brazil", "mx": "Mexico", "co": "Colombia" },
+    "u1": {
+      "errKeywords": "Please enter keywords", "errTypes": "Please select at least one collection type",
+      "keywords": "Keywords / Search Topic", "keywordsPlaceholder": "e.g. hot pot restaurant, phone case brand, gym...",
+      "selectChannels": "Select Channels", "mapSettings": "Map Search Settings",
+      "locationLabel": "Location / city / address (to scope the search)", "locationPlaceholder": "e.g. Xinyi District Taipei, Banqiao District New Taipei...",
+      "shopeeCountry": "Shopee Country",
+      "appIdTitle": "App ID (App Store / Google Play, one per line)", "appIdHint": "App Store: numeric ID starting with id | Google Play: package name",
+      "rssTitle": "Google Alerts RSS URL (one per line)", "rssHint": "Go to google.com/alerts → Manage → Subscription → choose \"RSS feed\" then copy the URL",
+      "perTypeCount": "Items per type", "countUnit": "{n} items", "language": "Language",
+      "collecting": "Collecting, please wait…", "startCollect": "Start Collecting",
+      "resultTitle": "Collection Result", "tabSummary": "AI Summary", "tabRaw": "Raw Data", "recollect": "Re-collect"
+    }
   }
 }

@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
   Film, Video, Upload, Phone, Mic, Headphones,
@@ -62,13 +63,10 @@ const UNITS: UnitDef[] = [
 
 const SIDE_TOOLS: (UnitDef & { href: string | null })[] = []
 
-interface CollectSubOption { id: string; label: string }
 interface CollectTypeDef {
   id: CollectType
-  label: string
   emoji: string
-  desc: string
-  subOptions: CollectSubOption[]
+  subOptions: string[]
   needsLocation?: boolean
   needsCountry?: boolean
   needsAppIds?: boolean
@@ -76,142 +74,28 @@ interface CollectTypeDef {
 }
 
 const COLLECT_TYPE_DEFS: CollectTypeDef[] = [
-  {
-    id: 'map', label: '地圖搜尋', emoji: '🗺️',
-    desc: '組織: 公司/門市等',
-    needsLocation: true,
-    subOptions: [
-      { id: 'info',        label: '基本資訊 (名稱/地址/電話)' },
-      { id: 'coordinates', label: '經緯度/距離計算' },
-      { id: 'reviews',     label: 'MAP 評論' },
-      { id: 'hours',       label: '營業時間' },
-    ],
-  },
-  {
-    id: 'tiktok', label: 'TikTok', emoji: '📱',
-    desc: '影音搜尋 / 評論',
-    subOptions: [
-      { id: 'videos',      label: '影音搜尋' },
-      { id: 'comments',    label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'facebook', label: 'Facebook', emoji: '👥',
-    desc: '內文 / 評論',
-    subOptions: [
-      { id: 'posts',       label: '內文' },
-      { id: 'comments',    label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'instagram', label: 'Instagram', emoji: '📸',
-    desc: '內文 / 評論',
-    subOptions: [
-      { id: 'posts',       label: '內文' },
-      { id: 'comments',    label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'threads', label: 'Threads', emoji: '🧵',
-    desc: '內文 / 評論',
-    subOptions: [
-      { id: 'posts',       label: '內文' },
-      { id: 'comments',    label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'youtube', label: 'YouTube', emoji: '🎬',
-    desc: '短影音 / 長影音 / 評論',
-    subOptions: [
-      { id: 'shorts',      label: '短影音' },
-      { id: 'videos',      label: '長影音' },
-      { id: 'comments',    label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'amazon', label: 'Amazon', emoji: '📦',
-    desc: '產品 / 評論',
-    subOptions: [
-      { id: 'products',    label: '產品' },
-      { id: 'reviews',     label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'shopee', label: 'Shopee', emoji: '🛒',
-    desc: '產品 / 評論 (可選國家)',
-    needsCountry: true,
-    subOptions: [
-      { id: 'products',    label: '產品' },
-      { id: 'reviews',     label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'ios_android', label: 'iOS / Android', emoji: '📲',
-    desc: 'App Store / Google Play 評論',
-    needsAppIds: true,
-    subOptions: [
-      { id: 'reviews',     label: '評論' },
-      { id: 'vendor_info', label: '廠商資料 (名稱/電話/Email)' },
-    ],
-  },
-  {
-    id: 'news', label: '新聞搜尋', emoji: '🔔',
-    desc: 'Google Alerts RSS',
-    needsRssUrls: true,
-    subOptions: [],
-  },
-  {
-    id: 'web', label: '網頁搜尋', emoji: '🌐',
-    desc: 'Tavily 深度搜尋',
-    subOptions: [],
-  },
-  {
-    id: 'competitors', label: '競爭對手', emoji: '🎯',
-    desc: 'Tavily 競品分析',
-    subOptions: [],
-  },
-  {
-    id: 'trend', label: '社群熱點', emoji: '🔥',
-    desc: 'Reddit · HN · Polymarket 近30天',
-    subOptions: [
-      { id: 'reddit',     label: 'Reddit 熱門討論' },
-      { id: 'hackernews', label: 'Hacker News' },
-      { id: 'polymarket', label: 'Polymarket 市場預測' },
-    ],
-  },
-  {
-    id: 'dcard', label: 'Dcard', emoji: '💚',
-    desc: '台灣最大論壇，旅遊/生活版',
-    subOptions: [],
-  },
-  {
-    id: 'booking', label: '訂房平台評論', emoji: '🏨',
-    desc: 'Booking.com + Airbnb 住客評論',
-    subOptions: [
-      { id: 'booking', label: 'Booking.com 評論' },
-      { id: 'airbnb',  label: 'Airbnb 評論' },
-    ],
-  },
+  { id: 'map', emoji: '🗺️', needsLocation: true, subOptions: ['info', 'coordinates', 'reviews', 'hours'] },
+  { id: 'tiktok', emoji: '📱', subOptions: ['videos', 'comments', 'vendor_info'] },
+  { id: 'facebook', emoji: '👥', subOptions: ['posts', 'comments', 'vendor_info'] },
+  { id: 'instagram', emoji: '📸', subOptions: ['posts', 'comments', 'vendor_info'] },
+  { id: 'threads', emoji: '🧵', subOptions: ['posts', 'comments', 'vendor_info'] },
+  { id: 'youtube', emoji: '🎬', subOptions: ['shorts', 'videos', 'comments', 'vendor_info'] },
+  { id: 'amazon', emoji: '📦', subOptions: ['products', 'reviews', 'vendor_info'] },
+  { id: 'shopee', emoji: '🛒', needsCountry: true, subOptions: ['products', 'reviews', 'vendor_info'] },
+  { id: 'ios_android', emoji: '📲', needsAppIds: true, subOptions: ['reviews', 'vendor_info'] },
+  { id: 'news', emoji: '🔔', needsRssUrls: true, subOptions: [] },
+  { id: 'web', emoji: '🌐', subOptions: [] },
+  { id: 'competitors', emoji: '🎯', subOptions: [] },
+  { id: 'trend', emoji: '🔥', subOptions: ['reddit', 'hackernews', 'polymarket'] },
+  { id: 'dcard', emoji: '💚', subOptions: [] },
+  { id: 'booking', emoji: '🏨', subOptions: ['booking', 'airbnb'] },
 ]
 
 const SHOPEE_COUNTRIES = [
-  { code: 'tw', label: '🇹🇼 台灣' },
-  { code: 'vn', label: '🇻🇳 越南' },
-  { code: 'id', label: '🇮🇩 印尼' },
-  { code: 'ph', label: '🇵🇭 菲律賓' },
-  { code: 'my', label: '🇲🇾 馬來西亞' },
-  { code: 'th', label: '🇹🇭 泰國' },
-  { code: 'sg', label: '🇸🇬 新加坡' },
-  { code: 'br', label: '🇧🇷 巴西' },
-  { code: 'mx', label: '🇲🇽 墨西哥' },
-  { code: 'co', label: '🇨🇴 哥倫比亞' },
+  { code: 'tw', flag: '🇹🇼' }, { code: 'vn', flag: '🇻🇳' }, { code: 'id', flag: '🇮🇩' },
+  { code: 'ph', flag: '🇵🇭' }, { code: 'my', flag: '🇲🇾' }, { code: 'th', flag: '🇹🇭' },
+  { code: 'sg', flag: '🇸🇬' }, { code: 'br', flag: '🇧🇷' }, { code: 'mx', flag: '🇲🇽' },
+  { code: 'co', flag: '🇨🇴' },
 ]
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
@@ -227,11 +111,12 @@ async function patchCampaign(id: string, body: Record<string, unknown>) {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: UnitStatus }) {
+  const t = useTranslations('MA')
   if (status === 'idle') return null
   const cfg = {
-    running: { cls: 'bg-blue-100 text-blue-700',  label: '執行中', spin: true  },
-    done:    { cls: 'bg-green-100 text-green-700', label: '完成',   spin: false },
-    error:   { cls: 'bg-red-100 text-red-700',     label: '錯誤',   spin: false },
+    running: { cls: 'bg-blue-100 text-blue-700',  label: t('status.running'), spin: true  },
+    done:    { cls: 'bg-green-100 text-green-700', label: t('status.done'),    spin: false },
+    error:   { cls: 'bg-red-100 text-red-700',     label: t('status.error'),   spin: false },
   }[status]
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.cls}`}>
@@ -277,15 +162,16 @@ function Unit1Collect({
   const [error, setError] = useState('')
   const [result, setResult] = useState<Unit1Data | null>(savedData?.summary ? savedData : null)
   const [tab, setTab] = useState<'summary' | 'raw'>('summary')
+  const t = useTranslations('MA')
 
-  const toggleType = (t: CollectType) => {
-    if (selectedTypes.includes(t)) {
-      setSelectedTypes(prev => prev.filter(x => x !== t))
+  const toggleType = (ty: CollectType) => {
+    if (selectedTypes.includes(ty)) {
+      setSelectedTypes(prev => prev.filter(x => x !== ty))
     } else {
-      setSelectedTypes(prev => [...prev, t])
-      const def = COLLECT_TYPE_DEFS.find(d => d.id === t)
-      if (def && def.subOptions.length > 0 && !(subOptions[t]?.length)) {
-        setSubOptions(prev => ({ ...prev, [t]: def.subOptions.map(s => s.id) }))
+      setSelectedTypes(prev => [...prev, ty])
+      const def = COLLECT_TYPE_DEFS.find(d => d.id === ty)
+      if (def && def.subOptions.length > 0 && !(subOptions[ty]?.length)) {
+        setSubOptions(prev => ({ ...prev, [ty]: [...def.subOptions] }))
       }
     }
   }
@@ -298,8 +184,8 @@ function Unit1Collect({
   }
 
   const run = async () => {
-    if (!keywords.trim()) { setError('請輸入關鍵字'); return }
-    if (selectedTypes.length === 0) { setError('請至少選一種蒐集類型'); return }
+    if (!keywords.trim()) { setError(t('u1.errKeywords')); return }
+    if (selectedTypes.length === 0) { setError(t('u1.errTypes')); return }
     setRunning(true); setError('')
     try {
       const res = await fetch('/api/marketing/collect', {
@@ -339,20 +225,20 @@ function Unit1Collect({
     <div className="space-y-5">
       {/* Keywords */}
       <div>
-        <label className="block text-sm font-semibold mb-1.5">關鍵字 / 搜尋主題</label>
+        <label className="block text-sm font-semibold mb-1.5">{t('u1.keywords')}</label>
         <input value={keywords} onChange={e => setKeywords(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && run()}
           className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-          placeholder="例如：火鍋餐廳、手機殼品牌、健身房..." />
+          placeholder={t('u1.keywordsPlaceholder')} />
       </div>
 
       {/* Type cards */}
       <div>
-        <label className="block text-sm font-semibold mb-3">選擇蒐集管道</label>
+        <label className="block text-sm font-semibold mb-3">{t('u1.selectChannels')}</label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {COLLECT_TYPE_DEFS.map(ct => {
             const selected = selectedTypes.includes(ct.id)
-            const curSubs = subOptions[ct.id] ?? ct.subOptions.map(s => s.id)
+            const curSubs = subOptions[ct.id] ?? ct.subOptions
             return (
               <div key={ct.id}
                 className="rounded-xl border-2 overflow-hidden transition-all"
@@ -363,8 +249,8 @@ function Unit1Collect({
                   style={selected ? { background: 'color-mix(in oklch, var(--primary) 6%, transparent)' } : {}}>
                   <span className="text-xl leading-none">{ct.emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold">{ct.label}</div>
-                    <div className="text-[11px] text-gray-400">{ct.desc}</div>
+                    <div className="text-sm font-semibold">{t(`ct.${ct.id}.label`)}</div>
+                    <div className="text-[11px] text-gray-400">{t(`ct.${ct.id}.desc`)}</div>
                   </div>
                   <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                     selected ? 'border-transparent text-white' : 'border-gray-300'
@@ -377,14 +263,14 @@ function Unit1Collect({
                   <div className="px-3 pb-2.5 pt-1 flex flex-wrap gap-x-3 gap-y-1.5 border-t"
                     style={{ borderColor: 'color-mix(in oklch, var(--primary) 20%, transparent)', background: 'color-mix(in oklch, var(--primary) 3%, transparent)' }}>
                     {ct.subOptions.map(so => (
-                      <label key={so.id} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
+                      <label key={so} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
                         <input type="checkbox"
                           className="rounded"
                           style={{ accentColor: 'var(--primary)' }}
-                          checked={curSubs.includes(so.id)}
-                          onChange={() => toggleSub(ct.id, so.id)}
+                          checked={curSubs.includes(so)}
+                          onChange={() => toggleSub(ct.id, so)}
                         />
-                        {so.label}
+                        {t(`sub.${ct.id}.${so}`)}
                       </label>
                     ))}
                   </div>
@@ -398,12 +284,12 @@ function Unit1Collect({
       {/* Location (for map) */}
       {selectedTypes.includes('map') && (
         <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 space-y-2">
-          <div className="text-xs font-semibold text-blue-800">🗺️ 地圖搜尋設定</div>
+          <div className="text-xs font-semibold text-blue-800">🗺️ {t('u1.mapSettings')}</div>
           <div>
-            <label className="block text-xs text-blue-700 mb-1">地點 / 城市 / 地址（用於定位搜尋範圍）</label>
+            <label className="block text-xs text-blue-700 mb-1">{t('u1.locationLabel')}</label>
             <input value={location} onChange={e => setLocation(e.target.value)}
               className="w-full h-8 px-3 rounded-lg border text-xs outline-none focus:ring-2 bg-white border-blue-200"
-              placeholder="例如：台北市信義區、新北市板橋區..." />
+              placeholder={t('u1.locationPlaceholder')} />
           </div>
         </div>
       )}
@@ -411,7 +297,7 @@ function Unit1Collect({
       {/* Shopee country */}
       {selectedTypes.includes('shopee') && (
         <div className="p-3.5 rounded-xl bg-orange-50 border border-orange-200">
-          <label className="block text-xs font-semibold text-orange-800 mb-2">🛒 Shopee 國家</label>
+          <label className="block text-xs font-semibold text-orange-800 mb-2">🛒 {t('u1.shopeeCountry')}</label>
           <div className="flex flex-wrap gap-1.5">
             {SHOPEE_COUNTRIES.map(c => (
               <button key={c.code} type="button" onClick={() => setShopeeCountry(c.code)}
@@ -419,7 +305,7 @@ function Unit1Collect({
                 style={shopeeCountry === c.code
                   ? { background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' }
                   : { background: 'white', borderColor: '#e5e7eb' }}>
-                {c.label}
+                {c.flag} {t(`shopee.${c.code}`)}
               </button>
             ))}
           </div>
@@ -429,36 +315,36 @@ function Unit1Collect({
       {/* App IDs (iOS/Android) */}
       {selectedTypes.includes('ios_android') && (
         <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 space-y-1.5">
-          <div className="text-xs font-semibold text-purple-800">📲 App ID（App Store / Google Play，每行一個）</div>
+          <div className="text-xs font-semibold text-purple-800">📲 {t('u1.appIdTitle')}</div>
           <textarea value={appIds} onChange={e => setAppIds(e.target.value)}
             rows={2} placeholder={'id1234567890\ncom.example.app'}
             className="w-full text-xs border border-purple-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white" />
-          <p className="text-[10px] text-purple-600">App Store: id 開頭數字 ID｜Google Play: package name</p>
+          <p className="text-[10px] text-purple-600">{t('u1.appIdHint')}</p>
         </div>
       )}
 
       {/* Google Alerts RSS (news) */}
       {selectedTypes.includes('news') && (
         <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-1.5">
-          <div className="text-xs font-semibold text-amber-800">🔔 Google Alerts RSS URL（每行一個）</div>
+          <div className="text-xs font-semibold text-amber-800">🔔 {t('u1.rssTitle')}</div>
           <textarea value={alertRssUrls} onChange={e => setAlertRssUrls(e.target.value)}
             rows={3} placeholder={'https://www.google.com/alerts/feeds/XXXXX/XXXXX\nhttps://...'}
             className="w-full text-xs border border-amber-200 rounded-lg px-3 py-2 font-mono focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white" />
-          <p className="text-[10px] text-amber-700">前往 google.com/alerts → 管理 → 訂閱 → 選「RSS 訂閱」後複製 URL</p>
+          <p className="text-[10px] text-amber-700">{t('u1.rssHint')}</p>
         </div>
       )}
 
       {/* Settings row */}
       <div className="flex gap-4 flex-wrap">
         <div>
-          <label className="block text-xs font-medium mb-1.5 text-gray-500">每類資料筆數</label>
+          <label className="block text-xs font-medium mb-1.5 text-gray-500">{t('u1.perTypeCount')}</label>
           <select value={limit} onChange={e => setLimit(Number(e.target.value))}
             className="h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
-            {[5, 10, 15, 20, 30].map(n => <option key={n} value={n}>{n} 筆</option>)}
+            {[5, 10, 15, 20, 30].map(n => <option key={n} value={n}>{t('u1.countUnit', { n })}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1.5 text-gray-500">語言</label>
+          <label className="block text-xs font-medium mb-1.5 text-gray-500">{t('u1.language')}</label>
           <select value={language} onChange={e => setLanguage(e.target.value)}
             className="h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
             <option value="zh-TW">繁體中文</option>
@@ -478,26 +364,26 @@ function Unit1Collect({
       <button onClick={run} disabled={running}
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
-        {running ? <><Loader2 className="h-4 w-4 animate-spin" />蒐集中，請稍候…</> : <><Search className="h-4 w-4" />開始蒐集</>}
+        {running ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u1.collecting')}</> : <><Search className="h-4 w-4" />{t('u1.startCollect')}</>}
       </button>
 
       {result && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 border-b pb-2">
-            <span className="text-sm font-semibold text-gray-800">蒐集結果</span>
+            <span className="text-sm font-semibold text-gray-800">{t('u1.resultTitle')}</span>
             <div className="flex gap-1">
-              {(['summary', 'raw'] as const).map(t => (
-                <button key={t} onClick={() => setTab(t)}
+              {(['summary', 'raw'] as const).map(tb => (
+                <button key={tb} onClick={() => setTab(tb)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    tab === t ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    tab === tb ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}>
-                  {t === 'summary' ? 'AI 摘要' : '原始資料'}
+                  {tb === 'summary' ? t('u1.tabSummary') : t('u1.tabRaw')}
                 </button>
               ))}
             </div>
             <button onClick={run} disabled={running}
               className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
-              <RefreshCw className="h-3.5 w-3.5" /> 重新蒐集
+              <RefreshCw className="h-3.5 w-3.5" /> {t('u1.recollect')}
             </button>
           </div>
           <div className="p-4 rounded-xl bg-gray-50 border max-h-[520px] overflow-y-auto">
