@@ -1778,6 +1778,32 @@
       "uploading": "Đang tải lên…", "publishTo": "Đăng lên {n} nền tảng",
       "uploadResult": "Kết quả tải lên", "publishOk": "Đăng thành công", "publishFail": "Đăng thất bại", "updateToken": "→ Vào cài đặt cập nhật Token",
       "successCount": "{ok}/{total} nền tảng thành công"
+    },
+    "u10": {
+      "voice": { "mlFemale": "Đa ngôn ngữ, Nữ", "mlMale": "Đa ngôn ngữ, Nam", "brMale": "Tiếng Anh-Anh, Nam", "usFemale": "Tiếng Anh-Mỹ, Nữ" },
+      "defMarketingTeam": "Đội tiếp thị", "defScript": "Kịch bản mặc định", "defGeneralCustomer": "Khách hàng chung", "defGeneralDesc": "Khách tiềm năng chung hoặc không rõ", "groupDefault": "Chung",
+      "scriptN": "Kịch bản {n}", "categoryN": "Phân loại {n}",
+      "errNeedRule": "Hãy định nghĩa ít nhất một quy tắc gửi trước", "errNeedRecipients": "Vui lòng nhập danh sách người nhận", "errNeedTemplate": "Điền tiêu đề và nội dung cho ít nhất một kịch bản", "sendFailed": "Gửi thất bại",
+      "errNeedScript2": "Hãy nhập hoặc tạo kịch bản trước", "errNeedScript": "Hãy nhập kịch bản trước", "errNeedPhone": "Nhập ít nhất một số điện thoại",
+      "tabPhone": "Tiếp thị qua điện thoại", "tabEmail": "Tiếp thị qua Email",
+      "sendService": "Dịch vụ gửi: Resend", "fromName": "Tên người gửi", "fromEmail": "Email người gửi (cần xác minh ở Resend)",
+      "step1Title": "Bước 1 — Mẫu Email (Kịch bản)", "step1Hint": "Định nghĩa các mẫu nội dung Email để dùng trong quy tắc gửi",
+      "applyUnit4All": "Áp dụng Unit 4 cho mọi mẫu", "templateNamePlaceholder": "Tên mẫu (VD: Kịch bản blogger)", "applyUnit4": "Áp dụng Unit 4",
+      "emailSubject": "Tiêu đề Email", "emailSubjectPlaceholder": "Tiêu đề Email…", "emailBody": "Nội dung Email", "emailBodyPlaceholder": "Nội dung Email…", "addTemplate": "Thêm mẫu",
+      "step2Title": "Bước 2 — Quy tắc gửi", "step2Hint": "Định nghĩa tên phân loại và tiêu chí AI, chỉ định mẫu áp dụng. AI khớp theo thứ tự, quy tắc khớp đầu tiên có hiệu lực.",
+      "categoryNamePlaceholder": "Tên phân loại (VD: blogger làm đẹp)", "aiBasis": "Tiêu chí phân loại AI (mô tả đặc điểm nhóm này)", "aiBasisPlaceholder": "VD: blogger làm đẹp cá nhân, chủ yếu là cá nhân có ảnh hưởng trên mạng xã hội",
+      "applyTemplate": "Áp dụng mẫu", "classifiedHere": "Đã phân loại vào đây: {n} người nhận", "addRule": "Thêm quy tắc",
+      "step3Title": "Bước 3 — Nhập Email người nhận", "step3Hint": "Mỗi dòng một Email; AI tự phân loại theo quy tắc trên",
+      "classifying": "AI đang phân loại…", "autoClassify": "AI tự phân loại", "recognizedEmails": "Đã nhận diện {n} Email hợp lệ",
+      "sendingN": "Đang gửi… ({n})", "startSendN": "Gửi {n} Email", "sendResult": "Kết quả gửi", "successN": "{ok}/{total} thành công", "sent": "Đã gửi",
+      "envNotice": "Cần cài biến môi trường ở Vercel:",
+      "ttsProvider": "TTS: ElevenLabs", "callProvider": "Gọi: Bird (app.bird.com)", "vbeeLocked": "VBEE — kích hoạt sau",
+      "voiceDialSettings": "Cài đặt giọng / gọi", "elevenVoice": "Giọng ElevenLabs", "birdCallerId": "Số hiển thị Bird *",
+      "phoneScript": "Kịch bản tiếp thị qua điện thoại", "aiGenerating": "AI đang tạo…", "aiGenerate": "AI tự tạo",
+      "scriptPlaceholder": "Xin chào! Tôi là [Tên] từ [Công ty], hôm nay gọi để chia sẻ với bạn…", "scriptCount": "{n} ký tự · khuyến nghị 100-200 ký tự (~30-60 giây)",
+      "genVoice": "Đang tạo giọng…", "previewVoice": "Nghe thử giọng",
+      "phoneList": "Danh sách số điện thoại", "recognizedPhones": "Đã nhận diện {n}", "phoneHint": "Mỗi dòng một số, hoặc phân tách bằng dấu phẩy; hỗ trợ định dạng quốc tế (kèm mã quốc gia)",
+      "callingN": "Đang gọi… ({n})", "startCallN": "Bắt đầu gọi {n} số", "callResult": "Kết quả gọi", "callOk": "Gọi thành công"
     }
   }
 }

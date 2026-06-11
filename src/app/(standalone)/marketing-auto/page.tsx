@@ -3474,12 +3474,12 @@ interface Unit10Data {
 }
 
 const ELEVEN_VOICES = [
-  { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah — 多語言，女' },
-  { id: 'TX3LPaxmHKxFdv7VOQHJ', label: 'Liam — 多語言，男' },
-  { id: 'XB0fDUnXU5powFXDhCwa', label: 'Charlotte — 多語言，女' },
-  { id: 'onwK4e9ZLuTAKqWW03F9', label: 'Daniel — 英式英語，男' },
-  { id: 'pFZP5JQG7iQjIQuC4Bku', label: 'Lily — 多語言，女' },
-  { id: 'cgSgspJ2msm6clMCkdW9', label: 'Jessica — 美式英語，女' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah',     descKey: 'mlFemale' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam',      descKey: 'mlMale' },
+  { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', descKey: 'mlFemale' },
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel',    descKey: 'brMale' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily',      descKey: 'mlFemale' },
+  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica',   descKey: 'usFemale' },
 ]
 
 function Unit10ProspectMarketing({
@@ -3495,6 +3495,8 @@ function Unit10ProspectMarketing({
   unit4Data?: Unit4Data
   onDone: (data: Unit10Data) => void
 }) {
+  const t = useTranslations('MA')
+  const locale = useLocale()
   const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
 
   // ── Phone tab state ──────────────────────────────────────────────────────
@@ -3523,16 +3525,16 @@ function Unit10ProspectMarketing({
   const [emailInput, setEmailInput] = useState(savedData?.emailInput ?? '')
   const [emailRecipients, setEmailRecipients] = useState<{ email: string; group: string }[]>(savedData?.emailRecipients ?? [])
   const [classifying, setClassifying] = useState(false)
-  const [fromName, setFromName] = useState(savedData?.fromName ?? '行銷團隊')
+  const [fromName, setFromName] = useState(savedData?.fromName ?? t('u10.defMarketingTeam'))
   const [fromEmail, setFromEmail] = useState(savedData?.fromEmail ?? '')
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(
     savedData?.emailTemplates ?? [
-      { id: 'etpl-1', name: '預設腳本', subject: '', body: '' },
+      { id: 'etpl-1', name: t('u10.defScript'), subject: '', body: '' },
     ]
   )
   const [emailRules, setEmailRules] = useState<EmailRule[]>(
     savedData?.emailRules ?? [
-      { id: 'erule-1', name: '一般客戶', desc: '一般潛在客戶或不明身份', templateId: 'etpl-1' },
+      { id: 'erule-1', name: t('u10.defGeneralCustomer'), desc: t('u10.defGeneralDesc'), templateId: 'etpl-1' },
     ]
   )
   const [sending, setSending] = useState(false)
@@ -3561,7 +3563,7 @@ function Unit10ProspectMarketing({
 
   // ── Email template CRUD ──────────────────────────────────────────────────────
   const addEmailTemplate = () => setEmailTemplates(prev => [...prev, {
-    id: `etpl-${Date.now()}`, name: `腳本 ${prev.length + 1}`, subject: '', body: '',
+    id: `etpl-${Date.now()}`, name: t('u10.scriptN', { n: prev.length + 1 }), subject: '', body: '',
   }])
   const updateEmailTemplate = (id: string, patch: Partial<EmailTemplate>) =>
     setEmailTemplates(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t))
@@ -3571,7 +3573,7 @@ function Unit10ProspectMarketing({
   // ── Email rule CRUD ──────────────────────────────────────────────────────────
   const addEmailRule = () => setEmailRules(prev => [...prev, {
     id: `erule-${Date.now()}`,
-    name: `分類 ${prev.length + 1}`,
+    name: t('u10.categoryN', { n: prev.length + 1 }),
     desc: '',
     templateId: emailTemplates[0]?.id ?? '',
   }])
@@ -3587,7 +3589,7 @@ function Unit10ProspectMarketing({
       if (!trimmed) return null
       const [email] = trimmed.split(/[\s|,]/)
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
-      return { email, group: emailRules[0]?.name ?? '一般' }
+      return { email, group: emailRules[0]?.name ?? t('u10.groupDefault') }
     }).filter(Boolean) as { email: string; group: string }[]
   }
 
@@ -3598,7 +3600,7 @@ function Unit10ProspectMarketing({
 
   const classifyEmails = async () => {
     if (emailRecipients.length === 0) return
-    if (emailRules.length === 0) { setSendError('請先定義至少一條發送規則'); return }
+    if (emailRules.length === 0) { setSendError(t('u10.errNeedRule')); return }
     setClassifying(true)
     try {
       const categoryList = emailRules
@@ -3633,9 +3635,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
   }
 
   const sendEmails = async () => {
-    if (emailRecipients.length === 0) { setSendError('請輸入收件人清單'); return }
-    const hasTemplate = emailTemplates.some(t => t.subject && t.body)
-    if (!hasTemplate) { setSendError('請為至少一個腳本填寫主旨與內文'); return }
+    if (emailRecipients.length === 0) { setSendError(t('u10.errNeedRecipients')); return }
+    const hasTemplate = emailTemplates.some(tpl => tpl.subject && tpl.body)
+    if (!hasTemplate) { setSendError(t('u10.errNeedTemplate')); return }
     setSending(true); setSendError(''); setEmailResults([])
     try {
       // Build groups map: rule.name → template subject/body
@@ -3657,7 +3659,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? '寄送失敗')
+      if (!res.ok) throw new Error(data.error ?? t('u10.sendFailed'))
       setEmailResults(data.results)
       onDone({ ...savedData, lastEmailBatch: { total: data.total, success: data.success, results: data.results, sentAt: new Date().toISOString() } })
     } catch (e) { setSendError(String(e)) }
@@ -3688,7 +3690,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
   }
 
   const preview = async () => {
-    if (!script.trim()) { setPreviewError('請先輸入或生成腳本'); return }
+    if (!script.trim()) { setPreviewError(t('u10.errNeedScript2')); return }
     setPreviewLoading(true); setPreviewError(''); setPreviewUrl('')
     try {
       const res = await fetch('/api/marketing/phone-call', {
@@ -3704,8 +3706,8 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
   }
 
   const startCalling = async () => {
-    if (!script.trim()) { setCallError('請先輸入腳本'); return }
-    if (phones.length === 0) { setCallError('請輸入至少一個電話號碼'); return }
+    if (!script.trim()) { setCallError(t('u10.errNeedScript')); return }
+    if (phones.length === 0) { setCallError(t('u10.errNeedPhone')); return }
     setCalling(true); setCallError(''); setResults([])
     try {
       const res = await fetch('/api/marketing/phone-call', {
@@ -3726,7 +3728,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {([['phone', '📞 電話行銷'], ['email', '📧 Email 行銷']] as const).map(([tab, label]) => (
+        {([['phone', `📞 ${t('u10.tabPhone')}`], ['email', `📧 ${t('u10.tabEmail')}`]] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab
@@ -3744,19 +3746,19 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
           {/* Provider bar */}
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700 w-fit">
-            ✉️ 寄送服務：Resend
+            ✉️ {t('u10.sendService')}
           </div>
 
           {/* From settings */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">寄件人名稱</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t('u10.fromName')}</label>
               <input value={fromName} onChange={e => setFromName(e.target.value)}
                 className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-                placeholder="行銷團隊" />
+                placeholder={t('u10.defMarketingTeam')} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">寄件人 Email（需在 Resend 驗證）</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t('u10.fromEmail')}</label>
               <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
                 className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
                 placeholder="marketing@yourdomain.com" />
@@ -3767,19 +3769,19 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold">Step 1 — Email 模板（腳本）</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">定義不同的 Email 內容模板，稍後在發送規則中選用</div>
+                <div className="text-sm font-semibold">{t('u10.step1Title')}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{t('u10.step1Hint')}</div>
               </div>
               {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
                 <button
-                  onClick={() => setEmailTemplates(prev => prev.map(t => ({
-                    ...t,
-                    subject: unit4Data.results!.email_subject ?? t.subject,
-                    body: unit4Data.results!.email_body ?? t.body,
+                  onClick={() => setEmailTemplates(prev => prev.map(tpl => ({
+                    ...tpl,
+                    subject: unit4Data.results!.email_subject ?? tpl.subject,
+                    body: unit4Data.results!.email_body ?? tpl.body,
                   })))}
                   className="text-xs px-3 py-1.5 rounded-lg border text-indigo-600 border-indigo-300 hover:bg-indigo-50 flex-shrink-0"
                 >
-                  ⚡ 套用 Unit 4 至所有模板
+                  ⚡ {t('u10.applyUnit4All')}
                 </button>
               )}
             </div>
@@ -3791,7 +3793,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   <input
                     value={tpl.name}
                     onChange={e => updateEmailTemplate(tpl.id, { name: e.target.value })}
-                    placeholder="模板名稱（例如：博主版腳本）"
+                    placeholder={t('u10.templateNamePlaceholder')}
                     className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
                   />
                   {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
@@ -3802,7 +3804,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                       })}
                       className="text-[10px] text-indigo-600 hover:underline flex-shrink-0"
                     >
-                      套用 Unit 4
+                      {t('u10.applyUnit4')}
                     </button>
                   )}
                   {emailTemplates.length > 1 && (
@@ -3813,21 +3815,21 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   )}
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">Email 主旨</label>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.emailSubject')}</label>
                   <input
                     value={tpl.subject}
                     onChange={e => updateEmailTemplate(tpl.id, { subject: e.target.value })}
-                    placeholder="Email 主旨…"
+                    placeholder={t('u10.emailSubjectPlaceholder')}
                     className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">Email 內文</label>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.emailBody')}</label>
                   <textarea
                     value={tpl.body}
                     onChange={e => updateEmailTemplate(tpl.id, { body: e.target.value })}
                     rows={4}
-                    placeholder="Email 內文…"
+                    placeholder={t('u10.emailBodyPlaceholder')}
                     className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white"
                   />
                 </div>
@@ -3835,15 +3837,15 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             ))}
             <button onClick={addEmailTemplate}
               className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
-              <Plus className="h-3.5 w-3.5" />新增模板
+              <Plus className="h-3.5 w-3.5" />{t('u10.addTemplate')}
             </button>
           </div>
 
           {/* ── Step 2: 發送規則 ── */}
           <div className="space-y-3">
             <div>
-              <div className="text-sm font-semibold">Step 2 — 發送規則</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">定義分類名稱與 AI 判斷依據，並指定套用哪個模板。AI 依序比對，第一個符合的規則生效。</div>
+              <div className="text-sm font-semibold">{t('u10.step2Title')}</div>
+              <div className="text-[10px] text-gray-400 mt-0.5">{t('u10.step2Hint')}</div>
             </div>
 
             {emailRules.map((rule, idx) => (
@@ -3853,7 +3855,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   <input
                     value={rule.name}
                     onChange={e => updateEmailRule(rule.id, { name: e.target.value })}
-                    placeholder="分類名稱（例如：美妝博主）"
+                    placeholder={t('u10.categoryNamePlaceholder')}
                     className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
                   />
                   {emailRules.length > 1 && (
@@ -3864,36 +3866,36 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   )}
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">AI 分類依據（描述這類收件人特徵）</label>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.aiBasis')}</label>
                   <input
                     value={rule.desc}
                     onChange={e => updateEmailRule(rule.id, { desc: e.target.value })}
-                    placeholder="例如：個人美妝博主，以社交媒體影響力為主的個人"
+                    placeholder={t('u10.aiBasisPlaceholder')}
                     className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">套用模板</label>
+                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.applyTemplate')}</label>
                   <select
                     value={rule.templateId}
                     onChange={e => updateEmailRule(rule.id, { templateId: e.target.value })}
                     className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
                   >
-                    {emailTemplates.map(t => (
-                      <option key={t.id} value={t.id}>{t.name || `模板 ${emailTemplates.indexOf(t) + 1}`}</option>
+                    {emailTemplates.map((tpl, ti) => (
+                      <option key={tpl.id} value={tpl.id}>{tpl.name || t('u10.scriptN', { n: ti + 1 })}</option>
                     ))}
                   </select>
                 </div>
                 {emailRecipients.length > 0 && (
                   <div className="text-[10px] text-gray-400">
-                    已分類至此：{emailRecipients.filter(r => r.group === rule.name).length} 個收件人
+                    {t('u10.classifiedHere', { n: emailRecipients.filter(r => r.group === rule.name).length })}
                   </div>
                 )}
               </div>
             ))}
             <button onClick={addEmailRule}
               className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
-              <Plus className="h-3.5 w-3.5" />新增規則
+              <Plus className="h-3.5 w-3.5" />{t('u10.addRule')}
             </button>
           </div>
 
@@ -3901,20 +3903,20 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold">Step 3 — 輸入收件人 Email</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">每行一個 Email，AI 依上方規則自動歸類</div>
+                <div className="text-sm font-semibold">{t('u10.step3Title')}</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{t('u10.step3Hint')}</div>
               </div>
               <button onClick={classifyEmails} disabled={classifying || emailRecipients.length === 0}
                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
                 style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
                 {classifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                {classifying ? 'AI 分類中…' : 'AI 自動分類'}
+                {classifying ? t('u10.classifying') : t('u10.autoClassify')}
               </button>
             </div>
             <textarea value={emailInput} onChange={e => handleEmailInput(e.target.value)} rows={5}
               className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
               placeholder={'user@example.com\nvip@company.com\nlead@factory.com'} />
-            <p className="text-[10px] text-gray-400">已識別 {emailRecipients.length} 個有效 Email</p>
+            <p className="text-[10px] text-gray-400">{t('u10.recognizedEmails', { n: emailRecipients.length })}</p>
           </div>
 
           {/* Parsed preview */}
@@ -3945,17 +3947,17 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
             style={{ background: 'var(--primary)' }}>
             {sending
-              ? <><Loader2 className="h-4 w-4 animate-spin" />寄送中…（{emailRecipients.length} 封）</>
-              : <>✉️ 開始寄送 {emailRecipients.length} 封 Email</>}
+              ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u10.sendingN', { n: emailRecipients.length })}</>
+              : <>✉️ {t('u10.startSendN', { n: emailRecipients.length })}</>}
           </button>
 
           {/* Email results */}
           {emailResults.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700">寄送結果</span>
+                <span className="text-sm font-semibold text-gray-700">{t('u10.sendResult')}</span>
                 <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                  {emailResults.filter(r => r.ok).length}/{emailResults.length} 成功
+                  {t('u10.successN', { ok: emailResults.filter(r => r.ok).length, total: emailResults.length })}
                 </span>
               </div>
               <div className="max-h-52 overflow-y-auto space-y-1.5">
@@ -3967,7 +3969,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                     <span className="font-mono flex-1">{r.email}</span>
                     <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">{r.group}</span>
                     {r.ok
-                      ? <span className="text-green-700">已寄出</span>
+                      ? <span className="text-green-700">{t('u10.sent')}</span>
                       : <span className="text-red-600 truncate max-w-[180px]">{r.error}</span>}
                   </div>
                 ))}
@@ -3977,7 +3979,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
           {/* Env notice */}
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700">
-            <div className="font-semibold mb-1">需在 Vercel 設定環境變數：</div>
+            <div className="font-semibold mb-1">{t('u10.envNotice')}</div>
             <div className="flex gap-2 flex-wrap">
               <code className="bg-blue-100 px-1.5 py-0.5 rounded">RESEND_API_KEY</code>
               <code className="bg-blue-100 px-1.5 py-0.5 rounded">RESEND_FROM_EMAIL</code>
@@ -3992,33 +3994,33 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       {/* Provider info bar */}
       <div className="flex gap-3 flex-wrap">
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs font-medium text-gray-600">
-          <Volume2 className="h-3.5 w-3.5" /> TTS：ElevenLabs
+          <Volume2 className="h-3.5 w-3.5" /> {t('u10.ttsProvider')}
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs font-medium text-gray-600">
-          <PhoneCall className="h-3.5 w-3.5" /> 撥打：Bird (app.bird.com)
+          <PhoneCall className="h-3.5 w-3.5" /> {t('u10.callProvider')}
         </div>
         {/* VBEE locked */}
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs text-gray-300 line-through cursor-not-allowed select-none">
-          🇻🇳 VBEE — 待日後啟用
+          🇻🇳 {t('u10.vbeeLocked')}
         </div>
       </div>
 
       {/* ElevenLabs + Bird settings */}
       <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">語音 / 撥號設定</div>
+        <div className="text-xs font-semibold text-gray-600">{t('u10.voiceDialSettings')}</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">ElevenLabs 語音</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u10.elevenVoice')}</label>
             <select value={voiceId} onChange={e => setVoiceId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
-              {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+              {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.name} — {t(`u10.voice.${v.descKey}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">Bird 顯示號碼 *</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u10.birdCallerId')}</label>
             <input value={birdCallerId} onChange={e => setBirdCallerId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-              placeholder="+886xxxxxxxxx 或 +84xxxxxxxxx" />
+              placeholder="+886xxxxxxxxx / +84xxxxxxxxx" />
           </div>
         </div>
       </div>
@@ -4026,7 +4028,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       {/* Script */}
       <div>
         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-          <label className="text-sm font-semibold">電話行銷腳本</label>
+          <label className="text-sm font-semibold">{t('u10.phoneScript')}</label>
           <select value={scriptLang} onChange={e => setScriptLang(e.target.value)}
             className="h-7 px-2 rounded-lg border text-xs outline-none focus:ring-1 bg-white">
             {['繁體中文', '越南語', 'English', '簡體中文', '日本語'].map(l =>
@@ -4036,13 +4038,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50 ml-auto"
             style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
             {generatingScript ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            {generatingScript ? 'AI 生成中…' : 'AI 自動生成'}
+            {generatingScript ? t('u10.aiGenerating') : t('u10.aiGenerate')}
           </button>
         </div>
         <textarea value={script} onChange={e => setScript(e.target.value)} rows={8}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
-          placeholder="您好！我是來自[公司]的[姓名]，今天打電話是想和您分享…" />
-        <div className="text-[10px] text-gray-400 mt-1">{script.length} 字 · 建議 100-200 字（約 30-60 秒）</div>
+          placeholder={t('u10.scriptPlaceholder')} />
+        <div className="text-[10px] text-gray-400 mt-1">{t('u10.scriptCount', { n: script.length })}</div>
       </div>
 
       {/* TTS Preview */}
@@ -4050,7 +4052,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         <button onClick={preview} disabled={previewLoading || !script.trim()}
           className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors">
           {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-          {previewLoading ? '生成語音中…' : '試聽語音'}
+          {previewLoading ? t('u10.genVoice') : t('u10.previewVoice')}
         </button>
         {previewUrl && <audio controls src={previewUrl} className="h-8 flex-1 min-w-0" />}
         {previewError && <span className="text-xs text-red-600">{previewError}</span>}
@@ -4059,13 +4061,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       {/* Phone list */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">
-          電話號碼清單
-          <span className="ml-2 text-xs font-normal text-gray-400">已識別 {phones.length} 個</span>
+          {t('u10.phoneList')}
+          <span className="ml-2 text-xs font-normal text-gray-400">{t('u10.recognizedPhones', { n: phones.length })}</span>
         </label>
         <textarea value={phoneInput} onChange={e => handlePhoneInput(e.target.value)} rows={5}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
           placeholder={'+886912345678\n+84901234567\n+1234567890'} />
-        <p className="text-[10px] text-gray-400 mt-1">每行一個號碼，或用逗號分隔，支援國際格式（需含國碼）</p>
+        <p className="text-[10px] text-gray-400 mt-1">{t('u10.phoneHint')}</p>
       </div>
 
       {callError && (
@@ -4078,17 +4080,17 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
         {calling
-          ? <><Loader2 className="h-4 w-4 animate-spin" />撥打中…（{phones.length} 通）</>
-          : <><PhoneCall className="h-4 w-4" />開始撥打 {phones.length} 通電話</>}
+          ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u10.callingN', { n: phones.length })}</>
+          : <><PhoneCall className="h-4 w-4" />{t('u10.startCallN', { n: phones.length })}</>}
       </button>
 
       {/* Results */}
       {results.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700">撥打結果</span>
+            <span className="text-sm font-semibold text-gray-700">{t('u10.callResult')}</span>
             <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-              {results.filter(r => r.ok).length}/{results.length} 成功
+              {t('u10.successN', { ok: results.filter(r => r.ok).length, total: results.length })}
             </span>
           </div>
           <div className="max-h-64 overflow-y-auto space-y-1.5">
@@ -4097,14 +4099,14 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                 {r.ok ? <PhoneCall className="h-3.5 w-3.5 text-green-600 flex-shrink-0" /> : <PhoneOff className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
                 <span className="font-mono font-medium">{r.phone}</span>
                 {r.ok
-                  ? <span className="text-green-700 ml-auto">撥出成功{r.id ? ` · ${r.id}` : ''}</span>
+                  ? <span className="text-green-700 ml-auto">{t('u10.callOk')}{r.id ? ` · ${r.id}` : ''}</span>
                   : <span className="text-red-600 ml-auto truncate max-w-[200px]">{r.error}</span>}
               </div>
             ))}
           </div>
           {savedData?.lastBatch && (
             <div className="text-[10px] text-gray-400">
-              {new Date(savedData.lastBatch.calledAt).toLocaleString('zh-TW')} · ElevenLabs + Bird
+              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs + Bird
             </div>
           )}
         </div>
@@ -4112,7 +4114,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
       {/* Env notice */}
       <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700">
-        <div className="font-semibold mb-1">需在 Vercel 設定環境變數：</div>
+        <div className="font-semibold mb-1">{t('u10.envNotice')}</div>
         <div className="flex gap-2 flex-wrap">
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">ELEVENLABS_API_KEY</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">BIRD_API_KEY</code>

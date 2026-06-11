@@ -1778,6 +1778,32 @@
       "uploading": "Uploading…", "publishTo": "Publish to {n} platforms",
       "uploadResult": "Upload Result", "publishOk": "Published", "publishFail": "Failed", "updateToken": "→ Go to settings to update Token",
       "successCount": "{ok}/{total} platforms succeeded"
+    },
+    "u10": {
+      "voice": { "mlFemale": "Multilingual, F", "mlMale": "Multilingual, M", "brMale": "British English, M", "usFemale": "American English, F" },
+      "defMarketingTeam": "Marketing Team", "defScript": "Default Script", "defGeneralCustomer": "General Customer", "defGeneralDesc": "General prospect or unknown", "groupDefault": "General",
+      "scriptN": "Script {n}", "categoryN": "Category {n}",
+      "errNeedRule": "Define at least one sending rule first", "errNeedRecipients": "Please enter a recipient list", "errNeedTemplate": "Fill in subject and body for at least one script", "sendFailed": "Send failed",
+      "errNeedScript2": "Enter or generate a script first", "errNeedScript": "Enter a script first", "errNeedPhone": "Enter at least one phone number",
+      "tabPhone": "Phone Marketing", "tabEmail": "Email Marketing",
+      "sendService": "Sending service: Resend", "fromName": "Sender Name", "fromEmail": "Sender Email (must be verified in Resend)",
+      "step1Title": "Step 1 — Email Templates (Scripts)", "step1Hint": "Define different email content templates to use later in sending rules",
+      "applyUnit4All": "Apply Unit 4 to all templates", "templateNamePlaceholder": "Template name (e.g. Influencer Script)", "applyUnit4": "Apply Unit 4",
+      "emailSubject": "Email Subject", "emailSubjectPlaceholder": "Email subject…", "emailBody": "Email Body", "emailBodyPlaceholder": "Email body…", "addTemplate": "Add Template",
+      "step2Title": "Step 2 — Sending Rules", "step2Hint": "Define category names and AI criteria, and which template to apply. AI matches in order; first match wins.",
+      "categoryNamePlaceholder": "Category name (e.g. beauty influencer)", "aiBasis": "AI classification basis (describe this recipient type)", "aiBasisPlaceholder": "e.g. individual beauty influencers, mainly social-media-driven individuals",
+      "applyTemplate": "Apply Template", "classifiedHere": "Classified here: {n} recipients", "addRule": "Add Rule",
+      "step3Title": "Step 3 — Enter Recipient Emails", "step3Hint": "One email per line; AI auto-classifies by the rules above",
+      "classifying": "AI classifying…", "autoClassify": "AI auto-classify", "recognizedEmails": "{n} valid emails recognized",
+      "sendingN": "Sending… ({n})", "startSendN": "Send {n} emails", "sendResult": "Send Result", "successN": "{ok}/{total} succeeded", "sent": "Sent",
+      "envNotice": "Set environment variables in Vercel:",
+      "ttsProvider": "TTS: ElevenLabs", "callProvider": "Calls: Bird (app.bird.com)", "vbeeLocked": "VBEE — coming later",
+      "voiceDialSettings": "Voice / Dial Settings", "elevenVoice": "ElevenLabs Voice", "birdCallerId": "Bird Caller ID *",
+      "phoneScript": "Phone Marketing Script", "aiGenerating": "AI generating…", "aiGenerate": "AI auto-generate",
+      "scriptPlaceholder": "Hello! I'm [Name] from [Company], I'm calling today to share with you…", "scriptCount": "{n} chars · recommended 100-200 chars (~30-60s)",
+      "genVoice": "Generating voice…", "previewVoice": "Preview Voice",
+      "phoneList": "Phone Number List", "recognizedPhones": "{n} recognized", "phoneHint": "One number per line, or comma-separated; international format supported (with country code)",
+      "callingN": "Calling… ({n})", "startCallN": "Start calling {n} numbers", "callResult": "Call Result", "callOk": "Call succeeded"
     }
   }
 }

@@ -1778,6 +1778,32 @@
       "uploading": "上傳中…", "publishTo": "一鍵發布至 {n} 個平台",
       "uploadResult": "上傳結果", "publishOk": "發布成功", "publishFail": "發布失敗", "updateToken": "→ 前往設定更新 Token",
       "successCount": "{ok}/{total} 個平台成功"
+    },
+    "u10": {
+      "voice": { "mlFemale": "多語言，女", "mlMale": "多語言，男", "brMale": "英式英語，男", "usFemale": "美式英語，女" },
+      "defMarketingTeam": "行銷團隊", "defScript": "預設腳本", "defGeneralCustomer": "一般客戶", "defGeneralDesc": "一般潛在客戶或不明身份", "groupDefault": "一般",
+      "scriptN": "腳本 {n}", "categoryN": "分類 {n}",
+      "errNeedRule": "請先定義至少一條發送規則", "errNeedRecipients": "請輸入收件人清單", "errNeedTemplate": "請為至少一個腳本填寫主旨與內文", "sendFailed": "寄送失敗",
+      "errNeedScript2": "請先輸入或生成腳本", "errNeedScript": "請先輸入腳本", "errNeedPhone": "請輸入至少一個電話號碼",
+      "tabPhone": "電話行銷", "tabEmail": "Email 行銷",
+      "sendService": "寄送服務：Resend", "fromName": "寄件人名稱", "fromEmail": "寄件人 Email（需在 Resend 驗證）",
+      "step1Title": "Step 1 — Email 模板（腳本）", "step1Hint": "定義不同的 Email 內容模板，稍後在發送規則中選用",
+      "applyUnit4All": "套用 Unit 4 至所有模板", "templateNamePlaceholder": "模板名稱（例如：博主版腳本）", "applyUnit4": "套用 Unit 4",
+      "emailSubject": "Email 主旨", "emailSubjectPlaceholder": "Email 主旨…", "emailBody": "Email 內文", "emailBodyPlaceholder": "Email 內文…", "addTemplate": "新增模板",
+      "step2Title": "Step 2 — 發送規則", "step2Hint": "定義分類名稱與 AI 判斷依據，並指定套用哪個模板。AI 依序比對，第一個符合的規則生效。",
+      "categoryNamePlaceholder": "分類名稱（例如：美妝博主）", "aiBasis": "AI 分類依據（描述這類收件人特徵）", "aiBasisPlaceholder": "例如：個人美妝博主，以社交媒體影響力為主的個人",
+      "applyTemplate": "套用模板", "classifiedHere": "已分類至此：{n} 個收件人", "addRule": "新增規則",
+      "step3Title": "Step 3 — 輸入收件人 Email", "step3Hint": "每行一個 Email，AI 依上方規則自動歸類",
+      "classifying": "AI 分類中…", "autoClassify": "AI 自動分類", "recognizedEmails": "已識別 {n} 個有效 Email",
+      "sendingN": "寄送中…（{n} 封）", "startSendN": "開始寄送 {n} 封 Email", "sendResult": "寄送結果", "successN": "{ok}/{total} 成功", "sent": "已寄出",
+      "envNotice": "需在 Vercel 設定環境變數：",
+      "ttsProvider": "TTS：ElevenLabs", "callProvider": "撥打：Bird (app.bird.com)", "vbeeLocked": "VBEE — 待日後啟用",
+      "voiceDialSettings": "語音 / 撥號設定", "elevenVoice": "ElevenLabs 語音", "birdCallerId": "Bird 顯示號碼 *",
+      "phoneScript": "電話行銷腳本", "aiGenerating": "AI 生成中…", "aiGenerate": "AI 自動生成",
+      "scriptPlaceholder": "您好！我是來自[公司]的[姓名]，今天打電話是想和您分享…", "scriptCount": "{n} 字 · 建議 100-200 字（約 30-60 秒）",
+      "genVoice": "生成語音中…", "previewVoice": "試聽語音",
+      "phoneList": "電話號碼清單", "recognizedPhones": "已識別 {n} 個", "phoneHint": "每行一個號碼，或用逗號分隔，支援國際格式（需含國碼）",
+      "callingN": "撥打中…（{n} 通）", "startCallN": "開始撥打 {n} 通電話", "callResult": "撥打結果", "callOk": "撥出成功"
     }
   }
 }
