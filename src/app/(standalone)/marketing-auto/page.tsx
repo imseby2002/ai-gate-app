@@ -4599,21 +4599,10 @@ type BookingStep =
   | 'phone'         // 聯絡電話
   | 'special_req'   // 特殊需求
 
-const BOOKING_STEP_LABELS: Record<BookingStep, string> = {
-  product:       '行程/產品/房型 選擇',
-  date_depart:   '出發日期',
-  date_checkin:  '入住日期',
-  date_checkout: '退房日期',
-  timeslot:      '時段/班次',
-  headcount:     '人數（大人/小孩/嬰兒）',
-  passenger_id:  '乘客資料（姓名+生日+身分證，逐人收集）',
-  booker_name:   '訂房/訂位人姓名',
-  quote:         '報價（AI 套定價計算機計算總價並告知客人）',
-  email:         '電子郵件',
-  plate:         '車牌號碼',
-  phone:         '聯絡電話',
-  special_req:   '特殊需求',
-}
+const BOOKING_STEPS: BookingStep[] = [
+  'product', 'date_depart', 'date_checkin', 'date_checkout', 'timeslot',
+  'headcount', 'passenger_id', 'booker_name', 'quote', 'email', 'plate', 'phone', 'special_req',
+]
 
 interface BookingFlowDef {
   id: string
@@ -4909,6 +4898,10 @@ function Unit12CustomerService({
   industry?: string
   onDone: (data: Unit12Data) => void
 }) {
+  const t = useTranslations('MA')
+  const locale = useLocale()
+  const stepLabel = (s: BookingStep) => t(`u12.step.${s}`)
+  const industryLabel = (id: string) => t.has(`u12.industry.${id}`) ? t(`u12.industry.${id}`) : (CS_INDUSTRY_TEMPLATES[id]?.label ?? id)
   const [tab, setTab] = useState<Cs12Tab>('platforms')
 
   // AI settings
@@ -5162,7 +5155,7 @@ function Unit12CustomerService({
       parsed = JSON.parse(editingPc.jsonText)
       setPcJsonError('')
     } catch (e) {
-      setPcJsonError(`JSON 格式錯誤：${String(e)}`)
+      setPcJsonError(t('u12.jsonError', { error: String(e) }))
       return
     }
     setSavingPc(true)
@@ -5298,7 +5291,7 @@ function Unit12CustomerService({
         const r = await fetch(`/api/marketing/cs-datasource/${bkId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingBreakfastForm.name || '購物設定', config, enabled: true }),
+          body: JSON.stringify({ name: editingBreakfastForm.name || t('u12.shoppingConfig'), config, enabled: true }),
         })
         const d = await r.json()
         if (d.source) setBreakfastSources(prev => prev.map(s => s.id === bkId ? d.source : s))
@@ -5306,7 +5299,7 @@ function Unit12CustomerService({
         const r = await fetch('/api/marketing/cs-datasource', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingBreakfastForm.name || '購物設定', type: 'breakfast_webhook', config, industry: ind }),
+          body: JSON.stringify({ name: editingBreakfastForm.name || t('u12.shoppingConfig'), type: 'breakfast_webhook', config, industry: ind }),
         })
         const d = await r.json()
         if (d.source) setBreakfastSources(prev => [...prev, d.source])
@@ -5418,13 +5411,13 @@ function Unit12CustomerService({
       const res = await fetch('/api/marketing/telegram-setup', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        setTelegramSetupResult({ ok: false, msg: data.error ?? '註冊失敗' })
+        setTelegramSetupResult({ ok: false, msg: data.error ?? t('u12.tgRegFailed') })
       } else {
         const tgOk = data.setResult?.ok === true
         const webhookSet = data.infoResult?.result?.url ?? ''
         setTelegramSetupResult({
           ok: tgOk,
-          msg: tgOk ? `Webhook 已成功註冊` : `Telegram 回傳：${JSON.stringify(data.setResult)}`,
+          msg: tgOk ? t('u12.tgRegOk') : t('u12.tgReturned', { data: JSON.stringify(data.setResult) }),
           webhookUrl: webhookSet,
         })
       }
@@ -5459,7 +5452,7 @@ function Unit12CustomerService({
       })
       const data = await res.json()
       const ok = data.result?.ok === true
-      setTelegramTestResult({ ok, msg: ok ? '✅ 測試訊息已送出' : `❌ ${JSON.stringify(data.result?.description ?? data)}` })
+      setTelegramTestResult({ ok, msg: ok ? t('u12.tgTestSent') : `❌ ${JSON.stringify(data.result?.description ?? data)}` })
     } catch (e) {
       setTelegramTestResult({ ok: false, msg: String(e) })
     }
@@ -5544,14 +5537,14 @@ function Unit12CustomerService({
       whatsapp: [
         { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
         { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
-        { key: 'whatsapp_verify_token', label: 'Verify Token（自訂任意字串）', placeholder: 'my_verify_token', secret: false },
-        { key: 'whatsapp_app_secret', label: 'App Secret（驗證 webhook 簽章，強烈建議填）', placeholder: 'Meta 應用程式密鑰', secret: true },
+        { key: 'whatsapp_verify_token', label: t('u12.cred.waVerify'), placeholder: 'my_verify_token', secret: false },
+        { key: 'whatsapp_app_secret', label: t('u12.cred.waSecret'), placeholder: t('u12.cred.metaKey'), secret: true },
       ],
       whatsapp_personal: [],  // QR-based auth, no manual fields needed
       telegram: [
-        { key: 'telegram_bot_token', label: 'Bot Token（從 @BotFather 取得）', placeholder: '123456789:AAF...', secret: true },
-        { key: 'telegram_admin_chat_id', label: '管理員 Chat ID（選填）', placeholder: '你的個人 Chat ID，從 @userinfobot 取得', secret: false },
-        { key: 'telegram_webhook_secret', label: 'Webhook Secret（setWebhook 的 secret_token，強烈建議填）', placeholder: '自訂任意字串', secret: true },
+        { key: 'telegram_bot_token', label: t('u12.cred.tgToken'), placeholder: '123456789:AAF...', secret: true },
+        { key: 'telegram_admin_chat_id', label: t('u12.cred.tgAdmin'), placeholder: t('u12.cred.tgAdminPh'), secret: false },
+        { key: 'telegram_webhook_secret', label: t('u12.cred.tgSecret'), placeholder: t('u12.cred.anyString'), secret: true },
       ],
       zalo: [
         { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
@@ -5559,7 +5552,7 @@ function Unit12CustomerService({
       wechat: [
         { key: 'wechat_app_id', label: 'App ID', placeholder: 'wx...', secret: false },
         { key: 'wechat_app_secret', label: 'App Secret', placeholder: '...', secret: true },
-        { key: 'wechat_token', label: 'Token（伺服器設定的 Token，驗證簽章用）', placeholder: '自訂任意字串', secret: false },
+        { key: 'wechat_token', label: t('u12.cred.wechatToken'), placeholder: t('u12.cred.anyString'), secret: false },
       ],
     }
     return map[platformId] ?? []
@@ -5579,7 +5572,7 @@ function Unit12CustomerService({
     const imgSnap = testImage
     setTestInput('')
     setTestImage(null)
-    const userDisplay = userMsg + (imgSnap ? '\n🖼️ [圖片]' : '')
+    const userDisplay = userMsg + (imgSnap ? `\n🖼️ ${t('u12.imageTag')}` : '')
     setTestHistory(prev => [...prev, { role: 'user', content: userDisplay }])
     setTestLoading(true)
 
@@ -5622,7 +5615,7 @@ function Unit12CustomerService({
       try {
         data = JSON.parse(raw)
       } catch {
-        throw new Error(raw.slice(0, 200) || `伺服器回應錯誤 (HTTP ${res.status})`)
+        throw new Error(raw.slice(0, 200) || t('u12.serverError', { status: res.status }))
       }
       if (data.reply) {
         const newEntry: CsLogEntry = {
@@ -5670,10 +5663,10 @@ function Unit12CustomerService({
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
-        setTestHistory(prev => [...prev, { role: 'assistant', content: `錯誤：${data.error ?? '未知錯誤'}` }])
+        setTestHistory(prev => [...prev, { role: 'assistant', content: t('u12.errorMsg', { error: data.error ?? t('u12.unknownError') }) }])
       }
     } catch (e) {
-      setTestHistory(prev => [...prev, { role: 'assistant', content: `連線錯誤：${String(e)}` }])
+      setTestHistory(prev => [...prev, { role: 'assistant', content: t('u12.connError', { error: String(e) }) }])
     }
     setTestLoading(false)
   }
@@ -5718,7 +5711,7 @@ function Unit12CustomerService({
 
   // 自動滿意度問卷 / 結案
   function closeCase() {
-    const surveyMsg = '感謝您的聯繫！請問本次問題有解決您的疑慮嗎？\n\n1️⃣ 已解決，非常滿意\n2️⃣ 已解決，尚可\n3️⃣ 未解決，需進一步協助\n\n如有其他問題，歡迎隨時聯繫我們 🙏'
+    const surveyMsg = t('u12.surveyMsg')
     setTestHistory(prev => [...prev, { role: 'assistant', content: surveyMsg }])
     setCaseClosed(true)
     startAutoCloseTimer()
@@ -5769,8 +5762,8 @@ function Unit12CustomerService({
     setCreatingTicket(true)
     const lastUserMsg = [...testHistory].reverse().find(m => m.role === 'user')
     const lastAiMsg = [...testHistory].reverse().find(m => m.role === 'assistant')
-    const subject = lastUserMsg?.content?.slice(0, 50) ?? '客服工單'
-    const description = testHistory.map(m => `${m.role === 'user' ? '客戶' : 'AI'}：${m.content}`).join('\n')
+    const subject = lastUserMsg?.content?.slice(0, 50) ?? t('u12.ticketSubject')
+    const description = testHistory.map(m => `${m.role === 'user' ? t('u12.roleCustomer') : 'AI'}：${m.content}`).join('\n')
     const highRiskMsg = [...testHistory].reverse().find(m => m.role === 'assistant' && m.meta?.risk === 'high')
     const priority = highRiskMsg ? 'high' : 'medium'
     const intent = lastAiMsg?.meta?.intent
@@ -5811,7 +5804,7 @@ function Unit12CustomerService({
       await fetch('/api/marketing/cs-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ industry: ind, platform: 'test', from_id: 'test_user', from_name: '測試用戶', message: userMsg, reply, intent, risk, latency_ms: latencyMs, campaign_id: campaignId }),
+        body: JSON.stringify({ industry: ind, platform: 'test', from_id: 'test_user', from_name: t('u12.testUser'), message: userMsg, reply, intent, risk, latency_ms: latencyMs, campaign_id: campaignId }),
       })
     } catch { /* silent */ }
   }
@@ -5839,14 +5832,14 @@ function Unit12CustomerService({
     s === 'resolved' ? 'text-green-600 bg-green-50' :
     'text-gray-500 bg-gray-100'
   const ticketStatusLabel = (s: string) =>
-    s === 'open' ? '待處理' : s === 'in_progress' ? '處理中' : s === 'resolved' ? '已解決' : '已結案'
+    s === 'open' ? t('u12.tkOpen') : s === 'in_progress' ? t('u12.tkInProgress') : s === 'resolved' ? t('u12.tkResolved') : t('u12.tkClosed')
   const ticketPriorityColor = (p: string) =>
     p === 'urgent' ? 'text-red-600 bg-red-50' :
     p === 'high' ? 'text-orange-600 bg-orange-50' :
     p === 'medium' ? 'text-indigo-600 bg-indigo-50' :
     'text-gray-500 bg-gray-100'
   const ticketPriorityLabel = (p: string) =>
-    p === 'urgent' ? '緊急' : p === 'high' ? '高' : p === 'medium' ? '中' : '低'
+    p === 'urgent' ? t('u12.prUrgent') : p === 'high' ? t('u12.prHigh') : p === 'medium' ? t('u12.prMedium') : t('u12.prLow')
   const platformEmoji = (p: string) =>
     p === 'line' ? '💬' : p === 'whatsapp' ? '📱' : p === 'telegram' ? '✈️' : p === 'test' ? '🧪' : '💌'
 
@@ -5858,33 +5851,34 @@ function Unit12CustomerService({
         <div>
           <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
             <Headphones className="h-4 w-4" style={{ color: 'var(--primary)' }} />
-            智能客服系統
+            {t('u12.title')}
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">Gemini Flash 意圖分類 · Claude Sonnet 高風險升級</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t('u12.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(t => {
+          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
+            const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
             const labels: Record<Cs12Tab, string> = {
-              platforms: '平台', 'ai-settings': 'AI 設定', 'dialogue-files': '知識庫',
-              'data-sources': '資料來源', pricing: '定價計算機', test: '測試', logs: '記錄',
-              tickets: `工單${tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length > 0 ? ` (${tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length})` : ''}`,
-              inbox: '收件匣',
+              platforms: t('u12.tabPlatforms'), 'ai-settings': t('u12.tabAiSettings'), 'dialogue-files': t('u12.tabKnowledge'),
+              'data-sources': t('u12.tabDataSources'), pricing: t('u12.tabPricing'), test: t('u12.tabTest'), logs: t('u12.tabLogs'),
+              tickets: `${t('u12.tabTickets')}${openCount > 0 ? ` (${openCount})` : ''}`,
+              inbox: t('u12.tabInbox'),
             }
-            const isNew = (t === 'tickets' || t === 'inbox') && tab !== t
+            const isNew = (tb === 'tickets' || tb === 'inbox') && tab !== tb
             return (
-              <button key={t}
+              <button key={tb}
                 onClick={() => {
-                  setTab(t)
-                  if (t === 'tickets') loadTickets()
-                  if (t === 'inbox') loadInbox()
-                  if (t === 'data-sources') loadFaq(industry ?? 'homestay')
+                  setTab(tb)
+                  if (tb === 'tickets') loadTickets()
+                  if (tb === 'inbox') loadInbox()
+                  if (tb === 'data-sources') loadFaq(industry ?? 'homestay')
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative ${
-                  tab === t ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  tab === tb ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
-                style={tab === t ? { background: 'var(--primary)' } : {}}>
-                {labels[t]}
-                {isNew && t === 'inbox' && inboxMessages.length === 0 && (
+                style={tab === tb ? { background: 'var(--primary)' } : {}}>
+                {labels[tb]}
+                {isNew && tb === 'inbox' && inboxMessages.length === 0 && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
                 )}
               </button>
@@ -5897,7 +5891,7 @@ function Unit12CustomerService({
       {tab === 'platforms' && (
         <div className="space-y-3">
           <p className="text-xs text-gray-500">
-            設定各平台的 API Key，再將 Webhook URL 複製到對應平台後台。
+            {t('u12.platformsIntro')}
           </p>
           <div className="grid grid-cols-1 gap-3">
             {CS_PLATFORMS.map(p => (
@@ -5910,12 +5904,12 @@ function Unit12CustomerService({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${platformConnected[p.id] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {platformConnected[p.id] ? '已連線' : '未設定'}
+                      {platformConnected[p.id] ? t('u12.connected') : t('u12.notSet')}
                     </span>
                     {p.id !== 'whatsapp_personal' && (
                       <button onClick={() => setEditingPlatform(editingPlatform === p.id ? null : p.id)}
                         className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">
-                        設定
+                        {t('u12.configure')}
                       </button>
                     )}
                   </div>
@@ -5925,11 +5919,11 @@ function Unit12CustomerService({
                 {p.showWebhook && (
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-[10px] bg-gray-100 px-2.5 py-1.5 rounded-lg text-gray-700 font-mono truncate">
-                      {appUrl}/api/marketing/cs-webhook/{p.id}/{userId ?? '(登入後顯示)'}
+                      {appUrl}/api/marketing/cs-webhook/{p.id}/{userId ?? t('u12.loginToShow')}
                     </code>
                     <button onClick={() => userId && navigator.clipboard.writeText(`${appUrl}/api/marketing/cs-webhook/${p.id}/${userId}`)}
                       className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 whitespace-nowrap">
-                      複製
+                      {t('u12.copy')}
                     </button>
                   </div>
                 )}
@@ -5940,7 +5934,7 @@ function Unit12CustomerService({
                   {p.docUrl && (
                     <a href={p.docUrl} target="_blank" rel="noopener noreferrer"
                       className="ml-1.5 text-indigo-400 hover:text-indigo-600 underline">
-                      官方說明 ↗
+                      {t('u12.officialDocs')} ↗
                     </a>
                   )}
                 </p>
@@ -5952,11 +5946,11 @@ function Unit12CustomerService({
                     <div className="flex flex-wrap gap-2">
                       <button onClick={registerTelegramWebhook} disabled={telegramSetupLoading}
                         className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 disabled:opacity-50">
-                        {telegramSetupLoading ? '註冊中...' : '🔗 重新註冊 Webhook'}
+                        {telegramSetupLoading ? t('u12.tgRegistering') : `🔗 ${t('u12.tgReregister')}`}
                       </button>
                       <button onClick={checkTelegramDiag} disabled={telegramDiagLoading}
                         className="text-xs px-3 py-1.5 rounded-lg bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 disabled:opacity-50">
-                        {telegramDiagLoading ? '查詢中...' : '🔍 查看錯誤狀態'}
+                        {telegramDiagLoading ? t('u12.tgQuerying') : `🔍 ${t('u12.tgCheckStatus')}`}
                       </button>
                     </div>
 
@@ -5974,9 +5968,9 @@ function Unit12CustomerService({
                         {/* Endpoint self-check */}
                         {telegramDiag.endpointStatus != null && (
                           <div className={telegramDiag.endpointStatus === 200 ? 'text-green-400' : 'text-red-400'}>
-                            🌐 Webhook 端點: HTTP {telegramDiag.endpointStatus}
-                            {telegramDiag.endpointStatus === 307 ? ' ← 仍被重導，等待 Vercel 部署完成後再試' : ''}
-                            {telegramDiag.endpointStatus === 200 ? ' ← 正常可存取' : ''}
+                            🌐 {t('u12.tgEndpoint')}: HTTP {telegramDiag.endpointStatus}
+                            {telegramDiag.endpointStatus === 307 ? ` ← ${t('u12.tgRedirected')}` : ''}
+                            {telegramDiag.endpointStatus === 200 ? ` ← ${t('u12.tgAccessible')}` : ''}
                           </div>
                         )}
                         {/* Bot info */}
@@ -5988,30 +5982,30 @@ function Unit12CustomerService({
                           const r = (telegramDiag.info as any).result
                           return (
                             <>
-                              <div>🔗 Webhook URL: <span className="break-all opacity-70">{r.url || '（未設定）'}</span></div>
+                              <div>🔗 Webhook URL: <span className="break-all opacity-70">{r.url || t('u12.tgNotSet')}</span></div>
                               <div>📬 Pending updates: {r.pending_update_count ?? 0}</div>
                               {r.last_error_message && (
                                 <>
                                   <div className={telegramDiag?.endpointStatus === 200 ? 'text-yellow-400' : 'text-red-400'}>
-                                    {telegramDiag?.endpointStatus === 200 ? '⚠️' : '❌'} 最後錯誤: {r.last_error_message}
+                                    {telegramDiag?.endpointStatus === 200 ? '⚠️' : '❌'} {t('u12.tgLastError')}: {r.last_error_message}
                                   </div>
                                   {r.last_error_date && (
-                                    <div className="text-gray-400 opacity-70">   時間: {new Date(r.last_error_date * 1000).toLocaleString()}</div>
+                                    <div className="text-gray-400 opacity-70">   {t('u12.tgTime')}: {new Date(r.last_error_date * 1000).toLocaleString(locale)}</div>
                                   )}
                                   {telegramDiag?.endpointStatus === 200 && (
-                                    <div className="text-green-400">   ✅ 此為歷史錯誤，目前 Webhook 端點已正常（HTTP 200）</div>
+                                    <div className="text-green-400">   ✅ {t('u12.tgHistoricError')}</div>
                                   )}
                                 </>
                               )}
                               {!r.last_error_message && r.url && (
-                                <div className="text-green-400">✅ Webhook 正常，無錯誤紀錄</div>
+                                <div className="text-green-400">✅ {t('u12.tgWebhookOk')}</div>
                               )}
                             </>
                           )
                         })()}
                         {telegramDiag.recentChats && telegramDiag.recentChats.length > 0 && (
                           <div className="mt-1">
-                            <div className="text-gray-400 mb-0.5">最近對話（點選填入）：</div>
+                            <div className="text-gray-400 mb-0.5">{t('u12.tgRecentChats')}</div>
                             {telegramDiag.recentChats.map(c => (
                               <button key={c.chatId} onClick={() => setTelegramTestChatId(String(c.chatId))}
                                 className="mr-1 mb-1 text-[10px] px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-white">
@@ -6024,10 +6018,10 @@ function Unit12CustomerService({
                         {(() => {
                           const adminId = platformCreds['telegram']?.telegram_admin_chat_id
                           return adminId
-                            ? <div className="text-blue-300">👤 管理員 Chat ID: <span className="text-white">{adminId}</span> ← 客戶訊息會轉發至此</div>
-                            : <div className="text-yellow-400">⚠️ 未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）</div>
+                            ? <div className="text-blue-300">👤 {t('u12.tgAdminId')}: <span className="text-white">{adminId}</span> ← {t('u12.tgForwardHere')}</div>
+                            : <div className="text-yellow-400">⚠️ {t('u12.tgNoAdminId')}</div>
                         })()}
-                        {!(telegramDiag.me as any)?.ok && <div className="text-red-400">❌ Bot Token 無效：{JSON.stringify((telegramDiag.me as any)?.description)}</div>}
+                        {!(telegramDiag.me as any)?.ok && <div className="text-red-400">❌ {t('u12.tgBadToken')}: {JSON.stringify((telegramDiag.me as any)?.description)}</div>}
                       </div>
                     )}
 

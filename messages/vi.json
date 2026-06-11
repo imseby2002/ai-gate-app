@@ -1820,6 +1820,26 @@
       "videoLog": "Nhật ký video MC", "nVideos": "{n}",
       "stDone": "✓ Hoàn tất", "stFailed": "✗ Thất bại", "stProcessing": "⏳ Đang tạo", "downloadVideo": "Tải video",
       "envHint": "Cần cài biến môi trường:"
+    },
+    "u12": {
+      "step": { "product": "Chọn tour/sản phẩm/phòng", "date_depart": "Ngày khởi hành", "date_checkin": "Ngày nhận phòng", "date_checkout": "Ngày trả phòng", "timeslot": "Khung giờ/Chuyến", "headcount": "Số người (lớn/trẻ em/em bé)", "passenger_id": "Thông tin hành khách (tên+ngày sinh+CMND, từng người)", "booker_name": "Tên người đặt", "quote": "Báo giá (AI tính tổng qua máy tính giá)", "email": "Email", "plate": "Biển số xe", "phone": "Điện thoại liên hệ", "special_req": "Yêu cầu đặc biệt" },
+      "industry": { "homestay": "Homestay / Du lịch", "ecommerce": "TMĐT / Bán lẻ", "restaurant": "Nhà hàng / Ẩm thực", "clinic": "Phòng khám / Thẩm mỹ", "beauty": "Làm đẹp / Tóc / SPA", "education": "Giáo dục / Luyện thi" },
+      "cred": { "waVerify": "Verify Token (chuỗi tùy ý)", "waSecret": "App Secret (xác minh chữ ký webhook, rất khuyến nghị)", "metaKey": "Khóa ứng dụng Meta", "tgToken": "Bot Token (lấy từ @BotFather)", "tgAdmin": "Chat ID quản trị (tùy chọn)", "tgAdminPh": "Chat ID cá nhân của bạn, từ @userinfobot", "tgSecret": "Webhook Secret (secret_token của setWebhook, rất khuyến nghị)", "anyString": "Chuỗi tùy ý", "wechatToken": "Token (Token cấu hình ở server, để xác minh chữ ký)" },
+      "jsonError": "Lỗi định dạng JSON: {error}", "shoppingConfig": "Cấu hình mua sắm",
+      "tgRegFailed": "Đăng ký thất bại", "tgRegOk": "Đã đăng ký Webhook thành công", "tgReturned": "Telegram trả về: {data}", "tgTestSent": "✅ Đã gửi tin nhắn thử",
+      "imageTag": "[Hình ảnh]", "serverError": "Lỗi phản hồi máy chủ (HTTP {status})", "errorMsg": "Lỗi: {error}", "unknownError": "Lỗi không xác định", "connError": "Lỗi kết nối: {error}",
+      "surveyMsg": "Cảm ơn bạn đã liên hệ! Vấn đề lần này đã giải quyết được thắc mắc của bạn chưa?\n\n1️⃣ Đã giải quyết, rất hài lòng\n2️⃣ Đã giải quyết, tạm ổn\n3️⃣ Chưa giải quyết, cần hỗ trợ thêm\n\nCó vấn đề gì khác, hãy liên hệ bất cứ lúc nào 🙏",
+      "ticketSubject": "Phiếu hỗ trợ", "roleCustomer": "Khách hàng", "testUser": "Người dùng thử",
+      "tkOpen": "Chờ xử lý", "tkInProgress": "Đang xử lý", "tkResolved": "Đã giải quyết", "tkClosed": "Đã đóng",
+      "prUrgent": "Khẩn cấp", "prHigh": "Cao", "prMedium": "Trung bình", "prLow": "Thấp",
+      "title": "Hệ thống CSKH thông minh", "subtitle": "Gemini Flash phân loại ý định · Claude Sonnet nâng cấp rủi ro cao",
+      "tabPlatforms": "Nền tảng", "tabAiSettings": "Cài đặt AI", "tabKnowledge": "Kho tri thức", "tabDataSources": "Nguồn dữ liệu", "tabPricing": "Máy tính giá", "tabTest": "Kiểm thử", "tabLogs": "Nhật ký", "tabTickets": "Phiếu", "tabInbox": "Hộp thư",
+      "platformsIntro": "Cài API Key của từng nền tảng, rồi sao chép Webhook URL vào backend nền tảng tương ứng.",
+      "connected": "Đã kết nối", "notSet": "Chưa cài", "configure": "Cài đặt", "loginToShow": "(hiện sau khi đăng nhập)", "copy": "Sao chép", "officialDocs": "Tài liệu chính thức",
+      "tgRegistering": "Đang đăng ký...", "tgReregister": "Đăng ký lại Webhook", "tgQuerying": "Đang truy vấn...", "tgCheckStatus": "Xem trạng thái lỗi",
+      "tgEndpoint": "Điểm cuối Webhook", "tgRedirected": "Vẫn bị chuyển hướng, đợi Vercel deploy xong rồi thử lại", "tgAccessible": "Truy cập bình thường",
+      "tgNotSet": "(chưa cài)", "tgLastError": "Lỗi cuối", "tgTime": "Thời gian", "tgHistoricError": "Đây là lỗi cũ; điểm cuối Webhook hiện đã bình thường (HTTP 200)", "tgWebhookOk": "Webhook bình thường, không có lỗi",
+      "tgRecentChats": "Trò chuyện gần đây (nhấn để điền):", "tgAdminId": "Chat ID quản trị", "tgForwardHere": "Tin khách sẽ chuyển đến đây", "tgNoAdminId": "Chưa cài Chat ID quản trị; tin khách sẽ không chuyển cho bạn. Vào \"Cài đặt thông tin\" nhập Chat ID của bạn (lấy từ @userinfobot)", "tgBadToken": "Bot Token không hợp lệ"
     }
   }
 }

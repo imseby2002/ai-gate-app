@@ -1820,6 +1820,26 @@
       "videoLog": "Anchor Video Log", "nVideos": "{n}",
       "stDone": "✓ Done", "stFailed": "✗ Failed", "stProcessing": "⏳ Processing", "downloadVideo": "Download video",
       "envHint": "Environment variables required:"
+    },
+    "u12": {
+      "step": { "product": "Tour/Product/Room selection", "date_depart": "Departure date", "date_checkin": "Check-in date", "date_checkout": "Check-out date", "timeslot": "Time slot/Session", "headcount": "Headcount (adult/child/infant)", "passenger_id": "Passenger info (name+DOB+ID, per person)", "booker_name": "Booker name", "quote": "Quote (AI calculates total via pricing calculator)", "email": "Email", "plate": "License plate", "phone": "Contact phone", "special_req": "Special requests" },
+      "industry": { "homestay": "B&B / Travel", "ecommerce": "E-commerce / Retail", "restaurant": "Restaurant / F&B", "clinic": "Clinic / Aesthetics", "beauty": "Beauty / Hair / SPA", "education": "Education / Tutoring" },
+      "cred": { "waVerify": "Verify Token (any custom string)", "waSecret": "App Secret (verifies webhook signature, strongly recommended)", "metaKey": "Meta app secret", "tgToken": "Bot Token (from @BotFather)", "tgAdmin": "Admin Chat ID (optional)", "tgAdminPh": "Your personal Chat ID, from @userinfobot", "tgSecret": "Webhook Secret (setWebhook secret_token, strongly recommended)", "anyString": "Any custom string", "wechatToken": "Token (server-configured Token, for signature verification)" },
+      "jsonError": "JSON format error: {error}", "shoppingConfig": "Shopping Config",
+      "tgRegFailed": "Registration failed", "tgRegOk": "Webhook registered successfully", "tgReturned": "Telegram returned: {data}", "tgTestSent": "✅ Test message sent",
+      "imageTag": "[Image]", "serverError": "Server response error (HTTP {status})", "errorMsg": "Error: {error}", "unknownError": "Unknown error", "connError": "Connection error: {error}",
+      "surveyMsg": "Thank you for contacting us! Did this resolve your concern?\n\n1️⃣ Resolved, very satisfied\n2️⃣ Resolved, okay\n3️⃣ Not resolved, need more help\n\nFeel free to reach out anytime 🙏",
+      "ticketSubject": "Support Ticket", "roleCustomer": "Customer", "testUser": "Test User",
+      "tkOpen": "Open", "tkInProgress": "In Progress", "tkResolved": "Resolved", "tkClosed": "Closed",
+      "prUrgent": "Urgent", "prHigh": "High", "prMedium": "Medium", "prLow": "Low",
+      "title": "Smart Customer Service", "subtitle": "Gemini Flash intent classification · Claude Sonnet high-risk escalation",
+      "tabPlatforms": "Platforms", "tabAiSettings": "AI Settings", "tabKnowledge": "Knowledge Base", "tabDataSources": "Data Sources", "tabPricing": "Pricing Calculator", "tabTest": "Test", "tabLogs": "Logs", "tabTickets": "Tickets", "tabInbox": "Inbox",
+      "platformsIntro": "Set each platform's API key, then copy the Webhook URL into the platform's backend.",
+      "connected": "Connected", "notSet": "Not set", "configure": "Configure", "loginToShow": "(shown after login)", "copy": "Copy", "officialDocs": "Official docs",
+      "tgRegistering": "Registering...", "tgReregister": "Re-register Webhook", "tgQuerying": "Querying...", "tgCheckStatus": "Check error status",
+      "tgEndpoint": "Webhook endpoint", "tgRedirected": "Still redirected, wait for Vercel deploy to finish and retry", "tgAccessible": "Accessible",
+      "tgNotSet": "(not set)", "tgLastError": "Last error", "tgTime": "Time", "tgHistoricError": "This is a historic error; the Webhook endpoint is now OK (HTTP 200)", "tgWebhookOk": "Webhook OK, no error records",
+      "tgRecentChats": "Recent chats (click to fill):", "tgAdminId": "Admin Chat ID", "tgForwardHere": "Customer messages forwarded here", "tgNoAdminId": "No admin Chat ID set; customer messages won't be forwarded to you. Go to \"Configure credentials\" and enter your Chat ID (from @userinfobot)", "tgBadToken": "Invalid Bot Token"
     }
   }
 }

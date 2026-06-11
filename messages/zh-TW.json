@@ -1820,6 +1820,26 @@
       "videoLog": "主播影片記錄", "nVideos": "{n} 部",
       "stDone": "✓ 完成", "stFailed": "✗ 失敗", "stProcessing": "⏳ 生成中", "downloadVideo": "下載影片",
       "envHint": "需要設定的環境變數："
+    },
+    "u12": {
+      "step": { "product": "行程/產品/房型 選擇", "date_depart": "出發日期", "date_checkin": "入住日期", "date_checkout": "退房日期", "timeslot": "時段/班次", "headcount": "人數（大人/小孩/嬰兒）", "passenger_id": "乘客資料（姓名+生日+身分證，逐人收集）", "booker_name": "訂房/訂位人姓名", "quote": "報價（AI 套定價計算機計算總價並告知客人）", "email": "電子郵件", "plate": "車牌號碼", "phone": "聯絡電話", "special_req": "特殊需求" },
+      "industry": { "homestay": "民宿 / 旅遊", "ecommerce": "電商 / 零售", "restaurant": "餐廳 / 餐飲", "clinic": "診所 / 醫美", "beauty": "美容 / 美髮 / SPA", "education": "教育 / 補習班" },
+      "cred": { "waVerify": "Verify Token（自訂任意字串）", "waSecret": "App Secret（驗證 webhook 簽章，強烈建議填）", "metaKey": "Meta 應用程式密鑰", "tgToken": "Bot Token（從 @BotFather 取得）", "tgAdmin": "管理員 Chat ID（選填）", "tgAdminPh": "你的個人 Chat ID，從 @userinfobot 取得", "tgSecret": "Webhook Secret（setWebhook 的 secret_token，強烈建議填）", "anyString": "自訂任意字串", "wechatToken": "Token（伺服器設定的 Token，驗證簽章用）" },
+      "jsonError": "JSON 格式錯誤：{error}", "shoppingConfig": "購物設定",
+      "tgRegFailed": "註冊失敗", "tgRegOk": "Webhook 已成功註冊", "tgReturned": "Telegram 回傳：{data}", "tgTestSent": "✅ 測試訊息已送出",
+      "imageTag": "[圖片]", "serverError": "伺服器回應錯誤 (HTTP {status})", "errorMsg": "錯誤：{error}", "unknownError": "未知錯誤", "connError": "連線錯誤：{error}",
+      "surveyMsg": "感謝您的聯繫！請問本次問題有解決您的疑慮嗎？\n\n1️⃣ 已解決，非常滿意\n2️⃣ 已解決，尚可\n3️⃣ 未解決，需進一步協助\n\n如有其他問題，歡迎隨時聯繫我們 🙏",
+      "ticketSubject": "客服工單", "roleCustomer": "客戶", "testUser": "測試用戶",
+      "tkOpen": "待處理", "tkInProgress": "處理中", "tkResolved": "已解決", "tkClosed": "已結案",
+      "prUrgent": "緊急", "prHigh": "高", "prMedium": "中", "prLow": "低",
+      "title": "智能客服系統", "subtitle": "Gemini Flash 意圖分類 · Claude Sonnet 高風險升級",
+      "tabPlatforms": "平台", "tabAiSettings": "AI 設定", "tabKnowledge": "知識庫", "tabDataSources": "資料來源", "tabPricing": "定價計算機", "tabTest": "測試", "tabLogs": "記錄", "tabTickets": "工單", "tabInbox": "收件匣",
+      "platformsIntro": "設定各平台的 API Key，再將 Webhook URL 複製到對應平台後台。",
+      "connected": "已連線", "notSet": "未設定", "configure": "設定", "loginToShow": "(登入後顯示)", "copy": "複製", "officialDocs": "官方說明",
+      "tgRegistering": "註冊中...", "tgReregister": "重新註冊 Webhook", "tgQuerying": "查詢中...", "tgCheckStatus": "查看錯誤狀態",
+      "tgEndpoint": "Webhook 端點", "tgRedirected": "仍被重導，等待 Vercel 部署完成後再試", "tgAccessible": "正常可存取",
+      "tgNotSet": "（未設定）", "tgLastError": "最後錯誤", "tgTime": "時間", "tgHistoricError": "此為歷史錯誤，目前 Webhook 端點已正常（HTTP 200）", "tgWebhookOk": "Webhook 正常，無錯誤紀錄",
+      "tgRecentChats": "最近對話（點選填入）：", "tgAdminId": "管理員 Chat ID", "tgForwardHere": "客戶訊息會轉發至此", "tgNoAdminId": "未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）", "tgBadToken": "Bot Token 無效"
     }
   }
 }
