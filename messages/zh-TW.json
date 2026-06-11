@@ -1767,6 +1767,17 @@
       "manualPlaceholder": "描述影片畫面，例如：A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
       "notice": "<b>注意：</b>影片生成通常需要 <b>1-3 分鐘</b>，提交後頁面會自動每 6 秒輪詢狀態，請勿離開此頁面。生成完成後影片將自動顯示。",
       "successHint": "已生成 {n} 支影片，可於單元9上傳至各平台。"
+    },
+    "u9": {
+      "errPlatform": "請至少選一個平台", "errCopy": "請輸入發文文案",
+      "imgCount": "圖片 {n} 張", "vidCount": "影片 {n} 支", "copy": "文案", "ready": "已備妥", "notGenerated": "尚未生成",
+      "platformSettings": "平台連結設定", "imgPlatforms": "圖片發布平台", "vidPlatforms": "影片發布平台",
+      "pickImage": "選擇上傳圖片", "noImages": "尚未在單元6生成圖片。", "pickVideo": "選擇上傳影片", "noVideos": "尚未在單元8生成影片。",
+      "postCopy": "發文文案", "quickLoad": "快速載入：", "anchorTag": "🎙️主播",
+      "copyPlaceholder": "輸入或從單元4載入文案…", "charCount": "{n} 字",
+      "uploading": "上傳中…", "publishTo": "一鍵發布至 {n} 個平台",
+      "uploadResult": "上傳結果", "publishOk": "發布成功", "publishFail": "發布失敗", "updateToken": "→ 前往設定更新 Token",
+      "successCount": "{ok}/{total} 個平台成功"
     }
   }
 }

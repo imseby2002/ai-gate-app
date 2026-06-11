@@ -1767,6 +1767,17 @@
       "manualPlaceholder": "Describe the video, e.g. A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
       "notice": "<b>Note:</b> Video generation usually takes <b>1-3 minutes</b>. After submitting, the page polls status every 6 seconds — don't leave this page. The video appears automatically when done.",
       "successHint": "Generated {n} videos; you can upload them to platforms in Unit 9."
+    },
+    "u9": {
+      "errPlatform": "Please select at least one platform", "errCopy": "Please enter post copy",
+      "imgCount": "{n} images", "vidCount": "{n} videos", "copy": "Copy", "ready": "ready", "notGenerated": "not generated",
+      "platformSettings": "Platform Connection Settings", "imgPlatforms": "Image Publishing Platforms", "vidPlatforms": "Video Publishing Platforms",
+      "pickImage": "Select Image to Upload", "noImages": "No images generated in Unit 6.", "pickVideo": "Select Video to Upload", "noVideos": "No videos generated in Unit 8.",
+      "postCopy": "Post Copy", "quickLoad": "Quick load:", "anchorTag": "🎙️Anchor",
+      "copyPlaceholder": "Enter or load copy from Unit 4…", "charCount": "{n} chars",
+      "uploading": "Uploading…", "publishTo": "Publish to {n} platforms",
+      "uploadResult": "Upload Result", "publishOk": "Published", "publishFail": "Failed", "updateToken": "→ Go to settings to update Token",
+      "successCount": "{ok}/{total} platforms succeeded"
     }
   }
 }

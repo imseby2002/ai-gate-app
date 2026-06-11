@@ -1767,6 +1767,17 @@
       "manualPlaceholder": "Mô tả video, VD: A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
       "notice": "<b>Lưu ý:</b> Tạo video thường mất <b>1-3 phút</b>. Sau khi gửi, trang sẽ tự kiểm tra trạng thái mỗi 6 giây — đừng rời trang. Video hiện tự động khi xong.",
       "successHint": "Đã tạo {n} video; có thể tải lên các nền tảng ở Unit 9."
+    },
+    "u9": {
+      "errPlatform": "Vui lòng chọn ít nhất một nền tảng", "errCopy": "Vui lòng nhập nội dung đăng",
+      "imgCount": "{n} hình", "vidCount": "{n} video", "copy": "Nội dung", "ready": "đã sẵn sàng", "notGenerated": "chưa tạo",
+      "platformSettings": "Cài đặt kết nối nền tảng", "imgPlatforms": "Nền tảng đăng hình", "vidPlatforms": "Nền tảng đăng video",
+      "pickImage": "Chọn hình để tải lên", "noImages": "Chưa tạo hình ở Unit 6.", "pickVideo": "Chọn video để tải lên", "noVideos": "Chưa tạo video ở Unit 8.",
+      "postCopy": "Nội dung bài đăng", "quickLoad": "Tải nhanh:", "anchorTag": "🎙️MC",
+      "copyPlaceholder": "Nhập hoặc tải nội dung từ Unit 4…", "charCount": "{n} ký tự",
+      "uploading": "Đang tải lên…", "publishTo": "Đăng lên {n} nền tảng",
+      "uploadResult": "Kết quả tải lên", "publishOk": "Đăng thành công", "publishFail": "Đăng thất bại", "updateToken": "→ Vào cài đặt cập nhật Token",
+      "successCount": "{ok}/{total} nền tảng thành công"
     }
   }
 }

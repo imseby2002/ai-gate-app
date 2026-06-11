@@ -3187,6 +3187,8 @@ function Unit9Upload({
   const [uploading, setUploading] = useState(false)
   const [results, setResults] = useState<UploadResult[]>(savedData?.lastUpload?.results ?? [])
   const [error, setError] = useState('')
+  const t = useTranslations('MA')
+  const locale = useLocale()
 
   const toggleImgPlatform = (id: string) =>
     setSelectedImagePlatforms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
@@ -3198,8 +3200,8 @@ function Unit9Upload({
   const hasVideos = videos.length > 0
 
   const upload = async () => {
-    if (allSelected.length === 0) { setError('請至少選一個平台'); return }
-    if (!copyText.trim()) { setError('請輸入發文文案'); return }
+    if (allSelected.length === 0) { setError(t('u9.errPlatform')); return }
+    if (!copyText.trim()) { setError(t('u9.errCopy')); return }
     setUploading(true); setError('')
     try {
       const res = await fetch('/api/marketing/upload', {
@@ -3232,26 +3234,26 @@ function Unit9Upload({
       {/* Assets status */}
       <div className="flex gap-2 flex-wrap">
         {[
-          { label: `圖片 ${images.length} 張`, ok: hasImages },
-          { label: `影片 ${videos.length} 支`, ok: hasVideos },
-          { label: '文案', ok: Object.keys(copyResults).length > 0 },
+          { label: t('u9.imgCount', { n: images.length }), ok: hasImages },
+          { label: t('u9.vidCount', { n: videos.length }), ok: hasVideos },
+          { label: t('u9.copy'), ok: Object.keys(copyResults).length > 0 },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
             s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
           }`}>
             {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
-            {s.label} {s.ok ? '已備妥' : '尚未生成'}
+            {s.label} {s.ok ? t('u9.ready') : t('u9.notGenerated')}
           </div>
         ))}
         <a href="/settings" target="_blank"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors">
-          <Settings className="h-3.5 w-3.5" /> 平台連結設定
+          <Settings className="h-3.5 w-3.5" /> {t('u9.platformSettings')}
         </a>
       </div>
 
       {/* Image platform selector */}
       <div>
-        <label className="block text-sm font-semibold mb-2">圖片發布平台</label>
+        <label className="block text-sm font-semibold mb-2">{t('u9.imgPlatforms')}</label>
         <div className="flex flex-wrap gap-2">
           {IMAGE_UPLOAD_PLATFORMS.map(p => {
             const sel = selectedImagePlatforms.includes(p.id)
@@ -3270,7 +3272,7 @@ function Unit9Upload({
 
       {/* Video platform selector */}
       <div>
-        <label className="block text-sm font-semibold mb-2">影片發布平台</label>
+        <label className="block text-sm font-semibold mb-2">{t('u9.vidPlatforms')}</label>
         <div className="flex flex-wrap gap-2">
           {VIDEO_UPLOAD_PLATFORMS.map(p => {
             const sel = selectedVideoPlatforms.includes(p.id)
@@ -3290,14 +3292,14 @@ function Unit9Upload({
       {/* Image picker */}
       {selectedImagePlatforms.length > 0 && (
         <div className="space-y-2">
-          <label className="block text-sm font-semibold">選擇上傳圖片</label>
+          <label className="block text-sm font-semibold">{t('u9.pickImage')}</label>
           {hasImages ? (
             <div className="flex gap-2 flex-wrap">
               {images.map(img => (
                 <button key={img.url} onClick={() => setSelectedImageUrl(img.url)}
                   className="relative rounded-xl overflow-hidden border-2 transition-all"
                   style={selectedImageUrl === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
-                  <img src={img.url} alt="圖片" className="w-16 h-16 object-cover" />
+                  <img src={img.url} alt="" className="w-16 h-16 object-cover" />
                   {selectedImageUrl === img.url && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                       <CheckCircle2 className="h-5 w-5 text-white" />
@@ -3307,7 +3309,7 @@ function Unit9Upload({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">尚未在單元6生成圖片。</p>
+            <p className="text-xs text-gray-400">{t('u9.noImages')}</p>
           )}
         </div>
       )}
@@ -3315,7 +3317,7 @@ function Unit9Upload({
       {/* Video picker */}
       {selectedVideoPlatforms.length > 0 && (
         <div className="space-y-2">
-          <label className="block text-sm font-semibold">選擇上傳影片</label>
+          <label className="block text-sm font-semibold">{t('u9.pickVideo')}</label>
           {hasVideos ? (
             <div className="flex gap-3 flex-wrap">
               {videos.map(vid => (
@@ -3332,7 +3334,7 @@ function Unit9Upload({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">尚未在單元8生成影片。</p>
+            <p className="text-xs text-gray-400">{t('u9.noVideos')}</p>
           )}
         </div>
       )}
@@ -3340,15 +3342,15 @@ function Unit9Upload({
       {/* Copy text */}
       <div>
         <label className="block text-sm font-semibold mb-1.5">
-          發文文案
+          {t('u9.postCopy')}
           {Object.keys(copyResults).length > 0 && (
-            <span className="ml-2 text-xs font-normal text-gray-400">快速載入：</span>
+            <span className="ml-2 text-xs font-normal text-gray-400">{t('u9.quickLoad')}</span>
           )}
           {Object.entries(copyResults).slice(0, 4).map(([k, v]) => {
             const labels: Record<string, string> = {
               facebook_post: 'FB', instagram_caption: 'IG', threads_post: 'Threads',
               line_message: 'LINE', twitter_post: 'Twitter', linkedin_post: 'LinkedIn',
-              anchor_script: '🎙️主播',
+              anchor_script: t('u9.anchorTag'),
             }
             return (
               <button key={k} onClick={() => setCopyText(v as string)}
@@ -3361,8 +3363,8 @@ function Unit9Upload({
         </label>
         <textarea value={copyText} onChange={e => setCopyText(e.target.value)} rows={6}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
-          placeholder="輸入或從單元4載入文案…" />
-        <div className="text-[10px] text-gray-400 mt-1">{copyText.length} 字</div>
+          placeholder={t('u9.copyPlaceholder')} />
+        <div className="text-[10px] text-gray-400 mt-1">{t('u9.charCount', { n: copyText.length })}</div>
       </div>
 
       {error && (
@@ -3375,14 +3377,14 @@ function Unit9Upload({
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
         style={{ background: 'var(--primary)' }}>
         {uploading
-          ? <><Loader2 className="h-4 w-4 animate-spin" />上傳中…</>
-          : <><Upload className="h-4 w-4" />一鍵發布至 {allSelected.length} 個平台</>}
+          ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u9.uploading')}</>
+          : <><Upload className="h-4 w-4" />{t('u9.publishTo', { n: allSelected.length })}</>}
       </button>
 
       {/* Results */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-gray-700">上傳結果</div>
+          <div className="text-sm font-semibold text-gray-700">{t('u9.uploadResult')}</div>
           <div className="space-y-2">
             {results.map(r => (
               <div key={r.platform}
@@ -3392,7 +3394,7 @@ function Unit9Upload({
                   : <XCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />}
                 <div className="flex-1 min-w-0">
                   <div className={`text-sm font-semibold ${r.ok ? 'text-green-700' : 'text-red-700'}`}>
-                    {r.platform} — {r.ok ? '發布成功' : '發布失敗'}
+                    {r.platform} — {r.ok ? t('u9.publishOk') : t('u9.publishFail')}
                   </div>
                   {r.postId && <div className="text-xs text-green-600 mt-0.5">Post ID: {r.postId}</div>}
                   {r.error && (
@@ -3400,7 +3402,7 @@ function Unit9Upload({
                       {r.error}
                       {/expired|invalid.*token|token.*invalid|session.*expired/i.test(r.error) && (
                         <a href="/settings" className="ml-2 underline font-semibold text-red-700 hover:text-red-900">
-                          → 前往設定更新 Token
+                          {t('u9.updateToken')}
                         </a>
                       )}
                     </div>
@@ -3410,7 +3412,7 @@ function Unit9Upload({
             ))}
           </div>
           <div className="text-[10px] text-gray-400">
-            {results.filter(r => r.ok).length}/{results.length} 個平台成功 · {savedData?.lastUpload?.uploadedAt ? new Date(savedData.lastUpload.uploadedAt).toLocaleString('zh-TW') : ''}
+            {t('u9.successCount', { ok: results.filter(r => r.ok).length, total: results.length })} · {savedData?.lastUpload?.uploadedAt ? new Date(savedData.lastUpload.uploadedAt).toLocaleString(locale) : ''}
           </div>
         </div>
       )}
