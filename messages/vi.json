@@ -1535,5 +1535,47 @@
       "anchorVideoDone": "Video người dẫn xong", "anchorVideoFailed": "Tạo video người dẫn thất bại", "heygenTimeout": "HeyGen quá hạn",
       "unitNotSupported": "Đơn vị {unitId} không hỗ trợ tự chạy"
     }
+  },
+  "Prospect": {
+    "title": "Tiếp thị khách hàng tiềm năng",
+    "subtitle": "Tự thu thập tổ chức → AI lọc + phân loại → tính khoảng cách → gọi điện / gửi email",
+    "tabPhone": "Tiếp thị qua điện thoại", "tabEmail": "Tiếp thị qua Email", "tabSchedule": "Chạy theo lịch",
+    "cats": { "factory": "Sản xuất/Nhà máy", "hotel": "Lưu trú/Homestay", "restaurant": "Ẩm thực/Thực phẩm", "financial": "Tài chính/Bảo hiểm", "retail": "Bán lẻ/Cửa hàng", "healthcare": "Y tế/Phòng khám", "education": "Giáo dục/Đào tạo", "realestate": "Bất động sản", "logistics": "Logistics/Vận tải", "other": "Khác" },
+    "cond": { "mobile": "Di động", "landline": "Cố định", "empRange": "{min}–{max} người", "empMin": "≥{min} người", "empMax": "≤{max} người", "catchAll": "Khác (khớp tất cả)", "keyword": "Từ khóa: {tag}", "all": "(khớp tất cả)" },
+    "voice": { "mlFemale": "Đa ngôn ngữ, Nữ", "mlMale": "Đa ngôn ngữ, Nam", "brMale": "Tiếng Anh-Anh, Nam", "usFemale": "Tiếng Anh-Mỹ, Nữ" },
+    "def": { "script": "Kịch bản mặc định", "scriptText": "Xin chào, chúng tôi là...", "template": "Mẫu mặc định", "generalCustomer": "Khách hàng chung", "generalCustomerDesc": "Khách tiềm năng chung hoặc không rõ", "marketingTeam": "Đội tiếp thị", "scriptN": "Kịch bản {n}", "ruleN": "Quy tắc {n}", "templateN": "Mẫu {n}", "categoryN": "Phân loại {n}" },
+    "rule": { "namePlaceholder": "Tên quy tắc", "phoneType": "Loại điện thoại", "any": "Bất kỳ", "aiCategory": "Phân loại AI", "anyCategory": "— Mọi phân loại —", "minEmp": "Số người tối thiểu (0=không giới hạn)", "maxEmp": "Số người tối đa (0=không giới hạn)", "maxDist": "Khoảng cách tối đa km (0=không giới hạn)", "customTag": "Từ khóa tùy chỉnh (khớp nếu tên hoặc phân loại gốc chứa từ này)", "customTagPlaceholder": "VD: làm đẹp, nhà máy… (để trống hoặc \"khác\" = khớp tất cả, làm quy tắc dự phòng)", "useScript": "Kịch bản sử dụng", "noCall": "— Không gọi —", "condPrefix": "Điều kiện: " },
+    "err": { "noEmailOrgs": "Không có tổ chức nào khớp quy tắc đã chọn và có Email", "noKeywords": "Vui lòng nhập từ khóa tìm kiếm", "collectFailed": "Thu thập thất bại", "aborted": "Đã hủy", "aiFailed": "Phân tích AI thất bại" },
+    "msg": { "collected": "Đã thu thập {count} ký tự", "selected": "Chọn {selected} / {total}", "called": "Đã gọi {count}" },
+    "sched": {
+      "enable": "Bật chạy theo lịch", "enableHint": "Hệ thống kiểm tra mỗi giờ và kích hoạt thu thập+lọc vào thời gian đã đặt",
+      "mode": "Chế độ", "modeBoth": "Cả hai",
+      "modePhoneHint": "Sau khi thu thập+lọc, bạn sẽ được thông báo qua Telegram để gọi điện",
+      "modeEmailHint": "Sau khi thu thập+lọc, tự gửi email hàng loạt theo quy tắc",
+      "modeBothHint": "Sau khi thu thập+lọc, tự gửi email và Telegram thông báo cho bạn gọi điện",
+      "frequency": "Tần suất", "daily": "Hàng ngày", "weekly": "Hàng tuần", "monthly": "Hàng tháng",
+      "weekday": "Thứ trong tuần", "dow": { "0": "CN", "1": "T2", "2": "T3", "3": "T4", "4": "T5", "5": "T6", "6": "T7" },
+      "monthDay": "Ngày trong tháng", "monthDayHint": "Tối đa 28 (tránh vấn đề số ngày trong tháng)",
+      "time": "Thời gian chạy", "hourUnit": "{h}:00", "minUnit": ":{m}",
+      "statusTitle": "Trạng thái", "lastRun": "Lần chạy trước: ", "nextRun": "Lần chạy tiếp: ",
+      "lastResult": "Kết quả trước: thu thập {total} → chọn ", "lastResultSuffix": "",
+      "saving": "Đang lưu…", "saved": "Đã lưu!", "save": "Lưu lịch",
+      "saveHint": "Sau khi lưu, hệ thống kiểm tra mỗi giờ và chạy đúng giờ. Kết quả thông báo qua Telegram."
+    },
+    "s1": { "title": "Bước 1 — Nguồn thu thập", "keywords": "Từ khóa tìm kiếm *", "keywordsPlaceholder": "Mỗi dòng hoặc phân tách bằng dấu phẩy một từ khóa, tìm độc lập\nVD:\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea", "keywordsHint": "Nhiều từ khóa được tìm riêng và gộp/loại trùng", "location": "Khu vực (tùy chọn)", "locationPlaceholder": "VD: TP Đài Nam, huyện Tân Trúc", "limit": "Số lượng tối đa mỗi từ khóa", "limitHint": "Nhiều từ khóa tìm riêng rồi gộp; tổng = số lượng × số từ khóa", "channels": "Kênh thu thập" },
+    "src": { "map": "Bản đồ", "web": "Trang web" },
+    "s2": { "title": "Bước 2 — Điều kiện lọc", "criteria": "Điều kiện lọc (AI hiểu)", "criteriaPlaceholder": "VD: chỉ sản xuất và nhà máy; trên 50 nhân viên; loại studio cá nhân nhỏ", "minEmp": "Số nhân viên tối thiểu", "unlimited": "0 = không giới hạn" },
+    "s3": { "title": "Bước 3 — Khoảng cách", "enable": "Bật lọc theo khoảng cách", "enableHint": "Khi tắt, không loại theo khoảng cách; vẫn hiện khoảng cách cửa hàng gần nhất", "noBranches": "Chưa thiết lập cửa hàng. Hãy thêm tại \"Tự động hóa tiếp thị → Dữ liệu công ty → Cửa hàng/Chi nhánh\".", "branchesLoaded": "Đã tải <b>{total}</b> cửa hàng, trong đó <b>{coords}</b> có tọa độ để tính khoảng cách.", "maxDist": "Khoảng cách tối đa (km)", "maxDistPlaceholder": "VD: 5", "maxDistHint": "Tổ chức vượt khoảng cách này sẽ bị loại (cần cửa hàng có tọa độ)." },
+    "s4p": { "title": "Bước 4 — Kịch bản giọng nói", "scriptName": "Tên kịch bản", "scriptTextPlaceholder": "Nhập nội dung kịch bản giọng nói...", "addScript": "Thêm kịch bản" },
+    "s5p": { "title": "Bước 5 — Quy tắc gọi", "hint1": "Khớp từng quy tắc theo thứ tự; <b>quy tắc khớp đầu tiên</b> thắng. Kết hợp loại điện thoại, phân loại AI, số người, khoảng cách, v.v.", "hint2": "Tổ chức không khớp quy tắc nào sẽ vào nhóm \"Chưa phân bổ\" và không tự gọi.", "empty": "Chưa có quy tắc, nhấn \"Thêm quy tắc\" để bắt đầu", "addRule": "Thêm quy tắc" },
+    "s6p": { "title": "Bước 6 — Cài đặt gọi", "callerId": "Số hiển thị Bird (Caller ID)", "callerIdHint": " — số người nhận thấy khi gọi (số công ty bạn)", "callerIdWarn": "⚠️ Không điền thì không gọi được, hãy nhập số đã xác minh trong tài khoản Bird", "dialList": "Danh sách chờ gọi ({count} số hợp lệ)", "fromFilter": " — từ kết quả lọc", "needRules": "Hãy tạo quy tắc gọi ở Bước 5 trước", "dialable": "{has} gọi được / {no} không có số", "andMore": "…còn {count} số nữa", "noPhonePrefix": "Không có số: ", "unmappedNoCall": "Chưa phân bổ (không khớp quy tắc) {count} — sẽ không gọi", "noSelected": "Sau lọc không có tổ chức được chọn, không có số để gọi", "runFirst": "Sau khi chạy Pipeline, danh sách chờ gọi sẽ hiện ở đây" },
+    "s4e": { "title": "Bước 4 — Mẫu kịch bản Email", "hint": "Định nghĩa mẫu nội dung Email để dùng trong quy tắc gửi.", "templateName": "Tên mẫu", "subject": "Tiêu đề Email", "body": "Nội dung Email (hỗ trợ xuống dòng)", "addTemplate": "Thêm mẫu" },
+    "s5e": { "title": "Bước 5 — Quy tắc gửi", "hint": "Tùy chỉnh tên phân loại và điều kiện, chỉ định mẫu áp dụng. Khớp theo thứ tự, quy tắc khớp đầu tiên có hiệu lực.", "categoryName": "Tên phân loại (VD: blogger làm đẹp)", "tagPlaceholder": "VD: làm đẹp, nhà máy, blogger (để trống = không giới hạn)", "applyTemplate": "Áp dụng mẫu" },
+    "s6e": { "title": "Bước 6 — Cài đặt người gửi", "fromName": "Tên người gửi", "fromEmail": "Email người gửi (tên miền đã xác minh Resend)", "envNote": "Cần cài biến môi trường: " },
+    "run": { "running": "Đang chạy…", "exec": "Chạy Pipeline", "collect": "Thu thập", "analyze": "Phân tích", "call": "Gọi" },
+    "stat": { "total": "Tổng thu thập", "selected": "Được chọn", "rejected": "Bị loại" },
+    "email": { "sendTitle": "Gửi Email", "noEmailTitle": "⚠️ Không tự phát hiện Email nào", "noEmailHint": "Google Maps không cung cấp dữ liệu Email. Hãy thêm <b>Facebook</b> hoặc <b>Trang web</b> vào kênh ở Bước 1, hệ thống sẽ thử trích xuất Email từ dữ liệu nhà cung cấp.", "manualHint": "Bạn cũng có thể nhập thủ công Email từng tổ chức ở bảng dưới.", "perOrgEmail": "Email từng tổ chức", "filledCount": "{filled}/{total} đã điền", "templateLabel": "Mẫu: {name}", "notSet": "Chưa đặt", "hasEmail": "{count} có Email", "sending": "Đang gửi…", "sendN": "Gửi {count}", "subjectPrefix": "Tiêu đề: " },
+    "res": { "success": "✓ {n} thành công", "fail": "✗ {n} thất bại" },
+    "phone": { "groupTitle": "Gọi theo nhóm quy tắc", "matchedPhones": "{matched} tổ chức · {phones} số hợp lệ", "calling": "Đang gọi…", "callN": "Gọi {count}", "noScript": "Chưa gán kịch bản", "scriptPrefix": "Kịch bản: ", "noPhone": "Không có điện thoại", "unmappedCount": "Chưa phân bổ (không khớp quy tắc) {count}", "rejectedCount": "Tổ chức bị loại {count} (nhấn để mở)", "selectedListCount": "Danh sách được chọn đầy đủ {count}", "colOrg": "Tổ chức", "colCategory": "Phân loại", "colPhone": "Điện thoại", "colRule": "Quy tắc", "unassigned": "Chưa phân bổ" }
   }
 }

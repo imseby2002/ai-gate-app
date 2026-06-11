@@ -1535,5 +1535,47 @@
       "anchorVideoDone": "主播影片完成", "anchorVideoFailed": "主播影片生成失敗", "heygenTimeout": "HeyGen 逾時",
       "unitNotSupported": "Unit {unitId} 不支援自動執行"
     }
+  },
+  "Prospect": {
+    "title": "潛在客戶行銷",
+    "subtitle": "自動蒐集組織 → AI 篩選 + 分類 → 距離計算 → 電話撥打 / Email 寄送",
+    "tabPhone": "電話行銷", "tabEmail": "Email 行銷", "tabSchedule": "定時執行",
+    "cats": { "factory": "製造/工廠", "hotel": "住宿/民宿", "restaurant": "餐飲/食品", "financial": "金融/保險", "retail": "零售/商店", "healthcare": "醫療/診所", "education": "教育/培訓", "realestate": "房地產", "logistics": "物流/運輸", "other": "其他" },
+    "cond": { "mobile": "行動電話", "landline": "座機", "empRange": "{min}–{max}人", "empMin": "≥{min}人", "empMax": "≤{max}人", "catchAll": "其他（全部符合）", "keyword": "關鍵字：{tag}", "all": "（全部符合）" },
+    "voice": { "mlFemale": "多語言，女", "mlMale": "多語言，男", "brMale": "英式英語，男", "usFemale": "美式英語，女" },
+    "def": { "script": "預設腳本", "scriptText": "您好，我們是...", "template": "預設模板", "generalCustomer": "一般客戶", "generalCustomerDesc": "一般潛在客戶或不明身份", "marketingTeam": "行銷團隊", "scriptN": "腳本 {n}", "ruleN": "規則 {n}", "templateN": "模板 {n}", "categoryN": "分類 {n}" },
+    "rule": { "namePlaceholder": "規則名稱", "phoneType": "電話類型", "any": "任何", "aiCategory": "AI 分類", "anyCategory": "— 任何分類 —", "minEmp": "最少人數（0=不限）", "maxEmp": "最多人數（0=不限）", "maxDist": "距離上限 km（0=不限）", "customTag": "自訂關鍵字（名稱或原始分類含此字即符合）", "customTagPlaceholder": "例如：美妝、工廠…（空白或填「其他」=全部符合，可做兜底規則）", "useScript": "使用腳本", "noCall": "— 不撥打 —", "condPrefix": "條件：" },
+    "err": { "noEmailOrgs": "所選規則沒有符合條件且有 Email 的組織", "noKeywords": "請填寫搜尋關鍵字", "collectFailed": "蒐集失敗", "aborted": "已中止", "aiFailed": "AI 分析失敗" },
+    "msg": { "collected": "已蒐集 {count} 字元", "selected": "入選 {selected} / {total} 家", "called": "撥出 {count} 支" },
+    "sched": {
+      "enable": "啟用定時執行", "enableHint": "系統每小時自動檢查，依設定時間觸發蒐集＋篩選",
+      "mode": "執行模式", "modeBoth": "兩者都執行",
+      "modePhoneHint": "系統完成蒐集篩選後，將以 Telegram 通知您進行電話撥打",
+      "modeEmailHint": "系統完成蒐集篩選後，自動依規則批次寄送 Email",
+      "modeBothHint": "系統完成蒐集篩選後，自動寄送 Email 並以 Telegram 通知您撥打電話",
+      "frequency": "執行頻率", "daily": "每天", "weekly": "每週", "monthly": "每月",
+      "weekday": "執行星期", "dow": { "0": "日", "1": "一", "2": "二", "3": "三", "4": "四", "5": "五", "6": "六" },
+      "monthDay": "每月幾號", "monthDayHint": "最大 28（避免月份天數問題）",
+      "time": "執行時間", "hourUnit": "{h} 時", "minUnit": "{m} 分",
+      "statusTitle": "執行狀態", "lastRun": "上次執行：", "nextRun": "下次執行：",
+      "lastResult": "上次結果：蒐集 {total} 家 → 入選 ", "lastResultSuffix": " 家",
+      "saving": "儲存中…", "saved": "已儲存！", "save": "儲存排程設定",
+      "saveHint": "儲存後系統每小時自動檢查，到時間即觸發執行。結果透過 Telegram 通知。"
+    },
+    "s1": { "title": "Step 1 — 蒐集來源", "keywords": "搜尋關鍵字 *", "keywordsPlaceholder": "每行或逗號分隔一個關鍵字，各自獨立搜尋\n例如：\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea", "keywordsHint": "多個關鍵字會分別搜尋，結果合併去重", "location": "地區（選填）", "locationPlaceholder": "例如：台南市、新竹縣", "limit": "每個關鍵字最多筆數", "limitHint": "多個關鍵字會分別搜尋並合併，總筆數 = 筆數 × 關鍵字數", "channels": "蒐集管道" },
+    "src": { "map": "地圖", "web": "網頁" },
+    "s2": { "title": "Step 2 — 篩選條件", "criteria": "篩選條件（AI 理解）", "criteriaPlaceholder": "例如：只要製造業和工廠；員工人數 50 人以上；排除小型個人工作室", "minEmp": "最低員工人數", "unlimited": "0 = 不限" },
+    "s3": { "title": "Step 3 — 距離設定", "enable": "啟用距離篩選", "enableHint": "關閉時不依距離淘汰，仍顯示最近門市距離", "noBranches": "尚未設定門市。請前往「行銷自動化 → 公司資料 → 門市/分公司」新增。", "branchesLoaded": "已載入 <b>{total}</b> 個門市，其中 <b>{coords}</b> 個有經緯度可計算距離。", "maxDist": "距離上限（km）", "maxDistPlaceholder": "例如：5", "maxDistHint": "超過此距離的組織將被淘汰（需門市有設定經緯度）。" },
+    "s4p": { "title": "Step 4 — 語音腳本", "scriptName": "腳本名稱", "scriptTextPlaceholder": "輸入語音腳本內容...", "addScript": "新增腳本" },
+    "s5p": { "title": "Step 5 — 撥打規則", "hint1": "依序比對每條規則，<b>第一個符合的規則</b>勝出。可按電話類型、AI 分類、人數、距離等任意組合。", "hint2": "未匹配任何規則的組織將歸入「未分配」群組，不會自動撥打。", "empty": "尚未建立規則，點擊「新增規則」開始設定", "addRule": "新增規則" },
+    "s6p": { "title": "Step 6 — 撥話設定", "callerId": "Bird 顯示號碼（Caller ID）", "callerIdHint": " — 接收方看到的來電號碼（你的公司號碼）", "callerIdWarn": "⚠️ 未填寫則無法撥打，請填入 Bird 帳號中已驗證的號碼", "dialList": "待撥清單（共 {count} 支有效號碼）", "fromFilter": " — 來自篩選結果", "needRules": "請先在 Step 5 建立撥打規則", "dialable": "{has} 支可撥 / {no} 支無號碼", "andMore": "…還有 {count} 支", "noPhonePrefix": "無號碼：", "unmappedNoCall": "未分配（無匹配規則）{count} 家 — 不會被撥打", "noSelected": "篩選後無入選組織，無待撥號碼", "runFirst": "執行 Pipeline 後，待撥清單將顯示於此" },
+    "s4e": { "title": "Step 4 — Email 腳本模板", "hint": "定義 Email 內容模板，在發送規則中選用。", "templateName": "模板名稱", "subject": "Email 主旨", "body": "Email 內文（支援換行）", "addTemplate": "新增模板" },
+    "s5e": { "title": "Step 5 — 發送規則", "hint": "自訂分類名稱與條件，指定套用哪個模板。依序比對，第一個符合的規則生效。", "categoryName": "分類名稱（例如：美妝博主）", "tagPlaceholder": "例如：美妝、工廠、博主（空白不限）", "applyTemplate": "套用模板" },
+    "s6e": { "title": "Step 6 — 寄件設定", "fromName": "寄件人名稱", "fromEmail": "寄件人 Email（Resend 已驗證網域）", "envNote": "需設定環境變數：" },
+    "run": { "running": "執行中…", "exec": "執行 Pipeline", "collect": "蒐集", "analyze": "分析", "call": "撥打" },
+    "stat": { "total": "蒐集總數", "selected": "入選", "rejected": "淘汰" },
+    "email": { "sendTitle": "Email 寄送", "noEmailTitle": "⚠️ 未自動抓到任何 Email", "noEmailHint": "Google 地圖不提供 Email 資料。建議在 Step 1 蒐集管道加選 <b>Facebook</b> 或 <b>網頁</b>，系統會嘗試從廠商資料中萃取 Email。", "manualHint": "您也可以在下方表格手動填入各組織的 Email。", "perOrgEmail": "各組織 Email", "filledCount": "{filled}/{total} 筆已填", "templateLabel": "模板：{name}", "notSet": "未設定", "hasEmail": "{count} 個有 Email", "sending": "寄送中…", "sendN": "寄送 {count} 封", "subjectPrefix": "主旨：" },
+    "res": { "success": "✓ 成功 {n}", "fail": "✗ 失敗 {n}" },
+    "phone": { "groupTitle": "規則分組撥打", "matchedPhones": "{matched} 家 · {phones} 支有效電話", "calling": "撥打中…", "callN": "撥打 {count} 支", "noScript": "未指定腳本", "scriptPrefix": "腳本：", "noPhone": "無電話", "unmappedCount": "未分配（無匹配規則）{count} 家", "rejectedCount": "淘汰組織 {count} 家（點擊展開）", "selectedListCount": "入選完整列表 {count} 家", "colOrg": "組織", "colCategory": "分類", "colPhone": "電話", "colRule": "規則", "unassigned": "未分配" }
   }
 }

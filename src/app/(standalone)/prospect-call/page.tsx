@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
@@ -106,26 +107,29 @@ interface Config {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
+type Translate = ReturnType<typeof useTranslations>
+
 const CATEGORIES = [
-  { id: 'factory',    label: '製造/工廠',  emoji: '🏭' },
-  { id: 'hotel',      label: '住宿/民宿',  emoji: '🏨' },
-  { id: 'restaurant', label: '餐飲/食品',  emoji: '🍽️' },
-  { id: 'financial',  label: '金融/保險',  emoji: '🏦' },
-  { id: 'retail',     label: '零售/商店',  emoji: '🛍️' },
-  { id: 'healthcare', label: '醫療/診所',  emoji: '🏥' },
-  { id: 'education',  label: '教育/培訓',  emoji: '🎓' },
-  { id: 'realestate', label: '房地產',     emoji: '🏠' },
-  { id: 'logistics',  label: '物流/運輸',  emoji: '🚚' },
-  { id: 'other',      label: '其他',       emoji: '📋' },
+  { id: 'factory',    emoji: '🏭' },
+  { id: 'hotel',      emoji: '🏨' },
+  { id: 'restaurant', emoji: '🍽️' },
+  { id: 'financial',  emoji: '🏦' },
+  { id: 'retail',     emoji: '🛍️' },
+  { id: 'healthcare', emoji: '🏥' },
+  { id: 'education',  emoji: '🎓' },
+  { id: 'realestate', emoji: '🏠' },
+  { id: 'logistics',  emoji: '🚚' },
+  { id: 'other',      emoji: '📋' },
 ]
+const catLabel = (t: Translate, id: string) => t.has(`cats.${id}`) ? t(`cats.${id}`) : id
 
 const ELEVEN_VOICES = [
-  { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah — 多語言，女' },
-  { id: 'TX3LPaxmHKxFdv7VOQHJ', label: 'Liam — 多語言，男' },
-  { id: 'XB0fDUnXU5powFXDhCwa', label: 'Charlotte — 多語言，女' },
-  { id: 'onwK4e9ZLuTAKqWW03F9', label: 'Daniel — 英式英語，男' },
-  { id: 'pFZP5JQG7iQjIQuC4Bku', label: 'Lily — 多語言，女' },
-  { id: 'cgSgspJ2msm6clMCkdW9', label: 'Jessica — 美式英語，女' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah',     descKey: 'voice.mlFemale' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam',      descKey: 'voice.mlMale' },
+  { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', descKey: 'voice.mlFemale' },
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel',    descKey: 'voice.brMale' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily',      descKey: 'voice.mlFemale' },
+  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica',   descKey: 'voice.usFemale' },
 ]
 
 const EMPTY_CONDITION: RuleCondition = {
@@ -137,28 +141,30 @@ const EMPTY_CONDITION: RuleCondition = {
   customTag: '',
 }
 
-const DEFAULT_CONFIG: Config = {
-  keywords: '',
-  location: '',
-  sources: ['map'],
-  collectLimit: 50,
-  filterCriteria: '',
-  minEmployees: 0,
-  distanceEnabled: false,
-  maxDistanceKm: 5,
-  birdCallerId: '',
-  voiceScripts: [
-    { id: 'script-1', name: '預設腳本', text: '您好，我們是...', voiceId: 'EXAVITQu4vr4xnSDxMaL' },
-  ],
-  routingRules: [],
-  emailTemplates: [
-    { id: 'email-1', name: '預設模板', subject: '', body: '' },
-  ],
-  emailRules: [
-    { id: 'erule-1', name: '一般客戶', desc: '一般潛在客戶或不明身份', templateId: 'email-1', customTag: '', minEmployees: 0, maxEmployees: 0 },
-  ],
-  fromName: '行銷團隊',
-  fromEmail: '',
+function makeDefaultConfig(t: Translate): Config {
+  return {
+    keywords: '',
+    location: '',
+    sources: ['map'],
+    collectLimit: 50,
+    filterCriteria: '',
+    minEmployees: 0,
+    distanceEnabled: false,
+    maxDistanceKm: 5,
+    birdCallerId: '',
+    voiceScripts: [
+      { id: 'script-1', name: t('def.script'), text: t('def.scriptText'), voiceId: 'EXAVITQu4vr4xnSDxMaL' },
+    ],
+    routingRules: [],
+    emailTemplates: [
+      { id: 'email-1', name: t('def.template'), subject: '', body: '' },
+    ],
+    emailRules: [
+      { id: 'erule-1', name: t('def.generalCustomer'), desc: t('def.generalCustomerDesc'), templateId: 'email-1', customTag: '', minEmployees: 0, maxEmployees: 0 },
+    ],
+    fromName: t('def.marketingTeam'),
+    fromEmail: '',
+  }
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -209,19 +215,19 @@ function matchRule(org: ProspectOrg, rule: RoutingRule): boolean {
   return true
 }
 
-function conditionSummary(c: RuleCondition): string {
+function conditionSummary(c: RuleCondition, t: Translate): string {
   const parts: string[] = []
-  if (c.phoneType === 'mobile') parts.push('行動電話')
-  if (c.phoneType === 'landline') parts.push('座機')
-  if (c.aiCategory) parts.push(CATEGORIES.find(x => x.id === c.aiCategory)?.label ?? c.aiCategory)
-  if (c.minEmployees > 0 && c.maxEmployees > 0) parts.push(`${c.minEmployees}–${c.maxEmployees}人`)
-  else if (c.minEmployees > 0) parts.push(`≥${c.minEmployees}人`)
-  else if (c.maxEmployees > 0) parts.push(`≤${c.maxEmployees}人`)
+  if (c.phoneType === 'mobile') parts.push(t('cond.mobile'))
+  if (c.phoneType === 'landline') parts.push(t('cond.landline'))
+  if (c.aiCategory) parts.push(catLabel(t, c.aiCategory))
+  if (c.minEmployees > 0 && c.maxEmployees > 0) parts.push(t('cond.empRange', { min: c.minEmployees, max: c.maxEmployees }))
+  else if (c.minEmployees > 0) parts.push(t('cond.empMin', { min: c.minEmployees }))
+  else if (c.maxEmployees > 0) parts.push(t('cond.empMax', { max: c.maxEmployees }))
   if (c.maxDistanceKm > 0) parts.push(`≤${c.maxDistanceKm}km`)
   if (c.customTag.trim()) {
-    parts.push(isCatchAll(c.customTag) ? '其他（全部符合）' : `關鍵字：${c.customTag.trim()}`)
+    parts.push(isCatchAll(c.customTag) ? t('cond.catchAll') : t('cond.keyword', { tag: c.customTag.trim() }))
   }
-  return parts.length ? parts.join(' · ') : '（全部符合）'
+  return parts.length ? parts.join(' · ') : t('cond.all')
 }
 
 // ─── Section wrapper ────────────────────────────────────────────────────────────
@@ -281,6 +287,7 @@ function RoutingRuleEditor({
   onRemove: () => void
   index: number
 }) {
+  const t = useTranslations('Prospect')
   const setC = (patch: Partial<RuleCondition>) =>
     onChange({ condition: { ...rule.condition, ...patch } })
 
@@ -293,7 +300,7 @@ function RoutingRuleEditor({
         <input
           value={rule.name}
           onChange={e => onChange({ name: e.target.value })}
-          placeholder="規則名稱"
+          placeholder={t('rule.namePlaceholder')}
           className="flex-1 h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
         />
         <button type="button" onClick={onRemove}
@@ -306,12 +313,12 @@ function RoutingRuleEditor({
       <div className="p-3 grid grid-cols-2 gap-2">
         {/* Phone type */}
         <div className="col-span-2">
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">電話類型</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.phoneType')}</label>
           <div className="flex gap-1">
             {([
-              { val: 'any', label: '任何' },
-              { val: 'mobile', label: '📱 行動電話' },
-              { val: 'landline', label: '☎️ 座機' },
+              { val: 'any', label: t('rule.any') },
+              { val: 'mobile', label: `📱 ${t('cond.mobile')}` },
+              { val: 'landline', label: `☎️ ${t('cond.landline')}` },
             ] as { val: PhoneType; label: string }[]).map(opt => (
               <button
                 key={opt.val}
@@ -331,20 +338,20 @@ function RoutingRuleEditor({
 
         {/* AI Category */}
         <div className="col-span-2">
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">AI 分類</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.aiCategory')}</label>
           <select
             value={rule.condition.aiCategory}
             onChange={e => setC({ aiCategory: e.target.value })}
             className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
           >
-            <option value="">— 任何分類 —</option>
-            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+            <option value="">{t('rule.anyCategory')}</option>
+            {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.emoji} {catLabel(t, c.id)}</option>)}
           </select>
         </div>
 
         {/* Employee range */}
         <div>
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">最少人數（0=不限）</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.minEmp')}</label>
           <input
             type="number" min={0}
             value={rule.condition.minEmployees}
@@ -353,7 +360,7 @@ function RoutingRuleEditor({
           />
         </div>
         <div>
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">最多人數（0=不限）</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.maxEmp')}</label>
           <input
             type="number" min={0}
             value={rule.condition.maxEmployees}
@@ -364,7 +371,7 @@ function RoutingRuleEditor({
 
         {/* Max distance */}
         <div className="col-span-2">
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">距離上限 km（0=不限）</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.maxDist')}</label>
           <input
             type="number" min={0} step={0.5}
             value={rule.condition.maxDistanceKm}
@@ -375,24 +382,24 @@ function RoutingRuleEditor({
 
         {/* Custom tag */}
         <div className="col-span-2">
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">自訂關鍵字（名稱或原始分類含此字即符合）</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.customTag')}</label>
           <input
             value={rule.condition.customTag}
             onChange={e => setC({ customTag: e.target.value })}
-            placeholder="例如：美妝、工廠…（空白或填「其他」=全部符合，可做兜底規則）"
+            placeholder={t('rule.customTagPlaceholder')}
             className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
           />
         </div>
 
         {/* Script */}
         <div className="col-span-2 pt-1 border-t">
-          <label className="block text-[10px] font-medium text-gray-500 mb-1">使用腳本</label>
+          <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('rule.useScript')}</label>
           <select
             value={rule.scriptId}
             onChange={e => onChange({ scriptId: e.target.value })}
             className="w-full h-7 px-2 rounded-md border text-xs outline-none focus:ring-2 bg-white"
           >
-            <option value="">— 不撥打 —</option>
+            <option value="">{t('rule.noCall')}</option>
             {voiceScripts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
@@ -401,7 +408,7 @@ function RoutingRuleEditor({
       {/* Summary */}
       <div className="px-3 pb-2">
         <div className="text-[10px] text-gray-400 bg-white rounded px-2 py-1 border">
-          條件：{conditionSummary(rule.condition)}
+          {t('rule.condPrefix')}{conditionSummary(rule.condition, t)}
         </div>
       </div>
     </div>
@@ -411,8 +418,10 @@ function RoutingRuleEditor({
 // ─── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ProspectCallPage() {
+  const t = useTranslations('Prospect')
+  const locale = useLocale()
   const [activeTab, setActiveTab] = useState<'phone' | 'email' | 'schedule'>('phone')
-  const [config, setConfig] = useState<Config>(DEFAULT_CONFIG)
+  const [config, setConfig] = useState<Config>(() => makeDefaultConfig(t))
   const [branches, setBranches] = useState<Branch[]>([])
   const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailRules: true, emailSettings: true, schedule: false })
   const [schedule, setSchedule] = useState<ProspectSchedule>(DEFAULT_SCHEDULE)
@@ -489,7 +498,7 @@ export default function ProspectCallPage() {
   // ── Voice scripts CRUD ────────────────────────────────────────────────────
 
   const addScript = () => setC('voiceScripts', [...config.voiceScripts, {
-    id: `script-${Date.now()}`, name: `腳本 ${config.voiceScripts.length + 1}`,
+    id: `script-${Date.now()}`, name: t('def.scriptN', { n: config.voiceScripts.length + 1 }),
     text: '', voiceId: 'EXAVITQu4vr4xnSDxMaL',
   }])
 
@@ -503,7 +512,7 @@ export default function ProspectCallPage() {
 
   const addRule = () => setC('routingRules', [...config.routingRules, {
     id: `rule-${Date.now()}`,
-    name: `規則 ${config.routingRules.length + 1}`,
+    name: t('def.ruleN', { n: config.routingRules.length + 1 }),
     condition: { ...EMPTY_CONDITION },
     scriptId: config.voiceScripts[0]?.id ?? '',
   }])
@@ -517,7 +526,7 @@ export default function ProspectCallPage() {
   // ── Email templates CRUD ─────────────────────────────────────────────────
 
   const addEmailTemplate = () => setC('emailTemplates', [...config.emailTemplates, {
-    id: `email-${Date.now()}`, name: `模板 ${config.emailTemplates.length + 1}`,
+    id: `email-${Date.now()}`, name: t('def.templateN', { n: config.emailTemplates.length + 1 }),
     subject: '', body: '',
   }])
 
@@ -531,7 +540,7 @@ export default function ProspectCallPage() {
 
   const addEmailRule = () => setC('emailRules', [...(config.emailRules ?? []), {
     id: `erule-${Date.now()}`,
-    name: `分類 ${(config.emailRules ?? []).length + 1}`,
+    name: t('def.categoryN', { n: (config.emailRules ?? []).length + 1 }),
     desc: '',
     templateId: config.emailTemplates[0]?.id ?? '',
     customTag: '',
@@ -579,7 +588,7 @@ export default function ProspectCallPage() {
       if (!emailAddr) return false
       return matchEmailRule(o, rule)
     })
-    if (targetOrgs.length === 0) { setError('所選規則沒有符合條件且有 Email 的組織'); return }
+    if (targetOrgs.length === 0) { setError(t('err.noEmailOrgs')); return }
     setSendingEmail(rule.id)
     try {
       const recipients = targetOrgs.map(o => ({
@@ -627,7 +636,7 @@ export default function ProspectCallPage() {
   // ── Run pipeline ──────────────────────────────────────────────────────────
 
   const runPipeline = async () => {
-    if (!config.keywords.trim()) { setError('請填寫搜尋關鍵字'); return }
+    if (!config.keywords.trim()) { setError(t('err.noKeywords')); return }
     setError(''); setRunning(true); abortRef.current = false
     setOrgs([]); setCallResults({})
     setStepStatus({ collect: 'running', filter: 'idle', done: 'idle' })
@@ -662,12 +671,12 @@ export default function ProspectCallPage() {
         }),
       })
       const collectData = await collectRes.json()
-      if (!collectRes.ok) throw new Error(collectData.error || '蒐集失敗')
+      if (!collectRes.ok) throw new Error(collectData.error || t('err.collectFailed'))
       const rawText: string = collectData.raw || collectData.result || collectData.summary || ''
       setStepStatus(p => ({ ...p, collect: 'done', filter: 'running' }))
-      setStepMsg(p => ({ ...p, collect: `已蒐集 ${rawText.length} 字元` }))
+      setStepMsg(p => ({ ...p, collect: t('msg.collected', { count: rawText.length }) }))
 
-      if (abortRef.current) throw new Error('已中止')
+      if (abortRef.current) throw new Error(t('err.aborted'))
 
       const filterRes = await fetch('/api/marketing/prospect-filter', {
         method: 'POST',
@@ -681,12 +690,12 @@ export default function ProspectCallPage() {
         }),
       })
       const filterData = await filterRes.json()
-      if (!filterRes.ok) throw new Error(filterData.error || 'AI 分析失敗')
+      if (!filterRes.ok) throw new Error(filterData.error || t('err.aiFailed'))
       const result: ProspectOrg[] = filterData.orgs || []
       setOrgs(result)
       const selected = result.filter(o => o.selected)
       setStepStatus(p => ({ ...p, filter: 'done', call: 'running' }))
-      setStepMsg(p => ({ ...p, filter: `入選 ${selected.length} / ${result.length} 家` }))
+      setStepMsg(p => ({ ...p, filter: t('msg.selected', { selected: selected.length, total: result.length }) }))
 
       // ── 自動依規則撥打 ──────────────────────────────────────────────────────
       // 計算每個 org 對應的規則（inline，不依賴 React state）
@@ -732,7 +741,7 @@ export default function ProspectCallPage() {
       }
 
       setStepStatus(p => ({ ...p, call: 'done', done: 'done' }))
-      setStepMsg(p => ({ ...p, call: `撥出 ${totalCalled} 支` }))
+      setStepMsg(p => ({ ...p, call: t('msg.called', { count: totalCalled }) }))
 
     } catch (e) {
       const msg = String(e)
@@ -802,16 +811,16 @@ export default function ProspectCallPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />潛在客戶行銷
+            <Users className="h-6 w-6 text-primary" />{t('title')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            自動蒐集組織 → AI 篩選 + 分類 → 距離計算 → 電話撥打 / Email 寄送
+            {t('subtitle')}
           </p>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 border-b">
-          {([['phone', '📞 電話行銷'], ['email', '📧 Email 行銷'], ['schedule', '⏱ 定時執行']] as const).map(([tab, label]) => (
+          {([['phone', `📞 ${t('tabPhone')}`], ['email', `📧 ${t('tabEmail')}`], ['schedule', `⏱ ${t('tabSchedule')}`]] as const).map(([tab, label]) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab
@@ -829,8 +838,8 @@ export default function ProspectCallPage() {
             {/* Enable toggle */}
             <div className="border rounded-xl p-5 flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold">啟用定時執行</div>
-                <div className="text-xs text-gray-400 mt-0.5">系統每小時自動檢查，依設定時間觸發蒐集＋篩選</div>
+                <div className="text-sm font-semibold">{t('sched.enable')}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{t('sched.enableHint')}</div>
               </div>
               <button type="button" onClick={() => setSched('enabled', !schedule.enabled)}
                 className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
@@ -843,12 +852,12 @@ export default function ProspectCallPage() {
               <div className="border rounded-xl p-5 space-y-4">
                 {/* Mode */}
                 <div>
-                  <label className="block text-xs font-medium mb-2">執行模式</label>
+                  <label className="block text-xs font-medium mb-2">{t('sched.mode')}</label>
                   <div className="flex gap-2">
                     {([
-                      { val: 'phone', label: '📞 電話行銷' },
-                      { val: 'email', label: '📧 Email行銷' },
-                      { val: 'both',  label: '🔀 兩者都執行' },
+                      { val: 'phone', label: `📞 ${t('tabPhone')}` },
+                      { val: 'email', label: `📧 ${t('tabEmail')}` },
+                      { val: 'both',  label: `🔀 ${t('sched.modeBoth')}` },
                     ] as const).map(opt => (
                       <button key={opt.val} type="button" onClick={() => setSched('mode', opt.val)}
                         className="flex-1 py-2 rounded-lg text-sm border transition-all font-medium"
@@ -860,17 +869,17 @@ export default function ProspectCallPage() {
                     ))}
                   </div>
                   <p className="text-xs text-gray-400 mt-1.5">
-                    {schedule.mode === 'phone' && '系統完成蒐集篩選後，將以 Telegram 通知您進行電話撥打'}
-                    {schedule.mode === 'email' && '系統完成蒐集篩選後，自動依規則批次寄送 Email'}
-                    {schedule.mode === 'both'  && '系統完成蒐集篩選後，自動寄送 Email 並以 Telegram 通知您撥打電話'}
+                    {schedule.mode === 'phone' && t('sched.modePhoneHint')}
+                    {schedule.mode === 'email' && t('sched.modeEmailHint')}
+                    {schedule.mode === 'both'  && t('sched.modeBothHint')}
                   </p>
                 </div>
 
                 {/* Frequency */}
                 <div>
-                  <label className="block text-xs font-medium mb-2">執行頻率</label>
+                  <label className="block text-xs font-medium mb-2">{t('sched.frequency')}</label>
                   <div className="flex gap-2">
-                    {([{ val: 'daily', label: '每天' }, { val: 'weekly', label: '每週' }, { val: 'monthly', label: '每月' }] as const).map(opt => (
+                    {([{ val: 'daily', label: t('sched.daily') }, { val: 'weekly', label: t('sched.weekly') }, { val: 'monthly', label: t('sched.monthly') }] as const).map(opt => (
                       <button key={opt.val} type="button" onClick={() => setSched('frequency', opt.val)}
                         className="flex-1 py-2 rounded-lg text-sm border transition-all font-medium"
                         style={schedule.frequency === opt.val
@@ -885,15 +894,15 @@ export default function ProspectCallPage() {
                 {/* Weekday */}
                 {schedule.frequency === 'weekly' && (
                   <div>
-                    <label className="block text-xs font-medium mb-2">執行星期</label>
+                    <label className="block text-xs font-medium mb-2">{t('sched.weekday')}</label>
                     <div className="flex gap-1">
-                      {['日','一','二','三','四','五','六'].map((d, i) => (
+                      {[0,1,2,3,4,5,6].map(i => (
                         <button key={i} type="button" onClick={() => setSched('weekday', i)}
                           className="flex-1 py-2 rounded-lg text-sm border transition-all"
                           style={schedule.weekday === i
                             ? { borderColor: 'var(--primary)', color: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', fontWeight: 600 }
                             : { borderColor: '#e5e7eb', color: '#6b7280' }}>
-                          {d}
+                          {t(`sched.dow.${i}`)}
                         </button>
                       ))}
                     </div>
@@ -903,28 +912,28 @@ export default function ProspectCallPage() {
                 {/* Month day */}
                 {schedule.frequency === 'monthly' && (
                   <div>
-                    <label className="block text-xs font-medium mb-2">每月幾號</label>
+                    <label className="block text-xs font-medium mb-2">{t('sched.monthDay')}</label>
                     <input type="number" min={1} max={28} value={schedule.monthDay}
                       onChange={e => setSched('monthDay', Number(e.target.value))}
                       className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-                    <p className="text-[11px] text-gray-400 mt-1">最大 28（避免月份天數問題）</p>
+                    <p className="text-[11px] text-gray-400 mt-1">{t('sched.monthDayHint')}</p>
                   </div>
                 )}
 
                 {/* Time */}
                 <div>
-                  <label className="block text-xs font-medium mb-2">執行時間</label>
+                  <label className="block text-xs font-medium mb-2">{t('sched.time')}</label>
                   <div className="flex gap-3">
                     <select value={schedule.hour} onChange={e => setSched('hour', Number(e.target.value))}
                       className="flex-1 h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
                       {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={i}>{String(i).padStart(2,'0')} 時</option>
+                        <option key={i} value={i}>{t('sched.hourUnit', { h: String(i).padStart(2,'0') })}</option>
                       ))}
                     </select>
                     <select value={schedule.minute} onChange={e => setSched('minute', Number(e.target.value))}
                       className="flex-1 h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
                       {[0,15,30,45].map(m => (
-                        <option key={m} value={m}>{String(m).padStart(2,'0')} 分</option>
+                        <option key={m} value={m}>{t('sched.minUnit', { m: String(m).padStart(2,'0') })}</option>
                       ))}
                     </select>
                   </div>
@@ -936,17 +945,17 @@ export default function ProspectCallPage() {
             {(schedule.nextRunAt || schedule.lastRunAt || scheduleLastResult) && (
               <div className="border rounded-xl p-4 space-y-2 bg-blue-50 border-blue-100">
                 <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />執行狀態
+                  <Clock className="h-3.5 w-3.5" />{t('sched.statusTitle')}
                 </div>
                 {schedule.lastRunAt && (
-                  <div className="text-xs text-gray-600">上次執行：<span className="font-medium">{new Date(schedule.lastRunAt).toLocaleString('zh-TW')}</span></div>
+                  <div className="text-xs text-gray-600">{t('sched.lastRun')}<span className="font-medium">{new Date(schedule.lastRunAt).toLocaleString(locale)}</span></div>
                 )}
                 {schedule.nextRunAt && (
-                  <div className="text-xs text-blue-700">下次執行：<span className="font-semibold">{new Date(schedule.nextRunAt).toLocaleString('zh-TW')}</span></div>
+                  <div className="text-xs text-blue-700">{t('sched.nextRun')}<span className="font-semibold">{new Date(schedule.nextRunAt).toLocaleString(locale)}</span></div>
                 )}
                 {scheduleLastResult && (
                   <div className="text-xs text-gray-600 pt-1 border-t border-blue-200">
-                    上次結果：蒐集 {scheduleLastResult.total} 家 → 入選 <span className="text-green-600 font-semibold">{scheduleLastResult.selected}</span> 家
+                    {t('sched.lastResult', { total: scheduleLastResult.total })}<span className="text-green-600 font-semibold">{scheduleLastResult.selected}</span>{t('sched.lastResultSuffix')}
                   </div>
                 )}
               </div>
@@ -956,12 +965,12 @@ export default function ProspectCallPage() {
             <button type="button" onClick={saveSchedule} disabled={scheduleSaving}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
               style={{ background: 'var(--primary)' }}>
-              {scheduleSaving ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</>
-                : scheduleSaved ? <><CheckCircle2 className="h-4 w-4" />已儲存！</>
-                : <><Save className="h-4 w-4" />儲存排程設定</>}
+              {scheduleSaving ? <><Loader2 className="h-4 w-4 animate-spin" />{t('sched.saving')}</>
+                : scheduleSaved ? <><CheckCircle2 className="h-4 w-4" />{t('sched.saved')}</>
+                : <><Save className="h-4 w-4" />{t('sched.save')}</>}
             </button>
             <p className="text-[11px] text-gray-400 text-center">
-              儲存後系統每小時自動檢查，到時間即觸發執行。結果透過 Telegram 通知。
+              {t('sched.saveHint')}
             </p>
           </div>
         )}
@@ -973,35 +982,35 @@ export default function ProspectCallPage() {
           <div className="space-y-3">
 
             {/* Step 1: Collect */}
-            <Section title="Step 1 — 蒐集來源" icon={Search}
+            <Section title={t('s1.title')} icon={Search}
               open={openSections.collect} onToggle={() => toggleSection('collect')}>
               <div>
-                <label className="block text-xs font-medium mb-1">搜尋關鍵字 *</label>
+                <label className="block text-xs font-medium mb-1">{t('s1.keywords')}</label>
                 <textarea value={config.keywords} onChange={e => setC('keywords', e.target.value)}
-                  rows={3} placeholder={"每行或逗號分隔一個關鍵字，各自獨立搜尋\n例如：\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea"}
+                  rows={3} placeholder={t('s1.keywordsPlaceholder')}
                   className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none" />
-                <p className="text-xs text-gray-400 mt-0.5">多個關鍵字會分別搜尋，結果合併去重</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('s1.keywordsHint')}</p>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">地區（選填）</label>
+                <label className="block text-xs font-medium mb-1">{t('s1.location')}</label>
                 <input value={config.location} onChange={e => setC('location', e.target.value)}
-                  placeholder="例如：台南市、新竹縣"
+                  placeholder={t('s1.locationPlaceholder')}
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium mb-1">每個關鍵字最多筆數</label>
+                  <label className="block text-xs font-medium mb-1">{t('s1.limit')}</label>
                   <input type="number" min={10} max={500} step={10} value={config.collectLimit}
                     onChange={e => setC('collectLimit', Number(e.target.value))}
                     className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-                  <p className="text-xs text-gray-400 mt-0.5">多個關鍵字會分別搜尋並合併，總筆數 = 筆數 × 關鍵字數</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('s1.limitHint')}</p>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-2">蒐集管道</label>
+                <label className="block text-xs font-medium mb-2">{t('s1.channels')}</label>
                 <div className="flex flex-wrap gap-2">
                   {([
-                    { id: 'map'        as CollectSource, label: '🗺️ 地圖' },
+                    { id: 'map'        as CollectSource, label: `🗺️ ${t('src.map')}` },
                     { id: 'facebook'   as CollectSource, label: '👥 Facebook' },
                     { id: 'instagram'  as CollectSource, label: '📸 Instagram' },
                     { id: 'tiktok'     as CollectSource, label: '📱 TikTok' },
@@ -1010,7 +1019,7 @@ export default function ProspectCallPage() {
                     { id: 'amazon'     as CollectSource, label: '📦 Amazon' },
                     { id: 'shopee'     as CollectSource, label: '🛒 Shopee' },
                     { id: 'ios_android' as CollectSource, label: '📲 iOS/Android' },
-                    { id: 'web'        as CollectSource, label: '🌐 網頁' },
+                    { id: 'web'        as CollectSource, label: `🌐 ${t('src.web')}` },
                   ]).map(s => (
                     <button key={s.id} type="button" onClick={() => toggleSource(s.id)}
                       className="px-3 py-1.5 rounded-lg text-xs border transition-all"
@@ -1025,32 +1034,32 @@ export default function ProspectCallPage() {
             </Section>
 
             {/* Step 2: Filter */}
-            <Section title="Step 2 — 篩選條件" icon={Filter}
+            <Section title={t('s2.title')} icon={Filter}
               open={openSections.filter} onToggle={() => toggleSection('filter')}>
               <div>
-                <label className="block text-xs font-medium mb-1">篩選條件（AI 理解）</label>
+                <label className="block text-xs font-medium mb-1">{t('s2.criteria')}</label>
                 <textarea value={config.filterCriteria}
                   onChange={e => setC('filterCriteria', e.target.value)}
-                  rows={2} placeholder="例如：只要製造業和工廠；員工人數 50 人以上；排除小型個人工作室"
+                  rows={2} placeholder={t('s2.criteriaPlaceholder')}
                   className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none" />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">最低員工人數</label>
+                <label className="block text-xs font-medium mb-1">{t('s2.minEmp')}</label>
                 <input type="number" min={0} value={config.minEmployees}
                   onChange={e => setC('minEmployees', Number(e.target.value))}
-                  placeholder="0 = 不限"
+                  placeholder={t('s2.unlimited')}
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
               </div>
             </Section>
 
             {/* Step 3: Distance */}
-            <Section title="Step 3 — 距離設定" icon={MapPin}
+            <Section title={t('s3.title')} icon={MapPin}
               open={openSections.distance} onToggle={() => toggleSection('distance')}>
               {/* Toggle */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium">啟用距離篩選</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">關閉時不依距離淘汰，仍顯示最近門市距離</p>
+                  <p className="text-xs font-medium">{t('s3.enable')}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{t('s3.enableHint')}</p>
                 </div>
                 <button
                   type="button"
@@ -1069,21 +1078,21 @@ export default function ProspectCallPage() {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
                 <Building2 className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                 {branches.length === 0
-                  ? <span>尚未設定門市。請前往「行銷自動化 → 公司資料 → 門市/分公司」新增。</span>
-                  : <span>已載入 <strong>{branches.length}</strong> 個門市，其中 <strong>{branchesWithCoords.length}</strong> 個有經緯度可計算距離。</span>
+                  ? <span>{t('s3.noBranches')}</span>
+                  : <span>{t.rich('s3.branchesLoaded', { total: branches.length, coords: branchesWithCoords.length, b: (c) => <strong>{c}</strong> })}</span>
                 }
               </div>
 
               {/* 距離輸入（僅啟用時顯示） */}
               {config.distanceEnabled && (
                 <div>
-                  <label className="block text-xs font-medium mb-1">距離上限（km）</label>
+                  <label className="block text-xs font-medium mb-1">{t('s3.maxDist')}</label>
                   <input type="number" min={0.5} step={0.5} value={config.maxDistanceKm}
                     onChange={e => setC('maxDistanceKm', Number(e.target.value))}
-                    placeholder="例如：5"
+                    placeholder={t('s3.maxDistPlaceholder')}
                     className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
                   <p className="text-[10px] text-gray-400 mt-1">
-                    超過此距離的組織將被淘汰（需門市有設定經緯度）。
+                    {t('s3.maxDistHint')}
                   </p>
                 </div>
               )}
@@ -1093,7 +1102,7 @@ export default function ProspectCallPage() {
             {activeTab === 'phone' && <>
 
             {/* Step 4: Voice scripts */}
-            <Section title="Step 4 — 語音腳本" icon={Mic}
+            <Section title={t('s4p.title')} icon={Mic}
               open={openSections.scripts} onToggle={() => toggleSection('scripts')}>
               <div className="space-y-3">
                 {config.voiceScripts.map(s => (
@@ -1101,7 +1110,7 @@ export default function ProspectCallPage() {
                     <div className="flex items-center gap-2">
                       <input value={s.name} onChange={e => updateScript(s.id, { name: e.target.value })}
                         className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
-                        placeholder="腳本名稱" />
+                        placeholder={t('s4p.scriptName')} />
                       {config.voiceScripts.length > 1 && (
                         <button type="button" onClick={() => removeScript(s.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
@@ -1110,37 +1119,37 @@ export default function ProspectCallPage() {
                       )}
                     </div>
                     <textarea value={s.text} onChange={e => updateScript(s.id, { text: e.target.value })}
-                      rows={3} placeholder="輸入語音腳本內容..."
+                      rows={3} placeholder={t('s4p.scriptTextPlaceholder')}
                       className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white" />
                     <select value={s.voiceId} onChange={e => updateScript(s.id, { voiceId: e.target.value })}
                       className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
-                      {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                      {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.name} — {t(v.descKey)}</option>)}
                     </select>
                   </div>
                 ))}
                 <button type="button" onClick={addScript}
                   className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
-                  <Plus className="h-3.5 w-3.5" />新增腳本
+                  <Plus className="h-3.5 w-3.5" />{t('s4p.addScript')}
                 </button>
               </div>
             </Section>
 
             {/* Step 5: Routing rules */}
-            <Section title="Step 5 — 撥打規則" icon={Settings2}
+            <Section title={t('s5p.title')} icon={Settings2}
               open={openSections.mapping} onToggle={() => toggleSection('mapping')}>
               <div className="space-y-1">
                 <p className="text-xs text-gray-500">
-                  依序比對每條規則，<strong>第一個符合的規則</strong>勝出。可按電話類型、AI 分類、人數、距離等任意組合。
+                  {t.rich('s5p.hint1', { b: (c) => <strong>{c}</strong> })}
                 </p>
                 <p className="text-[10px] text-gray-400">
-                  未匹配任何規則的組織將歸入「未分配」群組，不會自動撥打。
+                  {t('s5p.hint2')}
                 </p>
               </div>
 
               <div className="space-y-3">
                 {config.routingRules.length === 0 && (
                   <div className="text-xs text-gray-400 text-center py-4 border-2 border-dashed rounded-xl">
-                    尚未建立規則，點擊「新增規則」開始設定
+                    {t('s5p.empty')}
                   </div>
                 )}
                 {config.routingRules.map((rule, idx) => (
@@ -1155,26 +1164,26 @@ export default function ProspectCallPage() {
                 ))}
                 <button type="button" onClick={addRule}
                   className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
-                  <Plus className="h-3.5 w-3.5" />新增規則
+                  <Plus className="h-3.5 w-3.5" />{t('s5p.addRule')}
                 </button>
               </div>
             </Section>
 
             {/* Step 6: Call config */}
-            <Section title="Step 6 — 撥話設定" icon={Phone}
+            <Section title={t('s6p.title')} icon={Phone}
               open={openSections.call} onToggle={() => toggleSection('call')}>
               <div className="space-y-4">
                 {/* Caller ID */}
                 <div>
                   <label className="block text-xs font-medium mb-1">
-                    Bird 顯示號碼（Caller ID）
-                    <span className="ml-1 text-[10px] text-gray-400 font-normal">— 接收方看到的來電號碼（你的公司號碼）</span>
+                    {t('s6p.callerId')}
+                    <span className="ml-1 text-[10px] text-gray-400 font-normal">{t('s6p.callerIdHint')}</span>
                   </label>
                   <input value={config.birdCallerId} onChange={e => setC('birdCallerId', e.target.value)}
-                    placeholder="+886xxxxxxxxx 或 +84xxxxxxxxx"
+                    placeholder="+886xxxxxxxxx / +84xxxxxxxxx"
                     className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
                   {!config.birdCallerId.trim() && (
-                    <p className="text-[10px] text-amber-500 mt-1">⚠️ 未填寫則無法撥打，請填入 Bird 帳號中已驗證的號碼</p>
+                    <p className="text-[10px] text-amber-500 mt-1">{t('s6p.callerIdWarn')}</p>
                   )}
                 </div>
 
@@ -1182,11 +1191,11 @@ export default function ProspectCallPage() {
                 {selectedOrgs.length > 0 && (
                   <div>
                     <p className="text-xs font-medium mb-2 text-gray-700">
-                      待撥清單（共 {selectedOrgs.filter(o => o.phoneNormalized).length} 支有效號碼）
-                      <span className="ml-1 text-[10px] text-gray-400 font-normal">— 來自篩選結果</span>
+                      {t('s6p.dialList', { count: selectedOrgs.filter(o => o.phoneNormalized).length })}
+                      <span className="ml-1 text-[10px] text-gray-400 font-normal">{t('s6p.fromFilter')}</span>
                     </p>
                     {config.routingRules.length === 0 ? (
-                      <p className="text-[10px] text-gray-400">請先在 Step 5 建立撥打規則</p>
+                      <p className="text-[10px] text-gray-400">{t('s6p.needRules')}</p>
                     ) : (
                       <div className="space-y-2 max-h-52 overflow-y-auto">
                         {config.routingRules.map(rule => {
@@ -1198,7 +1207,7 @@ export default function ProspectCallPage() {
                             <div key={rule.id} className="rounded-lg border bg-gray-50 p-2 text-[11px]">
                               <div className="font-medium text-gray-700 mb-1">
                                 {rule.name}
-                                <span className="ml-1 text-gray-400">· {hasPhone.length} 支可撥 / {noPhone.length} 支無號碼</span>
+                                <span className="ml-1 text-gray-400">· {t('s6p.dialable', { has: hasPhone.length, no: noPhone.length })}</span>
                               </div>
                               {hasPhone.slice(0, 5).map(o => (
                                 <div key={o.id} className="flex items-center gap-1.5 py-0.5 border-t border-gray-100 first:border-0">
@@ -1208,11 +1217,11 @@ export default function ProspectCallPage() {
                                 </div>
                               ))}
                               {hasPhone.length > 5 && (
-                                <p className="text-gray-400 text-[10px] mt-0.5">…還有 {hasPhone.length - 5} 支</p>
+                                <p className="text-gray-400 text-[10px] mt-0.5">{t('s6p.andMore', { count: hasPhone.length - 5 })}</p>
                               )}
                               {noPhone.length > 0 && (
                                 <div className="mt-1 text-gray-400">
-                                  無號碼：{noPhone.map(o => o.name).join('、').slice(0, 60)}{noPhone.length > 3 ? '…' : ''}
+                                  {t('s6p.noPhonePrefix')}{noPhone.map(o => o.name).join('、').slice(0, 60)}{noPhone.length > 3 ? '…' : ''}
                                 </div>
                               )}
                             </div>
@@ -1220,7 +1229,7 @@ export default function ProspectCallPage() {
                         })}
                         {unmapped.length > 0 && (
                           <div className="rounded-lg border bg-amber-50 p-2 text-[11px] text-amber-700">
-                            未分配（無匹配規則）{unmapped.length} 家 — 不會被撥打
+                            {t('s6p.unmappedNoCall', { count: unmapped.length })}
                           </div>
                         )}
                       </div>
@@ -1228,10 +1237,10 @@ export default function ProspectCallPage() {
                   </div>
                 )}
                 {selectedOrgs.length === 0 && orgs.length > 0 && (
-                  <p className="text-[10px] text-gray-400">篩選後無入選組織，無待撥號碼</p>
+                  <p className="text-[10px] text-gray-400">{t('s6p.noSelected')}</p>
                 )}
                 {orgs.length === 0 && (
-                  <p className="text-[10px] text-gray-400">執行 Pipeline 後，待撥清單將顯示於此</p>
+                  <p className="text-[10px] text-gray-400">{t('s6p.runFirst')}</p>
                 )}
               </div>
             </Section>
@@ -1242,42 +1251,42 @@ export default function ProspectCallPage() {
             {activeTab === 'email' && <>
 
             {/* Step 4: Email templates */}
-            <Section title="Step 4 — Email 腳本模板" icon={Mail}
+            <Section title={t('s4e.title')} icon={Mail}
               open={openSections.emailTemplates} onToggle={() => toggleSection('emailTemplates')}>
-              <p className="text-xs text-gray-500">定義 Email 內容模板，在發送規則中選用。</p>
+              <p className="text-xs text-gray-500">{t('s4e.hint')}</p>
               <div className="space-y-3">
-                {config.emailTemplates.map(t => (
-                  <div key={t.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
+                {config.emailTemplates.map(tpl => (
+                  <div key={tpl.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
                     <div className="flex items-center gap-2">
-                      <input value={t.name} onChange={e => updateEmailTemplate(t.id, { name: e.target.value })}
+                      <input value={tpl.name} onChange={e => updateEmailTemplate(tpl.id, { name: e.target.value })}
                         className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
-                        placeholder="模板名稱" />
+                        placeholder={t('s4e.templateName')} />
                       {config.emailTemplates.length > 1 && (
-                        <button type="button" onClick={() => removeEmailTemplate(t.id)}
+                        <button type="button" onClick={() => removeEmailTemplate(tpl.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
-                    <input value={t.subject} onChange={e => updateEmailTemplate(t.id, { subject: e.target.value })}
+                    <input value={tpl.subject} onChange={e => updateEmailTemplate(tpl.id, { subject: e.target.value })}
                       className="w-full h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
-                      placeholder="Email 主旨" />
-                    <textarea value={t.body} onChange={e => updateEmailTemplate(t.id, { body: e.target.value })}
-                      rows={4} placeholder="Email 內文（支援換行）"
+                      placeholder={t('s4e.subject')} />
+                    <textarea value={tpl.body} onChange={e => updateEmailTemplate(tpl.id, { body: e.target.value })}
+                      rows={4} placeholder={t('s4e.body')}
                       className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white" />
                   </div>
                 ))}
                 <button type="button" onClick={addEmailTemplate}
                   className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
-                  <Plus className="h-3.5 w-3.5" />新增模板
+                  <Plus className="h-3.5 w-3.5" />{t('s4e.addTemplate')}
                 </button>
               </div>
             </Section>
 
             {/* Step 5: Email sending rules */}
-            <Section title="Step 5 — 發送規則" icon={Settings2}
+            <Section title={t('s5e.title')} icon={Settings2}
               open={openSections.emailRules} onToggle={() => toggleSection('emailRules')}>
-              <p className="text-xs text-gray-500">自訂分類名稱與條件，指定套用哪個模板。依序比對，第一個符合的規則生效。</p>
+              <p className="text-xs text-gray-500">{t('s5e.hint')}</p>
               <div className="space-y-3">
                 {(config.emailRules ?? []).map((rule, idx) => (
                   <div key={rule.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
@@ -1285,7 +1294,7 @@ export default function ProspectCallPage() {
                       <span className="text-[10px] font-bold text-gray-400 w-5">{idx + 1}</span>
                       <input value={rule.name} onChange={e => updateEmailRule(rule.id, { name: e.target.value })}
                         className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
-                        placeholder="分類名稱（例如：美妝博主）" />
+                        placeholder={t('s5e.categoryName')} />
                       {(config.emailRules ?? []).length > 1 && (
                         <button type="button" onClick={() => removeEmailRule(rule.id)}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
@@ -1294,31 +1303,31 @@ export default function ProspectCallPage() {
                       )}
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 block mb-0.5">自訂關鍵字（名稱或原始分類含此字即符合）</label>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">{t('rule.customTag')}</label>
                       <input value={rule.customTag} onChange={e => updateEmailRule(rule.id, { customTag: e.target.value })}
                         className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
-                        placeholder="例如：美妝、工廠、博主（空白不限）" />
+                        placeholder={t('s5e.tagPlaceholder')} />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-gray-500 block mb-0.5">最低員工數（0=不限）</label>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">{t('rule.minEmp')}</label>
                         <input type="number" min={0} value={rule.minEmployees}
                           onChange={e => updateEmailRule(rule.id, { minEmployees: Number(e.target.value) })}
                           className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white" />
                       </div>
                       <div>
-                        <label className="text-[10px] text-gray-500 block mb-0.5">最高員工數（0=不限）</label>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">{t('rule.maxEmp')}</label>
                         <input type="number" min={0} value={rule.maxEmployees}
                           onChange={e => updateEmailRule(rule.id, { maxEmployees: Number(e.target.value) })}
                           className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white" />
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] text-gray-500 block mb-0.5">套用模板</label>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">{t('s5e.applyTemplate')}</label>
                       <select value={rule.templateId} onChange={e => updateEmailRule(rule.id, { templateId: e.target.value })}
                         className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
-                        {config.emailTemplates.map(t => (
-                          <option key={t.id} value={t.id}>{t.name || `模板 ${config.emailTemplates.indexOf(t) + 1}`}</option>
+                        {config.emailTemplates.map((tpl, ti) => (
+                          <option key={tpl.id} value={tpl.id}>{tpl.name || t('def.templateN', { n: ti + 1 })}</option>
                         ))}
                       </select>
                     </div>
@@ -1326,28 +1335,28 @@ export default function ProspectCallPage() {
                 ))}
                 <button type="button" onClick={addEmailRule}
                   className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
-                  <Plus className="h-3.5 w-3.5" />新增規則
+                  <Plus className="h-3.5 w-3.5" />{t('s5p.addRule')}
                 </button>
               </div>
             </Section>
 
             {/* Step 6: Email sender settings */}
-            <Section title="Step 6 — 寄件設定" icon={Mail}
+            <Section title={t('s6e.title')} icon={Mail}
               open={openSections.emailSettings} onToggle={() => toggleSection('emailSettings')}>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1">寄件人名稱</label>
+                  <label className="block text-xs font-medium mb-1">{t('s6e.fromName')}</label>
                   <input value={config.fromName} onChange={e => setC('fromName', e.target.value)}
-                    placeholder="行銷團隊" className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                    placeholder={t('def.marketingTeam')} className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">寄件人 Email（Resend 已驗證網域）</label>
+                  <label className="block text-xs font-medium mb-1">{t('s6e.fromEmail')}</label>
                   <input value={config.fromEmail} onChange={e => setC('fromEmail', e.target.value)}
                     placeholder="marketing@yourdomain.com"
                     className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
                 </div>
                 <div className="text-[10px] text-gray-400 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                  需設定環境變數：<code className="font-mono">RESEND_API_KEY</code>
+                  {t('s6e.envNote')}<code className="font-mono">RESEND_API_KEY</code>
                 </div>
               </div>
             </Section>
@@ -1364,17 +1373,17 @@ export default function ProspectCallPage() {
               <button type="button" onClick={runPipeline} disabled={running}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
                 style={{ background: 'var(--primary)' }}>
-                {running ? <><Loader2 className="h-4 w-4 animate-spin" />執行中…</> : <><Play className="h-4 w-4" />執行 Pipeline</>}
+                {running ? <><Loader2 className="h-4 w-4 animate-spin" />{t('run.running')}</> : <><Play className="h-4 w-4" />{t('run.exec')}</>}
               </button>
 
               {(Object.keys(stepStatus).length > 0) && (
                 <div className="grid grid-cols-3 gap-2">
                   <StepBadge status={stepStatus.collect ?? 'idle'}
-                    label={`蒐集${stepMsg.collect ? ` · ${stepMsg.collect}` : ''}`} />
+                    label={`${t('run.collect')}${stepMsg.collect ? ` · ${stepMsg.collect}` : ''}`} />
                   <StepBadge status={stepStatus.filter ?? 'idle'}
-                    label={`分析${stepMsg.filter ? ` · ${stepMsg.filter}` : ''}`} />
+                    label={`${t('run.analyze')}${stepMsg.filter ? ` · ${stepMsg.filter}` : ''}`} />
                   <StepBadge status={stepStatus.call ?? 'idle'}
-                    label={`撥打${stepMsg.call ? ` · ${stepMsg.call}` : ''}`} />
+                    label={`${t('run.call')}${stepMsg.call ? ` · ${stepMsg.call}` : ''}`} />
                 </div>
               )}
 
@@ -1389,9 +1398,9 @@ export default function ProspectCallPage() {
             {orgs.length > 0 && (
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: '蒐集總數', value: orgs.length, color: 'text-gray-700' },
-                  { label: '入選', value: selectedOrgs.length, color: 'text-green-600' },
-                  { label: '淘汰', value: orgs.length - selectedOrgs.length, color: 'text-red-500' },
+                  { label: t('stat.total'), value: orgs.length, color: 'text-gray-700' },
+                  { label: t('stat.selected'), value: selectedOrgs.length, color: 'text-green-600' },
+                  { label: t('stat.rejected'), value: orgs.length - selectedOrgs.length, color: 'text-red-500' },
                 ].map(s => (
                   <div key={s.label} className="p-3 rounded-xl border text-center">
                     <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -1404,21 +1413,21 @@ export default function ProspectCallPage() {
             {/* ── Email right panel ── */}
             {activeTab === 'email' && selectedOrgs.length > 0 && (
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Email 寄送</h3>
+                <h3 className="text-sm font-semibold text-gray-700">{t('email.sendTitle')}</h3>
 
                 {/* Email input table */}
                 {selectedOrgs.filter(o => o.email || (orgEmails[o.id] ?? '')).length === 0 && (
                   <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-700 space-y-1">
-                    <p className="font-medium">⚠️ 未自動抓到任何 Email</p>
-                    <p>Google 地圖不提供 Email 資料。建議在 Step 1 蒐集管道加選 <strong>Facebook</strong> 或 <strong>網頁</strong>，系統會嘗試從廠商資料中萃取 Email。</p>
-                    <p>您也可以在下方表格手動填入各組織的 Email。</p>
+                    <p className="font-medium">{t('email.noEmailTitle')}</p>
+                    <p>{t.rich('email.noEmailHint', { b: (c) => <strong>{c}</strong> })}</p>
+                    <p>{t('email.manualHint')}</p>
                   </div>
                 )}
                 <div className="border rounded-xl overflow-hidden">
                   <div className="px-3 py-2 bg-gray-50 border-b text-xs text-gray-500 font-medium flex items-center justify-between">
-                    <span>各組織 Email</span>
+                    <span>{t('email.perOrgEmail')}</span>
                     <span className="text-gray-400">
-                      {selectedOrgs.filter(o => o.email || orgEmails[o.id]).length}/{selectedOrgs.length} 筆已填
+                      {t('email.filledCount', { filled: selectedOrgs.filter(o => o.email || orgEmails[o.id]).length, total: selectedOrgs.length })}
                     </span>
                   </div>
                   <div className="max-h-56 overflow-y-auto">
@@ -1427,7 +1436,7 @@ export default function ProspectCallPage() {
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-medium truncate">{o.name}</div>
                           <div className="text-[10px] text-gray-400">
-                            {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji} {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
+                            {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji} {catLabel(t, o.aiCategory)}
                           </div>
                         </div>
                         <input
@@ -1457,7 +1466,7 @@ export default function ProspectCallPage() {
                         <div>
                           <div className="text-sm font-semibold">{rule.name}</div>
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            模板：{tpl?.name ?? '未設定'}{' · '}{targets.length} 個有 Email
+                            {t('email.templateLabel', { name: tpl?.name ?? t('email.notSet') })}{' · '}{t('email.hasEmail', { count: targets.length })}
                           </div>
                         </div>
                         <button type="button"
@@ -1465,18 +1474,18 @@ export default function ProspectCallPage() {
                           disabled={isSending || targets.length === 0 || !tpl?.subject || !tpl?.body}
                           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
                           style={{ background: 'var(--primary)' }}>
-                          {isSending ? <><Loader2 className="h-3 w-3 animate-spin" />寄送中…</> : <><Mail className="h-3 w-3" />寄送 {targets.length} 封</>}
+                          {isSending ? <><Loader2 className="h-3 w-3 animate-spin" />{t('email.sending')}</> : <><Mail className="h-3 w-3" />{t('email.sendN', { count: targets.length })}</>}
                         </button>
                       </div>
                       {tpl?.subject && (
                         <div className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">
-                          主旨：{tpl.subject.slice(0, 60)}{tpl.subject.length > 60 ? '…' : ''}
+                          {t('email.subjectPrefix')}{tpl.subject.slice(0, 60)}{tpl.subject.length > 60 ? '…' : ''}
                         </div>
                       )}
                       {result && (
                         <div className="flex gap-3 text-xs">
-                          <span className="text-green-600">✓ 成功 {result.ok}</span>
-                          {result.fail > 0 && <span className="text-red-500">✗ 失敗 {result.fail}</span>}
+                          <span className="text-green-600">{t('res.success', { n: result.ok })}</span>
+                          {result.fail > 0 && <span className="text-red-500">{t('res.fail', { n: result.fail })}</span>}
                         </div>
                       )}
                     </div>
@@ -1489,7 +1498,7 @@ export default function ProspectCallPage() {
             {/* By-rule call panels */}
             {activeTab === 'phone' && byRule.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">規則分組撥打</h3>
+                <h3 className="text-sm font-semibold text-gray-700">{t('phone.groupTitle')}</h3>
                 {byRule.map(({ rule, matched, script }) => {
                   const phones = matched.filter(o => o.phoneNormalized).map(o => o.phoneNormalized!)
                   const result = callResults[rule.id]
@@ -1500,7 +1509,7 @@ export default function ProspectCallPage() {
                         <div>
                           <div className="text-sm font-semibold">{rule.name}</div>
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            {conditionSummary(rule.condition)} · {matched.length} 家 · {phones.length} 支有效電話
+                            {conditionSummary(rule.condition, t)} · {t('phone.matchedPhones', { matched: matched.length, phones: phones.length })}
                           </div>
                         </div>
                         {script ? (
@@ -1509,21 +1518,21 @@ export default function ProspectCallPage() {
                             disabled={isCalling || phones.length === 0}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
                             style={{ background: 'var(--primary)' }}>
-                            {isCalling ? <><Loader2 className="h-3 w-3 animate-spin" />撥打中…</> : <><PhoneCall className="h-3 w-3" />撥打 {phones.length} 支</>}
+                            {isCalling ? <><Loader2 className="h-3 w-3 animate-spin" />{t('phone.calling')}</> : <><PhoneCall className="h-3 w-3" />{t('phone.callN', { count: phones.length })}</>}
                           </button>
                         ) : (
-                          <span className="text-[10px] text-gray-400 px-2">未指定腳本</span>
+                          <span className="text-[10px] text-gray-400 px-2">{t('phone.noScript')}</span>
                         )}
                       </div>
                       {script && (
                         <div className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">
-                          腳本：{script.name}
+                          {t('phone.scriptPrefix')}{script.name}
                         </div>
                       )}
                       {result && (
                         <div className="flex gap-3 text-xs">
-                          <span className="text-green-600">✓ 成功 {result.ok}</span>
-                          {result.fail > 0 && <span className="text-red-500">✗ 失敗 {result.fail}</span>}
+                          <span className="text-green-600">{t('res.success', { n: result.ok })}</span>
+                          {result.fail > 0 && <span className="text-red-500">{t('res.fail', { n: result.fail })}</span>}
                         </div>
                       )}
                       <div className="space-y-1 max-h-40 overflow-y-auto">
@@ -1537,7 +1546,7 @@ export default function ProspectCallPage() {
                             <div className="flex-shrink-0 text-right space-y-0.5">
                               {o.phoneNormalized
                                 ? <div className="text-green-600">{isMobile(o.phoneNormalized) ? '📱' : '☎️'} {o.phoneNormalized}</div>
-                                : <div className="text-gray-300">無電話</div>
+                                : <div className="text-gray-300">{t('phone.noPhone')}</div>
                               }
                               {o.nearestBranch && (
                                 <div className="text-gray-400">{o.nearestBranch} {o.nearestBranchDistance}km</div>
@@ -1556,7 +1565,7 @@ export default function ProspectCallPage() {
             {activeTab === 'phone' && unmapped.length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-500 cursor-pointer hover:bg-gray-50 select-none">
-                  未分配（無匹配規則）{unmapped.length} 家
+                  {t('phone.unmappedCount', { count: unmapped.length })}
                 </summary>
                 <div className="px-4 pb-3 space-y-1 max-h-48 overflow-y-auto">
                   {unmapped.map(o => (
@@ -1565,7 +1574,7 @@ export default function ProspectCallPage() {
                       <div className="flex-1">
                         <div className="font-medium">{o.name}</div>
                         <div className="text-gray-400">
-                          {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji} {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
+                          {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji} {catLabel(t, o.aiCategory)}
                           {o.phoneNormalized && ` · ${isMobile(o.phoneNormalized) ? '📱' : '☎️'} ${o.phoneNormalized}`}
                         </div>
                       </div>
@@ -1579,7 +1588,7 @@ export default function ProspectCallPage() {
             {activeTab === 'phone' && orgs.filter(o => !o.selected).length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-500 cursor-pointer hover:bg-gray-50 select-none">
-                  淘汰組織 {orgs.filter(o => !o.selected).length} 家（點擊展開）
+                  {t('phone.rejectedCount', { count: orgs.filter(o => !o.selected).length })}
                 </summary>
                 <div className="px-4 pb-3 space-y-1 max-h-48 overflow-y-auto">
                   {orgs.filter(o => !o.selected).map(o => (
@@ -1599,16 +1608,16 @@ export default function ProspectCallPage() {
             {activeTab === 'phone' && selectedOrgs.length > 0 && (
               <details className="border rounded-xl">
                 <summary className="px-4 py-3 text-xs text-gray-600 font-medium cursor-pointer hover:bg-gray-50 select-none">
-                  入選完整列表 {selectedOrgs.length} 家
+                  {t('phone.selectedListCount', { count: selectedOrgs.length })}
                 </summary>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[11px]">
                     <thead>
                       <tr className="border-b bg-gray-50 text-gray-500">
-                        <th className="px-3 py-2 text-left font-medium">組織</th>
-                        <th className="px-3 py-2 text-left font-medium">分類</th>
-                        <th className="px-3 py-2 text-left font-medium">電話</th>
-                        <th className="px-3 py-2 text-left font-medium">規則</th>
+                        <th className="px-3 py-2 text-left font-medium">{t('phone.colOrg')}</th>
+                        <th className="px-3 py-2 text-left font-medium">{t('phone.colCategory')}</th>
+                        <th className="px-3 py-2 text-left font-medium">{t('phone.colPhone')}</th>
+                        <th className="px-3 py-2 text-left font-medium">{t('phone.colRule')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1623,7 +1632,7 @@ export default function ProspectCallPage() {
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {CATEGORIES.find(c => c.id === o.aiCategory)?.emoji}{' '}
-                              {CATEGORIES.find(c => c.id === o.aiCategory)?.label}
+                              {catLabel(t, o.aiCategory)}
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {o.phoneNormalized
@@ -1632,7 +1641,7 @@ export default function ProspectCallPage() {
                               }
                             </td>
                             <td className="px-3 py-2 whitespace-nowrap text-gray-500">
-                              {ruleName ?? <span className="text-gray-300">未分配</span>}
+                              {ruleName ?? <span className="text-gray-300">{t('phone.unassigned')}</span>}
                             </td>
                           </tr>
                         )

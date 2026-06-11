@@ -1535,5 +1535,47 @@
       "anchorVideoDone": "Anchor video done", "anchorVideoFailed": "Anchor video generation failed", "heygenTimeout": "HeyGen timed out",
       "unitNotSupported": "Unit {unitId} does not support auto-execution"
     }
+  },
+  "Prospect": {
+    "title": "Prospect Marketing",
+    "subtitle": "Auto-collect orgs → AI filter + classify → distance calc → phone calls / email",
+    "tabPhone": "Phone Marketing", "tabEmail": "Email Marketing", "tabSchedule": "Schedule",
+    "cats": { "factory": "Manufacturing/Factory", "hotel": "Lodging/B&B", "restaurant": "Food & Beverage", "financial": "Finance/Insurance", "retail": "Retail/Shops", "healthcare": "Healthcare/Clinic", "education": "Education/Training", "realestate": "Real Estate", "logistics": "Logistics/Transport", "other": "Other" },
+    "cond": { "mobile": "Mobile", "landline": "Landline", "empRange": "{min}–{max} ppl", "empMin": "≥{min} ppl", "empMax": "≤{max} ppl", "catchAll": "Other (matches all)", "keyword": "Keyword: {tag}", "all": "(matches all)" },
+    "voice": { "mlFemale": "Multilingual, F", "mlMale": "Multilingual, M", "brMale": "British English, M", "usFemale": "American English, F" },
+    "def": { "script": "Default Script", "scriptText": "Hello, we are...", "template": "Default Template", "generalCustomer": "General Customer", "generalCustomerDesc": "General prospect or unknown", "marketingTeam": "Marketing Team", "scriptN": "Script {n}", "ruleN": "Rule {n}", "templateN": "Template {n}", "categoryN": "Category {n}" },
+    "rule": { "namePlaceholder": "Rule name", "phoneType": "Phone Type", "any": "Any", "aiCategory": "AI Category", "anyCategory": "— Any category —", "minEmp": "Min count (0=any)", "maxEmp": "Max count (0=any)", "maxDist": "Max distance km (0=any)", "customTag": "Custom keyword (matches if name or raw category contains it)", "customTagPlaceholder": "e.g. beauty, factory… (blank or \"other\" = matches all, as a fallback rule)", "useScript": "Script to use", "noCall": "— Don't call —", "condPrefix": "Conditions: " },
+    "err": { "noEmailOrgs": "No orgs match the selected rule and have an email", "noKeywords": "Please enter search keywords", "collectFailed": "Collection failed", "aborted": "Aborted", "aiFailed": "AI analysis failed" },
+    "msg": { "collected": "Collected {count} characters", "selected": "Selected {selected} / {total}", "called": "Dialed {count}" },
+    "sched": {
+      "enable": "Enable Schedule", "enableHint": "The system checks hourly and triggers collection+filtering at the set time",
+      "mode": "Mode", "modeBoth": "Both",
+      "modePhoneHint": "After collection+filtering, you'll be notified via Telegram to make calls",
+      "modeEmailHint": "After collection+filtering, emails are sent in batch per rule automatically",
+      "modeBothHint": "After collection+filtering, emails are sent automatically and Telegram notifies you to call",
+      "frequency": "Frequency", "daily": "Daily", "weekly": "Weekly", "monthly": "Monthly",
+      "weekday": "Day of Week", "dow": { "0": "Sun", "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu", "5": "Fri", "6": "Sat" },
+      "monthDay": "Day of Month", "monthDayHint": "Max 28 (avoids month-length issues)",
+      "time": "Run Time", "hourUnit": "{h}:00", "minUnit": ":{m}",
+      "statusTitle": "Status", "lastRun": "Last run: ", "nextRun": "Next run: ",
+      "lastResult": "Last result: collected {total} → selected ", "lastResultSuffix": "",
+      "saving": "Saving…", "saved": "Saved!", "save": "Save Schedule",
+      "saveHint": "After saving, the system checks hourly and runs at the scheduled time. Results notified via Telegram."
+    },
+    "s1": { "title": "Step 1 — Collection Sources", "keywords": "Search Keywords *", "keywordsPlaceholder": "One keyword per line or comma-separated, each searched independently\ne.g.\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea", "keywordsHint": "Multiple keywords are searched separately and merged/deduplicated", "location": "Location (optional)", "locationPlaceholder": "e.g. Tainan City, Hsinchu County", "limit": "Max per keyword", "limitHint": "Multiple keywords searched separately and merged; total = limit × keyword count", "channels": "Channels" },
+    "src": { "map": "Map", "web": "Web" },
+    "s2": { "title": "Step 2 — Filter Criteria", "criteria": "Filter criteria (AI-understood)", "criteriaPlaceholder": "e.g. only manufacturing and factories; 50+ employees; exclude small studios", "minEmp": "Min Employees", "unlimited": "0 = unlimited" },
+    "s3": { "title": "Step 3 — Distance", "enable": "Enable distance filter", "enableHint": "When off, no elimination by distance; still shows nearest store distance", "noBranches": "No stores set up. Add them via \"Marketing Automation → Company Data → Stores/Branches\".", "branchesLoaded": "Loaded <b>{total}</b> stores, of which <b>{coords}</b> have coordinates for distance calculation.", "maxDist": "Max distance (km)", "maxDistPlaceholder": "e.g. 5", "maxDistHint": "Orgs beyond this distance are eliminated (requires store coordinates)." },
+    "s4p": { "title": "Step 4 — Voice Scripts", "scriptName": "Script name", "scriptTextPlaceholder": "Enter voice script content...", "addScript": "Add Script" },
+    "s5p": { "title": "Step 5 — Routing Rules", "hint1": "Rules are matched in order; the <b>first matching rule</b> wins. Combine phone type, AI category, headcount, distance, etc.", "hint2": "Orgs matching no rule go to the \"Unassigned\" group and won't be auto-called.", "empty": "No rules yet. Click \"Add Rule\" to start.", "addRule": "Add Rule" },
+    "s6p": { "title": "Step 6 — Call Settings", "callerId": "Bird Caller ID", "callerIdHint": " — the number recipients see (your company number)", "callerIdWarn": "⚠️ Without this, calls can't be made; enter a number verified in your Bird account", "dialList": "Dial list ({count} valid numbers)", "fromFilter": " — from filter results", "needRules": "First create routing rules in Step 5", "dialable": "{has} dialable / {no} no number", "andMore": "…and {count} more", "noPhonePrefix": "No number: ", "unmappedNoCall": "Unassigned (no matching rule) {count} — won't be called", "noSelected": "No selected orgs after filtering; no numbers to dial", "runFirst": "After running the pipeline, the dial list appears here" },
+    "s4e": { "title": "Step 4 — Email Templates", "hint": "Define email content templates to use in sending rules.", "templateName": "Template name", "subject": "Email Subject", "body": "Email Body (newlines supported)", "addTemplate": "Add Template" },
+    "s5e": { "title": "Step 5 — Sending Rules", "hint": "Define custom category names and conditions, and which template to apply. Matched in order; first match wins.", "categoryName": "Category name (e.g. beauty influencer)", "tagPlaceholder": "e.g. beauty, factory, influencer (blank = any)", "applyTemplate": "Apply Template" },
+    "s6e": { "title": "Step 6 — Sender Settings", "fromName": "Sender Name", "fromEmail": "Sender Email (Resend verified domain)", "envNote": "Requires env variable: " },
+    "run": { "running": "Running…", "exec": "Run Pipeline", "collect": "Collect", "analyze": "Analyze", "call": "Call" },
+    "stat": { "total": "Total Collected", "selected": "Selected", "rejected": "Rejected" },
+    "email": { "sendTitle": "Email Sending", "noEmailTitle": "⚠️ No email auto-detected", "noEmailHint": "Google Maps doesn't provide email data. Add <b>Facebook</b> or <b>Web</b> to channels in Step 1, and the system will try to extract emails from vendor data.", "manualHint": "You can also enter each org's email manually in the table below.", "perOrgEmail": "Email per Org", "filledCount": "{filled}/{total} filled", "templateLabel": "Template: {name}", "notSet": "Not set", "hasEmail": "{count} with email", "sending": "Sending…", "sendN": "Send {count}", "subjectPrefix": "Subject: " },
+    "res": { "success": "✓ {n} succeeded", "fail": "✗ {n} failed" },
+    "phone": { "groupTitle": "Call by Rule Group", "matchedPhones": "{matched} orgs · {phones} valid phones", "calling": "Calling…", "callN": "Call {count}", "noScript": "No script assigned", "scriptPrefix": "Script: ", "noPhone": "No phone", "unmappedCount": "Unassigned (no matching rule) {count}", "rejectedCount": "Rejected orgs {count} (click to expand)", "selectedListCount": "Full selected list {count}", "colOrg": "Org", "colCategory": "Category", "colPhone": "Phone", "colRule": "Rule", "unassigned": "Unassigned" }
   }
 }
