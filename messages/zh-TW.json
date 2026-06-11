@@ -1860,7 +1860,19 @@
       "maxDiscount": "最大折扣", "maxDiscountHint": "0 = 不提供折扣", "maxDiscountOk": "✓ AI 最多可讓 {pct}% 折扣", "giftItems": "可贈送項目", "onePerLine": "一行一項", "giftPlaceholder": "免費早餐（一人）\n延遲退房至 12 點\n免費停車一天\n升級套房（視空房狀況）", "giftHint": "客人猶豫時 AI 會從清單中挑一項主動提出，確認後列入訂單確認清單。",
       "vipTitle": "VIP 客戶名單", "live": "已上線", "vipDesc": "每行一個關鍵字（客戶名稱、Line 暱稱、手機號後4碼等）。對話中偵測到時，自動顯示「VIP 優先處理」標示。",
       "autoClose": "自動結案", "autoCloseDesc": "按下「結案」後，若客戶在指定時間內無回應，系統自動關閉工單。設為 0 表示不自動結案。", "minutesAutoClose": "分鐘後自動結案", "enabled": "✓ 已啟用",
-      "ticketNotify": "工單通知", "ticketNotifyTag": "建立工單時自動推播", "ticketNotifyDesc": "客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。"
+      "ticketNotify": "工單通知", "ticketNotifyTag": "建立工單時自動推播", "ticketNotifyDesc": "客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。",
+      "whLabelPh": "備註名稱（如：店長群組）", "whLineToken": "Channel Access Token（LINE Developers 取得）", "whLineTarget": "目標 ID：User ID（U 開頭）或 Group ID（C 開頭）", "whTgToken": "Bot Token（@BotFather 取得，格式：123456:ABC-DEF...）", "whTgChatId": "Chat ID（用戶/群組/頻道 ID，如：-1001234567890）", "whTgHint": "將 Bot 加入群組後，傳訊息給 @userinfobot 可查詢 Chat ID", "addNotifyChannel": "新增通知管道", "saveSettings": "儲存設定",
+      "kbHint": "AI 客服優先從這裡查找答案，找不到才回到公司資料（Unit 2）", "kbDirectInput": "直接輸入知識內容", "kbFaqTag": "FAQ / 產品資料", "kbDesc": "放 FAQ、產品規格、價格等<b>具體資訊</b>，AI 客服會從這裡查找答案。<br></br>這裡<b>不是</b> Prompt 設定，Prompt 請到「AI 設定」分頁設定。", "kbPlaceholder": "例：\nQ: 如何申請試用？\nA: 請至官網填寫申請表，我們會在 1 個工作天內回覆。\n\nQ: 收費方案為何？\nA: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。",
+      "uploadDoc": "上傳文件（PDF / DOCX / XLSX / CSV / TXT）", "uploadingShort": "上傳中…", "clickUpload50": "點擊上傳 · 最大 50MB", "noFiles": "尚未上傳任何文件", "extractedChars": "已萃取 {n} 字", "noTextContent": "無文字內容", "deleteFile": "刪除此檔案", "saveKb": "儲存知識庫",
+      "extSources": "外部資料來源", "extSourcesHint": "客戶輸入觸發關鍵字時，AI 自動查詢對應 Google Sheets", "add": "新增",
+      "sourceSwitch": "AI 取得來源切換", "sourceSwitchHint": "沒有使用「訂單系統」的話，可切換成由下方資料來源／定價計算機取得。",
+      "roomPrice": "房價／動態價格", "roomPriceHint": "客人問價時 AI 從哪取得", "bookingSystem": "訂單系統",
+      "checkinPwd": "入住密碼／房號", "checkinPwdHint": "客人給訂單號時 AI 從哪取得", "pwdSheet": "訂單密碼表",
+      "checkinTime": "入住時間", "checkinTimeHint": "未到此時間，AI 不提供密碼／房號（HH:MM）。留空則用民宿資料設定，預設 15:00",
+      "recommendedSheets": "建議設定的 Google Sheets（{name}）", "sheetN": "表格 {n}", "queryColumn": "查詢欄位：", "returnColExample": "回傳欄位範例：", "triggerWord": "觸發詞：", "triggerMode": "觸發模式：", "tmNumeric": "數字觸發", "tmBoth": "關鍵字+數字", "tmKeyword": "關鍵字觸發",
+      "dsTip1": "<b>定價查詢</b>請到「定價計算機」分頁設定 — 這裡只放需要即時查詢的非定價資料（訂單、排班、時段）", "dsTip2": "依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID",
+      "loadingShort": "載入中…", "noDataSources": "尚無資料來源。點擊「新增」設定 Google Sheets 查詢。", "toolDivision": "工具分工說明", "toolSheets": "<b>Google Sheets（此頁）</b>：訂單查詢、排班、可用時段等即時動態資料", "toolPricing": "<b>定價計算機</b>：房型/療程/套餐等定價計算，AI 自動套公式報價", "toolKb": "<b>知識庫</b>：FAQ、政策說明、靜態產品介紹",
+      "enable": "啟用", "disable": "停用"
     }
   }
 }

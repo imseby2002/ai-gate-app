@@ -6562,7 +6562,7 @@ function Unit12CustomerService({
                       <option value="webhook">Webhook</option>
                     </select>
                     <input
-                      placeholder="備註名稱（如：店長群組）"
+                      placeholder={t('u12.whLabelPh')}
                       value={wh.label}
                       onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, label: e.target.value } : w))}
                       className="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
@@ -6571,13 +6571,13 @@ function Unit12CustomerService({
                   {wh.type === 'line_messaging' ? (
                     <>
                       <input
-                        placeholder="Channel Access Token（LINE Developers 取得）"
+                        placeholder={t('u12.whLineToken')}
                         value={wh.value}
                         onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
                         className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
                       />
                       <input
-                        placeholder="目標 ID：User ID（U 開頭）或 Group ID（C 開頭）"
+                        placeholder={t('u12.whLineTarget')}
                         value={wh.target ?? ''}
                         onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, target: e.target.value } : w))}
                         className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
@@ -6586,18 +6586,18 @@ function Unit12CustomerService({
                   ) : wh.type === 'telegram' ? (
                     <>
                       <input
-                        placeholder="Bot Token（@BotFather 取得，格式：123456:ABC-DEF...）"
+                        placeholder={t('u12.whTgToken')}
                         value={wh.value}
                         onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, value: e.target.value } : w))}
                         className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
                       />
                       <input
-                        placeholder="Chat ID（用戶/群組/頻道 ID，如：-1001234567890）"
+                        placeholder={t('u12.whTgChatId')}
                         value={wh.target ?? ''}
                         onChange={e => setNotifyWebhooks(prev => prev.map((w, i) => i === idx ? { ...w, target: e.target.value } : w))}
                         className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
                       />
-                      <p className="text-[10px] text-gray-400">💡 將 Bot 加入群組後，傳訊息給 @userinfobot 可查詢 Chat ID</p>
+                      <p className="text-[10px] text-gray-400">💡 {t('u12.whTgHint')}</p>
                     </>
                   ) : (
                     <input
@@ -6615,18 +6615,18 @@ function Unit12CustomerService({
             <button
               onClick={() => setNotifyWebhooks(prev => [...prev, { id: crypto.randomUUID(), type: 'line_messaging', label: '', value: '', target: '' }])}
               className="text-xs text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 flex items-center gap-1"
-            >+ 新增通知管道</button>
+            >+ {t('u12.addNotifyChannel')}</button>
           </div>
 
           <button onClick={saveSettings} disabled={savingSettings}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
             style={{ background: 'var(--primary)' }}>
-            {savingSettings ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</> : <><CheckCircle2 className="h-4 w-4" />儲存設定</>}
+            {savingSettings ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u12.saving')}</> : <><CheckCircle2 className="h-4 w-4" />{t('u12.saveSettings')}</>}
           </button>
 
           {/* Env hint */}
           <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-500 space-y-1">
-            <div className="font-medium text-gray-600">需要設定的環境變數：</div>
+            <div className="font-medium text-gray-600">{t('u11.envHint')}</div>
             <div className="flex gap-2 flex-wrap">
               <code className="bg-blue-100 px-1.5 py-0.5 rounded">GOOGLE_AI_API_KEY</code>
               <code className="bg-orange-100 px-1.5 py-0.5 rounded">ANTHROPIC_API_KEY</code>
@@ -6639,32 +6639,32 @@ function Unit12CustomerService({
       {tab === 'dialogue-files' && (
         <div className="space-y-4">
           <div>
-            <div className="text-sm font-medium text-gray-700">知識庫</div>
-            <div className="text-xs text-gray-400 mt-0.5">AI 客服優先從這裡查找答案，找不到才回到公司資料（Unit 2）</div>
+            <div className="text-sm font-medium text-gray-700">{t('u12.tabKnowledge')}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{t('u12.kbHint')}</div>
           </div>
 
           {/* Direct text input */}
           <div className="border-2 border-green-200 rounded-xl p-4 space-y-2 bg-green-50/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-gray-600">直接輸入知識內容</span>
-                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">FAQ / 產品資料</span>
+                <span className="text-xs font-medium text-gray-600">{t('u12.kbDirectInput')}</span>
+                <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">{t('u12.kbFaqTag')}</span>
               </div>
-              <span className="text-xs text-gray-400">{knowledgeBase.length} 字</span>
+              <span className="text-xs text-gray-400">{t('u12.nChars', { n: knowledgeBase.length })}</span>
             </div>
-            <p className="text-xs text-gray-500">放 FAQ、產品規格、價格等<strong>具體資訊</strong>，AI 客服會從這裡查找答案。<br />這裡<strong>不是</strong> Prompt 設定，Prompt 請到「AI 設定」分頁設定。</p>
+            <p className="text-xs text-gray-500">{t.rich('u12.kbDesc', { b: (c) => <strong>{c}</strong>, br: () => <br /> })}</p>
             <textarea
               value={knowledgeBase}
               onChange={e => setKnowledgeBase(e.target.value)}
               rows={8}
-              placeholder="例：&#10;Q: 如何申請試用？&#10;A: 請至官網填寫申請表，我們會在 1 個工作天內回覆。&#10;&#10;Q: 收費方案為何？&#10;A: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。"
+              placeholder={t('u12.kbPlaceholder')}
               className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-green-300 font-mono"
             />
           </div>
 
           {/* File upload */}
           <div className="border rounded-xl p-4 space-y-3">
-            <span className="text-xs font-medium text-gray-600">上傳文件（PDF / DOCX / XLSX / CSV / TXT）</span>
+            <span className="text-xs font-medium text-gray-600">{t('u12.uploadDoc')}</span>
             <div
               onClick={() => !uploadingDialogue && dialogueInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${uploadingDialogue ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-50'}`}
@@ -6677,15 +6677,15 @@ function Unit12CustomerService({
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleDialogueUpload(f); e.target.value = '' }}
               />
               {uploadingDialogue
-                ? <><Loader2 className="h-5 w-5 text-gray-400 mx-auto mb-1 animate-spin" /><p className="text-xs text-gray-500">上傳中…</p></>
-                : <><Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500">點擊上傳 · 最大 50MB</p></>
+                ? <><Loader2 className="h-5 w-5 text-gray-400 mx-auto mb-1 animate-spin" /><p className="text-xs text-gray-500">{t('u12.uploadingShort')}</p></>
+                : <><Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" /><p className="text-xs text-gray-500">{t('u12.clickUpload50')}</p></>
               }
             </div>
             {(() => {
               // Always show files from either local state or saved DB data
               const displayFiles = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
               return displayFiles.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center">尚未上傳任何文件</p>
+                <p className="text-xs text-gray-400 text-center">{t('u12.noFiles')}</p>
               ) : (
                 <div className="space-y-1.5">
                   {displayFiles.map(f => (
@@ -6693,9 +6693,9 @@ function Unit12CustomerService({
                       <FileText className="h-4 w-4 text-indigo-400 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{f.name}</p>
-                        <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? `已萃取 ${f.textContent.length.toLocaleString()} 字` : '無文字內容'}</p>
+                        <p className="text-[10px] text-gray-400">{f.sizeKb} KB · {f.textContent ? t('u12.extractedChars', { n: f.textContent.length.toLocaleString() }) : t('u12.noTextContent')}</p>
                       </div>
-                      <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors" title="刪除此檔案">
+                      <button onClick={() => removeDialogueFile(f.url)} className="text-gray-400 hover:text-red-500 transition-colors" title={t('u12.deleteFile')}>
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -6709,7 +6709,7 @@ function Unit12CustomerService({
           <button onClick={saveSettings} disabled={savingSettings}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
             style={{ background: 'var(--primary)' }}>
-            {savingSettings ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</> : <><CheckCircle2 className="h-4 w-4" />儲存知識庫</>}
+            {savingSettings ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u12.saving')}</> : <><CheckCircle2 className="h-4 w-4" />{t('u12.saveKb')}</>}
           </button>
         </div>
       )}
@@ -6719,13 +6719,13 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700">外部資料來源</div>
-              <div className="text-xs text-gray-400 mt-0.5">客戶輸入觸發關鍵字時，AI 自動查詢對應 Google Sheets</div>
+              <div className="text-sm font-medium text-gray-700">{t('u12.extSources')}</div>
+              <div className="text-xs text-gray-400 mt-0.5">{t('u12.extSourcesHint')}</div>
             </div>
             <button onClick={openAddDs}
               className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1"
               style={{ background: 'var(--primary)' }}>
-              <Plus className="h-3.5 w-3.5" />新增
+              <Plus className="h-3.5 w-3.5" />{t('u12.add')}
             </button>
           </div>
 
@@ -6733,37 +6733,37 @@ function Unit12CustomerService({
           {ind === 'homestay' && (
             <div className="bg-white border rounded-xl p-4 space-y-3">
               <div>
-                <div className="text-sm font-semibold text-gray-800">AI 取得來源切換</div>
-                <p className="text-[11px] text-gray-400 mt-0.5">沒有使用「訂單系統」的話，可切換成由下方資料來源／定價計算機取得。</p>
+                <div className="text-sm font-semibold text-gray-800">{t('u12.sourceSwitch')}</div>
+                <p className="text-[11px] text-gray-400 mt-0.5">{t('u12.sourceSwitchHint')}</p>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-xs font-medium text-gray-700">房價／動態價格</div>
-                  <div className="text-[10px] text-gray-400">客人問價時 AI 從哪取得</div>
+                  <div className="text-xs font-medium text-gray-700">{t('u12.roomPrice')}</div>
+                  <div className="text-[10px] text-gray-400">{t('u12.roomPriceHint')}</div>
                 </div>
                 <div className="flex rounded-lg border overflow-hidden text-xs shrink-0">
                   <button onClick={() => saveSourcePrefs({ ...sourcePrefs, priceSource: 'booking_system' })} disabled={savingPrefs}
-                    className={`px-3 py-1.5 font-medium ${sourcePrefs.priceSource === 'booking_system' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單系統</button>
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.priceSource === 'booking_system' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{t('u12.bookingSystem')}</button>
                   <button onClick={() => saveSourcePrefs({ ...sourcePrefs, priceSource: 'pricing_calculator' })} disabled={savingPrefs}
-                    className={`px-3 py-1.5 font-medium ${sourcePrefs.priceSource === 'pricing_calculator' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>定價計算機</button>
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.priceSource === 'pricing_calculator' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{t('u12.tabPricing')}</button>
                 </div>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="text-xs font-medium text-gray-700">入住密碼／房號</div>
-                  <div className="text-[10px] text-gray-400">客人給訂單號時 AI 從哪取得</div>
+                  <div className="text-xs font-medium text-gray-700">{t('u12.checkinPwd')}</div>
+                  <div className="text-[10px] text-gray-400">{t('u12.checkinPwdHint')}</div>
                 </div>
                 <div className="flex rounded-lg border overflow-hidden text-xs shrink-0">
                   <button onClick={() => saveSourcePrefs({ ...sourcePrefs, passwordSource: 'booking_system' })} disabled={savingPrefs}
-                    className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'booking_system' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單系統</button>
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'booking_system' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{t('u12.bookingSystem')}</button>
                   <button onClick={() => saveSourcePrefs({ ...sourcePrefs, passwordSource: 'datasource' })} disabled={savingPrefs}
-                    className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'datasource' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>訂單密碼表</button>
+                    className={`px-3 py-1.5 font-medium ${sourcePrefs.passwordSource === 'datasource' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>{t('u12.pwdSheet')}</button>
                 </div>
               </div>
               <div className="flex items-center justify-between gap-2 border-t pt-3">
                 <div className="min-w-0">
-                  <div className="text-xs font-medium text-gray-700">入住時間</div>
-                  <div className="text-[10px] text-gray-400">未到此時間，AI 不提供密碼／房號（HH:MM）。留空則用民宿資料設定，預設 15:00</div>
+                  <div className="text-xs font-medium text-gray-700">{t('u12.checkinTime')}</div>
+                  <div className="text-[10px] text-gray-400">{t('u12.checkinTimeHint')}</div>
                 </div>
                 <input type="time" value={sourcePrefs.checkinTime}
                   onChange={e => setSourcePrefs({ ...sourcePrefs, checkinTime: e.target.value })}
@@ -6777,41 +6777,41 @@ function Unit12CustomerService({
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-base">{CS_INDUSTRY_TEMPLATES[industry].emoji}</span>
-                <div className="font-medium text-sm text-blue-800">建議設定的 Google Sheets（{CS_INDUSTRY_TEMPLATES[industry].label}）</div>
+                <div className="font-medium text-sm text-blue-800">{t('u12.recommendedSheets', { name: industryLabel(industry) })}</div>
               </div>
               <div className="space-y-2">
                 {CS_INDUSTRY_TEMPLATES[industry].recommendedSheets.map((sheet, i) => (
                   <div key={i} className="bg-white rounded-lg border border-blue-100 p-3 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">表格 {i + 1}</span>
+                      <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">{t('u12.sheetN', { n: i + 1 })}</span>
                       <span className="text-xs font-semibold text-gray-800">{sheet.name}</span>
                       <span className="text-[10px] text-gray-400">{sheet.description}</span>
                     </div>
                     <div className="text-[10px] text-gray-500 space-y-0.5">
-                      <div>查詢欄位：<span className="text-gray-700 font-medium">{sheet.keyColumn}</span></div>
-                      <div>回傳欄位範例：<span className="text-gray-600">{sheet.returnColumnsExample}</span></div>
-                      <div>觸發詞：<span className="text-blue-600">{sheet.triggerKeywords}</span>　觸發模式：<span className="font-medium">{sheet.triggerMode === 'numeric' ? '數字觸發' : sheet.triggerMode === 'both' ? '關鍵字+數字' : '關鍵字觸發'}</span></div>
+                      <div>{t('u12.queryColumn')}<span className="text-gray-700 font-medium">{sheet.keyColumn}</span></div>
+                      <div>{t('u12.returnColExample')}<span className="text-gray-600">{sheet.returnColumnsExample}</span></div>
+                      <div>{t('u12.triggerWord')}<span className="text-blue-600">{sheet.triggerKeywords}</span>　{t('u12.triggerMode')}<span className="font-medium">{sheet.triggerMode === 'numeric' ? t('u12.tmNumeric') : sheet.triggerMode === 'both' ? t('u12.tmBoth') : t('u12.tmKeyword')}</span></div>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="text-[10px] text-blue-600 space-y-0.5">
-                <div>💡 <strong>定價查詢</strong>請到「定價計算機」分頁設定 — 這裡只放需要即時查詢的非定價資料（訂單、排班、時段）</div>
-                <div>👉 依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID</div>
+                <div>💡 {t.rich('u12.dsTip1', { b: (c) => <strong>{c}</strong> })}</div>
+                <div>👉 {t('u12.dsTip2')}</div>
               </div>
             </div>
           )}
 
-          {dsLoading && <div className="text-xs text-gray-400 text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />載入中…</div>}
+          {dsLoading && <div className="text-xs text-gray-400 text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />{t('u12.loadingShort')}</div>}
 
           {dataSources.length === 0 && !dsLoading && !editingDs && (
             <div className="border-2 border-dashed rounded-xl p-6 text-center space-y-2">
-              <div className="text-sm text-gray-400">尚無資料來源。點擊「新增」設定 Google Sheets 查詢。</div>
+              <div className="text-sm text-gray-400">{t('u12.noDataSources')}</div>
               <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3 text-left space-y-1">
-                <div className="font-medium text-gray-600">📌 工具分工說明</div>
-                <div>• <span className="font-medium">Google Sheets（此頁）</span>：訂單查詢、排班、可用時段等即時動態資料</div>
-                <div>• <span className="font-medium">定價計算機</span>：房型/療程/套餐等定價計算，AI 自動套公式報價</div>
-                <div>• <span className="font-medium">知識庫</span>：FAQ、政策說明、靜態產品介紹</div>
+                <div className="font-medium text-gray-600">📌 {t('u12.toolDivision')}</div>
+                <div>• {t.rich('u12.toolSheets', { b: (c) => <span className="font-medium">{c}</span> })}</div>
+                <div>• {t.rich('u12.toolPricing', { b: (c) => <span className="font-medium">{c}</span> })}</div>
+                <div>• {t.rich('u12.toolKb', { b: (c) => <span className="font-medium">{c}</span> })}</div>
               </div>
             </div>
           )}
@@ -6823,17 +6823,17 @@ function Unit12CustomerService({
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-800 truncate">{src.name}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                      觸發詞：{(src.config.triggerKeywords ?? []).join('、') || '（未設定）'}
+                      {t('u12.triggerWord')}{(src.config.triggerKeywords ?? []).join('、') || t('u12.tgNotSet')}
                     </div>
                   </div>
                   <button onClick={() => toggleDs(src)}
                     className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {src.enabled ? '啟用' : '停用'}
+                    {src.enabled ? t('u12.enable') : t('u12.disable')}
                   </button>
                   <button onClick={() => openEditDs(src)}
-                    className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                    className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
                   <button onClick={() => deleteDs(src.id)}
-                    className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">刪除</button>
+                    className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
                 </div>
               ))}
             </div>
