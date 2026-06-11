@@ -1743,6 +1743,30 @@
       "videoN": "Video {n}", "scriptTitle": "Storyboard video {n} — Claude Sonnet · {dur} giây", "totalVideos": "Tổng {n}",
       "feedbackPlaceholder": "VD: nhịp quá chậm; mở đầu chưa hấp dẫn; thêm chi tiết sản phẩm…",
       "tipBody": "Sau khi xong kịch bản, vào <b>Unit 8 Tạo video</b> dùng KLING (5/10 giây), Google VEO3 (25 giây) hoặc SORA (60 giây) để chuyển kịch bản thành video thực tế."
+    },
+    "u8": {
+      "model": {
+        "kling-standard": "KLING Standard", "kling-pro": "KLING Pro", "kling-img2video": "KLING ảnh ra video",
+        "veo3": "Google VEO3", "veo3-img2video": "VEO3 ảnh ra video", "sora": "SORA", "sora-img2video": "SORA ảnh ra video"
+      },
+      "gen": { "kling": "KLING đang tạo…", "veo3": "VEO3 đang tạo…", "sora": "SORA đang tạo…" },
+      "promptEmpty": "Prompt video không được trống; hãy hoàn tất kịch bản Unit 7 hoặc nhập mô tả thủ công trước",
+      "selectDuration": "Chọn thời lượng video",
+      "durHint": { "5": "Siêu ngắn · nhanh", "10": "Video ngắn", "25": "Video trung-dài", "60": "Video dài" },
+      "klingStandard": "Standard (nhanh hơn)", "klingPro": "Pro (chất lượng đỉnh)",
+      "img2video": "Ảnh ra video", "img2videoHint": "Dùng hình Unit 6 làm khung bắt đầu", "currentModel": "Mô hình hiện tại: ",
+      "videoSettings": "Cài đặt video", "aspectRatio": "Tỷ lệ khung hình",
+      "aspect": { "16:9": "16:9 Ngang", "9:16": "9:16 Dọc", "1:1": "1:1 Vuông" },
+      "selectSourceImg": "Chọn hình nguồn", "driveImage": "Hình Google Drive",
+      "noUnit6Images": "Chưa tạo hình ở Unit 6. Hãy hoàn tất Unit 6 trước, hoặc dùng hình Drive.",
+      "driveChosen": "Đã chọn hình Drive; video sẽ tạo từ hình này", "noDriveImg": "Chưa chọn hình Google Drive ở Unit 5/6/7; hãy vào bất kỳ unit nào để chọn.",
+      "fromScripts": "Tạo từ kịch bản Unit 7 (tổng {n})",
+      "processing": "Đang tạo (~1-3 phút)", "failed": "Thất bại",
+      "videoPrompt": "Prompt video", "videoPromptPlaceholder": "Mô tả cảnh và chuyển động video…", "genVideo": "Tạo video",
+      "noUnit7": "<b>Chưa chạy Unit 7 (Kịch bản video)</b>; bạn có thể nhập prompt bên dưới để tạo video.",
+      "manualPlaceholder": "Mô tả video, VD: A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
+      "notice": "<b>Lưu ý:</b> Tạo video thường mất <b>1-3 phút</b>. Sau khi gửi, trang sẽ tự kiểm tra trạng thái mỗi 6 giây — đừng rời trang. Video hiện tự động khi xong.",
+      "successHint": "Đã tạo {n} video; có thể tải lên các nền tảng ở Unit 9."
     }
   }
 }

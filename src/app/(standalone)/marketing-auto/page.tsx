@@ -2643,21 +2643,11 @@ interface Unit8Data {
   videos?: GeneratedVideo[]
 }
 
-const VIDEO_MODEL_LABELS: Record<VideoModel, string> = {
-  'kling-standard':  'KLING Standard',
-  'kling-pro':       'KLING Pro',
-  'kling-img2video': 'KLING 圖生影片',
-  'veo3':            'Google VEO3',
-  'veo3-img2video':  'VEO3 圖生影片',
-  'sora':            'SORA',
-  'sora-img2video':  'SORA 圖生影片',
-}
-
-const DURATION_CARDS: { duration: VideoDuration; provider: string; badge: string; hint: string }[] = [
-  { duration: '5',  provider: 'KLING', badge: '5秒',  hint: '超短 · 快速' },
-  { duration: '10', provider: 'KLING', badge: '10秒', hint: '短影音' },
-  { duration: '25', provider: 'Google VEO3', badge: '25秒', hint: '中長影音' },
-  { duration: '60', provider: 'SORA',  badge: '60秒', hint: '長影片' },
+const DURATION_CARDS: { duration: VideoDuration; provider: string }[] = [
+  { duration: '5',  provider: 'KLING' },
+  { duration: '10', provider: 'KLING' },
+  { duration: '25', provider: 'Google VEO3' },
+  { duration: '60', provider: 'SORA' },
 ]
 
 function resolveModel(duration: VideoDuration, klingQuality: 'standard' | 'pro', useImg2Video: boolean): VideoModel {
@@ -2669,16 +2659,10 @@ function resolveModel(duration: VideoDuration, klingQuality: 'standard' | 'pro',
   return useImg2Video ? 'sora-img2video' : 'sora'
 }
 
-function generatingLabel(model: VideoModel): string {
-  if (model.startsWith('kling')) return 'KLING 生成中…'
-  if (model.startsWith('veo3')) return 'VEO3 生成中…'
-  return 'SORA 生成中…'
-}
-
 const VIDEO_ASPECT_OPTIONS = [
-  { value: '16:9', label: '16:9 橫式', hint: 'YouTube/FB' },
-  { value: '9:16', label: '9:16 直式', hint: 'Reels/TikTok' },
-  { value: '1:1',  label: '1:1 正方形', hint: 'IG/通用' },
+  { value: '16:9', hint: 'YouTube/FB' },
+  { value: '9:16', hint: 'Reels/TikTok' },
+  { value: '1:1',  hint: 'IG' },
 ]
 
 // Strip markdown bold/italic markers
@@ -2743,6 +2727,10 @@ function Unit8VideoGenerate({
 }) {
   const scripts = unit7Data?.scripts ?? []
   const generatedImages = unit6Data?.images ?? []
+  const t = useTranslations('MA')
+  const locale = useLocale()
+  const modelLabel = (m: VideoModel) => t(`u8.model.${m}`)
+  const genLabel = (m: VideoModel) => t(`u8.gen.${m.startsWith('kling') ? 'kling' : m.startsWith('veo3') ? 'veo3' : 'sora'}`)
 
   const [duration, setDuration] = useState<VideoDuration>('5')
   const [klingQuality, setKlingQuality] = useState<'standard' | 'pro'>('standard')
@@ -2830,7 +2818,7 @@ function Unit8VideoGenerate({
   const submitJob = async (scriptId: number) => {
     const prompt = prompts[scriptId]?.trim()
     if (!prompt) {
-      setJobs(prev => ({ ...prev, [scriptId]: { scriptId, requestId: '', model, status: 'failed', error: '影片 Prompt 不可為空，請先完成單元 7 腳本或手動輸入描述' } }))
+      setJobs(prev => ({ ...prev, [scriptId]: { scriptId, requestId: '', model, status: 'failed', error: t('u8.promptEmpty') } }))
       return
     }
     const payload: Record<string, unknown> = { prompt, scriptId, model, duration, aspectRatio }
@@ -2877,7 +2865,7 @@ function Unit8VideoGenerate({
 
       {/* Duration / Provider selector */}
       <div>
-        <label className="block text-sm font-semibold mb-3">選擇影片時長</label>
+        <label className="block text-sm font-semibold mb-3">{t('u8.selectDuration')}</label>
         <div className="grid grid-cols-4 gap-3">
           {DURATION_CARDS.map(card => (
             <button key={card.duration} onClick={() => { setDuration(card.duration); setUseImg2Video(false) }}
@@ -2885,12 +2873,12 @@ function Unit8VideoGenerate({
               style={duration === card.duration
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
                 : { borderColor: '#e5e7eb', background: 'white' }}>
-              <span className="text-base font-bold text-gray-800">{card.badge}</span>
+              <span className="text-base font-bold text-gray-800">{t('u7.durSec', { s: card.duration })}</span>
               <span className="text-[11px] font-semibold mt-1"
                 style={{ color: duration === card.duration ? 'var(--primary)' : '#6b7280' }}>
                 {card.provider}
               </span>
-              <span className="text-[10px] text-gray-400 mt-0.5">{card.hint}</span>
+              <span className="text-[10px] text-gray-400 mt-0.5">{t(`u8.durHint.${card.duration}`)}</span>
             </button>
           ))}
         </div>
@@ -2904,7 +2892,7 @@ function Unit8VideoGenerate({
                 style={klingQuality === q
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                   : { background: 'white' }}>
-                {q === 'standard' ? 'Standard（較快）' : 'Pro（旗艦品質）'}
+                {q === 'standard' ? t('u8.klingStandard') : t('u8.klingPro')}
               </button>
             ))}
           </div>
@@ -2918,23 +2906,23 @@ function Unit8VideoGenerate({
               ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
               : { background: 'white' }}>
             <ImageIcon className="h-3.5 w-3.5" />
-            圖片生成影片
+            {t('u8.img2video')}
           </button>
-          <span className="text-[10px] text-gray-400">使用單元6圖片作為起始畫面</span>
+          <span className="text-[10px] text-gray-400">{t('u8.img2videoHint')}</span>
         </div>
 
         <div className="mt-2 text-[10px] text-gray-400">
-          目前模型：<span className="font-semibold text-gray-600">{VIDEO_MODEL_LABELS[model]}</span>
+          {t('u8.currentModel')}<span className="font-semibold text-gray-600">{modelLabel(model)}</span>
         </div>
       </div>
 
       {/* Settings */}
       <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">影片設定</div>
+        <div className="text-xs font-semibold text-gray-600">{t('u8.videoSettings')}</div>
         <div className="flex flex-wrap gap-6">
           {/* Aspect ratio */}
           <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">畫面比例</div>
+            <div className="text-xs font-medium text-gray-500 mb-2">{t('u8.aspectRatio')}</div>
             <div className="flex gap-2">
               {VIDEO_ASPECT_OPTIONS.map(opt => (
                 <button key={opt.value} onClick={() => setAspectRatio(opt.value)}
@@ -2942,7 +2930,7 @@ function Unit8VideoGenerate({
                   style={aspectRatio === opt.value
                     ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                     : { background: 'white' }}>
-                  <span className="font-medium">{opt.label}</span>
+                  <span className="font-medium">{t(`u8.aspect.${opt.value}`)}</span>
                   <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
                 </button>
               ))}
@@ -2954,7 +2942,7 @@ function Unit8VideoGenerate({
       {/* Image selector (img2video) */}
       {useImg2Video && (
         <div className="p-4 rounded-xl border border-blue-100 bg-blue-50 space-y-3">
-          <div className="text-xs font-semibold text-blue-800">選擇來源圖片</div>
+          <div className="text-xs font-semibold text-blue-800">{t('u8.selectSourceImg')}</div>
           {/* Source toggle */}
           <div className="flex gap-2">
             <button onClick={() => setImg2VideoSource('unit6')}
@@ -2962,14 +2950,14 @@ function Unit8VideoGenerate({
               style={img2VideoSource === 'unit6'
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                 : { background: 'white' }}>
-              單元6 生成圖片
+              {t('u7.unit6Image')}
             </button>
             <button onClick={() => setImg2VideoSource('drive')}
               className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-all"
               style={img2VideoSource === 'drive'
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                 : { background: 'white' }}>
-              Google Drive 圖片
+              {t('u8.driveImage')}
             </button>
           </div>
           {img2VideoSource === 'unit6' && (
@@ -2979,7 +2967,7 @@ function Unit8VideoGenerate({
                   <button key={img.url} onClick={() => setSelectedImage(img.url)}
                     className="relative rounded-lg overflow-hidden border-2 transition-all"
                     style={selectedImage === img.url ? { borderColor: 'var(--primary)' } : { borderColor: 'transparent' }}>
-                    <img src={img.url} alt="圖片" className="w-16 h-16 object-cover" />
+                    <img src={img.url} alt="" className="w-16 h-16 object-cover" />
                     {selectedImage === img.url && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                         <CheckCircle2 className="h-5 w-5 text-white" />
@@ -2989,7 +2977,7 @@ function Unit8VideoGenerate({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-blue-600">尚未在單元6生成圖片。請先完成單元6，或改用 Drive 圖片。</p>
+              <p className="text-xs text-blue-600">{t('u8.noUnit6Images')}</p>
             )
           )}
           {img2VideoSource === 'drive' && (
@@ -2998,11 +2986,11 @@ function Unit8VideoGenerate({
                 <img src={drivePickedImage.dataUrl} alt={drivePickedImage.name} className="w-16 h-16 object-cover rounded-lg border" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-blue-800 truncate">{drivePickedImage.name}</p>
-                  <p className="text-[10px] text-blue-500 mt-0.5">已選擇 Drive 圖片，將以此圖生成影片</p>
+                  <p className="text-[10px] text-blue-500 mt-0.5">{t('u8.driveChosen')}</p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-blue-600">尚未在單元5/6/7 選取 Google Drive 圖片，請先前往任一單元選取。</p>
+              <p className="text-xs text-blue-600">{t('u8.noDriveImg')}</p>
             )
           )}
         </div>
@@ -3011,7 +2999,7 @@ function Unit8VideoGenerate({
       {/* From Unit 7 scripts */}
       {hasUnit7 ? (
         <div className="space-y-4">
-          <div className="text-sm font-semibold text-gray-700">從單元7腳本生成（共 {scripts.length} 支）</div>
+          <div className="text-sm font-semibold text-gray-700">{t('u8.fromScripts', { n: scripts.length })}</div>
           {scripts.map(s => {
             const job = jobs[s.id]
             const vid = videos.find(v => v.scriptId === s.id)
@@ -3021,20 +3009,20 @@ function Unit8VideoGenerate({
               <div key={s.id} className="border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
                   <Film className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-700">影片 {s.id}</span>
-                  {vid && <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">已生成</span>}
-                  {isProcessing && <span className="ml-auto text-[10px] text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 flex items-center gap-1"><Loader2 className="h-2.5 w-2.5 animate-spin" />生成中（約1-3分鐘）</span>}
-                  {isFailed && <span className="ml-auto text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">失敗</span>}
+                  <span className="text-sm font-medium text-gray-700">{t('u7.videoN', { n: s.id })}</span>
+                  {vid && <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">{t('u6.generated')}</span>}
+                  {isProcessing && <span className="ml-auto text-[10px] text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 flex items-center gap-1"><Loader2 className="h-2.5 w-2.5 animate-spin" />{t('u8.processing')}</span>}
+                  {isFailed && <span className="ml-auto text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">{t('u8.failed')}</span>}
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">影片 Prompt <span className="text-gray-400 font-normal">（可編輯）</span></label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u8.videoPrompt')} <span className="text-gray-400 font-normal">{t('u6.editable')}</span></label>
                     <textarea value={prompts[s.id] ?? ''} onChange={e => {
                         setUserEditedPrompts(prev => new Set(prev).add(s.id))
                         setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))
                       }}
                       rows={3} className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none"
-                      placeholder="描述影片畫面與動作…" />
+                      placeholder={t('u8.videoPromptPlaceholder')} />
                   </div>
                   {isFailed && (
                     <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
@@ -3045,17 +3033,17 @@ function Unit8VideoGenerate({
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
                     style={{ background: 'var(--primary)' }}>
                     {isProcessing
-                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{generatingLabel(model)}</>
-                      : <><Sparkles className="h-3.5 w-3.5" />{vid ? '重新生成' : '生成影片'}</>}
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{genLabel(model)}</>
+                      : <><Sparkles className="h-3.5 w-3.5" />{vid ? t('u4.regenerate') : t('u8.genVideo')}</>}
                   </button>
                   {vid && (
                     <div className="rounded-xl overflow-hidden border bg-black">
                       <video src={vid.url} controls className="w-full max-h-72" />
                       <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
-                        <span className="text-[10px] text-gray-400 flex-1">{VIDEO_MODEL_LABELS[vid.model]} · {new Date(vid.generatedAt).toLocaleString('zh-TW')}</span>
+                        <span className="text-[10px] text-gray-400 flex-1">{modelLabel(vid.model)} · {new Date(vid.generatedAt).toLocaleString(locale)}</span>
                         <a href={vid.url} download={`video-${s.id}.mp4`} target="_blank" rel="noreferrer"
                           className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
-                          <Download className="h-3 w-3" /> 下載
+                          <Download className="h-3 w-3" /> {t('u6.download')}
                         </a>
                         <button onClick={() => removeVideo(vid.url)} className="p-1 rounded-lg text-gray-400 hover:text-red-400">
                           <X className="h-3 w-3" />
@@ -3070,7 +3058,7 @@ function Unit8VideoGenerate({
         </div>
       ) : (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-          <strong>尚未執行單元7（影片腳本）</strong>，可在下方直接輸入 Prompt 生成影片。
+          {t.rich('u8.noUnit7', { b: (c) => <strong>{c}</strong> })}
         </div>
       )}
 
@@ -3078,11 +3066,11 @@ function Unit8VideoGenerate({
       <div className="border rounded-xl p-4 space-y-3">
         <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
           <Wand2 className="h-4 w-4" style={{ color: 'var(--primary)' }} />
-          手動輸入 Prompt
+          {t('u6.manualPrompt')}
         </div>
         <textarea value={manualPrompt} onChange={e => setManualPrompt(e.target.value)} rows={3}
           className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none"
-          placeholder="描述影片畫面，例如：A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…" />
+          placeholder={t('u8.manualPlaceholder')} />
         {manualJob?.status === 'failed' && (
           <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
             <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{manualJob.error}
@@ -3092,8 +3080,8 @@ function Unit8VideoGenerate({
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
           style={{ background: 'var(--primary)' }}>
           {manualJob?.status === 'processing'
-            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{generatingLabel(model)}</>
-            : <><Sparkles className="h-3.5 w-3.5" />生成影片</>}
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{genLabel(model)}</>
+            : <><Sparkles className="h-3.5 w-3.5" />{t('u8.genVideo')}</>}
         </button>
         {(() => {
           const manualVid = videos.find(v => v.scriptId === 0)
@@ -3102,11 +3090,11 @@ function Unit8VideoGenerate({
               <video src={manualVid.url} controls autoPlay className="w-full max-h-72" />
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
                 <span className="text-[10px] text-gray-400 flex-1">
-                  {VIDEO_MODEL_LABELS[manualVid.model]} · {new Date(manualVid.generatedAt).toLocaleString('zh-TW')}
+                  {modelLabel(manualVid.model)} · {new Date(manualVid.generatedAt).toLocaleString(locale)}
                 </span>
                 <a href={manualVid.url} download="video.mp4" target="_blank" rel="noreferrer"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
-                  <Download className="h-3 w-3" /> 下載
+                  <Download className="h-3 w-3" /> {t('u6.download')}
                 </a>
                 <button onClick={() => removeVideo(manualVid.url)} className="p-1 rounded-lg text-gray-400 hover:text-red-400">
                   <X className="h-3 w-3" />
@@ -3119,13 +3107,13 @@ function Unit8VideoGenerate({
 
       {/* Notice */}
       <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700">
-        <strong>注意：</strong>影片生成通常需要 <strong>1-3 分鐘</strong>，提交後頁面會自動每 6 秒輪詢狀態，請勿離開此頁面。生成完成後影片將自動顯示。
+        {t.rich('u8.notice', { b: (c) => <strong>{c}</strong> })}
       </div>
 
       {videos.length > 0 && (
         <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-          <span className="text-xs text-green-700 font-medium">已生成 {videos.length} 支影片，可於單元9上傳至各平台。</span>
+          <span className="text-xs text-green-700 font-medium">{t('u8.successHint', { n: videos.length })}</span>
         </div>
       )}
     </div>
