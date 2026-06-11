@@ -1622,6 +1622,36 @@
       "perTypeCount": "每類資料筆數", "countUnit": "{n} 筆", "language": "語言",
       "collecting": "蒐集中，請稍候…", "startCollect": "開始蒐集",
       "resultTitle": "蒐集結果", "tabSummary": "AI 摘要", "tabRaw": "原始資料", "recollect": "重新蒐集"
+    },
+    "opt": {
+      "科技/軟體": "科技/軟體", "製造業": "製造業", "零售/電商": "零售/電商", "金融服務": "金融服務", "醫療健康": "醫療健康", "餐飲/消費": "餐飲/消費", "教育培訓": "教育培訓", "房地產": "房地產", "物流/運輸": "物流/運輸", "廣告/行銷": "廣告/行銷", "其他": "其他",
+      "1-10人": "1-10人", "11-50人": "11-50人", "51-200人": "51-200人", "201-500人": "201-500人", "501-1000人": "501-1000人", "1000人以上": "1000人以上",
+      "專業/正式": "專業/正式", "活潑/年輕": "活潑/年輕", "溫暖/親切": "溫暖/親切", "創新/前衛": "創新/前衛", "奢華/高端": "奢華/高端", "親民/平易": "親民/平易"
+    },
+    "u2": {
+      "clickUpload": "點擊上傳", "uploading": "上傳中…", "textExtracted": "· 已萃取文字",
+      "basicInfo": "基本資料", "companyName": "公司名稱 *", "companyNamePlaceholder": "例如：台灣科技股份有限公司",
+      "industry": "產業別", "pleaseSelect": "請選擇", "employees": "員工人數",
+      "capital": "資本額", "capitalPlaceholder": "例如：新台幣 1,000 萬元",
+      "founded": "成立年份", "foundedPlaceholder": "例如：2010", "website": "官方網站",
+      "address": "公司地址", "addressPlaceholder": "縣市 + 區 + 街道",
+      "bizDesc": "業務描述", "intro": "公司簡介", "introPlaceholder": "簡述公司背景、發展歷程、核心價值…",
+      "products": "主要產品 / 服務", "productsPlaceholder": "描述主要產品或服務項目、特色功能…",
+      "audience": "目標客群", "audiencePlaceholder": "描述主要客戶群體、年齡層、消費習慣…",
+      "advantage": "核心競爭優勢", "advantagePlaceholder": "相較競爭對手，公司最大的優勢是…",
+      "brandSettings": "品牌設定", "brandTone": "品牌語調",
+      "branches": "門市 / 分公司", "addBranch": "新增門市", "noBranches": "尚未新增任何門市，點擊「新增門市」開始建立",
+      "branchName": "門市名稱 *", "branchNamePlaceholder": "例如：台北信義門市",
+      "phone": "電話", "phonePlaceholder": "例如：02-1234-5678",
+      "branchAddress": "地址 *", "branchAddressPlaceholder": "例如：台北市信義區信義路五段7號",
+      "lat": "緯度（選填）", "lng": "經度（選填）", "notes": "備註", "notesPlaceholder": "例如：週末延長營業",
+      "saveBranch": "儲存門市", "cancel": "取消", "branchCountHint": "共 {count} 個門市。可輸入經緯度以啟用最近門市計算功能。",
+      "materials": "素材上傳", "matLogo": "Logo / 品牌標誌", "matImage": "產品 / 情境圖片", "matDoc": "公司簡介 / 型錄", "matFaq": "FAQ / 對答資料",
+      "materialsHint": "Excel/Word/PDF 文件將自動萃取文字，供 AI 分析與客服回覆使用。",
+      "saving": "儲存中…", "saveCompany": "儲存公司資料", "saved": "已儲存",
+      "overview": "資料概覽", "companyNameShort": "公司名稱", "industryShort": "產業",
+      "branchCount": "門市數量", "nBranches": "{n} 間", "withCoords": "含經緯度",
+      "uploadedFiles": "上傳檔案", "nFiles": "{n} 份", "textMaterials": "文字素材", "nExtracted": "{n} 份已萃取"
     }
   }
 }

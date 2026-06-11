@@ -1622,6 +1622,36 @@
       "perTypeCount": "Items per type", "countUnit": "{n} items", "language": "Language",
       "collecting": "Collecting, please wait…", "startCollect": "Start Collecting",
       "resultTitle": "Collection Result", "tabSummary": "AI Summary", "tabRaw": "Raw Data", "recollect": "Re-collect"
+    },
+    "opt": {
+      "科技/軟體": "Tech/Software", "製造業": "Manufacturing", "零售/電商": "Retail/E-commerce", "金融服務": "Financial Services", "醫療健康": "Healthcare", "餐飲/消費": "F&B/Consumer", "教育培訓": "Education/Training", "房地產": "Real Estate", "物流/運輸": "Logistics/Transport", "廣告/行銷": "Advertising/Marketing", "其他": "Other",
+      "1-10人": "1-10 ppl", "11-50人": "11-50 ppl", "51-200人": "51-200 ppl", "201-500人": "201-500 ppl", "501-1000人": "501-1000 ppl", "1000人以上": "1000+ ppl",
+      "專業/正式": "Professional/Formal", "活潑/年輕": "Lively/Youthful", "溫暖/親切": "Warm/Friendly", "創新/前衛": "Innovative/Avant-garde", "奢華/高端": "Luxury/High-end", "親民/平易": "Approachable/Down-to-earth"
+    },
+    "u2": {
+      "clickUpload": "Click to upload", "uploading": "Uploading…", "textExtracted": "· text extracted",
+      "basicInfo": "Basic Info", "companyName": "Company Name *", "companyNamePlaceholder": "e.g. Taiwan Tech Co., Ltd.",
+      "industry": "Industry", "pleaseSelect": "Please select", "employees": "Employees",
+      "capital": "Capital", "capitalPlaceholder": "e.g. NT$10,000,000",
+      "founded": "Year Founded", "foundedPlaceholder": "e.g. 2010", "website": "Website",
+      "address": "Company Address", "addressPlaceholder": "City + District + Street",
+      "bizDesc": "Business Description", "intro": "Company Intro", "introPlaceholder": "Briefly describe the company background, history, core values…",
+      "products": "Main Products / Services", "productsPlaceholder": "Describe main products or services, key features…",
+      "audience": "Target Audience", "audiencePlaceholder": "Describe main customer groups, age range, spending habits…",
+      "advantage": "Core Competitive Advantage", "advantagePlaceholder": "Compared to competitors, the company's biggest advantage is…",
+      "brandSettings": "Brand Settings", "brandTone": "Brand Tone",
+      "branches": "Stores / Branches", "addBranch": "Add Store", "noBranches": "No stores yet, click \"Add Store\" to start",
+      "branchName": "Store Name *", "branchNamePlaceholder": "e.g. Taipei Xinyi Store",
+      "phone": "Phone", "phonePlaceholder": "e.g. 02-1234-5678",
+      "branchAddress": "Address *", "branchAddressPlaceholder": "e.g. No.7, Sec.5, Xinyi Rd., Xinyi Dist., Taipei",
+      "lat": "Latitude (optional)", "lng": "Longitude (optional)", "notes": "Notes", "notesPlaceholder": "e.g. extended hours on weekends",
+      "saveBranch": "Save Store", "cancel": "Cancel", "branchCountHint": "{count} stores total. Enter coordinates to enable nearest-store calculation.",
+      "materials": "Material Upload", "matLogo": "Logo / Brand Mark", "matImage": "Product / Scene Images", "matDoc": "Company Profile / Catalog", "matFaq": "FAQ / Q&A Data",
+      "materialsHint": "Excel/Word/PDF files will be auto-extracted for AI analysis and customer-service replies.",
+      "saving": "Saving…", "saveCompany": "Save Company Data", "saved": "Saved",
+      "overview": "Data Overview", "companyNameShort": "Company", "industryShort": "Industry",
+      "branchCount": "Store Count", "nBranches": "{n}", "withCoords": "With Coordinates",
+      "uploadedFiles": "Uploaded Files", "nFiles": "{n}", "textMaterials": "Text Materials", "nExtracted": "{n} extracted"
     }
   }
 }

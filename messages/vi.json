@@ -1622,6 +1622,36 @@
       "perTypeCount": "Số lượng mỗi loại", "countUnit": "{n} mục", "language": "Ngôn ngữ",
       "collecting": "Đang thu thập, vui lòng đợi…", "startCollect": "Bắt đầu thu thập",
       "resultTitle": "Kết quả thu thập", "tabSummary": "Tóm tắt AI", "tabRaw": "Dữ liệu gốc", "recollect": "Thu thập lại"
+    },
+    "opt": {
+      "科技/軟體": "Công nghệ/Phần mềm", "製造業": "Sản xuất", "零售/電商": "Bán lẻ/TMĐT", "金融服務": "Dịch vụ tài chính", "醫療健康": "Y tế sức khỏe", "餐飲/消費": "Ẩm thực/Tiêu dùng", "教育培訓": "Giáo dục/Đào tạo", "房地產": "Bất động sản", "物流/運輸": "Logistics/Vận tải", "廣告/行銷": "Quảng cáo/Tiếp thị", "其他": "Khác",
+      "1-10人": "1-10 người", "11-50人": "11-50 người", "51-200人": "51-200 người", "201-500人": "201-500 người", "501-1000人": "501-1000 người", "1000人以上": "Trên 1000 người",
+      "專業/正式": "Chuyên nghiệp/Trang trọng", "活潑/年輕": "Sôi động/Trẻ trung", "溫暖/親切": "Ấm áp/Thân thiện", "創新/前衛": "Sáng tạo/Tiên phong", "奢華/高端": "Sang trọng/Cao cấp", "親民/平易": "Gần gũi/Bình dị"
+    },
+    "u2": {
+      "clickUpload": "Nhấn để tải lên", "uploading": "Đang tải lên…", "textExtracted": "· đã trích xuất văn bản",
+      "basicInfo": "Thông tin cơ bản", "companyName": "Tên công ty *", "companyNamePlaceholder": "VD: Công ty TNHH Công nghệ Đài Loan",
+      "industry": "Ngành", "pleaseSelect": "Vui lòng chọn", "employees": "Số nhân viên",
+      "capital": "Vốn", "capitalPlaceholder": "VD: 10.000.000 TWD",
+      "founded": "Năm thành lập", "foundedPlaceholder": "VD: 2010", "website": "Website",
+      "address": "Địa chỉ công ty", "addressPlaceholder": "Tỉnh/TP + Quận + Đường",
+      "bizDesc": "Mô tả kinh doanh", "intro": "Giới thiệu công ty", "introPlaceholder": "Mô tả ngắn gọn bối cảnh, lịch sử, giá trị cốt lõi…",
+      "products": "Sản phẩm / Dịch vụ chính", "productsPlaceholder": "Mô tả sản phẩm hoặc dịch vụ chính, tính năng nổi bật…",
+      "audience": "Khách hàng mục tiêu", "audiencePlaceholder": "Mô tả nhóm khách hàng chính, độ tuổi, thói quen chi tiêu…",
+      "advantage": "Lợi thế cạnh tranh cốt lõi", "advantagePlaceholder": "So với đối thủ, lợi thế lớn nhất của công ty là…",
+      "brandSettings": "Cài đặt thương hiệu", "brandTone": "Giọng điệu thương hiệu",
+      "branches": "Cửa hàng / Chi nhánh", "addBranch": "Thêm cửa hàng", "noBranches": "Chưa có cửa hàng, nhấn \"Thêm cửa hàng\" để bắt đầu",
+      "branchName": "Tên cửa hàng *", "branchNamePlaceholder": "VD: Cửa hàng Tín Nghĩa Đài Bắc",
+      "phone": "Điện thoại", "phonePlaceholder": "VD: 02-1234-5678",
+      "branchAddress": "Địa chỉ *", "branchAddressPlaceholder": "VD: Số 7, Đoạn 5, Đường Tín Nghĩa, Quận Tín Nghĩa, Đài Bắc",
+      "lat": "Vĩ độ (tùy chọn)", "lng": "Kinh độ (tùy chọn)", "notes": "Ghi chú", "notesPlaceholder": "VD: kéo dài giờ mở cửa cuối tuần",
+      "saveBranch": "Lưu cửa hàng", "cancel": "Hủy", "branchCountHint": "Tổng {count} cửa hàng. Nhập tọa độ để bật tính cửa hàng gần nhất.",
+      "materials": "Tải lên tài liệu", "matLogo": "Logo / Nhận diện thương hiệu", "matImage": "Hình sản phẩm / bối cảnh", "matDoc": "Hồ sơ công ty / Catalog", "matFaq": "FAQ / Dữ liệu hỏi đáp",
+      "materialsHint": "Tệp Excel/Word/PDF sẽ được tự trích xuất văn bản cho AI phân tích và trả lời CSKH.",
+      "saving": "Đang lưu…", "saveCompany": "Lưu dữ liệu công ty", "saved": "Đã lưu",
+      "overview": "Tổng quan dữ liệu", "companyNameShort": "Công ty", "industryShort": "Ngành",
+      "branchCount": "Số cửa hàng", "nBranches": "{n}", "withCoords": "Có tọa độ",
+      "uploadedFiles": "Tệp đã tải", "nFiles": "{n}", "textMaterials": "Tài liệu văn bản", "nExtracted": "{n} đã trích xuất"
     }
   }
 }

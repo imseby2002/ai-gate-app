@@ -461,6 +461,7 @@ function FileUploadZone({
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const catFiles = files.filter(f => f.category === category)
+  const t = useTranslations('MA')
 
   return (
     <div>
@@ -470,7 +471,7 @@ function FileUploadZone({
         className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
       >
         <Upload className="h-5 w-5 text-gray-300 mx-auto mb-1" />
-        <p className="text-xs text-gray-500">點擊上傳</p>
+        <p className="text-xs text-gray-500">{t('u2.clickUpload')}</p>
         <p className="text-[10px] text-gray-400 mt-0.5">{accept.replace(/,/g, ' / ')}</p>
       </div>
       <input
@@ -488,7 +489,7 @@ function FileUploadZone({
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium truncate">{f.name}</div>
-                <div className="text-[10px] text-gray-400">{f.sizeKb} KB {f.textContent ? '· 已萃取文字' : ''}</div>
+                <div className="text-[10px] text-gray-400">{f.sizeKb} KB {f.textContent ? t('u2.textExtracted') : ''}</div>
               </div>
               <button type="button" onClick={() => onRemove(f.url)} className="text-gray-300 hover:text-red-400 transition-colors">
                 <X className="h-3.5 w-3.5" />
@@ -499,7 +500,7 @@ function FileUploadZone({
       )}
       {uploading && (
         <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> 上傳中…
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('u2.uploading')}
         </div>
       )}
     </div>
@@ -524,6 +525,8 @@ function Unit2CompanyData({
   const [uploadError, setUploadError] = useState('')
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null)
   const [showBranchForm, setShowBranchForm] = useState(false)
+  const t = useTranslations('MA')
+  const optLabel = (o: string) => t.has(`opt.${o}`) ? t(`opt.${o}`) : o
 
   const set = (key: keyof Unit2Data, value: string) =>
     setForm(prev => ({ ...prev, [key]: value }))
@@ -589,58 +592,58 @@ function Unit2CompanyData({
     <div className="space-y-8">
       {/* Basic Info */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">基本資料</h3>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.basicInfo')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {field('companyName', '公司名稱 *', '例如：台灣科技股份有限公司')}
+          {field('companyName', t('u2.companyName'), t('u2.companyNamePlaceholder'))}
           <div>
-            <label className="block text-sm font-medium mb-1.5">產業別</label>
+            <label className="block text-sm font-medium mb-1.5">{t('u2.industry')}</label>
             <select value={form.industry ?? ''} onChange={e => set('industry', e.target.value)}
               className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
-              <option value="">請選擇</option>
-              {INDUSTRY_OPTIONS.map(o => <option key={o}>{o}</option>)}
+              <option value="">{t('u2.pleaseSelect')}</option>
+              {INDUSTRY_OPTIONS.map(o => <option key={o} value={o}>{optLabel(o)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1.5">員工人數</label>
+            <label className="block text-sm font-medium mb-1.5">{t('u2.employees')}</label>
             <select value={form.employees ?? ''} onChange={e => set('employees', e.target.value)}
               className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
-              <option value="">請選擇</option>
-              {EMPLOYEE_OPTIONS.map(o => <option key={o}>{o}</option>)}
+              <option value="">{t('u2.pleaseSelect')}</option>
+              {EMPLOYEE_OPTIONS.map(o => <option key={o} value={o}>{optLabel(o)}</option>)}
             </select>
           </div>
-          {field('capital', '資本額', '例如：新台幣 1,000 萬元')}
-          {field('founded', '成立年份', '例如：2010')}
-          {field('website', '官方網站', 'https://www.example.com')}
+          {field('capital', t('u2.capital'), t('u2.capitalPlaceholder'))}
+          {field('founded', t('u2.founded'), t('u2.foundedPlaceholder'))}
+          {field('website', t('u2.website'), 'https://www.example.com')}
         </div>
         <div className="mt-4">
-          {field('address', '公司地址', '縣市 + 區 + 街道')}
+          {field('address', t('u2.address'), t('u2.addressPlaceholder'))}
         </div>
       </section>
 
       {/* Business Description */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">業務描述</h3>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.bizDesc')}</h3>
         <div className="space-y-4">
-          {field('description', '公司簡介', '簡述公司背景、發展歷程、核心價值…', true)}
-          {field('products', '主要產品 / 服務', '描述主要產品或服務項目、特色功能…', true)}
-          {field('targetAudience', '目標客群', '描述主要客戶群體、年齡層、消費習慣…', true)}
-          {field('competitiveAdvantage', '核心競爭優勢', '相較競爭對手，公司最大的優勢是…', true)}
+          {field('description', t('u2.intro'), t('u2.introPlaceholder'), true)}
+          {field('products', t('u2.products'), t('u2.productsPlaceholder'), true)}
+          {field('targetAudience', t('u2.audience'), t('u2.audiencePlaceholder'), true)}
+          {field('competitiveAdvantage', t('u2.advantage'), t('u2.advantagePlaceholder'), true)}
         </div>
       </section>
 
       {/* Brand */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">品牌設定</h3>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.brandSettings')}</h3>
         <div>
-          <label className="block text-sm font-medium mb-2">品牌語調</label>
+          <label className="block text-sm font-medium mb-2">{t('u2.brandTone')}</label>
           <div className="flex flex-wrap gap-2">
-            {TONE_OPTIONS.map(t => (
-              <button key={t} type="button" onClick={() => set('brandTone', t)}
+            {TONE_OPTIONS.map(tone => (
+              <button key={tone} type="button" onClick={() => set('brandTone', tone)}
                 className="px-3 py-1.5 rounded-lg text-sm border transition-all"
-                style={form.brandTone === t
+                style={form.brandTone === tone
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                   : {}}>
-                {t}
+                {optLabel(tone)}
               </button>
             ))}
           </div>
@@ -650,16 +653,16 @@ function Unit2CompanyData({
       {/* Branches */}
       <section>
         <div className="flex items-center justify-between pb-2 border-b mb-4">
-          <h3 className="text-sm font-bold text-gray-700">門市 / 分公司</h3>
+          <h3 className="text-sm font-bold text-gray-700">{t('u2.branches')}</h3>
           <button type="button"
             onClick={() => { setEditingBranch(emptyBranch()); setShowBranchForm(true) }}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-gray-50 transition-colors">
-            <Plus className="h-3.5 w-3.5" />新增門市
+            <Plus className="h-3.5 w-3.5" />{t('u2.addBranch')}
           </button>
         </div>
 
         {branches.length === 0 && !showBranchForm && (
-          <p className="text-xs text-gray-400 py-4 text-center">尚未新增任何門市，點擊「新增門市」開始建立</p>
+          <p className="text-xs text-gray-400 py-4 text-center">{t('u2.noBranches')}</p>
         )}
 
         <div className="space-y-2">
@@ -690,37 +693,37 @@ function Unit2CompanyData({
           <div className="mt-3 p-4 rounded-xl border-2 border-dashed space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">門市名稱 *</label>
+                <label className="block text-xs font-medium mb-1">{t('u2.branchName')}</label>
                 <input value={editingBranch.name}
                   onChange={e => setEditingBranch(prev => prev ? { ...prev, name: e.target.value } : prev)}
-                  placeholder="例如：台北信義門市"
+                  placeholder={t('u2.branchNamePlaceholder')}
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">電話</label>
+                <label className="block text-xs font-medium mb-1">{t('u2.phone')}</label>
                 <input value={editingBranch.phone ?? ''}
                   onChange={e => setEditingBranch(prev => prev ? { ...prev, phone: e.target.value } : prev)}
-                  placeholder="例如：02-1234-5678"
+                  placeholder={t('u2.phonePlaceholder')}
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">地址 *</label>
+              <label className="block text-xs font-medium mb-1">{t('u2.branchAddress')}</label>
               <input value={editingBranch.address}
                 onChange={e => setEditingBranch(prev => prev ? { ...prev, address: e.target.value } : prev)}
-                placeholder="例如：台北市信義區信義路五段7號"
+                placeholder={t('u2.branchAddressPlaceholder')}
                 className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">緯度（選填）</label>
+                <label className="block text-xs font-medium mb-1">{t('u2.lat')}</label>
                 <input type="number" value={editingBranch.lat ?? ''}
                   onChange={e => setEditingBranch(prev => prev ? { ...prev, lat: e.target.value ? Number(e.target.value) : undefined } : prev)}
                   placeholder="25.033964"
                   className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">經度（選填）</label>
+                <label className="block text-xs font-medium mb-1">{t('u2.lng')}</label>
                 <input type="number" value={editingBranch.lng ?? ''}
                   onChange={e => setEditingBranch(prev => prev ? { ...prev, lng: e.target.value ? Number(e.target.value) : undefined } : prev)}
                   placeholder="121.564468"
@@ -728,10 +731,10 @@ function Unit2CompanyData({
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">備註</label>
+              <label className="block text-xs font-medium mb-1">{t('u2.notes')}</label>
               <input value={editingBranch.notes ?? ''}
                 onChange={e => setEditingBranch(prev => prev ? { ...prev, notes: e.target.value } : prev)}
-                placeholder="例如：週末延長營業"
+                placeholder={t('u2.notesPlaceholder')}
                 className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
             </div>
             <div className="flex gap-2 pt-1">
@@ -740,12 +743,12 @@ function Unit2CompanyData({
                 disabled={!editingBranch.name || !editingBranch.address}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40"
                 style={{ background: 'var(--primary)' }}>
-                <Check className="h-3.5 w-3.5" />儲存門市
+                <Check className="h-3.5 w-3.5" />{t('u2.saveBranch')}
               </button>
               <button type="button"
                 onClick={() => { setShowBranchForm(false); setEditingBranch(null) }}
                 className="px-4 py-2 rounded-lg text-sm border hover:bg-gray-50 transition-colors">
-                取消
+                {t('u2.cancel')}
               </button>
             </div>
           </div>
@@ -753,30 +756,30 @@ function Unit2CompanyData({
 
         {branches.length > 0 && (
           <p className="text-xs text-gray-400 mt-3">
-            共 {branches.length} 個門市。可輸入經緯度以啟用最近門市計算功能。
+            {t('u2.branchCountHint', { count: branches.length })}
           </p>
         )}
       </section>
 
       {/* Files */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">素材上傳</h3>
+        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.materials')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <FileUploadZone category="logo" label="Logo / 品牌標誌"
+          <FileUploadZone category="logo" label={t('u2.matLogo')}
             accept=".jpg,.jpeg,.png,.svg,.webp" files={files} uploading={uploading}
             onUpload={handleUpload} onRemove={handleRemove} />
-          <FileUploadZone category="image" label="產品 / 情境圖片"
+          <FileUploadZone category="image" label={t('u2.matImage')}
             accept=".jpg,.jpeg,.png,.webp,.gif" files={files} uploading={uploading}
             onUpload={handleUpload} onRemove={handleRemove} />
-          <FileUploadZone category="document" label="公司簡介 / 型錄"
+          <FileUploadZone category="document" label={t('u2.matDoc')}
             accept=".pdf,.docx,.doc,.txt" files={files} uploading={uploading}
             onUpload={handleUpload} onRemove={handleRemove} />
-          <FileUploadZone category="faq" label="FAQ / 對答資料"
+          <FileUploadZone category="faq" label={t('u2.matFaq')}
             accept=".xlsx,.xls,.csv,.docx,.doc,.txt" files={files} uploading={uploading}
             onUpload={handleUpload} onRemove={handleRemove} />
         </div>
         <p className="text-xs text-gray-400 mt-3">
-          Excel/Word/PDF 文件將自動萃取文字，供 AI 分析與客服回覆使用。
+          {t('u2.materialsHint')}
         </p>
         {uploadError && (
           <div className="mt-2 flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
@@ -790,25 +793,25 @@ function Unit2CompanyData({
         <button onClick={handleSave} disabled={saving}
           className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
           style={{ background: 'var(--primary)' }}>
-          {saving ? <><Loader2 className="h-4 w-4 animate-spin" />儲存中…</> : <><CheckCircle2 className="h-4 w-4" />儲存公司資料</>}
+          {saving ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u2.saving')}</> : <><CheckCircle2 className="h-4 w-4" />{t('u2.saveCompany')}</>}
         </button>
-        {saved && <span className="text-sm text-green-600 flex items-center gap-1"><CheckCircle2 className="h-4 w-4" />已儲存</span>}
+        {saved && <span className="text-sm text-green-600 flex items-center gap-1"><CheckCircle2 className="h-4 w-4" />{t('u2.saved')}</span>}
       </div>
 
       {/* Stats preview */}
       {(form.companyName || files.length > 0 || branches.length > 0) && (
         <div className="p-4 rounded-xl bg-gray-50 border">
-          <div className="text-xs font-medium text-gray-500 mb-3">資料概覽</div>
+          <div className="text-xs font-medium text-gray-500 mb-3">{t('u2.overview')}</div>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: '公司名稱', value: form.companyName || '—' },
-              { label: '產業', value: form.industry || '—' },
-              { label: '品牌語調', value: form.brandTone || '—' },
-              { label: '員工人數', value: form.employees || '—' },
-              { label: '門市數量', value: branches.length > 0 ? `${branches.length} 間` : '—' },
-              { label: '含經緯度', value: branches.filter(b => b.lat && b.lng).length > 0 ? `${branches.filter(b => b.lat && b.lng).length} 間` : '—' },
-              { label: '上傳檔案', value: `${files.length} 份` },
-              { label: '文字素材', value: `${files.filter(f => f.textContent).length} 份已萃取` },
+              { label: t('u2.companyNameShort'), value: form.companyName || '—' },
+              { label: t('u2.industryShort'), value: optLabel(form.industry || '') || '—' },
+              { label: t('u2.brandTone'), value: optLabel(form.brandTone || '') || '—' },
+              { label: t('u2.employees'), value: optLabel(form.employees || '') || '—' },
+              { label: t('u2.branchCount'), value: branches.length > 0 ? t('u2.nBranches', { n: branches.length }) : '—' },
+              { label: t('u2.withCoords'), value: branches.filter(b => b.lat && b.lng).length > 0 ? t('u2.nBranches', { n: branches.filter(b => b.lat && b.lng).length }) : '—' },
+              { label: t('u2.uploadedFiles'), value: t('u2.nFiles', { n: files.length }) },
+              { label: t('u2.textMaterials'), value: t('u2.nExtracted', { n: files.filter(f => f.textContent).length }) },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <div className="text-xs font-bold text-gray-800 truncate">{s.value}</div>
