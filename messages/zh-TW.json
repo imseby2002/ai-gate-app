@@ -1701,6 +1701,27 @@
       "refImageLabel": "參考圖片", "refGenerated": "腳本已根據此圖片風格生成",
       "feedbackTitle": "輸入修改意見，重新生成所有腳本", "feedbackPlaceholder": "例如：風格改成更年輕活潑；加入更多產品細節；色調改為暖色系…",
       "tipTitle": "使用提示", "tipBody": "每張腳本末尾的 <b>AI 生成 Prompt</b> 可直接複製至 Midjourney、DALL-E 3、Stable Diffusion 等工具生成圖片。完成後前往 <b>單元6 圖片產出</b> 進行 AI 生成。"
+    },
+    "u6": {
+      "promptEmpty": "Prompt 不可為空", "promptRequired": "請輸入 Prompt", "selectModel": "選擇生成模型",
+      "model": {
+        "flux": { "desc": "高品質寫實，最適合行銷圖", "badge": "推薦" },
+        "dalle3": { "desc": "語意理解強，圖中文字清晰", "badge": "OpenAI" },
+        "nano": { "desc": "速度快，適合快速草稿預覽", "badge": "快速" }
+      },
+      "costUnit": "/張", "imageSettings": "圖片設定", "sizeRatio": "尺寸比例",
+      "size": { "1:1": "1:1 正方形", "9:16": "9:16 直式", "16:9": "16:9 橫式" },
+      "quality": "品質", "qStandard": "標準", "qHd": "HD 高清",
+      "styleLabel": "風格", "sVivid": "鮮豔生動", "sNatural": "自然寫實",
+      "refImgTitle": "參考圖片（img2img）", "enabled": "已啟用", "useRefImg": "使用參考圖片生成",
+      "refImgPickLabel": "圖片生成參考圖", "refImgChosen": "已選擇參考圖片，所有圖片將以此圖風格生成（img2img）",
+      "refImgHint": "啟用後可從 Google Drive 選取圖片作為生成基礎，實現 img2img 效果",
+      "fromScripts": "從單元5腳本生成（共 {n} 張）", "generated": "已生成",
+      "aiPrompt": "AI 生成 Prompt", "editable": "（可編輯）", "promptPlaceholder": "輸入英文 Prompt…",
+      "modelGenerating": "{model} 生成中…", "genWithModel": "用 {model} 生成", "download": "下載", "revisedPrompt": "模型修訂 Prompt：",
+      "noUnit5": "<b>尚未執行單元5（圖片腳本）</b>，可直接在下方輸入自訂 Prompt 生成圖片。",
+      "manualPrompt": "手動輸入 Prompt", "manualPlaceholder": "輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble...",
+      "generatingShort": "生成中…", "successHint": "已生成 {n} 張圖片，儲存於 Supabase Storage，可於單元9上傳至各平台。"
     }
   }
 }

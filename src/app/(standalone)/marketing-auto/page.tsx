@@ -1768,16 +1768,16 @@ interface Unit6Data {
 
 type ImageModel = 'dalle3' | 'flux' | 'nano'
 
-const IMAGE_MODELS: { id: ImageModel; name: string; desc: string; cost: string; badge: string }[] = [
-  { id: 'flux',   name: 'FLUX.1 Pro',   desc: '高品質寫實，最適合行銷圖',    cost: '$0.05/張', badge: '推薦'   },
-  { id: 'dalle3', name: 'DALL-E 3',     desc: '語意理解強，圖中文字清晰',    cost: '$0.08/張', badge: 'OpenAI' },
-  { id: 'nano',   name: 'Nano Banana',  desc: '速度快，適合快速草稿預覽',    cost: '$0.02/張', badge: '快速'   },
+const IMAGE_MODELS: { id: ImageModel; name: string; cost: string }[] = [
+  { id: 'flux',   name: 'FLUX.1 Pro',   cost: '$0.05' },
+  { id: 'dalle3', name: 'DALL-E 3',     cost: '$0.08' },
+  { id: 'nano',   name: 'Nano Banana',  cost: '$0.02' },
 ]
 
 const SIZE_OPTIONS = [
-  { value: '1:1',  label: '1:1 正方形', hint: 'IG/FB' },
-  { value: '9:16', label: '9:16 直式',  hint: 'Reels/Stories' },
-  { value: '16:9', label: '16:9 橫式', hint: 'YouTube/LinkedIn' },
+  { value: '1:1',  hint: 'IG/FB' },
+  { value: '9:16', hint: 'Reels/Stories' },
+  { value: '16:9', hint: 'YouTube/LinkedIn' },
 ]
 
 // Extract AI prompt from script content
@@ -1846,6 +1846,8 @@ function Unit6ImageGenerate({
   onDone: (data: Unit6Data) => void
 }) {
   const scripts = unit5Data?.scripts ?? []
+  const t = useTranslations('MA')
+  const locale = useLocale()
 
   const [model, setModel] = useState<ImageModel>('flux')
   const [size, setSize] = useState('1:1')
@@ -1885,7 +1887,7 @@ function Unit6ImageGenerate({
 
   const generateOne = async (scriptId: number) => {
     const prompt = prompts[scriptId]?.trim()
-    if (!prompt) { setErrors(prev => ({ ...prev, [scriptId]: 'Prompt 不可為空' })); return }
+    if (!prompt) { setErrors(prev => ({ ...prev, [scriptId]: t('u6.promptEmpty') })); return }
     setGenerating(prev => ({ ...prev, [scriptId]: true }))
     setErrors(prev => ({ ...prev, [scriptId]: '' }))
     try {
@@ -1909,7 +1911,7 @@ function Unit6ImageGenerate({
   }
 
   const generateManual = async () => {
-    if (!manualPrompt.trim()) { setManualError('請輸入 Prompt'); return }
+    if (!manualPrompt.trim()) { setManualError(t('u6.promptRequired')); return }
     setManualGenerating(true); setManualError('')
     try {
       const res = await fetch('/api/marketing/generate-image', {
@@ -1948,7 +1950,7 @@ function Unit6ImageGenerate({
 
       {/* Model selector */}
       <div>
-        <label className="block text-sm font-semibold mb-3">選擇生成模型</label>
+        <label className="block text-sm font-semibold mb-3">{t('u6.selectModel')}</label>
         <div className="grid grid-cols-3 gap-3">
           {IMAGE_MODELS.map(m => (
             <button key={m.id} onClick={() => setModel(m.id)}
@@ -1960,11 +1962,11 @@ function Unit6ImageGenerate({
                 style={model === m.id
                   ? { background: 'var(--primary)', color: 'white' }
                   : { background: '#f3f4f6', color: '#6b7280' }}>
-                {m.badge}
+                {t(`u6.model.${m.id}.badge`)}
               </span>
               <span className="text-sm font-bold text-gray-800 pr-8">{m.name}</span>
-              <span className="text-[10px] text-gray-400 mt-1 leading-snug">{m.desc}</span>
-              <span className="text-xs font-semibold mt-2" style={{ color: 'var(--primary)' }}>{m.cost}</span>
+              <span className="text-[10px] text-gray-400 mt-1 leading-snug">{t(`u6.model.${m.id}.desc`)}</span>
+              <span className="text-xs font-semibold mt-2" style={{ color: 'var(--primary)' }}>{m.cost}{t('u6.costUnit')}</span>
             </button>
           ))}
         </div>
@@ -1972,11 +1974,11 @@ function Unit6ImageGenerate({
 
       {/* Image settings */}
       <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">圖片設定</div>
+        <div className="text-xs font-semibold text-gray-600">{t('u6.imageSettings')}</div>
         <div className="flex flex-wrap gap-6">
           {/* Size */}
           <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">尺寸比例</div>
+            <div className="text-xs font-medium text-gray-500 mb-2">{t('u6.sizeRatio')}</div>
             <div className="flex gap-2">
               {SIZE_OPTIONS.map(opt => (
                 <button key={opt.value} onClick={() => setSize(opt.value)}
@@ -1984,7 +1986,7 @@ function Unit6ImageGenerate({
                   style={size === opt.value
                     ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                     : { background: 'white' }}>
-                  <span className="font-medium">{opt.label}</span>
+                  <span className="font-medium">{t(`u6.size.${opt.value}`)}</span>
                   <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
                 </button>
               ))}
@@ -1994,7 +1996,7 @@ function Unit6ImageGenerate({
           {model === 'dalle3' && (
             <>
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-2">品質</div>
+                <div className="text-xs font-medium text-gray-500 mb-2">{t('u6.quality')}</div>
                 <div className="flex gap-2">
                   {(['standard', 'hd'] as const).map(q => (
                     <button key={q} onClick={() => setQuality(q)}
@@ -2002,13 +2004,13 @@ function Unit6ImageGenerate({
                       style={quality === q
                         ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                         : { background: 'white' }}>
-                      {q === 'standard' ? '標準' : 'HD 高清'}
+                      {q === 'standard' ? t('u6.qStandard') : t('u6.qHd')}
                     </button>
                   ))}
                 </div>
               </div>
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-2">風格</div>
+                <div className="text-xs font-medium text-gray-500 mb-2">{t('u6.styleLabel')}</div>
                 <div className="flex gap-2">
                   {(['vivid', 'natural'] as const).map(st => (
                     <button key={st} onClick={() => setStyle(st)}
@@ -2016,7 +2018,7 @@ function Unit6ImageGenerate({
                       style={style === st
                         ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                         : { background: 'white' }}>
-                      {st === 'vivid' ? '鮮豔生動' : '自然寫實'}
+                      {st === 'vivid' ? t('u6.sVivid') : t('u6.sNatural')}
                     </button>
                   ))}
                 </div>
@@ -2031,14 +2033,14 @@ function Unit6ImageGenerate({
         <div className="flex items-center justify-between">
           <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
             <ImageIcon className="w-3.5 h-3.5" />
-            參考圖片（img2img）
+            {t('u6.refImgTitle')}
           </div>
           <button onClick={() => setUseRefImg(v => !v)}
             className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all"
             style={useRefImg
               ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
               : { background: 'white' }}>
-            {useRefImg ? '已啟用' : '使用參考圖片生成'}
+            {useRefImg ? t('u6.enabled') : t('u6.useRefImg')}
           </button>
         </div>
         {useRefImg && (
@@ -2048,14 +2050,14 @@ function Unit6ImageGenerate({
             onFolderChange={onDriveFolderChange}
             onImagePicked={onDriveImagePicked}
             pickedImage={drivePickedImage ?? null}
-            label="圖片生成參考圖"
+            label={t('u6.refImgPickLabel')}
           />
         )}
         {useRefImg && drivePickedImage && (
-          <p className="text-[10px] text-blue-600">已選擇參考圖片，所有圖片將以此圖風格生成（img2img）</p>
+          <p className="text-[10px] text-blue-600">{t('u6.refImgChosen')}</p>
         )}
         {!useRefImg && (
-          <p className="text-[10px] text-blue-500">啟用後可從 Google Drive 選取圖片作為生成基礎，實現 img2img 效果</p>
+          <p className="text-[10px] text-blue-500">{t('u6.refImgHint')}</p>
         )}
       </div>
 
@@ -2063,7 +2065,7 @@ function Unit6ImageGenerate({
       {hasUnit5 ? (
         <div className="space-y-4">
           <div className="text-sm font-semibold text-gray-700">
-            從單元5腳本生成（共 {scripts.length} 張）
+            {t('u6.fromScripts', { n: scripts.length })}
           </div>
           {scripts.map(s => {
             const img = images.find(i => i.scriptId === s.id)
@@ -2074,17 +2076,17 @@ function Unit6ImageGenerate({
               <div key={s.id} className="border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
                   <ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-700">圖片 {s.id}</span>
+                  <span className="text-sm font-medium text-gray-700">{t('u5.imageN', { n: s.id })}</span>
                   {img && (
                     <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                      已生成 · {modelLabel}
+                      {t('u6.generated')} · {modelLabel}
                     </span>
                   )}
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                      AI 生成 Prompt <span className="text-gray-400 font-normal">（可編輯）</span>
+                      {t('u6.aiPrompt')} <span className="text-gray-400 font-normal">{t('u6.editable')}</span>
                     </label>
                     <textarea
                       value={prompts[s.id] ?? ''}
@@ -2094,7 +2096,7 @@ function Unit6ImageGenerate({
                       }}
                       rows={3}
                       className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
-                      placeholder="輸入英文 Prompt…"
+                      placeholder={t('u6.promptPlaceholder')}
                     />
                   </div>
                   {err && (
@@ -2107,22 +2109,22 @@ function Unit6ImageGenerate({
                       className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-opacity"
                       style={{ background: 'var(--primary)' }}>
                       {isGen
-                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{modelInfo.name} 生成中…</>
-                        : <><Sparkles className="h-3.5 w-3.5" />{img ? '重新生成' : `用 ${modelInfo.name} 生成`}</>}
+                        ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('u6.modelGenerating', { model: modelInfo.name })}</>
+                        : <><Sparkles className="h-3.5 w-3.5" />{img ? t('u4.regenerate') : t('u6.genWithModel', { model: modelInfo.name })}</>}
                     </button>
                     {img && (
                       <span className="text-[10px] text-gray-400">
-                        {img.size} · {modelInfo.cost} · {new Date(img.generatedAt).toLocaleTimeString('zh-TW')}
+                        {img.size} · {modelInfo.cost}{t('u6.costUnit')} · {new Date(img.generatedAt).toLocaleTimeString(locale)}
                       </span>
                     )}
                   </div>
                   {img && (
                     <div className="relative rounded-xl overflow-hidden border bg-gray-50">
-                      <img src={img.url} alt={`圖片 ${s.id}`} className="w-full object-contain max-h-96" />
+                      <img src={img.url} alt={t('u5.imageN', { n: s.id })} className="w-full object-contain max-h-96" />
                       <div className="absolute top-2 right-2 flex gap-1.5">
                         <a href={img.url} download={`img-${s.id}.png`} target="_blank" rel="noreferrer"
                           className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/60 text-white text-[10px] hover:bg-black/80">
-                          <Download className="h-3 w-3" /> 下載
+                          <Download className="h-3 w-3" /> {t('u6.download')}
                         </a>
                         <button onClick={() => removeImage(img.url)}
                           className="p-1 rounded-lg bg-black/60 text-white hover:bg-black/80">
@@ -2131,7 +2133,7 @@ function Unit6ImageGenerate({
                       </div>
                       {img.revisedPrompt && img.revisedPrompt !== img.prompt && (
                         <div className="px-3 py-2 bg-gray-50 border-t">
-                          <div className="text-[10px] text-gray-500 font-medium mb-0.5">模型修訂 Prompt：</div>
+                          <div className="text-[10px] text-gray-500 font-medium mb-0.5">{t('u6.revisedPrompt')}</div>
                           <div className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{img.revisedPrompt}</div>
                         </div>
                       )}
@@ -2144,7 +2146,7 @@ function Unit6ImageGenerate({
         </div>
       ) : (
         <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-          <strong>尚未執行單元5（圖片腳本）</strong>，可直接在下方輸入自訂 Prompt 生成圖片。
+          {t.rich('u6.noUnit5', { b: (c) => <strong>{c}</strong> })}
         </div>
       )}
 
@@ -2152,11 +2154,11 @@ function Unit6ImageGenerate({
       <div className="border rounded-xl p-4 space-y-3">
         <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
           <Wand2 className="h-4 w-4" style={{ color: 'var(--primary)' }} />
-          手動輸入 Prompt
+          {t('u6.manualPrompt')}
         </div>
         <textarea value={manualPrompt} onChange={e => setManualPrompt(e.target.value)} rows={3}
           className="w-full px-3 py-2 rounded-lg border text-xs outline-none focus:ring-2 resize-none font-mono"
-          placeholder="輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble..." />
+          placeholder={t('u6.manualPlaceholder')} />
         {manualError && (
           <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
             <AlertCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />{manualError}
@@ -2166,8 +2168,8 @@ function Unit6ImageGenerate({
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
           style={{ background: 'var(--primary)' }}>
           {manualGenerating
-            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />生成中…</>
-            : <><Sparkles className="h-3.5 w-3.5" />用 {modelInfo.name} 生成</>}
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('u6.generatingShort')}</>
+            : <><Sparkles className="h-3.5 w-3.5" />{t('u6.genWithModel', { model: modelInfo.name })}</>}
         </button>
         {images.filter(i => !scripts.find(s => s.id === i.scriptId)).length > 0 && (
           <div className="grid grid-cols-2 gap-3 mt-2">
@@ -2193,7 +2195,7 @@ function Unit6ImageGenerate({
         <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
           <span className="text-xs text-green-700 font-medium">
-            已生成 {images.length} 張圖片，儲存於 Supabase Storage，可於單元9上傳至各平台。
+            {t('u6.successHint', { n: images.length })}
           </span>
         </div>
       )}

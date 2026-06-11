@@ -1701,6 +1701,27 @@
       "refImageLabel": "Hình tham khảo", "refGenerated": "Kịch bản đã tạo theo phong cách hình này",
       "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ kịch bản", "feedbackPlaceholder": "VD: đổi phong cách trẻ trung sinh động hơn; thêm chi tiết sản phẩm; đổi sang tông màu ấm…",
       "tipTitle": "Mẹo dùng", "tipBody": "<b>Prompt tạo AI</b> ở cuối mỗi kịch bản có thể sao chép trực tiếp vào Midjourney, DALL-E 3, Stable Diffusion, v.v. để tạo hình. Xong rồi vào <b>Unit 6 Tạo hình</b> để tạo bằng AI."
+    },
+    "u6": {
+      "promptEmpty": "Prompt không được để trống", "promptRequired": "Vui lòng nhập Prompt", "selectModel": "Chọn mô hình tạo",
+      "model": {
+        "flux": { "desc": "Chân thực chất lượng cao, hợp nhất cho hình tiếp thị", "badge": "Đề xuất" },
+        "dalle3": { "desc": "Hiểu ngữ nghĩa tốt, chữ trong hình rõ", "badge": "OpenAI" },
+        "nano": { "desc": "Nhanh, hợp xem nháp nhanh", "badge": "Nhanh" }
+      },
+      "costUnit": "/hình", "imageSettings": "Cài đặt hình", "sizeRatio": "Tỷ lệ kích thước",
+      "size": { "1:1": "1:1 Vuông", "9:16": "9:16 Dọc", "16:9": "16:9 Ngang" },
+      "quality": "Chất lượng", "qStandard": "Tiêu chuẩn", "qHd": "HD",
+      "styleLabel": "Phong cách", "sVivid": "Rực rỡ sống động", "sNatural": "Tự nhiên chân thực",
+      "refImgTitle": "Hình tham khảo (img2img)", "enabled": "Đã bật", "useRefImg": "Tạo theo hình tham khảo",
+      "refImgPickLabel": "Hình tham khảo tạo ảnh", "refImgChosen": "Đã chọn hình tham khảo; tất cả hình sẽ theo phong cách hình này (img2img)",
+      "refImgHint": "Bật lên để chọn hình từ Google Drive làm cơ sở tạo, đạt hiệu ứng img2img",
+      "fromScripts": "Tạo từ kịch bản Unit 5 (tổng {n})", "generated": "Đã tạo",
+      "aiPrompt": "Prompt tạo AI", "editable": "(chỉnh sửa được)", "promptPlaceholder": "Nhập prompt tiếng Anh…",
+      "modelGenerating": "{model} đang tạo…", "genWithModel": "Tạo bằng {model}", "download": "Tải về", "revisedPrompt": "Prompt mô hình chỉnh sửa:",
+      "noUnit5": "<b>Chưa chạy Unit 5 (Kịch bản hình)</b>; bạn có thể nhập prompt tùy chỉnh bên dưới để tạo hình.",
+      "manualPrompt": "Nhập Prompt thủ công", "manualPlaceholder": "Nhập prompt tiếng Anh, VD: Professional marketing photo of luxury skincare products on white marble...",
+      "generatingShort": "Đang tạo…", "successHint": "Đã tạo {n} hình, lưu ở Supabase Storage; có thể tải lên các nền tảng ở Unit 9."
     }
   }
 }

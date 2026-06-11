@@ -1701,6 +1701,27 @@
       "refImageLabel": "Reference Image", "refGenerated": "Script generated based on this image's style",
       "feedbackTitle": "Enter revisions to regenerate all scripts", "feedbackPlaceholder": "e.g. make the style younger and livelier; add more product detail; switch to warm tones…",
       "tipTitle": "Tip", "tipBody": "The <b>AI Generation Prompt</b> at the end of each script can be copied directly into Midjourney, DALL-E 3, Stable Diffusion, etc. to generate images. When done, go to <b>Unit 6 Image Generation</b> for AI generation."
+    },
+    "u6": {
+      "promptEmpty": "Prompt cannot be empty", "promptRequired": "Please enter a Prompt", "selectModel": "Select Generation Model",
+      "model": {
+        "flux": { "desc": "High-quality realism, best for marketing images", "badge": "Recommended" },
+        "dalle3": { "desc": "Strong comprehension, clear in-image text", "badge": "OpenAI" },
+        "nano": { "desc": "Fast, good for quick draft previews", "badge": "Fast" }
+      },
+      "costUnit": "/img", "imageSettings": "Image Settings", "sizeRatio": "Aspect Ratio",
+      "size": { "1:1": "1:1 Square", "9:16": "9:16 Portrait", "16:9": "16:9 Landscape" },
+      "quality": "Quality", "qStandard": "Standard", "qHd": "HD",
+      "styleLabel": "Style", "sVivid": "Vivid", "sNatural": "Natural",
+      "refImgTitle": "Reference Image (img2img)", "enabled": "Enabled", "useRefImg": "Generate with reference image",
+      "refImgPickLabel": "Image generation reference", "refImgChosen": "Reference image selected; all images will follow this image's style (img2img)",
+      "refImgHint": "Once enabled, pick an image from Google Drive as the generation base for img2img",
+      "fromScripts": "Generate from Unit 5 scripts ({n} total)", "generated": "Generated",
+      "aiPrompt": "AI Generation Prompt", "editable": "(editable)", "promptPlaceholder": "Enter an English prompt…",
+      "modelGenerating": "{model} generating…", "genWithModel": "Generate with {model}", "download": "Download", "revisedPrompt": "Model-revised Prompt:",
+      "noUnit5": "<b>Unit 5 (Image Scripts) not run yet</b>; you can enter a custom prompt below to generate images.",
+      "manualPrompt": "Manual Prompt", "manualPlaceholder": "Enter an English prompt, e.g. Professional marketing photo of luxury skincare products on white marble...",
+      "generatingShort": "Generating…", "successHint": "Generated {n} images, stored in Supabase Storage; you can upload them to platforms in Unit 9."
     }
   }
 }
