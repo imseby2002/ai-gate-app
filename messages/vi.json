@@ -1,4 +1,5 @@
 {
+  "Nav": { "backHome": "Về Trang chủ", "backToMenu": "Về Menu chính" },
   "Landing": {
     "signIn": "Đăng nhập",
     "freeTrial": "Dùng thử miễn phí",

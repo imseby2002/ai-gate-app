@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Zap, ArrowLeft } from 'lucide-react'
 import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath } from '@/lib/systems'
 
@@ -11,6 +12,7 @@ interface BackToMenuProps {
 
 export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const pathname = usePathname()
+  const t = useTranslations('Nav')
   const [href, setHref] = useState('/apps')
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     return (
       <a href={href} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm transition-colors">
         <ArrowLeft className="h-3.5 w-3.5" />
-        返回首頁
+        {t('backHome')}
       </a>
     )
   }
@@ -61,7 +63,7 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
       <Zap className="h-5 w-5 text-primary" />
       <div className="leading-none">
         <span className="font-bold text-base">AI GATE</span>
-        <span className="block text-xs text-muted-foreground mt-0.5">← 返回主選單</span>
+        <span className="block text-xs text-muted-foreground mt-0.5">← {t('backToMenu')}</span>
       </div>
     </a>
   )

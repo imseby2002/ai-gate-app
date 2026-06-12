@@ -1,4 +1,5 @@
 {
+  "Nav": { "backHome": "Back to Home", "backToMenu": "Back to Menu" },
   "Landing": {
     "signIn": "Sign In",
     "freeTrial": "Free Trial",

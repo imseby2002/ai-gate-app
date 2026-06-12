@@ -1,4 +1,5 @@
 {
+  "Nav": { "backHome": "返回首頁", "backToMenu": "返回主選單" },
   "Landing": {
     "signIn": "登入",
     "freeTrial": "免費試用",
