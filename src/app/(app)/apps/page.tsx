@@ -44,8 +44,10 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
   // 非管理者：帶子域 scope 時只顯示該系統模組，否則只顯示有權限的模組；管理者顯示全部
   const visibleModules = MODULES.filter(m => {
     if (m.id === 'leads') return false
-    if (isAdmin) return true
+    // 子域（booking/cs/work…）：一律只顯示該系統模組，管理者也不例外，
+    // 避免 booking.im-tourist.com/apps 顯示成與 www 相同的全模組總選單。
     if (scope) return m.id === scope
+    if (isAdmin) return true
     return enabledModules.includes(m.id)
   })
 
