@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
+import { outputLangInstruction } from '@/lib/ai/output-lang'
 
 export const maxDuration = 60
 
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { productName, description, industry, targetAudience, imageBase64, imageMimeType } = body
+  const { productName, description, industry, targetAudience, imageBase64, imageMimeType, locale } = body
 
   if (!productName?.trim()) {
     return NextResponse.json({ error: '請輸入產品名稱' }, { status: 400 })
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 產品描述：${description ?? '未提供'}
 目標受眾：${targetAudience ?? '未提供'}`
 
-  const promptText = `${DIRECTOR_PROMPT}\n\n【產品資料】\n${textCtx}`
+  const promptText = `${DIRECTOR_PROMPT}${outputLangInstruction(locale)}\n\n【產品資料】\n${textCtx}`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const messages: any[] = imageBase64

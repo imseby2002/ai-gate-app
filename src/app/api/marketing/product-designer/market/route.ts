@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
+import { outputLangInstruction } from '@/lib/ai/output-lang'
 
 export const maxDuration = 60
 
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { productName, description, industry, targetAudience, productAnalysis, selectedRoute } = body
+  const { productName, description, industry, targetAudience, productAnalysis, selectedRoute, locale } = body
 
   const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })
 
@@ -79,7 +80,7 @@ ${selectedRoute ? `選定路線：${selectedRoute.route_name} — ${selectedRout
       },
       messages: [{
         role: 'user',
-        content: `${MARKET_PROMPT}\n\n【產品資料】\n${ctx}`,
+        content: `${MARKET_PROMPT}${outputLangInstruction(locale)}\n\n【產品資料】\n${ctx}`,
       }],
       maxOutputTokens: 3000,
     })

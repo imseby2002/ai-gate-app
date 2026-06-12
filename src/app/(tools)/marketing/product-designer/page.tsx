@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
   ChevronLeft, Upload, Sparkles, CheckCircle2, Loader2,
@@ -87,6 +87,7 @@ const AIDA_COLORS: Record<string, string> = {
 
 export default function ProductDesignerPage() {
   const t = useTranslations('Marketing')
+  const locale = useLocale()
   const [activeStep, setActiveStep] = useState(1)
 
   // Form state
@@ -148,7 +149,7 @@ export default function ProductDesignerPage() {
       const res = await fetch('/api/marketing/product-designer/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName, description, industry, targetAudience, imageBase64, imageMimeType }),
+        body: JSON.stringify({ productName, description, industry, targetAudience, imageBase64, imageMimeType, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -170,7 +171,7 @@ export default function ProductDesignerPage() {
       const res = await fetch('/api/marketing/product-designer/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productAnalysis, selectedRoute: routes[selectedRouteIdx], productName }),
+        body: JSON.stringify({ productAnalysis, selectedRoute: routes[selectedRouteIdx], productName, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -189,7 +190,7 @@ export default function ProductDesignerPage() {
       const res = await fetch('/api/marketing/product-designer/market', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName, description, industry, targetAudience, productAnalysis, selectedRoute: selectedRouteIdx !== null ? routes[selectedRouteIdx] : null }),
+        body: JSON.stringify({ productName, description, industry, targetAudience, productAnalysis, selectedRoute: selectedRouteIdx !== null ? routes[selectedRouteIdx] : null, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -208,7 +209,7 @@ export default function ProductDesignerPage() {
       const res = await fetch('/api/marketing/product-designer/strategy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName, industry, productAnalysis, selectedRoute: selectedRouteIdx !== null ? routes[selectedRouteIdx] : null, marketAnalysis }),
+        body: JSON.stringify({ productName, industry, productAnalysis, selectedRoute: selectedRouteIdx !== null ? routes[selectedRouteIdx] : null, marketAnalysis, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
