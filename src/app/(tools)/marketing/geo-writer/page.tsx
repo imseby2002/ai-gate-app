@@ -1,0 +1,217 @@
+'use client'
+
+import { useState } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
+import Link from 'next/link'
+import {
+  ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
+  FileText, Code2, RefreshCw,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils/cn'
+
+type Intent = 'info' | 'local' | 'compare' | 'transact'
+interface GeoQuestion { question: string; intent: Intent }
+interface GeoArticle { title: string; body_md: string; json_ld: unknown }
+
+const INTENT_STYLES: Record<Intent, string> = {
+  info:     'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  local:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  compare:  'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  transact: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+}
+
+export default function GeoWriterPage() {
+  const t = useTranslations('Marketing')
+  const locale = useLocale()
+
+  const [topic, setTopic] = useState('')
+  const [exclusiveFacts, setExclusiveFacts] = useState('')
+  const [author, setAuthor] = useState('')
+
+  const [questions, setQuestions] = useState<GeoQuestion[]>([])
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [article, setArticle] = useState<GeoArticle | null>(null)
+
+  const [loadingQ, setLoadingQ] = useState(false)
+  const [loadingA, setLoadingA] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState<'md' | 'jsonld' | null>(null)
+
+  async function explore() {
+    if (!topic.trim()) { setError(t('geo.errTopic')); return }
+    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null)
+    try {
+      const res = await fetch('/api/marketing/geo/questions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, exclusiveFacts, locale }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      const qs: GeoQuestion[] = data.questions ?? []
+      setQuestions(qs)
+      setSelected(new Set(qs.map((_, i) => i)))
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingQ(false) }
+  }
+
+  function toggle(i: number) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
+
+  async function generate() {
+    const picked = questions.filter((_, i) => selected.has(i)).map(q => q.question)
+    if (picked.length === 0) { setError(t('geo.errPick')); return }
+    setError(''); setLoadingA(true); setArticle(null)
+    try {
+      const res = await fetch('/api/marketing/geo/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, questions: picked, exclusiveFacts, author, locale }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setArticle(data)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingA(false) }
+  }
+
+  async function copy(kind: 'md' | 'jsonld') {
+    if (!article) return
+    const text = kind === 'md'
+      ? article.body_md
+      : typeof article.json_ld === 'string' ? article.json_ld : JSON.stringify(article.json_ld, null, 2)
+    await navigator.clipboard.writeText(text)
+    setCopied(kind)
+    setTimeout(() => setCopied(null), 1500)
+  }
+
+  return (
+    <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 space-y-6">
+
+        <div className="flex items-center gap-2">
+          <Link href="/marketing" className="text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <Search className="h-5 w-5 text-indigo-600" />
+              {t('geo.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-4 py-2.5 text-sm text-red-700 dark:text-red-300">
+            {error}
+          </div>
+        )}
+
+        {/* Step 1: input */}
+        <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
+          <h2 className="text-sm font-semibold">{t('geo.step1')}</h2>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">{t('geo.topic')}</label>
+            <Input value={topic} onChange={e => setTopic(e.target.value)} placeholder={t('geo.topicPh')} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">{t('geo.exclusive')}</label>
+            <Textarea value={exclusiveFacts} onChange={e => setExclusiveFacts(e.target.value)}
+              placeholder={t('geo.exclusivePh')} rows={4} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">{t('geo.author')}</label>
+            <Input value={author} onChange={e => setAuthor(e.target.value)} placeholder={t('geo.authorPh')} />
+          </div>
+          <Button onClick={explore} disabled={loadingQ} className="w-full">
+            {loadingQ ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            {loadingQ ? t('geo.exploring') : t('geo.explore')}
+          </Button>
+        </div>
+
+        {/* Step 2: questions */}
+        {questions.length > 0 && (
+          <div className="bg-card rounded-xl border p-5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">{t('geo.step2')}</h2>
+              <span className="text-xs text-muted-foreground">{t('geo.picked', { n: selected.size, total: questions.length })}</span>
+            </div>
+            <div className="space-y-2">
+              {questions.map((q, i) => (
+                <label key={i} className={cn(
+                  'flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors',
+                  selected.has(i) ? 'border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20' : 'border-border hover:bg-muted/50'
+                )}>
+                  <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)}
+                    className="mt-0.5 h-4 w-4 accent-indigo-600" />
+                  <span className="flex-1 text-sm">{q.question}</span>
+                  <span className={cn('text-[10px] px-2 py-0.5 rounded-full shrink-0', INTENT_STYLES[q.intent] ?? INTENT_STYLES.info)}>
+                    {t(`geo.intent.${q.intent}` as Parameters<typeof t>[0])}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <Button onClick={generate} disabled={loadingA || selected.size === 0} className="w-full">
+              {loadingA ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {loadingA ? t('geo.generating') : t('geo.generate')}
+            </Button>
+          </div>
+        )}
+
+        {/* Step 3: article */}
+        {article && (
+          <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4 text-indigo-600" />
+                {article.title}
+              </h2>
+              <Button variant="ghost" size="sm" onClick={generate} disabled={loadingA}>
+                <RefreshCw className="h-3.5 w-3.5" /> {t('geo.regenerate')}
+              </Button>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-muted-foreground">{t('geo.articleMd')}</span>
+                <Button variant="outline" size="sm" onClick={() => copy('md')}>
+                  {copied === 'md' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied === 'md' ? t('geo.copied') : t('geo.copy')}
+                </Button>
+              </div>
+              <pre className="text-xs whitespace-pre-wrap bg-muted/50 rounded-lg p-3 max-h-96 overflow-auto font-mono">{article.body_md}</pre>
+            </div>
+
+            {article.json_ld != null && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Code2 className="h-3.5 w-3.5" /> {t('geo.jsonld')}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => copy('jsonld')}>
+                    {copied === 'jsonld' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied === 'jsonld' ? t('geo.copied') : t('geo.copy')}
+                  </Button>
+                </div>
+                <pre className="text-xs whitespace-pre-wrap bg-muted/50 rounded-lg p-3 max-h-72 overflow-auto font-mono">
+                  {typeof article.json_ld === 'string' ? article.json_ld : JSON.stringify(article.json_ld, null, 2)}
+                </pre>
+                <p className="text-[11px] text-muted-foreground mt-1.5">{t('geo.jsonldHint')}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}

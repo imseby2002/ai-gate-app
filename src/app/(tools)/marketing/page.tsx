@@ -4,12 +4,13 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   Megaphone, Sparkles, GitBranch, BarChart3,
-  ArrowRight, Zap, Target, Layers, Phone,
+  ArrowRight, Zap, Target, Layers, Phone, Search,
 } from 'lucide-react'
 
 const FEATURES = [
   { key: 'auto',     icon: Megaphone,  href: '/marketing-auto',             color: 'from-violet-500 to-purple-600' },
   { key: 'designer', icon: Sparkles,   href: '/marketing/product-designer', color: 'from-pink-500 to-rose-600' },
+  { key: 'geo',      icon: Search,     href: '/marketing/geo-writer',       color: 'from-indigo-500 to-blue-600' },
   { key: 'pipeline', icon: GitBranch,  href: '/marketing-pipeline',         color: 'from-blue-500 to-cyan-600' },
   { key: 'prospect', icon: Phone,      href: '/prospect-call',              color: 'from-teal-500 to-emerald-600' },
   { key: 'swot',     icon: BarChart3,  href: '/marketing-auto',             color: 'from-emerald-500 to-teal-600', secondary: true },
