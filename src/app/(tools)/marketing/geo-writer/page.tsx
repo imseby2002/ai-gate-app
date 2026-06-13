@@ -7,7 +7,7 @@ import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
   FileText, Code2, RefreshCw, Gauge, Layers, Crown,
   Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages, Download,
-  Settings, Save,
+  Settings, Save, Award, BarChart3, Printer, TrendingDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,13 @@ interface GeoQuestion {
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
 interface GeoCluster { id: string; title: string; pillar: boolean; questionIds: string[] }
 interface TrackResult { id: string; cited: boolean; rank: number | null; sources: string[] }
+interface PassageScore { index: number; heading: string | null; excerpt: string; score: number; reasons: string[] }
+interface Citability { score: number; passages: PassageScore[]; best: number | null; weakest: number | null }
+interface ReportData {
+  latestCitedRate: number; ourAppearances: number; totalQuestions: number
+  competitors: { domain: string; questions: number; share: number }[]
+  dropped: { question: string; lastSeen: string }[]
+}
 
 const SOURCE_DOT: Record<VolumeSource, string> = {
   measured:  'bg-emerald-500',
@@ -55,6 +62,10 @@ export default function GeoWriterPage() {
   const [tracking, setTracking] = useState<TrackResult[]>([])
   const [loadingT, setLoadingT] = useState(false)
   const [autoTrack, setAutoTrack] = useState(false)
+  const [citability, setCitability] = useState<Citability | null>(null)
+  const [loadingCi, setLoadingCi] = useState(false)
+  const [report, setReport] = useState<ReportData | null>(null)
+  const [loadingR, setLoadingR] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [loadingP, setLoadingP] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
@@ -208,9 +219,44 @@ export default function GeoWriterPage() {
       setArticle(data)
       setPublishedUrl(null)
       setTracking([])
+      setCitability(null)
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingA(false) }
+  }
+
+  async function checkCitability() {
+    if (!article?.articleId) return
+    setError(''); setLoadingCi(true)
+    try {
+      const res = await fetch('/api/marketing/geo/citability', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: article.articleId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setCitability(data)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingCi(false) }
+  }
+
+  async function loadReport() {
+    if (!projectId) return
+    setError(''); setLoadingR(true)
+    try {
+      const res = await fetch(`/api/marketing/geo/report?projectId=${projectId}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setReport(data)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingR(false) }
+  }
+
+  function printReport() {
+    if (!projectId) return
+    window.open(`/api/marketing/geo/report?projectId=${projectId}&format=html`, '_blank')
   }
 
   async function publish(mode: 'landing' | 'wordpress' | 'webhook' | 'export') {
@@ -251,6 +297,7 @@ export default function GeoWriterPage() {
       setArticle(data)
       setPublishedUrl(null)
       setTracking([])
+      setCitability(null)
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingTr(false) }
@@ -523,6 +570,42 @@ export default function GeoWriterPage() {
                 <p className="text-[11px] text-muted-foreground mt-1.5">{t('geo.jsonldHint')}</p>
               </div>
             )}
+
+            {/* 段落可引用度 */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Award className="h-3.5 w-3.5" /> {t('geo.citTitle')}
+                  {citability && <span className="ml-1 font-bold text-indigo-600">{citability.score}/100</span>}
+                </span>
+                <Button variant="outline" size="sm" onClick={checkCitability} disabled={loadingCi}>
+                  {loadingCi ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Award className="h-3.5 w-3.5" />}
+                  {t('geo.citCheck')}
+                </Button>
+              </div>
+              {citability && (
+                <div className="space-y-1.5">
+                  {citability.passages.map(p => (
+                    <div key={p.index} className={cn('rounded-lg border px-3 py-2 text-xs',
+                      p.index === citability.best ? 'border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : p.index === citability.weakest ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-950/20' : 'border-border')}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn('font-bold tabular-nums w-8',
+                          p.score >= 70 ? 'text-emerald-600' : p.score >= 50 ? 'text-amber-600' : 'text-red-600')}>{p.score}</span>
+                        <span className="flex-1 truncate text-muted-foreground">{p.heading ? `【${p.heading}】` : ''}{p.excerpt}</span>
+                        {p.index === citability.best && <span className="text-[10px] text-emerald-600 shrink-0">{t('geo.citBest')}</span>}
+                        {p.index === citability.weakest && <span className="text-[10px] text-amber-600 shrink-0">{t('geo.citWeak')}</span>}
+                      </div>
+                      {p.reasons.length > 0 && p.score < 70 && (
+                        <ul className="mt-1 ml-10 list-disc text-[11px] text-muted-foreground">
+                          {p.reasons.map((r, j) => <li key={j}>{r}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -579,6 +662,70 @@ export default function GeoWriterPage() {
                 })}
               </div>
             )}
+
+            {/* 月報：競品 SoV + 趨勢 + 列印 */}
+            <div className="border-t pt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <BarChart3 className="h-3.5 w-3.5" /> {t('geo.reportTitle')}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={loadReport} disabled={loadingR}>
+                    {loadingR ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BarChart3 className="h-3.5 w-3.5" />}
+                    {t('geo.reportView')}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={printReport}>
+                    <Printer className="h-3.5 w-3.5" /> {t('geo.reportPrint')}
+                  </Button>
+                </div>
+              </div>
+              {report && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-lg border p-2.5 text-center">
+                      <div className="text-lg font-bold text-indigo-600 tabular-nums">{report.latestCitedRate}%</div>
+                      <div className="text-[10px] text-muted-foreground">{t('geo.repRate')}</div>
+                    </div>
+                    <div className="rounded-lg border p-2.5 text-center">
+                      <div className="text-lg font-bold text-indigo-600 tabular-nums">{report.ourAppearances}</div>
+                      <div className="text-[10px] text-muted-foreground">{t('geo.repCited')}</div>
+                    </div>
+                    <div className="rounded-lg border p-2.5 text-center">
+                      <div className="text-lg font-bold text-amber-600 tabular-nums">{report.dropped.length}</div>
+                      <div className="text-[10px] text-muted-foreground">{t('geo.repDropped')}</div>
+                    </div>
+                  </div>
+                  {report.competitors.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-1">{t('geo.repCompetitors')}</p>
+                      <div className="space-y-1">
+                        {report.competitors.slice(0, 6).map(c => (
+                          <div key={c.domain} className="flex items-center gap-2 text-xs">
+                            <span className="w-40 truncate">{c.domain}</span>
+                            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                              <div className="h-full bg-indigo-500" style={{ width: `${c.share}%` }} />
+                            </div>
+                            <span className="tabular-nums text-muted-foreground w-10 text-right">{c.share}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {report.dropped.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-medium text-amber-600 mb-1 flex items-center gap-1">
+                        <TrendingDown className="h-3 w-3" /> {t('geo.repDropList')}
+                      </p>
+                      <ul className="space-y-0.5">
+                        {report.dropped.slice(0, 5).map((d, j) => (
+                          <li key={j} className="text-[11px] text-muted-foreground truncate">• {d.question}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
