@@ -31,16 +31,25 @@ export async function GET(req: Request) {
   const admin = createAdminClient()
   const batch = Number(process.env.GEO_TRACK_BATCH ?? 40)
 
-  // 取已撰寫問句（含所屬專案 locale 與文章 published_url）
+  // 只追蹤「已啟用自動追蹤」的專案
+  const { data: autoProjects } = await admin
+    .from('geo_projects')
+    .select('id')
+    .eq('auto_track', true)
+  const autoIds = (autoProjects ?? []).map(p => p.id)
+  if (autoIds.length === 0) return NextResponse.json({ tracked: 0, projects: 0 })
+
+  // 取這些專案中已撰寫的問句（含 locale 與目標網域）
   const { data: questions } = await admin
     .from('geo_questions')
     .select('id, question, project_id, geo_projects(locale, target_domain)')
     .eq('status', 'written')
+    .in('project_id', autoIds)
     .order('created_at', { ascending: true })
     .limit(batch)
 
   if (!questions || questions.length === 0) {
-    return NextResponse.json({ tracked: 0 })
+    return NextResponse.json({ tracked: 0, projects: autoIds.length })
   }
 
   const projectIds = [...new Set(questions.map(q => q.project_id))]

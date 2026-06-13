@@ -54,6 +54,7 @@ export default function GeoWriterPage() {
   const [article, setArticle] = useState<GeoArticle | null>(null)
   const [tracking, setTracking] = useState<TrackResult[]>([])
   const [loadingT, setLoadingT] = useState(false)
+  const [autoTrack, setAutoTrack] = useState(false)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [loadingP, setLoadingP] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
@@ -269,6 +270,22 @@ export default function GeoWriterPage() {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingT(false) }
+  }
+
+  async function toggleAutoTrack() {
+    if (!projectId) return
+    const next = !autoTrack
+    setAutoTrack(next)
+    try {
+      const res = await fetch('/api/marketing/geo/auto-track', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, autoTrack: next }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setAutoTrack(!next) // 回滾
+      setError(t('geo.saveFail'))
+    }
   }
 
   async function copy(kind: 'md' | 'jsonld') {
@@ -522,7 +539,17 @@ export default function GeoWriterPage() {
                 {loadingT ? t('geo.tracking') : t('geo.track')}
               </Button>
             </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <button type="button" role="switch" aria-checked={autoTrack} onClick={toggleAutoTrack}
+                className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
+                  autoTrack ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600')}>
+                <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  autoTrack ? 'translate-x-4' : 'translate-x-0.5')} />
+              </button>
+              <span className="text-xs font-medium">{t('geo.autoTrack')}</span>
+            </label>
             <p className="text-[11px] text-muted-foreground">{t('geo.trackHint')}</p>
+            <p className="text-[11px] text-muted-foreground">{t('geo.trackRecorded')}</p>
             {tracking.length > 0 && (
               <div className="space-y-2">
                 {tracking.map(r => {
