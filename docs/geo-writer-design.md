@@ -99,6 +99,75 @@ geo_tracking     id, question_id, engine, checked_at, cited(bool), rank, cited_s
 - 步驟5：追蹤（track API + cron + 儀表板）
 - 步驟6：越南文版、publish 落地頁/WordPress webhook
 
+---
+
+# 實作現況（已完成，超出原 6 步規劃）
+
+> 以下為實際落地的模組、檔案、資料表與設定，含吸收自參考專案的擴充。
+> 參考：geo-seo-claude（評分/審計/llms.txt/爬蟲檢查）、GEOFlow（多模式發佈）。
+
+## 已完成模組對照
+| 階段 | 功能 | 主要檔案 |
+|---|---|---|
+| 探勘 | 問句挖掘 + 意圖分類(haiku) | `api/marketing/geo/questions` |
+| 評分 | 機會分數(Autocomplete+Perplexity) | `api/marketing/geo/score`、`lib/geo/providers/*`、`lib/geo/scoring.ts` |
+| 規劃 | 聚叢 + 防農場三機制 | `api/marketing/geo/cluster`、`generate`(強制獨家層+查重) |
+| 產出 | 6要素文章 + JSON-LD | `api/marketing/geo/generate` |
+| 品質 | 段落可引用度評分 | `api/marketing/geo/citability`、`lib/geo/citability.ts` |
+| 發佈 | 落地頁/WordPress原生/Webhook/匯出HTML | `api/marketing/geo/publish`、`app/geo/[id]`、`lib/geo/md.ts` |
+| 多語 | 繁中/英/越南 | `api/marketing/geo/translate` |
+| 追蹤 | Perplexity引用追蹤 + cron + per-project開關 | `api/marketing/geo/track`、`api/cron/geo-track`、`auto-track`、`lib/geo/track.ts` |
+| 報告 | 競品SoV + 月度趨勢 + 可列印PDF | `api/marketing/geo/report`、`lib/geo/report.ts` |
+| 技術審計 | AI爬蟲檢查 + llms.txt + GEO Score | `api/marketing/geo/{crawlers,llms,audit}`、`lib/geo/{crawlers,llms,audit}.ts` |
+| 素材庫 | 商家/作者/事實複用 + Schema 注入 | `api/marketing/geo/material`、`lib/geo/schema.ts` |
+
+UI 單頁：`src/app/(tools)/marketing/geo-writer/page.tsx`（入口卡＋側欄已接 `(tools)/marketing`）。
+i18n：`messages/{zh-TW,en,vi}.json` 的 `Marketing.geo.*`。
+
+## 資料表（實際；migrations 041–045）
+- `geo_projects`：+ `author`、`target_domain`(使用者輸入追蹤網域)、`auto_track`(每週自動追蹤開關)
+- `geo_questions` / `geo_clusters` / `geo_articles`(+`project_id`) / `geo_tracking`：同原設計
+- `geo_publish_settings`(per-user)：wp_base_url/user/app_password、webhook_url/token
+- `geo_material`(per-user)：business(jsonb)、authors(jsonb[])、facts(jsonb[])
+- 全表 RLS：父表依 user_id，子表依所屬 project 擁有者。
+
+## 發佈四模式（取代原「複製貼上」）
+1. landing：本站 SSR `/geo/<id>`（免設定，放行 AI 爬蟲）
+2. wordpress：WordPress 原生 REST `/wp-json/wp/v2/posts` + Application Password（含 Hostinger）
+3. webhook：通用 webhook 給非 WP 的 CMS/API
+4. export：含 JSON-LD 的獨立 HTML 下載（靜態網站/無後台）
+> WordPress/Webhook 憑證由使用者於「發佈設定」面板填入（per-user），非 env。
+
+## Schema 強化
+原 Article+FAQPage+Organization → 素材庫存在時，`enrichJsonLd` 確定性注入 **LocalBusiness**（真實地址/電話/座標）與 **Person**（作者掛 Article.author/publisher），不靠 LLM 編造。
+
+## 機會分數實作細節
+搜尋訊號(FreeKeywordProvider：Google Autocomplete) × 商業意圖(step1 intent 映射) × AI端稀缺(Perplexity sonar 批次競爭偵測)；無 Perplexity 金鑰時稀缺退回中性值。UI 標 🟢實測/🟡推估/⚪AI推測。
+
+## 引用追蹤與月報
+- track：Perplexity 模擬提問→取回引用來源網域→判斷目標網域是否被引用/排名→寫 `geo_tracking`。
+- cron `/api/cron/geo-track`：每週一 06:00，只跑 `auto_track=true` 專案，`GEO_TRACK_BATCH`(預設40) 控量。
+- report：由 `geo_tracking` 歷史聚合被引用率趨勢、競品 share-of-voice、掉榜清單；`format=html` 出可列印報告（瀏覽器另存 PDF，未裝 PDF 套件）。
+
+## 技術審計（lib/geo/audit.ts，GEO Score 0–100）
+可引用度30 / 結構化資料20 / 技術基礎20 / E-E-A-T署名15 / AI爬蟲放行15。
+爬蟲檢查涵蓋 14 個 UA：GPTBot、OAI-SearchBot、ChatGPT-User、ClaudeBot、anthropic-ai、PerplexityBot、Perplexity-User、Google-Extended、Applebot-Extended、Amazonbot、Bytespider、CCBot、Meta-ExternalAgent、cohere-ai。
+
+## 環境變數（皆選用，未設有後備）
+- 已有 `ANTHROPIC_API_KEY`、`PERPLEXITY_API_KEY`、`CRON_SECRET`。
+- `GEO_TRACK_BATCH`(預設40)、`GEO_BRAND_DOMAIN`(後備，預設 im-tourist.com)。
+- WordPress/Webhook 憑證改 per-user 設定；env `GEO_WP_*`、`GEO_WORDPRESS_*` 僅作全域後備。
+- 未來付費關鍵字源：`DATAFORSEO_*`（`getKeywordProvider()` 自動切換）。
+
+## 與原設計差異/決策
+- 追蹤目標網域：改為使用者於專案輸入（非 env 寫死）。
+- 自動追蹤：改為 per-project 開關，預設關閉（控成本）。
+- PDF：因禁裝新套件，採可列印 HTML→瀏覽器另存 PDF。
+- 發佈/憑證：per-user 設定面板。
+- 暫未做（評估後續）：GEOFlow 多站批次排程量產、品牌提及外部掃描（YouTube/Reddit/Wikipedia）、prospect CRM（已有潛在客戶模組）。
+
+---
+
 ## 商業背景（重要脈絡）
 先用 freemium 服務驗證商機，再決定系統化深度：
 - 免費鉤子：1 服務 1 篇做到被 AI 引用（限前 5 家），條件是對方提供真實報價/服務細節，並綁「做出效果幫忙轉介/頁面掛 im-tourist 製作」。
