@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
   }
 
-  const { topic, exclusiveFacts, author, locale } = await req.json()
+  const { topic, exclusiveFacts, author, targetDomain, locale } = await req.json()
   if (!topic?.trim()) {
     return NextResponse.json({ error: '請輸入主題' }, { status: 400 })
   }
@@ -88,6 +88,7 @@ ${exclusiveFacts?.trim() ? `\n【獨家資訊／可用素材】\n${exclusiveFact
       locale: locale ?? 'zh-TW',
       exclusive_facts: exclusiveFacts?.trim() || null,
       author: author?.trim() || null,
+      target_domain: targetDomain?.trim() || null,
     })
     .select('id')
     .single()

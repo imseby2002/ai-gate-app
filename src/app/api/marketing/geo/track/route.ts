@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   const { data: project } = await supabase
     .from('geo_projects')
-    .select('id, locale')
+    .select('id, locale, target_domain')
     .eq('id', projectId)
     .single()
   if (!project) return NextResponse.json({ error: '找不到專案' }, { status: 404 })
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   // 每個問句找出所屬文章的 published_url 推得目標網域
   const inputs: TrackInput[] = questions.map(q => {
     const art = (articles ?? []).find(a => (a.question_ids ?? []).includes(q.id))
-    return { id: q.id, question: q.question, target: deriveTarget(art?.published_url) }
+    return { id: q.id, question: q.question, target: deriveTarget(project.target_domain, art?.published_url) }
   })
 
   const results = await trackQuestions(supabase, inputs, project.locale ?? 'zh-TW')

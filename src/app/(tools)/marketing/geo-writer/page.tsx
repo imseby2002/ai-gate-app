@@ -43,6 +43,7 @@ export default function GeoWriterPage() {
   const [topic, setTopic] = useState('')
   const [exclusiveFacts, setExclusiveFacts] = useState('')
   const [author, setAuthor] = useState('')
+  const [targetDomain, setTargetDomain] = useState('')
 
   const [projectId, setProjectId] = useState<string | null>(null)
   const [questions, setQuestions] = useState<GeoQuestion[]>([])
@@ -70,7 +71,7 @@ export default function GeoWriterPage() {
     try {
       const res = await fetch('/api/marketing/geo/questions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, exclusiveFacts, author, locale }),
+        body: JSON.stringify({ topic, exclusiveFacts, author, targetDomain, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
@@ -263,6 +264,10 @@ export default function GeoWriterPage() {
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">{t('geo.author')}</label>
             <Input value={author} onChange={e => setAuthor(e.target.value)} placeholder={t('geo.authorPh')} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">{t('geo.targetDomain')}</label>
+            <Input value={targetDomain} onChange={e => setTargetDomain(e.target.value)} placeholder={t('geo.targetDomainPh')} />
           </div>
           <Button onClick={explore} disabled={loadingQ} className="w-full">
             {loadingQ ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}

@@ -24,8 +24,9 @@ function hostOf(url: string | null | undefined): string | null {
   try { return new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace(/^www\./, '') } catch { return null }
 }
 
-export function deriveTarget(publishedUrl: string | null | undefined): string {
-  return hostOf(publishedUrl) || process.env.GEO_BRAND_DOMAIN || 'im-tourist.com'
+/** 優先用專案自訂目標網域 → 文章已發佈網域 → env 後備 */
+export function deriveTarget(projectDomain?: string | null, publishedUrl?: string | null): string {
+  return hostOf(projectDomain) || hostOf(publishedUrl) || process.env.GEO_BRAND_DOMAIN || 'im-tourist.com'
 }
 
 async function checkOne(q: TrackInput, locale: string): Promise<TrackResult | null> {

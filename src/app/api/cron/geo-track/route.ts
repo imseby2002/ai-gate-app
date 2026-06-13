@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   // 取已撰寫問句（含所屬專案 locale 與文章 published_url）
   const { data: questions } = await admin
     .from('geo_questions')
-    .select('id, question, project_id, geo_projects(locale)')
+    .select('id, question, project_id, geo_projects(locale, target_domain)')
     .eq('status', 'written')
     .order('created_at', { ascending: true })
     .limit(batch)
@@ -54,9 +54,10 @@ export async function GET(req: Request) {
   const byLocale = new Map<string, TrackInput[]>()
   for (const q of questions) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const locale = ((q as any).geo_projects?.locale as string) ?? 'zh-TW'
+    const proj = (q as any).geo_projects
+    const locale = (proj?.locale as string) ?? 'zh-TW'
     const art = (articles ?? []).find(a => (a.question_ids ?? []).includes(q.id))
-    const input: TrackInput = { id: q.id, question: q.question, target: deriveTarget(art?.published_url) }
+    const input: TrackInput = { id: q.id, question: q.question, target: deriveTarget(proj?.target_domain, art?.published_url) }
     const arr = byLocale.get(locale) ?? []
     arr.push(input)
     byLocale.set(locale, arr)
