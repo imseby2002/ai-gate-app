@@ -9,6 +9,7 @@ import {
   Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages, Download,
   Settings, Save, Award, BarChart3, Printer, TrendingDown,
   Wrench, Bot, ScrollText, Gauge as GaugeIcon,
+  Library, Plus, Trash2, MapPin, UserCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,6 +32,13 @@ interface ReportData {
   competitors: { domain: string; questions: number; share: number }[]
   dropped: { question: string; lastSeen: string }[]
 }
+interface BusinessProfile {
+  name?: string; type?: string; url?: string; phone?: string
+  streetAddress?: string; city?: string; region?: string; country?: string
+  latitude?: string; longitude?: string; openingHours?: string; priceRange?: string; sameAs?: string[]
+}
+interface AuthorProfile { name?: string; jobTitle?: string; bio?: string; url?: string }
+interface FactItem { label?: string; text?: string }
 interface CrawlerReport { domain: string; robotsFound: boolean; blockedCount: number; crawlers: { bot: string; purpose: string; allowed: boolean }[] }
 interface AuditReport { url: string; total: number; schemaTypes: string[]; breakdown: { key: string; label: string; score: number; max: number; note: string }[] }
 
@@ -84,6 +92,48 @@ export default function GeoWriterPage() {
   const [webhookConfigured, setWebhookConfigured] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
+
+  // 素材庫
+  const [showMaterial, setShowMaterial] = useState(false)
+  const [business, setBusiness] = useState<BusinessProfile>({})
+  const [authors, setAuthors] = useState<AuthorProfile[]>([])
+  const [facts, setFacts] = useState<FactItem[]>([])
+  const [savingMat, setSavingMat] = useState(false)
+  const [matSaved, setMatSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/marketing/geo/material')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return
+        setBusiness(d.business ?? {})
+        setAuthors(d.authors ?? [])
+        setFacts(d.facts ?? [])
+      })
+      .catch(() => {})
+  }, [])
+
+  async function saveMaterial() {
+    setSavingMat(true); setMatSaved(false); setError('')
+    try {
+      const res = await fetch('/api/marketing/geo/material', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business, authors, facts }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'error')
+      setMatSaved(true); setTimeout(() => setMatSaved(false), 2000)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setSavingMat(false) }
+  }
+
+  function insertFact(f: FactItem) {
+    const line = f.text?.trim()
+    if (!line) return
+    setExclusiveFacts(prev => prev ? `${prev}\n${line}` : line)
+  }
+
+  const bz = (k: keyof BusinessProfile, v: string) => setBusiness(b => ({ ...b, [k]: v }))
 
   // GEO 技術工具
   const [showTools, setShowTools] = useState(false)
@@ -407,6 +457,9 @@ export default function GeoWriterPage() {
             </h1>
             <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setShowMaterial(s => !s)}>
+            <Library className="h-3.5 w-3.5" /> {t('geo.material')}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowTools(s => !s)}>
             <Wrench className="h-3.5 w-3.5" /> {t('geo.tools')}
           </Button>
@@ -414,6 +467,75 @@ export default function GeoWriterPage() {
             <Settings className="h-3.5 w-3.5" /> {t('geo.publishSettings')}
           </Button>
         </div>
+
+        {/* 素材庫：商家檔案(LocalBusiness) / 作者(Person) / 獨家事實 */}
+        {showMaterial && (
+          <div className="bg-card rounded-xl border p-5 space-y-5 shadow-sm">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Library className="h-4 w-4 text-indigo-600" /> {t('geo.material')}
+            </h2>
+            <p className="text-[11px] text-muted-foreground">{t('geo.materialHint')}</p>
+
+            {/* 商家檔案 */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{t('geo.bizSection')}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input value={business.name ?? ''} onChange={e => bz('name', e.target.value)} placeholder={t('geo.bizName')} />
+                <select value={business.type ?? 'LocalBusiness'} onChange={e => bz('type', e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+                  {['LocalBusiness', 'TravelAgency', 'Restaurant', 'Store', 'ProfessionalService', 'Organization'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <Input value={business.url ?? ''} onChange={e => bz('url', e.target.value)} placeholder={t('geo.bizUrl')} />
+                <Input value={business.phone ?? ''} onChange={e => bz('phone', e.target.value)} placeholder={t('geo.bizPhone')} />
+                <Input value={business.streetAddress ?? ''} onChange={e => bz('streetAddress', e.target.value)} placeholder={t('geo.bizStreet')} />
+                <Input value={business.city ?? ''} onChange={e => bz('city', e.target.value)} placeholder={t('geo.bizCity')} />
+                <Input value={business.region ?? ''} onChange={e => bz('region', e.target.value)} placeholder={t('geo.bizRegion')} />
+                <Input value={business.country ?? ''} onChange={e => bz('country', e.target.value)} placeholder={t('geo.bizCountry')} />
+                <Input value={business.latitude ?? ''} onChange={e => bz('latitude', e.target.value)} placeholder={t('geo.bizLat')} />
+                <Input value={business.longitude ?? ''} onChange={e => bz('longitude', e.target.value)} placeholder={t('geo.bizLng')} />
+                <Input value={business.openingHours ?? ''} onChange={e => bz('openingHours', e.target.value)} placeholder={t('geo.bizHours')} />
+                <Input value={business.priceRange ?? ''} onChange={e => bz('priceRange', e.target.value)} placeholder={t('geo.bizPrice')} />
+              </div>
+            </div>
+
+            {/* 作者 */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1"><UserCircle className="h-3.5 w-3.5" />{t('geo.authorSection')}</p>
+                <Button variant="ghost" size="sm" onClick={() => setAuthors(a => [...a, {}])}><Plus className="h-3.5 w-3.5" />{t('geo.addItem')}</Button>
+              </div>
+              {authors.map((a, i) => (
+                <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border p-2 relative">
+                  <Input value={a.name ?? ''} onChange={e => setAuthors(arr => arr.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder={t('geo.authorName')} />
+                  <Input value={a.jobTitle ?? ''} onChange={e => setAuthors(arr => arr.map((x, j) => j === i ? { ...x, jobTitle: e.target.value } : x))} placeholder={t('geo.authorJob')} />
+                  <Input value={a.url ?? ''} onChange={e => setAuthors(arr => arr.map((x, j) => j === i ? { ...x, url: e.target.value } : x))} placeholder={t('geo.authorUrl')} />
+                  <Input value={a.bio ?? ''} onChange={e => setAuthors(arr => arr.map((x, j) => j === i ? { ...x, bio: e.target.value } : x))} placeholder={t('geo.authorBio')} />
+                  <button onClick={() => setAuthors(arr => arr.filter((_, j) => j !== i))} className="absolute -top-2 -right-2 bg-card border rounded-full p-0.5 text-muted-foreground hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              ))}
+            </div>
+
+            {/* 獨家事實 */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">{t('geo.factSection')}</p>
+                <Button variant="ghost" size="sm" onClick={() => setFacts(f => [...f, {}])}><Plus className="h-3.5 w-3.5" />{t('geo.addItem')}</Button>
+              </div>
+              {facts.map((f, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <Input value={f.label ?? ''} onChange={e => setFacts(arr => arr.map((x, j) => j === i ? { ...x, label: e.target.value } : x))} placeholder={t('geo.factLabel')} className="w-32 shrink-0" />
+                  <Textarea value={f.text ?? ''} onChange={e => setFacts(arr => arr.map((x, j) => j === i ? { ...x, text: e.target.value } : x))} placeholder={t('geo.factText')} rows={1} className="flex-1" />
+                  <button onClick={() => setFacts(arr => arr.filter((_, j) => j !== i))} className="mt-2 text-muted-foreground hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              ))}
+            </div>
+
+            <Button onClick={saveMaterial} disabled={savingMat} size="sm">
+              {savingMat ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : matSaved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+              {matSaved ? t('geo.saved') : t('geo.save')}
+            </Button>
+          </div>
+        )}
 
         {/* GEO 技術工具：AI 爬蟲檢查 / llms.txt / 落地頁審計 */}
         {showTools && (
@@ -555,6 +677,17 @@ export default function GeoWriterPage() {
             <label className="text-xs font-medium text-muted-foreground">{t('geo.exclusive')}</label>
             <Textarea value={exclusiveFacts} onChange={e => setExclusiveFacts(e.target.value)}
               placeholder={t('geo.exclusivePh')} rows={4} />
+            {facts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                <span className="text-[11px] text-muted-foreground self-center">{t('geo.insertFact')}</span>
+                {facts.filter(f => f.text?.trim()).map((f, i) => (
+                  <button key={i} onClick={() => insertFact(f)}
+                    className="text-[11px] px-2 py-0.5 rounded-full border bg-card hover:bg-muted">
+                    + {f.label?.trim() || f.text!.slice(0, 12)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">{t('geo.author')}</label>

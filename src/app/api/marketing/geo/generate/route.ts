@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
+import { enrichJsonLd, type Material } from '@/lib/geo/schema'
 
 export const maxDuration = 120
 
@@ -97,9 +98,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '找不到勾選的問句' }, { status: 404 })
   }
 
+  // 素材庫（商家檔案 / 作者 / 獨家事實）
+  const { data: material } = await supabase
+    .from('geo_material')
+    .select('business, authors, facts')
+    .eq('user_id', user.id)
+    .single()
+  const mat: Material = {
+    business: material?.business ?? null,
+    authors: material?.authors ?? [],
+    facts: material?.facts ?? [],
+  }
+
   const topic = project.seed_topic
   const exclusiveFacts = project.exclusive_facts ?? ''
-  const author = project.author ?? ''
+  const author = (project.author ?? '').trim() || mat.authors?.[0]?.name || ''
   const questions = qRows.map(r => r.question)
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -135,6 +148,10 @@ ${author.trim() || 'im-tourist 峴港在地團隊'}
     if (jsonldMatch) {
       const raw = jsonldMatch[1].replace(/```json|```/g, '').trim()
       try { json_ld = JSON.parse(raw) } catch { json_ld = null }
+    }
+    // 用素材庫的真實商家/作者注入 LocalBusiness + Person（不靠 LLM 編造）
+    if (mat.business || (mat.authors && mat.authors.length > 0)) {
+      json_ld = enrichJsonLd(json_ld, mat)
     }
     const titleMatch = body_md.match(/^#\s+(.+)$/m)
     title = titleMatch ? titleMatch[1].trim() : topic
