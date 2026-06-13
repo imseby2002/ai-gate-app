@@ -31,6 +31,13 @@ export async function POST(req: NextRequest) {
     .single()
   if (!article) return NextResponse.json({ error: '找不到文章' }, { status: 404 })
 
+  // 每位使用者自己的發佈設定（優先），未設則退回 env
+  const { data: settings } = await supabase
+    .from('geo_publish_settings')
+    .select('wp_base_url, wp_user, wp_app_password, webhook_url, webhook_token')
+    .eq('user_id', user.id)
+    .single()
+
   const bodyHtml = mdToHtml(article.body_md)
   const jsonLdStr = article.json_ld
     ? (typeof article.json_ld === 'string' ? article.json_ld : JSON.stringify(article.json_ld))
@@ -47,12 +54,12 @@ export async function POST(req: NextRequest) {
 
   // ── WordPress 原生 REST 直發 ──
   if (mode === 'wordpress') {
-    const base = process.env.GEO_WP_BASE_URL
-    const wpUser = process.env.GEO_WP_USER
-    const appPw = process.env.GEO_WP_APP_PASSWORD
+    const base = settings?.wp_base_url || process.env.GEO_WP_BASE_URL
+    const wpUser = settings?.wp_user || process.env.GEO_WP_USER
+    const appPw = settings?.wp_app_password || process.env.GEO_WP_APP_PASSWORD
     if (!base || !wpUser || !appPw) {
       return NextResponse.json(
-        { error: '尚未設定 WordPress：請設定 GEO_WP_BASE_URL / GEO_WP_USER / GEO_WP_APP_PASSWORD' },
+        { error: '尚未設定 WordPress：請在「發佈設定」填入網址、帳號與應用程式密碼' },
         { status: 400 },
       )
     }
@@ -84,15 +91,16 @@ export async function POST(req: NextRequest) {
 
   // ── 通用 webhook（對方 CMS/API 自行接收）──
   if (mode === 'webhook') {
-    const hook = process.env.GEO_WORDPRESS_WEBHOOK
-    if (!hook) return NextResponse.json({ error: 'GEO_WORDPRESS_WEBHOOK 未設定' }, { status: 400 })
+    const hook = settings?.webhook_url || process.env.GEO_WORDPRESS_WEBHOOK
+    const hookToken = settings?.webhook_token || process.env.GEO_WORDPRESS_TOKEN
+    if (!hook) return NextResponse.json({ error: '尚未設定 Webhook：請在「發佈設定」填入 Webhook 網址' }, { status: 400 })
     let publishedUrl = ''
     try {
       const res = await fetch(hook, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(process.env.GEO_WORDPRESS_TOKEN ? { Authorization: `Bearer ${process.env.GEO_WORDPRESS_TOKEN}` } : {}),
+          ...(hookToken ? { Authorization: `Bearer ${hookToken}` } : {}),
         },
         body: JSON.stringify({
           title: article.title,

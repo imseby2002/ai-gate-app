@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
   FileText, Code2, RefreshCw, Gauge, Layers, Crown,
   Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages, Download,
+  Settings, Save,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,6 +57,51 @@ export default function GeoWriterPage() {
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [loadingP, setLoadingP] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
+
+  // 發佈設定（per-user）
+  const [showSettings, setShowSettings] = useState(false)
+  const [wpBaseUrl, setWpBaseUrl] = useState('')
+  const [wpUser, setWpUser] = useState('')
+  const [wpAppPassword, setWpAppPassword] = useState('')
+  const [wpConfigured, setWpConfigured] = useState(false)
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [webhookToken, setWebhookToken] = useState('')
+  const [webhookConfigured, setWebhookConfigured] = useState(false)
+  const [savingSettings, setSavingSettings] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/marketing/geo/settings')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return
+        setWpBaseUrl(d.wpBaseUrl ?? '')
+        setWpUser(d.wpUser ?? '')
+        setWpConfigured(!!d.wpConfigured)
+        setWebhookUrl(d.webhookUrl ?? '')
+        setWebhookConfigured(!!d.webhookConfigured)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function saveSettings() {
+    setSavingSettings(true); setSettingsSaved(false); setError('')
+    try {
+      const res = await fetch('/api/marketing/geo/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wpBaseUrl, wpUser, wpAppPassword, webhookUrl, webhookToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      if (wpAppPassword.trim()) setWpConfigured(true)
+      if (webhookToken.trim()) setWebhookConfigured(true)
+      setWpAppPassword(''); setWebhookToken('')
+      setSettingsSaved(true)
+      setTimeout(() => setSettingsSaved(false), 2000)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setSavingSettings(false) }
+  }
 
   const [loadingQ, setLoadingQ] = useState(false)
   const [loadingS, setLoadingS] = useState(false)
@@ -243,14 +289,47 @@ export default function GeoWriterPage() {
           <Link href="/marketing" className="text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-5 w-5" />
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold flex items-center gap-2">
               <Search className="h-5 w-5 text-indigo-600" />
               {t('geo.title')}
             </h1>
             <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)}>
+            <Settings className="h-3.5 w-3.5" /> {t('geo.publishSettings')}
+          </Button>
         </div>
+
+        {/* 發佈設定（per-user） */}
+        {showSettings && (
+          <div className="bg-card rounded-xl border p-5 space-y-4 shadow-sm">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Settings className="h-4 w-4 text-indigo-600" /> {t('geo.publishSettings')}
+            </h2>
+
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">{t('geo.wpSection')}</p>
+              <Input value={wpBaseUrl} onChange={e => setWpBaseUrl(e.target.value)} placeholder={t('geo.wpBaseUrlPh')} />
+              <Input value={wpUser} onChange={e => setWpUser(e.target.value)} placeholder={t('geo.wpUserPh')} />
+              <Input type="password" value={wpAppPassword} onChange={e => setWpAppPassword(e.target.value)}
+                placeholder={wpConfigured ? t('geo.secretSetPh') : t('geo.wpPwPh')} />
+              <p className="text-[11px] text-muted-foreground">{t('geo.wpHelp')}</p>
+            </div>
+
+            <div className="space-y-3 border-t pt-4">
+              <p className="text-xs font-medium text-muted-foreground">{t('geo.webhookSection')}</p>
+              <Input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder={t('geo.webhookUrlPh')} />
+              <Input type="password" value={webhookToken} onChange={e => setWebhookToken(e.target.value)}
+                placeholder={webhookConfigured ? t('geo.secretSetPh') : t('geo.webhookTokenPh')} />
+            </div>
+
+            <Button onClick={saveSettings} disabled={savingSettings} size="sm">
+              {savingSettings ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : settingsSaved ? <Check className="h-3.5 w-3.5" /> : <Save className="h-3.5 w-3.5" />}
+              {settingsSaved ? t('geo.saved') : t('geo.save')}
+            </Button>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 px-4 py-2.5 text-sm text-red-700 dark:text-red-300">
