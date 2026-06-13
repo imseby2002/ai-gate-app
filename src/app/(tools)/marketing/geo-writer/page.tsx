@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
   FileText, Code2, RefreshCw, Gauge, Layers, Crown,
-  Radar, CheckCircle2, XCircle,
+  Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -52,6 +52,9 @@ export default function GeoWriterPage() {
   const [article, setArticle] = useState<GeoArticle | null>(null)
   const [tracking, setTracking] = useState<TrackResult[]>([])
   const [loadingT, setLoadingT] = useState(false)
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+  const [loadingP, setLoadingP] = useState(false)
+  const [loadingTr, setLoadingTr] = useState(false)
 
   const [loadingQ, setLoadingQ] = useState(false)
   const [loadingS, setLoadingS] = useState(false)
@@ -155,9 +158,45 @@ export default function GeoWriterPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
       setArticle(data)
+      setPublishedUrl(null)
+      setTracking([])
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingA(false) }
+  }
+
+  async function publish(mode: 'landing' | 'wordpress') {
+    if (!article?.articleId) return
+    setError(''); setLoadingP(true)
+    try {
+      const res = await fetch('/api/marketing/geo/publish', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: article.articleId, mode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setPublishedUrl(data.url || null)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingP(false) }
+  }
+
+  async function translate(targetLocale: 'zh-TW' | 'en' | 'vi') {
+    if (!article?.articleId) return
+    setError(''); setLoadingTr(true)
+    try {
+      const res = await fetch('/api/marketing/geo/translate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: article.articleId, targetLocale }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setArticle(data)
+      setPublishedUrl(null)
+      setTracking([])
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingTr(false) }
   }
 
   async function trackNow() {
@@ -314,6 +353,31 @@ export default function GeoWriterPage() {
                 <RefreshCw className="h-3.5 w-3.5" /> {t('geo.regenerate')}
               </Button>
             </div>
+
+            {/* Publish + multilingual */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => publish('landing')} disabled={loadingP}>
+                {loadingP ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+                {t('geo.publishLanding')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => publish('wordpress')} disabled={loadingP}>
+                <ExternalLink className="h-3.5 w-3.5" /> {t('geo.publishWp')}
+              </Button>
+              <span className="mx-1 h-4 w-px bg-border" />
+              <Languages className="h-3.5 w-3.5 text-muted-foreground" />
+              {(['zh-TW', 'en', 'vi'] as const).filter(l => l !== locale).map(l => (
+                <Button key={l} variant="outline" size="sm" onClick={() => translate(l)} disabled={loadingTr}>
+                  {loadingTr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                  {t(`geo.lang.${l}` as Parameters<typeof t>[0])}
+                </Button>
+              ))}
+            </div>
+            {publishedUrl && (
+              <a href={publishedUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-indigo-600 hover:underline break-all">
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" /> {publishedUrl}
+              </a>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
