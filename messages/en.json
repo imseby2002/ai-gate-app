@@ -1255,6 +1255,8 @@
       "rankN": "Rank {n}",
       "publishLanding": "Publish landing page",
       "publishWp": "Publish to WordPress",
+      "publishWebhook": "Send to Webhook",
+      "exportHtml": "Export HTML",
       "lang": { "zh-TW": "Chinese", "en": "English", "vi": "Vietnamese" },
       "generate": "Generate article + JSON-LD",
       "generating": "Generating...",

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
   FileText, Code2, RefreshCw, Gauge, Layers, Crown,
-  Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages,
+  Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages, Download,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -166,7 +166,7 @@ export default function GeoWriterPage() {
     } finally { setLoadingA(false) }
   }
 
-  async function publish(mode: 'landing' | 'wordpress') {
+  async function publish(mode: 'landing' | 'wordpress' | 'webhook' | 'export') {
     if (!article?.articleId) return
     setError(''); setLoadingP(true)
     try {
@@ -176,7 +176,16 @@ export default function GeoWriterPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
-      setPublishedUrl(data.url || null)
+      if (mode === 'export') {
+        const blob = new Blob([data.html], { type: 'text/html' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = data.filename || 'geo-article.html'
+        a.click()
+        URL.revokeObjectURL(a.href)
+      } else {
+        setPublishedUrl(data.url || null)
+      }
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingP(false) }
@@ -367,6 +376,12 @@ export default function GeoWriterPage() {
               </Button>
               <Button variant="outline" size="sm" onClick={() => publish('wordpress')} disabled={loadingP}>
                 <ExternalLink className="h-3.5 w-3.5" /> {t('geo.publishWp')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => publish('webhook')} disabled={loadingP}>
+                <ExternalLink className="h-3.5 w-3.5" /> {t('geo.publishWebhook')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => publish('export')} disabled={loadingP}>
+                <Download className="h-3.5 w-3.5" /> {t('geo.exportHtml')}
               </Button>
               <span className="mx-1 h-4 w-px bg-border" />
               <Languages className="h-3.5 w-3.5 text-muted-foreground" />

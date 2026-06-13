@@ -14,6 +14,38 @@ function inline(s: string): string {
   return out
 }
 
+/** 產生可直接上傳/開啟的獨立 HTML 文件（含 JSON-LD、放行 AI 爬蟲），給非 WordPress 使用者匯出。 */
+export function buildStandaloneHtml(title: string, bodyHtml: string, jsonLd: string | null): string {
+  return `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="index,follow">
+<title>${title.replace(/</g, '&lt;')}</title>
+${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
+<style>
+body{max-width:760px;margin:0 auto;padding:32px 20px;line-height:1.7;font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:#1e293b}
+h1{font-size:1.9rem;font-weight:800;margin:0 0 1rem}
+h2{font-size:1.4rem;font-weight:700;margin:2rem 0 .75rem}
+h3{font-size:1.15rem;font-weight:700;margin:1.5rem 0 .5rem}
+p{margin:.75rem 0}
+ul,ol{margin:.75rem 0 .75rem 1.5rem}
+li{margin:.35rem 0}
+a{color:#4f46e5}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.95rem}
+th,td{border:1px solid #e2e8f0;padding:.5rem .75rem;text-align:left}
+th{background:#f8fafc;font-weight:700}
+</style>
+</head>
+<body>
+<article>
+${bodyHtml}
+</article>
+</body>
+</html>`
+}
+
 export function mdToHtml(md: string): string {
   const lines = md.replace(/\r\n/g, '\n').split('\n')
   const html: string[] = []
