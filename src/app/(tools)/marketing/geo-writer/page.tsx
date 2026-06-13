@@ -8,6 +8,7 @@ import {
   FileText, Code2, RefreshCw, Gauge, Layers, Crown,
   Radar, CheckCircle2, XCircle, Globe, ExternalLink, Languages, Download,
   Settings, Save, Award, BarChart3, Printer, TrendingDown,
+  Wrench, Bot, ScrollText, Gauge as GaugeIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +31,8 @@ interface ReportData {
   competitors: { domain: string; questions: number; share: number }[]
   dropped: { question: string; lastSeen: string }[]
 }
+interface CrawlerReport { domain: string; robotsFound: boolean; blockedCount: number; crawlers: { bot: string; purpose: string; allowed: boolean }[] }
+interface AuditReport { url: string; total: number; schemaTypes: string[]; breakdown: { key: string; label: string; score: number; max: number; note: string }[] }
 
 const SOURCE_DOT: Record<VolumeSource, string> = {
   measured:  'bg-emerald-500',
@@ -82,6 +85,14 @@ export default function GeoWriterPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
 
+  // GEO 技術工具
+  const [showTools, setShowTools] = useState(false)
+  const [crawlerReport, setCrawlerReport] = useState<CrawlerReport | null>(null)
+  const [loadingCr, setLoadingCr] = useState(false)
+  const [auditInput, setAuditInput] = useState('')
+  const [auditReport, setAuditReport] = useState<AuditReport | null>(null)
+  const [loadingAu, setLoadingAu] = useState(false)
+
   useEffect(() => {
     fetch('/api/marketing/geo/settings')
       .then(r => r.ok ? r.json() : null)
@@ -113,6 +124,42 @@ export default function GeoWriterPage() {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setSavingSettings(false) }
+  }
+
+  async function checkCrawlers() {
+    const dom = (targetDomain || auditInput).trim()
+    if (!dom) { setError(t('geo.errDomain')); return }
+    setError(''); setLoadingCr(true)
+    try {
+      const res = await fetch(`/api/marketing/geo/crawlers?domain=${encodeURIComponent(dom)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setCrawlerReport(data)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingCr(false) }
+  }
+
+  function downloadLlms() {
+    if (!projectId) { setError(t('geo.errTopic')); return }
+    window.open(`/api/marketing/geo/llms?projectId=${projectId}`, '_blank')
+  }
+
+  async function auditPage() {
+    const url = (auditInput || publishedUrl || '').trim()
+    if (!url) { setError(t('geo.errUrl')); return }
+    setError(''); setLoadingAu(true)
+    try {
+      const res = await fetch('/api/marketing/geo/audit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setAuditReport(data)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingAu(false) }
   }
 
   const [loadingQ, setLoadingQ] = useState(false)
@@ -360,10 +407,106 @@ export default function GeoWriterPage() {
             </h1>
             <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setShowTools(s => !s)}>
+            <Wrench className="h-3.5 w-3.5" /> {t('geo.tools')}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)}>
             <Settings className="h-3.5 w-3.5" /> {t('geo.publishSettings')}
           </Button>
         </div>
+
+        {/* GEO 技術工具：AI 爬蟲檢查 / llms.txt / 落地頁審計 */}
+        {showTools && (
+          <div className="bg-card rounded-xl border p-5 space-y-5 shadow-sm">
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-indigo-600" /> {t('geo.tools')}
+            </h2>
+
+            {/* AI 爬蟲檢查 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Bot className="h-3.5 w-3.5" /> {t('geo.crawlerTitle')}
+                </span>
+                <Button variant="outline" size="sm" onClick={checkCrawlers} disabled={loadingCr}>
+                  {loadingCr ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+                  {t('geo.crawlerCheck')}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t('geo.crawlerHint')}</p>
+              {crawlerReport && (
+                <div>
+                  {!crawlerReport.robotsFound && (
+                    <p className="text-[11px] text-amber-600 mb-1">{t('geo.noRobots')}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {crawlerReport.crawlers.map(c => (
+                      <div key={c.bot} className="flex items-center gap-1.5 text-xs">
+                        {c.allowed
+                          ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          : <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />}
+                        <span className="truncate" title={c.purpose}>{c.bot}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* llms.txt */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <ScrollText className="h-3.5 w-3.5" /> {t('geo.llmsTitle')}
+                </span>
+                <Button variant="outline" size="sm" onClick={downloadLlms}>
+                  <Download className="h-3.5 w-3.5" /> {t('geo.llmsGen')}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">{t('geo.llmsHint')}</p>
+            </div>
+
+            {/* 落地頁審計 */}
+            <div className="space-y-2 border-t pt-4">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <GaugeIcon className="h-3.5 w-3.5" /> {t('geo.auditTitle')}
+              </span>
+              <div className="flex gap-2">
+                <Input value={auditInput} onChange={e => setAuditInput(e.target.value)}
+                  placeholder={publishedUrl || t('geo.auditPh')} />
+                <Button variant="outline" size="sm" onClick={auditPage} disabled={loadingAu}>
+                  {loadingAu ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GaugeIcon className="h-3.5 w-3.5" />}
+                  {t('geo.auditRun')}
+                </Button>
+              </div>
+              {auditReport && (
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className={cn('text-2xl font-bold tabular-nums',
+                      auditReport.total >= 75 ? 'text-emerald-600' : auditReport.total >= 50 ? 'text-amber-600' : 'text-red-600')}>
+                      {auditReport.total}
+                    </span>
+                    <span className="text-xs text-muted-foreground">/ 100 GEO Score</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {auditReport.breakdown.map(b => (
+                      <div key={b.key} className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="w-24 shrink-0">{b.label}</span>
+                          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                            <div className="h-full bg-indigo-500" style={{ width: `${(b.score / b.max) * 100}%` }} />
+                          </div>
+                          <span className="tabular-nums text-muted-foreground w-12 text-right">{b.score}/{b.max}</span>
+                        </div>
+                        <p className="ml-2 text-[10px] text-muted-foreground mt-0.5">{b.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 發佈設定（per-user） */}
         {showSettings && (
