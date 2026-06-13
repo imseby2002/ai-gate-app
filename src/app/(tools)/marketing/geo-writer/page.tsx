@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
-  FileText, Code2, RefreshCw,
+  FileText, Code2, RefreshCw, Gauge,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,8 +13,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
 
 type Intent = 'info' | 'local' | 'compare' | 'transact'
-interface GeoQuestion { id: string; question: string; intent: Intent }
+type VolumeSource = 'measured' | 'estimated' | 'unknown'
+interface GeoQuestion {
+  id: string; question: string; intent: Intent
+  opportunity_score?: number; volume_source?: VolumeSource
+}
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
+
+const SOURCE_DOT: Record<VolumeSource, string> = {
+  measured:  'bg-emerald-500',
+  estimated: 'bg-amber-500',
+  unknown:   'bg-slate-400',
+}
 
 const INTENT_STYLES: Record<Intent, string> = {
   info:     'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
@@ -37,13 +47,15 @@ export default function GeoWriterPage() {
   const [article, setArticle] = useState<GeoArticle | null>(null)
 
   const [loadingQ, setLoadingQ] = useState(false)
+  const [loadingS, setLoadingS] = useState(false)
   const [loadingA, setLoadingA] = useState(false)
+  const [scored, setScored] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState<'md' | 'jsonld' | null>(null)
 
   async function explore() {
     if (!topic.trim()) { setError(t('geo.errTopic')); return }
-    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null); setProjectId(null)
+    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null); setProjectId(null); setScored(false)
     try {
       const res = await fetch('/api/marketing/geo/questions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -66,6 +78,35 @@ export default function GeoWriterPage() {
       next.has(i) ? next.delete(i) : next.add(i)
       return next
     })
+  }
+
+  async function scoreAll() {
+    if (!projectId) return
+    setError(''); setLoadingS(true)
+    try {
+      const res = await fetch('/api/marketing/geo/score', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      const scoreMap = new Map<string, { opportunity_score: number; volume_source: VolumeSource }>(
+        (data.questions ?? []).map((s: { id: string; opportunity_score: number; volume_source: VolumeSource }) =>
+          [s.id, { opportunity_score: s.opportunity_score, volume_source: s.volume_source }]),
+      )
+      setQuestions(prev =>
+        [...prev]
+          .map(q => {
+            const s = scoreMap.get(q.id)
+            return s ? { ...q, ...s } : q
+          })
+          .sort((a, b) => (b.opportunity_score ?? -1) - (a.opportunity_score ?? -1)),
+      )
+      setSelected(new Set(questions.map((_, i) => i))) // 重排後維持全選；下方依新順序
+      setScored(true)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingS(false) }
   }
 
   async function generate() {
@@ -144,19 +185,38 @@ export default function GeoWriterPage() {
         {/* Step 2: questions */}
         {questions.length > 0 && (
           <div className="bg-card rounded-xl border p-5 space-y-3 shadow-sm">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold">{t('geo.step2')}</h2>
-              <span className="text-xs text-muted-foreground">{t('geo.picked', { n: selected.size, total: questions.length })}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{t('geo.picked', { n: selected.size, total: questions.length })}</span>
+                <Button variant="outline" size="sm" onClick={scoreAll} disabled={loadingS}>
+                  {loadingS ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gauge className="h-3.5 w-3.5" />}
+                  {loadingS ? t('geo.scoring') : t('geo.score')}
+                </Button>
+              </div>
             </div>
+            {scored && (
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{t('geo.src.measured')}</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" />{t('geo.src.estimated')}</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" />{t('geo.src.unknown')}</span>
+              </div>
+            )}
             <div className="space-y-2">
               {questions.map((q, i) => (
-                <label key={i} className={cn(
+                <label key={q.id} className={cn(
                   'flex items-start gap-3 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors',
                   selected.has(i) ? 'border-indigo-300 bg-indigo-50/50 dark:bg-indigo-950/20' : 'border-border hover:bg-muted/50'
                 )}>
                   <input type="checkbox" checked={selected.has(i)} onChange={() => toggle(i)}
                     className="mt-0.5 h-4 w-4 accent-indigo-600" />
                   <span className="flex-1 text-sm">{q.question}</span>
+                  {q.opportunity_score != null && (
+                    <span className="flex items-center gap-1 shrink-0" title={t('geo.opp')}>
+                      <span className={cn('h-2 w-2 rounded-full', SOURCE_DOT[q.volume_source ?? 'unknown'])} />
+                      <span className="text-xs font-semibold tabular-nums text-indigo-600">{q.opportunity_score}</span>
+                    </span>
+                  )}
                   <span className={cn('text-[10px] px-2 py-0.5 rounded-full shrink-0', INTENT_STYLES[q.intent] ?? INTENT_STYLES.info)}>
                     {t(`geo.intent.${q.intent}` as Parameters<typeof t>[0])}
                   </span>
