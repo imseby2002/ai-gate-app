@@ -1,15 +1,16 @@
 /**
  * POST /api/marketing/geo/generate
- * GEO Writer 步驟1 — 產出文章
- * sonnet 依勾選問句 + 獨家資訊，產出一篇「容易被 AI 引用」的文章（Markdown）+ JSON-LD。
+ * GEO Writer 步驟1/2 — 產出文章
+ * sonnet 依勾選問句 + 獨家資訊，產出「容易被 AI 引用」的文章（Markdown）+ JSON-LD。
  * 必含 6 要素：開頭 40–60 字直接回答、H2/H3 問句標題、列點/表格/FAQ、
  * JSON-LD（FAQPage+Article+Organization）、E-E-A-T 署名、放行 AI 爬蟲（提示）。
- * 步驟1 MVP：不建表，直接回傳供前端複製。
+ * 步驟2：讀取專案/問句，寫入 geo_articles，並將勾選問句標記 status=written。
  *
- * Body: { topic, questions: string[], exclusiveFacts?, author?, locale? }
- * Resp: { title, body_md, json_ld }
+ * Body: { projectId, questionIds: string[], locale? }
+ * Resp: { articleId, title, body_md, json_ld }
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
@@ -42,14 +43,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
   }
 
-  const { topic, questions, exclusiveFacts, author, locale } = await req.json()
-  if (!topic?.trim()) {
-    return NextResponse.json({ error: '請輸入主題' }, { status: 400 })
+  const { projectId, questionIds, locale } = await req.json()
+  if (!projectId) return NextResponse.json({ error: '缺少 projectId' }, { status: 400 })
+  const ids: string[] = Array.isArray(questionIds) ? questionIds.filter(Boolean) : []
+  if (ids.length === 0) return NextResponse.json({ error: '請至少勾選一個問句' }, { status: 400 })
+
+  // 讀專案（RLS 保證擁有者）
+  const { data: project, error: pErr } = await supabase
+    .from('geo_projects')
+    .select('id, seed_topic, exclusive_facts, author')
+    .eq('id', projectId)
+    .single()
+  if (pErr || !project) return NextResponse.json({ error: '找不到專案' }, { status: 404 })
+
+  // 讀勾選問句
+  const { data: qRows, error: qErr } = await supabase
+    .from('geo_questions')
+    .select('id, question')
+    .eq('project_id', projectId)
+    .in('id', ids)
+  if (qErr || !qRows || qRows.length === 0) {
+    return NextResponse.json({ error: '找不到勾選的問句' }, { status: 404 })
   }
-  const qs: string[] = Array.isArray(questions) ? questions.filter((q: string) => q?.trim()) : []
-  if (qs.length === 0) {
-    return NextResponse.json({ error: '請至少勾選一個問句' }, { status: 400 })
-  }
+
+  const topic = project.seed_topic
+  const exclusiveFacts = project.exclusive_facts ?? ''
+  const author = project.author ?? ''
+  const questions = qRows.map(r => r.question)
 
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -59,14 +79,17 @@ export async function POST(req: NextRequest) {
 ${topic}
 
 【必須回答的問句（每題一個 H2/H3 小標）】
-${qs.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 
-${exclusiveFacts?.trim() ? `【獨家資訊（務必融入，提升可信度與被引用率）】\n${exclusiveFacts}\n` : ''}
+${exclusiveFacts.trim() ? `【獨家資訊（務必融入，提升可信度與被引用率）】\n${exclusiveFacts}\n` : ''}
 【署名（E-E-A-T author）】
-${author?.trim() || 'im-tourist 峴港在地團隊'}
+${author.trim() || 'im-tourist 峴港在地團隊'}
 
 請依輸出規則產出文章與 JSON-LD。`
 
+  let body_md = ''
+  let json_ld: unknown = null
+  let title = topic
   try {
     const { text } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
@@ -77,20 +100,43 @@ ${author?.trim() || 'im-tourist 峴港在地團隊'}
     const bodyMatch = text.match(/===ARTICLE_START===([\s\S]*?)===ARTICLE_END===/)
     const jsonldMatch = text.match(/===JSONLD_START===([\s\S]*?)===JSONLD_END===/)
 
-    const body_md = bodyMatch ? bodyMatch[1].trim() : text.trim()
-
-    let json_ld: unknown = null
+    body_md = bodyMatch ? bodyMatch[1].trim() : text.trim()
     if (jsonldMatch) {
       const raw = jsonldMatch[1].replace(/```json|```/g, '').trim()
-      try { json_ld = JSON.parse(raw) } catch { json_ld = raw }
+      try { json_ld = JSON.parse(raw) } catch { json_ld = null }
     }
-
     const titleMatch = body_md.match(/^#\s+(.+)$/m)
-    const title = titleMatch ? titleMatch[1].trim() : topic
-
-    return NextResponse.json({ title, body_md, json_ld })
+    title = titleMatch ? titleMatch[1].trim() : topic
   } catch (err) {
     console.error('[geo/generate]', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
+
+  const dedup_hash = createHash('sha256').update(body_md).digest('hex').slice(0, 32)
+
+  // 寫入文章
+  const { data: article, error: aErr } = await supabase
+    .from('geo_articles')
+    .insert({
+      project_id: projectId,
+      title,
+      body_md,
+      json_ld: json_ld ?? null,
+      question_ids: qRows.map(r => r.id),
+      exclusive_used: !!exclusiveFacts.trim(),
+      dedup_hash,
+      status: 'draft',
+    })
+    .select('id')
+    .single()
+
+  if (aErr || !article) {
+    console.error('[geo/generate] article insert', aErr)
+    return NextResponse.json({ error: '寫入文章失敗' }, { status: 500 })
+  }
+
+  // 勾選問句標記為已撰寫
+  await supabase.from('geo_questions').update({ status: 'written' }).in('id', qRows.map(r => r.id))
+
+  return NextResponse.json({ articleId: article.id, title, body_md, json_ld })
 }

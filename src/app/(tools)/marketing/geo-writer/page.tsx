@@ -13,8 +13,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
 
 type Intent = 'info' | 'local' | 'compare' | 'transact'
-interface GeoQuestion { question: string; intent: Intent }
-interface GeoArticle { title: string; body_md: string; json_ld: unknown }
+interface GeoQuestion { id: string; question: string; intent: Intent }
+interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
 
 const INTENT_STYLES: Record<Intent, string> = {
   info:     'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
@@ -31,6 +31,7 @@ export default function GeoWriterPage() {
   const [exclusiveFacts, setExclusiveFacts] = useState('')
   const [author, setAuthor] = useState('')
 
+  const [projectId, setProjectId] = useState<string | null>(null)
   const [questions, setQuestions] = useState<GeoQuestion[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [article, setArticle] = useState<GeoArticle | null>(null)
@@ -42,15 +43,16 @@ export default function GeoWriterPage() {
 
   async function explore() {
     if (!topic.trim()) { setError(t('geo.errTopic')); return }
-    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null)
+    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null); setProjectId(null)
     try {
       const res = await fetch('/api/marketing/geo/questions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, exclusiveFacts, locale }),
+        body: JSON.stringify({ topic, exclusiveFacts, author, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
       const qs: GeoQuestion[] = data.questions ?? []
+      setProjectId(data.projectId ?? null)
       setQuestions(qs)
       setSelected(new Set(qs.map((_, i) => i)))
     } catch (e) {
@@ -67,13 +69,14 @@ export default function GeoWriterPage() {
   }
 
   async function generate() {
-    const picked = questions.filter((_, i) => selected.has(i)).map(q => q.question)
-    if (picked.length === 0) { setError(t('geo.errPick')); return }
+    const pickedIds = questions.filter((_, i) => selected.has(i)).map(q => q.id)
+    if (pickedIds.length === 0) { setError(t('geo.errPick')); return }
+    if (!projectId) { setError(t('geo.errTopic')); return }
     setError(''); setLoadingA(true); setArticle(null)
     try {
       const res = await fetch('/api/marketing/geo/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, questions: picked, exclusiveFacts, author, locale }),
+        body: JSON.stringify({ projectId, questionIds: pickedIds, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
