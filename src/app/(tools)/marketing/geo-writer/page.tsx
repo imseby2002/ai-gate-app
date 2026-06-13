@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
-  FileText, Code2, RefreshCw, Gauge,
+  FileText, Code2, RefreshCw, Gauge, Layers, Crown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +19,7 @@ interface GeoQuestion {
   opportunity_score?: number; volume_source?: VolumeSource
 }
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
+interface GeoCluster { id: string; title: string; pillar: boolean; questionIds: string[] }
 
 const SOURCE_DOT: Record<VolumeSource, string> = {
   measured:  'bg-emerald-500',
@@ -44,10 +45,13 @@ export default function GeoWriterPage() {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [questions, setQuestions] = useState<GeoQuestion[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [clusters, setClusters] = useState<GeoCluster[]>([])
+  const [activeCluster, setActiveCluster] = useState<string | null>(null)
   const [article, setArticle] = useState<GeoArticle | null>(null)
 
   const [loadingQ, setLoadingQ] = useState(false)
   const [loadingS, setLoadingS] = useState(false)
+  const [loadingC, setLoadingC] = useState(false)
   const [loadingA, setLoadingA] = useState(false)
   const [scored, setScored] = useState(false)
   const [error, setError] = useState('')
@@ -55,7 +59,7 @@ export default function GeoWriterPage() {
 
   async function explore() {
     if (!topic.trim()) { setError(t('geo.errTopic')); return }
-    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null); setProjectId(null); setScored(false)
+    setError(''); setLoadingQ(true); setQuestions([]); setSelected(new Set()); setArticle(null); setProjectId(null); setScored(false); setClusters([]); setActiveCluster(null)
     try {
       const res = await fetch('/api/marketing/geo/questions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -109,6 +113,31 @@ export default function GeoWriterPage() {
     } finally { setLoadingS(false) }
   }
 
+  async function clusterPlan() {
+    if (!projectId) return
+    setError(''); setLoadingC(true)
+    try {
+      const res = await fetch('/api/marketing/geo/cluster', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setClusters(data.clusters ?? [])
+      setActiveCluster(null)
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingC(false) }
+  }
+
+  function pickCluster(c: GeoCluster) {
+    setActiveCluster(c.id)
+    const idxs = c.questionIds
+      .map(qid => questions.findIndex(q => q.id === qid))
+      .filter(i => i >= 0)
+    setSelected(new Set(idxs))
+  }
+
   async function generate() {
     const pickedIds = questions.filter((_, i) => selected.has(i)).map(q => q.id)
     if (pickedIds.length === 0) { setError(t('geo.errPick')); return }
@@ -117,7 +146,7 @@ export default function GeoWriterPage() {
     try {
       const res = await fetch('/api/marketing/geo/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, questionIds: pickedIds, locale }),
+        body: JSON.stringify({ projectId, questionIds: pickedIds, clusterId: activeCluster, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'error')
@@ -193,8 +222,31 @@ export default function GeoWriterPage() {
                   {loadingS ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gauge className="h-3.5 w-3.5" />}
                   {loadingS ? t('geo.scoring') : t('geo.score')}
                 </Button>
+                <Button variant="outline" size="sm" onClick={clusterPlan} disabled={loadingC}>
+                  {loadingC ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Layers className="h-3.5 w-3.5" />}
+                  {loadingC ? t('geo.clustering') : t('geo.cluster')}
+                </Button>
               </div>
             </div>
+
+            {clusters.length > 0 && (
+              <div className="space-y-2 rounded-lg bg-muted/40 p-3">
+                <p className="text-[11px] text-muted-foreground">{t('geo.clusterHint')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {clusters.map(c => (
+                    <button key={c.id} onClick={() => pickCluster(c)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors',
+                        activeCluster === c.id ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300' : 'border-border bg-card hover:bg-muted'
+                      )}>
+                      {c.pillar && <Crown className="h-3 w-3 text-amber-500" />}
+                      <span className="font-medium">{c.title}</span>
+                      <span className="text-muted-foreground">({c.questionIds.length})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {scored && (
               <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{t('geo.src.measured')}</span>

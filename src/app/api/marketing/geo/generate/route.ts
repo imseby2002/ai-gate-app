@@ -6,7 +6,11 @@
  * JSON-LD（FAQPage+Article+Organization）、E-E-A-T 署名、放行 AI 爬蟲（提示）。
  * 步驟2：讀取專案/問句，寫入 geo_articles，並將勾選問句標記 status=written。
  *
- * Body: { projectId, questionIds: string[], locale? }
+ * 防內容農場：
+ *   - 機制2 強制獨家層：project.exclusive_facts 未填則拒絕產出（回 422 code=no_exclusive）
+ *   - 機制3 產出查重：與專案內既有文章 question_ids 重疊度過高則擋下（回 409 code=duplicate）
+ *
+ * Body: { projectId, questionIds: string[], clusterId?, locale? }
  * Resp: { articleId, title, body_md, json_ld }
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
   }
 
-  const { projectId, questionIds, locale } = await req.json()
+  const { projectId, questionIds, clusterId, locale } = await req.json()
   if (!projectId) return NextResponse.json({ error: '缺少 projectId' }, { status: 400 })
   const ids: string[] = Array.isArray(questionIds) ? questionIds.filter(Boolean) : []
   if (ids.length === 0) return NextResponse.json({ error: '請至少勾選一個問句' }, { status: 400 })
@@ -55,6 +59,33 @@ export async function POST(req: NextRequest) {
     .eq('id', projectId)
     .single()
   if (pErr || !project) return NextResponse.json({ error: '找不到專案' }, { status: 404 })
+
+  // 防農場機制2：強制獨家層
+  if (!project.exclusive_facts?.trim()) {
+    return NextResponse.json(
+      { error: '請先在「獨家資訊」填入真實報價／在地案例／數據，避免產出空泛內容', code: 'no_exclusive' },
+      { status: 422 },
+    )
+  }
+
+  // 防農場機制3：查重 — 與既有文章問句重疊度過高則擋下
+  const { data: existing } = await supabase
+    .from('geo_articles')
+    .select('id, title, question_ids')
+    .eq('project_id', projectId)
+  const pickedSet = new Set(ids)
+  for (const a of existing ?? []) {
+    const prev: string[] = a.question_ids ?? []
+    if (prev.length === 0) continue
+    const overlap = prev.filter(id => pickedSet.has(id)).length
+    const jaccard = overlap / new Set([...prev, ...ids]).size
+    if (jaccard >= 0.6) {
+      return NextResponse.json(
+        { error: `與既有文章「${a.title}」題材高度重複，請合併或改選不同問句`, code: 'duplicate', duplicateOf: a.id },
+        { status: 409 },
+      )
+    }
+  }
 
   // 讀勾選問句
   const { data: qRows, error: qErr } = await supabase
@@ -119,6 +150,7 @@ ${author.trim() || 'im-tourist 峴港在地團隊'}
     .from('geo_articles')
     .insert({
       project_id: projectId,
+      cluster_id: clusterId ?? null,
       title,
       body_md,
       json_ld: json_ld ?? null,
