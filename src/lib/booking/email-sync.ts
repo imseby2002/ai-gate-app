@@ -38,6 +38,23 @@ interface EmailSyncResult {
   }
 }
 
+// 測試用開關：在 notes 附加「抓取時間」，方便追蹤每日入住 Email 擷取狀況。
+// 全部完善後改為 false 即關閉（不影響其他邏輯）。
+const DEBUG_FETCH_NOTE = true
+
+// 台灣時間 YYYY-MM-DD HH:mm
+function fetchNoteTag(): string {
+  const t = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16).replace('T', ' ')
+  return `[抓取 ${t}]`
+}
+
+// 把抓取時間附加到既有 notes；會先移除舊的抓取標記避免累積。
+function appendFetchNote(base: string | null | undefined): string {
+  const b = (base ?? '').replace(/\s*\[抓取 [^\]]*\]/g, '').trim()
+  const tag = fetchNoteTag()
+  return b ? `${b} ${tag}` : tag
+}
+
 const PLATFORM_SENDERS: Record<string, string> = {
   booking_com: 'booking.com',
   agoda:       'agoda.com',
@@ -451,13 +468,16 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       // Duplicate check 1: exact confirmation_id match
       const { data: dupById } = await supabase
         .from('bookings')
-        .select('id, status, guest_name, check_out, total_price, num_guests, property_id')
+        .select('id, status, guest_name, check_out, total_price, num_guests, property_id, notes')
         .eq('user_id', setting.user_id)
         .eq('platform_booking_id', confId)
         .maybeSingle()
       if (dupById) {
         if (extracted.is_cancellation && dupById.status !== 'cancelled') {
-          await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dupById.id)
+          await supabase.from('bookings').update({
+            status: 'cancelled',
+            ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(dupById.notes) } : {}),
+          }).eq('id', dupById.id)
           addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
           result.added++
           result.processed++; continue
@@ -476,13 +496,17 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           patch.num_guests = extracted.num_guests
         if (resolvedPropertyId && !dupById.property_id)
           patch.property_id = resolvedPropertyId
+        const hadPatch = Object.keys(patch).length > 0
+        if (hadPatch && !extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
+          patch.status = 'confirmed'
+          patch.notes = null
+        }
+        if (DEBUG_FETCH_NOTE) {
+          patch.notes = appendFetchNote('notes' in patch ? (patch.notes as string | null) : dupById.notes)
+        }
         if (Object.keys(patch).length > 0) {
-          if (!extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
-            patch.status = 'confirmed'
-            patch.notes = null
-          }
           await supabase.from('bookings').update(patch).eq('id', dupById.id)
-          result.added++
+          if (hadPatch) result.added++; else result.debug.skipped_duplicate++
         } else {
           result.debug.skipped_duplicate++
         }
@@ -505,7 +529,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         if (dupByGuest) {
           existingId = dupByGuest.id
           if (extracted.is_cancellation) {
-            await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', existingId)
+            await supabase.from('bookings').update({
+              status: 'cancelled',
+              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(null) } : {}),
+            }).eq('id', existingId)
             addLog(`[取消✓ dup2] ${confId} | ${subj80}`)
             result.added++; result.processed++; continue
           }
@@ -514,8 +541,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
               platform_booking_id: extracted.confirmation_id,
               total_price: extracted.total_price ?? dupByGuest.total_price,
               status: 'confirmed',
-              notes: null,
+              notes: DEBUG_FETCH_NOTE ? appendFetchNote(null) : null,
             }).eq('id', existingId)
+          } else if (DEBUG_FETCH_NOTE) {
+            await supabase.from('bookings').update({ notes: appendFetchNote(null) }).eq('id', existingId)
           }
           result.debug.skipped_duplicate++; result.processed++; continue
         }
@@ -534,7 +563,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         const { data: dup } = await dupQ.maybeSingle()
         if (dup) {
           if (extracted.is_cancellation && dup.status !== 'cancelled') {
-            await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', dup.id)
+            await supabase.from('bookings').update({
+              status: 'cancelled',
+              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(null) } : {}),
+            }).eq('id', dup.id)
             addLog(`[取消✓ dup3] ${confId} | ${subj80}`)
             result.added++
           } else {
@@ -559,7 +591,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           total_price:         extracted.total_price,
           status:              bookingStatus,
           source:              'email',
-          notes:               isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null,
+          notes:               (() => {
+            const base = isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null
+            return DEBUG_FETCH_NOTE ? appendFetchNote(base) : base
+          })(),
           raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
         }, { onConflict: 'user_id,platform,platform_booking_id' })
 
