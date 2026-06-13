@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
   ChevronLeft, Search, Sparkles, Loader2, Copy, Check,
   FileText, Code2, RefreshCw, Gauge, Layers, Crown,
+  Radar, CheckCircle2, XCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ interface GeoQuestion {
 }
 interface GeoArticle { articleId?: string; title: string; body_md: string; json_ld: unknown }
 interface GeoCluster { id: string; title: string; pillar: boolean; questionIds: string[] }
+interface TrackResult { id: string; cited: boolean; rank: number | null; sources: string[] }
 
 const SOURCE_DOT: Record<VolumeSource, string> = {
   measured:  'bg-emerald-500',
@@ -48,6 +50,8 @@ export default function GeoWriterPage() {
   const [clusters, setClusters] = useState<GeoCluster[]>([])
   const [activeCluster, setActiveCluster] = useState<string | null>(null)
   const [article, setArticle] = useState<GeoArticle | null>(null)
+  const [tracking, setTracking] = useState<TrackResult[]>([])
+  const [loadingT, setLoadingT] = useState(false)
 
   const [loadingQ, setLoadingQ] = useState(false)
   const [loadingS, setLoadingS] = useState(false)
@@ -154,6 +158,22 @@ export default function GeoWriterPage() {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e))
     } finally { setLoadingA(false) }
+  }
+
+  async function trackNow() {
+    if (!projectId) return
+    setError(''); setLoadingT(true)
+    try {
+      const res = await fetch('/api/marketing/geo/track', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'error')
+      setTracking(data.results ?? [])
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e))
+    } finally { setLoadingT(false) }
   }
 
   async function copy(kind: 'md' | 'jsonld') {
@@ -321,6 +341,52 @@ export default function GeoWriterPage() {
                   {typeof article.json_ld === 'string' ? article.json_ld : JSON.stringify(article.json_ld, null, 2)}
                 </pre>
                 <p className="text-[11px] text-muted-foreground mt-1.5">{t('geo.jsonldHint')}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 5: tracking dashboard */}
+        {article && (
+          <div className="bg-card rounded-xl border p-5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Radar className="h-4 w-4 text-indigo-600" />
+                {t('geo.trackTitle')}
+              </h2>
+              <Button variant="outline" size="sm" onClick={trackNow} disabled={loadingT}>
+                {loadingT ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />}
+                {loadingT ? t('geo.tracking') : t('geo.track')}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">{t('geo.trackHint')}</p>
+            {tracking.length > 0 && (
+              <div className="space-y-2">
+                {tracking.map(r => {
+                  const q = questions.find(x => x.id === r.id)
+                  return (
+                    <div key={r.id} className="rounded-lg border px-3 py-2.5">
+                      <div className="flex items-start gap-2">
+                        {r.cited
+                          ? <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                          : <XCircle className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />}
+                        <span className="flex-1 text-sm">{q?.question ?? r.id}</span>
+                        {r.cited && r.rank != null && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 shrink-0">
+                            {t('geo.rankN', { n: r.rank })}
+                          </span>
+                        )}
+                      </div>
+                      {r.sources.length > 0 && (
+                        <div className="mt-1.5 ml-6 flex flex-wrap gap-1">
+                          {r.sources.slice(0, 6).map((s, j) => (
+                            <span key={j} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{s}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
