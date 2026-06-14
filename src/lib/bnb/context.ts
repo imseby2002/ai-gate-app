@@ -39,11 +39,41 @@ export async function getBnbContext(
   const cookieStore = await cookies()
   const requested = cookieStore.get(ACTIVE_BNB_COOKIE)?.value
 
-  if (!requested || requested === user.id) {
-    return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true }
+  const selfCtx = (): BnbContext => ({
+    user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true,
+  })
+  const memberCtx = (ownerId: string, role: BnbRole): BnbContext => ({
+    user, ownerId, role, isOwner: false,
+    canWrite: role === 'admin' || role === 'manager',
+    canSettings: role === 'admin',
+  })
+
+  // 使用者主動選了自己的民宿
+  if (requested === user.id) return selfCtx()
+
+  // 尚未設定切換 cookie：若是「純協作者」（自己沒有任何民宿房型資料、但有受邀的
+  // active membership）→ 自動進入受邀民宿，省去手動切換。一旦用切換器選過即寫入
+  // cookie，走下方驗證分支，不再自動判定。
+  if (!requested) {
+    const { data: memberships } = await sb
+      .from('bnb_members')
+      .select('owner_id, role')
+      .eq('member_id', user.id)
+      .eq('status', 'active')
+      .eq('scope', scope)
+      .order('created_at', { ascending: true })
+
+    if (memberships?.length) {
+      const { count } = await sb
+        .from('properties')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      if (!count) return memberCtx(memberships[0].owner_id, memberships[0].role as BnbRole)
+    }
+    return selfCtx()
   }
 
-  // 依模組（scope）驗證協作授權：booking 助理未必有 cs 權限，反之亦然
+  // requested 指向他人 → 依模組（scope）驗證協作授權：booking 助理未必有 cs 權限，反之亦然
   const { data: member } = await sb
     .from('bnb_members')
     .select('role, status')
@@ -53,18 +83,6 @@ export async function getBnbContext(
     .eq('scope', scope)
     .maybeSingle()
 
-  if (!member) {
-    // 無效的切換目標 → 退回自己的民宿
-    return { user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true }
-  }
-
-  const role = member.role as BnbRole
-  return {
-    user,
-    ownerId: requested,
-    role,
-    isOwner: false,
-    canWrite: role === 'admin' || role === 'manager',
-    canSettings: role === 'admin',
-  }
+  if (!member) return selfCtx() // 無效的切換目標 → 退回自己的民宿
+  return memberCtx(requested, member.role as BnbRole)
 }
