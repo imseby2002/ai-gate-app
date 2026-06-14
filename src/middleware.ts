@@ -70,6 +70,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/callback') ||
       pathname.startsWith('/_next') ||
       pathname.startsWith('/api/cron/') ||
+      pathname.startsWith('/manifest') ||
+      pathname === '/sw.js' ||
       pathname.startsWith('/api/billing/webhook') ||
       pathname.startsWith('/api/locale') ||
       pathname.startsWith('/api/auth/check-whitelist') ||
