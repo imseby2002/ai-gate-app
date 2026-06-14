@@ -60,6 +60,8 @@ const COLS: { key: string; labelKey: string; kind: ColKind; sensitive?: boolean 
 
 const GRID_COLS = 'minmax(70px,1fr) minmax(88px,1fr) minmax(120px,1.4fr) minmax(80px,1fr) minmax(78px,0.9fr) minmax(70px,0.9fr) minmax(70px,0.9fr) minmax(52px,0.6fr) 2rem'
 
+const COL: Record<string, typeof COLS[number]> = Object.fromEntries(COLS.map(c => [c.key, c]))
+
 const NUMERIC = new Set<EditableField>(['price_total', 'deposit'])
 
 function toNum(v: unknown): number | null {
@@ -303,6 +305,13 @@ export default function DailyPage() {
     }
   }
 
+  const renderCell = (row: DailyRecord, key: string) => (
+    <Cell row={row} col={COL[key]} editing={editing} editVal={editVal}
+      showPasswords={showPasswords} saving={saving} inputRef={inputRef}
+      onStartEdit={startEdit} onCommitEdit={commitEdit}
+      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid} />
+  )
+
   async function deleteRow(id: string) {
     setRows(prev => prev.filter(r => r.id !== id))
     await fetch('/api/booking/daily', {
@@ -385,30 +394,56 @@ export default function DailyPage() {
         ) : (
           rows.map(row => (
             <div key={row.id}
-              className={`rounded-2xl border bg-white shadow-sm p-4 space-y-2 ${saving === row.id ? 'opacity-60' : ''}`}>
-              <div className="flex items-start justify-between gap-2 pb-2 border-b">
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] text-gray-400 mb-0.5">{t(COLS[0].labelKey)}</div>
-                  <Cell row={row} col={COLS[0]} editing={editing} editVal={editVal}
-                    showPasswords={showPasswords} saving={saving} inputRef={inputRef}
-                    onStartEdit={startEdit} onCommitEdit={commitEdit}
-                    onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid} />
-                </div>
+              className={`rounded-2xl border bg-white shadow-sm overflow-hidden ${saving === row.id ? 'opacity-60' : ''}`}>
+              {/* 標題：房號 */}
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-gray-50 border-b">
+                <span className="font-semibold text-gray-900 text-[15px] min-w-0 truncate">{row.room_name}</span>
                 <button onClick={() => deleteRow(row.id)}
-                  className="p-1.5 text-gray-300 hover:text-red-400 rounded shrink-0">
+                  className="p-1 text-gray-300 hover:text-red-400 rounded shrink-0">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                {COLS.slice(1).map(col => (
-                  <div key={col.key} className={col.key === 'order_number' ? 'col-span-2' : ''}>
-                    <div className="text-[10px] text-gray-400 mb-0.5">{t(col.labelKey)}</div>
-                    <Cell row={row} col={col} editing={editing} editVal={editVal}
-                      showPasswords={showPasswords} saving={saving} inputRef={inputRef}
-                      onStartEdit={startEdit} onCommitEdit={commitEdit}
-                      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid} />
+
+              <div className="px-4 py-3 space-y-3">
+                {/* 訂單 / 客人 */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <span className="w-14 shrink-0 text-xs text-gray-400">{t('daily.cols.order_number')}</span>
+                    <div className="flex-1 min-w-0">{renderCell(row, 'order_number')}</div>
                   </div>
-                ))}
+                  <div className="flex items-center gap-3">
+                    <span className="w-14 shrink-0 text-xs text-gray-400">{t('daily.cols.guest_name')}</span>
+                    <div className="flex-1 min-w-0">{renderCell(row, 'guest_name')}</div>
+                  </div>
+                </div>
+
+                {/* 費用 */}
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t">
+                  <div>
+                    <div className="text-[10px] text-gray-400 mb-0.5">{t('daily.cols.price_total')}</div>
+                    {renderCell(row, 'price_total')}
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 mb-0.5">{t('daily.cols.deposit')}</div>
+                    {renderCell(row, 'deposit')}
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400 mb-0.5">{t('daily.cols.balance')}</div>
+                    {renderCell(row, 'balance')}
+                  </div>
+                </div>
+
+                {/* 已付款 + 房門密碼 */}
+                <div className="flex items-center justify-between gap-3 pt-3 border-t">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{t('daily.cols.paid')}</span>
+                    {renderCell(row, 'paid')}
+                  </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-gray-400 shrink-0">{t('daily.cols.room_password')}</span>
+                    <div className="min-w-[88px]">{renderCell(row, 'room_password')}</div>
+                  </div>
+                </div>
               </div>
             </div>
           ))
