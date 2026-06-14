@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check, ExternalLink } from 'lucide-react'
+import { InstallDailyButton } from './InstallDailyButton'
 
 interface DailyRecord {
   id: string
@@ -322,6 +323,7 @@ export default function DailyPage() {
           <p className="text-sm text-gray-500 mt-0.5">{t('daily.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <InstallDailyButton label={t('daily.install')} iosHint={t('daily.installHint')} />
           <button
             onClick={() => setShowPasswords(v => !v)}
             className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border hover:bg-gray-50 text-gray-600">

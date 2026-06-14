@@ -1018,6 +1018,8 @@
       "orderTag": "Đơn",
       "gateShared": "Dùng chung toàn nhà; áp dụng cho mọi phòng hôm nay và các ngày sau",
       "openOrder": "Xem chi tiết đơn",
+      "install": "Cài lên điện thoại",
+      "installHint": "iPhone: chạm nút Chia sẻ trên trình duyệt rồi chọn \"Thêm vào MH chính\" để mở như một ứng dụng.",
       "hint": "Nhấn vào ô bất kỳ để sửa · Mật khẩu cổng áp dụng cho tất cả phòng trong ngày và về sau · Mật khẩu phòng áp dụng cho phòng đó về sau · (sửa một ngày sẽ cập nhật từ ngày đó) · \"Đơn\" màu xanh = nhập từ hệ thống đặt phòng · Mật khẩu ẩn theo mặc định",
       "unmatchedTitle": "Đơn hôm nay (chưa khớp phòng, tổng {count})",
       "unmatchedHint": "⚠ Các đơn này chưa có loại phòng tương ứng, vui lòng chỉ định loại phòng tại trang \"Đơn đặt\" để tự động nhập",

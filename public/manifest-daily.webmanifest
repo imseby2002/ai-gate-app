@@ -1,0 +1,17 @@
+{
+  "id": "/booking/daily",
+  "name": "每日入住",
+  "short_name": "每日入住",
+  "description": "今日房號 / 房門密碼 / 訂單一覽",
+  "start_url": "/booking/daily",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
