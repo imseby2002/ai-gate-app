@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus, Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-react'
+import { Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check } from 'lucide-react'
 
 interface DailyRecord {
   id: string
@@ -11,19 +11,41 @@ interface DailyRecord {
   gate_password: string | null
   order_number: string | null
   guest_name: string | null
+  price_total: number | null
+  deposit: number | null
+  paid: boolean
   source: 'traiwan' | 'manual' | 'booking'
   sort_order: number
 }
 
-type EditableField = 'room_name' | 'room_password' | 'gate_password' | 'order_number' | 'guest_name'
+type ColKind = 'text' | 'num' | 'balance' | 'paid'
+type EditableField = 'room_name' | 'room_password' | 'gate_password' | 'order_number' | 'guest_name' | 'price_total' | 'deposit'
 
-const COLS: { key: EditableField; labelKey: string; width: string; sensitive?: boolean }[] = [
-  { key: 'room_name',     labelKey: 'daily.cols.room_name',     width: 'w-24' },
-  { key: 'room_password', labelKey: 'daily.cols.room_password', width: 'w-32', sensitive: true },
-  { key: 'gate_password', labelKey: 'daily.cols.gate_password', width: 'w-32', sensitive: true },
-  { key: 'order_number',  labelKey: 'daily.cols.order_number',  width: 'w-36' },
-  { key: 'guest_name',    labelKey: 'daily.cols.guest_name',    width: 'w-32' },
+const COLS: { key: string; labelKey: string; kind: ColKind; sensitive?: boolean }[] = [
+  { key: 'room_name',     labelKey: 'daily.cols.room_name',     kind: 'text' },
+  { key: 'room_password', labelKey: 'daily.cols.room_password', kind: 'text', sensitive: true },
+  { key: 'gate_password', labelKey: 'daily.cols.gate_password', kind: 'text', sensitive: true },
+  { key: 'order_number',  labelKey: 'daily.cols.order_number',  kind: 'text' },
+  { key: 'guest_name',    labelKey: 'daily.cols.guest_name',    kind: 'text' },
+  { key: 'price_total',   labelKey: 'daily.cols.price_total',   kind: 'num' },
+  { key: 'deposit',       labelKey: 'daily.cols.deposit',       kind: 'num' },
+  { key: 'balance',       labelKey: 'daily.cols.balance',       kind: 'balance' },
+  { key: 'paid',          labelKey: 'daily.cols.paid',          kind: 'paid' },
 ]
+
+const GRID_COLS = 'minmax(70px,1fr) minmax(88px,1fr) minmax(88px,1fr) minmax(120px,1.4fr) minmax(80px,1fr) minmax(78px,0.9fr) minmax(70px,0.9fr) minmax(70px,0.9fr) minmax(52px,0.6fr) 2rem'
+
+const NUMERIC = new Set<EditableField>(['price_total', 'deposit'])
+
+function toNum(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
+function fmtMoney(v: number | null): string {
+  return v == null ? '' : v.toLocaleString()
+}
 
 function todayTW() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
@@ -53,23 +75,53 @@ interface CellProps {
   showPasswords: boolean
   saving: string | null
   inputRef: React.RefObject<HTMLInputElement | null>
-  onStartEdit: (id: string, field: EditableField, val: string | null) => void
+  onStartEdit: (id: string, field: EditableField, val: string | number | null) => void
   onCommitEdit: () => void
   onCancelEdit: () => void
   onEditValChange: (v: string) => void
+  onTogglePaid: (row: DailyRecord) => void
 }
 
-function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange }: CellProps) {
+function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange, onTogglePaid }: CellProps) {
   const t = useTranslations('Booking')
-  const val = row[col.key]
-  const isEditing = editing?.id === row.id && editing?.field === col.key
-  const masked = col.sensitive && !showPasswords && val
+
+  // 尾款 = 訂房價格 - 訂金（即時計算，不可編輯）
+  if (col.kind === 'balance') {
+    const price = toNum(row.price_total)
+    const dep = toNum(row.deposit)
+    const balance = price == null ? null : price - (dep ?? 0)
+    return (
+      <div className="min-h-[32px] px-2 py-1 text-sm flex items-center text-gray-700 font-medium">
+        {balance == null ? <span className="text-gray-300">—</span> : fmtMoney(balance)}
+      </div>
+    )
+  }
+
+  // 是否已付款（點擊切換）
+  if (col.kind === 'paid') {
+    return (
+      <div className="min-h-[32px] px-2 py-1 flex items-center">
+        <button
+          onClick={() => onTogglePaid(row)}
+          className={`h-5 w-5 rounded border flex items-center justify-center transition-colors
+            ${row.paid ? 'bg-green-500 border-green-500 text-white' : 'bg-white border-gray-300 hover:border-green-400'}`}>
+          {row.paid && <Check className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+    )
+  }
+
+  const field = col.key as EditableField
+  const raw = row[col.key as keyof DailyRecord]
+  const isEditing = editing?.id === row.id && editing?.field === field
+  const masked = col.sensitive && !showPasswords && raw
 
   if (isEditing) {
     return (
       <input
         ref={inputRef}
         value={editVal}
+        inputMode={col.kind === 'num' ? 'numeric' : 'text'}
         onChange={e => onEditValChange(e.target.value)}
         onBlur={onCommitEdit}
         onKeyDown={e => {
@@ -81,19 +133,21 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
     )
   }
 
+  const display = col.kind === 'num' ? fmtMoney(toNum(raw)) : (raw as string | null)
+
   return (
     <div
-      onClick={() => onStartEdit(row.id, col.key, val)}
+      onClick={() => onStartEdit(row.id, field, raw as string | number | null)}
       className={`min-h-[32px] px-2 py-1 rounded cursor-pointer text-sm transition-colors
         hover:bg-indigo-50 group flex items-center gap-1
-        ${!val ? 'text-gray-300' : 'text-gray-800'}
+        ${!display ? 'text-gray-300' : 'text-gray-800'}
         ${saving === row.id ? 'opacity-60' : ''}`}
     >
-      {masked ? '••••••' : (val || t('daily.clickToFill'))}
-      {row.source === 'traiwan' && col.key === 'order_number' && val && (
+      {masked ? '••••••' : (display || t('daily.clickToFill'))}
+      {row.source === 'traiwan' && col.key === 'order_number' && raw && (
         <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
       )}
-      {row.source === 'booking' && col.key === 'order_number' && val && (
+      {row.source === 'booking' && col.key === 'order_number' && raw && (
         <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">{t('daily.orderTag')}</span>
       )}
     </div>
@@ -135,9 +189,9 @@ export default function DailyPage() {
     if (editing) inputRef.current?.focus()
   }, [editing])
 
-  async function startEdit(id: string, field: EditableField, val: string | null) {
+  function startEdit(id: string, field: EditableField, val: string | number | null) {
     setEditing({ id, field })
-    setEditVal(val ?? '')
+    setEditVal(val == null ? '' : String(val))
   }
 
   async function commitEdit() {
@@ -145,12 +199,18 @@ export default function DailyPage() {
     const { id, field } = editing
     setEditing(null)
     const original = rows.find(r => r.id === id)
-    if (!original || original[field] === (editVal || null)) return
-    const newVal = editVal || null
+    if (!original) return
+
+    const isNum = NUMERIC.has(field)
+    const newVal: string | number | null = isNum
+      ? toNum(editVal)
+      : (editVal || null)
+
+    if (original[field] === newVal) return
 
     // 大門密碼：全棟共用，套用到當日所有房間 + 之後所有日期
     if (field === 'gate_password') {
-      setRows(prev => prev.map(r => ({ ...r, gate_password: newVal })))
+      setRows(prev => prev.map(r => ({ ...r, gate_password: newVal as string | null })))
       setSaving(id)
       try {
         await fetch('/api/booking/daily', {
@@ -167,7 +227,7 @@ export default function DailyPage() {
 
     // 房門密碼：每房獨立，套用到「該房間」當天 + 之後所有日期
     if (field === 'room_password') {
-      setRows(prev => prev.map(r => r.id === id ? { ...r, room_password: newVal } : r))
+      setRows(prev => prev.map(r => r.id === id ? { ...r, room_password: newVal as string | null } : r))
       setSaving(id)
       try {
         await fetch('/api/booking/daily', {
@@ -195,16 +255,18 @@ export default function DailyPage() {
     }
   }
 
-  async function addRow() {
-    const res = await fetch('/api/booking/daily', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, room_name: t('daily.roomN', { n: rows.length + 1 }), source: 'manual', sort_order: rows.length }),
-    })
-    const [created] = await res.json()
-    if (created) {
-      setRows(prev => [...prev, created])
-      setTimeout(() => startEdit(created.id, 'room_name', created.room_name), 50)
+  async function togglePaid(row: DailyRecord) {
+    const newVal = !row.paid
+    setRows(prev => prev.map(r => r.id === row.id ? { ...r, paid: newVal } : r))
+    setSaving(row.id)
+    try {
+      await fetch('/api/booking/daily', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id, paid: newVal }),
+      })
+    } finally {
+      setSaving(null)
     }
   }
 
@@ -220,7 +282,7 @@ export default function DailyPage() {
   const isToday = date === todayTW()
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
@@ -281,7 +343,7 @@ export default function DailyPage() {
                   <Cell row={row} col={COLS[0]} editing={editing} editVal={editVal}
                     showPasswords={showPasswords} saving={saving} inputRef={inputRef}
                     onStartEdit={startEdit} onCommitEdit={commitEdit}
-                    onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} />
+                    onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid} />
                 </div>
                 <button onClick={() => deleteRow(row.id)}
                   className="p-1.5 text-gray-300 hover:text-red-400 rounded shrink-0">
@@ -295,7 +357,7 @@ export default function DailyPage() {
                     <Cell row={row} col={col} editing={editing} editVal={editVal}
                       showPasswords={showPasswords} saving={saving} inputRef={inputRef}
                       onStartEdit={startEdit} onCommitEdit={commitEdit}
-                      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} />
+                      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid} />
                   </div>
                 ))}
               </div>
@@ -305,11 +367,11 @@ export default function DailyPage() {
       </div>
 
       {/* Table (desktop) */}
-      <div className="hidden sm:block border rounded-xl overflow-hidden bg-white shadow-sm">
+      <div className="hidden sm:block border rounded-xl overflow-x-auto bg-white shadow-sm">
         <div className="grid bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wide"
-          style={{ gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 2rem' }}>
+          style={{ gridTemplateColumns: GRID_COLS }}>
           {COLS.map(c => (
-            <div key={c.key} className="px-3 py-2.5">{t(c.labelKey)}</div>
+            <div key={c.key} className="px-3 py-2.5 whitespace-nowrap">{t(c.labelKey)}</div>
           ))}
           <div />
         </div>
@@ -325,7 +387,7 @@ export default function DailyPage() {
             <div key={row.id}
               className={`grid items-center border-b last:border-0 hover:bg-gray-50/50 transition-colors
                 ${i % 2 === 0 ? '' : 'bg-gray-50/30'}`}
-              style={{ gridTemplateColumns: '1fr 1fr 1fr 1.5fr 1fr 2rem' }}>
+              style={{ gridTemplateColumns: GRID_COLS }}>
               {COLS.map(col => (
                 <div key={col.key} className="px-2 py-1">
                   <Cell
@@ -340,6 +402,7 @@ export default function DailyPage() {
                     onCommitEdit={commitEdit}
                     onCancelEdit={() => setEditing(null)}
                     onEditValChange={setEditVal}
+                    onTogglePaid={togglePaid}
                   />
                 </div>
               ))}
@@ -353,13 +416,6 @@ export default function DailyPage() {
           ))
         )}
       </div>
-
-      {/* Add row */}
-      <button onClick={addRow}
-        className="mt-3 flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-700 px-2 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
-        <Plus className="h-4 w-4" />
-        {t('daily.addRoom')}
-      </button>
 
       <p className="mt-4 text-xs text-gray-400">
         {t('daily.hint')}

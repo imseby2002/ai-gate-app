@@ -1024,7 +1024,11 @@
         "room_password": "Room Password",
         "gate_password": "Gate Password",
         "order_number": "Order Number",
-        "guest_name": "Guest Name"
+        "guest_name": "Guest Name",
+        "price_total": "Price",
+        "deposit": "Deposit",
+        "balance": "Balance",
+        "paid": "Paid"
       }
     },
     "properties": {

@@ -1024,7 +1024,11 @@
         "room_password": "Mật khẩu phòng",
         "gate_password": "Mật khẩu cổng",
         "order_number": "Mã đơn",
-        "guest_name": "Tên khách"
+        "guest_name": "Tên khách",
+        "price_total": "Giá phòng",
+        "deposit": "Đặt cọc",
+        "balance": "Còn lại",
+        "paid": "Đã trả"
       }
     },
     "properties": {

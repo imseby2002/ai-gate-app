@@ -1024,7 +1024,11 @@
         "room_password": "房門密碼",
         "gate_password": "大門密碼",
         "order_number": "訂單號碼",
-        "guest_name": "旅客姓名"
+        "guest_name": "旅客姓名",
+        "price_total": "訂房價格",
+        "deposit": "訂金",
+        "balance": "尾款",
+        "paid": "已付款"
       }
     },
     "properties": {
