@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data: todayBookings } = await supabase
     .from('bookings')
-    .select('property_id, guest_name, platform_booking_id, check_in, total_price, platform')
+    .select('id, property_id, guest_name, platform_booking_id, check_in, total_price, platform')
     .eq('user_id', ctx.ownerId)
     .eq('check_in', date)
     .order('created_at')
@@ -139,6 +139,16 @@ export async function GET(req: NextRequest) {
     (nameOrder[a.room_name] ?? 999) - (nameOrder[b.room_name] ?? 999)
   )
 
+  // 單號 → booking id 對照，讓每日入住可直接點進該筆訂單詳情
+  const idByOrder: Record<string, string> = {}
+  for (const b of bookingList) {
+    if (b.platform_booking_id) idByOrder[b.platform_booking_id] = b.id
+  }
+  const allWithId = all.map((r: { order_number: string | null }) => ({
+    ...r,
+    booking_id: r.order_number ? (idByOrder[r.order_number] ?? null) : null,
+  }))
+
   // 找出有訂單但 property_id 為 null 或不在現有房型的訂單
   const matchedOrderNums = new Set(all.map((r: { order_number: string | null }) => r.order_number).filter(Boolean))
   const unmatched = bookingList.filter(b =>
@@ -146,9 +156,10 @@ export async function GET(req: NextRequest) {
   ).map(b => ({
     guest_name: b.guest_name ?? '',
     order_number: b.platform_booking_id ?? '',
+    booking_id: b.id ?? null,
   }))
 
-  return NextResponse.json({ rooms: all, unmatched })
+  return NextResponse.json({ rooms: allWithId, unmatched })
 }
 
 // POST — 批次 upsert

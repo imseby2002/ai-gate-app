@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check } from 'lucide-react'
+import { Trash2, RefreshCw, ChevronLeft, ChevronRight, Eye, EyeOff, Check, ExternalLink } from 'lucide-react'
 
 interface DailyRecord {
   id: string
@@ -15,6 +16,7 @@ interface DailyRecord {
   deposit: number | null
   paid: boolean
   platform: string | null
+  booking_id: string | null
   source: 'traiwan' | 'manual' | 'booking'
   sort_order: number
 }
@@ -41,12 +43,12 @@ function platformLabel(p: string | null): string | null {
 }
 
 type ColKind = 'text' | 'num' | 'balance' | 'paid'
-type EditableField = 'room_name' | 'room_password' | 'gate_password' | 'order_number' | 'guest_name' | 'price_total' | 'deposit'
+type EditableField = 'room_name' | 'room_password' | 'order_number' | 'guest_name' | 'price_total' | 'deposit'
 
+// 大門密碼為全棟共用，獨立到表格上方輸入，不佔表格欄位（資料仍寫入每筆 record 供 AI 抓取）
 const COLS: { key: string; labelKey: string; kind: ColKind; sensitive?: boolean }[] = [
   { key: 'room_name',     labelKey: 'daily.cols.room_name',     kind: 'text' },
   { key: 'room_password', labelKey: 'daily.cols.room_password', kind: 'text', sensitive: true },
-  { key: 'gate_password', labelKey: 'daily.cols.gate_password', kind: 'text', sensitive: true },
   { key: 'order_number',  labelKey: 'daily.cols.order_number',  kind: 'text' },
   { key: 'guest_name',    labelKey: 'daily.cols.guest_name',    kind: 'text' },
   { key: 'price_total',   labelKey: 'daily.cols.price_total',   kind: 'num' },
@@ -55,7 +57,7 @@ const COLS: { key: string; labelKey: string; kind: ColKind; sensitive?: boolean 
   { key: 'paid',          labelKey: 'daily.cols.paid',          kind: 'paid' },
 ]
 
-const GRID_COLS = 'minmax(70px,1fr) minmax(88px,1fr) minmax(88px,1fr) minmax(120px,1.4fr) minmax(80px,1fr) minmax(78px,0.9fr) minmax(70px,0.9fr) minmax(70px,0.9fr) minmax(52px,0.6fr) 2rem'
+const GRID_COLS = 'minmax(70px,1fr) minmax(88px,1fr) minmax(120px,1.4fr) minmax(80px,1fr) minmax(78px,0.9fr) minmax(70px,0.9fr) minmax(70px,0.9fr) minmax(52px,0.6fr) 2rem'
 
 const NUMERIC = new Set<EditableField>(['price_total', 'deposit'])
 
@@ -172,6 +174,13 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
       {row.source === 'traiwan' && col.key === 'order_number' && raw && !platformLabel(row.platform) && (
         <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
       )}
+      {col.key === 'order_number' && row.booking_id && (
+        <Link href={`/booking/bookings/${row.booking_id}`} onClick={e => e.stopPropagation()}
+          title={t('daily.openOrder')}
+          className="ml-1 text-gray-400 hover:text-indigo-600 shrink-0">
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+      )}
     </div>
   )
 }
@@ -186,6 +195,7 @@ export default function DailyPage() {
   const [showPasswords, setShowPasswords] = useState(false)
   const [editing, setEditing] = useState<{ id: string; field: EditableField } | null>(null)
   const [editVal, setEditVal] = useState('')
+  const [gatePw, setGatePw] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -207,9 +217,26 @@ export default function DailyPage() {
 
   useEffect(() => { load() }, [load])
 
+  // 大門密碼全棟共用，同步顯示於獨立輸入框（取任一房間的值）
+  useEffect(() => { setGatePw(rows[0]?.gate_password ?? '') }, [rows])
+
   useEffect(() => {
     if (editing) inputRef.current?.focus()
   }, [editing])
+
+  // 大門密碼：套用到當日所有房間 + 之後所有日期（資料仍寫入每筆 record 供 AI 抓取）
+  async function commitGate() {
+    const newVal = gatePw.trim() || null
+    if ((rows[0]?.gate_password ?? null) === newVal) return
+    setRows(prev => prev.map(r => ({ ...r, gate_password: newVal })))
+    try {
+      await fetch('/api/booking/daily', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forward: true, from_date: date, field: 'gate_password', value: newVal }),
+      })
+    } catch { /* ignore */ }
+  }
 
   function startEdit(id: string, field: EditableField, val: string | number | null) {
     setEditing({ id, field })
@@ -229,23 +256,6 @@ export default function DailyPage() {
       : (editVal || null)
 
     if (original[field] === newVal) return
-
-    // 大門密碼：全棟共用，套用到當日所有房間 + 之後所有日期
-    if (field === 'gate_password') {
-      setRows(prev => prev.map(r => ({ ...r, gate_password: newVal as string | null })))
-      setSaving(id)
-      try {
-        await fetch('/api/booking/daily', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ forward: true, from_date: date, field: 'gate_password', value: newVal }),
-        })
-        await load()
-      } finally {
-        setSaving(null)
-      }
-      return
-    }
 
     // 房門密碼：每房獨立，套用到「該房間」當天 + 之後所有日期
     if (field === 'room_password') {
@@ -347,6 +357,21 @@ export default function DailyPage() {
             className="text-xs text-indigo-600 hover:underline ml-1">{t('daily.backToToday')}</button>
         )}
         <span className="text-sm text-gray-500 ml-1">{fmtDate(date)}{isToday ? t('daily.todayParen') : ''}</span>
+      </div>
+
+      {/* 大門密碼（全棟共用，獨立於表格） */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <label className="text-sm font-medium text-gray-600 shrink-0">{t('daily.cols.gate_password')}</label>
+        <input
+          type={showPasswords ? 'text' : 'password'}
+          value={gatePw}
+          onChange={e => setGatePw(e.target.value)}
+          onBlur={commitGate}
+          onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          placeholder={t('daily.clickToFill')}
+          className="text-sm border rounded-lg px-3 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        />
+        <span className="text-xs text-gray-400">{t('daily.gateShared')}</span>
       </div>
 
       {/* Mobile cards */}
