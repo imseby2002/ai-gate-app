@@ -14,8 +14,30 @@ interface DailyRecord {
   price_total: number | null
   deposit: number | null
   paid: boolean
+  platform: string | null
   source: 'traiwan' | 'manual' | 'booking'
   sort_order: number
+}
+
+// 平台縮寫（顯示在訂單號碼後）
+const PLATFORM_LABEL: Record<string, string> = {
+  booking_com: 'Booking',
+  agoda:       'Agoda',
+  trip_com:    'Trip',
+  asiayo:      'AsiaYo',
+  airbnb:      'Airbnb',
+  expedia:     'Expedia',
+  hotels_com:  'Hotels',
+  ctrip:       'Ctrip',
+  klook:       'Klook',
+  kkday:       'KKday',
+  easytravel:  'EzTravel',
+  traveloka:   'Traveloka',
+  mafengwo:    'Mafengwo',
+}
+function platformLabel(p: string | null): string | null {
+  if (!p || p === 'other') return null
+  return PLATFORM_LABEL[p] ?? p
 }
 
 type ColKind = 'text' | 'num' | 'balance' | 'paid'
@@ -144,11 +166,11 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
         ${saving === row.id ? 'opacity-60' : ''}`}
     >
       {masked ? '••••••' : (display || t('daily.clickToFill'))}
-      {row.source === 'traiwan' && col.key === 'order_number' && raw && (
-        <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
+      {col.key === 'order_number' && raw && platformLabel(row.platform) && (
+        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">{platformLabel(row.platform)}</span>
       )}
-      {row.source === 'booking' && col.key === 'order_number' && raw && (
-        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">{t('daily.orderTag')}</span>
+      {row.source === 'traiwan' && col.key === 'order_number' && raw && !platformLabel(row.platform) && (
+        <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
       )}
     </div>
   )

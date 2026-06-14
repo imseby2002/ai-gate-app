@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data: todayBookings } = await supabase
     .from('bookings')
-    .select('property_id, guest_name, platform_booking_id, check_in, total_price')
+    .select('property_id, guest_name, platform_booking_id, check_in, total_price, platform')
     .eq('user_id', ctx.ownerId)
     .eq('check_in', date)
     .order('created_at')
@@ -71,10 +71,10 @@ export async function GET(req: NextRequest) {
   }
 
   // 今日訂單依 property_id 分組
-  const bookingByPropId: Record<string, { guest_name: string; platform_booking_id: string; total_price: number | null }> = {}
+  const bookingByPropId: Record<string, { guest_name: string; platform_booking_id: string; total_price: number | null; platform: string | null }> = {}
   for (const b of bookingList) {
     if (!bookingByPropId[b.property_id]) {
-      bookingByPropId[b.property_id] = { guest_name: b.guest_name, platform_booking_id: b.platform_booking_id, total_price: b.total_price ?? null }
+      bookingByPropId[b.property_id] = { guest_name: b.guest_name, platform_booking_id: b.platform_booking_id, total_price: b.total_price ?? null, platform: b.platform ?? null }
     }
   }
 
@@ -93,6 +93,7 @@ export async function GET(req: NextRequest) {
         order_number: booking?.platform_booking_id ?? null,
         guest_name: booking?.guest_name ?? null,
         price_total: booking?.total_price ?? null,
+        platform: booking?.platform ?? null,
         source: booking ? 'booking' : 'manual',
         sort_order: cleanList.length + i,
         updated_at: new Date().toISOString(),
@@ -118,12 +119,14 @@ export async function GET(req: NextRequest) {
         order_number: booking.platform_booking_id ?? null,
         guest_name: booking.guest_name ?? null,
         price_total: rec.price_total ?? booking.total_price ?? null,
+        platform: rec.platform ?? booking.platform ?? null,
         source: 'booking',
         updated_at: new Date().toISOString(),
       }).eq('id', rec.id)
       rec.order_number = booking.platform_booking_id ?? null
       rec.guest_name = booking.guest_name ?? null
       if (rec.price_total == null) rec.price_total = booking.total_price ?? null
+      if (rec.platform == null) rec.platform = booking.platform ?? null
     }
   }
 
@@ -166,6 +169,7 @@ export async function POST(req: NextRequest) {
     price_total: r.price_total ?? null,
     deposit: r.deposit ?? null,
     paid: r.paid ?? false,
+    platform: r.platform ?? null,
     source: r.source ?? 'manual',
     sort_order: r.sort_order ?? i,
     updated_at: new Date().toISOString(),
