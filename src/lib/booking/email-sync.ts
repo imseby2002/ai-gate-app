@@ -1,6 +1,7 @@
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 
 interface BookingExtracted {
   platform: string
@@ -196,6 +197,14 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     return result
   }
 
+  // 自癒遷移：金鑰就緒時，把舊明文密碼加密回存（之後便不再有明文）
+  if (setting.imap_password && !isEncrypted(setting.imap_password)) {
+    const enc = encryptSecret(setting.imap_password)
+    if (enc && enc !== setting.imap_password) {
+      await supabase.from('email_settings').update({ imap_password: enc }).eq('id', settingId)
+    }
+  }
+
   const { data: userProperties } = await supabase
     .from('properties')
     .select('id, name, name_aliases')
@@ -240,7 +249,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     host: setting.imap_host,
     port: setting.imap_port,
     secure: true,
-    auth: { user: setting.imap_user, pass: setting.imap_password },
+    auth: { user: setting.imap_user, pass: decryptSecret(setting.imap_password) ?? '' },
     logger: false as const,
     connectionTimeout: 60000,
     greetingTimeout: 30000,

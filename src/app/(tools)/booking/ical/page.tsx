@@ -123,8 +123,10 @@ export default function ICalPage() {
             <div key={s.id} className="bg-white border rounded-xl p-4 space-y-2">
               <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">
+                    {s.properties?.name ?? properties.find(p => p.id === s.property_id)?.name ?? t('bookings.form.unspecified')}
+                  </span>
                   <span className="font-semibold text-sm text-gray-900">{s.platform_name || s.platform}</span>
-                  {s.properties && <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full">{s.properties.name}</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => toggleEnable(s)}
@@ -142,7 +144,7 @@ export default function ICalPage() {
               </div>
               <div className="text-[11px] text-gray-400 font-mono truncate">{s.ical_url}</div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400">
-                {s.last_synced_at && <span>{t('ical.lastPrefix', { date: new Date(s.last_synced_at).toLocaleString(locale) })}</span>}
+                {s.last_synced_at && <span>{t('ical.lastPrefix', { date: new Date(s.last_synced_at).toLocaleString(locale, { timeZone: 'Asia/Taipei' }) })}</span>}
                 {s.last_sync_count != null && <span>{t('bookings.count', { count: s.last_sync_count })}</span>}
                 {s.last_sync_error
                   ? <span className="flex items-center gap-1 text-red-500"><XCircle className="h-3 w-3" />{s.last_sync_error.slice(0, 50)}</span>
