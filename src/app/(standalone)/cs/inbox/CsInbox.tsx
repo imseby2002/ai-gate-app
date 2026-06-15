@@ -40,11 +40,11 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
   const locale = useLocale()
   const stageLabel = (s: string) => t.has(`stages.${s}`) ? t(`stages.${s}`) : ''
   const fmtTime = (ts: string) => {
-    try { return new Date(ts).toLocaleString(locale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) }
+    try { return new Date(ts).toLocaleString(locale, { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) }
     catch { return ts }
   }
   const fmtClock = (ts: string) => {
-    try { return new Date(ts).toLocaleString(locale, { hour: '2-digit', minute: '2-digit', hour12: false }) }
+    try { return new Date(ts).toLocaleString(locale, { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false }) }
     catch { return '' }
   }
   const industry = initialIndustry
