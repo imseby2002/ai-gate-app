@@ -48,6 +48,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
     { icon: FlaskConical,label: t('actionTestLabel'),      desc: t('actionTestDesc'),      href: csUrl, color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' },
     { icon: Users,       label: t('actionCustomersLabel'), desc: t('actionCustomersDesc'), href: `/cs/customers?industry=${industry}`, color: 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' },
     { icon: UserPlus,    label: t('actionCollabLabel'),    desc: t('actionCollabDesc'),    href: '/team?scope=cs', color: 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400' },
+    { icon: Settings,    label: '頻道綁定', desc: '綁定 LINE / WhatsApp / Telegram', href: '/cs/settings', color: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400' },
     { icon: Database,    label: t('actionDsLabel'),        desc: t('actionDsDesc'),        href: csUrl, color: 'bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400' },
     { icon: BarChart3,   label: t('actionAnalyticsLabel'), desc: t('actionAnalyticsDesc'), href: csUrl, color: 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' },
   ]
