@@ -171,7 +171,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <InstallInboxButton label="安裝App" iosHint="點瀏覽器分享圖示 → 加入主畫面，即可像 App 一樣開啟收件夾回覆客戶。" />
+            <InstallInboxButton label="安裝手機" iosHint="點瀏覽器分享圖示 → 加入主畫面，即可像 App 一樣開啟收件夾回覆客戶。" />
             <button onClick={() => { loadList(); if (active) loadThread(active) }}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
               <RefreshCw className={`h-4 w-4 ${loadingList ? 'animate-spin' : ''}`} /> {t('refresh')}
