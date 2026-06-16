@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { RefreshCw, Plus, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 interface ICalSetting {
-  id: string; platform: string; platform_name: string; ical_url: string
+  id: string; property_id: string | null; platform: string; platform_name: string; ical_url: string
   sync_enabled: boolean; last_synced_at: string | null; last_sync_count: number | null
   last_sync_error: string | null; properties?: { name: string }
 }
