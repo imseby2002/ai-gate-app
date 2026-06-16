@@ -1,0 +1,17 @@
+{
+  "id": "/cs/inbox",
+  "name": "客服收件夾",
+  "short_name": "客服收件夾",
+  "description": "LINE / WhatsApp / Telegram 客戶訊息，一處即時回覆",
+  "start_url": "/cs/inbox",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

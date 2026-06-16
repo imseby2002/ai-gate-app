@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { ArrowLeft, RefreshCw, Loader2, Send, Bot, UserRound, Inbox, ChevronLeft } from 'lucide-react'
+import { InstallInboxButton } from './InstallInboxButton'
 
 const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
   line:               { name: 'LINE',    emoji: '💬' },
@@ -169,10 +170,13 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
               <h1 className="text-xl font-bold">{t('title')}</h1>
             </div>
           </div>
-          <button onClick={() => { loadList(); if (active) loadThread(active) }}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <RefreshCw className={`h-4 w-4 ${loadingList ? 'animate-spin' : ''}`} /> {t('refresh')}
-          </button>
+          <div className="flex items-center gap-2">
+            <InstallInboxButton label="安裝App" iosHint="點瀏覽器分享圖示 → 加入主畫面，即可像 App 一樣開啟收件夾回覆客戶。" />
+            <button onClick={() => { loadList(); if (active) loadThread(active) }}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              <RefreshCw className={`h-4 w-4 ${loadingList ? 'animate-spin' : ''}`} /> {t('refresh')}
+            </button>
+          </div>
         </div>
 
         {/* Body: 雙欄 */}
