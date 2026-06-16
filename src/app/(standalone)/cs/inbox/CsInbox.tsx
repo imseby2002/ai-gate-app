@@ -158,7 +158,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
   }
 
   return (
-    <div className="h-[calc(100vh-0px)] min-h-full bg-slate-50/50 dark:bg-background">
+    <div className="h-[100dvh] min-h-[100dvh] bg-slate-50/50 dark:bg-background">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card/60">
@@ -287,7 +287,7 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
                     <textarea
                       value={draft}
                       onChange={e => setDraft(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send() } }}
                       placeholder={t('replyPlaceholder', { name: active.name || active.from_id })}
                       rows={1}
                       className="flex-1 resize-none rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 max-h-32"
