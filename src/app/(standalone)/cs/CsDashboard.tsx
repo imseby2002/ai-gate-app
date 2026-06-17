@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { InstallInboxButton } from './inbox/InstallInboxButton'
 import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Ticket, Wifi, WifiOff, Settings, FlaskConical,
@@ -81,6 +82,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <InstallInboxButton label="安裝手機" iosHint="點瀏覽器分享圖示 → 加入主畫面，把客服收件夾當 App 用。" />
               <Link href="/cs?select=1" className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors text-sm font-medium">
                 <RefreshCw className="h-3.5 w-3.5" />
                 {t('changeIndustry')}
