@@ -44,7 +44,7 @@ export function InstallInboxButton({ label, iosHint }: { label: string; iosHint:
     <div className="relative">
       <button
         onClick={onClick}
-        className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-400">
+        className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-lg bg-blue-600 text-white shadow-sm ring-1 ring-blue-700/20 hover:bg-blue-700">
         <Download className="h-4 w-4" />
         {label}
       </button>
