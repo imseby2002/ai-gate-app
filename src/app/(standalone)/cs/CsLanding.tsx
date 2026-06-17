@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { InstallInboxButton } from './inbox/InstallInboxButton'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
@@ -106,6 +107,9 @@ export function CsLanding() {
         </div>
       </div>
 
+      <div className="flex justify-center px-6 -mt-2 mb-6">
+        <InstallInboxButton label="安裝手機" iosHint="點瀏覽器分享圖示 → 加入主畫面，把客服收件夾當 App 用。" />
+      </div>
       {/* ── Industry Templates ── */}
       <div className="px-6 pb-10 max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-5">
