@@ -28,6 +28,7 @@ type NavItem = {
   icon: React.ElementType
   module: string | null
   adminOnly?: boolean
+  alwaysShow?: boolean
 }
 
 const MAIN_NAV: NavItem[] = [
@@ -38,7 +39,7 @@ const MAIN_NAV: NavItem[] = [
 ]
 
 const TOOL_NAV: NavItem[] = [
-  { labelKey: 'work',          label: '工作區',          href: '/work',            icon: NotebookPen,  module: null },
+  { labelKey: 'work',          label: '工作區',          href: '/work',            icon: NotebookPen,  module: null, alwaysShow: true },
   { labelKey: 'resume',        href: '/resume',          icon: FileText,     module: 'resume' },
   { labelKey: 'marketing',     href: '/marketing-auto',   icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
@@ -68,6 +69,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
 
   // 連結可見性：管理員看全部；非管理員若帶系統範圍（scope）只看該系統，否則依 enabled_modules
   const isVisible = (item: NavItem) => {
+    if (item.alwaysShow) return true
     if (item.adminOnly) return isAdmin
     if (isAdmin) return true
     if (scope) return (item.module ?? 'chat') === scope
