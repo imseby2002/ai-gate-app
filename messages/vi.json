@@ -1,5 +1,8 @@
 {
-  "Nav": { "backHome": "Về Trang chủ", "backToMenu": "Về Menu chính" },
+  "Nav": {
+    "backHome": "Về Trang chủ",
+    "backToMenu": "Về Menu chính"
+  },
   "Landing": {
     "signIn": "Đăng nhập",
     "freeTrial": "Dùng thử miễn phí",
@@ -124,12 +127,30 @@
     "locked": "Bị khóa",
     "assistantCount": "{count} trợ lý",
     "modules": {
-      "chat": { "label": "AI Chat", "desc": "Trò chuyện, tạo ảnh, tạo video, trợ lý RAG" },
-      "marketing": { "label": "Marketing Tự Động", "desc": "Tạo nội dung, hình ảnh, video, tự động hóa quy trình" },
-      "cs": { "label": "Dịch vụ Khách hàng", "desc": "LINE / WhatsApp / Telegram chăm sóc khách hàng" },
-      "leads": { "label": "Tiếp thị Khách hàng", "desc": "Kịch bản cuộc gọi marketing, phân tích khách hàng tiềm năng" },
-      "resume": { "label": "Công cụ CV", "desc": "Chỉnh sửa CV bằng AI & ghép việc làm" },
-      "booking": { "label": "Hệ thống Đặt phòng", "desc": "Phòng, đơn đặt, giá & đặt phòng trực tuyến" }
+      "chat": {
+        "label": "AI Chat",
+        "desc": "Trò chuyện, tạo ảnh, tạo video, trợ lý RAG"
+      },
+      "marketing": {
+        "label": "Marketing Tự Động",
+        "desc": "Tạo nội dung, hình ảnh, video, tự động hóa quy trình"
+      },
+      "cs": {
+        "label": "Dịch vụ Khách hàng",
+        "desc": "LINE / WhatsApp / Telegram chăm sóc khách hàng"
+      },
+      "leads": {
+        "label": "Tiếp thị Khách hàng",
+        "desc": "Kịch bản cuộc gọi marketing, phân tích khách hàng tiềm năng"
+      },
+      "resume": {
+        "label": "Công cụ CV",
+        "desc": "Chỉnh sửa CV bằng AI & ghép việc làm"
+      },
+      "booking": {
+        "label": "Hệ thống Đặt phòng",
+        "desc": "Phòng, đơn đặt, giá & đặt phòng trực tuyến"
+      }
     },
     "routes": {
       "daily": "Trò chuyện hàng ngày",
@@ -185,8 +206,22 @@
     "empty1": "Chưa có dữ liệu khách hàng.",
     "empty2": "Khách hàng sẽ tự xuất hiện ở đây sau khi trò chuyện qua LINE và các kênh khác.",
     "footer": "{count} khách hàng · càng hỏi giá nhiều càng gần chốt đơn; nên ưu tiên theo dõi khách đang thương lượng.",
-    "stages": { "new": "Khách mới", "inquiring": "Đang hỏi", "quoted": "Đã báo giá", "negotiating": "Đang thương lượng", "won": "Đã chốt", "lost": "Đã mất" },
-    "col": { "customer": "Khách", "stage": "Giai đoạn", "priceAsk": "Hỏi giá", "messages": "Tin nhắn", "lastIntent": "Hỏi gần nhất", "lastContact": "Liên hệ gần nhất" }
+    "stages": {
+      "new": "Khách mới",
+      "inquiring": "Đang hỏi",
+      "quoted": "Đã báo giá",
+      "negotiating": "Đang thương lượng",
+      "won": "Đã chốt",
+      "lost": "Đã mất"
+    },
+    "col": {
+      "customer": "Khách",
+      "stage": "Giai đoạn",
+      "priceAsk": "Hỏi giá",
+      "messages": "Tin nhắn",
+      "lastIntent": "Hỏi gần nhất",
+      "lastContact": "Liên hệ gần nhất"
+    }
   },
   "CsInbox": {
     "title": "Hộp thư thống nhất",
@@ -203,7 +238,14 @@
     "agentLabel": "Nhân viên",
     "sendNote": "Sau khi gửi sẽ chuyển sang \"Người thật tiếp quản\" và AI tạm dừng tự trả lời.",
     "replyPlaceholder": "Trả lời {name}… (Enter để gửi, Shift+Enter xuống dòng)",
-    "stages": { "new": "Khách mới", "inquiring": "Đang hỏi", "quoted": "Đã báo giá", "negotiating": "Đang thương lượng", "won": "Đã chốt", "lost": "Đã mất" }
+    "stages": {
+      "new": "Khách mới",
+      "inquiring": "Đang hỏi",
+      "quoted": "Đã báo giá",
+      "negotiating": "Đang thương lượng",
+      "won": "Đã chốt",
+      "lost": "Đã mất"
+    }
   },
   "CsDashboard": {
     "running": "Hệ thống đang hoạt động",
@@ -268,42 +310,76 @@
     "ctaNote": "Miễn phí · Không giới hạn · Dữ liệu được mã hóa",
     "ind_homestay_name": "Homestay / Du lịch",
     "ind_homestay_desc": "Tư vấn phòng, quy trình đặt phòng, hủy phòng, lịch trình",
-    "ind_homestay_tag0": "Đặt phòng", "ind_homestay_tag1": "Chọn ngày", "ind_homestay_tag2": "Chính sách hủy", "ind_homestay_tag3": "Gợi ý lịch trình",
+    "ind_homestay_tag0": "Đặt phòng",
+    "ind_homestay_tag1": "Chọn ngày",
+    "ind_homestay_tag2": "Chính sách hủy",
+    "ind_homestay_tag3": "Gợi ý lịch trình",
     "ind_ecommerce_name": "Thương mại điện tử / Bán lẻ",
     "ind_ecommerce_desc": "Tra cứu đơn hàng, đổi trả, theo dõi vận chuyển, khuyến mãi",
-    "ind_ecommerce_tag0": "Trạng thái đơn", "ind_ecommerce_tag1": "Đổi trả", "ind_ecommerce_tag2": "Theo dõi vận chuyển", "ind_ecommerce_tag3": "Tư vấn sản phẩm",
+    "ind_ecommerce_tag0": "Trạng thái đơn",
+    "ind_ecommerce_tag1": "Đổi trả",
+    "ind_ecommerce_tag2": "Theo dõi vận chuyển",
+    "ind_ecommerce_tag3": "Tư vấn sản phẩm",
     "ind_restaurant_name": "Nhà hàng / F&B",
     "ind_restaurant_desc": "Đặt bàn, giao hàng, giới thiệu menu, khuyến mãi",
-    "ind_restaurant_tag0": "Đặt bàn trực tuyến", "ind_restaurant_tag1": "Tra cứu menu", "ind_restaurant_tag2": "Thời gian giao hàng", "ind_restaurant_tag3": "Phòng riêng",
+    "ind_restaurant_tag0": "Đặt bàn trực tuyến",
+    "ind_restaurant_tag1": "Tra cứu menu",
+    "ind_restaurant_tag2": "Thời gian giao hàng",
+    "ind_restaurant_tag3": "Phòng riêng",
     "ind_clinic_name": "Phòng khám / Thẩm mỹ",
     "ind_clinic_desc": "Đặt lịch, tư vấn liệu trình, chăm sóc hậu phẫu, báo giá",
-    "ind_clinic_tag0": "Đặt lịch trực tuyến", "ind_clinic_tag1": "Thông tin liệu trình", "ind_clinic_tag2": "Tra cứu giá", "ind_clinic_tag3": "Câu hỏi hậu phẫu",
+    "ind_clinic_tag0": "Đặt lịch trực tuyến",
+    "ind_clinic_tag1": "Thông tin liệu trình",
+    "ind_clinic_tag2": "Tra cứu giá",
+    "ind_clinic_tag3": "Câu hỏi hậu phẫu",
     "ind_beauty_name": "Làm đẹp / Tóc / SPA",
     "ind_beauty_desc": "Đặt lịch, bảng giá, giới thiệu chuyên viên, tư vấn",
-    "ind_beauty_tag0": "Đặt dịch vụ", "ind_beauty_tag1": "Chọn chuyên viên", "ind_beauty_tag2": "Tư vấn giá", "ind_beauty_tag3": "Tư vấn chăm sóc",
+    "ind_beauty_tag0": "Đặt dịch vụ",
+    "ind_beauty_tag1": "Chọn chuyên viên",
+    "ind_beauty_tag2": "Tư vấn giá",
+    "ind_beauty_tag3": "Tư vấn chăm sóc",
     "ind_education_name": "Giáo dục / Trung tâm",
     "ind_education_desc": "Tư vấn khóa học, học thử, học phí, giáo viên",
-    "ind_education_tag0": "Giới thiệu khóa học", "ind_education_tag1": "Đặt lịch học thử", "ind_education_tag2": "Học phí", "ind_education_tag3": "Tìm hiểu giáo viên",
+    "ind_education_tag0": "Giới thiệu khóa học",
+    "ind_education_tag1": "Đặt lịch học thử",
+    "ind_education_tag2": "Học phí",
+    "ind_education_tag3": "Tìm hiểu giáo viên",
     "fg_ai_title": "🤖 AI Thông minh",
-    "fg_ai_intent_label": "Nhận diện ý định", "fg_ai_intent_desc": "Tự động phát hiện mục đích người dùng để phân luồng chính xác",
-    "fg_ai_lang_label": "Tự động phát hiện ngôn ngữ", "fg_ai_lang_desc": "Phát hiện ngôn ngữ khách hàng và tự động chuyển đổi phản hồi",
-    "fg_ai_draft_label": "Bản thảo thông minh", "fg_ai_draft_desc": "AI tạo gợi ý phản hồi; nhân viên chấp nhận hoặc chỉnh sửa một chạm",
-    "fg_ai_summary_label": "Tóm tắt cuộc trò chuyện", "fg_ai_summary_desc": "Tự động tóm tắt cuộc trò chuyện dài để bàn giao dễ dàng",
+    "fg_ai_intent_label": "Nhận diện ý định",
+    "fg_ai_intent_desc": "Tự động phát hiện mục đích người dùng để phân luồng chính xác",
+    "fg_ai_lang_label": "Tự động phát hiện ngôn ngữ",
+    "fg_ai_lang_desc": "Phát hiện ngôn ngữ khách hàng và tự động chuyển đổi phản hồi",
+    "fg_ai_draft_label": "Bản thảo thông minh",
+    "fg_ai_draft_desc": "AI tạo gợi ý phản hồi; nhân viên chấp nhận hoặc chỉnh sửa một chạm",
+    "fg_ai_summary_label": "Tóm tắt cuộc trò chuyện",
+    "fg_ai_summary_desc": "Tự động tóm tắt cuộc trò chuyện dài để bàn giao dễ dàng",
     "fg_analytics_title": "📊 Phân tích & Báo cáo",
-    "fg_analytics_report_label": "Báo cáo hiệu suất CS", "fg_analytics_report_desc": "Tự động theo dõi thời gian phản hồi, tỷ lệ giải quyết, sự hài lòng",
-    "fg_analytics_trend_label": "Biểu đồ xu hướng cảm xúc", "fg_analytics_trend_desc": "Trực quan hóa điểm bùng phát cảm xúc tiêu cực",
-    "fg_analytics_hot_label": "Thống kê chủ đề nóng", "fg_analytics_hot_desc": "Xem khách hàng hỏi gì nhiều nhất",
-    "fg_analytics_survey_label": "Khảo sát tự động", "fg_analytics_survey_desc": "Tự gửi khảo sát sau giải quyết; tự đóng nếu không phản hồi",
+    "fg_analytics_report_label": "Báo cáo hiệu suất CS",
+    "fg_analytics_report_desc": "Tự động theo dõi thời gian phản hồi, tỷ lệ giải quyết, sự hài lòng",
+    "fg_analytics_trend_label": "Biểu đồ xu hướng cảm xúc",
+    "fg_analytics_trend_desc": "Trực quan hóa điểm bùng phát cảm xúc tiêu cực",
+    "fg_analytics_hot_label": "Thống kê chủ đề nóng",
+    "fg_analytics_hot_desc": "Xem khách hàng hỏi gì nhiều nhất",
+    "fg_analytics_survey_label": "Khảo sát tự động",
+    "fg_analytics_survey_desc": "Tự gửi khảo sát sau giải quyết; tự đóng nếu không phản hồi",
     "fg_crm_title": "🎯 Quản lý Khách hàng",
-    "fg_crm_vip_label": "Nhận diện VIP", "fg_crm_vip_desc": "Tích hợp CRM; khách hàng giá trị cao được ưu tiên",
-    "fg_crm_churn_label": "Cảnh báo rời bỏ", "fg_crm_churn_desc": "Phát hiện ý định hủy và chủ động can thiệp",
-    "fg_crm_order_label": "Tích hợp tra cứu đơn hàng", "fg_crm_order_desc": "Khách hàng nhập mã đơn để tra cứu trực tiếp",
-    "fg_crm_ticket_label": "Hệ thống phiếu", "fg_crm_ticket_desc": "Vấn đề phức tạp tạo phiếu theo dõi, không bỏ sót",
+    "fg_crm_vip_label": "Nhận diện VIP",
+    "fg_crm_vip_desc": "Tích hợp CRM; khách hàng giá trị cao được ưu tiên",
+    "fg_crm_churn_label": "Cảnh báo rời bỏ",
+    "fg_crm_churn_desc": "Phát hiện ý định hủy và chủ động can thiệp",
+    "fg_crm_order_label": "Tích hợp tra cứu đơn hàng",
+    "fg_crm_order_desc": "Khách hàng nhập mã đơn để tra cứu trực tiếp",
+    "fg_crm_ticket_label": "Hệ thống phiếu",
+    "fg_crm_ticket_desc": "Vấn đề phức tạp tạo phiếu theo dõi, không bỏ sót",
     "fg_int_title": "⚙️ Tích hợp Hệ thống",
-    "fg_int_inbox_label": "Hộp thư thống nhất", "fg_int_inbox_desc": "LINE / IG / Email quản lý tập trung một nơi",
-    "fg_int_kb_label": "Tìm kiếm cơ sở tri thức", "fg_int_kb_desc": "Nhân viên nhập từ khóa; AI gợi ý câu trả lời ngay",
-    "fg_int_pricing_label": "Máy tính giá", "fg_int_pricing_desc": "AI tự tính theo công thức và báo giá cho khách",
-    "fg_int_close_label": "Tự động đóng", "fg_int_close_desc": "Tự gửi khảo sát sau giải quyết; tự đóng nếu không phản hồi"
+    "fg_int_inbox_label": "Hộp thư thống nhất",
+    "fg_int_inbox_desc": "LINE / IG / Email quản lý tập trung một nơi",
+    "fg_int_kb_label": "Tìm kiếm cơ sở tri thức",
+    "fg_int_kb_desc": "Nhân viên nhập từ khóa; AI gợi ý câu trả lời ngay",
+    "fg_int_pricing_label": "Máy tính giá",
+    "fg_int_pricing_desc": "AI tự tính theo công thức và báo giá cho khách",
+    "fg_int_close_label": "Tự động đóng",
+    "fg_int_close_desc": "Tự gửi khảo sát sau giải quyết; tự đóng nếu không phản hồi"
   },
   "Booking": {
     "title": "Quản lý đặt phòng",
@@ -364,7 +440,15 @@
       "closedDates": "Đã khóa các ngày đã chọn",
       "openedDates": "Đã mở các ngày đã chọn",
       "orderFallback": "Đơn",
-      "day": { "0": "CN", "1": "T2", "2": "T3", "3": "T4", "4": "T5", "5": "T6", "6": "T7" }
+      "day": {
+        "0": "CN",
+        "1": "T2",
+        "2": "T3",
+        "3": "T4",
+        "4": "T5",
+        "5": "T6",
+        "6": "T7"
+      }
     },
     "reviews": {
       "platformManual": "Thêm thủ công",
@@ -527,14 +611,40 @@
       }
     },
     "pricing": {
-      "tabs": { "daily": "Định giá hàng ngày", "calendar": "Dạng lưới", "rules": "Quy tắc giá", "compare": "So sánh lân cận" },
-      "statusOpen": "Mở", "statusClosed": "Đóng", "statusAdmin": "Hậu đài",
-      "ruleTypes": {
-        "weekend": "Cuối tuần", "holiday": "Ngày lễ", "seasonal": "Theo mùa", "occupancy": "Tỷ lệ lấp đầy",
-        "advance_booking": "Phút chót (trong N ngày)", "early_bird": "Đặt sớm (N+ ngày)", "market": "Theo thị trường (tự động)"
+      "tabs": {
+        "daily": "Định giá hàng ngày",
+        "calendar": "Dạng lưới",
+        "rules": "Quy tắc giá",
+        "compare": "So sánh lân cận"
       },
-      "fields": { "price": "Giá phòng", "deposit": "Đặt cọc", "extraPerson": "Phụ thu người", "largeBed": "Giường lớn", "smallBed": "Giường nhỏ" },
-      "weekdays": { "0": "T2", "1": "T3", "2": "T4", "3": "T5", "4": "T6", "5": "T7", "6": "CN" },
+      "statusOpen": "Mở",
+      "statusClosed": "Đóng",
+      "statusAdmin": "Hậu đài",
+      "ruleTypes": {
+        "weekend": "Cuối tuần",
+        "holiday": "Ngày lễ",
+        "seasonal": "Theo mùa",
+        "occupancy": "Tỷ lệ lấp đầy",
+        "advance_booking": "Phút chót (trong N ngày)",
+        "early_bird": "Đặt sớm (N+ ngày)",
+        "market": "Theo thị trường (tự động)"
+      },
+      "fields": {
+        "price": "Giá phòng",
+        "deposit": "Đặt cọc",
+        "extraPerson": "Phụ thu người",
+        "largeBed": "Giường lớn",
+        "smallBed": "Giường nhỏ"
+      },
+      "weekdays": {
+        "0": "T2",
+        "1": "T3",
+        "2": "T4",
+        "3": "T5",
+        "4": "T6",
+        "5": "T7",
+        "6": "CN"
+      },
       "roomLabel": "Loại phòng:",
       "weekendNote": "(Nền hồng = T6–CN; ngày lễ quốc gia đặt riêng trong \"Quy tắc giá\")",
       "quickFill": "Điền nhanh",
@@ -575,7 +685,14 @@
       "noRules": "Chưa có quy tắc giá. Nhấn \"Thêm quy tắc\" để bắt đầu.",
       "priorityShort": "Ưu tiên {n}",
       "allRoomTypes": "Tất cả loại phòng",
-      "col": { "ruleName": "Tên quy tắc", "type": "Loại", "adjust": "Mức điều chỉnh", "applyRoom": "Áp dụng phòng", "status": "Trạng thái", "actions": "Thao tác" },
+      "col": {
+        "ruleName": "Tên quy tắc",
+        "type": "Loại",
+        "adjust": "Mức điều chỉnh",
+        "applyRoom": "Áp dụng phòng",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
       "compareSubtitle": "Truy vấn giá các khách sạn/nhà nghỉ khác cùng khu vực cho ngày nhận phòng (Google Hotels)",
       "locationKeyword": "Từ khóa khu vực",
       "locationPlaceholder": "Tự điền vị trí nhà nghỉ, hoặc nhập: Nghi Lan Tiêu Khê",
@@ -589,14 +706,19 @@
       "watchlistHint": "Chỉ định khách sạn/nhà nghỉ cần theo dõi; sau khi truy vấn sẽ được đánh dấu và ghim. Những nơi không có trong kết quả lân cận có thể truy vấn riêng.",
       "watchPlaceholder": "Nhập tên khách sạn/nhà nghỉ",
       "cacheNote": "↺ Kết quả này từ cache (không tốn lượt). Cần giá mới nhất hãy nhấn \"Buộc truy vấn lại\".",
-      "statMin": "Thấp nhất", "statMedian": "Trung vị", "statAvg": "Trung bình", "statMax": "Cao nhất",
+      "statMin": "Thấp nhất",
+      "statMedian": "Trung vị",
+      "statAvg": "Trung bình",
+      "statMax": "Cao nhất",
       "yourVsMedian": "Giá của bạn vs trung vị lân cận (NT$ {median})",
-      "higher": "cao hơn", "lower": "thấp hơn",
+      "higher": "cao hơn",
+      "lower": "thấp hơn",
       "applyToDynamic": "Áp dụng vào định giá động",
       "applyToDynamicHint": "Dùng giá truy vấn làm cơ sở, điều chỉnh theo phần trăm rồi ghi vào định giá hàng ngày (áp dụng sau khi bạn duyệt, ghi đè giá hiện có trong khoảng).",
       "basis": "Cơ sở",
       "adjustPct": "Điều chỉnh %",
-      "from": "Từ", "to": "Đến",
+      "from": "Từ",
+      "to": "Đến",
       "weekday": "Thứ",
       "roomType": "Loại phòng",
       "noneEqualsAll": "Không chọn = tất cả",
@@ -616,7 +738,9 @@
       "overridePrice": "Giá ghi đè",
       "blankClearOverride": "Trống = xóa ghi đè",
       "selectedCount": "Đã chọn {count} ô",
-      "openBooking": "Mở đặt phòng", "adminOnly": "Chỉ hậu đài", "notBookable": "Không thể đặt",
+      "openBooking": "Mở đặt phòng",
+      "adminOnly": "Chỉ hậu đài",
+      "notBookable": "Không thể đặt",
       "setPrice": "Đặt giá",
       "batchTitle": "Đặt giá hàng loạt",
       "batchSubtitle": "Chọn nhiều ngày lễ hoặc nhập khoảng ngày thủ công",
@@ -628,10 +752,13 @@
       "consecutiveHolidays": "🎉 Kỳ nghỉ dài",
       "schoolHolidays": "🏫 Nghỉ học kỳ",
       "manualRange": "Khoảng ngày thủ công thêm (tùy chọn)",
-      "startDate": "Ngày bắt đầu", "endDate": "Ngày kết thúc",
+      "startDate": "Ngày bắt đầu",
+      "endDate": "Ngày kết thúc",
       "totalDays": "Tổng: {count} ngày (gộp ngày lễ + ngày thủ công, sau khi lọc thứ)",
       "applyWeekday": "Áp dụng thứ",
-      "dowAll": "Tất cả", "dowWeekday": "Ngày thường", "dowWeekend": "Cuối tuần",
+      "dowAll": "Tất cả",
+      "dowWeekday": "Ngày thường",
+      "dowWeekend": "Cuối tuần",
       "applyRoomType": "Áp dụng loại phòng",
       "deselectAll": "Bỏ chọn tất cả",
       "overrideRoomPrice": "Ghi đè giá phòng",
@@ -639,9 +766,11 @@
       "overrideNote": "Khi đặt sẽ ghi đè giá gốc và định giá động của từng ngày",
       "bookingStatusOptional": "Trạng thái đặt (tùy chọn)",
       "noChange": "Không đổi",
-      "adminOnlyFull": "Chỉ hậu đài", "notBookableFull": "Không thể đặt",
+      "adminOnlyFull": "Chỉ hậu đài",
+      "notBookableFull": "Không thể đặt",
       "applyDays": "Áp dụng {count} ngày",
-      "editRule": "Sửa quy tắc", "addRuleTitle": "Thêm quy tắc giá",
+      "editRule": "Sửa quy tắc",
+      "addRuleTitle": "Thêm quy tắc giá",
       "ruleNameLabel": "Tên quy tắc *",
       "ruleNamePlaceholder": "VD: Cuối tuần +20%",
       "ruleTypeLabel": "Loại quy tắc *",
@@ -659,9 +788,13 @@
       "earlyBirdLabel": "🐦 Đặt sớm: kích hoạt khi đặt ít nhất N ngày trước nhận phòng",
       "earlyBirdHint": "VD: N=90 → chỉ đặt trước 90+ ngày tính; N=30 → trước 30+ ngày",
       "marketRuleHint": "📈 Theo thị trường: lịch trình tự lấy giá lân cận mỗi ngày, tính giá theo \"giá cơ sở + mức điều chỉnh trên\", ghi vào định giá hàng ngày (kẹp giữa sàn/trần). Trước tiên xác nhận đã điền vị trí nhà nghỉ trong \"So sánh lân cận\".",
-      "nearbyMedian": "Trung vị lân cận", "nearbyMin": "Thấp nhất lân cận", "nearbyAvg": "Trung bình lân cận",
-      "priceFloor": "Giá sàn (tùy chọn)", "priceCeil": "Giá trần (tùy chọn)",
-      "notBelow": "Không thấp hơn", "notAbove": "Không cao hơn",
+      "nearbyMedian": "Trung vị lân cận",
+      "nearbyMin": "Thấp nhất lân cận",
+      "nearbyAvg": "Trung bình lân cận",
+      "priceFloor": "Giá sàn (tùy chọn)",
+      "priceCeil": "Giá trần (tùy chọn)",
+      "notBelow": "Không thấp hơn",
+      "notAbove": "Không cao hơn",
       "priorityLabel": "Ưu tiên (số lớn áp dụng trước)",
       "saveRule": "Lưu quy tắc"
     },
@@ -779,10 +912,22 @@
       "bodyPlaceholder": "Để trống để dùng mẫu mặc định…",
       "enableThis": "Bật mẫu này",
       "types": {
-        "confirmation": { "label": "Email xác nhận đặt phòng", "desc": "Gửi thủ công cho khách sau khi tạo đơn" },
-        "reminder": { "label": "Nhắc nhận phòng", "desc": "Gửi 1–2 ngày trước khi nhận phòng" },
-        "checkout": { "label": "Nhắc trả phòng", "desc": "Gửi vào ngày trả phòng" },
-        "cancellation": { "label": "Thông báo hủy", "desc": "Gửi khi đơn bị hủy" }
+        "confirmation": {
+          "label": "Email xác nhận đặt phòng",
+          "desc": "Gửi thủ công cho khách sau khi tạo đơn"
+        },
+        "reminder": {
+          "label": "Nhắc nhận phòng",
+          "desc": "Gửi 1–2 ngày trước khi nhận phòng"
+        },
+        "checkout": {
+          "label": "Nhắc trả phòng",
+          "desc": "Gửi vào ngày trả phòng"
+        },
+        "cancellation": {
+          "label": "Thông báo hủy",
+          "desc": "Gửi khi đơn bị hủy"
+        }
       }
     },
     "reports": {
@@ -1082,14 +1227,49 @@
       "other": "Dịch vụ khác"
     },
     "amenities": {
-      "海景": "Hướng biển", "山景": "Hướng núi", "河景": "Hướng sông", "市景": "Hướng thành phố", "無邊際泳池": "Hồ bơi vô cực", "私人泳池": "Hồ bơi riêng",
-      "露台": "Sân thượng", "陽台": "Ban công", "私人花園": "Vườn riêng", "庭院": "Sân trong", "BBQ 區": "Khu BBQ",
-      "雙人床": "Giường đôi", "加大雙人床": "Giường King", "兩張單人床": "Hai giường đơn", "上下鋪": "Giường tầng", "沙發床": "Giường sofa",
-      "冷氣": "Điều hòa", "電視": "TV", "第四台/串流": "Truyền hình cáp/Streaming", "冰箱": "Tủ lạnh", "保險箱": "Két sắt", "書桌": "Bàn làm việc", "沙發": "Sofa",
-      "獨立衛浴": "Phòng tắm riêng", "浴缸": "Bồn tắm", "淋浴間": "Vòi sen", "吹風機": "Máy sấy tóc", "盥洗用品": "Đồ vệ sinh", "免治馬桶": "Bồn cầu thông minh",
-      "WiFi": "WiFi", "停車位": "Chỗ đậu xe", "廚房": "Bếp", "公共廚房": "Bếp chung", "洗衣機": "Máy giặt", "烘衣機": "Máy sấy",
-      "早餐": "Bữa sáng", "下午茶": "Trà chiều", "迷你吧": "Minibar", "咖啡/茶": "Cà phê/Trà",
-      "24H 入住": "Nhận phòng 24H", "行李寄存": "Giữ hành lý", "機場接送": "Đưa đón sân bay", "腳踏車租借": "Thuê xe đạp"
+      "海景": "Hướng biển",
+      "山景": "Hướng núi",
+      "河景": "Hướng sông",
+      "市景": "Hướng thành phố",
+      "無邊際泳池": "Hồ bơi vô cực",
+      "私人泳池": "Hồ bơi riêng",
+      "露台": "Sân thượng",
+      "陽台": "Ban công",
+      "私人花園": "Vườn riêng",
+      "庭院": "Sân trong",
+      "BBQ 區": "Khu BBQ",
+      "雙人床": "Giường đôi",
+      "加大雙人床": "Giường King",
+      "兩張單人床": "Hai giường đơn",
+      "上下鋪": "Giường tầng",
+      "沙發床": "Giường sofa",
+      "冷氣": "Điều hòa",
+      "電視": "TV",
+      "第四台/串流": "Truyền hình cáp/Streaming",
+      "冰箱": "Tủ lạnh",
+      "保險箱": "Két sắt",
+      "書桌": "Bàn làm việc",
+      "沙發": "Sofa",
+      "獨立衛浴": "Phòng tắm riêng",
+      "浴缸": "Bồn tắm",
+      "淋浴間": "Vòi sen",
+      "吹風機": "Máy sấy tóc",
+      "盥洗用品": "Đồ vệ sinh",
+      "免治馬桶": "Bồn cầu thông minh",
+      "WiFi": "WiFi",
+      "停車位": "Chỗ đậu xe",
+      "廚房": "Bếp",
+      "公共廚房": "Bếp chung",
+      "洗衣機": "Máy giặt",
+      "烘衣機": "Máy sấy",
+      "早餐": "Bữa sáng",
+      "下午茶": "Trà chiều",
+      "迷你吧": "Minibar",
+      "咖啡/茶": "Cà phê/Trà",
+      "24H 入住": "Nhận phòng 24H",
+      "行李寄存": "Giữ hành lý",
+      "機場接送": "Đưa đón sân bay",
+      "腳踏車租借": "Thuê xe đạp"
     },
     "profile": {
       "title": "Thông tin nhà nghỉ",
@@ -1253,7 +1433,11 @@
       "score": "Tính điểm cơ hội",
       "scoring": "Đang chấm điểm...",
       "opp": "Điểm cơ hội (tín hiệu tìm kiếm × ý định × độ khan hiếm phía AI)",
-      "src": { "measured": "Đo thực tế", "estimated": "Ước tính", "unknown": "AI suy đoán" },
+      "src": {
+        "measured": "Đo thực tế",
+        "estimated": "Ước tính",
+        "unknown": "AI suy đoán"
+      },
       "cluster": "Lập cụm",
       "clustering": "Đang gom cụm...",
       "clusterHint": "Nhấn vào một cụm để áp dụng các câu hỏi của cụm đó (một bài cho mỗi cụm, tránh mỗi câu một bài kiểu content farm). 👑 = Bài trụ cột.",
@@ -1330,7 +1514,11 @@
       "secretSetPh": "Đã thiết lập; để trống để giữ nguyên",
       "save": "Lưu cài đặt",
       "saved": "Đã lưu",
-      "lang": { "zh-TW": "Bản Trung", "en": "Bản Anh", "vi": "Bản Việt" },
+      "lang": {
+        "zh-TW": "Bản Trung",
+        "en": "Bản Anh",
+        "vi": "Bản Việt"
+      },
       "generate": "Tạo bài viết + JSON-LD",
       "generating": "Đang tạo...",
       "regenerate": "Tạo lại",
@@ -1341,20 +1529,110 @@
       "copied": "Đã sao chép",
       "errTopic": "Vui lòng nhập chủ đề",
       "errPick": "Vui lòng chọn ít nhất một câu hỏi",
-      "intent": { "info": "Thông tin", "local": "Địa phương", "compare": "So sánh", "transact": "Giao dịch" }
+      "intent": {
+        "info": "Thông tin",
+        "local": "Địa phương",
+        "compare": "So sánh",
+        "transact": "Giao dịch"
+      }
     },
     "features": {
-      "auto": { "title": "Tự động hóa Marketing", "desc": "Marketing tự động đầu-cuối — từ thu thập dữ liệu, phân tích đối thủ, viết nội dung, sản xuất ảnh/video, đến tải lên nền tảng", "badge": "Đầy đủ tính năng", "tags": ["Thu thập dữ liệu", "Viết nội dung", "Ảnh/Video", "Tự động tải lên"] },
-      "designer": { "title": "Nhà thiết kế Marketing sản phẩm AI", "desc": "Tải ảnh sản phẩm; AI tạo chiến lược marketing, bộ nội dung, phân tích thị trường và chiến lược SEO — gói marketing hoàn chỉnh trong 4 bước", "badge": "Mới", "tags": ["Chiến lược", "Bộ nội dung", "Phân tích thị trường", "Chiến lược SEO"] },
-      "geo": { "title": "Cây bút nội dung GEO", "desc": "Nhập chủ đề và thông tin độc quyền; AI khai thác câu hỏi có ý định cao và viết bài + JSON-LD tối ưu để được ChatGPT / Perplexity / Google AIO trích dẫn", "badge": "Mới", "tags": ["Khai thác câu hỏi", "Phân loại ý định", "JSON-LD", "Tối ưu trích dẫn AI"] },
-      "pipeline": { "title": "Dây chuyền Marketing", "desc": "Lập lịch trực quan và theo dõi tiến độ nhiệm vụ marketing; quản lý trạng thái thực thi nhiều chiến dịch và quy trình duyệt Telegram", "badge": "Nâng cao", "tags": ["Lập lịch", "Theo dõi tiến độ", "Duyệt Telegram", "Đa chiến dịch"] },
-      "prospect": { "title": "Marketing khách tiềm năng", "desc": "Tự thu thập tổ chức → AI lọc & phân loại → tính khoảng cách → gọi điện / gửi Email để chủ động phát triển khách tiềm năng", "badge": "Công cụ phát triển", "tags": ["Tự thu thập", "AI lọc", "Marketing điện thoại", "Marketing Email"] },
-      "swot": { "title": "Phân tích thị trường & đối thủ", "desc": "Phân tích SWOT, giám sát đối thủ, hiểu hành vi người tiêu dùng — AI phân tích sâu cho quyết định có cơ sở", "badge": "Trong Tự động hóa Marketing", "tags": ["SWOT", "Giám sát đối thủ", "Hiểu khách hàng", "Phân tích AI"] },
-      "audience": { "title": "Mô phỏng nhóm khách mục tiêu", "desc": "Engine mô phỏng người tiêu dùng đa chiều, dự đoán phản ứng và tỷ lệ chuyển đổi của các nhóm khách khác nhau", "badge": "Trong Tự động hóa Marketing", "tags": ["Mô phỏng khách", "Dự đoán chuyển đổi", "Phân tích cảm xúc", "Tối ưu chiến lược"] },
-      "brand": { "title": "Cơ sở dữ liệu thương hiệu", "desc": "Quản lý tập trung tài sản thương hiệu, dữ liệu công ty và cơ sở tri thức marketing; bộ nhớ đệm AI tiết kiệm chi phí token mỗi lần gọi", "badge": "Quản lý trong Cài đặt", "tags": ["Quản lý tài sản", "Dữ liệu công ty", "Bộ nhớ đệm AI", "Tiết kiệm token"] }
+      "auto": {
+        "title": "Tự động hóa Marketing",
+        "desc": "Marketing tự động đầu-cuối — từ thu thập dữ liệu, phân tích đối thủ, viết nội dung, sản xuất ảnh/video, đến tải lên nền tảng",
+        "badge": "Đầy đủ tính năng",
+        "tags": [
+          "Thu thập dữ liệu",
+          "Viết nội dung",
+          "Ảnh/Video",
+          "Tự động tải lên"
+        ]
+      },
+      "designer": {
+        "title": "Nhà thiết kế Marketing sản phẩm AI",
+        "desc": "Tải ảnh sản phẩm; AI tạo chiến lược marketing, bộ nội dung, phân tích thị trường và chiến lược SEO — gói marketing hoàn chỉnh trong 4 bước",
+        "badge": "Mới",
+        "tags": [
+          "Chiến lược",
+          "Bộ nội dung",
+          "Phân tích thị trường",
+          "Chiến lược SEO"
+        ]
+      },
+      "geo": {
+        "title": "Cây bút nội dung GEO",
+        "desc": "Nhập chủ đề và thông tin độc quyền; AI khai thác câu hỏi có ý định cao và viết bài + JSON-LD tối ưu để được ChatGPT / Perplexity / Google AIO trích dẫn",
+        "badge": "Mới",
+        "tags": [
+          "Khai thác câu hỏi",
+          "Phân loại ý định",
+          "JSON-LD",
+          "Tối ưu trích dẫn AI"
+        ]
+      },
+      "pipeline": {
+        "title": "Dây chuyền Marketing",
+        "desc": "Lập lịch trực quan và theo dõi tiến độ nhiệm vụ marketing; quản lý trạng thái thực thi nhiều chiến dịch và quy trình duyệt Telegram",
+        "badge": "Nâng cao",
+        "tags": [
+          "Lập lịch",
+          "Theo dõi tiến độ",
+          "Duyệt Telegram",
+          "Đa chiến dịch"
+        ]
+      },
+      "prospect": {
+        "title": "Marketing khách tiềm năng",
+        "desc": "Tự thu thập tổ chức → AI lọc & phân loại → tính khoảng cách → gọi điện / gửi Email để chủ động phát triển khách tiềm năng",
+        "badge": "Công cụ phát triển",
+        "tags": [
+          "Tự thu thập",
+          "AI lọc",
+          "Marketing điện thoại",
+          "Marketing Email"
+        ]
+      },
+      "swot": {
+        "title": "Phân tích thị trường & đối thủ",
+        "desc": "Phân tích SWOT, giám sát đối thủ, hiểu hành vi người tiêu dùng — AI phân tích sâu cho quyết định có cơ sở",
+        "badge": "Trong Tự động hóa Marketing",
+        "tags": [
+          "SWOT",
+          "Giám sát đối thủ",
+          "Hiểu khách hàng",
+          "Phân tích AI"
+        ]
+      },
+      "audience": {
+        "title": "Mô phỏng nhóm khách mục tiêu",
+        "desc": "Engine mô phỏng người tiêu dùng đa chiều, dự đoán phản ứng và tỷ lệ chuyển đổi của các nhóm khách khác nhau",
+        "badge": "Trong Tự động hóa Marketing",
+        "tags": [
+          "Mô phỏng khách",
+          "Dự đoán chuyển đổi",
+          "Phân tích cảm xúc",
+          "Tối ưu chiến lược"
+        ]
+      },
+      "brand": {
+        "title": "Cơ sở dữ liệu thương hiệu",
+        "desc": "Quản lý tập trung tài sản thương hiệu, dữ liệu công ty và cơ sở tri thức marketing; bộ nhớ đệm AI tiết kiệm chi phí token mỗi lần gọi",
+        "badge": "Quản lý trong Cài đặt",
+        "tags": [
+          "Quản lý tài sản",
+          "Dữ liệu công ty",
+          "Bộ nhớ đệm AI",
+          "Tiết kiệm token"
+        ]
+      }
     },
     "pd": {
-      "steps": { "1": "Chiến lược", "2": "Bộ nội dung", "3": "Phân tích thị trường", "4": "Chiến lược nội dung" },
+      "steps": {
+        "1": "Chiến lược",
+        "2": "Bộ nội dung",
+        "3": "Phân tích thị trường",
+        "4": "Chiến lược nội dung"
+      },
       "errProductName": "Vui lòng nhập tên sản phẩm",
       "errSelectRoute": "Vui lòng chọn tuyến marketing trước",
       "step1Title": "Bước 1: Chiến lược",
@@ -1403,7 +1681,12 @@
       "visual": "Hình ảnh: ",
       "persuasion": "Góc thuyết phục: ",
       "imagePrompts": "Prompt hình ảnh:",
-      "aida": { "A": "Chú ý", "I": "Quan tâm", "D": "Khao khát", "action": "Hành động" },
+      "aida": {
+        "A": "Chú ý",
+        "I": "Quan tâm",
+        "D": "Khao khát",
+        "action": "Hành động"
+      },
       "genImage": "Tạo ảnh",
       "visualSummary": "Tóm tắt hình ảnh:",
       "coreValueProp": "Tuyên bố giá trị cốt lõi",
@@ -1451,33 +1734,78 @@
     "phaseAnalyze": "DeepSeek-R1 phân tích",
     "phaseWrite": "Claude viết",
     "categories": {
-      "job-search": { "label": "🔍 Tìm việc", "desc": "Hồ sơ, thư xin việc, phỏng vấn, đàm phán lương" },
-      "workplace": { "label": "💼 Công sở hàng ngày", "desc": "Email, báo cáo, thuyết trình, biên bản họp" },
-      "advanced": { "label": "🧠 Tình huống nâng cao", "desc": "Ứng đối, đánh giá, thăng chức, lượng hóa công việc" },
-      "thinking": { "label": "🎯 Ra quyết định", "desc": "Mô hình tư duy của các bậc thầy để mổ xẻ quyết định" }
+      "job-search": {
+        "label": "🔍 Tìm việc",
+        "desc": "Hồ sơ, thư xin việc, phỏng vấn, đàm phán lương"
+      },
+      "workplace": {
+        "label": "💼 Công sở hàng ngày",
+        "desc": "Email, báo cáo, thuyết trình, biên bản họp"
+      },
+      "advanced": {
+        "label": "🧠 Tình huống nâng cao",
+        "desc": "Ứng đối, đánh giá, thăng chức, lượng hóa công việc"
+      },
+      "thinking": {
+        "label": "🎯 Ra quyết định",
+        "desc": "Mô hình tư duy của các bậc thầy để mổ xẻ quyết định"
+      }
     },
     "optimize": {
       "cardDesc": "Chọn cách điền; càng chi tiết kết quả càng chính xác",
-      "modeUpload": "Tải tệp", "modeForm": "Điền thủ công", "modeBoth": "Cả hai",
-      "jdLabel": "JD công việc mục tiêu", "jdPlaceholder": "Dán mô tả công việc…",
+      "modeUpload": "Tải tệp",
+      "modeForm": "Điền thủ công",
+      "modeBoth": "Cả hai",
+      "jdLabel": "JD công việc mục tiêu",
+      "jdPlaceholder": "Dán mô tả công việc…",
       "processing": "Đang xử lý…",
-      "emptyTitle": "Cộng tác hai mô hình", "emptyDesc1": "DeepSeek-R1 phân tích khoảng cách", "emptyDesc2": "Claude Sonnet viết hồ sơ tối ưu"
+      "emptyTitle": "Cộng tác hai mô hình",
+      "emptyDesc1": "DeepSeek-R1 phân tích khoảng cách",
+      "emptyDesc2": "Claude Sonnet viết hồ sơ tối ưu"
     },
     "cover": {
       "cardDesc": "Chọn mẫu và điền JD cùng kinh nghiệm",
-      "selectTemplate": "Chọn mẫu thư xin việc", "loadingTemplates": "Đang tải mẫu…",
-      "freeform": "✨ Tự do (không dùng mẫu)", "freeformDesc": "AI tự quyết định cấu trúc thư xin việc phù hợp nhất",
-      "jdLabel": "JD công việc mục tiêu", "jdPlaceholder": "Dán mô tả công việc…",
-      "expLabel": "Kinh nghiệm trước đây", "expPlaceholder": "Mô tả kinh nghiệm, kỹ năng và thành tích của bạn…",
-      "extraLabel": "Yêu cầu thêm (tùy chọn)", "extraPlaceholder": "VD: viết bằng tiếng Anh, giọng điệu thoải mái…",
-      "emptyTitle": "Chưa có thư xin việc", "emptyDesc1": "Chọn mẫu và điền JD cùng kinh nghiệm", "emptyDesc2": "Claude sẽ viết thư xin việc cho bạn"
+      "selectTemplate": "Chọn mẫu thư xin việc",
+      "loadingTemplates": "Đang tải mẫu…",
+      "freeform": "✨ Tự do (không dùng mẫu)",
+      "freeformDesc": "AI tự quyết định cấu trúc thư xin việc phù hợp nhất",
+      "jdLabel": "JD công việc mục tiêu",
+      "jdPlaceholder": "Dán mô tả công việc…",
+      "expLabel": "Kinh nghiệm trước đây",
+      "expPlaceholder": "Mô tả kinh nghiệm, kỹ năng và thành tích của bạn…",
+      "extraLabel": "Yêu cầu thêm (tùy chọn)",
+      "extraPlaceholder": "VD: viết bằng tiếng Anh, giọng điệu thoải mái…",
+      "emptyTitle": "Chưa có thư xin việc",
+      "emptyDesc1": "Chọn mẫu và điền JD cùng kinh nghiệm",
+      "emptyDesc2": "Claude sẽ viết thư xin việc cho bạn"
     },
     "form": {
-      "basicSection": "1. Thông tin cơ bản", "name": "Họ tên", "phone": "Điện thoại", "email": "Email", "targetPosition": "Vị trí ứng tuyển",
-      "eduSection": "2. Học vấn & Chứng chỉ", "eduN": "Học vấn {n}", "school": "Tên trường", "major": "Chuyên ngành", "degree": "Cử nhân/Thạc sĩ", "eduPeriod": "Thời gian", "addEdu": "Thêm học vấn", "certs": "Chứng chỉ liên quan, kỳ thi ngôn ngữ…",
-      "expSection": "3. Kinh nghiệm làm việc/thực tập", "expN": "Kinh nghiệm {n}", "company": "Công ty", "jobTitle": "Chức danh", "expPeriod": "Thời gian", "expDesc": "Kết quả chính (nên lượng hóa)", "addExp": "Thêm kinh nghiệm",
-      "skillsSection": "4. Kỹ năng & Ngôn ngữ", "skills": "Kỹ năng: Python, Excel, Figma…", "languages": "Ngôn ngữ: Tiếng Trung (bản ngữ), Tiếng Anh (TOEIC 880)…",
-      "otherSection": "5. Khác (tùy chọn)", "selfIntro": "Tự giới thiệu (3–5 dòng)", "otherField": "Điểm cộng khác"
+      "basicSection": "1. Thông tin cơ bản",
+      "name": "Họ tên",
+      "phone": "Điện thoại",
+      "email": "Email",
+      "targetPosition": "Vị trí ứng tuyển",
+      "eduSection": "2. Học vấn & Chứng chỉ",
+      "eduN": "Học vấn {n}",
+      "school": "Tên trường",
+      "major": "Chuyên ngành",
+      "degree": "Cử nhân/Thạc sĩ",
+      "eduPeriod": "Thời gian",
+      "addEdu": "Thêm học vấn",
+      "certs": "Chứng chỉ liên quan, kỳ thi ngôn ngữ…",
+      "expSection": "3. Kinh nghiệm làm việc/thực tập",
+      "expN": "Kinh nghiệm {n}",
+      "company": "Công ty",
+      "jobTitle": "Chức danh",
+      "expPeriod": "Thời gian",
+      "expDesc": "Kết quả chính (nên lượng hóa)",
+      "addExp": "Thêm kinh nghiệm",
+      "skillsSection": "4. Kỹ năng & Ngôn ngữ",
+      "skills": "Kỹ năng: Python, Excel, Figma…",
+      "languages": "Ngôn ngữ: Tiếng Trung (bản ngữ), Tiếng Anh (TOEIC 880)…",
+      "otherSection": "5. Khác (tùy chọn)",
+      "selfIntro": "Tự giới thiệu (3–5 dòng)",
+      "otherField": "Điểm cộng khác"
     },
     "upload": {
       "onlyTypes": "Chỉ hỗ trợ JPG, PDF, Word",
@@ -1487,79 +1815,383 @@
       "imageNote": "✓ Ảnh JPG sẽ được Claude nhận diện hình ảnh phân tích"
     },
     "tools": {
-      "resume-optimize": { "label": "Tối ưu hồ sơ", "desc": "Dán JD; AI hai mô hình phân tích và viết lại hồ sơ tối ưu ATS", "submit": "Bắt đầu tối ưu" },
-      "cover-letter": { "label": "Viết thư xin việc", "desc": "Chọn mẫu, nhập JD và kinh nghiệm; Claude tạo thư xin việc hoàn chỉnh", "submit": "Tạo thư xin việc" },
-      "interview-practice": { "label": "Luyện phỏng vấn", "desc": "Mô phỏng câu hỏi phỏng vấn thường gặp + gợi ý trả lời theo STAR", "submit": "Tạo câu hỏi", "fields": {
-        "jd": { "label": "JD công việc mục tiêu", "placeholder": "Dán mô tả công việc để chính xác hơn…" },
-        "background": { "label": "Bối cảnh cá nhân", "placeholder": "Mô tả ngắn học vấn, số năm kinh nghiệm, kỹ năng chính…" } } },
-      "salary-negotiation": { "label": "Đàm phán lương", "desc": "Cung cấp kịch bản đàm phán hoàn chỉnh giúp bạn đạt mức lương xứng đáng", "submit": "Tạo kịch bản", "fields": {
-        "position": { "label": "Vị trí & Ngành mục tiêu", "placeholder": "VD: Marketing / Công nghệ" },
-        "currentSalary": { "label": "Lương hiện tại (tháng)", "placeholder": "VD: 35,000" },
-        "targetSalary": { "label": "Lương mong muốn (tháng)", "placeholder": "VD: 45,000" },
-        "highlights": { "label": "Điểm nổi bật & Thành tích", "placeholder": "Năng lực cạnh tranh, thành quả, kỹ năng đặc biệt…" } } },
-      "resume-clinic": { "label": "Khám sức khỏe hồ sơ", "desc": "Nói thẳng như HR: có nên ứng tuyển, tỷ lệ thắng, vướng ở đâu, cách khắc phục", "submit": "Bắt đầu khám", "fields": {
-        "jd": { "label": "JD công việc mục tiêu", "placeholder": "Dán mô tả công việc…" },
-        "background": { "label": "Bối cảnh / Điểm chính hồ sơ", "placeholder": "Học vấn, kinh nghiệm, kỹ năng chính, tác phẩm tiêu biểu…" },
-        "company": { "label": "Công ty mục tiêu (tùy chọn)", "placeholder": "VD: công ty đa quốc gia, startup, công ty niêm yết…" } } },
-      "career-advisor": { "label": "Cố vấn học & nghề", "desc": "Phân tích thực tế về ngành học, nghề, chọn thành phố — thiết thực, không sáo rỗng", "submit": "Cho tôi lời khuyên", "fields": {
-        "situation": { "label": "Hoàn cảnh của bạn", "options": ["Học sinh THPT chọn ngành", "Sinh viên chọn hướng/chuyển ngành", "Sinh viên mới ra trường chọn ngành nghề", "Chuyển việc", "Phân vân thi cao học/công chức"] },
-        "background": { "label": "Điều kiện nền tảng", "placeholder": "Ngành, điểm số, kinh nghiệm, thành phố, yếu tố gia đình…" },
-        "options": { "label": "Các lựa chọn đang cân nhắc", "placeholder": "VD: CNTT vs Điện, ở Đài Bắc vs về quê…" },
-        "concern": { "label": "Điều bạn quan tâm nhất", "placeholder": "VD: lương, ổn định, sở thích, tiềm năng…" } } },
-      "email-draft": { "label": "Soạn Email", "desc": "Thư xin lỗi, nhắc nợ, giao tiếp liên phòng — tạo email lịch sự chỉ một nhấp", "submit": "Tạo Email", "fields": {
-        "type": { "label": "Loại Email", "options": ["Xin lỗi", "Nhắc/đòi nợ", "Yêu cầu hỗ trợ liên phòng", "Từ chối yêu cầu", "Báo cáo tiến độ", "Cảm ơn", "Khác"] },
-        "relationship": { "label": "Người nhận & Quan hệ", "placeholder": "VD: quản lý (trực tiếp), khách hàng, đồng nghiệp liên phòng…" },
-        "context": { "label": "Bối cảnh", "placeholder": "Mô tả bối cảnh và mục tiêu bạn muốn đạt…" },
-        "keyPoints": { "label": "Điểm cần nhấn mạnh (tùy chọn)", "placeholder": "VD: thể hiện thành ý, chuyên nghiệp nhưng không hạ mình…" } } },
-      "report-writing": { "label": "Viết báo cáo/đề xuất", "desc": "Nhập chủ đề và điểm chính; AI tạo cấu trúc và nội dung báo cáo hoàn chỉnh", "submit": "Tạo báo cáo", "fields": {
-        "topic": { "label": "Chủ đề báo cáo", "placeholder": "VD: Phân tích kết quả bán hàng Q3" },
-        "context": { "label": "Bối cảnh", "placeholder": "Giải thích mục đích và bối cảnh báo cáo…" },
-        "mainPoints": { "label": "Luận điểm/Dữ liệu chính", "placeholder": "Liệt kê dữ liệu, kết luận hoặc luận điểm bạn có…" },
-        "audience": { "label": "Đối tượng", "placeholder": "VD: lãnh đạo cấp cao, khách hàng, toàn thể nhân viên…" } } },
-      "presentation-outline": { "label": "Dàn ý thuyết trình", "desc": "Chủ đề + đối tượng → AI tạo dàn ý từng slide và gợi ý trực quan hóa", "submit": "Tạo dàn ý", "fields": {
-        "topic": { "label": "Chủ đề thuyết trình", "placeholder": "VD: Kế hoạch chiến lược thương hiệu 2025" },
-        "audience": { "label": "Đối tượng", "placeholder": "VD: hội đồng quản trị, khách hàng tiềm năng…" },
-        "coreMessage": { "label": "Thông điệp cốt lõi (điều khán giả nên nhớ)", "placeholder": "Nói thông điệp chính trong một câu…" },
-        "duration": { "label": "Thời lượng", "placeholder": "VD: 10 phút, 30 phút" } } },
-      "meeting-minutes": { "label": "Biên bản họp", "desc": "Dán ghi chú họp lộn xộn; tự sắp xếp thành tài liệu có cấu trúc", "submit": "Sắp xếp biên bản", "fields": {
-        "rawNotes": { "label": "Ghi chú họp gốc", "placeholder": "Dán ghi chú họp (có thể lộn xộn)…" } } },
-      "workplace-phrases": { "label": "Ứng đối công sở", "desc": "Sếp khó tính, từ chối việc thêm… cung cấp nhiều kịch bản ứng đối", "submit": "Tạo gợi ý", "fields": {
-        "scenario": { "label": "Loại tình huống", "options": ["Bị sếp làm khó", "Từ chối việc thêm", "Quản lý cấp trên", "Đối phó đồng nghiệp giành công", "Nêu ý kiến phản đối", "Đề cập tăng lương", "Khác"] },
-        "context": { "label": "Mô tả tình huống cụ thể", "placeholder": "Giải thích cụ thể đã xảy ra chuyện gì…" },
-        "goal": { "label": "Kết quả mong muốn", "placeholder": "Bạn mong cuộc trao đổi này đạt được gì…" } } },
-      "workplace-relationship": { "label": "Cố vấn quan hệ công sở", "desc": "Hiểu động cơ của sếp/đồng nghiệp/cấp dưới; đưa chiến lược hòa hợp và quản lý cấp trên", "submit": "Phân tích chiến lược", "fields": {
-        "role": { "label": "Đối tượng", "options": ["Quản lý trực tiếp", "Sếp / Cấp cao", "Đồng nghiệp ngang hàng", "Cấp dưới", "Tiền bối / Cố vấn", "Đầu mối liên phòng"] },
-        "situation": { "label": "Tình huống cụ thể", "placeholder": "Mô tả hành vi của họ, tương tác giữa hai bên, điểm vướng hiện tại…" },
-        "goal": { "label": "Mục tiêu của bạn", "placeholder": "VD: lấy lòng tin, giành nguồn lực, hóa giải hiểu lầm, bảo vệ bản thân…" } } },
-      "performance-review": { "label": "Viết tự đánh giá", "desc": "Nhập công việc và kết quả; AI viết bản tự đánh giá thuyết phục", "submit": "Tạo tự đánh giá", "fields": {
-        "position": { "label": "Vị trí & Phòng ban", "placeholder": "VD: Phòng Marketing, Chuyên viên Marketing số" },
-        "workContent": { "label": "Công việc chính kỳ này", "placeholder": "Liệt kê công việc chính bạn phụ trách…" },
-        "achievements": { "label": "Kết quả chính (kèm số liệu)", "placeholder": "VD: hoàn thành dự án XX, tăng XX%…" },
-        "challenges": { "label": "Thách thức đã vượt qua (tùy chọn)", "placeholder": "Giải thích khó khăn và cách giải quyết…" } } },
-      "promotion-letter": { "label": "Thư xin thăng chức", "desc": "Viết thư xin thăng chức mạnh mẽ, làm nổi bật đóng góp và giá trị của bạn", "submit": "Tạo thư", "fields": {
-        "positions": { "label": "Vị trí hiện tại → Vị trí xin", "placeholder": "VD: Chuyên viên KD → Trưởng nhóm KD" },
-        "background": { "label": "Bối cảnh & Thâm niên", "placeholder": "VD: làm việc 3 năm, nền tảng kỹ thuật…" },
-        "achievements": { "label": "Đóng góp & Thành tích chính", "placeholder": "Liệt kê đóng góp cụ thể (có số liệu càng tốt)…" },
-        "reason": { "label": "Lý do xin", "placeholder": "Vì sao bạn là người phù hợp nhất cho vị trí này…" } } },
-      "quantify-work": { "label": "Lượng hóa công việc", "desc": "Biến \"Tôi phụ trách XXX\" thành câu nổi bật có số liệu, có sức ảnh hưởng", "submit": "Lượng hóa công việc", "fields": {
-        "jobContent": { "label": "Mô tả công việc (mỗi dòng một mục)", "placeholder": "VD:\nQuản lý mạng xã hội\nHỗ trợ tổ chức sự kiện thường niên\nXử lý khiếu nại khách hàng" } } },
-      "munger-mental-models": { "label": "Tư duy đa mô hình", "desc": "Mô hình tư duy đa ngành kiểu Munger + tư duy đảo ngược, mổ xẻ quyết định và điểm mù", "submit": "Bắt đầu phân tích", "fields": {
-        "decision": { "label": "Quyết định / Vấn đề", "placeholder": "VD: Có nên nghỉ việc khởi nghiệp? Nhận dự án này?" },
-        "context": { "label": "Bối cảnh & Ràng buộc", "placeholder": "Thông tin, nguồn lực, thời gian, điều bạn quan tâm…" },
-        "options": { "label": "Lựa chọn đang cân nhắc", "placeholder": "Liệt kê các lựa chọn bạn đang nghĩ tới" } } },
-      "first-principles": { "label": "Phân rã nguyên lý gốc", "desc": "Tư duy kiểu Musk: phân rã đến sự thật cơ bản, rồi xây lại giải pháp từ số 0", "submit": "Phân rã vấn đề", "fields": {
-        "problem": { "label": "Vấn đề cần giải", "placeholder": "VD: Làm sao giảm một nửa chi phí? Học nhanh một kỹ năng?" },
-        "assumptions": { "label": "Cách làm hiện tại / Giả định", "placeholder": "Hiện mọi người làm thế nào, ràng buộc bạn mặc định là gì…" } } },
-      "value-investing": { "label": "Góc nhìn đầu tư giá trị", "desc": "Đánh giá kiểu Buffett: vòng tròn năng lực, hào kinh tế, biên an toàn (không phải lời khuyên đầu tư)", "submit": "Đánh giá cơ hội", "fields": {
-        "target": { "label": "Đối tượng / Việc kinh doanh / Cơ hội", "placeholder": "VD: một mã cổ phiếu, nhượng quyền một cửa hàng, đầu tư startup của bạn bè" },
-        "info": { "label": "Thông tin đã biết", "placeholder": "Mô hình kinh doanh, tài chính, cạnh tranh, giá, mức độ bạn hiểu…" },
-        "concern": { "label": "Câu hỏi muốn làm rõ nhất", "placeholder": "VD: Giá hiện tại có hợp lý? Rủi ro ở đâu?" } } },
-      "antifragile-risk": { "label": "Đánh giá rủi ro phản mong manh", "desc": "Tư duy rủi ro kiểu Taleb: rủi ro giảm, bất đối xứng, ngưỡng sống còn", "submit": "Đánh giá rủi ro", "fields": {
-        "decision": { "label": "Quyết định / Kế hoạch cần đánh giá", "placeholder": "VD: dồn hết tiền vào một dự án, nghỉ việc làm toàn thời gian việc gì đó" },
-        "downside": { "label": "Tình huống xấu nhất bạn lo", "placeholder": "Điều tệ nhất có thể xảy ra, bạn sẽ mất gì…" } } },
-      "naval-leverage": { "label": "Đòn bẩy & Lựa chọn cuộc đời", "desc": "Góc nhìn kiểu Naval: kiến thức đặc thù, đòn bẩy, tư duy dài hạn và lựa chọn", "submit": "Cho tôi hướng đi", "fields": {
-        "situation": { "label": "Hoàn cảnh của bạn", "placeholder": "VD: 30 tuổi, nhân viên văn phòng, muốn tích lũy tài sản nhưng chưa rõ hướng" },
-        "question": { "label": "Câu hỏi muốn làm rõ", "placeholder": "VD: Nên chuyên sâu một kỹ năng hay thử nhiều? Làm sao tạo thu nhập thụ động?" } } }
+      "resume-optimize": {
+        "label": "Tối ưu hồ sơ",
+        "desc": "Dán JD; AI hai mô hình phân tích và viết lại hồ sơ tối ưu ATS",
+        "submit": "Bắt đầu tối ưu"
+      },
+      "cover-letter": {
+        "label": "Viết thư xin việc",
+        "desc": "Chọn mẫu, nhập JD và kinh nghiệm; Claude tạo thư xin việc hoàn chỉnh",
+        "submit": "Tạo thư xin việc"
+      },
+      "interview-practice": {
+        "label": "Luyện phỏng vấn",
+        "desc": "Mô phỏng câu hỏi phỏng vấn thường gặp + gợi ý trả lời theo STAR",
+        "submit": "Tạo câu hỏi",
+        "fields": {
+          "jd": {
+            "label": "JD công việc mục tiêu",
+            "placeholder": "Dán mô tả công việc để chính xác hơn…"
+          },
+          "background": {
+            "label": "Bối cảnh cá nhân",
+            "placeholder": "Mô tả ngắn học vấn, số năm kinh nghiệm, kỹ năng chính…"
+          }
+        }
+      },
+      "salary-negotiation": {
+        "label": "Đàm phán lương",
+        "desc": "Cung cấp kịch bản đàm phán hoàn chỉnh giúp bạn đạt mức lương xứng đáng",
+        "submit": "Tạo kịch bản",
+        "fields": {
+          "position": {
+            "label": "Vị trí & Ngành mục tiêu",
+            "placeholder": "VD: Marketing / Công nghệ"
+          },
+          "currentSalary": {
+            "label": "Lương hiện tại (tháng)",
+            "placeholder": "VD: 35,000"
+          },
+          "targetSalary": {
+            "label": "Lương mong muốn (tháng)",
+            "placeholder": "VD: 45,000"
+          },
+          "highlights": {
+            "label": "Điểm nổi bật & Thành tích",
+            "placeholder": "Năng lực cạnh tranh, thành quả, kỹ năng đặc biệt…"
+          }
+        }
+      },
+      "resume-clinic": {
+        "label": "Khám sức khỏe hồ sơ",
+        "desc": "Nói thẳng như HR: có nên ứng tuyển, tỷ lệ thắng, vướng ở đâu, cách khắc phục",
+        "submit": "Bắt đầu khám",
+        "fields": {
+          "jd": {
+            "label": "JD công việc mục tiêu",
+            "placeholder": "Dán mô tả công việc…"
+          },
+          "background": {
+            "label": "Bối cảnh / Điểm chính hồ sơ",
+            "placeholder": "Học vấn, kinh nghiệm, kỹ năng chính, tác phẩm tiêu biểu…"
+          },
+          "company": {
+            "label": "Công ty mục tiêu (tùy chọn)",
+            "placeholder": "VD: công ty đa quốc gia, startup, công ty niêm yết…"
+          }
+        }
+      },
+      "career-advisor": {
+        "label": "Cố vấn học & nghề",
+        "desc": "Phân tích thực tế về ngành học, nghề, chọn thành phố — thiết thực, không sáo rỗng",
+        "submit": "Cho tôi lời khuyên",
+        "fields": {
+          "situation": {
+            "label": "Hoàn cảnh của bạn",
+            "options": [
+              "Học sinh THPT chọn ngành",
+              "Sinh viên chọn hướng/chuyển ngành",
+              "Sinh viên mới ra trường chọn ngành nghề",
+              "Chuyển việc",
+              "Phân vân thi cao học/công chức"
+            ]
+          },
+          "background": {
+            "label": "Điều kiện nền tảng",
+            "placeholder": "Ngành, điểm số, kinh nghiệm, thành phố, yếu tố gia đình…"
+          },
+          "options": {
+            "label": "Các lựa chọn đang cân nhắc",
+            "placeholder": "VD: CNTT vs Điện, ở Đài Bắc vs về quê…"
+          },
+          "concern": {
+            "label": "Điều bạn quan tâm nhất",
+            "placeholder": "VD: lương, ổn định, sở thích, tiềm năng…"
+          }
+        }
+      },
+      "email-draft": {
+        "label": "Soạn Email",
+        "desc": "Thư xin lỗi, nhắc nợ, giao tiếp liên phòng — tạo email lịch sự chỉ một nhấp",
+        "submit": "Tạo Email",
+        "fields": {
+          "type": {
+            "label": "Loại Email",
+            "options": [
+              "Xin lỗi",
+              "Nhắc/đòi nợ",
+              "Yêu cầu hỗ trợ liên phòng",
+              "Từ chối yêu cầu",
+              "Báo cáo tiến độ",
+              "Cảm ơn",
+              "Khác"
+            ]
+          },
+          "relationship": {
+            "label": "Người nhận & Quan hệ",
+            "placeholder": "VD: quản lý (trực tiếp), khách hàng, đồng nghiệp liên phòng…"
+          },
+          "context": {
+            "label": "Bối cảnh",
+            "placeholder": "Mô tả bối cảnh và mục tiêu bạn muốn đạt…"
+          },
+          "keyPoints": {
+            "label": "Điểm cần nhấn mạnh (tùy chọn)",
+            "placeholder": "VD: thể hiện thành ý, chuyên nghiệp nhưng không hạ mình…"
+          }
+        }
+      },
+      "report-writing": {
+        "label": "Viết báo cáo/đề xuất",
+        "desc": "Nhập chủ đề và điểm chính; AI tạo cấu trúc và nội dung báo cáo hoàn chỉnh",
+        "submit": "Tạo báo cáo",
+        "fields": {
+          "topic": {
+            "label": "Chủ đề báo cáo",
+            "placeholder": "VD: Phân tích kết quả bán hàng Q3"
+          },
+          "context": {
+            "label": "Bối cảnh",
+            "placeholder": "Giải thích mục đích và bối cảnh báo cáo…"
+          },
+          "mainPoints": {
+            "label": "Luận điểm/Dữ liệu chính",
+            "placeholder": "Liệt kê dữ liệu, kết luận hoặc luận điểm bạn có…"
+          },
+          "audience": {
+            "label": "Đối tượng",
+            "placeholder": "VD: lãnh đạo cấp cao, khách hàng, toàn thể nhân viên…"
+          }
+        }
+      },
+      "presentation-outline": {
+        "label": "Dàn ý thuyết trình",
+        "desc": "Chủ đề + đối tượng → AI tạo dàn ý từng slide và gợi ý trực quan hóa",
+        "submit": "Tạo dàn ý",
+        "fields": {
+          "topic": {
+            "label": "Chủ đề thuyết trình",
+            "placeholder": "VD: Kế hoạch chiến lược thương hiệu 2025"
+          },
+          "audience": {
+            "label": "Đối tượng",
+            "placeholder": "VD: hội đồng quản trị, khách hàng tiềm năng…"
+          },
+          "coreMessage": {
+            "label": "Thông điệp cốt lõi (điều khán giả nên nhớ)",
+            "placeholder": "Nói thông điệp chính trong một câu…"
+          },
+          "duration": {
+            "label": "Thời lượng",
+            "placeholder": "VD: 10 phút, 30 phút"
+          }
+        }
+      },
+      "meeting-minutes": {
+        "label": "Biên bản họp",
+        "desc": "Dán ghi chú họp lộn xộn; tự sắp xếp thành tài liệu có cấu trúc",
+        "submit": "Sắp xếp biên bản",
+        "fields": {
+          "rawNotes": {
+            "label": "Ghi chú họp gốc",
+            "placeholder": "Dán ghi chú họp (có thể lộn xộn)…"
+          }
+        }
+      },
+      "workplace-phrases": {
+        "label": "Ứng đối công sở",
+        "desc": "Sếp khó tính, từ chối việc thêm… cung cấp nhiều kịch bản ứng đối",
+        "submit": "Tạo gợi ý",
+        "fields": {
+          "scenario": {
+            "label": "Loại tình huống",
+            "options": [
+              "Bị sếp làm khó",
+              "Từ chối việc thêm",
+              "Quản lý cấp trên",
+              "Đối phó đồng nghiệp giành công",
+              "Nêu ý kiến phản đối",
+              "Đề cập tăng lương",
+              "Khác"
+            ]
+          },
+          "context": {
+            "label": "Mô tả tình huống cụ thể",
+            "placeholder": "Giải thích cụ thể đã xảy ra chuyện gì…"
+          },
+          "goal": {
+            "label": "Kết quả mong muốn",
+            "placeholder": "Bạn mong cuộc trao đổi này đạt được gì…"
+          }
+        }
+      },
+      "workplace-relationship": {
+        "label": "Cố vấn quan hệ công sở",
+        "desc": "Hiểu động cơ của sếp/đồng nghiệp/cấp dưới; đưa chiến lược hòa hợp và quản lý cấp trên",
+        "submit": "Phân tích chiến lược",
+        "fields": {
+          "role": {
+            "label": "Đối tượng",
+            "options": [
+              "Quản lý trực tiếp",
+              "Sếp / Cấp cao",
+              "Đồng nghiệp ngang hàng",
+              "Cấp dưới",
+              "Tiền bối / Cố vấn",
+              "Đầu mối liên phòng"
+            ]
+          },
+          "situation": {
+            "label": "Tình huống cụ thể",
+            "placeholder": "Mô tả hành vi của họ, tương tác giữa hai bên, điểm vướng hiện tại…"
+          },
+          "goal": {
+            "label": "Mục tiêu của bạn",
+            "placeholder": "VD: lấy lòng tin, giành nguồn lực, hóa giải hiểu lầm, bảo vệ bản thân…"
+          }
+        }
+      },
+      "performance-review": {
+        "label": "Viết tự đánh giá",
+        "desc": "Nhập công việc và kết quả; AI viết bản tự đánh giá thuyết phục",
+        "submit": "Tạo tự đánh giá",
+        "fields": {
+          "position": {
+            "label": "Vị trí & Phòng ban",
+            "placeholder": "VD: Phòng Marketing, Chuyên viên Marketing số"
+          },
+          "workContent": {
+            "label": "Công việc chính kỳ này",
+            "placeholder": "Liệt kê công việc chính bạn phụ trách…"
+          },
+          "achievements": {
+            "label": "Kết quả chính (kèm số liệu)",
+            "placeholder": "VD: hoàn thành dự án XX, tăng XX%…"
+          },
+          "challenges": {
+            "label": "Thách thức đã vượt qua (tùy chọn)",
+            "placeholder": "Giải thích khó khăn và cách giải quyết…"
+          }
+        }
+      },
+      "promotion-letter": {
+        "label": "Thư xin thăng chức",
+        "desc": "Viết thư xin thăng chức mạnh mẽ, làm nổi bật đóng góp và giá trị của bạn",
+        "submit": "Tạo thư",
+        "fields": {
+          "positions": {
+            "label": "Vị trí hiện tại → Vị trí xin",
+            "placeholder": "VD: Chuyên viên KD → Trưởng nhóm KD"
+          },
+          "background": {
+            "label": "Bối cảnh & Thâm niên",
+            "placeholder": "VD: làm việc 3 năm, nền tảng kỹ thuật…"
+          },
+          "achievements": {
+            "label": "Đóng góp & Thành tích chính",
+            "placeholder": "Liệt kê đóng góp cụ thể (có số liệu càng tốt)…"
+          },
+          "reason": {
+            "label": "Lý do xin",
+            "placeholder": "Vì sao bạn là người phù hợp nhất cho vị trí này…"
+          }
+        }
+      },
+      "quantify-work": {
+        "label": "Lượng hóa công việc",
+        "desc": "Biến \"Tôi phụ trách XXX\" thành câu nổi bật có số liệu, có sức ảnh hưởng",
+        "submit": "Lượng hóa công việc",
+        "fields": {
+          "jobContent": {
+            "label": "Mô tả công việc (mỗi dòng một mục)",
+            "placeholder": "VD:\nQuản lý mạng xã hội\nHỗ trợ tổ chức sự kiện thường niên\nXử lý khiếu nại khách hàng"
+          }
+        }
+      },
+      "munger-mental-models": {
+        "label": "Tư duy đa mô hình",
+        "desc": "Mô hình tư duy đa ngành kiểu Munger + tư duy đảo ngược, mổ xẻ quyết định và điểm mù",
+        "submit": "Bắt đầu phân tích",
+        "fields": {
+          "decision": {
+            "label": "Quyết định / Vấn đề",
+            "placeholder": "VD: Có nên nghỉ việc khởi nghiệp? Nhận dự án này?"
+          },
+          "context": {
+            "label": "Bối cảnh & Ràng buộc",
+            "placeholder": "Thông tin, nguồn lực, thời gian, điều bạn quan tâm…"
+          },
+          "options": {
+            "label": "Lựa chọn đang cân nhắc",
+            "placeholder": "Liệt kê các lựa chọn bạn đang nghĩ tới"
+          }
+        }
+      },
+      "first-principles": {
+        "label": "Phân rã nguyên lý gốc",
+        "desc": "Tư duy kiểu Musk: phân rã đến sự thật cơ bản, rồi xây lại giải pháp từ số 0",
+        "submit": "Phân rã vấn đề",
+        "fields": {
+          "problem": {
+            "label": "Vấn đề cần giải",
+            "placeholder": "VD: Làm sao giảm một nửa chi phí? Học nhanh một kỹ năng?"
+          },
+          "assumptions": {
+            "label": "Cách làm hiện tại / Giả định",
+            "placeholder": "Hiện mọi người làm thế nào, ràng buộc bạn mặc định là gì…"
+          }
+        }
+      },
+      "value-investing": {
+        "label": "Góc nhìn đầu tư giá trị",
+        "desc": "Đánh giá kiểu Buffett: vòng tròn năng lực, hào kinh tế, biên an toàn (không phải lời khuyên đầu tư)",
+        "submit": "Đánh giá cơ hội",
+        "fields": {
+          "target": {
+            "label": "Đối tượng / Việc kinh doanh / Cơ hội",
+            "placeholder": "VD: một mã cổ phiếu, nhượng quyền một cửa hàng, đầu tư startup của bạn bè"
+          },
+          "info": {
+            "label": "Thông tin đã biết",
+            "placeholder": "Mô hình kinh doanh, tài chính, cạnh tranh, giá, mức độ bạn hiểu…"
+          },
+          "concern": {
+            "label": "Câu hỏi muốn làm rõ nhất",
+            "placeholder": "VD: Giá hiện tại có hợp lý? Rủi ro ở đâu?"
+          }
+        }
+      },
+      "antifragile-risk": {
+        "label": "Đánh giá rủi ro phản mong manh",
+        "desc": "Tư duy rủi ro kiểu Taleb: rủi ro giảm, bất đối xứng, ngưỡng sống còn",
+        "submit": "Đánh giá rủi ro",
+        "fields": {
+          "decision": {
+            "label": "Quyết định / Kế hoạch cần đánh giá",
+            "placeholder": "VD: dồn hết tiền vào một dự án, nghỉ việc làm toàn thời gian việc gì đó"
+          },
+          "downside": {
+            "label": "Tình huống xấu nhất bạn lo",
+            "placeholder": "Điều tệ nhất có thể xảy ra, bạn sẽ mất gì…"
+          }
+        }
+      },
+      "naval-leverage": {
+        "label": "Đòn bẩy & Lựa chọn cuộc đời",
+        "desc": "Góc nhìn kiểu Naval: kiến thức đặc thù, đòn bẩy, tư duy dài hạn và lựa chọn",
+        "submit": "Cho tôi hướng đi",
+        "fields": {
+          "situation": {
+            "label": "Hoàn cảnh của bạn",
+            "placeholder": "VD: 30 tuổi, nhân viên văn phòng, muốn tích lũy tài sản nhưng chưa rõ hướng"
+          },
+          "question": {
+            "label": "Câu hỏi muốn làm rõ",
+            "placeholder": "VD: Nên chuyên sâu một kỹ năng hay thử nhiều? Làm sao tạo thu nhập thụ động?"
+          }
+        }
+      }
     }
   },
   "Pipeline": {
@@ -1588,9 +2220,19 @@
     "enabled": "Đã bật",
     "disabled": "Đã tắt",
     "frequency": "Tần suất",
-    "freqDaily": "Hàng ngày", "freqWeekly": "Hàng tuần", "freqMonthly": "Hàng tháng",
+    "freqDaily": "Hàng ngày",
+    "freqWeekly": "Hàng tuần",
+    "freqMonthly": "Hàng tháng",
     "weekday": "Thứ trong tuần",
-    "weekdayOpt": { "0": "Chủ Nhật", "1": "Thứ Hai", "2": "Thứ Ba", "3": "Thứ Tư", "4": "Thứ Năm", "5": "Thứ Sáu", "6": "Thứ Bảy" },
+    "weekdayOpt": {
+      "0": "Chủ Nhật",
+      "1": "Thứ Hai",
+      "2": "Thứ Ba",
+      "3": "Thứ Tư",
+      "4": "Thứ Năm",
+      "5": "Thứ Sáu",
+      "6": "Thứ Bảy"
+    },
     "monthDay": "Ngày trong tháng",
     "runTime": "Giờ chạy",
     "hourUnit": "{h}:00",
@@ -1609,17 +2251,50 @@
     "statPending": "{count} chờ chạy",
     "untitledCampaign": "Chiến dịch chưa đặt tên",
     "steps": {
-      "1": { "name": "Thu thập thông tin", "desc": "Tin tức/web/bản đồ/đánh giá" },
-      "2": { "name": "Dữ liệu công ty", "desc": "Từ dự án tự động hóa marketing" },
-      "3": { "name": "Phân tích dữ liệu", "desc": "SWOT/đối thủ/thị trường" },
-      "4": { "name": "Sản xuất nội dung", "desc": "Nội dung marketing đa nền tảng" },
-      "5": { "name": "Kịch bản ảnh", "desc": "Tạo kịch bản hình ảnh" },
-      "6": { "name": "Sản xuất ảnh", "desc": "Tạo ảnh AI" },
-      "7": { "name": "Kịch bản video", "desc": "Tạo phân cảnh" },
-      "8": { "name": "Sản xuất video", "desc": "Tạo video AI" },
-      "9": { "name": "Tải lên nền tảng", "desc": "Tự động tải lên các nền tảng" },
-      "10": { "name": "Marketing khách tiềm năng", "desc": "Marketing điện thoại / Email hàng loạt" },
-      "11": { "name": "Marketing người dẫn", "desc": "Video người dẫn HeyGen" }
+      "1": {
+        "name": "Thu thập thông tin",
+        "desc": "Tin tức/web/bản đồ/đánh giá"
+      },
+      "2": {
+        "name": "Dữ liệu công ty",
+        "desc": "Từ dự án tự động hóa marketing"
+      },
+      "3": {
+        "name": "Phân tích dữ liệu",
+        "desc": "SWOT/đối thủ/thị trường"
+      },
+      "4": {
+        "name": "Sản xuất nội dung",
+        "desc": "Nội dung marketing đa nền tảng"
+      },
+      "5": {
+        "name": "Kịch bản ảnh",
+        "desc": "Tạo kịch bản hình ảnh"
+      },
+      "6": {
+        "name": "Sản xuất ảnh",
+        "desc": "Tạo ảnh AI"
+      },
+      "7": {
+        "name": "Kịch bản video",
+        "desc": "Tạo phân cảnh"
+      },
+      "8": {
+        "name": "Sản xuất video",
+        "desc": "Tạo video AI"
+      },
+      "9": {
+        "name": "Tải lên nền tảng",
+        "desc": "Tự động tải lên các nền tảng"
+      },
+      "10": {
+        "name": "Marketing khách tiềm năng",
+        "desc": "Marketing điện thoại / Email hàng loạt"
+      },
+      "11": {
+        "name": "Marketing người dẫn",
+        "desc": "Video người dẫn HeyGen"
+      }
     },
     "log": {
       "start": "Bắt đầu: {name}",
@@ -1641,412 +2316,1422 @@
     },
     "out": {
       "loadedSkip": "Đã tải từ dự án marketing, bỏ qua chạy lại",
-      "collectFailed": "Thu thập thất bại", "collectDone": "Thu thập xong",
-      "analyzeFailed": "Phân tích thất bại (HTTP {status})", "analyzeDone": "Phân tích xong", "simDone": "Mô phỏng người tiêu dùng xong",
-      "copyFailed": "Tạo nội dung thất bại", "copyDone": "Nội dung xong · {count} bản",
-      "imgScriptFailed": "Kịch bản ảnh thất bại", "imgScriptDone": "Kịch bản ảnh xong · {count} bản", "noImgScript": "Không có kịch bản ảnh, hãy chạy Đơn vị 5 trước",
+      "collectFailed": "Thu thập thất bại",
+      "collectDone": "Thu thập xong",
+      "analyzeFailed": "Phân tích thất bại (HTTP {status})",
+      "analyzeDone": "Phân tích xong",
+      "simDone": "Mô phỏng người tiêu dùng xong",
+      "copyFailed": "Tạo nội dung thất bại",
+      "copyDone": "Nội dung xong · {count} bản",
+      "imgScriptFailed": "Kịch bản ảnh thất bại",
+      "imgScriptDone": "Kịch bản ảnh xong · {count} bản",
+      "noImgScript": "Không có kịch bản ảnh, hãy chạy Đơn vị 5 trước",
       "imgDone": "Tạo ảnh xong · {count} ảnh",
-      "videoScriptFailed": "Kịch bản video thất bại", "videoScriptDone": "Kịch bản video xong · {count} bản", "noVideoScript": "Không có kịch bản video, hãy chạy Đơn vị 7 trước",
-      "videoSubmitFailed": "Gửi video thất bại", "aborted": "Đã hủy", "videoDone": "Tạo video xong", "videoFailed": "Tạo video thất bại", "videoTimeout": "Tạo video quá hạn",
+      "videoScriptFailed": "Kịch bản video thất bại",
+      "videoScriptDone": "Kịch bản video xong · {count} bản",
+      "noVideoScript": "Không có kịch bản video, hãy chạy Đơn vị 7 trước",
+      "videoSubmitFailed": "Gửi video thất bại",
+      "aborted": "Đã hủy",
+      "videoDone": "Tạo video xong",
+      "videoFailed": "Tạo video thất bại",
+      "videoTimeout": "Tạo video quá hạn",
       "noUploadPlatforms": "Chưa cài nền tảng tải lên; cấu hình nền tảng Đơn vị 9 trong tự động hóa marketing",
-      "uploadFailed": "Tải lên thất bại", "waitAnchorUpload": "{platforms} (tải lên sau khi tạo video người dẫn)", "uploadDone": "Tải lên xong",
+      "uploadFailed": "Tải lên thất bại",
+      "waitAnchorUpload": "{platforms} (tải lên sau khi tạo video người dẫn)",
+      "uploadDone": "Tải lên xong",
       "defaultCallScript": "Xin chào, cảm ơn bạn đã quan tâm đến chúng tôi.",
-      "phoneResult": "Điện thoại: {success}/{total} thành công", "phoneFailed": "Điện thoại thất bại: {error}",
+      "phoneResult": "Điện thoại: {success}/{total} thành công",
+      "phoneFailed": "Điện thoại thất bại: {error}",
       "defaultEmailSubject": "Thông điệp marketing",
-      "emailResult": "Email: {success}/{total} thành công", "emailFailed": "Email thất bại: {error}",
-      "noLeadsList": "Không có danh sách điện thoại hoặc Email; cấu hình Đơn vị 10 trong tự động hóa marketing", "leadsDone": "Marketing khách tiềm năng xong",
+      "emailResult": "Email: {success}/{total} thành công",
+      "emailFailed": "Email thất bại: {error}",
+      "noLeadsList": "Không có danh sách điện thoại hoặc Email; cấu hình Đơn vị 10 trong tự động hóa marketing",
+      "leadsDone": "Marketing khách tiềm năng xong",
       "noAnchorConfig": "Chưa cài người dẫn; đặt Avatar & Voice ID Đơn vị 11 trong tự động hóa marketing",
       "defaultAnchorStyle": "chuyên nghiệp & thân thiện",
-      "anchorScriptGenFailed": "Tự tạo kịch bản người dẫn thất bại: {error}", "unknownError": "Lỗi không xác định",
+      "anchorScriptGenFailed": "Tự tạo kịch bản người dẫn thất bại: {error}",
+      "unknownError": "Lỗi không xác định",
       "heygenSubmitFailed": "Gửi HeyGen thất bại",
-      "uploadedTo": "Đã tải lên {platforms}", "uploadFailedShort": "Tải lên thất bại: {error}",
-      "anchorVideoDone": "Video người dẫn xong", "anchorVideoFailed": "Tạo video người dẫn thất bại", "heygenTimeout": "HeyGen quá hạn",
+      "uploadedTo": "Đã tải lên {platforms}",
+      "uploadFailedShort": "Tải lên thất bại: {error}",
+      "anchorVideoDone": "Video người dẫn xong",
+      "anchorVideoFailed": "Tạo video người dẫn thất bại",
+      "heygenTimeout": "HeyGen quá hạn",
       "unitNotSupported": "Đơn vị {unitId} không hỗ trợ tự chạy"
     }
   },
   "Prospect": {
     "title": "Tiếp thị khách hàng tiềm năng",
     "subtitle": "Tự thu thập tổ chức → AI lọc + phân loại → tính khoảng cách → gọi điện / gửi email",
-    "tabPhone": "Tiếp thị qua điện thoại", "tabEmail": "Tiếp thị qua Email", "tabSchedule": "Chạy theo lịch",
-    "cats": { "factory": "Sản xuất/Nhà máy", "hotel": "Lưu trú/Homestay", "restaurant": "Ẩm thực/Thực phẩm", "financial": "Tài chính/Bảo hiểm", "retail": "Bán lẻ/Cửa hàng", "healthcare": "Y tế/Phòng khám", "education": "Giáo dục/Đào tạo", "realestate": "Bất động sản", "logistics": "Logistics/Vận tải", "other": "Khác" },
-    "cond": { "mobile": "Di động", "landline": "Cố định", "empRange": "{min}–{max} người", "empMin": "≥{min} người", "empMax": "≤{max} người", "catchAll": "Khác (khớp tất cả)", "keyword": "Từ khóa: {tag}", "all": "(khớp tất cả)" },
-    "voice": { "mlFemale": "Đa ngôn ngữ, Nữ", "mlMale": "Đa ngôn ngữ, Nam", "brMale": "Tiếng Anh-Anh, Nam", "usFemale": "Tiếng Anh-Mỹ, Nữ" },
-    "def": { "script": "Kịch bản mặc định", "scriptText": "Xin chào, chúng tôi là...", "template": "Mẫu mặc định", "generalCustomer": "Khách hàng chung", "generalCustomerDesc": "Khách tiềm năng chung hoặc không rõ", "marketingTeam": "Đội tiếp thị", "scriptN": "Kịch bản {n}", "ruleN": "Quy tắc {n}", "templateN": "Mẫu {n}", "categoryN": "Phân loại {n}" },
-    "rule": { "namePlaceholder": "Tên quy tắc", "phoneType": "Loại điện thoại", "any": "Bất kỳ", "aiCategory": "Phân loại AI", "anyCategory": "— Mọi phân loại —", "minEmp": "Số người tối thiểu (0=không giới hạn)", "maxEmp": "Số người tối đa (0=không giới hạn)", "maxDist": "Khoảng cách tối đa km (0=không giới hạn)", "customTag": "Từ khóa tùy chỉnh (khớp nếu tên hoặc phân loại gốc chứa từ này)", "customTagPlaceholder": "VD: làm đẹp, nhà máy… (để trống hoặc \"khác\" = khớp tất cả, làm quy tắc dự phòng)", "useScript": "Kịch bản sử dụng", "noCall": "— Không gọi —", "condPrefix": "Điều kiện: " },
-    "err": { "noEmailOrgs": "Không có tổ chức nào khớp quy tắc đã chọn và có Email", "noKeywords": "Vui lòng nhập từ khóa tìm kiếm", "collectFailed": "Thu thập thất bại", "aborted": "Đã hủy", "aiFailed": "Phân tích AI thất bại" },
-    "msg": { "collected": "Đã thu thập {count} ký tự", "selected": "Chọn {selected} / {total}", "called": "Đã gọi {count}" },
+    "tabPhone": "Tiếp thị qua điện thoại",
+    "tabEmail": "Tiếp thị qua Email",
+    "tabSchedule": "Chạy theo lịch",
+    "cats": {
+      "factory": "Sản xuất/Nhà máy",
+      "hotel": "Lưu trú/Homestay",
+      "restaurant": "Ẩm thực/Thực phẩm",
+      "financial": "Tài chính/Bảo hiểm",
+      "retail": "Bán lẻ/Cửa hàng",
+      "healthcare": "Y tế/Phòng khám",
+      "education": "Giáo dục/Đào tạo",
+      "realestate": "Bất động sản",
+      "logistics": "Logistics/Vận tải",
+      "other": "Khác"
+    },
+    "cond": {
+      "mobile": "Di động",
+      "landline": "Cố định",
+      "empRange": "{min}–{max} người",
+      "empMin": "≥{min} người",
+      "empMax": "≤{max} người",
+      "catchAll": "Khác (khớp tất cả)",
+      "keyword": "Từ khóa: {tag}",
+      "all": "(khớp tất cả)"
+    },
+    "voice": {
+      "mlFemale": "Đa ngôn ngữ, Nữ",
+      "mlMale": "Đa ngôn ngữ, Nam",
+      "brMale": "Tiếng Anh-Anh, Nam",
+      "usFemale": "Tiếng Anh-Mỹ, Nữ"
+    },
+    "def": {
+      "script": "Kịch bản mặc định",
+      "scriptText": "Xin chào, chúng tôi là...",
+      "template": "Mẫu mặc định",
+      "generalCustomer": "Khách hàng chung",
+      "generalCustomerDesc": "Khách tiềm năng chung hoặc không rõ",
+      "marketingTeam": "Đội tiếp thị",
+      "scriptN": "Kịch bản {n}",
+      "ruleN": "Quy tắc {n}",
+      "templateN": "Mẫu {n}",
+      "categoryN": "Phân loại {n}"
+    },
+    "rule": {
+      "namePlaceholder": "Tên quy tắc",
+      "phoneType": "Loại điện thoại",
+      "any": "Bất kỳ",
+      "aiCategory": "Phân loại AI",
+      "anyCategory": "— Mọi phân loại —",
+      "minEmp": "Số người tối thiểu (0=không giới hạn)",
+      "maxEmp": "Số người tối đa (0=không giới hạn)",
+      "maxDist": "Khoảng cách tối đa km (0=không giới hạn)",
+      "customTag": "Từ khóa tùy chỉnh (khớp nếu tên hoặc phân loại gốc chứa từ này)",
+      "customTagPlaceholder": "VD: làm đẹp, nhà máy… (để trống hoặc \"khác\" = khớp tất cả, làm quy tắc dự phòng)",
+      "useScript": "Kịch bản sử dụng",
+      "noCall": "— Không gọi —",
+      "condPrefix": "Điều kiện: "
+    },
+    "err": {
+      "noEmailOrgs": "Không có tổ chức nào khớp quy tắc đã chọn và có Email",
+      "noKeywords": "Vui lòng nhập từ khóa tìm kiếm",
+      "collectFailed": "Thu thập thất bại",
+      "aborted": "Đã hủy",
+      "aiFailed": "Phân tích AI thất bại"
+    },
+    "msg": {
+      "collected": "Đã thu thập {count} ký tự",
+      "selected": "Chọn {selected} / {total}",
+      "called": "Đã gọi {count}"
+    },
     "sched": {
-      "enable": "Bật chạy theo lịch", "enableHint": "Hệ thống kiểm tra mỗi giờ và kích hoạt thu thập+lọc vào thời gian đã đặt",
-      "mode": "Chế độ", "modeBoth": "Cả hai",
+      "enable": "Bật chạy theo lịch",
+      "enableHint": "Hệ thống kiểm tra mỗi giờ và kích hoạt thu thập+lọc vào thời gian đã đặt",
+      "mode": "Chế độ",
+      "modeBoth": "Cả hai",
       "modePhoneHint": "Sau khi thu thập+lọc, bạn sẽ được thông báo qua Telegram để gọi điện",
       "modeEmailHint": "Sau khi thu thập+lọc, tự gửi email hàng loạt theo quy tắc",
       "modeBothHint": "Sau khi thu thập+lọc, tự gửi email và Telegram thông báo cho bạn gọi điện",
-      "frequency": "Tần suất", "daily": "Hàng ngày", "weekly": "Hàng tuần", "monthly": "Hàng tháng",
-      "weekday": "Thứ trong tuần", "dow": { "0": "CN", "1": "T2", "2": "T3", "3": "T4", "4": "T5", "5": "T6", "6": "T7" },
-      "monthDay": "Ngày trong tháng", "monthDayHint": "Tối đa 28 (tránh vấn đề số ngày trong tháng)",
-      "time": "Thời gian chạy", "hourUnit": "{h}:00", "minUnit": ":{m}",
-      "statusTitle": "Trạng thái", "lastRun": "Lần chạy trước: ", "nextRun": "Lần chạy tiếp: ",
-      "lastResult": "Kết quả trước: thu thập {total} → chọn ", "lastResultSuffix": "",
-      "saving": "Đang lưu…", "saved": "Đã lưu!", "save": "Lưu lịch",
+      "frequency": "Tần suất",
+      "daily": "Hàng ngày",
+      "weekly": "Hàng tuần",
+      "monthly": "Hàng tháng",
+      "weekday": "Thứ trong tuần",
+      "dow": {
+        "0": "CN",
+        "1": "T2",
+        "2": "T3",
+        "3": "T4",
+        "4": "T5",
+        "5": "T6",
+        "6": "T7"
+      },
+      "monthDay": "Ngày trong tháng",
+      "monthDayHint": "Tối đa 28 (tránh vấn đề số ngày trong tháng)",
+      "time": "Thời gian chạy",
+      "hourUnit": "{h}:00",
+      "minUnit": ":{m}",
+      "statusTitle": "Trạng thái",
+      "lastRun": "Lần chạy trước: ",
+      "nextRun": "Lần chạy tiếp: ",
+      "lastResult": "Kết quả trước: thu thập {total} → chọn ",
+      "lastResultSuffix": "",
+      "saving": "Đang lưu…",
+      "saved": "Đã lưu!",
+      "save": "Lưu lịch",
       "saveHint": "Sau khi lưu, hệ thống kiểm tra mỗi giờ và chạy đúng giờ. Kết quả thông báo qua Telegram."
     },
-    "s1": { "title": "Bước 1 — Nguồn thu thập", "keywords": "Từ khóa tìm kiếm *", "keywordsPlaceholder": "Mỗi dòng hoặc phân tách bằng dấu phẩy một từ khóa, tìm độc lập\nVD:\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea", "keywordsHint": "Nhiều từ khóa được tìm riêng và gộp/loại trùng", "location": "Khu vực (tùy chọn)", "locationPlaceholder": "VD: TP Đài Nam, huyện Tân Trúc", "limit": "Số lượng tối đa mỗi từ khóa", "limitHint": "Nhiều từ khóa tìm riêng rồi gộp; tổng = số lượng × số từ khóa", "channels": "Kênh thu thập" },
-    "src": { "map": "Bản đồ", "web": "Trang web" },
-    "s2": { "title": "Bước 2 — Điều kiện lọc", "criteria": "Điều kiện lọc (AI hiểu)", "criteriaPlaceholder": "VD: chỉ sản xuất và nhà máy; trên 50 nhân viên; loại studio cá nhân nhỏ", "minEmp": "Số nhân viên tối thiểu", "unlimited": "0 = không giới hạn" },
-    "s3": { "title": "Bước 3 — Khoảng cách", "enable": "Bật lọc theo khoảng cách", "enableHint": "Khi tắt, không loại theo khoảng cách; vẫn hiện khoảng cách cửa hàng gần nhất", "noBranches": "Chưa thiết lập cửa hàng. Hãy thêm tại \"Tự động hóa tiếp thị → Dữ liệu công ty → Cửa hàng/Chi nhánh\".", "branchesLoaded": "Đã tải <b>{total}</b> cửa hàng, trong đó <b>{coords}</b> có tọa độ để tính khoảng cách.", "maxDist": "Khoảng cách tối đa (km)", "maxDistPlaceholder": "VD: 5", "maxDistHint": "Tổ chức vượt khoảng cách này sẽ bị loại (cần cửa hàng có tọa độ)." },
-    "s4p": { "title": "Bước 4 — Kịch bản giọng nói", "scriptName": "Tên kịch bản", "scriptTextPlaceholder": "Nhập nội dung kịch bản giọng nói...", "addScript": "Thêm kịch bản" },
-    "s5p": { "title": "Bước 5 — Quy tắc gọi", "hint1": "Khớp từng quy tắc theo thứ tự; <b>quy tắc khớp đầu tiên</b> thắng. Kết hợp loại điện thoại, phân loại AI, số người, khoảng cách, v.v.", "hint2": "Tổ chức không khớp quy tắc nào sẽ vào nhóm \"Chưa phân bổ\" và không tự gọi.", "empty": "Chưa có quy tắc, nhấn \"Thêm quy tắc\" để bắt đầu", "addRule": "Thêm quy tắc" },
-    "s6p": { "title": "Bước 6 — Cài đặt gọi", "callerId": "Số hiển thị Bird (Caller ID)", "callerIdHint": " — số người nhận thấy khi gọi (số công ty bạn)", "callerIdWarn": "⚠️ Không điền thì không gọi được, hãy nhập số đã xác minh trong tài khoản Bird", "dialList": "Danh sách chờ gọi ({count} số hợp lệ)", "fromFilter": " — từ kết quả lọc", "needRules": "Hãy tạo quy tắc gọi ở Bước 5 trước", "dialable": "{has} gọi được / {no} không có số", "andMore": "…còn {count} số nữa", "noPhonePrefix": "Không có số: ", "unmappedNoCall": "Chưa phân bổ (không khớp quy tắc) {count} — sẽ không gọi", "noSelected": "Sau lọc không có tổ chức được chọn, không có số để gọi", "runFirst": "Sau khi chạy Pipeline, danh sách chờ gọi sẽ hiện ở đây" },
-    "s4e": { "title": "Bước 4 — Mẫu kịch bản Email", "hint": "Định nghĩa mẫu nội dung Email để dùng trong quy tắc gửi.", "templateName": "Tên mẫu", "subject": "Tiêu đề Email", "body": "Nội dung Email (hỗ trợ xuống dòng)", "addTemplate": "Thêm mẫu" },
-    "s5e": { "title": "Bước 5 — Quy tắc gửi", "hint": "Tùy chỉnh tên phân loại và điều kiện, chỉ định mẫu áp dụng. Khớp theo thứ tự, quy tắc khớp đầu tiên có hiệu lực.", "categoryName": "Tên phân loại (VD: blogger làm đẹp)", "tagPlaceholder": "VD: làm đẹp, nhà máy, blogger (để trống = không giới hạn)", "applyTemplate": "Áp dụng mẫu" },
-    "s6e": { "title": "Bước 6 — Cài đặt người gửi", "fromName": "Tên người gửi", "fromEmail": "Email người gửi (tên miền đã xác minh Resend)", "envNote": "Cần cài biến môi trường: " },
-    "run": { "running": "Đang chạy…", "exec": "Chạy Pipeline", "collect": "Thu thập", "analyze": "Phân tích", "call": "Gọi" },
-    "stat": { "total": "Tổng thu thập", "selected": "Được chọn", "rejected": "Bị loại" },
-    "email": { "sendTitle": "Gửi Email", "noEmailTitle": "⚠️ Không tự phát hiện Email nào", "noEmailHint": "Google Maps không cung cấp dữ liệu Email. Hãy thêm <b>Facebook</b> hoặc <b>Trang web</b> vào kênh ở Bước 1, hệ thống sẽ thử trích xuất Email từ dữ liệu nhà cung cấp.", "manualHint": "Bạn cũng có thể nhập thủ công Email từng tổ chức ở bảng dưới.", "perOrgEmail": "Email từng tổ chức", "filledCount": "{filled}/{total} đã điền", "templateLabel": "Mẫu: {name}", "notSet": "Chưa đặt", "hasEmail": "{count} có Email", "sending": "Đang gửi…", "sendN": "Gửi {count}", "subjectPrefix": "Tiêu đề: " },
-    "res": { "success": "✓ {n} thành công", "fail": "✗ {n} thất bại" },
-    "phone": { "groupTitle": "Gọi theo nhóm quy tắc", "matchedPhones": "{matched} tổ chức · {phones} số hợp lệ", "calling": "Đang gọi…", "callN": "Gọi {count}", "noScript": "Chưa gán kịch bản", "scriptPrefix": "Kịch bản: ", "noPhone": "Không có điện thoại", "unmappedCount": "Chưa phân bổ (không khớp quy tắc) {count}", "rejectedCount": "Tổ chức bị loại {count} (nhấn để mở)", "selectedListCount": "Danh sách được chọn đầy đủ {count}", "colOrg": "Tổ chức", "colCategory": "Phân loại", "colPhone": "Điện thoại", "colRule": "Quy tắc", "unassigned": "Chưa phân bổ" }
+    "s1": {
+      "title": "Bước 1 — Nguồn thu thập",
+      "keywords": "Từ khóa tìm kiếm *",
+      "keywordsPlaceholder": "Mỗi dòng hoặc phân tách bằng dấu phẩy một từ khóa, tìm độc lập\nVD:\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea",
+      "keywordsHint": "Nhiều từ khóa được tìm riêng và gộp/loại trùng",
+      "location": "Khu vực (tùy chọn)",
+      "locationPlaceholder": "VD: TP Đài Nam, huyện Tân Trúc",
+      "limit": "Số lượng tối đa mỗi từ khóa",
+      "limitHint": "Nhiều từ khóa tìm riêng rồi gộp; tổng = số lượng × số từ khóa",
+      "channels": "Kênh thu thập"
+    },
+    "src": {
+      "map": "Bản đồ",
+      "web": "Trang web"
+    },
+    "s2": {
+      "title": "Bước 2 — Điều kiện lọc",
+      "criteria": "Điều kiện lọc (AI hiểu)",
+      "criteriaPlaceholder": "VD: chỉ sản xuất và nhà máy; trên 50 nhân viên; loại studio cá nhân nhỏ",
+      "minEmp": "Số nhân viên tối thiểu",
+      "unlimited": "0 = không giới hạn"
+    },
+    "s3": {
+      "title": "Bước 3 — Khoảng cách",
+      "enable": "Bật lọc theo khoảng cách",
+      "enableHint": "Khi tắt, không loại theo khoảng cách; vẫn hiện khoảng cách cửa hàng gần nhất",
+      "noBranches": "Chưa thiết lập cửa hàng. Hãy thêm tại \"Tự động hóa tiếp thị → Dữ liệu công ty → Cửa hàng/Chi nhánh\".",
+      "branchesLoaded": "Đã tải <b>{total}</b> cửa hàng, trong đó <b>{coords}</b> có tọa độ để tính khoảng cách.",
+      "maxDist": "Khoảng cách tối đa (km)",
+      "maxDistPlaceholder": "VD: 5",
+      "maxDistHint": "Tổ chức vượt khoảng cách này sẽ bị loại (cần cửa hàng có tọa độ)."
+    },
+    "s4p": {
+      "title": "Bước 4 — Kịch bản giọng nói",
+      "scriptName": "Tên kịch bản",
+      "scriptTextPlaceholder": "Nhập nội dung kịch bản giọng nói...",
+      "addScript": "Thêm kịch bản"
+    },
+    "s5p": {
+      "title": "Bước 5 — Quy tắc gọi",
+      "hint1": "Khớp từng quy tắc theo thứ tự; <b>quy tắc khớp đầu tiên</b> thắng. Kết hợp loại điện thoại, phân loại AI, số người, khoảng cách, v.v.",
+      "hint2": "Tổ chức không khớp quy tắc nào sẽ vào nhóm \"Chưa phân bổ\" và không tự gọi.",
+      "empty": "Chưa có quy tắc, nhấn \"Thêm quy tắc\" để bắt đầu",
+      "addRule": "Thêm quy tắc"
+    },
+    "s6p": {
+      "title": "Bước 6 — Cài đặt gọi",
+      "callerId": "Số hiển thị Bird (Caller ID)",
+      "callerIdHint": " — số người nhận thấy khi gọi (số công ty bạn)",
+      "callerIdWarn": "⚠️ Không điền thì không gọi được, hãy nhập số đã xác minh trong tài khoản Bird",
+      "dialList": "Danh sách chờ gọi ({count} số hợp lệ)",
+      "fromFilter": " — từ kết quả lọc",
+      "needRules": "Hãy tạo quy tắc gọi ở Bước 5 trước",
+      "dialable": "{has} gọi được / {no} không có số",
+      "andMore": "…còn {count} số nữa",
+      "noPhonePrefix": "Không có số: ",
+      "unmappedNoCall": "Chưa phân bổ (không khớp quy tắc) {count} — sẽ không gọi",
+      "noSelected": "Sau lọc không có tổ chức được chọn, không có số để gọi",
+      "runFirst": "Sau khi chạy Pipeline, danh sách chờ gọi sẽ hiện ở đây"
+    },
+    "s4e": {
+      "title": "Bước 4 — Mẫu kịch bản Email",
+      "hint": "Định nghĩa mẫu nội dung Email để dùng trong quy tắc gửi.",
+      "templateName": "Tên mẫu",
+      "subject": "Tiêu đề Email",
+      "body": "Nội dung Email (hỗ trợ xuống dòng)",
+      "addTemplate": "Thêm mẫu"
+    },
+    "s5e": {
+      "title": "Bước 5 — Quy tắc gửi",
+      "hint": "Tùy chỉnh tên phân loại và điều kiện, chỉ định mẫu áp dụng. Khớp theo thứ tự, quy tắc khớp đầu tiên có hiệu lực.",
+      "categoryName": "Tên phân loại (VD: blogger làm đẹp)",
+      "tagPlaceholder": "VD: làm đẹp, nhà máy, blogger (để trống = không giới hạn)",
+      "applyTemplate": "Áp dụng mẫu"
+    },
+    "s6e": {
+      "title": "Bước 6 — Cài đặt người gửi",
+      "fromName": "Tên người gửi",
+      "fromEmail": "Email người gửi (tên miền đã xác minh Resend)",
+      "envNote": "Cần cài biến môi trường: "
+    },
+    "run": {
+      "running": "Đang chạy…",
+      "exec": "Chạy Pipeline",
+      "collect": "Thu thập",
+      "analyze": "Phân tích",
+      "call": "Gọi"
+    },
+    "stat": {
+      "total": "Tổng thu thập",
+      "selected": "Được chọn",
+      "rejected": "Bị loại"
+    },
+    "email": {
+      "sendTitle": "Gửi Email",
+      "noEmailTitle": "⚠️ Không tự phát hiện Email nào",
+      "noEmailHint": "Google Maps không cung cấp dữ liệu Email. Hãy thêm <b>Facebook</b> hoặc <b>Trang web</b> vào kênh ở Bước 1, hệ thống sẽ thử trích xuất Email từ dữ liệu nhà cung cấp.",
+      "manualHint": "Bạn cũng có thể nhập thủ công Email từng tổ chức ở bảng dưới.",
+      "perOrgEmail": "Email từng tổ chức",
+      "filledCount": "{filled}/{total} đã điền",
+      "templateLabel": "Mẫu: {name}",
+      "notSet": "Chưa đặt",
+      "hasEmail": "{count} có Email",
+      "sending": "Đang gửi…",
+      "sendN": "Gửi {count}",
+      "subjectPrefix": "Tiêu đề: "
+    },
+    "res": {
+      "success": "✓ {n} thành công",
+      "fail": "✗ {n} thất bại"
+    },
+    "phone": {
+      "groupTitle": "Gọi theo nhóm quy tắc",
+      "matchedPhones": "{matched} tổ chức · {phones} số hợp lệ",
+      "calling": "Đang gọi…",
+      "callN": "Gọi {count}",
+      "noScript": "Chưa gán kịch bản",
+      "scriptPrefix": "Kịch bản: ",
+      "noPhone": "Không có điện thoại",
+      "unmappedCount": "Chưa phân bổ (không khớp quy tắc) {count}",
+      "rejectedCount": "Tổ chức bị loại {count} (nhấn để mở)",
+      "selectedListCount": "Danh sách được chọn đầy đủ {count}",
+      "colOrg": "Tổ chức",
+      "colCategory": "Phân loại",
+      "colPhone": "Điện thoại",
+      "colRule": "Quy tắc",
+      "unassigned": "Chưa phân bổ"
+    }
   },
   "MA": {
-    "status": { "running": "Đang chạy", "done": "Hoàn tất", "error": "Lỗi" },
+    "status": {
+      "running": "Đang chạy",
+      "done": "Hoàn tất",
+      "error": "Lỗi"
+    },
     "ct": {
-      "map": { "label": "Tìm trên bản đồ", "desc": "Tổ chức: công ty/cửa hàng, v.v." },
-      "tiktok": { "label": "TikTok", "desc": "Tìm video / bình luận" },
-      "facebook": { "label": "Facebook", "desc": "Bài viết / bình luận" },
-      "instagram": { "label": "Instagram", "desc": "Bài viết / bình luận" },
-      "threads": { "label": "Threads", "desc": "Bài viết / bình luận" },
-      "youtube": { "label": "YouTube", "desc": "Video ngắn / video dài / bình luận" },
-      "amazon": { "label": "Amazon", "desc": "Sản phẩm / đánh giá" },
-      "shopee": { "label": "Shopee", "desc": "Sản phẩm / đánh giá (chọn quốc gia)" },
-      "ios_android": { "label": "iOS / Android", "desc": "Đánh giá App Store / Google Play" },
-      "news": { "label": "Tìm tin tức", "desc": "Google Alerts RSS" },
-      "web": { "label": "Tìm trang web", "desc": "Tavily tìm kiếm sâu" },
-      "competitors": { "label": "Đối thủ", "desc": "Tavily phân tích đối thủ" },
-      "trend": { "label": "Xu hướng cộng đồng", "desc": "Reddit · HN · Polymarket, 30 ngày qua" },
-      "dcard": { "label": "Dcard", "desc": "Diễn đàn lớn nhất Đài Loan, mục du lịch/đời sống" },
-      "booking": { "label": "Đánh giá lưu trú", "desc": "Đánh giá khách Booking.com + Airbnb" }
+      "map": {
+        "label": "Tìm trên bản đồ",
+        "desc": "Tổ chức: công ty/cửa hàng, v.v."
+      },
+      "tiktok": {
+        "label": "TikTok",
+        "desc": "Tìm video / bình luận"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "desc": "Bài viết / bình luận"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "desc": "Bài viết / bình luận"
+      },
+      "threads": {
+        "label": "Threads",
+        "desc": "Bài viết / bình luận"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "desc": "Video ngắn / video dài / bình luận"
+      },
+      "amazon": {
+        "label": "Amazon",
+        "desc": "Sản phẩm / đánh giá"
+      },
+      "shopee": {
+        "label": "Shopee",
+        "desc": "Sản phẩm / đánh giá (chọn quốc gia)"
+      },
+      "ios_android": {
+        "label": "iOS / Android",
+        "desc": "Đánh giá App Store / Google Play"
+      },
+      "news": {
+        "label": "Tìm tin tức",
+        "desc": "Google Alerts RSS"
+      },
+      "web": {
+        "label": "Tìm trang web",
+        "desc": "Tavily tìm kiếm sâu"
+      },
+      "competitors": {
+        "label": "Đối thủ",
+        "desc": "Tavily phân tích đối thủ"
+      },
+      "trend": {
+        "label": "Xu hướng cộng đồng",
+        "desc": "Reddit · HN · Polymarket, 30 ngày qua"
+      },
+      "dcard": {
+        "label": "Dcard",
+        "desc": "Diễn đàn lớn nhất Đài Loan, mục du lịch/đời sống"
+      },
+      "booking": {
+        "label": "Đánh giá lưu trú",
+        "desc": "Đánh giá khách Booking.com + Airbnb"
+      }
     },
     "sub": {
-      "map": { "info": "Thông tin cơ bản (tên/địa chỉ/điện thoại)", "coordinates": "Tọa độ/tính khoảng cách", "reviews": "Đánh giá MAP", "hours": "Giờ mở cửa" },
-      "tiktok": { "videos": "Tìm video", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "facebook": { "posts": "Bài viết", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "instagram": { "posts": "Bài viết", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "threads": { "posts": "Bài viết", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "youtube": { "shorts": "Video ngắn", "videos": "Video dài", "comments": "Bình luận", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "amazon": { "products": "Sản phẩm", "reviews": "Đánh giá", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "shopee": { "products": "Sản phẩm", "reviews": "Đánh giá", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "ios_android": { "reviews": "Đánh giá", "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)" },
-      "trend": { "reddit": "Thảo luận hot Reddit", "hackernews": "Hacker News", "polymarket": "Dự đoán Polymarket" },
-      "booking": { "booking": "Đánh giá Booking.com", "airbnb": "Đánh giá Airbnb" }
+      "map": {
+        "info": "Thông tin cơ bản (tên/địa chỉ/điện thoại)",
+        "coordinates": "Tọa độ/tính khoảng cách",
+        "reviews": "Đánh giá MAP",
+        "hours": "Giờ mở cửa"
+      },
+      "tiktok": {
+        "videos": "Tìm video",
+        "comments": "Bình luận",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "facebook": {
+        "posts": "Bài viết",
+        "comments": "Bình luận",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "instagram": {
+        "posts": "Bài viết",
+        "comments": "Bình luận",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "threads": {
+        "posts": "Bài viết",
+        "comments": "Bình luận",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "youtube": {
+        "shorts": "Video ngắn",
+        "videos": "Video dài",
+        "comments": "Bình luận",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "amazon": {
+        "products": "Sản phẩm",
+        "reviews": "Đánh giá",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "shopee": {
+        "products": "Sản phẩm",
+        "reviews": "Đánh giá",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "ios_android": {
+        "reviews": "Đánh giá",
+        "vendor_info": "Thông tin nhà cung cấp (tên/điện thoại/Email)"
+      },
+      "trend": {
+        "reddit": "Thảo luận hot Reddit",
+        "hackernews": "Hacker News",
+        "polymarket": "Dự đoán Polymarket"
+      },
+      "booking": {
+        "booking": "Đánh giá Booking.com",
+        "airbnb": "Đánh giá Airbnb"
+      }
     },
-    "shopee": { "tw": "Đài Loan", "vn": "Việt Nam", "id": "Indonesia", "ph": "Philippines", "my": "Malaysia", "th": "Thái Lan", "sg": "Singapore", "br": "Brazil", "mx": "Mexico", "co": "Colombia" },
+    "shopee": {
+      "tw": "Đài Loan",
+      "vn": "Việt Nam",
+      "id": "Indonesia",
+      "ph": "Philippines",
+      "my": "Malaysia",
+      "th": "Thái Lan",
+      "sg": "Singapore",
+      "br": "Brazil",
+      "mx": "Mexico",
+      "co": "Colombia"
+    },
     "u1": {
-      "errKeywords": "Vui lòng nhập từ khóa", "errTypes": "Vui lòng chọn ít nhất một loại thu thập",
-      "keywords": "Từ khóa / Chủ đề tìm kiếm", "keywordsPlaceholder": "VD: nhà hàng lẩu, thương hiệu ốp điện thoại, phòng gym...",
-      "selectChannels": "Chọn kênh thu thập", "mapSettings": "Cài đặt tìm bản đồ",
-      "locationLabel": "Địa điểm / thành phố / địa chỉ (để khoanh vùng tìm kiếm)", "locationPlaceholder": "VD: Quận Tín Nghĩa Đài Bắc, Quận Bản Kiều Tân Bắc...",
+      "errKeywords": "Vui lòng nhập từ khóa",
+      "errTypes": "Vui lòng chọn ít nhất một loại thu thập",
+      "keywords": "Từ khóa / Chủ đề tìm kiếm",
+      "keywordsPlaceholder": "VD: nhà hàng lẩu, thương hiệu ốp điện thoại, phòng gym...",
+      "selectChannels": "Chọn kênh thu thập",
+      "mapSettings": "Cài đặt tìm bản đồ",
+      "locationLabel": "Địa điểm / thành phố / địa chỉ (để khoanh vùng tìm kiếm)",
+      "locationPlaceholder": "VD: Quận Tín Nghĩa Đài Bắc, Quận Bản Kiều Tân Bắc...",
       "shopeeCountry": "Quốc gia Shopee",
-      "appIdTitle": "App ID (App Store / Google Play, mỗi dòng một cái)", "appIdHint": "App Store: ID số bắt đầu bằng id | Google Play: package name",
-      "rssTitle": "Google Alerts RSS URL (mỗi dòng một cái)", "rssHint": "Vào google.com/alerts → Quản lý → Đăng ký → chọn \"RSS feed\" rồi sao chép URL",
-      "perTypeCount": "Số lượng mỗi loại", "countUnit": "{n} mục", "language": "Ngôn ngữ",
-      "collecting": "Đang thu thập, vui lòng đợi…", "startCollect": "Bắt đầu thu thập",
-      "resultTitle": "Kết quả thu thập", "tabSummary": "Tóm tắt AI", "tabRaw": "Dữ liệu gốc", "recollect": "Thu thập lại"
+      "appIdTitle": "App ID (App Store / Google Play, mỗi dòng một cái)",
+      "appIdHint": "App Store: ID số bắt đầu bằng id | Google Play: package name",
+      "rssTitle": "Google Alerts RSS URL (mỗi dòng một cái)",
+      "rssHint": "Vào google.com/alerts → Quản lý → Đăng ký → chọn \"RSS feed\" rồi sao chép URL",
+      "perTypeCount": "Số lượng mỗi loại",
+      "countUnit": "{n} mục",
+      "language": "Ngôn ngữ",
+      "collecting": "Đang thu thập, vui lòng đợi…",
+      "startCollect": "Bắt đầu thu thập",
+      "resultTitle": "Kết quả thu thập",
+      "tabSummary": "Tóm tắt AI",
+      "tabRaw": "Dữ liệu gốc",
+      "recollect": "Thu thập lại"
     },
     "opt": {
-      "科技/軟體": "Công nghệ/Phần mềm", "製造業": "Sản xuất", "零售/電商": "Bán lẻ/TMĐT", "金融服務": "Dịch vụ tài chính", "醫療健康": "Y tế sức khỏe", "餐飲/消費": "Ẩm thực/Tiêu dùng", "教育培訓": "Giáo dục/Đào tạo", "房地產": "Bất động sản", "物流/運輸": "Logistics/Vận tải", "廣告/行銷": "Quảng cáo/Tiếp thị", "其他": "Khác",
-      "1-10人": "1-10 người", "11-50人": "11-50 người", "51-200人": "51-200 người", "201-500人": "201-500 người", "501-1000人": "501-1000 người", "1000人以上": "Trên 1000 người",
-      "專業/正式": "Chuyên nghiệp/Trang trọng", "活潑/年輕": "Sôi động/Trẻ trung", "溫暖/親切": "Ấm áp/Thân thiện", "創新/前衛": "Sáng tạo/Tiên phong", "奢華/高端": "Sang trọng/Cao cấp", "親民/平易": "Gần gũi/Bình dị"
+      "科技/軟體": "Công nghệ/Phần mềm",
+      "製造業": "Sản xuất",
+      "零售/電商": "Bán lẻ/TMĐT",
+      "金融服務": "Dịch vụ tài chính",
+      "醫療健康": "Y tế sức khỏe",
+      "餐飲/消費": "Ẩm thực/Tiêu dùng",
+      "教育培訓": "Giáo dục/Đào tạo",
+      "房地產": "Bất động sản",
+      "物流/運輸": "Logistics/Vận tải",
+      "廣告/行銷": "Quảng cáo/Tiếp thị",
+      "其他": "Khác",
+      "1-10人": "1-10 người",
+      "11-50人": "11-50 người",
+      "51-200人": "51-200 người",
+      "201-500人": "201-500 người",
+      "501-1000人": "501-1000 người",
+      "1000人以上": "Trên 1000 người",
+      "專業/正式": "Chuyên nghiệp/Trang trọng",
+      "活潑/年輕": "Sôi động/Trẻ trung",
+      "溫暖/親切": "Ấm áp/Thân thiện",
+      "創新/前衛": "Sáng tạo/Tiên phong",
+      "奢華/高端": "Sang trọng/Cao cấp",
+      "親民/平易": "Gần gũi/Bình dị"
     },
     "u2": {
-      "clickUpload": "Nhấn để tải lên", "uploading": "Đang tải lên…", "textExtracted": "· đã trích xuất văn bản",
-      "basicInfo": "Thông tin cơ bản", "companyName": "Tên công ty *", "companyNamePlaceholder": "VD: Công ty TNHH Công nghệ Đài Loan",
-      "industry": "Ngành", "pleaseSelect": "Vui lòng chọn", "employees": "Số nhân viên",
-      "capital": "Vốn", "capitalPlaceholder": "VD: 10.000.000 TWD",
-      "founded": "Năm thành lập", "foundedPlaceholder": "VD: 2010", "website": "Website",
-      "address": "Địa chỉ công ty", "addressPlaceholder": "Tỉnh/TP + Quận + Đường",
-      "bizDesc": "Mô tả kinh doanh", "intro": "Giới thiệu công ty", "introPlaceholder": "Mô tả ngắn gọn bối cảnh, lịch sử, giá trị cốt lõi…",
-      "products": "Sản phẩm / Dịch vụ chính", "productsPlaceholder": "Mô tả sản phẩm hoặc dịch vụ chính, tính năng nổi bật…",
-      "audience": "Khách hàng mục tiêu", "audiencePlaceholder": "Mô tả nhóm khách hàng chính, độ tuổi, thói quen chi tiêu…",
-      "advantage": "Lợi thế cạnh tranh cốt lõi", "advantagePlaceholder": "So với đối thủ, lợi thế lớn nhất của công ty là…",
-      "brandSettings": "Cài đặt thương hiệu", "brandTone": "Giọng điệu thương hiệu",
-      "branches": "Cửa hàng / Chi nhánh", "addBranch": "Thêm cửa hàng", "noBranches": "Chưa có cửa hàng, nhấn \"Thêm cửa hàng\" để bắt đầu",
-      "branchName": "Tên cửa hàng *", "branchNamePlaceholder": "VD: Cửa hàng Tín Nghĩa Đài Bắc",
-      "phone": "Điện thoại", "phonePlaceholder": "VD: 02-1234-5678",
-      "branchAddress": "Địa chỉ *", "branchAddressPlaceholder": "VD: Số 7, Đoạn 5, Đường Tín Nghĩa, Quận Tín Nghĩa, Đài Bắc",
-      "lat": "Vĩ độ (tùy chọn)", "lng": "Kinh độ (tùy chọn)", "notes": "Ghi chú", "notesPlaceholder": "VD: kéo dài giờ mở cửa cuối tuần",
-      "saveBranch": "Lưu cửa hàng", "cancel": "Hủy", "branchCountHint": "Tổng {count} cửa hàng. Nhập tọa độ để bật tính cửa hàng gần nhất.",
-      "materials": "Tải lên tài liệu", "matLogo": "Logo / Nhận diện thương hiệu", "matImage": "Hình sản phẩm / bối cảnh", "matDoc": "Hồ sơ công ty / Catalog", "matFaq": "FAQ / Dữ liệu hỏi đáp",
+      "clickUpload": "Nhấn để tải lên",
+      "uploading": "Đang tải lên…",
+      "textExtracted": "· đã trích xuất văn bản",
+      "basicInfo": "Thông tin cơ bản",
+      "companyName": "Tên công ty *",
+      "companyNamePlaceholder": "VD: Công ty TNHH Công nghệ Đài Loan",
+      "industry": "Ngành",
+      "pleaseSelect": "Vui lòng chọn",
+      "employees": "Số nhân viên",
+      "capital": "Vốn",
+      "capitalPlaceholder": "VD: 10.000.000 TWD",
+      "founded": "Năm thành lập",
+      "foundedPlaceholder": "VD: 2010",
+      "website": "Website",
+      "address": "Địa chỉ công ty",
+      "addressPlaceholder": "Tỉnh/TP + Quận + Đường",
+      "bizDesc": "Mô tả kinh doanh",
+      "intro": "Giới thiệu công ty",
+      "introPlaceholder": "Mô tả ngắn gọn bối cảnh, lịch sử, giá trị cốt lõi…",
+      "products": "Sản phẩm / Dịch vụ chính",
+      "productsPlaceholder": "Mô tả sản phẩm hoặc dịch vụ chính, tính năng nổi bật…",
+      "audience": "Khách hàng mục tiêu",
+      "audiencePlaceholder": "Mô tả nhóm khách hàng chính, độ tuổi, thói quen chi tiêu…",
+      "advantage": "Lợi thế cạnh tranh cốt lõi",
+      "advantagePlaceholder": "So với đối thủ, lợi thế lớn nhất của công ty là…",
+      "brandSettings": "Cài đặt thương hiệu",
+      "brandTone": "Giọng điệu thương hiệu",
+      "branches": "Cửa hàng / Chi nhánh",
+      "addBranch": "Thêm cửa hàng",
+      "noBranches": "Chưa có cửa hàng, nhấn \"Thêm cửa hàng\" để bắt đầu",
+      "branchName": "Tên cửa hàng *",
+      "branchNamePlaceholder": "VD: Cửa hàng Tín Nghĩa Đài Bắc",
+      "phone": "Điện thoại",
+      "phonePlaceholder": "VD: 02-1234-5678",
+      "branchAddress": "Địa chỉ *",
+      "branchAddressPlaceholder": "VD: Số 7, Đoạn 5, Đường Tín Nghĩa, Quận Tín Nghĩa, Đài Bắc",
+      "lat": "Vĩ độ (tùy chọn)",
+      "lng": "Kinh độ (tùy chọn)",
+      "notes": "Ghi chú",
+      "notesPlaceholder": "VD: kéo dài giờ mở cửa cuối tuần",
+      "saveBranch": "Lưu cửa hàng",
+      "cancel": "Hủy",
+      "branchCountHint": "Tổng {count} cửa hàng. Nhập tọa độ để bật tính cửa hàng gần nhất.",
+      "materials": "Tải lên tài liệu",
+      "matLogo": "Logo / Nhận diện thương hiệu",
+      "matImage": "Hình sản phẩm / bối cảnh",
+      "matDoc": "Hồ sơ công ty / Catalog",
+      "matFaq": "FAQ / Dữ liệu hỏi đáp",
       "materialsHint": "Tệp Excel/Word/PDF sẽ được tự trích xuất văn bản cho AI phân tích và trả lời CSKH.",
-      "saving": "Đang lưu…", "saveCompany": "Lưu dữ liệu công ty", "saved": "Đã lưu",
-      "overview": "Tổng quan dữ liệu", "companyNameShort": "Công ty", "industryShort": "Ngành",
-      "branchCount": "Số cửa hàng", "nBranches": "{n}", "withCoords": "Có tọa độ",
-      "uploadedFiles": "Tệp đã tải", "nFiles": "{n}", "textMaterials": "Tài liệu văn bản", "nExtracted": "{n} đã trích xuất"
+      "saving": "Đang lưu…",
+      "saveCompany": "Lưu dữ liệu công ty",
+      "saved": "Đã lưu",
+      "overview": "Tổng quan dữ liệu",
+      "companyNameShort": "Công ty",
+      "industryShort": "Ngành",
+      "branchCount": "Số cửa hàng",
+      "nBranches": "{n}",
+      "withCoords": "Có tọa độ",
+      "uploadedFiles": "Tệp đã tải",
+      "nFiles": "{n}",
+      "textMaterials": "Tài liệu văn bản",
+      "nExtracted": "{n} đã trích xuất"
     },
     "u3": {
       "errTypes": "Vui lòng chọn ít nhất một loại phân tích",
       "type": {
-        "swot": { "label": "Phân tích SWOT", "desc": "Đánh giá toàn diện điểm mạnh/yếu/cơ hội/thách thức" },
-        "company": { "label": "Phân tích công ty", "desc": "Mô hình, quy mô, tình hình kinh doanh, rủi ro" },
-        "competitor_activity": { "label": "Phân tích hoạt động đối thủ", "desc": "Cách tiếp thị, kênh, nội dung của đối thủ" },
-        "competitor_performance": { "label": "Phân tích hiệu quả đối thủ", "desc": "Thị phần, định giá, uy tín khách hàng" },
-        "content": { "label": "Phân tích trích xuất video/nội dung", "desc": "Chiến lược nội dung đối thủ, đặc điểm nội dung hiệu quả cao" },
-        "marketing": { "label": "Phân tích nội dung tiếp thị", "desc": "Xu hướng phong cách, điểm thu hút, từ khóa" }
+        "swot": {
+          "label": "Phân tích SWOT",
+          "desc": "Đánh giá toàn diện điểm mạnh/yếu/cơ hội/thách thức"
+        },
+        "company": {
+          "label": "Phân tích công ty",
+          "desc": "Mô hình, quy mô, tình hình kinh doanh, rủi ro"
+        },
+        "competitor_activity": {
+          "label": "Phân tích hoạt động đối thủ",
+          "desc": "Cách tiếp thị, kênh, nội dung của đối thủ"
+        },
+        "competitor_performance": {
+          "label": "Phân tích hiệu quả đối thủ",
+          "desc": "Thị phần, định giá, uy tín khách hàng"
+        },
+        "content": {
+          "label": "Phân tích trích xuất video/nội dung",
+          "desc": "Chiến lược nội dung đối thủ, đặc điểm nội dung hiệu quả cao"
+        },
+        "marketing": {
+          "label": "Phân tích nội dung tiếp thị",
+          "desc": "Xu hướng phong cách, điểm thu hút, từ khóa"
+        }
       },
-      "unit1": "Đơn vị 1 Dữ liệu thu thập", "loaded": "đã tải", "notRun": "chưa chạy",
-      "unit2": "Đơn vị 2 Dữ liệu công ty", "notFilled": "chưa điền",
-      "extraTitle": "Tài liệu tham khảo bổ sung (tùy chọn)", "extraHint": "Tải lên đề án, bài báo, báo cáo đối thủ, v.v.; AI sẽ tham khảo khi phân tích",
-      "uploading": "Đang tải lên…", "chooseFile": "Chọn tệp",
-      "selectItems": "Chọn mục phân tích", "analyzing": "Gemini đang phân tích, vui lòng đợi…", "startAnalyze": "Bắt đầu phân tích",
-      "mOpportunity": "Chỉ số cơ hội thị trường", "mCompetitors": "Số đối thủ", "nCompetitors": "{n}", "mAudience": "Khách hàng mục tiêu", "mScore": "Điểm cạnh tranh",
+      "unit1": "Đơn vị 1 Dữ liệu thu thập",
+      "loaded": "đã tải",
+      "notRun": "chưa chạy",
+      "unit2": "Đơn vị 2 Dữ liệu công ty",
+      "notFilled": "chưa điền",
+      "extraTitle": "Tài liệu tham khảo bổ sung (tùy chọn)",
+      "extraHint": "Tải lên đề án, bài báo, báo cáo đối thủ, v.v.; AI sẽ tham khảo khi phân tích",
+      "uploading": "Đang tải lên…",
+      "chooseFile": "Chọn tệp",
+      "selectItems": "Chọn mục phân tích",
+      "analyzing": "Gemini đang phân tích, vui lòng đợi…",
+      "startAnalyze": "Bắt đầu phân tích",
+      "mOpportunity": "Chỉ số cơ hội thị trường",
+      "mCompetitors": "Số đối thủ",
+      "nCompetitors": "{n}",
+      "mAudience": "Khách hàng mục tiêu",
+      "mScore": "Điểm cạnh tranh",
       "reanalyze": "Phân tích lại",
-      "simTitle": "Mô phỏng người tiêu dùng tiếp thị", "simHint": "Mô phỏng phản ứng của các nhóm tiêu dùng, va chạm phe nhóm, phát hiện khủng hoảng PR",
-      "simulating": "Đang mô phỏng…", "runSim": "Chạy mô phỏng người tiêu dùng"
+      "simTitle": "Mô phỏng người tiêu dùng tiếp thị",
+      "simHint": "Mô phỏng phản ứng của các nhóm tiêu dùng, va chạm phe nhóm, phát hiện khủng hoảng PR",
+      "simulating": "Đang mô phỏng…",
+      "runSim": "Chạy mô phỏng người tiêu dùng"
     },
     "u4": {
-      "errTypes": "Vui lòng chọn ít nhất một loại nội dung", "anchorGenFailed": "Tạo kịch bản MC thất bại: {error}",
-      "ctxCollect": "Dữ liệu thu thập", "ctxCompany": "Dữ liệu công ty", "ctxAnalysis": "Dữ liệu phân tích",
+      "errTypes": "Vui lòng chọn ít nhất một loại nội dung",
+      "anchorGenFailed": "Tạo kịch bản MC thất bại: {error}",
+      "ctxCollect": "Dữ liệu thu thập",
+      "ctxCompany": "Dữ liệu công ty",
+      "ctxAnalysis": "Dữ liệu phân tích",
       "selectTypes": "Chọn loại nội dung",
-      "group": { "social": "Mạng xã hội", "video": "Video", "ad": "Quảng cáo", "email": "Email", "other": "Khác", "anchor": "MC" },
-      "copy": {
-        "facebook_post": "Bài Facebook", "instagram_caption": "Chú thích Instagram", "threads_post": "Bài Threads", "line_message": "Tin nhắn LINE", "twitter_post": "Bài Twitter/X", "linkedin_post": "Bài LinkedIn", "youtube_description": "Mô tả YouTube", "ad_headline": "Bộ tiêu đề quảng cáo", "email_subject": "Tiêu đề Email", "email_body": "Nội dung Email", "press_release": "Thông cáo báo chí", "anchor_script": "🎙️ Kịch bản MC"
+      "group": {
+        "social": "Mạng xã hội",
+        "video": "Video",
+        "ad": "Quảng cáo",
+        "email": "Email",
+        "other": "Khác",
+        "anchor": "MC"
       },
-      "anchorTitle": "Cài đặt kịch bản MC", "anchorSubtitle": "(Kịch bản này dùng trực tiếp cho tạo video MC ở Unit 11)",
-      "videoDuration": "Thời lượng video", "durationOpt": "{s} giây (~{chars} chữ)",
+      "copy": {
+        "facebook_post": "Bài Facebook",
+        "instagram_caption": "Chú thích Instagram",
+        "threads_post": "Bài Threads",
+        "line_message": "Tin nhắn LINE",
+        "twitter_post": "Bài Twitter/X",
+        "linkedin_post": "Bài LinkedIn",
+        "youtube_description": "Mô tả YouTube",
+        "ad_headline": "Bộ tiêu đề quảng cáo",
+        "email_subject": "Tiêu đề Email",
+        "email_body": "Nội dung Email",
+        "press_release": "Thông cáo báo chí",
+        "anchor_script": "🎙️ Kịch bản MC"
+      },
+      "anchorTitle": "Cài đặt kịch bản MC",
+      "anchorSubtitle": "(Kịch bản này dùng trực tiếp cho tạo video MC ở Unit 11)",
+      "videoDuration": "Thời lượng video",
+      "durationOpt": "{s} giây (~{chars} chữ)",
       "anchorStyle": "Phong cách nói",
-      "style": { "專業親切": "Chuyên nghiệp & thân thiện", "熱情活力": "Nhiệt huyết & năng động", "沉穩信任": "Điềm tĩnh & đáng tin", "輕鬆幽默": "Thoải mái & hài hước", "商務正式": "Trang trọng kinh doanh" },
+      "style": {
+        "專業親切": "Chuyên nghiệp & thân thiện",
+        "熱情活力": "Nhiệt huyết & năng động",
+        "沉穩信任": "Điềm tĩnh & đáng tin",
+        "輕鬆幽默": "Thoải mái & hài hước",
+        "商務正式": "Trang trọng kinh doanh"
+      },
       "anchorNote": "Sau khi tạo, Unit 11 Tiếp thị MC sẽ tự dùng kịch bản này, không cần nhập lại.",
-      "userRules": "Quy định riêng của người dùng", "userRulesHint": "(tùy chọn; có thể chỉ định phong cách, từ cấm, thông điệp bắt buộc, v.v.)",
+      "userRules": "Quy định riêng của người dùng",
+      "userRulesHint": "(tùy chọn; có thể chỉ định phong cách, từ cấm, thông điệp bắt buộc, v.v.)",
       "userRulesPlaceholder": "VD: không dùng từ phóng đại như \"tốt nhất\", \"mạnh nhất\"; phải nhắc ưu đãi có hạn; nội dung cần tạo cảm giác cấp bách…",
-      "generating": "Claude đang tạo…", "generate": "Tạo nội dung", "editableHint": " — Claude Sonnet · chỉnh sửa trực tiếp", "regenerate": "Tạo lại",
-      "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ nội dung", "feedbackPlaceholder": "VD: giọng quá trang trọng, đổi sang thoải mái sinh động; thêm cảm giác ưu đãi có hạn…", "regenAll": "Tạo lại"
+      "generating": "Claude đang tạo…",
+      "generate": "Tạo nội dung",
+      "editableHint": " — Claude Sonnet · chỉnh sửa trực tiếp",
+      "regenerate": "Tạo lại",
+      "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ nội dung",
+      "feedbackPlaceholder": "VD: giọng quá trang trọng, đổi sang thoải mái sinh động; thêm cảm giác ưu đãi có hạn…",
+      "regenAll": "Tạo lại"
     },
     "u5": {
-      "ctxCopy": "Dữ liệu nội dung", "imageCount": "Số lượng hình", "targetPlatforms": "Nền tảng đăng mục tiêu",
-      "specialRules": "Quy định riêng", "specialRulesHint": "(tùy chọn; chỉ định phong cách hình, yếu tố cấm, thông tin bắt buộc, v.v.)",
+      "ctxCopy": "Dữ liệu nội dung",
+      "imageCount": "Số lượng hình",
+      "targetPlatforms": "Nền tảng đăng mục tiêu",
+      "specialRules": "Quy định riêng",
+      "specialRulesHint": "(tùy chọn; chỉ định phong cách hình, yếu tố cấm, thông tin bắt buộc, v.v.)",
       "specialRulesPlaceholder": "VD: phải có ảnh sản phẩm; phong cách sang trọng cao cấp; cấm dùng màu đỏ; chừa chỗ cho logo thương hiệu…",
-      "refImage": "Hình tham khảo (tùy chọn)", "enable": "Bật", "drivePickLabel": "Lấy ngẫu nhiên hình từ Google Drive; kịch bản sẽ khớp với hình này",
-      "generatingScript": "Claude đang tạo kịch bản…", "genWithRef": "Tạo kịch bản theo hình tham khảo", "genScript": "Tạo kịch bản hình",
-      "imageN": "Hình {n}", "scriptTitle": "Kịch bản hình ảnh {n} — Claude Sonnet", "totalImages": "Tổng {n}",
-      "refImageLabel": "Hình tham khảo", "refGenerated": "Kịch bản đã tạo theo phong cách hình này",
-      "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ kịch bản", "feedbackPlaceholder": "VD: đổi phong cách trẻ trung sinh động hơn; thêm chi tiết sản phẩm; đổi sang tông màu ấm…",
-      "tipTitle": "Mẹo dùng", "tipBody": "<b>Prompt tạo AI</b> ở cuối mỗi kịch bản có thể sao chép trực tiếp vào Midjourney, DALL-E 3, Stable Diffusion, v.v. để tạo hình. Xong rồi vào <b>Unit 6 Tạo hình</b> để tạo bằng AI."
+      "refImage": "Hình tham khảo (tùy chọn)",
+      "enable": "Bật",
+      "drivePickLabel": "Lấy ngẫu nhiên hình từ Google Drive; kịch bản sẽ khớp với hình này",
+      "generatingScript": "Claude đang tạo kịch bản…",
+      "genWithRef": "Tạo kịch bản theo hình tham khảo",
+      "genScript": "Tạo kịch bản hình",
+      "imageN": "Hình {n}",
+      "scriptTitle": "Kịch bản hình ảnh {n} — Claude Sonnet",
+      "totalImages": "Tổng {n}",
+      "refImageLabel": "Hình tham khảo",
+      "refGenerated": "Kịch bản đã tạo theo phong cách hình này",
+      "feedbackTitle": "Nhập ý kiến chỉnh sửa để tạo lại toàn bộ kịch bản",
+      "feedbackPlaceholder": "VD: đổi phong cách trẻ trung sinh động hơn; thêm chi tiết sản phẩm; đổi sang tông màu ấm…",
+      "tipTitle": "Mẹo dùng",
+      "tipBody": "<b>Prompt tạo AI</b> ở cuối mỗi kịch bản có thể sao chép trực tiếp vào Midjourney, DALL-E 3, Stable Diffusion, v.v. để tạo hình. Xong rồi vào <b>Unit 6 Tạo hình</b> để tạo bằng AI."
     },
     "u6": {
-      "promptEmpty": "Prompt không được để trống", "promptRequired": "Vui lòng nhập Prompt", "selectModel": "Chọn mô hình tạo",
+      "promptEmpty": "Prompt không được để trống",
+      "promptRequired": "Vui lòng nhập Prompt",
+      "selectModel": "Chọn mô hình tạo",
       "model": {
-        "flux": { "desc": "Chân thực chất lượng cao, hợp nhất cho hình tiếp thị", "badge": "Đề xuất" },
-        "dalle3": { "desc": "Hiểu ngữ nghĩa tốt, chữ trong hình rõ", "badge": "OpenAI" },
-        "nano": { "desc": "Nhanh, hợp xem nháp nhanh", "badge": "Nhanh" }
+        "flux": {
+          "desc": "Chân thực chất lượng cao, hợp nhất cho hình tiếp thị",
+          "badge": "Đề xuất"
+        },
+        "dalle3": {
+          "desc": "Hiểu ngữ nghĩa tốt, chữ trong hình rõ",
+          "badge": "OpenAI"
+        },
+        "nano": {
+          "desc": "Nhanh, hợp xem nháp nhanh",
+          "badge": "Nhanh"
+        }
       },
-      "costUnit": "/hình", "imageSettings": "Cài đặt hình", "sizeRatio": "Tỷ lệ kích thước",
-      "size": { "1:1": "1:1 Vuông", "9:16": "9:16 Dọc", "16:9": "16:9 Ngang" },
-      "quality": "Chất lượng", "qStandard": "Tiêu chuẩn", "qHd": "HD",
-      "styleLabel": "Phong cách", "sVivid": "Rực rỡ sống động", "sNatural": "Tự nhiên chân thực",
-      "refImgTitle": "Hình tham khảo (img2img)", "enabled": "Đã bật", "useRefImg": "Tạo theo hình tham khảo",
-      "refImgPickLabel": "Hình tham khảo tạo ảnh", "refImgChosen": "Đã chọn hình tham khảo; tất cả hình sẽ theo phong cách hình này (img2img)",
+      "costUnit": "/hình",
+      "imageSettings": "Cài đặt hình",
+      "sizeRatio": "Tỷ lệ kích thước",
+      "size": {
+        "1:1": "1:1 Vuông",
+        "9:16": "9:16 Dọc",
+        "16:9": "16:9 Ngang"
+      },
+      "quality": "Chất lượng",
+      "qStandard": "Tiêu chuẩn",
+      "qHd": "HD",
+      "styleLabel": "Phong cách",
+      "sVivid": "Rực rỡ sống động",
+      "sNatural": "Tự nhiên chân thực",
+      "refImgTitle": "Hình tham khảo (img2img)",
+      "enabled": "Đã bật",
+      "useRefImg": "Tạo theo hình tham khảo",
+      "refImgPickLabel": "Hình tham khảo tạo ảnh",
+      "refImgChosen": "Đã chọn hình tham khảo; tất cả hình sẽ theo phong cách hình này (img2img)",
       "refImgHint": "Bật lên để chọn hình từ Google Drive làm cơ sở tạo, đạt hiệu ứng img2img",
-      "fromScripts": "Tạo từ kịch bản Unit 5 (tổng {n})", "generated": "Đã tạo",
-      "aiPrompt": "Prompt tạo AI", "editable": "(chỉnh sửa được)", "promptPlaceholder": "Nhập prompt tiếng Anh…",
-      "modelGenerating": "{model} đang tạo…", "genWithModel": "Tạo bằng {model}", "download": "Tải về", "revisedPrompt": "Prompt mô hình chỉnh sửa:",
+      "fromScripts": "Tạo từ kịch bản Unit 5 (tổng {n})",
+      "generated": "Đã tạo",
+      "aiPrompt": "Prompt tạo AI",
+      "editable": "(chỉnh sửa được)",
+      "promptPlaceholder": "Nhập prompt tiếng Anh…",
+      "modelGenerating": "{model} đang tạo…",
+      "genWithModel": "Tạo bằng {model}",
+      "download": "Tải về",
+      "revisedPrompt": "Prompt mô hình chỉnh sửa:",
       "noUnit5": "<b>Chưa chạy Unit 5 (Kịch bản hình)</b>; bạn có thể nhập prompt tùy chỉnh bên dưới để tạo hình.",
-      "manualPrompt": "Nhập Prompt thủ công", "manualPlaceholder": "Nhập prompt tiếng Anh, VD: Professional marketing photo of luxury skincare products on white marble...",
-      "generatingShort": "Đang tạo…", "successHint": "Đã tạo {n} hình, lưu ở Supabase Storage; có thể tải lên các nền tảng ở Unit 9."
+      "manualPrompt": "Nhập Prompt thủ công",
+      "manualPlaceholder": "Nhập prompt tiếng Anh, VD: Professional marketing photo of luxury skincare products on white marble...",
+      "generatingShort": "Đang tạo…",
+      "successHint": "Đã tạo {n} hình, lưu ở Supabase Storage; có thể tải lên các nền tảng ở Unit 9."
     },
     "u7": {
-      "errTypes": "Vui lòng chọn ít nhất một loại video", "errPlatforms": "Vui lòng chọn ít nhất một nền tảng",
-      "platform": { "youtube": "YouTube (thường)" },
+      "errTypes": "Vui lòng chọn ít nhất một loại video",
+      "errPlatforms": "Vui lòng chọn ít nhất một nền tảng",
+      "platform": {
+        "youtube": "YouTube (thường)"
+      },
       "ctxImageScript": "Kịch bản hình",
-      "videoCount": "Số lượng video", "videoDuration": "Thời lượng video", "durSec": "{s} giây",
+      "videoCount": "Số lượng video",
+      "videoDuration": "Thời lượng video",
+      "durSec": "{s} giây",
       "videoType": "Loại video",
       "vtype": {
-        "short_video": { "label": "Video ngắn", "desc": "Bắt mắt, nhịp nhanh" },
-        "ad": { "label": "Video quảng cáo", "desc": "Cấu trúc AIDA, thúc đẩy chuyển đổi" },
-        "tutorial": { "label": "Video hướng dẫn", "desc": "Trình diễn cách dùng sản phẩm/dịch vụ" },
-        "testimonial": { "label": "Khách hàng chứng thực", "desc": "Truyền miệng chân thực, tạo niềm tin" },
-        "brand_story": { "label": "Câu chuyện thương hiệu", "desc": "Kết nối cảm xúc, hình ảnh thương hiệu" }
+        "short_video": {
+          "label": "Video ngắn",
+          "desc": "Bắt mắt, nhịp nhanh"
+        },
+        "ad": {
+          "label": "Video quảng cáo",
+          "desc": "Cấu trúc AIDA, thúc đẩy chuyển đổi"
+        },
+        "tutorial": {
+          "label": "Video hướng dẫn",
+          "desc": "Trình diễn cách dùng sản phẩm/dịch vụ"
+        },
+        "testimonial": {
+          "label": "Khách hàng chứng thực",
+          "desc": "Truyền miệng chân thực, tạo niềm tin"
+        },
+        "brand_story": {
+          "label": "Câu chuyện thương hiệu",
+          "desc": "Kết nối cảm xúc, hình ảnh thương hiệu"
+        }
       },
-      "refImgTitle": "Hình tham khảo (cho Claude Vision)", "useRefImg": "Dùng hình tham khảo", "refImgHint": "Khi bật, Claude tạo kịch bản sát hơn theo bối cảnh và phong cách của hình",
-      "unit6Image": "Hình tạo ở Unit 6", "refImgPickLabel": "Hình tham khảo kịch bản video", "pickUnit6": "Chọn một hình đã tạo ở Unit 6 làm tham khảo", "noUnit6Images": "Chưa tạo hình ở Unit 6; hãy hoàn tất Unit 6 trước hoặc dùng hình Drive.",
-      "optional": "(tùy chọn)", "rulesPlaceholder": "VD: phải có cận cảnh sản phẩm; lời dẫn bằng tiếng Đài; mở đầu bằng câu hỏi gây tò mò…",
-      "genWithRef": "Tạo kịch bản theo hình tham khảo", "genScript": "Tạo kịch bản video",
-      "videoN": "Video {n}", "scriptTitle": "Storyboard video {n} — Claude Sonnet · {dur} giây", "totalVideos": "Tổng {n}",
+      "refImgTitle": "Hình tham khảo (cho Claude Vision)",
+      "useRefImg": "Dùng hình tham khảo",
+      "refImgHint": "Khi bật, Claude tạo kịch bản sát hơn theo bối cảnh và phong cách của hình",
+      "unit6Image": "Hình tạo ở Unit 6",
+      "refImgPickLabel": "Hình tham khảo kịch bản video",
+      "pickUnit6": "Chọn một hình đã tạo ở Unit 6 làm tham khảo",
+      "noUnit6Images": "Chưa tạo hình ở Unit 6; hãy hoàn tất Unit 6 trước hoặc dùng hình Drive.",
+      "optional": "(tùy chọn)",
+      "rulesPlaceholder": "VD: phải có cận cảnh sản phẩm; lời dẫn bằng tiếng Đài; mở đầu bằng câu hỏi gây tò mò…",
+      "genWithRef": "Tạo kịch bản theo hình tham khảo",
+      "genScript": "Tạo kịch bản video",
+      "videoN": "Video {n}",
+      "scriptTitle": "Storyboard video {n} — Claude Sonnet · {dur} giây",
+      "totalVideos": "Tổng {n}",
       "feedbackPlaceholder": "VD: nhịp quá chậm; mở đầu chưa hấp dẫn; thêm chi tiết sản phẩm…",
       "tipBody": "Sau khi xong kịch bản, vào <b>Unit 8 Tạo video</b> dùng KLING (5/10 giây), Google VEO3 (25 giây) hoặc SORA (60 giây) để chuyển kịch bản thành video thực tế."
     },
     "u8": {
       "model": {
-        "kling-standard": "KLING Standard", "kling-pro": "KLING Pro", "kling-img2video": "KLING ảnh ra video",
-        "veo3": "Google VEO3", "veo3-img2video": "VEO3 ảnh ra video", "sora": "SORA", "sora-img2video": "SORA ảnh ra video"
+        "kling-standard": "KLING Standard",
+        "kling-pro": "KLING Pro",
+        "kling-img2video": "KLING ảnh ra video",
+        "veo3": "Google VEO3",
+        "veo3-img2video": "VEO3 ảnh ra video",
+        "sora": "SORA",
+        "sora-img2video": "SORA ảnh ra video"
       },
-      "gen": { "kling": "KLING đang tạo…", "veo3": "VEO3 đang tạo…", "sora": "SORA đang tạo…" },
+      "gen": {
+        "kling": "KLING đang tạo…",
+        "veo3": "VEO3 đang tạo…",
+        "sora": "SORA đang tạo…"
+      },
       "promptEmpty": "Prompt video không được trống; hãy hoàn tất kịch bản Unit 7 hoặc nhập mô tả thủ công trước",
       "selectDuration": "Chọn thời lượng video",
-      "durHint": { "5": "Siêu ngắn · nhanh", "10": "Video ngắn", "25": "Video trung-dài", "60": "Video dài" },
-      "klingStandard": "Standard (nhanh hơn)", "klingPro": "Pro (chất lượng đỉnh)",
-      "img2video": "Ảnh ra video", "img2videoHint": "Dùng hình Unit 6 làm khung bắt đầu", "currentModel": "Mô hình hiện tại: ",
-      "videoSettings": "Cài đặt video", "aspectRatio": "Tỷ lệ khung hình",
-      "aspect": { "16:9": "16:9 Ngang", "9:16": "9:16 Dọc", "1:1": "1:1 Vuông" },
-      "selectSourceImg": "Chọn hình nguồn", "driveImage": "Hình Google Drive",
+      "durHint": {
+        "5": "Siêu ngắn · nhanh",
+        "10": "Video ngắn",
+        "25": "Video trung-dài",
+        "60": "Video dài"
+      },
+      "klingStandard": "Standard (nhanh hơn)",
+      "klingPro": "Pro (chất lượng đỉnh)",
+      "img2video": "Ảnh ra video",
+      "img2videoHint": "Dùng hình Unit 6 làm khung bắt đầu",
+      "currentModel": "Mô hình hiện tại: ",
+      "videoSettings": "Cài đặt video",
+      "aspectRatio": "Tỷ lệ khung hình",
+      "aspect": {
+        "16:9": "16:9 Ngang",
+        "9:16": "9:16 Dọc",
+        "1:1": "1:1 Vuông"
+      },
+      "selectSourceImg": "Chọn hình nguồn",
+      "driveImage": "Hình Google Drive",
       "noUnit6Images": "Chưa tạo hình ở Unit 6. Hãy hoàn tất Unit 6 trước, hoặc dùng hình Drive.",
-      "driveChosen": "Đã chọn hình Drive; video sẽ tạo từ hình này", "noDriveImg": "Chưa chọn hình Google Drive ở Unit 5/6/7; hãy vào bất kỳ unit nào để chọn.",
+      "driveChosen": "Đã chọn hình Drive; video sẽ tạo từ hình này",
+      "noDriveImg": "Chưa chọn hình Google Drive ở Unit 5/6/7; hãy vào bất kỳ unit nào để chọn.",
       "fromScripts": "Tạo từ kịch bản Unit 7 (tổng {n})",
-      "processing": "Đang tạo (~1-3 phút)", "failed": "Thất bại",
-      "videoPrompt": "Prompt video", "videoPromptPlaceholder": "Mô tả cảnh và chuyển động video…", "genVideo": "Tạo video",
+      "processing": "Đang tạo (~1-3 phút)",
+      "failed": "Thất bại",
+      "videoPrompt": "Prompt video",
+      "videoPromptPlaceholder": "Mô tả cảnh và chuyển động video…",
+      "genVideo": "Tạo video",
       "noUnit7": "<b>Chưa chạy Unit 7 (Kịch bản video)</b>; bạn có thể nhập prompt bên dưới để tạo video.",
       "manualPlaceholder": "Mô tả video, VD: A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
       "notice": "<b>Lưu ý:</b> Tạo video thường mất <b>1-3 phút</b>. Sau khi gửi, trang sẽ tự kiểm tra trạng thái mỗi 6 giây — đừng rời trang. Video hiện tự động khi xong.",
       "successHint": "Đã tạo {n} video; có thể tải lên các nền tảng ở Unit 9."
     },
     "u9": {
-      "errPlatform": "Vui lòng chọn ít nhất một nền tảng", "errCopy": "Vui lòng nhập nội dung đăng",
-      "imgCount": "{n} hình", "vidCount": "{n} video", "copy": "Nội dung", "ready": "đã sẵn sàng", "notGenerated": "chưa tạo",
-      "platformSettings": "Cài đặt kết nối nền tảng", "imgPlatforms": "Nền tảng đăng hình", "vidPlatforms": "Nền tảng đăng video",
-      "pickImage": "Chọn hình để tải lên", "noImages": "Chưa tạo hình ở Unit 6.", "pickVideo": "Chọn video để tải lên", "noVideos": "Chưa tạo video ở Unit 8.",
-      "postCopy": "Nội dung bài đăng", "quickLoad": "Tải nhanh:", "anchorTag": "🎙️MC",
-      "copyPlaceholder": "Nhập hoặc tải nội dung từ Unit 4…", "charCount": "{n} ký tự",
-      "uploading": "Đang tải lên…", "publishTo": "Đăng lên {n} nền tảng",
-      "uploadResult": "Kết quả tải lên", "publishOk": "Đăng thành công", "publishFail": "Đăng thất bại", "updateToken": "→ Vào cài đặt cập nhật Token",
+      "errPlatform": "Vui lòng chọn ít nhất một nền tảng",
+      "errCopy": "Vui lòng nhập nội dung đăng",
+      "imgCount": "{n} hình",
+      "vidCount": "{n} video",
+      "copy": "Nội dung",
+      "ready": "đã sẵn sàng",
+      "notGenerated": "chưa tạo",
+      "platformSettings": "Cài đặt kết nối nền tảng",
+      "imgPlatforms": "Nền tảng đăng hình",
+      "vidPlatforms": "Nền tảng đăng video",
+      "pickImage": "Chọn hình để tải lên",
+      "noImages": "Chưa tạo hình ở Unit 6.",
+      "pickVideo": "Chọn video để tải lên",
+      "noVideos": "Chưa tạo video ở Unit 8.",
+      "postCopy": "Nội dung bài đăng",
+      "quickLoad": "Tải nhanh:",
+      "anchorTag": "🎙️MC",
+      "copyPlaceholder": "Nhập hoặc tải nội dung từ Unit 4…",
+      "charCount": "{n} ký tự",
+      "uploading": "Đang tải lên…",
+      "publishTo": "Đăng lên {n} nền tảng",
+      "uploadResult": "Kết quả tải lên",
+      "publishOk": "Đăng thành công",
+      "publishFail": "Đăng thất bại",
+      "updateToken": "→ Vào cài đặt cập nhật Token",
       "successCount": "{ok}/{total} nền tảng thành công"
     },
     "u10": {
-      "voice": { "mlFemale": "Đa ngôn ngữ, Nữ", "mlMale": "Đa ngôn ngữ, Nam", "brMale": "Tiếng Anh-Anh, Nam", "usFemale": "Tiếng Anh-Mỹ, Nữ" },
-      "defMarketingTeam": "Đội tiếp thị", "defScript": "Kịch bản mặc định", "defGeneralCustomer": "Khách hàng chung", "defGeneralDesc": "Khách tiềm năng chung hoặc không rõ", "groupDefault": "Chung",
-      "scriptN": "Kịch bản {n}", "categoryN": "Phân loại {n}",
-      "errNeedRule": "Hãy định nghĩa ít nhất một quy tắc gửi trước", "errNeedRecipients": "Vui lòng nhập danh sách người nhận", "errNeedTemplate": "Điền tiêu đề và nội dung cho ít nhất một kịch bản", "sendFailed": "Gửi thất bại",
-      "errNeedScript2": "Hãy nhập hoặc tạo kịch bản trước", "errNeedScript": "Hãy nhập kịch bản trước", "errNeedPhone": "Nhập ít nhất một số điện thoại",
-      "tabPhone": "Tiếp thị qua điện thoại", "tabEmail": "Tiếp thị qua Email",
-      "sendService": "Dịch vụ gửi: Resend", "fromName": "Tên người gửi", "fromEmail": "Email người gửi (cần xác minh ở Resend)",
-      "step1Title": "Bước 1 — Mẫu Email (Kịch bản)", "step1Hint": "Định nghĩa các mẫu nội dung Email để dùng trong quy tắc gửi",
-      "applyUnit4All": "Áp dụng Unit 4 cho mọi mẫu", "templateNamePlaceholder": "Tên mẫu (VD: Kịch bản blogger)", "applyUnit4": "Áp dụng Unit 4",
-      "emailSubject": "Tiêu đề Email", "emailSubjectPlaceholder": "Tiêu đề Email…", "emailBody": "Nội dung Email", "emailBodyPlaceholder": "Nội dung Email…", "addTemplate": "Thêm mẫu",
-      "step2Title": "Bước 2 — Quy tắc gửi", "step2Hint": "Định nghĩa tên phân loại và tiêu chí AI, chỉ định mẫu áp dụng. AI khớp theo thứ tự, quy tắc khớp đầu tiên có hiệu lực.",
-      "categoryNamePlaceholder": "Tên phân loại (VD: blogger làm đẹp)", "aiBasis": "Tiêu chí phân loại AI (mô tả đặc điểm nhóm này)", "aiBasisPlaceholder": "VD: blogger làm đẹp cá nhân, chủ yếu là cá nhân có ảnh hưởng trên mạng xã hội",
-      "applyTemplate": "Áp dụng mẫu", "classifiedHere": "Đã phân loại vào đây: {n} người nhận", "addRule": "Thêm quy tắc",
-      "step3Title": "Bước 3 — Nhập Email người nhận", "step3Hint": "Mỗi dòng một Email; AI tự phân loại theo quy tắc trên",
-      "classifying": "AI đang phân loại…", "autoClassify": "AI tự phân loại", "recognizedEmails": "Đã nhận diện {n} Email hợp lệ",
-      "sendingN": "Đang gửi… ({n})", "startSendN": "Gửi {n} Email", "sendResult": "Kết quả gửi", "successN": "{ok}/{total} thành công", "sent": "Đã gửi",
+      "voice": {
+        "mlFemale": "Đa ngôn ngữ, Nữ",
+        "mlMale": "Đa ngôn ngữ, Nam",
+        "brMale": "Tiếng Anh-Anh, Nam",
+        "usFemale": "Tiếng Anh-Mỹ, Nữ"
+      },
+      "defMarketingTeam": "Đội tiếp thị",
+      "defScript": "Kịch bản mặc định",
+      "defGeneralCustomer": "Khách hàng chung",
+      "defGeneralDesc": "Khách tiềm năng chung hoặc không rõ",
+      "groupDefault": "Chung",
+      "scriptN": "Kịch bản {n}",
+      "categoryN": "Phân loại {n}",
+      "errNeedRule": "Hãy định nghĩa ít nhất một quy tắc gửi trước",
+      "errNeedRecipients": "Vui lòng nhập danh sách người nhận",
+      "errNeedTemplate": "Điền tiêu đề và nội dung cho ít nhất một kịch bản",
+      "sendFailed": "Gửi thất bại",
+      "errNeedScript2": "Hãy nhập hoặc tạo kịch bản trước",
+      "errNeedScript": "Hãy nhập kịch bản trước",
+      "errNeedPhone": "Nhập ít nhất một số điện thoại",
+      "tabPhone": "Tiếp thị qua điện thoại",
+      "tabEmail": "Tiếp thị qua Email",
+      "sendService": "Dịch vụ gửi: Resend",
+      "fromName": "Tên người gửi",
+      "fromEmail": "Email người gửi (cần xác minh ở Resend)",
+      "step1Title": "Bước 1 — Mẫu Email (Kịch bản)",
+      "step1Hint": "Định nghĩa các mẫu nội dung Email để dùng trong quy tắc gửi",
+      "applyUnit4All": "Áp dụng Unit 4 cho mọi mẫu",
+      "templateNamePlaceholder": "Tên mẫu (VD: Kịch bản blogger)",
+      "applyUnit4": "Áp dụng Unit 4",
+      "emailSubject": "Tiêu đề Email",
+      "emailSubjectPlaceholder": "Tiêu đề Email…",
+      "emailBody": "Nội dung Email",
+      "emailBodyPlaceholder": "Nội dung Email…",
+      "addTemplate": "Thêm mẫu",
+      "step2Title": "Bước 2 — Quy tắc gửi",
+      "step2Hint": "Định nghĩa tên phân loại và tiêu chí AI, chỉ định mẫu áp dụng. AI khớp theo thứ tự, quy tắc khớp đầu tiên có hiệu lực.",
+      "categoryNamePlaceholder": "Tên phân loại (VD: blogger làm đẹp)",
+      "aiBasis": "Tiêu chí phân loại AI (mô tả đặc điểm nhóm này)",
+      "aiBasisPlaceholder": "VD: blogger làm đẹp cá nhân, chủ yếu là cá nhân có ảnh hưởng trên mạng xã hội",
+      "applyTemplate": "Áp dụng mẫu",
+      "classifiedHere": "Đã phân loại vào đây: {n} người nhận",
+      "addRule": "Thêm quy tắc",
+      "step3Title": "Bước 3 — Nhập Email người nhận",
+      "step3Hint": "Mỗi dòng một Email; AI tự phân loại theo quy tắc trên",
+      "classifying": "AI đang phân loại…",
+      "autoClassify": "AI tự phân loại",
+      "recognizedEmails": "Đã nhận diện {n} Email hợp lệ",
+      "sendingN": "Đang gửi… ({n})",
+      "startSendN": "Gửi {n} Email",
+      "sendResult": "Kết quả gửi",
+      "successN": "{ok}/{total} thành công",
+      "sent": "Đã gửi",
       "envNotice": "Cần cài biến môi trường ở Vercel:",
-      "ttsProvider": "TTS: ElevenLabs", "callProvider": "Gọi: Bird (app.bird.com)", "vbeeLocked": "VBEE — kích hoạt sau",
-      "voiceDialSettings": "Cài đặt giọng / gọi", "elevenVoice": "Giọng ElevenLabs", "birdCallerId": "Số hiển thị Bird *",
-      "phoneScript": "Kịch bản tiếp thị qua điện thoại", "aiGenerating": "AI đang tạo…", "aiGenerate": "AI tự tạo",
-      "scriptPlaceholder": "Xin chào! Tôi là [Tên] từ [Công ty], hôm nay gọi để chia sẻ với bạn…", "scriptCount": "{n} ký tự · khuyến nghị 100-200 ký tự (~30-60 giây)",
-      "genVoice": "Đang tạo giọng…", "previewVoice": "Nghe thử giọng",
-      "phoneList": "Danh sách số điện thoại", "recognizedPhones": "Đã nhận diện {n}", "phoneHint": "Mỗi dòng một số, hoặc phân tách bằng dấu phẩy; hỗ trợ định dạng quốc tế (kèm mã quốc gia)",
-      "callingN": "Đang gọi… ({n})", "startCallN": "Bắt đầu gọi {n} số", "callResult": "Kết quả gọi", "callOk": "Gọi thành công"
+      "ttsProvider": "TTS: ElevenLabs",
+      "callProvider": "Gọi: Bird (app.bird.com)",
+      "vbeeLocked": "VBEE — kích hoạt sau",
+      "voiceDialSettings": "Cài đặt giọng / gọi",
+      "elevenVoice": "Giọng ElevenLabs",
+      "birdCallerId": "Số hiển thị Bird *",
+      "phoneScript": "Kịch bản tiếp thị qua điện thoại",
+      "aiGenerating": "AI đang tạo…",
+      "aiGenerate": "AI tự tạo",
+      "scriptPlaceholder": "Xin chào! Tôi là [Tên] từ [Công ty], hôm nay gọi để chia sẻ với bạn…",
+      "scriptCount": "{n} ký tự · khuyến nghị 100-200 ký tự (~30-60 giây)",
+      "genVoice": "Đang tạo giọng…",
+      "previewVoice": "Nghe thử giọng",
+      "phoneList": "Danh sách số điện thoại",
+      "recognizedPhones": "Đã nhận diện {n}",
+      "phoneHint": "Mỗi dòng một số, hoặc phân tách bằng dấu phẩy; hỗ trợ định dạng quốc tế (kèm mã quốc gia)",
+      "callingN": "Đang gọi… ({n})",
+      "startCallN": "Bắt đầu gọi {n} số",
+      "callResult": "Kết quả gọi",
+      "callOk": "Gọi thành công"
     },
     "u11": {
-      "ratio": { "16:9": "Ngang 16:9", "9:16": "Dọc 9:16", "1:1": "Vuông 1:1" },
-      "ratioDesc": { "youtube": "YouTube / Quảng cáo", "reels": "Reels / TikTok", "ig": "Instagram" },
-      "bg": { "white": "Trắng", "black": "Đen", "lightBlue": "Xanh nhạt", "lightOrange": "Cam nhạt", "lightGreen": "Lục nhạt" },
-      "errAvatar": "Vui lòng chọn MC Avatar", "errVoice": "Vui lòng chọn giọng", "errScript": "Hãy tick \"🎙️ Kịch bản MC\" ở Unit 4 và tạo trước", "submitFailed": "Gửi thất bại",
-      "title": "Tiếp thị MC", "subtitle": "Tạo video tiếp thị bằng MC ảo HeyGen", "aiAvatarVideo": "Video AI Avatar", "autoSave": "Tự lưu vào Supabase",
-      "loadAssets": "Tải tài nguyên MC HeyGen", "loading": "Đang tải…", "reloadAssets": "Tải lại danh sách MC & giọng",
-      "selectAvatar": "Chọn MC Avatar", "nAvailable": "{n} khả dụng", "selectVoice": "Chọn giọng", "chooseVoice": "— Chọn giọng —",
-      "formatBg": "Định dạng video & nền", "bgColor": "Màu nền:", "customColor": "Màu tùy chỉnh",
-      "anchorScript": "Kịch bản MC", "durStyle": "{dur} giây · {style}", "fromUnit4": "Từ Unit 4 ({n} ký tự) · cần sửa thì quay lại Unit 4 tạo lại",
-      "noScript": "Chưa có kịch bản MC", "noScriptHint": "Vào Unit 4 → tick \"🎙️ Kịch bản MC\" → đặt số giây → tạo nội dung",
-      "submitting": "Đang gửi…", "genVideo": "Tạo video MC",
-      "videoLog": "Nhật ký video MC", "nVideos": "{n}",
-      "stDone": "✓ Hoàn tất", "stFailed": "✗ Thất bại", "stProcessing": "⏳ Đang tạo", "downloadVideo": "Tải video",
+      "ratio": {
+        "16:9": "Ngang 16:9",
+        "9:16": "Dọc 9:16",
+        "1:1": "Vuông 1:1"
+      },
+      "ratioDesc": {
+        "youtube": "YouTube / Quảng cáo",
+        "reels": "Reels / TikTok",
+        "ig": "Instagram"
+      },
+      "bg": {
+        "white": "Trắng",
+        "black": "Đen",
+        "lightBlue": "Xanh nhạt",
+        "lightOrange": "Cam nhạt",
+        "lightGreen": "Lục nhạt"
+      },
+      "errAvatar": "Vui lòng chọn MC Avatar",
+      "errVoice": "Vui lòng chọn giọng",
+      "errScript": "Hãy tick \"🎙️ Kịch bản MC\" ở Unit 4 và tạo trước",
+      "submitFailed": "Gửi thất bại",
+      "title": "Tiếp thị MC",
+      "subtitle": "Tạo video tiếp thị bằng MC ảo HeyGen",
+      "aiAvatarVideo": "Video AI Avatar",
+      "autoSave": "Tự lưu vào Supabase",
+      "loadAssets": "Tải tài nguyên MC HeyGen",
+      "loading": "Đang tải…",
+      "reloadAssets": "Tải lại danh sách MC & giọng",
+      "selectAvatar": "Chọn MC Avatar",
+      "nAvailable": "{n} khả dụng",
+      "selectVoice": "Chọn giọng",
+      "chooseVoice": "— Chọn giọng —",
+      "formatBg": "Định dạng video & nền",
+      "bgColor": "Màu nền:",
+      "customColor": "Màu tùy chỉnh",
+      "anchorScript": "Kịch bản MC",
+      "durStyle": "{dur} giây · {style}",
+      "fromUnit4": "Từ Unit 4 ({n} ký tự) · cần sửa thì quay lại Unit 4 tạo lại",
+      "noScript": "Chưa có kịch bản MC",
+      "noScriptHint": "Vào Unit 4 → tick \"🎙️ Kịch bản MC\" → đặt số giây → tạo nội dung",
+      "submitting": "Đang gửi…",
+      "genVideo": "Tạo video MC",
+      "videoLog": "Nhật ký video MC",
+      "nVideos": "{n}",
+      "stDone": "✓ Hoàn tất",
+      "stFailed": "✗ Thất bại",
+      "stProcessing": "⏳ Đang tạo",
+      "downloadVideo": "Tải video",
       "envHint": "Cần cài biến môi trường:"
     },
     "u12": {
-      "step": { "product": "Chọn tour/sản phẩm/phòng", "date_depart": "Ngày khởi hành", "date_checkin": "Ngày nhận phòng", "date_checkout": "Ngày trả phòng", "timeslot": "Khung giờ/Chuyến", "headcount": "Số người (lớn/trẻ em/em bé)", "passenger_id": "Thông tin hành khách (tên+ngày sinh+CMND, từng người)", "booker_name": "Tên người đặt", "quote": "Báo giá (AI tính tổng qua máy tính giá)", "email": "Email", "plate": "Biển số xe", "phone": "Điện thoại liên hệ", "special_req": "Yêu cầu đặc biệt" },
-      "industry": { "homestay": "Homestay / Du lịch", "ecommerce": "TMĐT / Bán lẻ", "restaurant": "Nhà hàng / Ẩm thực", "clinic": "Phòng khám / Thẩm mỹ", "beauty": "Làm đẹp / Tóc / SPA", "education": "Giáo dục / Luyện thi" },
-      "cred": { "waVerify": "Verify Token (chuỗi tùy ý)", "waSecret": "App Secret (xác minh chữ ký webhook, rất khuyến nghị)", "metaKey": "Khóa ứng dụng Meta", "tgToken": "Bot Token (lấy từ @BotFather)", "tgAdmin": "Chat ID quản trị (tùy chọn)", "tgAdminPh": "Chat ID cá nhân của bạn, từ @userinfobot", "tgSecret": "Webhook Secret (secret_token của setWebhook, rất khuyến nghị)", "anyString": "Chuỗi tùy ý", "wechatToken": "Token (Token cấu hình ở server, để xác minh chữ ký)" },
-      "jsonError": "Lỗi định dạng JSON: {error}", "shoppingConfig": "Cấu hình mua sắm",
-      "tgRegFailed": "Đăng ký thất bại", "tgRegOk": "Đã đăng ký Webhook thành công", "tgReturned": "Telegram trả về: {data}", "tgTestSent": "✅ Đã gửi tin nhắn thử",
-      "imageTag": "[Hình ảnh]", "serverError": "Lỗi phản hồi máy chủ (HTTP {status})", "errorMsg": "Lỗi: {error}", "unknownError": "Lỗi không xác định", "connError": "Lỗi kết nối: {error}",
+      "step": {
+        "product": "Chọn tour/sản phẩm/phòng",
+        "date_depart": "Ngày khởi hành",
+        "date_checkin": "Ngày nhận phòng",
+        "date_checkout": "Ngày trả phòng",
+        "timeslot": "Khung giờ/Chuyến",
+        "headcount": "Số người (lớn/trẻ em/em bé)",
+        "passenger_id": "Thông tin hành khách (tên+ngày sinh+CMND, từng người)",
+        "booker_name": "Tên người đặt",
+        "quote": "Báo giá (AI tính tổng qua máy tính giá)",
+        "email": "Email",
+        "plate": "Biển số xe",
+        "phone": "Điện thoại liên hệ",
+        "special_req": "Yêu cầu đặc biệt"
+      },
+      "industry": {
+        "homestay": "Homestay / Du lịch",
+        "ecommerce": "TMĐT / Bán lẻ",
+        "restaurant": "Nhà hàng / Ẩm thực",
+        "clinic": "Phòng khám / Thẩm mỹ",
+        "beauty": "Làm đẹp / Tóc / SPA",
+        "education": "Giáo dục / Luyện thi"
+      },
+      "cred": {
+        "waVerify": "Verify Token (chuỗi tùy ý)",
+        "waSecret": "App Secret (xác minh chữ ký webhook, rất khuyến nghị)",
+        "metaKey": "Khóa ứng dụng Meta",
+        "tgToken": "Bot Token (lấy từ @BotFather)",
+        "tgAdmin": "Chat ID quản trị (tùy chọn)",
+        "tgAdminPh": "Chat ID cá nhân của bạn, từ @userinfobot",
+        "tgSecret": "Webhook Secret (secret_token của setWebhook, rất khuyến nghị)",
+        "anyString": "Chuỗi tùy ý",
+        "wechatToken": "Token (Token cấu hình ở server, để xác minh chữ ký)"
+      },
+      "jsonError": "Lỗi định dạng JSON: {error}",
+      "shoppingConfig": "Cấu hình mua sắm",
+      "tgRegFailed": "Đăng ký thất bại",
+      "tgRegOk": "Đã đăng ký Webhook thành công",
+      "tgReturned": "Telegram trả về: {data}",
+      "tgTestSent": "✅ Đã gửi tin nhắn thử",
+      "imageTag": "[Hình ảnh]",
+      "serverError": "Lỗi phản hồi máy chủ (HTTP {status})",
+      "errorMsg": "Lỗi: {error}",
+      "unknownError": "Lỗi không xác định",
+      "connError": "Lỗi kết nối: {error}",
       "surveyMsg": "Cảm ơn bạn đã liên hệ! Vấn đề lần này đã giải quyết được thắc mắc của bạn chưa?\n\n1️⃣ Đã giải quyết, rất hài lòng\n2️⃣ Đã giải quyết, tạm ổn\n3️⃣ Chưa giải quyết, cần hỗ trợ thêm\n\nCó vấn đề gì khác, hãy liên hệ bất cứ lúc nào 🙏",
-      "ticketSubject": "Phiếu hỗ trợ", "roleCustomer": "Khách hàng", "testUser": "Người dùng thử",
-      "tkOpen": "Chờ xử lý", "tkInProgress": "Đang xử lý", "tkResolved": "Đã giải quyết", "tkClosed": "Đã đóng",
-      "prUrgent": "Khẩn cấp", "prHigh": "Cao", "prMedium": "Trung bình", "prLow": "Thấp",
-      "title": "Hệ thống CSKH thông minh", "subtitle": "Gemini Flash phân loại ý định · Claude Sonnet nâng cấp rủi ro cao",
-      "tabPlatforms": "Nền tảng", "tabAiSettings": "Cài đặt AI", "tabKnowledge": "Kho tri thức", "tabDataSources": "Nguồn dữ liệu", "tabPricing": "Máy tính giá", "tabTest": "Kiểm thử", "tabLogs": "Nhật ký", "tabTickets": "Phiếu", "tabInbox": "Hộp thư",
+      "ticketSubject": "Phiếu hỗ trợ",
+      "roleCustomer": "Khách hàng",
+      "testUser": "Người dùng thử",
+      "tkOpen": "Chờ xử lý",
+      "tkInProgress": "Đang xử lý",
+      "tkResolved": "Đã giải quyết",
+      "tkClosed": "Đã đóng",
+      "prUrgent": "Khẩn cấp",
+      "prHigh": "Cao",
+      "prMedium": "Trung bình",
+      "prLow": "Thấp",
+      "title": "Hệ thống CSKH thông minh",
+      "subtitle": "Gemini Flash phân loại ý định · Claude Sonnet nâng cấp rủi ro cao",
+      "tabPlatforms": "Nền tảng",
+      "tabAiSettings": "Cài đặt AI",
+      "tabKnowledge": "Kho tri thức",
+      "tabDataSources": "Nguồn dữ liệu",
+      "tabPricing": "Máy tính giá",
+      "tabTest": "Kiểm thử",
+      "tabLogs": "Nhật ký",
+      "tabTickets": "Phiếu",
+      "tabInbox": "Hộp thư",
       "platformsIntro": "Cài API Key của từng nền tảng, rồi sao chép Webhook URL vào backend nền tảng tương ứng.",
-      "connected": "Đã kết nối", "notSet": "Chưa cài", "configure": "Cài đặt", "loginToShow": "(hiện sau khi đăng nhập)", "copy": "Sao chép", "officialDocs": "Tài liệu chính thức",
-      "tgRegistering": "Đang đăng ký...", "tgReregister": "Đăng ký lại Webhook", "tgQuerying": "Đang truy vấn...", "tgCheckStatus": "Xem trạng thái lỗi",
-      "tgEndpoint": "Điểm cuối Webhook", "tgRedirected": "Vẫn bị chuyển hướng, đợi Vercel deploy xong rồi thử lại", "tgAccessible": "Truy cập bình thường",
-      "tgNotSet": "(chưa cài)", "tgLastError": "Lỗi cuối", "tgTime": "Thời gian", "tgHistoricError": "Đây là lỗi cũ; điểm cuối Webhook hiện đã bình thường (HTTP 200)", "tgWebhookOk": "Webhook bình thường, không có lỗi",
-      "tgRecentChats": "Trò chuyện gần đây (nhấn để điền):", "tgAdminId": "Chat ID quản trị", "tgForwardHere": "Tin khách sẽ chuyển đến đây", "tgNoAdminId": "Chưa cài Chat ID quản trị; tin khách sẽ không chuyển cho bạn. Vào \"Cài đặt thông tin\" nhập Chat ID của bạn (lấy từ @userinfobot)", "tgBadToken": "Bot Token không hợp lệ",
-      "tgTestHint": "Gửi tin nhắn thử (nhấn \"Xem trạng thái lỗi\" trước để tự lấy Chat ID)", "tgChatIdPh": "Chat ID, VD 123456789", "tgSending": "Đang gửi...", "tgSend": "Gửi",
-      "waConnectedPhone": "Đã kết nối: +{phone}", "waConnected": "WhatsApp đã kết nối", "waScanQr": "Quét QR Code bên dưới bằng WhatsApp", "waConnecting": "Đang kết nối...", "waReconnecting": "Đang kết nối lại...", "waNotConnected": "Chưa kết nối", "waDisconnected": "Đã ngắt, vui lòng kết nối lại", "waDisconnect": "Ngắt kết nối", "waStarting": "Đang khởi động...", "waWaiting": "Đang chờ quét...", "waScanConnect": "Quét QR để kết nối", "waQrHint": "Mở WhatsApp → Thiết bị đã liên kết → quét QR Code này", "waBridgeHint": "Hãy cài WHATSAPP_BRIDGE_URL và WHATSAPP_BRIDGE_API_KEY trong biến môi trường Vercel trước",
-      "fieldSet": "✓ đã cài", "keepOriginal": "Để trống để giữ giá trị cũ", "save": "Lưu", "saving": "Đang lưu...", "cancel": "Hủy",
-      "tplTitle": "Mẫu {name}", "tplDesc": "Áp dụng system prompt và quy trình hướng dẫn mặc định", "applyTemplate": "Áp dụng mẫu", "noPromptHint": "Chưa cài system prompt; nhấn \"Áp dụng mẫu\" để bắt đầu nhanh", "quickApplyTpl": "Áp dụng nhanh mẫu ngành",
-      "routingTitle": "Kiến trúc định tuyến AI", "routingFlash": "Phân loại ý định · trả lời rủi ro thấp/trung", "routingClaude": "Nâng cấp rủi ro cao · vấn đề phức tạp", "routingNote": "Ý định rủi ro cao: <b>đổi trả/hoàn tiền, khiếu nại, pháp lý/hợp đồng</b> (tự nâng cấp lên Claude)",
-      "escalationThreshold": "Ngưỡng nâng cấp", "escHighLabel": "Chỉ nâng cấp rủi ro cao", "escHighDesc": "Chỉ khiếu nại/hoàn tiền/pháp lý → Claude", "escMedLabel": "Nâng cấp từ rủi ro trung", "escMedDesc": "Cả trung + cao → Claude",
-      "replyLanguage": "Ngôn ngữ trả lời", "autoDetect": "Tự phát hiện (theo ngôn ngữ khách)",
-      "systemPrompt": "System Prompt", "aiRoleTag": "Cài đặt vai trò AI", "nChars": "{n} ký tự", "systemPromptHint": "Định nghĩa <b>vai trò, giọng điệu và quy tắc</b> của AI CSKH. VD: \"Bạn là CSKH của thương hiệu XX, trả lời với giọng thân thiện.\"<br></br>⚠️ Đây <b>không phải</b> nơi để FAQ hay dữ liệu sản phẩm — hãy đặt ở tab \"Kho tri thức\".", "systemPromptPlaceholder": "VD: Bạn là CSKH chuyên nghiệp của AI GATE; trả lời khách với giọng thân thiện, chuyên nghiệp. Nếu không chắc, chủ động báo sẽ chuyển cho nhân viên.",
-      "bookingFlow": "Quy trình đặt hướng dẫn", "bookingFlowHint": "Khi bật, AI tự kích hoạt quy trình tương ứng theo ý định khách và thu thập thông tin đặt từng bước",
-      "flowN": "Quy trình {n}", "quickBooking": "Đặt nhanh", "edit": "Sửa", "delete": "Xóa", "triggerKw": "Từ khóa kích hoạt: ", "notConfigured": "(chưa cài)", "simpleModeFlow": "Sau khi xác nhận báo giá AI → hiện form đặt → đẩy lên LINE", "collectSteps": "Các bước thu thập: ",
-      "addBookingType": "Thêm loại đặt", "defaultPayment": "Hướng dẫn thanh toán mặc định (dùng khi quy trình chưa cài)", "paymentPlaceholder": "VD: Vui lòng chuyển khoản tới E.SUN Bank 123-456789, chủ TK: Công ty OO, rồi gửi ảnh biên lai để xác nhận.",
-      "flowEditorTitle": "Cài đặt quy trình đặt", "flowName": "Tên quy trình", "flowNamePlaceholder": "VD: Đặt tour ngắm cá voi, đặt phòng, đỗ xe",
-      "triggerKwLabel": "Từ khóa kích hoạt (phân tách bằng dấu phẩy)", "triggerKwHint": "Khi khách nhắc các từ này, AI tự khởi động quy trình này", "triggerKwPlaceholder": "VD: ngắm cá voi,ra khơi,vòng đảo,đặt vé",
-      "dataHintLabel": "Từ khóa dữ liệu liên quan", "dataHintHint": "Cho AI biết tìm loại dữ liệu nào trong kho tri thức và máy tính giá.<br></br>VD: tour ngắm cá voi → điền \"ngắm cá voi\"; đặt phòng → điền \"loại phòng\" hoặc tên phòng", "dataHintPlaceholder": "VD: ngắm cá voi, phòng giường lớn view biển, đỗ xe",
-      "simpleMode": "Chế độ đặt nhanh", "simpleModeHint": "Khi bật: AI chỉ hỏi gói và số người, báo giá; sau khi khách xác nhận sẽ hiện form thu thập chi tiết (tên/ngày sinh/CMND) và đẩy lên LINE của CSKH.", "requireId": "Yêu cầu số CMND (em bé luôn được miễn)",
-      "collectStepsLabel": "Các bước thu thập (kéo ↑↓ để sắp xếp)", "flowPaymentLabel": "Hướng dẫn thanh toán (riêng quy trình này; để trống dùng mặc định)", "flowPaymentPlaceholder": "VD: Vui lòng chuyển khoản tới ...", "saveFlow": "Lưu quy trình này",
-      "discountTitle": "Quyền ưu đãi chốt đơn của AI", "salesTool": "Công cụ bán hàng", "discountDesc": "Cài các ưu đãi và quà AI có thể chủ động đề xuất khi khách do dự hoặc thấy đắt. AI mỗi lần chỉ nói một mục, lồng tự nhiên vào hội thoại.",
-      "maxDiscount": "Giảm tối đa", "maxDiscountHint": "0 = không giảm", "maxDiscountOk": "✓ AI có thể giảm tối đa {pct}%", "giftItems": "Quà tặng", "onePerLine": "mỗi dòng một mục", "giftPlaceholder": "Bữa sáng miễn phí (một người)\nTrả phòng muộn đến 12 giờ\nĐỗ xe miễn phí một ngày\nNâng hạng suite (tùy phòng trống)", "giftHint": "Khi khách do dự, AI chọn một mục để đề xuất; sau khi xác nhận sẽ thêm vào danh sách xác nhận đơn.",
-      "vipTitle": "Danh sách khách VIP", "live": "Đã chạy", "vipDesc": "Mỗi dòng một từ khóa (tên khách, nickname Line, 4 số cuối điện thoại, v.v.). Khi phát hiện trong hội thoại sẽ tự hiện nhãn \"Ưu tiên VIP\".",
-      "autoClose": "Tự đóng", "autoCloseDesc": "Sau khi nhấn \"Đóng\", nếu khách không phản hồi trong thời gian đã đặt, hệ thống tự đóng phiếu. Đặt 0 = không tự đóng.", "minutesAutoClose": "phút rồi tự đóng", "enabled": "✓ Đã bật",
-      "ticketNotify": "Thông báo phiếu", "ticketNotifyTag": "Tự đẩy khi tạo phiếu", "ticketNotifyDesc": "Khi khách yêu cầu nhân viên thật hoặc phiếu được tạo, tự thông báo cho liên hệ chỉ định. Hỗ trợ LINE Messaging API, Telegram Bot và Webhook tùy chỉnh.",
-      "whLabelPh": "Tên ghi chú (VD: Nhóm quản lý)", "whLineToken": "Channel Access Token (từ LINE Developers)", "whLineTarget": "ID đích: User ID (bắt đầu U) hoặc Group ID (bắt đầu C)", "whTgToken": "Bot Token (từ @BotFather, định dạng: 123456:ABC-DEF...)", "whTgChatId": "Chat ID (ID người dùng/nhóm/kênh, VD: -1001234567890)", "whTgHint": "Thêm bot vào nhóm rồi nhắn @userinfobot để xem Chat ID", "addNotifyChannel": "Thêm kênh thông báo", "saveSettings": "Lưu cài đặt",
-      "kbHint": "AI CSKH tìm câu trả lời ở đây trước, không có mới quay về dữ liệu công ty (Unit 2)", "kbDirectInput": "Nhập trực tiếp nội dung tri thức", "kbFaqTag": "FAQ / Dữ liệu sản phẩm", "kbDesc": "Đặt <b>thông tin cụ thể</b> như FAQ, thông số sản phẩm, giá ở đây; AI CSKH sẽ tìm câu trả lời tại đây.<br></br>Đây <b>không phải</b> Prompt — hãy đặt Prompt ở tab \"Cài đặt AI\".", "kbPlaceholder": "VD:\nQ: Làm sao đăng ký dùng thử?\nA: Hãy điền form trên website, chúng tôi sẽ phản hồi trong 1 ngày làm việc.\n\nQ: Các gói tính phí thế nào?\nA: Có gói theo tháng và theo năm, xem chi tiết ở trang giá.",
-      "uploadDoc": "Tải tài liệu (PDF / DOCX / XLSX / CSV / TXT)", "uploadingShort": "Đang tải lên…", "clickUpload50": "Nhấn để tải lên · tối đa 50MB", "noFiles": "Chưa tải tài liệu nào", "extractedChars": "Đã trích {n} ký tự", "noTextContent": "Không có nội dung văn bản", "deleteFile": "Xóa tệp này", "saveKb": "Lưu kho tri thức",
-      "extSources": "Nguồn dữ liệu ngoài", "extSourcesHint": "Khi khách nhập từ khóa kích hoạt, AI tự truy vấn Google Sheets tương ứng", "add": "Thêm",
-      "sourceSwitch": "Chuyển nguồn AI lấy", "sourceSwitchHint": "Nếu không dùng \"Hệ thống đơn\", có thể chuyển sang lấy từ nguồn dữ liệu / máy tính giá bên dưới.",
-      "roomPrice": "Giá phòng / Giá động", "roomPriceHint": "Khi khách hỏi giá, AI lấy từ đâu", "bookingSystem": "Hệ thống đơn",
-      "checkinPwd": "Mật khẩu nhận phòng / Số phòng", "checkinPwdHint": "Khi khách đưa mã đơn, AI lấy từ đâu", "pwdSheet": "Bảng mật khẩu đơn",
-      "checkinTime": "Giờ nhận phòng", "checkinTimeHint": "Chưa đến giờ này, AI không cung cấp mật khẩu / số phòng (HH:MM). Để trống dùng cài đặt của homestay, mặc định 15:00",
-      "recommendedSheets": "Google Sheets nên thiết lập ({name})", "sheetN": "Bảng {n}", "queryColumn": "Cột truy vấn: ", "returnColExample": "VD cột trả về: ", "triggerWord": "Từ kích hoạt: ", "triggerMode": "Chế độ kích hoạt: ", "tmNumeric": "Kích hoạt bằng số", "tmBoth": "Từ khóa + số", "tmKeyword": "Kích hoạt bằng từ khóa",
-      "dsTip1": "<b>Truy vấn giá</b> hãy đặt ở tab \"Máy tính giá\" — ở đây chỉ đặt dữ liệu phi giá cần tra cứu thời gian thực (đơn, lịch, khung giờ)", "dsTip2": "Sau khi tạo Google Sheets theo gợi ý trên, nhấn \"Thêm\" và nhập API Key cùng Spreadsheet ID",
-      "loadingShort": "Đang tải…", "noDataSources": "Chưa có nguồn dữ liệu. Nhấn \"Thêm\" để thiết lập truy vấn Google Sheets.", "toolDivision": "Phân công công cụ", "toolSheets": "<b>Google Sheets (trang này)</b>: dữ liệu động thời gian thực như tra đơn, lịch, khung giờ trống", "toolPricing": "<b>Máy tính giá</b>: tính giá phòng/liệu trình/gói; AI tự áp công thức để báo giá", "toolKb": "<b>Kho tri thức</b>: FAQ, giải thích chính sách, giới thiệu sản phẩm tĩnh",
-      "enable": "Bật", "disable": "Tắt",
-      "editSource": "Sửa nguồn dữ liệu", "addSource": "Thêm nguồn dữ liệu", "dsName": "Tên", "dsNamePh": "VD: Bảng mật khẩu đơn, giá phòng", "dsSpreadsheetPh": "1BxiMVs0... (đoạn giữa trên URL)", "dsSheetName": "Tên trang tính (Sheet Name)", "dsSheetNamePh": "Sheet1", "dsKeyColumn": "Tên cột truy vấn (cột ở hàng tiêu đề)", "dsKeyColumnPh": "VD: Mã đơn, tên loại phòng",
-      "dsReturnCols": "Cột trả về (mỗi dòng một cột; để trống trả tất cả)", "dsReturnColsPh": "Số phòng\nMật khẩu cửa chính\nMật khẩu phòng", "dsReturnColsHint": "Mỗi dòng một tên cột (phải trùng khớp hàng tiêu đề Google Sheets)",
-      "dsTriggerMode": "Cách kích hoạt", "dsTmKeyword": "Kích hoạt bằng từ khóa (tin khách chứa từ cụ thể)", "dsTmNumeric": "Kích hoạt bằng số (khách nhập mã đơn 8+ chữ số, tự khớp chính xác)", "dsTmBoth": "Cả hai", "dsNumericHint": "Phát hiện 8+ chữ số thuần (không bắt đầu bằng 0 hoặc +), khớp chính xác \"cột truy vấn\" rồi chỉ trả về bản ghi đó.",
-      "dsTriggerKw": "Từ khóa kích hoạt (phân tách bằng dấu phẩy; chỉ truy vấn khi tin chứa từ này)", "dsTriggerKwPh": "VD: đơn,mật khẩu,tra cứu",
-      "howToGetId": "Cách lấy Spreadsheet ID:", "howToGetIdBody": "Sao chép từ URL Google Sheets: docs.google.com/spreadsheets/d/<b>[đoạn này]</b>/edit", "sheetsPermHint": "Google Sheets phải đặt \"Bất kỳ ai có liên kết đều xem được\" và bật Sheets API.",
-      "usageNotes": "Hướng dẫn sử dụng", "usage1": "Mỗi người dùng có thể thêm nhiều nguồn dữ liệu, mỗi nguồn có Google API Key và bảng tính riêng.", "usage2": "\"Kích hoạt bằng từ khóa\": khi tin khách chứa từ kích hoạt, AI truy vấn cả bảng và đính kèm kết quả.", "usage3": "\"Kích hoạt bằng số\": khách nhập mã đơn 8+ chữ số (không bắt đầu 0/+) → khớp chính xác hàng → chỉ trả về số phòng, mật khẩu cửa, mật khẩu phòng, v.v. của bản ghi đó.", "usage4": "Có thể liệt kê nhiều cột trả về, VD: số phòng, mật khẩu cửa chính, mật khẩu cửa phòng; AI sẽ trả tất cả cho khách.",
-      "shopTitle": "Cấu hình mua sắm homestay", "shopHint": "Sau khi khách đặt qua LINE AI, tự gửi đến Google Apps Script của bạn, rồi Script đẩy lên nhóm LINE và lưu vào Sheets (VD: đặt bữa sáng, bổ sung đồ dùng, đăng ký sự kiện)", "noShopConfig": "Chưa có cấu hình mua sắm. Nhấn \"Thêm\" để thêm bữa sáng, đồ dùng, v.v.", "shopMeta": "Hạn: {cutoff}　Giao: {delivery}　Tùy chọn: {count}",
-      "editShopConfig": "Sửa cấu hình mua sắm", "addShopConfig": "Thêm cấu hình mua sắm", "shopName": "Tên", "shopNamePh": "VD: đặt bữa sáng, bổ sung đồ dùng, đăng ký sự kiện", "appsScriptUrl": "URL Apps Script Web App", "appsScriptHint": "URL /exec lấy được sau khi deploy Apps Script thành Web App",
-      "cutoffTime": "Giờ chốt", "deliveryTime": "Giờ giao dự kiến", "roomList": "Danh sách phòng (mỗi dòng một phòng, định dạng: số phòng tên loại phòng)", "itemMenu": "Menu món (mỗi dòng một tùy chọn)", "itemMenuHint": "Khi nhận đơn, AI sẽ liệt kê các tùy chọn này cho khách chọn",
-      "orderFlowTitle": "Quy trình nhận đơn của AI sau khi cấu hình:", "orderFlow1": "1. Khách hỏi dịch vụ → AI xác nhận số phòng → liệt kê menu trên", "orderFlow2": "2. Khách chọn món và số lượng → AI tổng hợp danh sách xác nhận", "orderFlow3": "3. Khách xác nhận → hệ thống tự POST đến Apps Script → Script đẩy nhóm LINE + lưu Sheets",
-      "pricingHint": "AI áp dụng con số chính xác khi truy vấn giá, không tự ước tính", "pcTour": "Tour", "pcAccommodation": "Lưu trú", "pcCustom": "Tùy chỉnh", "noPricing": "Chưa có cấu hình giá", "noPricingHint": "Dùng nút trên để thêm giá tour hoặc lưu trú",
-      "editPricing": "Sửa cấu hình giá", "addPricing": "Thêm cấu hình giá", "pcNamePh": "VD: giá phòng, giá tour", "pricingJson": "JSON giá (chỉ cần sửa số)", "loadTourTpl": "Tải mẫu tour", "loadAccTpl": "Tải mẫu lưu trú", "loadCustomTpl": "Tải mẫu tùy chỉnh",
-      "jsonFields": "Giải thích trường JSON", "jfTrigger": ": kích hoạt khi tin khách chứa các từ này, VD: [\"ngắm cá voi\",\"tour\"]", "jfPrice": ": giá ngày thường / cuối tuần (số, không dấu phẩy)", "jfPackages": ": gói combo, AI ưu tiên gợi ý", "jfGroup": ": quy tắc giảm giá nhóm", "jfCancel": ": chính sách hủy",
-      "pcUsage1": "Thêm sản phẩm sau này: nhấn \"+ Tùy chỉnh\", nhập từ kích hoạt và mô tả giá.", "pcUsage2": "Khi AI nhận tin chứa từ kích hoạt, sẽ tự nạp bảng giá và tính từng bước, không tự ước tính.", "pcUsage3": "Ngắm cá voi / lưu trú cấu hình cùng lúc không xung đột; AI chọn bảng giá phù hợp theo nội dung tin.",
-      "testChat": "Chat thử CSKH", "testRouting": "Định tuyến Gemini + Claude", "draftMode": "Chế độ nháp ", "on": "bật", "off": "tắt", "summary": "Tóm tắt", "createTicket": "Tạo phiếu", "closeCase": "Đóng vụ", "clear": "Xóa",
-      "testEmptyHint": "Nhập tin khách mô phỏng bên dưới để thử phản hồi của AI CSKH.", "vipPriority": "Khách VIP — ưu tiên", "churnWarning": "Cảnh báo rời bỏ: khách có thể đang cân nhắc hủy hoặc rời đi",
-      "riskHigh": "Rủi ro cao", "riskMedium": "Rủi ro trung", "riskLow": "Rủi ro thấp", "addToKb": "Thêm vào kho tri thức", "aiDrafting": "AI đang tạo nháp…", "aiThinking": "AI đang suy nghĩ…",
-      "smartDraft": "Bản nháp thông minh", "draftFor": "Bản nháp trả lời cho \"{msg}\"", "adoptSend": "Dùng & gửi", "discard": "Bỏ", "imageSelected": "Đã chọn hình", "remove": "Xóa", "uploadImage": "Tải hình", "send": "Gửi",
-      "autoCloseCountdown": "Đếm ngược tự đóng", "autoCloseIn": "tự đóng phiếu sau {time}", "caseAutoClosed": "Phiếu đã tự đóng", "convSummary": "Tóm tắt hội thoại", "quickPhrases": "Câu thử nhanh:",
-      "autoLearnFaq": "FAQ tự học", "autoLearnFaqHint": "Sau khi CSKH trả lời, thêm vào kho tri thức; lần sau AI trích câu trả lời chuẩn cho câu hỏi tương tự", "manualAdd": "Thêm thủ công", "noFaqRecords": "Chưa có bản ghi học. Ở tab \"Kiểm thử\", nhấn \"📚 Thêm vào kho tri thức\" cạnh phản hồi AI để thêm.",
-      "totalConv": "Tổng hội thoại", "avgSpeed": "Tốc độ phản hồi TB", "highRiskConv": "Hội thoại rủi ro cao", "claudeEscalated": "Claude nâng cấp", "riskDist": "Phân bố rủi ro", "hotIntents": "Top 5 vấn đề nóng", "sentimentTrend": "Xu hướng cảm xúc (7 ngày qua)",
-      "convLog": "Nhật ký hội thoại", "nRecords": "{n}", "noConvLog": "Chưa có bản ghi hội thoại", "customerLabel": "Khách: ", "aiLabel": "AI: ",
-      "ticketSystem": "Hệ thống phiếu", "filterAll": "Tất cả", "ticketTip": "Sang tab \"Kiểm thử\", chat với AI rồi nhấn \"Tạo phiếu\" để chuyển vào hệ thống phiếu", "noTickets": "Chưa có phiếu", "priorityLabel": "Ưu tiên {p}",
-      "unifiedInbox": "Hộp thư hợp nhất", "sourceNote": "Giải thích nguồn", "sourceTest": "🧪 Kiểm thử: tự lưu từ hội thoại ở tab \"Kiểm thử\"", "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram: tin Webhook nền tảng thực (cần thiết lập ở tab \"Nền tảng\" trước)", "noInbox": "Chưa có bản ghi tin nhắn", "noInboxHint": "Gửi vài tin ở tab \"Kiểm thử\" để xem tại đây",
-      "bookingFormTitle": "Điền thông tin đặt", "participants": "Người tham gia", "ageAdult": "Người lớn", "ageChild": "Trẻ em", "ageInfant": "Em bé", "ageYears": " ({age} tuổi)", "pName": "Họ tên", "pBirthday": "Ngày sinh", "pIdNumber": "Số CMND", "infantExempt": "Em bé (dưới 3 tuổi) miễn CMND",
-      "contactPhone": "Điện thoại liên hệ", "contactPhoneHint": "Điền điện thoại liên hệ của một người tham gia", "bookingThanks": "Cảm ơn bạn đã đặt! CSKH sẽ liên hệ sớm, vui lòng giữ điện thoại liên lạc được.", "submitting2": "Đang gửi…", "confirmSubmit": "Xác nhận gửi",
-      "faqQ": "Câu hỏi khách (Q)", "faqQPh": "VD: Mấy giờ được nhận phòng?", "faqA": "Câu trả lời chuẩn (A)", "faqAPh": "Nhập nội dung trả lời CSKH chính xác…", "faqKw": "Từ khóa kích hoạt (phân tách bằng dấu phẩy; để trống AI tự gợi ý)", "faqKwPh": "VD: nhận phòng,mấy giờ,check in", "aiAnalyzing": "AI đang phân tích…", "saveToKb": "Lưu vào kho tri thức",
+      "connected": "Đã kết nối",
+      "notSet": "Chưa cài",
+      "configure": "Cài đặt",
+      "loginToShow": "(hiện sau khi đăng nhập)",
+      "copy": "Sao chép",
+      "officialDocs": "Tài liệu chính thức",
+      "tgRegistering": "Đang đăng ký...",
+      "tgReregister": "Đăng ký lại Webhook",
+      "tgQuerying": "Đang truy vấn...",
+      "tgCheckStatus": "Xem trạng thái lỗi",
+      "tgEndpoint": "Điểm cuối Webhook",
+      "tgRedirected": "Vẫn bị chuyển hướng, đợi Vercel deploy xong rồi thử lại",
+      "tgAccessible": "Truy cập bình thường",
+      "tgNotSet": "(chưa cài)",
+      "tgLastError": "Lỗi cuối",
+      "tgTime": "Thời gian",
+      "tgHistoricError": "Đây là lỗi cũ; điểm cuối Webhook hiện đã bình thường (HTTP 200)",
+      "tgWebhookOk": "Webhook bình thường, không có lỗi",
+      "tgRecentChats": "Trò chuyện gần đây (nhấn để điền):",
+      "tgAdminId": "Chat ID quản trị",
+      "tgForwardHere": "Tin khách sẽ chuyển đến đây",
+      "tgNoAdminId": "Chưa cài Chat ID quản trị; tin khách sẽ không chuyển cho bạn. Vào \"Cài đặt thông tin\" nhập Chat ID của bạn (lấy từ @userinfobot)",
+      "tgBadToken": "Bot Token không hợp lệ",
+      "tgTestHint": "Gửi tin nhắn thử (nhấn \"Xem trạng thái lỗi\" trước để tự lấy Chat ID)",
+      "tgChatIdPh": "Chat ID, VD 123456789",
+      "tgSending": "Đang gửi...",
+      "tgSend": "Gửi",
+      "waConnectedPhone": "Đã kết nối: +{phone}",
+      "waConnected": "WhatsApp đã kết nối",
+      "waScanQr": "Quét QR Code bên dưới bằng WhatsApp",
+      "waConnecting": "Đang kết nối...",
+      "waReconnecting": "Đang kết nối lại...",
+      "waNotConnected": "Chưa kết nối",
+      "waDisconnected": "Đã ngắt, vui lòng kết nối lại",
+      "waDisconnect": "Ngắt kết nối",
+      "waStarting": "Đang khởi động...",
+      "waWaiting": "Đang chờ quét...",
+      "waScanConnect": "Quét QR để kết nối",
+      "waQrHint": "Mở WhatsApp → Thiết bị đã liên kết → quét QR Code này",
+      "waBridgeHint": "Hãy cài WHATSAPP_BRIDGE_URL và WHATSAPP_BRIDGE_API_KEY trong biến môi trường Vercel trước",
+      "fieldSet": "✓ đã cài",
+      "keepOriginal": "Để trống để giữ giá trị cũ",
+      "save": "Lưu",
+      "saving": "Đang lưu...",
+      "cancel": "Hủy",
+      "tplTitle": "Mẫu {name}",
+      "tplDesc": "Áp dụng system prompt và quy trình hướng dẫn mặc định",
+      "applyTemplate": "Áp dụng mẫu",
+      "noPromptHint": "Chưa cài system prompt; nhấn \"Áp dụng mẫu\" để bắt đầu nhanh",
+      "quickApplyTpl": "Áp dụng nhanh mẫu ngành",
+      "routingTitle": "Kiến trúc định tuyến AI",
+      "routingFlash": "Phân loại ý định · trả lời rủi ro thấp/trung",
+      "routingClaude": "Nâng cấp rủi ro cao · vấn đề phức tạp",
+      "routingNote": "Ý định rủi ro cao: <b>đổi trả/hoàn tiền, khiếu nại, pháp lý/hợp đồng</b> (tự nâng cấp lên Claude)",
+      "escalationThreshold": "Ngưỡng nâng cấp",
+      "escHighLabel": "Chỉ nâng cấp rủi ro cao",
+      "escHighDesc": "Chỉ khiếu nại/hoàn tiền/pháp lý → Claude",
+      "escMedLabel": "Nâng cấp từ rủi ro trung",
+      "escMedDesc": "Cả trung + cao → Claude",
+      "replyLanguage": "Ngôn ngữ trả lời",
+      "autoDetect": "Tự phát hiện (theo ngôn ngữ khách)",
+      "systemPrompt": "System Prompt",
+      "aiRoleTag": "Cài đặt vai trò AI",
+      "nChars": "{n} ký tự",
+      "systemPromptHint": "Định nghĩa <b>vai trò, giọng điệu và quy tắc</b> của AI CSKH. VD: \"Bạn là CSKH của thương hiệu XX, trả lời với giọng thân thiện.\"<br></br>⚠️ Đây <b>không phải</b> nơi để FAQ hay dữ liệu sản phẩm — hãy đặt ở tab \"Kho tri thức\".",
+      "systemPromptPlaceholder": "VD: Bạn là CSKH chuyên nghiệp của AI GATE; trả lời khách với giọng thân thiện, chuyên nghiệp. Nếu không chắc, chủ động báo sẽ chuyển cho nhân viên.",
+      "bookingFlow": "Quy trình đặt hướng dẫn",
+      "bookingFlowHint": "Khi bật, AI tự kích hoạt quy trình tương ứng theo ý định khách và thu thập thông tin đặt từng bước",
+      "flowN": "Quy trình {n}",
+      "quickBooking": "Đặt nhanh",
+      "edit": "Sửa",
+      "delete": "Xóa",
+      "triggerKw": "Từ khóa kích hoạt: ",
+      "notConfigured": "(chưa cài)",
+      "simpleModeFlow": "Sau khi xác nhận báo giá AI → hiện form đặt → đẩy lên LINE",
+      "collectSteps": "Các bước thu thập: ",
+      "addBookingType": "Thêm loại đặt",
+      "defaultPayment": "Hướng dẫn thanh toán mặc định (dùng khi quy trình chưa cài)",
+      "paymentPlaceholder": "VD: Vui lòng chuyển khoản tới E.SUN Bank 123-456789, chủ TK: Công ty OO, rồi gửi ảnh biên lai để xác nhận.",
+      "flowEditorTitle": "Cài đặt quy trình đặt",
+      "flowName": "Tên quy trình",
+      "flowNamePlaceholder": "VD: Đặt tour ngắm cá voi, đặt phòng, đỗ xe",
+      "triggerKwLabel": "Từ khóa kích hoạt (phân tách bằng dấu phẩy)",
+      "triggerKwHint": "Khi khách nhắc các từ này, AI tự khởi động quy trình này",
+      "triggerKwPlaceholder": "VD: ngắm cá voi,ra khơi,vòng đảo,đặt vé",
+      "dataHintLabel": "Từ khóa dữ liệu liên quan",
+      "dataHintHint": "Cho AI biết tìm loại dữ liệu nào trong kho tri thức và máy tính giá.<br></br>VD: tour ngắm cá voi → điền \"ngắm cá voi\"; đặt phòng → điền \"loại phòng\" hoặc tên phòng",
+      "dataHintPlaceholder": "VD: ngắm cá voi, phòng giường lớn view biển, đỗ xe",
+      "simpleMode": "Chế độ đặt nhanh",
+      "simpleModeHint": "Khi bật: AI chỉ hỏi gói và số người, báo giá; sau khi khách xác nhận sẽ hiện form thu thập chi tiết (tên/ngày sinh/CMND) và đẩy lên LINE của CSKH.",
+      "requireId": "Yêu cầu số CMND (em bé luôn được miễn)",
+      "collectStepsLabel": "Các bước thu thập (kéo ↑↓ để sắp xếp)",
+      "flowPaymentLabel": "Hướng dẫn thanh toán (riêng quy trình này; để trống dùng mặc định)",
+      "flowPaymentPlaceholder": "VD: Vui lòng chuyển khoản tới ...",
+      "saveFlow": "Lưu quy trình này",
+      "discountTitle": "Quyền ưu đãi chốt đơn của AI",
+      "salesTool": "Công cụ bán hàng",
+      "discountDesc": "Cài các ưu đãi và quà AI có thể chủ động đề xuất khi khách do dự hoặc thấy đắt. AI mỗi lần chỉ nói một mục, lồng tự nhiên vào hội thoại.",
+      "maxDiscount": "Giảm tối đa",
+      "maxDiscountHint": "0 = không giảm",
+      "maxDiscountOk": "✓ AI có thể giảm tối đa {pct}%",
+      "giftItems": "Quà tặng",
+      "onePerLine": "mỗi dòng một mục",
+      "giftPlaceholder": "Bữa sáng miễn phí (một người)\nTrả phòng muộn đến 12 giờ\nĐỗ xe miễn phí một ngày\nNâng hạng suite (tùy phòng trống)",
+      "giftHint": "Khi khách do dự, AI chọn một mục để đề xuất; sau khi xác nhận sẽ thêm vào danh sách xác nhận đơn.",
+      "vipTitle": "Danh sách khách VIP",
+      "live": "Đã chạy",
+      "vipDesc": "Mỗi dòng một từ khóa (tên khách, nickname Line, 4 số cuối điện thoại, v.v.). Khi phát hiện trong hội thoại sẽ tự hiện nhãn \"Ưu tiên VIP\".",
+      "autoClose": "Tự đóng",
+      "autoCloseDesc": "Sau khi nhấn \"Đóng\", nếu khách không phản hồi trong thời gian đã đặt, hệ thống tự đóng phiếu. Đặt 0 = không tự đóng.",
+      "minutesAutoClose": "phút rồi tự đóng",
+      "enabled": "✓ Đã bật",
+      "ticketNotify": "Thông báo phiếu",
+      "ticketNotifyTag": "Tự đẩy khi tạo phiếu",
+      "ticketNotifyDesc": "Khi khách yêu cầu nhân viên thật hoặc phiếu được tạo, tự thông báo cho liên hệ chỉ định. Hỗ trợ LINE Messaging API, Telegram Bot và Webhook tùy chỉnh.",
+      "whLabelPh": "Tên ghi chú (VD: Nhóm quản lý)",
+      "whLineToken": "Channel Access Token (từ LINE Developers)",
+      "whLineTarget": "ID đích: User ID (bắt đầu U) hoặc Group ID (bắt đầu C)",
+      "whTgToken": "Bot Token (từ @BotFather, định dạng: 123456:ABC-DEF...)",
+      "whTgChatId": "Chat ID (ID người dùng/nhóm/kênh, VD: -1001234567890)",
+      "whTgHint": "Thêm bot vào nhóm rồi nhắn @userinfobot để xem Chat ID",
+      "addNotifyChannel": "Thêm kênh thông báo",
+      "saveSettings": "Lưu cài đặt",
+      "kbHint": "AI CSKH tìm câu trả lời ở đây trước, không có mới quay về dữ liệu công ty (Unit 2)",
+      "kbDirectInput": "Nhập trực tiếp nội dung tri thức",
+      "kbFaqTag": "FAQ / Dữ liệu sản phẩm",
+      "kbDesc": "Đặt <b>thông tin cụ thể</b> như FAQ, thông số sản phẩm, giá ở đây; AI CSKH sẽ tìm câu trả lời tại đây.<br></br>Đây <b>không phải</b> Prompt — hãy đặt Prompt ở tab \"Cài đặt AI\".",
+      "kbPlaceholder": "VD:\nQ: Làm sao đăng ký dùng thử?\nA: Hãy điền form trên website, chúng tôi sẽ phản hồi trong 1 ngày làm việc.\n\nQ: Các gói tính phí thế nào?\nA: Có gói theo tháng và theo năm, xem chi tiết ở trang giá.",
+      "uploadDoc": "Tải tài liệu (PDF / DOCX / XLSX / CSV / TXT)",
+      "uploadingShort": "Đang tải lên…",
+      "clickUpload50": "Nhấn để tải lên · tối đa 50MB",
+      "noFiles": "Chưa tải tài liệu nào",
+      "extractedChars": "Đã trích {n} ký tự",
+      "noTextContent": "Không có nội dung văn bản",
+      "deleteFile": "Xóa tệp này",
+      "saveKb": "Lưu kho tri thức",
+      "extSources": "Nguồn dữ liệu ngoài",
+      "extSourcesHint": "Khi khách nhập từ khóa kích hoạt, AI tự truy vấn Google Sheets tương ứng",
+      "add": "Thêm",
+      "sourceSwitch": "Chuyển nguồn AI lấy",
+      "sourceSwitchHint": "Nếu không dùng \"Hệ thống đơn\", có thể chuyển sang lấy từ nguồn dữ liệu / máy tính giá bên dưới.",
+      "roomPrice": "Giá phòng / Giá động",
+      "roomPriceHint": "Khi khách hỏi giá, AI lấy từ đâu",
+      "bookingSystem": "Hệ thống đơn",
+      "checkinPwd": "Mật khẩu nhận phòng / Số phòng",
+      "checkinPwdHint": "Khi khách đưa mã đơn, AI lấy từ đâu",
+      "pwdSheet": "Bảng mật khẩu đơn",
+      "checkinTime": "Giờ nhận phòng",
+      "checkinTimeHint": "Chưa đến giờ này, AI không cung cấp mật khẩu / số phòng (HH:MM). Để trống dùng cài đặt của homestay, mặc định 15:00",
+      "recommendedSheets": "Google Sheets nên thiết lập ({name})",
+      "sheetN": "Bảng {n}",
+      "queryColumn": "Cột truy vấn: ",
+      "returnColExample": "VD cột trả về: ",
+      "triggerWord": "Từ kích hoạt: ",
+      "triggerMode": "Chế độ kích hoạt: ",
+      "tmNumeric": "Kích hoạt bằng số",
+      "tmBoth": "Từ khóa + số",
+      "tmKeyword": "Kích hoạt bằng từ khóa",
+      "dsTip1": "<b>Truy vấn giá</b> hãy đặt ở tab \"Máy tính giá\" — ở đây chỉ đặt dữ liệu phi giá cần tra cứu thời gian thực (đơn, lịch, khung giờ)",
+      "dsTip2": "Sau khi tạo Google Sheets theo gợi ý trên, nhấn \"Thêm\" và nhập API Key cùng Spreadsheet ID",
+      "loadingShort": "Đang tải…",
+      "noDataSources": "Chưa có nguồn dữ liệu. Nhấn \"Thêm\" để thiết lập truy vấn Google Sheets.",
+      "toolDivision": "Phân công công cụ",
+      "toolSheets": "<b>Google Sheets (trang này)</b>: dữ liệu động thời gian thực như tra đơn, lịch, khung giờ trống",
+      "toolPricing": "<b>Máy tính giá</b>: tính giá phòng/liệu trình/gói; AI tự áp công thức để báo giá",
+      "toolKb": "<b>Kho tri thức</b>: FAQ, giải thích chính sách, giới thiệu sản phẩm tĩnh",
+      "enable": "Bật",
+      "disable": "Tắt",
+      "editSource": "Sửa nguồn dữ liệu",
+      "addSource": "Thêm nguồn dữ liệu",
+      "dsName": "Tên",
+      "dsNamePh": "VD: Bảng mật khẩu đơn, giá phòng",
+      "dsSpreadsheetPh": "1BxiMVs0... (đoạn giữa trên URL)",
+      "dsSheetName": "Tên trang tính (Sheet Name)",
+      "dsSheetNamePh": "Sheet1",
+      "dsKeyColumn": "Tên cột truy vấn (cột ở hàng tiêu đề)",
+      "dsKeyColumnPh": "VD: Mã đơn, tên loại phòng",
+      "dsReturnCols": "Cột trả về (mỗi dòng một cột; để trống trả tất cả)",
+      "dsReturnColsPh": "Số phòng\nMật khẩu cửa chính\nMật khẩu phòng",
+      "dsReturnColsHint": "Mỗi dòng một tên cột (phải trùng khớp hàng tiêu đề Google Sheets)",
+      "dsTriggerMode": "Cách kích hoạt",
+      "dsTmKeyword": "Kích hoạt bằng từ khóa (tin khách chứa từ cụ thể)",
+      "dsTmNumeric": "Kích hoạt bằng số (khách nhập mã đơn 8+ chữ số, tự khớp chính xác)",
+      "dsTmBoth": "Cả hai",
+      "dsNumericHint": "Phát hiện 8+ chữ số thuần (không bắt đầu bằng 0 hoặc +), khớp chính xác \"cột truy vấn\" rồi chỉ trả về bản ghi đó.",
+      "dsTriggerKw": "Từ khóa kích hoạt (phân tách bằng dấu phẩy; chỉ truy vấn khi tin chứa từ này)",
+      "dsTriggerKwPh": "VD: đơn,mật khẩu,tra cứu",
+      "howToGetId": "Cách lấy Spreadsheet ID:",
+      "howToGetIdBody": "Sao chép từ URL Google Sheets: docs.google.com/spreadsheets/d/<b>[đoạn này]</b>/edit",
+      "sheetsPermHint": "Google Sheets phải đặt \"Bất kỳ ai có liên kết đều xem được\" và bật Sheets API.",
+      "usageNotes": "Hướng dẫn sử dụng",
+      "usage1": "Mỗi người dùng có thể thêm nhiều nguồn dữ liệu, mỗi nguồn có Google API Key và bảng tính riêng.",
+      "usage2": "\"Kích hoạt bằng từ khóa\": khi tin khách chứa từ kích hoạt, AI truy vấn cả bảng và đính kèm kết quả.",
+      "usage3": "\"Kích hoạt bằng số\": khách nhập mã đơn 8+ chữ số (không bắt đầu 0/+) → khớp chính xác hàng → chỉ trả về số phòng, mật khẩu cửa, mật khẩu phòng, v.v. của bản ghi đó.",
+      "usage4": "Có thể liệt kê nhiều cột trả về, VD: số phòng, mật khẩu cửa chính, mật khẩu cửa phòng; AI sẽ trả tất cả cho khách.",
+      "shopTitle": "Cấu hình mua sắm homestay",
+      "shopHint": "Sau khi khách đặt qua LINE AI, tự gửi đến Google Apps Script của bạn, rồi Script đẩy lên nhóm LINE và lưu vào Sheets (VD: đặt bữa sáng, bổ sung đồ dùng, đăng ký sự kiện)",
+      "noShopConfig": "Chưa có cấu hình mua sắm. Nhấn \"Thêm\" để thêm bữa sáng, đồ dùng, v.v.",
+      "shopMeta": "Hạn: {cutoff}　Giao: {delivery}　Tùy chọn: {count}",
+      "editShopConfig": "Sửa cấu hình mua sắm",
+      "addShopConfig": "Thêm cấu hình mua sắm",
+      "shopName": "Tên",
+      "shopNamePh": "VD: đặt bữa sáng, bổ sung đồ dùng, đăng ký sự kiện",
+      "appsScriptUrl": "URL Apps Script Web App",
+      "appsScriptHint": "URL /exec lấy được sau khi deploy Apps Script thành Web App",
+      "cutoffTime": "Giờ chốt",
+      "deliveryTime": "Giờ giao dự kiến",
+      "roomList": "Danh sách phòng (mỗi dòng một phòng, định dạng: số phòng tên loại phòng)",
+      "itemMenu": "Menu món (mỗi dòng một tùy chọn)",
+      "itemMenuHint": "Khi nhận đơn, AI sẽ liệt kê các tùy chọn này cho khách chọn",
+      "orderFlowTitle": "Quy trình nhận đơn của AI sau khi cấu hình:",
+      "orderFlow1": "1. Khách hỏi dịch vụ → AI xác nhận số phòng → liệt kê menu trên",
+      "orderFlow2": "2. Khách chọn món và số lượng → AI tổng hợp danh sách xác nhận",
+      "orderFlow3": "3. Khách xác nhận → hệ thống tự POST đến Apps Script → Script đẩy nhóm LINE + lưu Sheets",
+      "pricingHint": "AI áp dụng con số chính xác khi truy vấn giá, không tự ước tính",
+      "pcTour": "Tour",
+      "pcAccommodation": "Lưu trú",
+      "pcCustom": "Tùy chỉnh",
+      "noPricing": "Chưa có cấu hình giá",
+      "noPricingHint": "Dùng nút trên để thêm giá tour hoặc lưu trú",
+      "editPricing": "Sửa cấu hình giá",
+      "addPricing": "Thêm cấu hình giá",
+      "pcNamePh": "VD: giá phòng, giá tour",
+      "pricingJson": "JSON giá (chỉ cần sửa số)",
+      "loadTourTpl": "Tải mẫu tour",
+      "loadAccTpl": "Tải mẫu lưu trú",
+      "loadCustomTpl": "Tải mẫu tùy chỉnh",
+      "jsonFields": "Giải thích trường JSON",
+      "jfTrigger": ": kích hoạt khi tin khách chứa các từ này, VD: [\"ngắm cá voi\",\"tour\"]",
+      "jfPrice": ": giá ngày thường / cuối tuần (số, không dấu phẩy)",
+      "jfPackages": ": gói combo, AI ưu tiên gợi ý",
+      "jfGroup": ": quy tắc giảm giá nhóm",
+      "jfCancel": ": chính sách hủy",
+      "pcUsage1": "Thêm sản phẩm sau này: nhấn \"+ Tùy chỉnh\", nhập từ kích hoạt và mô tả giá.",
+      "pcUsage2": "Khi AI nhận tin chứa từ kích hoạt, sẽ tự nạp bảng giá và tính từng bước, không tự ước tính.",
+      "pcUsage3": "Ngắm cá voi / lưu trú cấu hình cùng lúc không xung đột; AI chọn bảng giá phù hợp theo nội dung tin.",
+      "testChat": "Chat thử CSKH",
+      "testRouting": "Định tuyến Gemini + Claude",
+      "draftMode": "Chế độ nháp ",
+      "on": "bật",
+      "off": "tắt",
+      "summary": "Tóm tắt",
+      "createTicket": "Tạo phiếu",
+      "closeCase": "Đóng vụ",
+      "clear": "Xóa",
+      "testEmptyHint": "Nhập tin khách mô phỏng bên dưới để thử phản hồi của AI CSKH.",
+      "vipPriority": "Khách VIP — ưu tiên",
+      "churnWarning": "Cảnh báo rời bỏ: khách có thể đang cân nhắc hủy hoặc rời đi",
+      "riskHigh": "Rủi ro cao",
+      "riskMedium": "Rủi ro trung",
+      "riskLow": "Rủi ro thấp",
+      "addToKb": "Thêm vào kho tri thức",
+      "aiDrafting": "AI đang tạo nháp…",
+      "aiThinking": "AI đang suy nghĩ…",
+      "smartDraft": "Bản nháp thông minh",
+      "draftFor": "Bản nháp trả lời cho \"{msg}\"",
+      "adoptSend": "Dùng & gửi",
+      "discard": "Bỏ",
+      "imageSelected": "Đã chọn hình",
+      "remove": "Xóa",
+      "uploadImage": "Tải hình",
+      "send": "Gửi",
+      "autoCloseCountdown": "Đếm ngược tự đóng",
+      "autoCloseIn": "tự đóng phiếu sau {time}",
+      "caseAutoClosed": "Phiếu đã tự đóng",
+      "convSummary": "Tóm tắt hội thoại",
+      "quickPhrases": "Câu thử nhanh:",
+      "autoLearnFaq": "FAQ tự học",
+      "autoLearnFaqHint": "Sau khi CSKH trả lời, thêm vào kho tri thức; lần sau AI trích câu trả lời chuẩn cho câu hỏi tương tự",
+      "manualAdd": "Thêm thủ công",
+      "noFaqRecords": "Chưa có bản ghi học. Ở tab \"Kiểm thử\", nhấn \"📚 Thêm vào kho tri thức\" cạnh phản hồi AI để thêm.",
+      "totalConv": "Tổng hội thoại",
+      "avgSpeed": "Tốc độ phản hồi TB",
+      "highRiskConv": "Hội thoại rủi ro cao",
+      "claudeEscalated": "Claude nâng cấp",
+      "riskDist": "Phân bố rủi ro",
+      "hotIntents": "Top 5 vấn đề nóng",
+      "sentimentTrend": "Xu hướng cảm xúc (7 ngày qua)",
+      "convLog": "Nhật ký hội thoại",
+      "nRecords": "{n}",
+      "noConvLog": "Chưa có bản ghi hội thoại",
+      "customerLabel": "Khách: ",
+      "aiLabel": "AI: ",
+      "ticketSystem": "Hệ thống phiếu",
+      "filterAll": "Tất cả",
+      "ticketTip": "Sang tab \"Kiểm thử\", chat với AI rồi nhấn \"Tạo phiếu\" để chuyển vào hệ thống phiếu",
+      "noTickets": "Chưa có phiếu",
+      "priorityLabel": "Ưu tiên {p}",
+      "unifiedInbox": "Hộp thư hợp nhất",
+      "sourceNote": "Giải thích nguồn",
+      "sourceTest": "🧪 Kiểm thử: tự lưu từ hội thoại ở tab \"Kiểm thử\"",
+      "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram: tin Webhook nền tảng thực (cần thiết lập ở tab \"Nền tảng\" trước)",
+      "noInbox": "Chưa có bản ghi tin nhắn",
+      "noInboxHint": "Gửi vài tin ở tab \"Kiểm thử\" để xem tại đây",
+      "bookingFormTitle": "Điền thông tin đặt",
+      "participants": "Người tham gia",
+      "ageAdult": "Người lớn",
+      "ageChild": "Trẻ em",
+      "ageInfant": "Em bé",
+      "ageYears": " ({age} tuổi)",
+      "pName": "Họ tên",
+      "pBirthday": "Ngày sinh",
+      "pIdNumber": "Số CMND",
+      "infantExempt": "Em bé (dưới 3 tuổi) miễn CMND",
+      "contactPhone": "Điện thoại liên hệ",
+      "contactPhoneHint": "Điền điện thoại liên hệ của một người tham gia",
+      "bookingThanks": "Cảm ơn bạn đã đặt! CSKH sẽ liên hệ sớm, vui lòng giữ điện thoại liên lạc được.",
+      "submitting2": "Đang gửi…",
+      "confirmSubmit": "Xác nhận gửi",
+      "faqQ": "Câu hỏi khách (Q)",
+      "faqQPh": "VD: Mấy giờ được nhận phòng?",
+      "faqA": "Câu trả lời chuẩn (A)",
+      "faqAPh": "Nhập nội dung trả lời CSKH chính xác…",
+      "faqKw": "Từ khóa kích hoạt (phân tách bằng dấu phẩy; để trống AI tự gợi ý)",
+      "faqKwPh": "VD: nhận phòng,mấy giờ,check in",
+      "aiAnalyzing": "AI đang phân tích…",
+      "saveToKb": "Lưu vào kho tri thức",
       "platformSettings": "Cài đặt kết nối nền tảng"
     },
     "comingSoon": "Đang xây dựng, vui lòng đón chờ",
     "unit": {
-      "1": { "name": "Thu thập thông tin", "desc": "Tin tức, web, bản đồ, đánh giá" },
-      "3": { "name": "Phân tích dữ liệu", "desc": "Thị trường, đối thủ, phân tích video/nội dung" },
-      "4": { "name": "Tạo nội dung", "desc": "AI tạo nội dung tiếp thị" },
-      "5": { "name": "Kịch bản hình", "desc": "Tạo kịch bản mô tả hình" },
-      "6": { "name": "Tạo hình", "desc": "AI tạo hình tiếp thị" },
-      "7": { "name": "Kịch bản video", "desc": "Tạo kịch bản storyboard" },
-      "8": { "name": "Tạo video", "desc": "AI tạo video tiếp thị" },
-      "9": { "name": "Tải lên nền tảng", "desc": "Tự tải lên FB/IG/YouTube, v.v." },
-      "11": { "name": "Tiếp thị MC", "desc": "Video MC ảo HeyGen" }
+      "1": {
+        "name": "Thu thập thông tin",
+        "desc": "Tin tức, web, bản đồ, đánh giá"
+      },
+      "3": {
+        "name": "Phân tích dữ liệu",
+        "desc": "Thị trường, đối thủ, phân tích video/nội dung"
+      },
+      "4": {
+        "name": "Tạo nội dung",
+        "desc": "AI tạo nội dung tiếp thị"
+      },
+      "5": {
+        "name": "Kịch bản hình",
+        "desc": "Tạo kịch bản mô tả hình"
+      },
+      "6": {
+        "name": "Tạo hình",
+        "desc": "AI tạo hình tiếp thị"
+      },
+      "7": {
+        "name": "Kịch bản video",
+        "desc": "Tạo kịch bản storyboard"
+      },
+      "8": {
+        "name": "Tạo video",
+        "desc": "AI tạo video tiếp thị"
+      },
+      "9": {
+        "name": "Tải lên nền tảng",
+        "desc": "Tự tải lên FB/IG/YouTube, v.v."
+      },
+      "11": {
+        "name": "Tiếp thị MC",
+        "desc": "Video MC ảo HeyGen"
+      }
     },
     "mp": {
-      "untitled": "Dự án tiếp thị chưa đặt tên", "csConfigTitle": "Cấu hình CSKH {name}", "backToCs": "Về trang tổng CSKH",
-      "saved": "Đã lưu", "notCreated": "Chưa tạo", "newProject": "Dự án mới", "rename": "Đổi tên", "confirmDelete": "Xóa \"{title}\"?", "delete": "Xóa",
-      "noProjects": "Chưa có dự án", "projectNamePh": "Tên dự án…", "creating": "Đang tạo…", "createProject": "Tạo dự án", "underConstruction": "Đang xây dựng",
-      "otherTools": "Công cụ khác", "automation": "Quy trình tự động", "linked": "Đang liên kết", "companySettings": "Cài đặt dữ liệu công ty"
+      "untitled": "Dự án tiếp thị chưa đặt tên",
+      "csConfigTitle": "Cấu hình CSKH {name}",
+      "backToCs": "Về trang tổng CSKH",
+      "saved": "Đã lưu",
+      "notCreated": "Chưa tạo",
+      "newProject": "Dự án mới",
+      "rename": "Đổi tên",
+      "confirmDelete": "Xóa \"{title}\"?",
+      "delete": "Xóa",
+      "noProjects": "Chưa có dự án",
+      "projectNamePh": "Tên dự án…",
+      "creating": "Đang tạo…",
+      "createProject": "Tạo dự án",
+      "underConstruction": "Đang xây dựng",
+      "otherTools": "Công cụ khác",
+      "automation": "Quy trình tự động",
+      "linked": "Đang liên kết",
+      "companySettings": "Cài đặt dữ liệu công ty"
     }
   },
   "Work": {
@@ -2078,7 +3763,13 @@
     "dMin": "{n} phút",
     "statusLabel": "Trạng thái",
     "statusPlaceholder": "Nhập trạng thái hiện tại…",
-    "presets": ["Chưa bắt đầu", "Đang làm", "Bị kẹt", "Chờ duyệt", "Hoàn thành"],
+    "presets": [
+      "Chưa bắt đầu",
+      "Đang làm",
+      "Bị kẹt",
+      "Chờ duyệt",
+      "Hoàn thành"
+    ],
     "commentsTitle": "Ý kiến",
     "commentsEmpty": "Chưa có ý kiến — hãy để lại báo cáo hoặc ý tưởng đầu tiên",
     "commentsPlaceholder": "Nhập báo cáo trạng thái hoặc ý kiến… (Ctrl/⌘ + Enter để gửi)",
@@ -2096,6 +3787,20 @@
     "joined": "Đã tham gia",
     "pending": "Chờ tham gia",
     "removeMember": "Xóa",
-    "translatedNote": "🌐 {text}"
+    "translatedNote": "🌐 {text}",
+    "statusCustom": "Tùy chỉnh…",
+    "reportsTitle": "Báo cáo",
+    "reportText": "Dán văn bản",
+    "reportLink": "Liên kết",
+    "reportFile": "Tải tệp lên",
+    "reportTextPh": "Dán nội dung báo cáo…",
+    "reportLinkPh": "Dán URL…",
+    "openLink": "Mở liên kết",
+    "uploading": "Đang tải lên…",
+    "toSubitem": "Thành mục con",
+    "subitems": "Mục con",
+    "addSubitem": "Thêm mục con",
+    "subitemPh": "Tiêu đề mục con…",
+    "ownerOnlyDone": "Chỉ chủ sở hữu mới đánh dấu hoàn thành"
   }
 }

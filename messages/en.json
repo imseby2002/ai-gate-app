@@ -1,5 +1,8 @@
 {
-  "Nav": { "backHome": "Back to Home", "backToMenu": "Back to Menu" },
+  "Nav": {
+    "backHome": "Back to Home",
+    "backToMenu": "Back to Menu"
+  },
   "Landing": {
     "signIn": "Sign In",
     "freeTrial": "Free Trial",
@@ -124,12 +127,30 @@
     "locked": "Locked",
     "assistantCount": "{count} assistants",
     "modules": {
-      "chat": { "label": "AI Chat", "desc": "Text chat, image gen, video gen, RAG assistant" },
-      "marketing": { "label": "Marketing Auto", "desc": "Content creation, images, videos, workflow automation" },
-      "cs": { "label": "Customer Service", "desc": "LINE / WhatsApp / Telegram smart CS" },
-      "leads": { "label": "Lead Marketing", "desc": "Marketing call scripts, lead analysis" },
-      "resume": { "label": "Resume Tools", "desc": "AI resume polish & job matching" },
-      "booking": { "label": "Booking System", "desc": "Properties, orders, pricing & online booking" }
+      "chat": {
+        "label": "AI Chat",
+        "desc": "Text chat, image gen, video gen, RAG assistant"
+      },
+      "marketing": {
+        "label": "Marketing Auto",
+        "desc": "Content creation, images, videos, workflow automation"
+      },
+      "cs": {
+        "label": "Customer Service",
+        "desc": "LINE / WhatsApp / Telegram smart CS"
+      },
+      "leads": {
+        "label": "Lead Marketing",
+        "desc": "Marketing call scripts, lead analysis"
+      },
+      "resume": {
+        "label": "Resume Tools",
+        "desc": "AI resume polish & job matching"
+      },
+      "booking": {
+        "label": "Booking System",
+        "desc": "Properties, orders, pricing & online booking"
+      }
     },
     "routes": {
       "daily": "Daily Chat",
@@ -185,8 +206,22 @@
     "empty1": "No customer data yet.",
     "empty2": "Customers appear here automatically after chatting via LINE and other channels.",
     "footer": "{count} customers · more price inquiries mean closer to a deal; prioritize following up on negotiating customers.",
-    "stages": { "new": "New", "inquiring": "Inquiring", "quoted": "Quoted", "negotiating": "Negotiating", "won": "Won", "lost": "Lost" },
-    "col": { "customer": "Customer", "stage": "Stage", "priceAsk": "Inquiries", "messages": "Messages", "lastIntent": "Last Intent", "lastContact": "Last Contact" }
+    "stages": {
+      "new": "New",
+      "inquiring": "Inquiring",
+      "quoted": "Quoted",
+      "negotiating": "Negotiating",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "col": {
+      "customer": "Customer",
+      "stage": "Stage",
+      "priceAsk": "Inquiries",
+      "messages": "Messages",
+      "lastIntent": "Last Intent",
+      "lastContact": "Last Contact"
+    }
   },
   "CsInbox": {
     "title": "Unified Inbox",
@@ -203,7 +238,14 @@
     "agentLabel": "Human Agent",
     "sendNote": "After sending, it switches to \"Human Takeover\" and AI pauses auto-reply.",
     "replyPlaceholder": "Reply to {name}… (Enter to send, Shift+Enter for newline)",
-    "stages": { "new": "New", "inquiring": "Inquiring", "quoted": "Quoted", "negotiating": "Negotiating", "won": "Won", "lost": "Lost" }
+    "stages": {
+      "new": "New",
+      "inquiring": "Inquiring",
+      "quoted": "Quoted",
+      "negotiating": "Negotiating",
+      "won": "Won",
+      "lost": "Lost"
+    }
   },
   "CsDashboard": {
     "running": "System Running",
@@ -268,42 +310,76 @@
     "ctaNote": "Free to use · Unlimited conversations · Data encrypted",
     "ind_homestay_name": "Homestay / Travel",
     "ind_homestay_desc": "Room inquiry, booking flow, cancellation policy, itinerary",
-    "ind_homestay_tag0": "Room booking", "ind_homestay_tag1": "Date selection", "ind_homestay_tag2": "Cancellation policy", "ind_homestay_tag3": "Itinerary tips",
+    "ind_homestay_tag0": "Room booking",
+    "ind_homestay_tag1": "Date selection",
+    "ind_homestay_tag2": "Cancellation policy",
+    "ind_homestay_tag3": "Itinerary tips",
     "ind_ecommerce_name": "E-commerce / Retail",
     "ind_ecommerce_desc": "Order lookup, returns, shipment tracking, promotions",
-    "ind_ecommerce_tag0": "Order status", "ind_ecommerce_tag1": "Returns", "ind_ecommerce_tag2": "Shipment tracking", "ind_ecommerce_tag3": "Product inquiry",
+    "ind_ecommerce_tag0": "Order status",
+    "ind_ecommerce_tag1": "Returns",
+    "ind_ecommerce_tag2": "Shipment tracking",
+    "ind_ecommerce_tag3": "Product inquiry",
     "ind_restaurant_name": "Restaurant / F&B",
     "ind_restaurant_desc": "Reservations, delivery, menu intro, promotions",
-    "ind_restaurant_tag0": "Online reservation", "ind_restaurant_tag1": "Menu inquiry", "ind_restaurant_tag2": "Delivery time", "ind_restaurant_tag3": "Private room",
+    "ind_restaurant_tag0": "Online reservation",
+    "ind_restaurant_tag1": "Menu inquiry",
+    "ind_restaurant_tag2": "Delivery time",
+    "ind_restaurant_tag3": "Private room",
     "ind_clinic_name": "Clinic / MedAesthetics",
     "ind_clinic_desc": "Appointments, treatment info, aftercare, pricing",
-    "ind_clinic_tag0": "Online booking", "ind_clinic_tag1": "Treatment info", "ind_clinic_tag2": "Pricing inquiry", "ind_clinic_tag3": "Aftercare FAQ",
+    "ind_clinic_tag0": "Online booking",
+    "ind_clinic_tag1": "Treatment info",
+    "ind_clinic_tag2": "Pricing inquiry",
+    "ind_clinic_tag3": "Aftercare FAQ",
     "ind_beauty_name": "Beauty / Hair / SPA",
     "ind_beauty_desc": "Bookings, price list, stylist intro, care advice",
-    "ind_beauty_tag0": "Service booking", "ind_beauty_tag1": "Stylist selection", "ind_beauty_tag2": "Price inquiry", "ind_beauty_tag3": "Care advice",
+    "ind_beauty_tag0": "Service booking",
+    "ind_beauty_tag1": "Stylist selection",
+    "ind_beauty_tag2": "Price inquiry",
+    "ind_beauty_tag3": "Care advice",
     "ind_education_name": "Education / Tutoring",
     "ind_education_desc": "Course inquiry, trial booking, tuition, teachers",
-    "ind_education_tag0": "Course intro", "ind_education_tag1": "Trial booking", "ind_education_tag2": "Tuition plans", "ind_education_tag3": "Teacher inquiry",
+    "ind_education_tag0": "Course intro",
+    "ind_education_tag1": "Trial booking",
+    "ind_education_tag2": "Tuition plans",
+    "ind_education_tag3": "Teacher inquiry",
     "fg_ai_title": "🤖 AI Core",
-    "fg_ai_intent_label": "Intent Detection", "fg_ai_intent_desc": "Auto-detect user intent (refund/inquiry/complaint/purchase) for smarter routing",
-    "fg_ai_lang_label": "Auto Language Detection", "fg_ai_lang_desc": "Detect customer language and switch replies automatically",
-    "fg_ai_draft_label": "Smart Draft", "fg_ai_draft_desc": "AI generates reply suggestions; agents accept or tweak with one click",
-    "fg_ai_summary_label": "Conversation Summary", "fg_ai_summary_desc": "Long chats auto-condensed for seamless agent handoff",
+    "fg_ai_intent_label": "Intent Detection",
+    "fg_ai_intent_desc": "Auto-detect user intent (refund/inquiry/complaint/purchase) for smarter routing",
+    "fg_ai_lang_label": "Auto Language Detection",
+    "fg_ai_lang_desc": "Detect customer language and switch replies automatically",
+    "fg_ai_draft_label": "Smart Draft",
+    "fg_ai_draft_desc": "AI generates reply suggestions; agents accept or tweak with one click",
+    "fg_ai_summary_label": "Conversation Summary",
+    "fg_ai_summary_desc": "Long chats auto-condensed for seamless agent handoff",
     "fg_analytics_title": "📊 Analytics & Reports",
-    "fg_analytics_report_label": "CS Performance Report", "fg_analytics_report_desc": "Auto-track response time, resolution rate, satisfaction",
-    "fg_analytics_trend_label": "Sentiment Trend Chart", "fg_analytics_trend_desc": "Visualize negative sentiment spikes by time or product",
-    "fg_analytics_hot_label": "Hot Topics Stats", "fg_analytics_hot_desc": "See what customers ask most — reveals product gaps and pain points",
-    "fg_analytics_survey_label": "Auto Satisfaction Survey", "fg_analytics_survey_desc": "Auto-send survey after resolution; auto-close if no response",
+    "fg_analytics_report_label": "CS Performance Report",
+    "fg_analytics_report_desc": "Auto-track response time, resolution rate, satisfaction",
+    "fg_analytics_trend_label": "Sentiment Trend Chart",
+    "fg_analytics_trend_desc": "Visualize negative sentiment spikes by time or product",
+    "fg_analytics_hot_label": "Hot Topics Stats",
+    "fg_analytics_hot_desc": "See what customers ask most — reveals product gaps and pain points",
+    "fg_analytics_survey_label": "Auto Satisfaction Survey",
+    "fg_analytics_survey_desc": "Auto-send survey after resolution; auto-close if no response",
     "fg_crm_title": "🎯 Customer Management",
-    "fg_crm_vip_label": "VIP Detection", "fg_crm_vip_desc": "CRM integration: high-value customers get priority queue",
-    "fg_crm_churn_label": "Churn Warning", "fg_crm_churn_desc": "Detect cancellation intent and proactively intervene",
-    "fg_crm_order_label": "Order Lookup Integration", "fg_crm_order_desc": "Customers enter order number to check status directly",
-    "fg_crm_ticket_label": "Ticket System", "fg_crm_ticket_desc": "Complex issues become tracked tickets so nothing falls through",
+    "fg_crm_vip_label": "VIP Detection",
+    "fg_crm_vip_desc": "CRM integration: high-value customers get priority queue",
+    "fg_crm_churn_label": "Churn Warning",
+    "fg_crm_churn_desc": "Detect cancellation intent and proactively intervene",
+    "fg_crm_order_label": "Order Lookup Integration",
+    "fg_crm_order_desc": "Customers enter order number to check status directly",
+    "fg_crm_ticket_label": "Ticket System",
+    "fg_crm_ticket_desc": "Complex issues become tracked tickets so nothing falls through",
     "fg_int_title": "⚙️ System Integration",
-    "fg_int_inbox_label": "Unified Inbox", "fg_int_inbox_desc": "LINE / IG / Email multi-platform conversations in one dashboard",
-    "fg_int_kb_label": "Knowledge Base Search", "fg_int_kb_desc": "Agents type a keyword; AI instantly recommends relevant answers",
-    "fg_int_pricing_label": "Pricing Calculator", "fg_int_pricing_desc": "AI auto-applies formulas and quotes customers",
-    "fg_int_close_label": "Auto Close", "fg_int_close_desc": "Auto-send satisfaction survey after resolution; auto-close if no response"
+    "fg_int_inbox_label": "Unified Inbox",
+    "fg_int_inbox_desc": "LINE / IG / Email multi-platform conversations in one dashboard",
+    "fg_int_kb_label": "Knowledge Base Search",
+    "fg_int_kb_desc": "Agents type a keyword; AI instantly recommends relevant answers",
+    "fg_int_pricing_label": "Pricing Calculator",
+    "fg_int_pricing_desc": "AI auto-applies formulas and quotes customers",
+    "fg_int_close_label": "Auto Close",
+    "fg_int_close_desc": "Auto-send satisfaction survey after resolution; auto-close if no response"
   },
   "Booking": {
     "title": "Booking Management",
@@ -364,7 +440,15 @@
       "closedDates": "Selected dates blocked",
       "openedDates": "Selected dates opened",
       "orderFallback": "Booking",
-      "day": { "0": "Sun", "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu", "5": "Fri", "6": "Sat" }
+      "day": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      }
     },
     "reviews": {
       "platformManual": "Manual",
@@ -527,14 +611,40 @@
       }
     },
     "pricing": {
-      "tabs": { "daily": "Daily Pricing", "calendar": "Grid View", "rules": "Pricing Rules", "compare": "Compare Nearby" },
-      "statusOpen": "Open", "statusClosed": "Closed", "statusAdmin": "Admin",
-      "ruleTypes": {
-        "weekend": "Weekend", "holiday": "Holiday", "seasonal": "Seasonal", "occupancy": "Occupancy",
-        "advance_booking": "Last-minute (within N days)", "early_bird": "Early bird (N+ days)", "market": "Market follow (auto scheduled)"
+      "tabs": {
+        "daily": "Daily Pricing",
+        "calendar": "Grid View",
+        "rules": "Pricing Rules",
+        "compare": "Compare Nearby"
       },
-      "fields": { "price": "Price", "deposit": "Deposit", "extraPerson": "Extra Guest", "largeBed": "Large Bed", "smallBed": "Small Bed" },
-      "weekdays": { "0": "Mon", "1": "Tue", "2": "Wed", "3": "Thu", "4": "Fri", "5": "Sat", "6": "Sun" },
+      "statusOpen": "Open",
+      "statusClosed": "Closed",
+      "statusAdmin": "Admin",
+      "ruleTypes": {
+        "weekend": "Weekend",
+        "holiday": "Holiday",
+        "seasonal": "Seasonal",
+        "occupancy": "Occupancy",
+        "advance_booking": "Last-minute (within N days)",
+        "early_bird": "Early bird (N+ days)",
+        "market": "Market follow (auto scheduled)"
+      },
+      "fields": {
+        "price": "Price",
+        "deposit": "Deposit",
+        "extraPerson": "Extra Guest",
+        "largeBed": "Large Bed",
+        "smallBed": "Small Bed"
+      },
+      "weekdays": {
+        "0": "Mon",
+        "1": "Tue",
+        "2": "Wed",
+        "3": "Thu",
+        "4": "Fri",
+        "5": "Sat",
+        "6": "Sun"
+      },
       "roomLabel": "Room:",
       "weekendNote": "(Pink = Fri–Sun; set public holidays separately in \"Pricing Rules\")",
       "quickFill": "Quick Fill",
@@ -575,7 +685,14 @@
       "noRules": "No pricing rules yet. Click \"Add Rule\" to start.",
       "priorityShort": "Priority {n}",
       "allRoomTypes": "All Room Types",
-      "col": { "ruleName": "Rule Name", "type": "Type", "adjust": "Adjustment", "applyRoom": "Apply to Room", "status": "Status", "actions": "Actions" },
+      "col": {
+        "ruleName": "Rule Name",
+        "type": "Type",
+        "adjust": "Adjustment",
+        "applyRoom": "Apply to Room",
+        "status": "Status",
+        "actions": "Actions"
+      },
       "compareSubtitle": "Query rates of other hotels/B&Bs in the same area for the given check-in date (Google Hotels)",
       "locationKeyword": "Location Keyword",
       "locationPlaceholder": "Auto-filled with your property's location, or enter: Yilan Jiaoxi",
@@ -589,14 +706,19 @@
       "watchlistHint": "Specify hotels/B&Bs to watch; after querying they're highlighted and pinned. Those not covered nearby can be queried precisely.",
       "watchPlaceholder": "Enter hotel/B&B name",
       "cacheNote": "↺ This result is from cache (no credit used). For the latest rates, click \"Force Requery\".",
-      "statMin": "Min", "statMedian": "Median", "statAvg": "Avg", "statMax": "Max",
+      "statMin": "Min",
+      "statMedian": "Median",
+      "statAvg": "Avg",
+      "statMax": "Max",
       "yourVsMedian": "Your price vs nearby median (NT$ {median})",
-      "higher": "higher", "lower": "lower",
+      "higher": "higher",
+      "lower": "lower",
       "applyToDynamic": "Apply to Dynamic Pricing",
       "applyToDynamicHint": "Use the queried rates as a baseline, adjust by a percentage, and write to daily pricing (applied after your review, overwriting existing prices in the range).",
       "basis": "Basis",
       "adjustPct": "Adjust %",
-      "from": "From", "to": "To",
+      "from": "From",
+      "to": "To",
       "weekday": "Weekday",
       "roomType": "Room Type",
       "noneEqualsAll": "None selected = all",
@@ -616,7 +738,9 @@
       "overridePrice": "Override Price",
       "blankClearOverride": "Blank = clear override",
       "selectedCount": "{count} cells selected",
-      "openBooking": "Open Booking", "adminOnly": "Admin Only", "notBookable": "Not Bookable",
+      "openBooking": "Open Booking",
+      "adminOnly": "Admin Only",
+      "notBookable": "Not Bookable",
       "setPrice": "Set Price",
       "batchTitle": "Batch Set Prices",
       "batchSubtitle": "Select multiple holidays or enter a date range manually",
@@ -628,10 +752,13 @@
       "consecutiveHolidays": "🎉 Long Weekends",
       "schoolHolidays": "🏫 School Holidays",
       "manualRange": "Extra manual date range (optional)",
-      "startDate": "Start date", "endDate": "End date",
+      "startDate": "Start date",
+      "endDate": "End date",
       "totalDays": "Total: {count} days (holidays + manual dates merged, after weekday filter)",
       "applyWeekday": "Apply Weekdays",
-      "dowAll": "All", "dowWeekday": "Weekdays", "dowWeekend": "Weekend",
+      "dowAll": "All",
+      "dowWeekday": "Weekdays",
+      "dowWeekend": "Weekend",
       "applyRoomType": "Apply to Room Types",
       "deselectAll": "Deselect All",
       "overrideRoomPrice": "Override Room Price",
@@ -639,9 +766,11 @@
       "overrideNote": "Once set, this overrides base and dynamic pricing for each date",
       "bookingStatusOptional": "Booking Status (optional)",
       "noChange": "No change",
-      "adminOnlyFull": "Admin Only", "notBookableFull": "Not Bookable",
+      "adminOnlyFull": "Admin Only",
+      "notBookableFull": "Not Bookable",
       "applyDays": "Apply {count} days",
-      "editRule": "Edit Rule", "addRuleTitle": "Add Pricing Rule",
+      "editRule": "Edit Rule",
+      "addRuleTitle": "Add Pricing Rule",
       "ruleNameLabel": "Rule Name *",
       "ruleNamePlaceholder": "e.g. Weekend +20%",
       "ruleTypeLabel": "Rule Type *",
@@ -659,9 +788,13 @@
       "earlyBirdLabel": "🐦 Early bird: triggers when booked at least N days before check-in",
       "earlyBirdHint": "e.g. N=90 → only bookings 90+ days ahead count; N=30 → 30+ days ahead",
       "marketRuleHint": "📈 Market follow: scheduled to fetch nearby rates daily and compute price as \"baseline + the adjustment above\", written to daily pricing (clamped between floor/ceil). First confirm your property's location is filled in \"Compare Nearby\".",
-      "nearbyMedian": "Nearby median", "nearbyMin": "Nearby min", "nearbyAvg": "Nearby avg",
-      "priceFloor": "Price floor (optional)", "priceCeil": "Price ceiling (optional)",
-      "notBelow": "Not below", "notAbove": "Not above",
+      "nearbyMedian": "Nearby median",
+      "nearbyMin": "Nearby min",
+      "nearbyAvg": "Nearby avg",
+      "priceFloor": "Price floor (optional)",
+      "priceCeil": "Price ceiling (optional)",
+      "notBelow": "Not below",
+      "notAbove": "Not above",
       "priorityLabel": "Priority (higher applies first)",
       "saveRule": "Save Rule"
     },
@@ -779,10 +912,22 @@
       "bodyPlaceholder": "Leave blank to use the default template…",
       "enableThis": "Enable this template",
       "types": {
-        "confirmation": { "label": "Booking Confirmation", "desc": "Sent manually to guests after a booking is created" },
-        "reminder": { "label": "Check-in Reminder", "desc": "Sent 1–2 days before check-in" },
-        "checkout": { "label": "Check-out Reminder", "desc": "Sent on the check-out day" },
-        "cancellation": { "label": "Cancellation Notice", "desc": "Sent when a booking is cancelled" }
+        "confirmation": {
+          "label": "Booking Confirmation",
+          "desc": "Sent manually to guests after a booking is created"
+        },
+        "reminder": {
+          "label": "Check-in Reminder",
+          "desc": "Sent 1–2 days before check-in"
+        },
+        "checkout": {
+          "label": "Check-out Reminder",
+          "desc": "Sent on the check-out day"
+        },
+        "cancellation": {
+          "label": "Cancellation Notice",
+          "desc": "Sent when a booking is cancelled"
+        }
       }
     },
     "reports": {
@@ -1082,14 +1227,49 @@
       "other": "Other Services"
     },
     "amenities": {
-      "海景": "Sea View", "山景": "Mountain View", "河景": "River View", "市景": "City View", "無邊際泳池": "Infinity Pool", "私人泳池": "Private Pool",
-      "露台": "Terrace", "陽台": "Balcony", "私人花園": "Private Garden", "庭院": "Courtyard", "BBQ 區": "BBQ Area",
-      "雙人床": "Double Bed", "加大雙人床": "King Bed", "兩張單人床": "Twin Beds", "上下鋪": "Bunk Bed", "沙發床": "Sofa Bed",
-      "冷氣": "Air Conditioning", "電視": "TV", "第四台/串流": "Cable/Streaming", "冰箱": "Fridge", "保險箱": "Safe", "書桌": "Desk", "沙發": "Sofa",
-      "獨立衛浴": "Private Bathroom", "浴缸": "Bathtub", "淋浴間": "Shower", "吹風機": "Hair Dryer", "盥洗用品": "Toiletries", "免治馬桶": "Bidet Toilet",
-      "WiFi": "WiFi", "停車位": "Parking", "廚房": "Kitchen", "公共廚房": "Shared Kitchen", "洗衣機": "Washer", "烘衣機": "Dryer",
-      "早餐": "Breakfast", "下午茶": "Afternoon Tea", "迷你吧": "Minibar", "咖啡/茶": "Coffee/Tea",
-      "24H 入住": "24H Check-in", "行李寄存": "Luggage Storage", "機場接送": "Airport Transfer", "腳踏車租借": "Bike Rental"
+      "海景": "Sea View",
+      "山景": "Mountain View",
+      "河景": "River View",
+      "市景": "City View",
+      "無邊際泳池": "Infinity Pool",
+      "私人泳池": "Private Pool",
+      "露台": "Terrace",
+      "陽台": "Balcony",
+      "私人花園": "Private Garden",
+      "庭院": "Courtyard",
+      "BBQ 區": "BBQ Area",
+      "雙人床": "Double Bed",
+      "加大雙人床": "King Bed",
+      "兩張單人床": "Twin Beds",
+      "上下鋪": "Bunk Bed",
+      "沙發床": "Sofa Bed",
+      "冷氣": "Air Conditioning",
+      "電視": "TV",
+      "第四台/串流": "Cable/Streaming",
+      "冰箱": "Fridge",
+      "保險箱": "Safe",
+      "書桌": "Desk",
+      "沙發": "Sofa",
+      "獨立衛浴": "Private Bathroom",
+      "浴缸": "Bathtub",
+      "淋浴間": "Shower",
+      "吹風機": "Hair Dryer",
+      "盥洗用品": "Toiletries",
+      "免治馬桶": "Bidet Toilet",
+      "WiFi": "WiFi",
+      "停車位": "Parking",
+      "廚房": "Kitchen",
+      "公共廚房": "Shared Kitchen",
+      "洗衣機": "Washer",
+      "烘衣機": "Dryer",
+      "早餐": "Breakfast",
+      "下午茶": "Afternoon Tea",
+      "迷你吧": "Minibar",
+      "咖啡/茶": "Coffee/Tea",
+      "24H 入住": "24H Check-in",
+      "行李寄存": "Luggage Storage",
+      "機場接送": "Airport Transfer",
+      "腳踏車租借": "Bike Rental"
     },
     "profile": {
       "title": "Property Profile",
@@ -1253,7 +1433,11 @@
       "score": "Score opportunity",
       "scoring": "Scoring...",
       "opp": "Opportunity score (search signal × intent × AI-side scarcity)",
-      "src": { "measured": "Measured", "estimated": "Estimated", "unknown": "AI guess" },
+      "src": {
+        "measured": "Measured",
+        "estimated": "Estimated",
+        "unknown": "AI guess"
+      },
       "cluster": "Plan clusters",
       "clustering": "Clustering...",
       "clusterHint": "Click a cluster to apply its questions (one article per cluster, avoiding one-question-per-article content farming). 👑 = Pillar long-form.",
@@ -1330,7 +1514,11 @@
       "secretSetPh": "Already set; leave blank to keep",
       "save": "Save settings",
       "saved": "Saved",
-      "lang": { "zh-TW": "Chinese", "en": "English", "vi": "Vietnamese" },
+      "lang": {
+        "zh-TW": "Chinese",
+        "en": "English",
+        "vi": "Vietnamese"
+      },
       "generate": "Generate article + JSON-LD",
       "generating": "Generating...",
       "regenerate": "Regenerate",
@@ -1341,20 +1529,110 @@
       "copied": "Copied",
       "errTopic": "Please enter a topic",
       "errPick": "Please select at least one question",
-      "intent": { "info": "Info", "local": "Local", "compare": "Compare", "transact": "Transact" }
+      "intent": {
+        "info": "Info",
+        "local": "Local",
+        "compare": "Compare",
+        "transact": "Transact"
+      }
     },
     "features": {
-      "auto": { "title": "Marketing Automation", "desc": "End-to-end automated marketing — from data gathering, competitor analysis, copywriting, image/video production, to platform uploads", "badge": "Full Feature", "tags": ["Data Gathering", "Copywriting", "Image/Video", "Auto Upload"] },
-      "designer": { "title": "AI Product Marketing Designer", "desc": "Upload a product image; AI generates marketing strategy, content sets, market analysis, and SEO content strategy — a complete marketing package in 4 steps", "badge": "New", "tags": ["Strategy", "Content Sets", "Market Analysis", "SEO Strategy"] },
-      "geo": { "title": "GEO Content Writer", "desc": "Enter a topic and exclusive facts; AI mines high-intent questions and writes articles + JSON-LD optimized to be cited by ChatGPT / Perplexity / Google AIO", "badge": "New", "tags": ["Question Mining", "Intent Classify", "JSON-LD", "AI Citation"] },
-      "pipeline": { "title": "Marketing Pipeline", "desc": "Visual scheduling and progress tracking of marketing tasks; manage execution status across campaigns and Telegram approval flows", "badge": "Advanced", "tags": ["Scheduling", "Progress Tracking", "Telegram Approval", "Multi-campaign"] },
-      "prospect": { "title": "Prospect Marketing", "desc": "Auto-gather organizations → AI filter & classify → distance calc → phone calls / emails to proactively develop prospects", "badge": "Dev Tool", "tags": ["Auto Gather", "AI Filter", "Phone Marketing", "Email Marketing"] },
-      "swot": { "title": "Market & Competitor Analysis", "desc": "SWOT analysis, competitor monitoring, consumer behavior insights — AI deep analysis for data-driven decisions", "badge": "In Marketing Automation", "tags": ["SWOT", "Competitor Monitoring", "Consumer Insights", "AI Analysis"] },
-      "audience": { "title": "Target Audience Simulation", "desc": "Multi-dimensional consumer simulation engine predicting how different audiences respond and convert", "badge": "In Marketing Automation", "tags": ["Audience Simulation", "Conversion Prediction", "Sentiment Analysis", "Strategy Optimization"] },
-      "brand": { "title": "Brand Database", "desc": "Centrally manage brand assets, company data, and marketing knowledge base; AI caching saves token cost on every call", "badge": "Managed in Settings", "tags": ["Asset Management", "Company Data", "AI Cache", "Token Saving"] }
+      "auto": {
+        "title": "Marketing Automation",
+        "desc": "End-to-end automated marketing — from data gathering, competitor analysis, copywriting, image/video production, to platform uploads",
+        "badge": "Full Feature",
+        "tags": [
+          "Data Gathering",
+          "Copywriting",
+          "Image/Video",
+          "Auto Upload"
+        ]
+      },
+      "designer": {
+        "title": "AI Product Marketing Designer",
+        "desc": "Upload a product image; AI generates marketing strategy, content sets, market analysis, and SEO content strategy — a complete marketing package in 4 steps",
+        "badge": "New",
+        "tags": [
+          "Strategy",
+          "Content Sets",
+          "Market Analysis",
+          "SEO Strategy"
+        ]
+      },
+      "geo": {
+        "title": "GEO Content Writer",
+        "desc": "Enter a topic and exclusive facts; AI mines high-intent questions and writes articles + JSON-LD optimized to be cited by ChatGPT / Perplexity / Google AIO",
+        "badge": "New",
+        "tags": [
+          "Question Mining",
+          "Intent Classify",
+          "JSON-LD",
+          "AI Citation"
+        ]
+      },
+      "pipeline": {
+        "title": "Marketing Pipeline",
+        "desc": "Visual scheduling and progress tracking of marketing tasks; manage execution status across campaigns and Telegram approval flows",
+        "badge": "Advanced",
+        "tags": [
+          "Scheduling",
+          "Progress Tracking",
+          "Telegram Approval",
+          "Multi-campaign"
+        ]
+      },
+      "prospect": {
+        "title": "Prospect Marketing",
+        "desc": "Auto-gather organizations → AI filter & classify → distance calc → phone calls / emails to proactively develop prospects",
+        "badge": "Dev Tool",
+        "tags": [
+          "Auto Gather",
+          "AI Filter",
+          "Phone Marketing",
+          "Email Marketing"
+        ]
+      },
+      "swot": {
+        "title": "Market & Competitor Analysis",
+        "desc": "SWOT analysis, competitor monitoring, consumer behavior insights — AI deep analysis for data-driven decisions",
+        "badge": "In Marketing Automation",
+        "tags": [
+          "SWOT",
+          "Competitor Monitoring",
+          "Consumer Insights",
+          "AI Analysis"
+        ]
+      },
+      "audience": {
+        "title": "Target Audience Simulation",
+        "desc": "Multi-dimensional consumer simulation engine predicting how different audiences respond and convert",
+        "badge": "In Marketing Automation",
+        "tags": [
+          "Audience Simulation",
+          "Conversion Prediction",
+          "Sentiment Analysis",
+          "Strategy Optimization"
+        ]
+      },
+      "brand": {
+        "title": "Brand Database",
+        "desc": "Centrally manage brand assets, company data, and marketing knowledge base; AI caching saves token cost on every call",
+        "badge": "Managed in Settings",
+        "tags": [
+          "Asset Management",
+          "Company Data",
+          "AI Cache",
+          "Token Saving"
+        ]
+      }
     },
     "pd": {
-      "steps": { "1": "Strategy", "2": "Content Set", "3": "Market Analysis", "4": "Content Strategy" },
+      "steps": {
+        "1": "Strategy",
+        "2": "Content Set",
+        "3": "Market Analysis",
+        "4": "Content Strategy"
+      },
       "errProductName": "Please enter a product name",
       "errSelectRoute": "Please select a marketing route first",
       "step1Title": "Step 1: Strategy",
@@ -1403,7 +1681,12 @@
       "visual": "Visual: ",
       "persuasion": "Persuasion angle: ",
       "imagePrompts": "Image prompts:",
-      "aida": { "A": "Attention", "I": "Interest", "D": "Desire", "action": "Action" },
+      "aida": {
+        "A": "Attention",
+        "I": "Interest",
+        "D": "Desire",
+        "action": "Action"
+      },
       "genImage": "Generate Image",
       "visualSummary": "Visual summary:",
       "coreValueProp": "Core Value Proposition",
@@ -1451,33 +1734,78 @@
     "phaseAnalyze": "DeepSeek-R1 Analysis",
     "phaseWrite": "Claude Writing",
     "categories": {
-      "job-search": { "label": "🔍 Job Search", "desc": "Resume, cover letter, interview, salary negotiation" },
-      "workplace": { "label": "💼 Workplace", "desc": "Email, reports, presentations, meeting minutes" },
-      "advanced": { "label": "🧠 Advanced", "desc": "Phrasing, performance, promotion, work quantification" },
-      "thinking": { "label": "🎯 Decision Making", "desc": "Expert mental models to break down your decisions" }
+      "job-search": {
+        "label": "🔍 Job Search",
+        "desc": "Resume, cover letter, interview, salary negotiation"
+      },
+      "workplace": {
+        "label": "💼 Workplace",
+        "desc": "Email, reports, presentations, meeting minutes"
+      },
+      "advanced": {
+        "label": "🧠 Advanced",
+        "desc": "Phrasing, performance, promotion, work quantification"
+      },
+      "thinking": {
+        "label": "🎯 Decision Making",
+        "desc": "Expert mental models to break down your decisions"
+      }
     },
     "optimize": {
       "cardDesc": "Choose how to fill in; the more detail, the more precise",
-      "modeUpload": "Upload File", "modeForm": "Fill Manually", "modeBoth": "Both",
-      "jdLabel": "Target Job JD", "jdPlaceholder": "Paste the job description…",
+      "modeUpload": "Upload File",
+      "modeForm": "Fill Manually",
+      "modeBoth": "Both",
+      "jdLabel": "Target Job JD",
+      "jdPlaceholder": "Paste the job description…",
       "processing": "Processing…",
-      "emptyTitle": "Dual-Model Collaboration", "emptyDesc1": "DeepSeek-R1 analyzes the gap", "emptyDesc2": "Claude Sonnet writes the optimized resume"
+      "emptyTitle": "Dual-Model Collaboration",
+      "emptyDesc1": "DeepSeek-R1 analyzes the gap",
+      "emptyDesc2": "Claude Sonnet writes the optimized resume"
     },
     "cover": {
       "cardDesc": "Choose a template and fill in JD and experience",
-      "selectTemplate": "Select Cover Letter Template", "loadingTemplates": "Loading templates…",
-      "freeform": "✨ Freeform (no template)", "freeformDesc": "AI decides the most suitable cover letter structure",
-      "jdLabel": "Target Job JD", "jdPlaceholder": "Paste the job description…",
-      "expLabel": "Past Experience", "expPlaceholder": "Describe your work experience, skills, and achievements…",
-      "extraLabel": "Extra Requirements (optional)", "extraPlaceholder": "e.g. write in English, casual tone…",
-      "emptyTitle": "No Cover Letter Yet", "emptyDesc1": "Choose a template and fill in JD and experience", "emptyDesc2": "Claude will write your cover letter"
+      "selectTemplate": "Select Cover Letter Template",
+      "loadingTemplates": "Loading templates…",
+      "freeform": "✨ Freeform (no template)",
+      "freeformDesc": "AI decides the most suitable cover letter structure",
+      "jdLabel": "Target Job JD",
+      "jdPlaceholder": "Paste the job description…",
+      "expLabel": "Past Experience",
+      "expPlaceholder": "Describe your work experience, skills, and achievements…",
+      "extraLabel": "Extra Requirements (optional)",
+      "extraPlaceholder": "e.g. write in English, casual tone…",
+      "emptyTitle": "No Cover Letter Yet",
+      "emptyDesc1": "Choose a template and fill in JD and experience",
+      "emptyDesc2": "Claude will write your cover letter"
     },
     "form": {
-      "basicSection": "1. Basic Info", "name": "Name", "phone": "Phone", "email": "Email", "targetPosition": "Target Position",
-      "eduSection": "2. Education & Certifications", "eduN": "Education {n}", "school": "School Name", "major": "Major", "degree": "Bachelor's/Master's", "eduPeriod": "Period", "addEdu": "Add Education", "certs": "Relevant certifications, language exams…",
-      "expSection": "3. Work/Internship Experience", "expN": "Experience {n}", "company": "Company", "jobTitle": "Title", "expPeriod": "Period", "expDesc": "Key results (quantify if possible)", "addExp": "Add Experience",
-      "skillsSection": "4. Skills & Languages", "skills": "Skills: Python, Excel, Figma…", "languages": "Languages: Chinese (native), English (TOEIC 880)…",
-      "otherSection": "5. Other (optional)", "selfIntro": "Self-introduction (3–5 lines)", "otherField": "Other highlights"
+      "basicSection": "1. Basic Info",
+      "name": "Name",
+      "phone": "Phone",
+      "email": "Email",
+      "targetPosition": "Target Position",
+      "eduSection": "2. Education & Certifications",
+      "eduN": "Education {n}",
+      "school": "School Name",
+      "major": "Major",
+      "degree": "Bachelor's/Master's",
+      "eduPeriod": "Period",
+      "addEdu": "Add Education",
+      "certs": "Relevant certifications, language exams…",
+      "expSection": "3. Work/Internship Experience",
+      "expN": "Experience {n}",
+      "company": "Company",
+      "jobTitle": "Title",
+      "expPeriod": "Period",
+      "expDesc": "Key results (quantify if possible)",
+      "addExp": "Add Experience",
+      "skillsSection": "4. Skills & Languages",
+      "skills": "Skills: Python, Excel, Figma…",
+      "languages": "Languages: Chinese (native), English (TOEIC 880)…",
+      "otherSection": "5. Other (optional)",
+      "selfIntro": "Self-introduction (3–5 lines)",
+      "otherField": "Other highlights"
     },
     "upload": {
       "onlyTypes": "Only JPG, PDF, Word supported",
@@ -1487,79 +1815,383 @@
       "imageNote": "✓ JPG images are analyzed by Claude's vision recognition"
     },
     "tools": {
-      "resume-optimize": { "label": "Resume Optimization", "desc": "Paste a JD; AI dual-model analyzes and rewrites an ATS-optimized resume", "submit": "Start Optimizing" },
-      "cover-letter": { "label": "Cover Letter", "desc": "Choose a template, enter JD and experience; Claude generates a complete cover letter", "submit": "Generate Cover Letter" },
-      "interview-practice": { "label": "Interview Practice", "desc": "Simulate common interview questions + STAR framework suggested answers", "submit": "Generate Questions", "fields": {
-        "jd": { "label": "Target Job JD", "placeholder": "Paste the job description for more precision…" },
-        "background": { "label": "Personal Background", "placeholder": "Briefly describe your education, years of experience, key skills…" } } },
-      "salary-negotiation": { "label": "Salary Negotiation", "desc": "Provides a complete negotiation script to help you get the salary you deserve", "submit": "Generate Script", "fields": {
-        "position": { "label": "Target Position & Industry", "placeholder": "e.g. Marketing Planner / Tech" },
-        "currentSalary": { "label": "Current Salary (monthly)", "placeholder": "e.g. 35,000" },
-        "targetSalary": { "label": "Target Salary (monthly)", "placeholder": "e.g. 45,000" },
-        "highlights": { "label": "Highlights & Achievements", "placeholder": "Your competitiveness, past results, special skills…" } } },
-      "resume-clinic": { "label": "Resume Health Check", "desc": "Straight talk like HR: should you apply, your odds, what's blocking you, how to fix it", "submit": "Start Check", "fields": {
-        "jd": { "label": "Target Job JD", "placeholder": "Paste the job description…" },
-        "background": { "label": "Your Background / Resume Highlights", "placeholder": "Education, experience, key skills, signature work…" },
-        "company": { "label": "Target Company (optional)", "placeholder": "e.g. a multinational, startup, listed company…" } } },
-      "career-advisor": { "label": "Career & Study Advisor", "desc": "Down-to-earth analysis of majors, industries, city choices — practical, no fluff", "submit": "Give Me Advice", "fields": {
-        "situation": { "label": "Your Situation", "options": ["High schooler choosing a major", "University student choosing direction/transferring", "New grad choosing an industry", "Career change", "Hesitating over grad school/civil exam"] },
-        "background": { "label": "Background", "placeholder": "Major, grades, experience, city, family considerations…" },
-        "options": { "label": "Options You're Considering", "placeholder": "e.g. CS vs EE, stay in Taipei vs move home…" },
-        "concern": { "label": "What You Care About Most", "placeholder": "e.g. salary, stability, interest, growth…" } } },
-      "email-draft": { "label": "Email Draft", "desc": "Apology, payment reminder, cross-team communication — generate a tactful email in one click", "submit": "Generate Email", "fields": {
-        "type": { "label": "Email Type", "options": ["Apology", "Payment reminder", "Cross-team request", "Decline a request", "Progress report", "Thank-you", "Other"] },
-        "relationship": { "label": "Recipient & Relationship", "placeholder": "e.g. manager (direct), client, cross-team colleague…" },
-        "context": { "label": "Context", "placeholder": "Describe the background and your goal…" },
-        "keyPoints": { "label": "Key Points to Emphasize (optional)", "placeholder": "e.g. show sincerity, stay professional but not subservient…" } } },
-      "report-writing": { "label": "Report/Proposal Writing", "desc": "Enter the topic and key points; AI generates a complete report structure and content", "submit": "Generate Report", "fields": {
-        "topic": { "label": "Report Topic", "placeholder": "e.g. Q3 sales results analysis" },
-        "context": { "label": "Background", "placeholder": "Explain the report's purpose and background…" },
-        "mainPoints": { "label": "Main Arguments/Data", "placeholder": "List your data, conclusions, or arguments…" },
-        "audience": { "label": "Target Audience", "placeholder": "e.g. senior management, clients, all staff…" } } },
-      "presentation-outline": { "label": "Presentation Outline", "desc": "Topic + audience → AI generates per-slide outline and visualization suggestions", "submit": "Generate Outline", "fields": {
-        "topic": { "label": "Presentation Topic", "placeholder": "e.g. 2025 brand strategy planning" },
-        "audience": { "label": "Target Audience", "placeholder": "e.g. board, potential clients…" },
-        "coreMessage": { "label": "Core Message (what they should remember)", "placeholder": "Say your key message in one sentence…" },
-        "duration": { "label": "Duration", "placeholder": "e.g. 10 min, 30 min" } } },
-      "meeting-minutes": { "label": "Meeting Minutes", "desc": "Paste messy meeting notes; auto-organize into a structured document", "submit": "Organize Minutes", "fields": {
-        "rawNotes": { "label": "Raw Meeting Notes", "placeholder": "Paste your meeting notes (can be messy)…" } } },
-      "workplace-phrases": { "label": "Workplace Phrasing", "desc": "Difficult bosses, declining extra work… provides multiple response scripts", "submit": "Generate Suggestions", "fields": {
-        "scenario": { "label": "Scenario Type", "options": ["Difficult boss", "Decline extra work", "Manage up", "Deal with credit-stealing colleague", "Raise an objection", "Discuss a raise", "Other"] },
-        "context": { "label": "Specific Situation", "placeholder": "Explain what specifically happened…" },
-        "goal": { "label": "Desired Outcome", "placeholder": "What you hope this communication achieves…" } } },
-      "workplace-relationship": { "label": "Workplace Relationship Advisor", "desc": "Understand the motives of bosses/colleagues/subordinates; get rapport and manage-up strategies", "submit": "Analyze Strategy", "fields": {
-        "role": { "label": "Target Person", "options": ["Direct manager", "Boss / Executive", "Peer colleague", "Subordinate", "Senior / Mentor", "Cross-team contact"] },
-        "situation": { "label": "Specific Situation", "placeholder": "Describe their behavior, your interactions, the current sticking point…" },
-        "goal": { "label": "Your Goal", "placeholder": "e.g. gain trust, secure resources, resolve misunderstanding, protect yourself…" } } },
-      "performance-review": { "label": "Performance Self-Review", "desc": "Enter your work and results; AI writes a persuasive self-review", "submit": "Generate Self-Review", "fields": {
-        "position": { "label": "Position & Department", "placeholder": "e.g. Marketing Dept, Digital Marketing Specialist" },
-        "workContent": { "label": "Main Work This Period", "placeholder": "List the main work you were responsible for…" },
-        "achievements": { "label": "Key Results (include numbers)", "placeholder": "e.g. completed XX project, grew XX%…" },
-        "challenges": { "label": "Challenges Overcome (optional)", "placeholder": "Explain the difficulties and how you solved them…" } } },
-      "promotion-letter": { "label": "Promotion Request Letter", "desc": "Write a strong promotion request letter highlighting your contributions and value", "submit": "Generate Letter", "fields": {
-        "positions": { "label": "Current → Applied Position", "placeholder": "e.g. Sales Specialist → Sales Supervisor" },
-        "background": { "label": "Background & Tenure", "placeholder": "e.g. 3 years on the job, STEM background…" },
-        "achievements": { "label": "Key Contributions & Achievements", "placeholder": "List your concrete contributions (numbers help)…" },
-        "reason": { "label": "Reason for Application", "placeholder": "Why you are the best fit for this position…" } } },
-      "quantify-work": { "label": "Quantify Your Work", "desc": "Turn \"I was responsible for XXX\" into impactful, number-backed highlight statements", "submit": "Quantify My Work", "fields": {
-        "jobContent": { "label": "Job Description (one per line)", "placeholder": "e.g.\nManaged social media\nHelped organize the annual event\nHandled customer complaints" } } },
-      "munger-mental-models": { "label": "Multidisciplinary Decision", "desc": "Munger-style mental models + inversion to break down your decisions and blind spots", "submit": "Start Analysis", "fields": {
-        "decision": { "label": "Decision / Question", "placeholder": "e.g. Should I quit to start a business? Take this project?" },
-        "context": { "label": "Background & Constraints", "placeholder": "Relevant info, resources, time, what you care about…" },
-        "options": { "label": "Options You're Considering", "placeholder": "List the choices you have in mind" } } },
-      "first-principles": { "label": "First-Principles Breakdown", "desc": "Musk-style thinking: break down to fundamental facts, then rebuild the solution from zero", "submit": "Break Down", "fields": {
-        "problem": { "label": "Problem to Solve", "placeholder": "e.g. How to halve costs? How to learn a skill fast?" },
-        "assumptions": { "label": "Current Approach / Assumptions", "placeholder": "How everyone does it now, what constraints you assume…" } } },
-      "value-investing": { "label": "Value-Investing Lens", "desc": "Buffett-style evaluation: circle of competence, moat, margin of safety (not investment advice)", "submit": "Evaluate Opportunity", "fields": {
-        "target": { "label": "Target / Business / Opportunity", "placeholder": "e.g. a stock, franchising a store, investing in a friend's startup" },
-        "info": { "label": "Known Information", "placeholder": "Business model, finances, competition, price, how well you understand it…" },
-        "concern": { "label": "Key Question to Clarify", "placeholder": "e.g. Is the current price reasonable? Where's the risk?" } } },
-      "antifragile-risk": { "label": "Antifragile Risk Assessment", "desc": "Taleb-style risk thinking: downside risk, asymmetry, survival floor", "submit": "Assess Risk", "fields": {
-        "decision": { "label": "Decision / Plan to Assess", "placeholder": "e.g. go all-in on one project, quit to do something full-time" },
-        "downside": { "label": "Worst Case You Worry About", "placeholder": "What could go worst, what you'd lose…" } } },
-      "naval-leverage": { "label": "Leverage & Life Choices", "desc": "Naval-style lens: specific knowledge, leverage, long-term thinking and choices", "submit": "Give Me Direction", "fields": {
-        "situation": { "label": "Your Situation", "placeholder": "e.g. 30, office worker, want to build assets but lack direction" },
-        "question": { "label": "Question to Clarify", "placeholder": "e.g. Specialize in one skill or try many? How to build passive income?" } } }
+      "resume-optimize": {
+        "label": "Resume Optimization",
+        "desc": "Paste a JD; AI dual-model analyzes and rewrites an ATS-optimized resume",
+        "submit": "Start Optimizing"
+      },
+      "cover-letter": {
+        "label": "Cover Letter",
+        "desc": "Choose a template, enter JD and experience; Claude generates a complete cover letter",
+        "submit": "Generate Cover Letter"
+      },
+      "interview-practice": {
+        "label": "Interview Practice",
+        "desc": "Simulate common interview questions + STAR framework suggested answers",
+        "submit": "Generate Questions",
+        "fields": {
+          "jd": {
+            "label": "Target Job JD",
+            "placeholder": "Paste the job description for more precision…"
+          },
+          "background": {
+            "label": "Personal Background",
+            "placeholder": "Briefly describe your education, years of experience, key skills…"
+          }
+        }
+      },
+      "salary-negotiation": {
+        "label": "Salary Negotiation",
+        "desc": "Provides a complete negotiation script to help you get the salary you deserve",
+        "submit": "Generate Script",
+        "fields": {
+          "position": {
+            "label": "Target Position & Industry",
+            "placeholder": "e.g. Marketing Planner / Tech"
+          },
+          "currentSalary": {
+            "label": "Current Salary (monthly)",
+            "placeholder": "e.g. 35,000"
+          },
+          "targetSalary": {
+            "label": "Target Salary (monthly)",
+            "placeholder": "e.g. 45,000"
+          },
+          "highlights": {
+            "label": "Highlights & Achievements",
+            "placeholder": "Your competitiveness, past results, special skills…"
+          }
+        }
+      },
+      "resume-clinic": {
+        "label": "Resume Health Check",
+        "desc": "Straight talk like HR: should you apply, your odds, what's blocking you, how to fix it",
+        "submit": "Start Check",
+        "fields": {
+          "jd": {
+            "label": "Target Job JD",
+            "placeholder": "Paste the job description…"
+          },
+          "background": {
+            "label": "Your Background / Resume Highlights",
+            "placeholder": "Education, experience, key skills, signature work…"
+          },
+          "company": {
+            "label": "Target Company (optional)",
+            "placeholder": "e.g. a multinational, startup, listed company…"
+          }
+        }
+      },
+      "career-advisor": {
+        "label": "Career & Study Advisor",
+        "desc": "Down-to-earth analysis of majors, industries, city choices — practical, no fluff",
+        "submit": "Give Me Advice",
+        "fields": {
+          "situation": {
+            "label": "Your Situation",
+            "options": [
+              "High schooler choosing a major",
+              "University student choosing direction/transferring",
+              "New grad choosing an industry",
+              "Career change",
+              "Hesitating over grad school/civil exam"
+            ]
+          },
+          "background": {
+            "label": "Background",
+            "placeholder": "Major, grades, experience, city, family considerations…"
+          },
+          "options": {
+            "label": "Options You're Considering",
+            "placeholder": "e.g. CS vs EE, stay in Taipei vs move home…"
+          },
+          "concern": {
+            "label": "What You Care About Most",
+            "placeholder": "e.g. salary, stability, interest, growth…"
+          }
+        }
+      },
+      "email-draft": {
+        "label": "Email Draft",
+        "desc": "Apology, payment reminder, cross-team communication — generate a tactful email in one click",
+        "submit": "Generate Email",
+        "fields": {
+          "type": {
+            "label": "Email Type",
+            "options": [
+              "Apology",
+              "Payment reminder",
+              "Cross-team request",
+              "Decline a request",
+              "Progress report",
+              "Thank-you",
+              "Other"
+            ]
+          },
+          "relationship": {
+            "label": "Recipient & Relationship",
+            "placeholder": "e.g. manager (direct), client, cross-team colleague…"
+          },
+          "context": {
+            "label": "Context",
+            "placeholder": "Describe the background and your goal…"
+          },
+          "keyPoints": {
+            "label": "Key Points to Emphasize (optional)",
+            "placeholder": "e.g. show sincerity, stay professional but not subservient…"
+          }
+        }
+      },
+      "report-writing": {
+        "label": "Report/Proposal Writing",
+        "desc": "Enter the topic and key points; AI generates a complete report structure and content",
+        "submit": "Generate Report",
+        "fields": {
+          "topic": {
+            "label": "Report Topic",
+            "placeholder": "e.g. Q3 sales results analysis"
+          },
+          "context": {
+            "label": "Background",
+            "placeholder": "Explain the report's purpose and background…"
+          },
+          "mainPoints": {
+            "label": "Main Arguments/Data",
+            "placeholder": "List your data, conclusions, or arguments…"
+          },
+          "audience": {
+            "label": "Target Audience",
+            "placeholder": "e.g. senior management, clients, all staff…"
+          }
+        }
+      },
+      "presentation-outline": {
+        "label": "Presentation Outline",
+        "desc": "Topic + audience → AI generates per-slide outline and visualization suggestions",
+        "submit": "Generate Outline",
+        "fields": {
+          "topic": {
+            "label": "Presentation Topic",
+            "placeholder": "e.g. 2025 brand strategy planning"
+          },
+          "audience": {
+            "label": "Target Audience",
+            "placeholder": "e.g. board, potential clients…"
+          },
+          "coreMessage": {
+            "label": "Core Message (what they should remember)",
+            "placeholder": "Say your key message in one sentence…"
+          },
+          "duration": {
+            "label": "Duration",
+            "placeholder": "e.g. 10 min, 30 min"
+          }
+        }
+      },
+      "meeting-minutes": {
+        "label": "Meeting Minutes",
+        "desc": "Paste messy meeting notes; auto-organize into a structured document",
+        "submit": "Organize Minutes",
+        "fields": {
+          "rawNotes": {
+            "label": "Raw Meeting Notes",
+            "placeholder": "Paste your meeting notes (can be messy)…"
+          }
+        }
+      },
+      "workplace-phrases": {
+        "label": "Workplace Phrasing",
+        "desc": "Difficult bosses, declining extra work… provides multiple response scripts",
+        "submit": "Generate Suggestions",
+        "fields": {
+          "scenario": {
+            "label": "Scenario Type",
+            "options": [
+              "Difficult boss",
+              "Decline extra work",
+              "Manage up",
+              "Deal with credit-stealing colleague",
+              "Raise an objection",
+              "Discuss a raise",
+              "Other"
+            ]
+          },
+          "context": {
+            "label": "Specific Situation",
+            "placeholder": "Explain what specifically happened…"
+          },
+          "goal": {
+            "label": "Desired Outcome",
+            "placeholder": "What you hope this communication achieves…"
+          }
+        }
+      },
+      "workplace-relationship": {
+        "label": "Workplace Relationship Advisor",
+        "desc": "Understand the motives of bosses/colleagues/subordinates; get rapport and manage-up strategies",
+        "submit": "Analyze Strategy",
+        "fields": {
+          "role": {
+            "label": "Target Person",
+            "options": [
+              "Direct manager",
+              "Boss / Executive",
+              "Peer colleague",
+              "Subordinate",
+              "Senior / Mentor",
+              "Cross-team contact"
+            ]
+          },
+          "situation": {
+            "label": "Specific Situation",
+            "placeholder": "Describe their behavior, your interactions, the current sticking point…"
+          },
+          "goal": {
+            "label": "Your Goal",
+            "placeholder": "e.g. gain trust, secure resources, resolve misunderstanding, protect yourself…"
+          }
+        }
+      },
+      "performance-review": {
+        "label": "Performance Self-Review",
+        "desc": "Enter your work and results; AI writes a persuasive self-review",
+        "submit": "Generate Self-Review",
+        "fields": {
+          "position": {
+            "label": "Position & Department",
+            "placeholder": "e.g. Marketing Dept, Digital Marketing Specialist"
+          },
+          "workContent": {
+            "label": "Main Work This Period",
+            "placeholder": "List the main work you were responsible for…"
+          },
+          "achievements": {
+            "label": "Key Results (include numbers)",
+            "placeholder": "e.g. completed XX project, grew XX%…"
+          },
+          "challenges": {
+            "label": "Challenges Overcome (optional)",
+            "placeholder": "Explain the difficulties and how you solved them…"
+          }
+        }
+      },
+      "promotion-letter": {
+        "label": "Promotion Request Letter",
+        "desc": "Write a strong promotion request letter highlighting your contributions and value",
+        "submit": "Generate Letter",
+        "fields": {
+          "positions": {
+            "label": "Current → Applied Position",
+            "placeholder": "e.g. Sales Specialist → Sales Supervisor"
+          },
+          "background": {
+            "label": "Background & Tenure",
+            "placeholder": "e.g. 3 years on the job, STEM background…"
+          },
+          "achievements": {
+            "label": "Key Contributions & Achievements",
+            "placeholder": "List your concrete contributions (numbers help)…"
+          },
+          "reason": {
+            "label": "Reason for Application",
+            "placeholder": "Why you are the best fit for this position…"
+          }
+        }
+      },
+      "quantify-work": {
+        "label": "Quantify Your Work",
+        "desc": "Turn \"I was responsible for XXX\" into impactful, number-backed highlight statements",
+        "submit": "Quantify My Work",
+        "fields": {
+          "jobContent": {
+            "label": "Job Description (one per line)",
+            "placeholder": "e.g.\nManaged social media\nHelped organize the annual event\nHandled customer complaints"
+          }
+        }
+      },
+      "munger-mental-models": {
+        "label": "Multidisciplinary Decision",
+        "desc": "Munger-style mental models + inversion to break down your decisions and blind spots",
+        "submit": "Start Analysis",
+        "fields": {
+          "decision": {
+            "label": "Decision / Question",
+            "placeholder": "e.g. Should I quit to start a business? Take this project?"
+          },
+          "context": {
+            "label": "Background & Constraints",
+            "placeholder": "Relevant info, resources, time, what you care about…"
+          },
+          "options": {
+            "label": "Options You're Considering",
+            "placeholder": "List the choices you have in mind"
+          }
+        }
+      },
+      "first-principles": {
+        "label": "First-Principles Breakdown",
+        "desc": "Musk-style thinking: break down to fundamental facts, then rebuild the solution from zero",
+        "submit": "Break Down",
+        "fields": {
+          "problem": {
+            "label": "Problem to Solve",
+            "placeholder": "e.g. How to halve costs? How to learn a skill fast?"
+          },
+          "assumptions": {
+            "label": "Current Approach / Assumptions",
+            "placeholder": "How everyone does it now, what constraints you assume…"
+          }
+        }
+      },
+      "value-investing": {
+        "label": "Value-Investing Lens",
+        "desc": "Buffett-style evaluation: circle of competence, moat, margin of safety (not investment advice)",
+        "submit": "Evaluate Opportunity",
+        "fields": {
+          "target": {
+            "label": "Target / Business / Opportunity",
+            "placeholder": "e.g. a stock, franchising a store, investing in a friend's startup"
+          },
+          "info": {
+            "label": "Known Information",
+            "placeholder": "Business model, finances, competition, price, how well you understand it…"
+          },
+          "concern": {
+            "label": "Key Question to Clarify",
+            "placeholder": "e.g. Is the current price reasonable? Where's the risk?"
+          }
+        }
+      },
+      "antifragile-risk": {
+        "label": "Antifragile Risk Assessment",
+        "desc": "Taleb-style risk thinking: downside risk, asymmetry, survival floor",
+        "submit": "Assess Risk",
+        "fields": {
+          "decision": {
+            "label": "Decision / Plan to Assess",
+            "placeholder": "e.g. go all-in on one project, quit to do something full-time"
+          },
+          "downside": {
+            "label": "Worst Case You Worry About",
+            "placeholder": "What could go worst, what you'd lose…"
+          }
+        }
+      },
+      "naval-leverage": {
+        "label": "Leverage & Life Choices",
+        "desc": "Naval-style lens: specific knowledge, leverage, long-term thinking and choices",
+        "submit": "Give Me Direction",
+        "fields": {
+          "situation": {
+            "label": "Your Situation",
+            "placeholder": "e.g. 30, office worker, want to build assets but lack direction"
+          },
+          "question": {
+            "label": "Question to Clarify",
+            "placeholder": "e.g. Specialize in one skill or try many? How to build passive income?"
+          }
+        }
+      }
     }
   },
   "Pipeline": {
@@ -1588,9 +2220,19 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "frequency": "Frequency",
-    "freqDaily": "Daily", "freqWeekly": "Weekly", "freqMonthly": "Monthly",
+    "freqDaily": "Daily",
+    "freqWeekly": "Weekly",
+    "freqMonthly": "Monthly",
     "weekday": "Day of Week",
-    "weekdayOpt": { "0": "Sunday", "1": "Monday", "2": "Tuesday", "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday" },
+    "weekdayOpt": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    },
     "monthDay": "Day of Month",
     "runTime": "Run Time",
     "hourUnit": "{h}:00",
@@ -1609,17 +2251,50 @@
     "statPending": "{count} pending",
     "untitledCampaign": "Untitled Campaign",
     "steps": {
-      "1": { "name": "Collect Info", "desc": "News/web/maps/reviews" },
-      "2": { "name": "Company Data", "desc": "From marketing automation project" },
-      "3": { "name": "Analyze Data", "desc": "SWOT/competitors/market" },
-      "4": { "name": "Copywriting", "desc": "Multi-platform marketing copy" },
-      "5": { "name": "Image Script", "desc": "Visual script generation" },
-      "6": { "name": "Image Output", "desc": "AI image generation" },
-      "7": { "name": "Video Script", "desc": "Storyboard generation" },
-      "8": { "name": "Video Output", "desc": "AI video generation" },
-      "9": { "name": "Upload Platforms", "desc": "Auto-upload to platforms" },
-      "10": { "name": "Prospect Marketing", "desc": "Batch phone / email marketing" },
-      "11": { "name": "Anchor Marketing", "desc": "HeyGen anchor video" }
+      "1": {
+        "name": "Collect Info",
+        "desc": "News/web/maps/reviews"
+      },
+      "2": {
+        "name": "Company Data",
+        "desc": "From marketing automation project"
+      },
+      "3": {
+        "name": "Analyze Data",
+        "desc": "SWOT/competitors/market"
+      },
+      "4": {
+        "name": "Copywriting",
+        "desc": "Multi-platform marketing copy"
+      },
+      "5": {
+        "name": "Image Script",
+        "desc": "Visual script generation"
+      },
+      "6": {
+        "name": "Image Output",
+        "desc": "AI image generation"
+      },
+      "7": {
+        "name": "Video Script",
+        "desc": "Storyboard generation"
+      },
+      "8": {
+        "name": "Video Output",
+        "desc": "AI video generation"
+      },
+      "9": {
+        "name": "Upload Platforms",
+        "desc": "Auto-upload to platforms"
+      },
+      "10": {
+        "name": "Prospect Marketing",
+        "desc": "Batch phone / email marketing"
+      },
+      "11": {
+        "name": "Anchor Marketing",
+        "desc": "HeyGen anchor video"
+      }
     },
     "log": {
       "start": "Starting: {name}",
@@ -1641,412 +2316,1422 @@
     },
     "out": {
       "loadedSkip": "Loaded from marketing project, skipping re-execution",
-      "collectFailed": "Collection failed", "collectDone": "Collection done",
-      "analyzeFailed": "Analysis failed (HTTP {status})", "analyzeDone": "Analysis done", "simDone": "Consumer simulation done",
-      "copyFailed": "Copy generation failed", "copyDone": "Copy done · {count} pieces",
-      "imgScriptFailed": "Image script failed", "imgScriptDone": "Image script done · {count} pieces", "noImgScript": "No image script, run Unit 5 first",
+      "collectFailed": "Collection failed",
+      "collectDone": "Collection done",
+      "analyzeFailed": "Analysis failed (HTTP {status})",
+      "analyzeDone": "Analysis done",
+      "simDone": "Consumer simulation done",
+      "copyFailed": "Copy generation failed",
+      "copyDone": "Copy done · {count} pieces",
+      "imgScriptFailed": "Image script failed",
+      "imgScriptDone": "Image script done · {count} pieces",
+      "noImgScript": "No image script, run Unit 5 first",
       "imgDone": "Image generation done · {count} images",
-      "videoScriptFailed": "Video script failed", "videoScriptDone": "Video script done · {count} pieces", "noVideoScript": "No video script, run Unit 7 first",
-      "videoSubmitFailed": "Video submit failed", "aborted": "Aborted", "videoDone": "Video generation done", "videoFailed": "Video generation failed", "videoTimeout": "Video generation timed out",
+      "videoScriptFailed": "Video script failed",
+      "videoScriptDone": "Video script done · {count} pieces",
+      "noVideoScript": "No video script, run Unit 7 first",
+      "videoSubmitFailed": "Video submit failed",
+      "aborted": "Aborted",
+      "videoDone": "Video generation done",
+      "videoFailed": "Video generation failed",
+      "videoTimeout": "Video generation timed out",
       "noUploadPlatforms": "No upload platforms set; configure Unit 9 platforms in marketing automation",
-      "uploadFailed": "Upload failed", "waitAnchorUpload": "{platforms} (upload after anchor video is generated)", "uploadDone": "Upload done",
+      "uploadFailed": "Upload failed",
+      "waitAnchorUpload": "{platforms} (upload after anchor video is generated)",
+      "uploadDone": "Upload done",
       "defaultCallScript": "Hello, thank you for your interest in us.",
-      "phoneResult": "Phone: {success}/{total} succeeded", "phoneFailed": "Phone failed: {error}",
+      "phoneResult": "Phone: {success}/{total} succeeded",
+      "phoneFailed": "Phone failed: {error}",
       "defaultEmailSubject": "Marketing Message",
-      "emailResult": "Email: {success}/{total} succeeded", "emailFailed": "Email failed: {error}",
-      "noLeadsList": "No phone or email list; configure Unit 10 in marketing automation", "leadsDone": "Prospect marketing done",
+      "emailResult": "Email: {success}/{total} succeeded",
+      "emailFailed": "Email failed: {error}",
+      "noLeadsList": "No phone or email list; configure Unit 10 in marketing automation",
+      "leadsDone": "Prospect marketing done",
       "noAnchorConfig": "No anchor config; set Unit 11 Avatar & Voice ID in marketing automation",
       "defaultAnchorStyle": "professional & friendly",
-      "anchorScriptGenFailed": "Anchor script auto-generation failed: {error}", "unknownError": "Unknown error",
+      "anchorScriptGenFailed": "Anchor script auto-generation failed: {error}",
+      "unknownError": "Unknown error",
       "heygenSubmitFailed": "HeyGen submit failed",
-      "uploadedTo": "Uploaded to {platforms}", "uploadFailedShort": "Upload failed: {error}",
-      "anchorVideoDone": "Anchor video done", "anchorVideoFailed": "Anchor video generation failed", "heygenTimeout": "HeyGen timed out",
+      "uploadedTo": "Uploaded to {platforms}",
+      "uploadFailedShort": "Upload failed: {error}",
+      "anchorVideoDone": "Anchor video done",
+      "anchorVideoFailed": "Anchor video generation failed",
+      "heygenTimeout": "HeyGen timed out",
       "unitNotSupported": "Unit {unitId} does not support auto-execution"
     }
   },
   "Prospect": {
     "title": "Prospect Marketing",
     "subtitle": "Auto-collect orgs → AI filter + classify → distance calc → phone calls / email",
-    "tabPhone": "Phone Marketing", "tabEmail": "Email Marketing", "tabSchedule": "Schedule",
-    "cats": { "factory": "Manufacturing/Factory", "hotel": "Lodging/B&B", "restaurant": "Food & Beverage", "financial": "Finance/Insurance", "retail": "Retail/Shops", "healthcare": "Healthcare/Clinic", "education": "Education/Training", "realestate": "Real Estate", "logistics": "Logistics/Transport", "other": "Other" },
-    "cond": { "mobile": "Mobile", "landline": "Landline", "empRange": "{min}–{max} ppl", "empMin": "≥{min} ppl", "empMax": "≤{max} ppl", "catchAll": "Other (matches all)", "keyword": "Keyword: {tag}", "all": "(matches all)" },
-    "voice": { "mlFemale": "Multilingual, F", "mlMale": "Multilingual, M", "brMale": "British English, M", "usFemale": "American English, F" },
-    "def": { "script": "Default Script", "scriptText": "Hello, we are...", "template": "Default Template", "generalCustomer": "General Customer", "generalCustomerDesc": "General prospect or unknown", "marketingTeam": "Marketing Team", "scriptN": "Script {n}", "ruleN": "Rule {n}", "templateN": "Template {n}", "categoryN": "Category {n}" },
-    "rule": { "namePlaceholder": "Rule name", "phoneType": "Phone Type", "any": "Any", "aiCategory": "AI Category", "anyCategory": "— Any category —", "minEmp": "Min count (0=any)", "maxEmp": "Max count (0=any)", "maxDist": "Max distance km (0=any)", "customTag": "Custom keyword (matches if name or raw category contains it)", "customTagPlaceholder": "e.g. beauty, factory… (blank or \"other\" = matches all, as a fallback rule)", "useScript": "Script to use", "noCall": "— Don't call —", "condPrefix": "Conditions: " },
-    "err": { "noEmailOrgs": "No orgs match the selected rule and have an email", "noKeywords": "Please enter search keywords", "collectFailed": "Collection failed", "aborted": "Aborted", "aiFailed": "AI analysis failed" },
-    "msg": { "collected": "Collected {count} characters", "selected": "Selected {selected} / {total}", "called": "Dialed {count}" },
+    "tabPhone": "Phone Marketing",
+    "tabEmail": "Email Marketing",
+    "tabSchedule": "Schedule",
+    "cats": {
+      "factory": "Manufacturing/Factory",
+      "hotel": "Lodging/B&B",
+      "restaurant": "Food & Beverage",
+      "financial": "Finance/Insurance",
+      "retail": "Retail/Shops",
+      "healthcare": "Healthcare/Clinic",
+      "education": "Education/Training",
+      "realestate": "Real Estate",
+      "logistics": "Logistics/Transport",
+      "other": "Other"
+    },
+    "cond": {
+      "mobile": "Mobile",
+      "landline": "Landline",
+      "empRange": "{min}–{max} ppl",
+      "empMin": "≥{min} ppl",
+      "empMax": "≤{max} ppl",
+      "catchAll": "Other (matches all)",
+      "keyword": "Keyword: {tag}",
+      "all": "(matches all)"
+    },
+    "voice": {
+      "mlFemale": "Multilingual, F",
+      "mlMale": "Multilingual, M",
+      "brMale": "British English, M",
+      "usFemale": "American English, F"
+    },
+    "def": {
+      "script": "Default Script",
+      "scriptText": "Hello, we are...",
+      "template": "Default Template",
+      "generalCustomer": "General Customer",
+      "generalCustomerDesc": "General prospect or unknown",
+      "marketingTeam": "Marketing Team",
+      "scriptN": "Script {n}",
+      "ruleN": "Rule {n}",
+      "templateN": "Template {n}",
+      "categoryN": "Category {n}"
+    },
+    "rule": {
+      "namePlaceholder": "Rule name",
+      "phoneType": "Phone Type",
+      "any": "Any",
+      "aiCategory": "AI Category",
+      "anyCategory": "— Any category —",
+      "minEmp": "Min count (0=any)",
+      "maxEmp": "Max count (0=any)",
+      "maxDist": "Max distance km (0=any)",
+      "customTag": "Custom keyword (matches if name or raw category contains it)",
+      "customTagPlaceholder": "e.g. beauty, factory… (blank or \"other\" = matches all, as a fallback rule)",
+      "useScript": "Script to use",
+      "noCall": "— Don't call —",
+      "condPrefix": "Conditions: "
+    },
+    "err": {
+      "noEmailOrgs": "No orgs match the selected rule and have an email",
+      "noKeywords": "Please enter search keywords",
+      "collectFailed": "Collection failed",
+      "aborted": "Aborted",
+      "aiFailed": "AI analysis failed"
+    },
+    "msg": {
+      "collected": "Collected {count} characters",
+      "selected": "Selected {selected} / {total}",
+      "called": "Dialed {count}"
+    },
     "sched": {
-      "enable": "Enable Schedule", "enableHint": "The system checks hourly and triggers collection+filtering at the set time",
-      "mode": "Mode", "modeBoth": "Both",
+      "enable": "Enable Schedule",
+      "enableHint": "The system checks hourly and triggers collection+filtering at the set time",
+      "mode": "Mode",
+      "modeBoth": "Both",
       "modePhoneHint": "After collection+filtering, you'll be notified via Telegram to make calls",
       "modeEmailHint": "After collection+filtering, emails are sent in batch per rule automatically",
       "modeBothHint": "After collection+filtering, emails are sent automatically and Telegram notifies you to call",
-      "frequency": "Frequency", "daily": "Daily", "weekly": "Weekly", "monthly": "Monthly",
-      "weekday": "Day of Week", "dow": { "0": "Sun", "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu", "5": "Fri", "6": "Sat" },
-      "monthDay": "Day of Month", "monthDayHint": "Max 28 (avoids month-length issues)",
-      "time": "Run Time", "hourUnit": "{h}:00", "minUnit": ":{m}",
-      "statusTitle": "Status", "lastRun": "Last run: ", "nextRun": "Next run: ",
-      "lastResult": "Last result: collected {total} → selected ", "lastResultSuffix": "",
-      "saving": "Saving…", "saved": "Saved!", "save": "Save Schedule",
+      "frequency": "Frequency",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "weekday": "Day of Week",
+      "dow": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "monthDay": "Day of Month",
+      "monthDayHint": "Max 28 (avoids month-length issues)",
+      "time": "Run Time",
+      "hourUnit": "{h}:00",
+      "minUnit": ":{m}",
+      "statusTitle": "Status",
+      "lastRun": "Last run: ",
+      "nextRun": "Next run: ",
+      "lastResult": "Last result: collected {total} → selected ",
+      "lastResultSuffix": "",
+      "saving": "Saving…",
+      "saved": "Saved!",
+      "save": "Save Schedule",
       "saveHint": "After saving, the system checks hourly and runs at the scheduled time. Results notified via Telegram."
     },
-    "s1": { "title": "Step 1 — Collection Sources", "keywords": "Search Keywords *", "keywordsPlaceholder": "One keyword per line or comma-separated, each searched independently\ne.g.\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea", "keywordsHint": "Multiple keywords are searched separately and merged/deduplicated", "location": "Location (optional)", "locationPlaceholder": "e.g. Tainan City, Hsinchu County", "limit": "Max per keyword", "limitHint": "Multiple keywords searched separately and merged; total = limit × keyword count", "channels": "Channels" },
-    "src": { "map": "Map", "web": "Web" },
-    "s2": { "title": "Step 2 — Filter Criteria", "criteria": "Filter criteria (AI-understood)", "criteriaPlaceholder": "e.g. only manufacturing and factories; 50+ employees; exclude small studios", "minEmp": "Min Employees", "unlimited": "0 = unlimited" },
-    "s3": { "title": "Step 3 — Distance", "enable": "Enable distance filter", "enableHint": "When off, no elimination by distance; still shows nearest store distance", "noBranches": "No stores set up. Add them via \"Marketing Automation → Company Data → Stores/Branches\".", "branchesLoaded": "Loaded <b>{total}</b> stores, of which <b>{coords}</b> have coordinates for distance calculation.", "maxDist": "Max distance (km)", "maxDistPlaceholder": "e.g. 5", "maxDistHint": "Orgs beyond this distance are eliminated (requires store coordinates)." },
-    "s4p": { "title": "Step 4 — Voice Scripts", "scriptName": "Script name", "scriptTextPlaceholder": "Enter voice script content...", "addScript": "Add Script" },
-    "s5p": { "title": "Step 5 — Routing Rules", "hint1": "Rules are matched in order; the <b>first matching rule</b> wins. Combine phone type, AI category, headcount, distance, etc.", "hint2": "Orgs matching no rule go to the \"Unassigned\" group and won't be auto-called.", "empty": "No rules yet. Click \"Add Rule\" to start.", "addRule": "Add Rule" },
-    "s6p": { "title": "Step 6 — Call Settings", "callerId": "Bird Caller ID", "callerIdHint": " — the number recipients see (your company number)", "callerIdWarn": "⚠️ Without this, calls can't be made; enter a number verified in your Bird account", "dialList": "Dial list ({count} valid numbers)", "fromFilter": " — from filter results", "needRules": "First create routing rules in Step 5", "dialable": "{has} dialable / {no} no number", "andMore": "…and {count} more", "noPhonePrefix": "No number: ", "unmappedNoCall": "Unassigned (no matching rule) {count} — won't be called", "noSelected": "No selected orgs after filtering; no numbers to dial", "runFirst": "After running the pipeline, the dial list appears here" },
-    "s4e": { "title": "Step 4 — Email Templates", "hint": "Define email content templates to use in sending rules.", "templateName": "Template name", "subject": "Email Subject", "body": "Email Body (newlines supported)", "addTemplate": "Add Template" },
-    "s5e": { "title": "Step 5 — Sending Rules", "hint": "Define custom category names and conditions, and which template to apply. Matched in order; first match wins.", "categoryName": "Category name (e.g. beauty influencer)", "tagPlaceholder": "e.g. beauty, factory, influencer (blank = any)", "applyTemplate": "Apply Template" },
-    "s6e": { "title": "Step 6 — Sender Settings", "fromName": "Sender Name", "fromEmail": "Sender Email (Resend verified domain)", "envNote": "Requires env variable: " },
-    "run": { "running": "Running…", "exec": "Run Pipeline", "collect": "Collect", "analyze": "Analyze", "call": "Call" },
-    "stat": { "total": "Total Collected", "selected": "Selected", "rejected": "Rejected" },
-    "email": { "sendTitle": "Email Sending", "noEmailTitle": "⚠️ No email auto-detected", "noEmailHint": "Google Maps doesn't provide email data. Add <b>Facebook</b> or <b>Web</b> to channels in Step 1, and the system will try to extract emails from vendor data.", "manualHint": "You can also enter each org's email manually in the table below.", "perOrgEmail": "Email per Org", "filledCount": "{filled}/{total} filled", "templateLabel": "Template: {name}", "notSet": "Not set", "hasEmail": "{count} with email", "sending": "Sending…", "sendN": "Send {count}", "subjectPrefix": "Subject: " },
-    "res": { "success": "✓ {n} succeeded", "fail": "✗ {n} failed" },
-    "phone": { "groupTitle": "Call by Rule Group", "matchedPhones": "{matched} orgs · {phones} valid phones", "calling": "Calling…", "callN": "Call {count}", "noScript": "No script assigned", "scriptPrefix": "Script: ", "noPhone": "No phone", "unmappedCount": "Unassigned (no matching rule) {count}", "rejectedCount": "Rejected orgs {count} (click to expand)", "selectedListCount": "Full selected list {count}", "colOrg": "Org", "colCategory": "Category", "colPhone": "Phone", "colRule": "Rule", "unassigned": "Unassigned" }
+    "s1": {
+      "title": "Step 1 — Collection Sources",
+      "keywords": "Search Keywords *",
+      "keywordsPlaceholder": "One keyword per line or comma-separated, each searched independently\ne.g.\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea",
+      "keywordsHint": "Multiple keywords are searched separately and merged/deduplicated",
+      "location": "Location (optional)",
+      "locationPlaceholder": "e.g. Tainan City, Hsinchu County",
+      "limit": "Max per keyword",
+      "limitHint": "Multiple keywords searched separately and merged; total = limit × keyword count",
+      "channels": "Channels"
+    },
+    "src": {
+      "map": "Map",
+      "web": "Web"
+    },
+    "s2": {
+      "title": "Step 2 — Filter Criteria",
+      "criteria": "Filter criteria (AI-understood)",
+      "criteriaPlaceholder": "e.g. only manufacturing and factories; 50+ employees; exclude small studios",
+      "minEmp": "Min Employees",
+      "unlimited": "0 = unlimited"
+    },
+    "s3": {
+      "title": "Step 3 — Distance",
+      "enable": "Enable distance filter",
+      "enableHint": "When off, no elimination by distance; still shows nearest store distance",
+      "noBranches": "No stores set up. Add them via \"Marketing Automation → Company Data → Stores/Branches\".",
+      "branchesLoaded": "Loaded <b>{total}</b> stores, of which <b>{coords}</b> have coordinates for distance calculation.",
+      "maxDist": "Max distance (km)",
+      "maxDistPlaceholder": "e.g. 5",
+      "maxDistHint": "Orgs beyond this distance are eliminated (requires store coordinates)."
+    },
+    "s4p": {
+      "title": "Step 4 — Voice Scripts",
+      "scriptName": "Script name",
+      "scriptTextPlaceholder": "Enter voice script content...",
+      "addScript": "Add Script"
+    },
+    "s5p": {
+      "title": "Step 5 — Routing Rules",
+      "hint1": "Rules are matched in order; the <b>first matching rule</b> wins. Combine phone type, AI category, headcount, distance, etc.",
+      "hint2": "Orgs matching no rule go to the \"Unassigned\" group and won't be auto-called.",
+      "empty": "No rules yet. Click \"Add Rule\" to start.",
+      "addRule": "Add Rule"
+    },
+    "s6p": {
+      "title": "Step 6 — Call Settings",
+      "callerId": "Bird Caller ID",
+      "callerIdHint": " — the number recipients see (your company number)",
+      "callerIdWarn": "⚠️ Without this, calls can't be made; enter a number verified in your Bird account",
+      "dialList": "Dial list ({count} valid numbers)",
+      "fromFilter": " — from filter results",
+      "needRules": "First create routing rules in Step 5",
+      "dialable": "{has} dialable / {no} no number",
+      "andMore": "…and {count} more",
+      "noPhonePrefix": "No number: ",
+      "unmappedNoCall": "Unassigned (no matching rule) {count} — won't be called",
+      "noSelected": "No selected orgs after filtering; no numbers to dial",
+      "runFirst": "After running the pipeline, the dial list appears here"
+    },
+    "s4e": {
+      "title": "Step 4 — Email Templates",
+      "hint": "Define email content templates to use in sending rules.",
+      "templateName": "Template name",
+      "subject": "Email Subject",
+      "body": "Email Body (newlines supported)",
+      "addTemplate": "Add Template"
+    },
+    "s5e": {
+      "title": "Step 5 — Sending Rules",
+      "hint": "Define custom category names and conditions, and which template to apply. Matched in order; first match wins.",
+      "categoryName": "Category name (e.g. beauty influencer)",
+      "tagPlaceholder": "e.g. beauty, factory, influencer (blank = any)",
+      "applyTemplate": "Apply Template"
+    },
+    "s6e": {
+      "title": "Step 6 — Sender Settings",
+      "fromName": "Sender Name",
+      "fromEmail": "Sender Email (Resend verified domain)",
+      "envNote": "Requires env variable: "
+    },
+    "run": {
+      "running": "Running…",
+      "exec": "Run Pipeline",
+      "collect": "Collect",
+      "analyze": "Analyze",
+      "call": "Call"
+    },
+    "stat": {
+      "total": "Total Collected",
+      "selected": "Selected",
+      "rejected": "Rejected"
+    },
+    "email": {
+      "sendTitle": "Email Sending",
+      "noEmailTitle": "⚠️ No email auto-detected",
+      "noEmailHint": "Google Maps doesn't provide email data. Add <b>Facebook</b> or <b>Web</b> to channels in Step 1, and the system will try to extract emails from vendor data.",
+      "manualHint": "You can also enter each org's email manually in the table below.",
+      "perOrgEmail": "Email per Org",
+      "filledCount": "{filled}/{total} filled",
+      "templateLabel": "Template: {name}",
+      "notSet": "Not set",
+      "hasEmail": "{count} with email",
+      "sending": "Sending…",
+      "sendN": "Send {count}",
+      "subjectPrefix": "Subject: "
+    },
+    "res": {
+      "success": "✓ {n} succeeded",
+      "fail": "✗ {n} failed"
+    },
+    "phone": {
+      "groupTitle": "Call by Rule Group",
+      "matchedPhones": "{matched} orgs · {phones} valid phones",
+      "calling": "Calling…",
+      "callN": "Call {count}",
+      "noScript": "No script assigned",
+      "scriptPrefix": "Script: ",
+      "noPhone": "No phone",
+      "unmappedCount": "Unassigned (no matching rule) {count}",
+      "rejectedCount": "Rejected orgs {count} (click to expand)",
+      "selectedListCount": "Full selected list {count}",
+      "colOrg": "Org",
+      "colCategory": "Category",
+      "colPhone": "Phone",
+      "colRule": "Rule",
+      "unassigned": "Unassigned"
+    }
   },
   "MA": {
-    "status": { "running": "Running", "done": "Done", "error": "Error" },
+    "status": {
+      "running": "Running",
+      "done": "Done",
+      "error": "Error"
+    },
     "ct": {
-      "map": { "label": "Map Search", "desc": "Orgs: companies/stores, etc." },
-      "tiktok": { "label": "TikTok", "desc": "Video search / comments" },
-      "facebook": { "label": "Facebook", "desc": "Posts / comments" },
-      "instagram": { "label": "Instagram", "desc": "Posts / comments" },
-      "threads": { "label": "Threads", "desc": "Posts / comments" },
-      "youtube": { "label": "YouTube", "desc": "Shorts / long videos / comments" },
-      "amazon": { "label": "Amazon", "desc": "Products / reviews" },
-      "shopee": { "label": "Shopee", "desc": "Products / reviews (country optional)" },
-      "ios_android": { "label": "iOS / Android", "desc": "App Store / Google Play reviews" },
-      "news": { "label": "News Search", "desc": "Google Alerts RSS" },
-      "web": { "label": "Web Search", "desc": "Tavily deep search" },
-      "competitors": { "label": "Competitors", "desc": "Tavily competitor analysis" },
-      "trend": { "label": "Social Trends", "desc": "Reddit · HN · Polymarket, last 30 days" },
-      "dcard": { "label": "Dcard", "desc": "Taiwan's largest forum, travel/life boards" },
-      "booking": { "label": "Lodging Reviews", "desc": "Booking.com + Airbnb guest reviews" }
+      "map": {
+        "label": "Map Search",
+        "desc": "Orgs: companies/stores, etc."
+      },
+      "tiktok": {
+        "label": "TikTok",
+        "desc": "Video search / comments"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "desc": "Posts / comments"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "desc": "Posts / comments"
+      },
+      "threads": {
+        "label": "Threads",
+        "desc": "Posts / comments"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "desc": "Shorts / long videos / comments"
+      },
+      "amazon": {
+        "label": "Amazon",
+        "desc": "Products / reviews"
+      },
+      "shopee": {
+        "label": "Shopee",
+        "desc": "Products / reviews (country optional)"
+      },
+      "ios_android": {
+        "label": "iOS / Android",
+        "desc": "App Store / Google Play reviews"
+      },
+      "news": {
+        "label": "News Search",
+        "desc": "Google Alerts RSS"
+      },
+      "web": {
+        "label": "Web Search",
+        "desc": "Tavily deep search"
+      },
+      "competitors": {
+        "label": "Competitors",
+        "desc": "Tavily competitor analysis"
+      },
+      "trend": {
+        "label": "Social Trends",
+        "desc": "Reddit · HN · Polymarket, last 30 days"
+      },
+      "dcard": {
+        "label": "Dcard",
+        "desc": "Taiwan's largest forum, travel/life boards"
+      },
+      "booking": {
+        "label": "Lodging Reviews",
+        "desc": "Booking.com + Airbnb guest reviews"
+      }
     },
     "sub": {
-      "map": { "info": "Basic info (name/address/phone)", "coordinates": "Coordinates/distance calc", "reviews": "MAP reviews", "hours": "Opening hours" },
-      "tiktok": { "videos": "Video search", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
-      "facebook": { "posts": "Posts", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
-      "instagram": { "posts": "Posts", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
-      "threads": { "posts": "Posts", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
-      "youtube": { "shorts": "Shorts", "videos": "Long videos", "comments": "Comments", "vendor_info": "Vendor info (name/phone/Email)" },
-      "amazon": { "products": "Products", "reviews": "Reviews", "vendor_info": "Vendor info (name/phone/Email)" },
-      "shopee": { "products": "Products", "reviews": "Reviews", "vendor_info": "Vendor info (name/phone/Email)" },
-      "ios_android": { "reviews": "Reviews", "vendor_info": "Vendor info (name/phone/Email)" },
-      "trend": { "reddit": "Reddit hot discussions", "hackernews": "Hacker News", "polymarket": "Polymarket predictions" },
-      "booking": { "booking": "Booking.com reviews", "airbnb": "Airbnb reviews" }
+      "map": {
+        "info": "Basic info (name/address/phone)",
+        "coordinates": "Coordinates/distance calc",
+        "reviews": "MAP reviews",
+        "hours": "Opening hours"
+      },
+      "tiktok": {
+        "videos": "Video search",
+        "comments": "Comments",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "facebook": {
+        "posts": "Posts",
+        "comments": "Comments",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "instagram": {
+        "posts": "Posts",
+        "comments": "Comments",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "threads": {
+        "posts": "Posts",
+        "comments": "Comments",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "youtube": {
+        "shorts": "Shorts",
+        "videos": "Long videos",
+        "comments": "Comments",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "amazon": {
+        "products": "Products",
+        "reviews": "Reviews",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "shopee": {
+        "products": "Products",
+        "reviews": "Reviews",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "ios_android": {
+        "reviews": "Reviews",
+        "vendor_info": "Vendor info (name/phone/Email)"
+      },
+      "trend": {
+        "reddit": "Reddit hot discussions",
+        "hackernews": "Hacker News",
+        "polymarket": "Polymarket predictions"
+      },
+      "booking": {
+        "booking": "Booking.com reviews",
+        "airbnb": "Airbnb reviews"
+      }
     },
-    "shopee": { "tw": "Taiwan", "vn": "Vietnam", "id": "Indonesia", "ph": "Philippines", "my": "Malaysia", "th": "Thailand", "sg": "Singapore", "br": "Brazil", "mx": "Mexico", "co": "Colombia" },
+    "shopee": {
+      "tw": "Taiwan",
+      "vn": "Vietnam",
+      "id": "Indonesia",
+      "ph": "Philippines",
+      "my": "Malaysia",
+      "th": "Thailand",
+      "sg": "Singapore",
+      "br": "Brazil",
+      "mx": "Mexico",
+      "co": "Colombia"
+    },
     "u1": {
-      "errKeywords": "Please enter keywords", "errTypes": "Please select at least one collection type",
-      "keywords": "Keywords / Search Topic", "keywordsPlaceholder": "e.g. hot pot restaurant, phone case brand, gym...",
-      "selectChannels": "Select Channels", "mapSettings": "Map Search Settings",
-      "locationLabel": "Location / city / address (to scope the search)", "locationPlaceholder": "e.g. Xinyi District Taipei, Banqiao District New Taipei...",
+      "errKeywords": "Please enter keywords",
+      "errTypes": "Please select at least one collection type",
+      "keywords": "Keywords / Search Topic",
+      "keywordsPlaceholder": "e.g. hot pot restaurant, phone case brand, gym...",
+      "selectChannels": "Select Channels",
+      "mapSettings": "Map Search Settings",
+      "locationLabel": "Location / city / address (to scope the search)",
+      "locationPlaceholder": "e.g. Xinyi District Taipei, Banqiao District New Taipei...",
       "shopeeCountry": "Shopee Country",
-      "appIdTitle": "App ID (App Store / Google Play, one per line)", "appIdHint": "App Store: numeric ID starting with id | Google Play: package name",
-      "rssTitle": "Google Alerts RSS URL (one per line)", "rssHint": "Go to google.com/alerts → Manage → Subscription → choose \"RSS feed\" then copy the URL",
-      "perTypeCount": "Items per type", "countUnit": "{n} items", "language": "Language",
-      "collecting": "Collecting, please wait…", "startCollect": "Start Collecting",
-      "resultTitle": "Collection Result", "tabSummary": "AI Summary", "tabRaw": "Raw Data", "recollect": "Re-collect"
+      "appIdTitle": "App ID (App Store / Google Play, one per line)",
+      "appIdHint": "App Store: numeric ID starting with id | Google Play: package name",
+      "rssTitle": "Google Alerts RSS URL (one per line)",
+      "rssHint": "Go to google.com/alerts → Manage → Subscription → choose \"RSS feed\" then copy the URL",
+      "perTypeCount": "Items per type",
+      "countUnit": "{n} items",
+      "language": "Language",
+      "collecting": "Collecting, please wait…",
+      "startCollect": "Start Collecting",
+      "resultTitle": "Collection Result",
+      "tabSummary": "AI Summary",
+      "tabRaw": "Raw Data",
+      "recollect": "Re-collect"
     },
     "opt": {
-      "科技/軟體": "Tech/Software", "製造業": "Manufacturing", "零售/電商": "Retail/E-commerce", "金融服務": "Financial Services", "醫療健康": "Healthcare", "餐飲/消費": "F&B/Consumer", "教育培訓": "Education/Training", "房地產": "Real Estate", "物流/運輸": "Logistics/Transport", "廣告/行銷": "Advertising/Marketing", "其他": "Other",
-      "1-10人": "1-10 ppl", "11-50人": "11-50 ppl", "51-200人": "51-200 ppl", "201-500人": "201-500 ppl", "501-1000人": "501-1000 ppl", "1000人以上": "1000+ ppl",
-      "專業/正式": "Professional/Formal", "活潑/年輕": "Lively/Youthful", "溫暖/親切": "Warm/Friendly", "創新/前衛": "Innovative/Avant-garde", "奢華/高端": "Luxury/High-end", "親民/平易": "Approachable/Down-to-earth"
+      "科技/軟體": "Tech/Software",
+      "製造業": "Manufacturing",
+      "零售/電商": "Retail/E-commerce",
+      "金融服務": "Financial Services",
+      "醫療健康": "Healthcare",
+      "餐飲/消費": "F&B/Consumer",
+      "教育培訓": "Education/Training",
+      "房地產": "Real Estate",
+      "物流/運輸": "Logistics/Transport",
+      "廣告/行銷": "Advertising/Marketing",
+      "其他": "Other",
+      "1-10人": "1-10 ppl",
+      "11-50人": "11-50 ppl",
+      "51-200人": "51-200 ppl",
+      "201-500人": "201-500 ppl",
+      "501-1000人": "501-1000 ppl",
+      "1000人以上": "1000+ ppl",
+      "專業/正式": "Professional/Formal",
+      "活潑/年輕": "Lively/Youthful",
+      "溫暖/親切": "Warm/Friendly",
+      "創新/前衛": "Innovative/Avant-garde",
+      "奢華/高端": "Luxury/High-end",
+      "親民/平易": "Approachable/Down-to-earth"
     },
     "u2": {
-      "clickUpload": "Click to upload", "uploading": "Uploading…", "textExtracted": "· text extracted",
-      "basicInfo": "Basic Info", "companyName": "Company Name *", "companyNamePlaceholder": "e.g. Taiwan Tech Co., Ltd.",
-      "industry": "Industry", "pleaseSelect": "Please select", "employees": "Employees",
-      "capital": "Capital", "capitalPlaceholder": "e.g. NT$10,000,000",
-      "founded": "Year Founded", "foundedPlaceholder": "e.g. 2010", "website": "Website",
-      "address": "Company Address", "addressPlaceholder": "City + District + Street",
-      "bizDesc": "Business Description", "intro": "Company Intro", "introPlaceholder": "Briefly describe the company background, history, core values…",
-      "products": "Main Products / Services", "productsPlaceholder": "Describe main products or services, key features…",
-      "audience": "Target Audience", "audiencePlaceholder": "Describe main customer groups, age range, spending habits…",
-      "advantage": "Core Competitive Advantage", "advantagePlaceholder": "Compared to competitors, the company's biggest advantage is…",
-      "brandSettings": "Brand Settings", "brandTone": "Brand Tone",
-      "branches": "Stores / Branches", "addBranch": "Add Store", "noBranches": "No stores yet, click \"Add Store\" to start",
-      "branchName": "Store Name *", "branchNamePlaceholder": "e.g. Taipei Xinyi Store",
-      "phone": "Phone", "phonePlaceholder": "e.g. 02-1234-5678",
-      "branchAddress": "Address *", "branchAddressPlaceholder": "e.g. No.7, Sec.5, Xinyi Rd., Xinyi Dist., Taipei",
-      "lat": "Latitude (optional)", "lng": "Longitude (optional)", "notes": "Notes", "notesPlaceholder": "e.g. extended hours on weekends",
-      "saveBranch": "Save Store", "cancel": "Cancel", "branchCountHint": "{count} stores total. Enter coordinates to enable nearest-store calculation.",
-      "materials": "Material Upload", "matLogo": "Logo / Brand Mark", "matImage": "Product / Scene Images", "matDoc": "Company Profile / Catalog", "matFaq": "FAQ / Q&A Data",
+      "clickUpload": "Click to upload",
+      "uploading": "Uploading…",
+      "textExtracted": "· text extracted",
+      "basicInfo": "Basic Info",
+      "companyName": "Company Name *",
+      "companyNamePlaceholder": "e.g. Taiwan Tech Co., Ltd.",
+      "industry": "Industry",
+      "pleaseSelect": "Please select",
+      "employees": "Employees",
+      "capital": "Capital",
+      "capitalPlaceholder": "e.g. NT$10,000,000",
+      "founded": "Year Founded",
+      "foundedPlaceholder": "e.g. 2010",
+      "website": "Website",
+      "address": "Company Address",
+      "addressPlaceholder": "City + District + Street",
+      "bizDesc": "Business Description",
+      "intro": "Company Intro",
+      "introPlaceholder": "Briefly describe the company background, history, core values…",
+      "products": "Main Products / Services",
+      "productsPlaceholder": "Describe main products or services, key features…",
+      "audience": "Target Audience",
+      "audiencePlaceholder": "Describe main customer groups, age range, spending habits…",
+      "advantage": "Core Competitive Advantage",
+      "advantagePlaceholder": "Compared to competitors, the company's biggest advantage is…",
+      "brandSettings": "Brand Settings",
+      "brandTone": "Brand Tone",
+      "branches": "Stores / Branches",
+      "addBranch": "Add Store",
+      "noBranches": "No stores yet, click \"Add Store\" to start",
+      "branchName": "Store Name *",
+      "branchNamePlaceholder": "e.g. Taipei Xinyi Store",
+      "phone": "Phone",
+      "phonePlaceholder": "e.g. 02-1234-5678",
+      "branchAddress": "Address *",
+      "branchAddressPlaceholder": "e.g. No.7, Sec.5, Xinyi Rd., Xinyi Dist., Taipei",
+      "lat": "Latitude (optional)",
+      "lng": "Longitude (optional)",
+      "notes": "Notes",
+      "notesPlaceholder": "e.g. extended hours on weekends",
+      "saveBranch": "Save Store",
+      "cancel": "Cancel",
+      "branchCountHint": "{count} stores total. Enter coordinates to enable nearest-store calculation.",
+      "materials": "Material Upload",
+      "matLogo": "Logo / Brand Mark",
+      "matImage": "Product / Scene Images",
+      "matDoc": "Company Profile / Catalog",
+      "matFaq": "FAQ / Q&A Data",
       "materialsHint": "Excel/Word/PDF files will be auto-extracted for AI analysis and customer-service replies.",
-      "saving": "Saving…", "saveCompany": "Save Company Data", "saved": "Saved",
-      "overview": "Data Overview", "companyNameShort": "Company", "industryShort": "Industry",
-      "branchCount": "Store Count", "nBranches": "{n}", "withCoords": "With Coordinates",
-      "uploadedFiles": "Uploaded Files", "nFiles": "{n}", "textMaterials": "Text Materials", "nExtracted": "{n} extracted"
+      "saving": "Saving…",
+      "saveCompany": "Save Company Data",
+      "saved": "Saved",
+      "overview": "Data Overview",
+      "companyNameShort": "Company",
+      "industryShort": "Industry",
+      "branchCount": "Store Count",
+      "nBranches": "{n}",
+      "withCoords": "With Coordinates",
+      "uploadedFiles": "Uploaded Files",
+      "nFiles": "{n}",
+      "textMaterials": "Text Materials",
+      "nExtracted": "{n} extracted"
     },
     "u3": {
       "errTypes": "Please select at least one analysis type",
       "type": {
-        "swot": { "label": "SWOT Analysis", "desc": "Full assessment of strengths/weaknesses/opportunities/threats" },
-        "company": { "label": "Company Analysis", "desc": "Business model, scale, operations, risks" },
-        "competitor_activity": { "label": "Competitor Activity Analysis", "desc": "Competitor marketing tactics, channels, content" },
-        "competitor_performance": { "label": "Competitor Performance Analysis", "desc": "Market share, pricing, customer reputation" },
-        "content": { "label": "Video/Copy Extraction Analysis", "desc": "Competitor content strategy, high-performing content traits" },
-        "marketing": { "label": "Marketing Copy Analysis", "desc": "Copy style trends, appeal points, keywords" }
+        "swot": {
+          "label": "SWOT Analysis",
+          "desc": "Full assessment of strengths/weaknesses/opportunities/threats"
+        },
+        "company": {
+          "label": "Company Analysis",
+          "desc": "Business model, scale, operations, risks"
+        },
+        "competitor_activity": {
+          "label": "Competitor Activity Analysis",
+          "desc": "Competitor marketing tactics, channels, content"
+        },
+        "competitor_performance": {
+          "label": "Competitor Performance Analysis",
+          "desc": "Market share, pricing, customer reputation"
+        },
+        "content": {
+          "label": "Video/Copy Extraction Analysis",
+          "desc": "Competitor content strategy, high-performing content traits"
+        },
+        "marketing": {
+          "label": "Marketing Copy Analysis",
+          "desc": "Copy style trends, appeal points, keywords"
+        }
       },
-      "unit1": "Unit 1 Collected Data", "loaded": "loaded", "notRun": "not run yet",
-      "unit2": "Unit 2 Company Data", "notFilled": "not filled yet",
-      "extraTitle": "Extra Reference Material (optional)", "extraHint": "Upload proposals, news articles, competitor reports, etc.; AI will reference them during analysis",
-      "uploading": "Uploading…", "chooseFile": "Choose File",
-      "selectItems": "Select Analysis Items", "analyzing": "Gemini analyzing, please wait…", "startAnalyze": "Start Analysis",
-      "mOpportunity": "Market Opportunity Index", "mCompetitors": "Competitor Count", "nCompetitors": "{n}", "mAudience": "Target Audience", "mScore": "Competitiveness Score",
+      "unit1": "Unit 1 Collected Data",
+      "loaded": "loaded",
+      "notRun": "not run yet",
+      "unit2": "Unit 2 Company Data",
+      "notFilled": "not filled yet",
+      "extraTitle": "Extra Reference Material (optional)",
+      "extraHint": "Upload proposals, news articles, competitor reports, etc.; AI will reference them during analysis",
+      "uploading": "Uploading…",
+      "chooseFile": "Choose File",
+      "selectItems": "Select Analysis Items",
+      "analyzing": "Gemini analyzing, please wait…",
+      "startAnalyze": "Start Analysis",
+      "mOpportunity": "Market Opportunity Index",
+      "mCompetitors": "Competitor Count",
+      "nCompetitors": "{n}",
+      "mAudience": "Target Audience",
+      "mScore": "Competitiveness Score",
       "reanalyze": "Re-analyze",
-      "simTitle": "Marketing Consumer Simulation", "simHint": "Simulate reactions of different consumer groups, faction clashes, PR crisis detection",
-      "simulating": "Simulating…", "runSim": "Run Consumer Simulation"
+      "simTitle": "Marketing Consumer Simulation",
+      "simHint": "Simulate reactions of different consumer groups, faction clashes, PR crisis detection",
+      "simulating": "Simulating…",
+      "runSim": "Run Consumer Simulation"
     },
     "u4": {
-      "errTypes": "Please select at least one copy type", "anchorGenFailed": "Anchor script generation failed: {error}",
-      "ctxCollect": "Collected Data", "ctxCompany": "Company Data", "ctxAnalysis": "Analysis Data",
+      "errTypes": "Please select at least one copy type",
+      "anchorGenFailed": "Anchor script generation failed: {error}",
+      "ctxCollect": "Collected Data",
+      "ctxCompany": "Company Data",
+      "ctxAnalysis": "Analysis Data",
       "selectTypes": "Select Copy Types",
-      "group": { "social": "Social", "video": "Video", "ad": "Ad", "email": "Email", "other": "Other", "anchor": "Anchor" },
-      "copy": {
-        "facebook_post": "Facebook Post", "instagram_caption": "Instagram Caption", "threads_post": "Threads Post", "line_message": "LINE Message", "twitter_post": "Twitter/X Post", "linkedin_post": "LinkedIn Post", "youtube_description": "YouTube Description", "ad_headline": "Ad Headline Set", "email_subject": "Email Subject", "email_body": "Email Body", "press_release": "Press Release", "anchor_script": "🎙️ Anchor Script"
+      "group": {
+        "social": "Social",
+        "video": "Video",
+        "ad": "Ad",
+        "email": "Email",
+        "other": "Other",
+        "anchor": "Anchor"
       },
-      "anchorTitle": "Anchor Script Settings", "anchorSubtitle": "(This script feeds directly into Unit 11 anchor video generation)",
-      "videoDuration": "Video Duration", "durationOpt": "{s} sec (~{chars} chars)",
+      "copy": {
+        "facebook_post": "Facebook Post",
+        "instagram_caption": "Instagram Caption",
+        "threads_post": "Threads Post",
+        "line_message": "LINE Message",
+        "twitter_post": "Twitter/X Post",
+        "linkedin_post": "LinkedIn Post",
+        "youtube_description": "YouTube Description",
+        "ad_headline": "Ad Headline Set",
+        "email_subject": "Email Subject",
+        "email_body": "Email Body",
+        "press_release": "Press Release",
+        "anchor_script": "🎙️ Anchor Script"
+      },
+      "anchorTitle": "Anchor Script Settings",
+      "anchorSubtitle": "(This script feeds directly into Unit 11 anchor video generation)",
+      "videoDuration": "Video Duration",
+      "durationOpt": "{s} sec (~{chars} chars)",
       "anchorStyle": "Speaking Style",
-      "style": { "專業親切": "Professional & friendly", "熱情活力": "Passionate & energetic", "沉穩信任": "Calm & trustworthy", "輕鬆幽默": "Relaxed & humorous", "商務正式": "Business formal" },
+      "style": {
+        "專業親切": "Professional & friendly",
+        "熱情活力": "Passionate & energetic",
+        "沉穩信任": "Calm & trustworthy",
+        "輕鬆幽默": "Relaxed & humorous",
+        "商務正式": "Business formal"
+      },
       "anchorNote": "Once generated, Unit 11 Anchor Marketing will use this script automatically — no need to re-enter.",
-      "userRules": "Special User Rules", "userRulesHint": "(optional; specify style, banned words, required messages, etc.)",
+      "userRules": "Special User Rules",
+      "userRulesHint": "(optional; specify style, banned words, required messages, etc.)",
       "userRulesPlaceholder": "e.g. don't use exaggerations like \"best\" or \"strongest\"; must mention the limited-time offer; copy should feel urgent…",
-      "generating": "Claude generating…", "generate": "Generate Copy", "editableHint": " — Claude Sonnet · editable directly", "regenerate": "Regenerate",
-      "feedbackTitle": "Enter revisions to regenerate all copy", "feedbackPlaceholder": "e.g. tone too formal, make it relaxed and lively; add a limited-time-offer feel…", "regenAll": "Regenerate"
+      "generating": "Claude generating…",
+      "generate": "Generate Copy",
+      "editableHint": " — Claude Sonnet · editable directly",
+      "regenerate": "Regenerate",
+      "feedbackTitle": "Enter revisions to regenerate all copy",
+      "feedbackPlaceholder": "e.g. tone too formal, make it relaxed and lively; add a limited-time-offer feel…",
+      "regenAll": "Regenerate"
     },
     "u5": {
-      "ctxCopy": "Copy Data", "imageCount": "Number of Images", "targetPlatforms": "Target Platforms",
-      "specialRules": "Special Rules", "specialRulesHint": "(optional; specify image style, banned elements, required info, etc.)",
+      "ctxCopy": "Copy Data",
+      "imageCount": "Number of Images",
+      "targetPlatforms": "Target Platforms",
+      "specialRules": "Special Rules",
+      "specialRulesHint": "(optional; specify image style, banned elements, required info, etc.)",
       "specialRulesPlaceholder": "e.g. must include product photo; high-end luxury style; no red; leave space for brand logo…",
-      "refImage": "Reference Image (optional)", "enable": "Enable", "drivePickLabel": "Pick a random image from Google Drive; the script will match this image",
-      "generatingScript": "Claude generating script…", "genWithRef": "Generate Script with Reference", "genScript": "Generate Image Script",
-      "imageN": "Image {n}", "scriptTitle": "Image {n} Visual Script — Claude Sonnet", "totalImages": "{n} total",
-      "refImageLabel": "Reference Image", "refGenerated": "Script generated based on this image's style",
-      "feedbackTitle": "Enter revisions to regenerate all scripts", "feedbackPlaceholder": "e.g. make the style younger and livelier; add more product detail; switch to warm tones…",
-      "tipTitle": "Tip", "tipBody": "The <b>AI Generation Prompt</b> at the end of each script can be copied directly into Midjourney, DALL-E 3, Stable Diffusion, etc. to generate images. When done, go to <b>Unit 6 Image Generation</b> for AI generation."
+      "refImage": "Reference Image (optional)",
+      "enable": "Enable",
+      "drivePickLabel": "Pick a random image from Google Drive; the script will match this image",
+      "generatingScript": "Claude generating script…",
+      "genWithRef": "Generate Script with Reference",
+      "genScript": "Generate Image Script",
+      "imageN": "Image {n}",
+      "scriptTitle": "Image {n} Visual Script — Claude Sonnet",
+      "totalImages": "{n} total",
+      "refImageLabel": "Reference Image",
+      "refGenerated": "Script generated based on this image's style",
+      "feedbackTitle": "Enter revisions to regenerate all scripts",
+      "feedbackPlaceholder": "e.g. make the style younger and livelier; add more product detail; switch to warm tones…",
+      "tipTitle": "Tip",
+      "tipBody": "The <b>AI Generation Prompt</b> at the end of each script can be copied directly into Midjourney, DALL-E 3, Stable Diffusion, etc. to generate images. When done, go to <b>Unit 6 Image Generation</b> for AI generation."
     },
     "u6": {
-      "promptEmpty": "Prompt cannot be empty", "promptRequired": "Please enter a Prompt", "selectModel": "Select Generation Model",
+      "promptEmpty": "Prompt cannot be empty",
+      "promptRequired": "Please enter a Prompt",
+      "selectModel": "Select Generation Model",
       "model": {
-        "flux": { "desc": "High-quality realism, best for marketing images", "badge": "Recommended" },
-        "dalle3": { "desc": "Strong comprehension, clear in-image text", "badge": "OpenAI" },
-        "nano": { "desc": "Fast, good for quick draft previews", "badge": "Fast" }
+        "flux": {
+          "desc": "High-quality realism, best for marketing images",
+          "badge": "Recommended"
+        },
+        "dalle3": {
+          "desc": "Strong comprehension, clear in-image text",
+          "badge": "OpenAI"
+        },
+        "nano": {
+          "desc": "Fast, good for quick draft previews",
+          "badge": "Fast"
+        }
       },
-      "costUnit": "/img", "imageSettings": "Image Settings", "sizeRatio": "Aspect Ratio",
-      "size": { "1:1": "1:1 Square", "9:16": "9:16 Portrait", "16:9": "16:9 Landscape" },
-      "quality": "Quality", "qStandard": "Standard", "qHd": "HD",
-      "styleLabel": "Style", "sVivid": "Vivid", "sNatural": "Natural",
-      "refImgTitle": "Reference Image (img2img)", "enabled": "Enabled", "useRefImg": "Generate with reference image",
-      "refImgPickLabel": "Image generation reference", "refImgChosen": "Reference image selected; all images will follow this image's style (img2img)",
+      "costUnit": "/img",
+      "imageSettings": "Image Settings",
+      "sizeRatio": "Aspect Ratio",
+      "size": {
+        "1:1": "1:1 Square",
+        "9:16": "9:16 Portrait",
+        "16:9": "16:9 Landscape"
+      },
+      "quality": "Quality",
+      "qStandard": "Standard",
+      "qHd": "HD",
+      "styleLabel": "Style",
+      "sVivid": "Vivid",
+      "sNatural": "Natural",
+      "refImgTitle": "Reference Image (img2img)",
+      "enabled": "Enabled",
+      "useRefImg": "Generate with reference image",
+      "refImgPickLabel": "Image generation reference",
+      "refImgChosen": "Reference image selected; all images will follow this image's style (img2img)",
       "refImgHint": "Once enabled, pick an image from Google Drive as the generation base for img2img",
-      "fromScripts": "Generate from Unit 5 scripts ({n} total)", "generated": "Generated",
-      "aiPrompt": "AI Generation Prompt", "editable": "(editable)", "promptPlaceholder": "Enter an English prompt…",
-      "modelGenerating": "{model} generating…", "genWithModel": "Generate with {model}", "download": "Download", "revisedPrompt": "Model-revised Prompt:",
+      "fromScripts": "Generate from Unit 5 scripts ({n} total)",
+      "generated": "Generated",
+      "aiPrompt": "AI Generation Prompt",
+      "editable": "(editable)",
+      "promptPlaceholder": "Enter an English prompt…",
+      "modelGenerating": "{model} generating…",
+      "genWithModel": "Generate with {model}",
+      "download": "Download",
+      "revisedPrompt": "Model-revised Prompt:",
       "noUnit5": "<b>Unit 5 (Image Scripts) not run yet</b>; you can enter a custom prompt below to generate images.",
-      "manualPrompt": "Manual Prompt", "manualPlaceholder": "Enter an English prompt, e.g. Professional marketing photo of luxury skincare products on white marble...",
-      "generatingShort": "Generating…", "successHint": "Generated {n} images, stored in Supabase Storage; you can upload them to platforms in Unit 9."
+      "manualPrompt": "Manual Prompt",
+      "manualPlaceholder": "Enter an English prompt, e.g. Professional marketing photo of luxury skincare products on white marble...",
+      "generatingShort": "Generating…",
+      "successHint": "Generated {n} images, stored in Supabase Storage; you can upload them to platforms in Unit 9."
     },
     "u7": {
-      "errTypes": "Please select at least one video type", "errPlatforms": "Please select at least one platform",
-      "platform": { "youtube": "YouTube (regular)" },
+      "errTypes": "Please select at least one video type",
+      "errPlatforms": "Please select at least one platform",
+      "platform": {
+        "youtube": "YouTube (regular)"
+      },
       "ctxImageScript": "Image Scripts",
-      "videoCount": "Number of Videos", "videoDuration": "Video Duration", "durSec": "{s}s",
+      "videoCount": "Number of Videos",
+      "videoDuration": "Video Duration",
+      "durSec": "{s}s",
       "videoType": "Video Type",
       "vtype": {
-        "short_video": { "label": "Short Video", "desc": "Eye-catching, fast-paced" },
-        "ad": { "label": "Ad Video", "desc": "AIDA structure, drives conversion" },
-        "tutorial": { "label": "Tutorial Video", "desc": "Demonstrate product/service use" },
-        "testimonial": { "label": "Customer Testimonial", "desc": "Authentic word-of-mouth, builds trust" },
-        "brand_story": { "label": "Brand Story", "desc": "Emotional connection, brand image" }
+        "short_video": {
+          "label": "Short Video",
+          "desc": "Eye-catching, fast-paced"
+        },
+        "ad": {
+          "label": "Ad Video",
+          "desc": "AIDA structure, drives conversion"
+        },
+        "tutorial": {
+          "label": "Tutorial Video",
+          "desc": "Demonstrate product/service use"
+        },
+        "testimonial": {
+          "label": "Customer Testimonial",
+          "desc": "Authentic word-of-mouth, builds trust"
+        },
+        "brand_story": {
+          "label": "Brand Story",
+          "desc": "Emotional connection, brand image"
+        }
       },
-      "refImgTitle": "Reference Image (for Claude Vision)", "useRefImg": "Use reference image", "refImgHint": "When enabled, Claude generates a more fitting script based on the image's scene and style",
-      "unit6Image": "Unit 6 Generated Image", "refImgPickLabel": "Video script reference", "pickUnit6": "Pick an image generated in Unit 6 as reference", "noUnit6Images": "No images generated in Unit 6 yet; complete Unit 6 first or use a Drive image.",
-      "optional": "(optional)", "rulesPlaceholder": "e.g. must show product close-up; narration in Taiwanese; open with a curiosity-piquing question…",
-      "genWithRef": "Generate Script with Reference", "genScript": "Generate Video Script",
-      "videoN": "Video {n}", "scriptTitle": "Video {n} Storyboard — Claude Sonnet · {dur}s", "totalVideos": "{n} total",
+      "refImgTitle": "Reference Image (for Claude Vision)",
+      "useRefImg": "Use reference image",
+      "refImgHint": "When enabled, Claude generates a more fitting script based on the image's scene and style",
+      "unit6Image": "Unit 6 Generated Image",
+      "refImgPickLabel": "Video script reference",
+      "pickUnit6": "Pick an image generated in Unit 6 as reference",
+      "noUnit6Images": "No images generated in Unit 6 yet; complete Unit 6 first or use a Drive image.",
+      "optional": "(optional)",
+      "rulesPlaceholder": "e.g. must show product close-up; narration in Taiwanese; open with a curiosity-piquing question…",
+      "genWithRef": "Generate Script with Reference",
+      "genScript": "Generate Video Script",
+      "videoN": "Video {n}",
+      "scriptTitle": "Video {n} Storyboard — Claude Sonnet · {dur}s",
+      "totalVideos": "{n} total",
       "feedbackPlaceholder": "e.g. pacing too slow; opening not engaging enough; add more product detail…",
       "tipBody": "Once scripts are done, go to <b>Unit 8 Video Generation</b> and use KLING (5/10s), Google VEO3 (25s), or SORA (60s) to turn scripts into actual videos."
     },
     "u8": {
       "model": {
-        "kling-standard": "KLING Standard", "kling-pro": "KLING Pro", "kling-img2video": "KLING img2video",
-        "veo3": "Google VEO3", "veo3-img2video": "VEO3 img2video", "sora": "SORA", "sora-img2video": "SORA img2video"
+        "kling-standard": "KLING Standard",
+        "kling-pro": "KLING Pro",
+        "kling-img2video": "KLING img2video",
+        "veo3": "Google VEO3",
+        "veo3-img2video": "VEO3 img2video",
+        "sora": "SORA",
+        "sora-img2video": "SORA img2video"
       },
-      "gen": { "kling": "KLING generating…", "veo3": "VEO3 generating…", "sora": "SORA generating…" },
+      "gen": {
+        "kling": "KLING generating…",
+        "veo3": "VEO3 generating…",
+        "sora": "SORA generating…"
+      },
       "promptEmpty": "Video prompt cannot be empty; complete Unit 7 scripts or enter a description manually first",
       "selectDuration": "Select Video Duration",
-      "durHint": { "5": "Ultra-short · fast", "10": "Short video", "25": "Medium-long video", "60": "Long video" },
-      "klingStandard": "Standard (faster)", "klingPro": "Pro (flagship quality)",
-      "img2video": "Image to Video", "img2videoHint": "Use a Unit 6 image as the starting frame", "currentModel": "Current model: ",
-      "videoSettings": "Video Settings", "aspectRatio": "Aspect Ratio",
-      "aspect": { "16:9": "16:9 Landscape", "9:16": "9:16 Portrait", "1:1": "1:1 Square" },
-      "selectSourceImg": "Select Source Image", "driveImage": "Google Drive Image",
+      "durHint": {
+        "5": "Ultra-short · fast",
+        "10": "Short video",
+        "25": "Medium-long video",
+        "60": "Long video"
+      },
+      "klingStandard": "Standard (faster)",
+      "klingPro": "Pro (flagship quality)",
+      "img2video": "Image to Video",
+      "img2videoHint": "Use a Unit 6 image as the starting frame",
+      "currentModel": "Current model: ",
+      "videoSettings": "Video Settings",
+      "aspectRatio": "Aspect Ratio",
+      "aspect": {
+        "16:9": "16:9 Landscape",
+        "9:16": "9:16 Portrait",
+        "1:1": "1:1 Square"
+      },
+      "selectSourceImg": "Select Source Image",
+      "driveImage": "Google Drive Image",
       "noUnit6Images": "No images generated in Unit 6. Complete Unit 6 first, or use a Drive image.",
-      "driveChosen": "Drive image selected; the video will be generated from this image", "noDriveImg": "No Google Drive image selected in Unit 5/6/7; please go to any unit to select one.",
+      "driveChosen": "Drive image selected; the video will be generated from this image",
+      "noDriveImg": "No Google Drive image selected in Unit 5/6/7; please go to any unit to select one.",
       "fromScripts": "Generate from Unit 7 scripts ({n} total)",
-      "processing": "Generating (~1-3 min)", "failed": "Failed",
-      "videoPrompt": "Video Prompt", "videoPromptPlaceholder": "Describe the video scene and motion…", "genVideo": "Generate Video",
+      "processing": "Generating (~1-3 min)",
+      "failed": "Failed",
+      "videoPrompt": "Video Prompt",
+      "videoPromptPlaceholder": "Describe the video scene and motion…",
+      "genVideo": "Generate Video",
       "noUnit7": "<b>Unit 7 (Video Scripts) not run yet</b>; you can enter a prompt below to generate a video.",
       "manualPlaceholder": "Describe the video, e.g. A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
       "notice": "<b>Note:</b> Video generation usually takes <b>1-3 minutes</b>. After submitting, the page polls status every 6 seconds — don't leave this page. The video appears automatically when done.",
       "successHint": "Generated {n} videos; you can upload them to platforms in Unit 9."
     },
     "u9": {
-      "errPlatform": "Please select at least one platform", "errCopy": "Please enter post copy",
-      "imgCount": "{n} images", "vidCount": "{n} videos", "copy": "Copy", "ready": "ready", "notGenerated": "not generated",
-      "platformSettings": "Platform Connection Settings", "imgPlatforms": "Image Publishing Platforms", "vidPlatforms": "Video Publishing Platforms",
-      "pickImage": "Select Image to Upload", "noImages": "No images generated in Unit 6.", "pickVideo": "Select Video to Upload", "noVideos": "No videos generated in Unit 8.",
-      "postCopy": "Post Copy", "quickLoad": "Quick load:", "anchorTag": "🎙️Anchor",
-      "copyPlaceholder": "Enter or load copy from Unit 4…", "charCount": "{n} chars",
-      "uploading": "Uploading…", "publishTo": "Publish to {n} platforms",
-      "uploadResult": "Upload Result", "publishOk": "Published", "publishFail": "Failed", "updateToken": "→ Go to settings to update Token",
+      "errPlatform": "Please select at least one platform",
+      "errCopy": "Please enter post copy",
+      "imgCount": "{n} images",
+      "vidCount": "{n} videos",
+      "copy": "Copy",
+      "ready": "ready",
+      "notGenerated": "not generated",
+      "platformSettings": "Platform Connection Settings",
+      "imgPlatforms": "Image Publishing Platforms",
+      "vidPlatforms": "Video Publishing Platforms",
+      "pickImage": "Select Image to Upload",
+      "noImages": "No images generated in Unit 6.",
+      "pickVideo": "Select Video to Upload",
+      "noVideos": "No videos generated in Unit 8.",
+      "postCopy": "Post Copy",
+      "quickLoad": "Quick load:",
+      "anchorTag": "🎙️Anchor",
+      "copyPlaceholder": "Enter or load copy from Unit 4…",
+      "charCount": "{n} chars",
+      "uploading": "Uploading…",
+      "publishTo": "Publish to {n} platforms",
+      "uploadResult": "Upload Result",
+      "publishOk": "Published",
+      "publishFail": "Failed",
+      "updateToken": "→ Go to settings to update Token",
       "successCount": "{ok}/{total} platforms succeeded"
     },
     "u10": {
-      "voice": { "mlFemale": "Multilingual, F", "mlMale": "Multilingual, M", "brMale": "British English, M", "usFemale": "American English, F" },
-      "defMarketingTeam": "Marketing Team", "defScript": "Default Script", "defGeneralCustomer": "General Customer", "defGeneralDesc": "General prospect or unknown", "groupDefault": "General",
-      "scriptN": "Script {n}", "categoryN": "Category {n}",
-      "errNeedRule": "Define at least one sending rule first", "errNeedRecipients": "Please enter a recipient list", "errNeedTemplate": "Fill in subject and body for at least one script", "sendFailed": "Send failed",
-      "errNeedScript2": "Enter or generate a script first", "errNeedScript": "Enter a script first", "errNeedPhone": "Enter at least one phone number",
-      "tabPhone": "Phone Marketing", "tabEmail": "Email Marketing",
-      "sendService": "Sending service: Resend", "fromName": "Sender Name", "fromEmail": "Sender Email (must be verified in Resend)",
-      "step1Title": "Step 1 — Email Templates (Scripts)", "step1Hint": "Define different email content templates to use later in sending rules",
-      "applyUnit4All": "Apply Unit 4 to all templates", "templateNamePlaceholder": "Template name (e.g. Influencer Script)", "applyUnit4": "Apply Unit 4",
-      "emailSubject": "Email Subject", "emailSubjectPlaceholder": "Email subject…", "emailBody": "Email Body", "emailBodyPlaceholder": "Email body…", "addTemplate": "Add Template",
-      "step2Title": "Step 2 — Sending Rules", "step2Hint": "Define category names and AI criteria, and which template to apply. AI matches in order; first match wins.",
-      "categoryNamePlaceholder": "Category name (e.g. beauty influencer)", "aiBasis": "AI classification basis (describe this recipient type)", "aiBasisPlaceholder": "e.g. individual beauty influencers, mainly social-media-driven individuals",
-      "applyTemplate": "Apply Template", "classifiedHere": "Classified here: {n} recipients", "addRule": "Add Rule",
-      "step3Title": "Step 3 — Enter Recipient Emails", "step3Hint": "One email per line; AI auto-classifies by the rules above",
-      "classifying": "AI classifying…", "autoClassify": "AI auto-classify", "recognizedEmails": "{n} valid emails recognized",
-      "sendingN": "Sending… ({n})", "startSendN": "Send {n} emails", "sendResult": "Send Result", "successN": "{ok}/{total} succeeded", "sent": "Sent",
+      "voice": {
+        "mlFemale": "Multilingual, F",
+        "mlMale": "Multilingual, M",
+        "brMale": "British English, M",
+        "usFemale": "American English, F"
+      },
+      "defMarketingTeam": "Marketing Team",
+      "defScript": "Default Script",
+      "defGeneralCustomer": "General Customer",
+      "defGeneralDesc": "General prospect or unknown",
+      "groupDefault": "General",
+      "scriptN": "Script {n}",
+      "categoryN": "Category {n}",
+      "errNeedRule": "Define at least one sending rule first",
+      "errNeedRecipients": "Please enter a recipient list",
+      "errNeedTemplate": "Fill in subject and body for at least one script",
+      "sendFailed": "Send failed",
+      "errNeedScript2": "Enter or generate a script first",
+      "errNeedScript": "Enter a script first",
+      "errNeedPhone": "Enter at least one phone number",
+      "tabPhone": "Phone Marketing",
+      "tabEmail": "Email Marketing",
+      "sendService": "Sending service: Resend",
+      "fromName": "Sender Name",
+      "fromEmail": "Sender Email (must be verified in Resend)",
+      "step1Title": "Step 1 — Email Templates (Scripts)",
+      "step1Hint": "Define different email content templates to use later in sending rules",
+      "applyUnit4All": "Apply Unit 4 to all templates",
+      "templateNamePlaceholder": "Template name (e.g. Influencer Script)",
+      "applyUnit4": "Apply Unit 4",
+      "emailSubject": "Email Subject",
+      "emailSubjectPlaceholder": "Email subject…",
+      "emailBody": "Email Body",
+      "emailBodyPlaceholder": "Email body…",
+      "addTemplate": "Add Template",
+      "step2Title": "Step 2 — Sending Rules",
+      "step2Hint": "Define category names and AI criteria, and which template to apply. AI matches in order; first match wins.",
+      "categoryNamePlaceholder": "Category name (e.g. beauty influencer)",
+      "aiBasis": "AI classification basis (describe this recipient type)",
+      "aiBasisPlaceholder": "e.g. individual beauty influencers, mainly social-media-driven individuals",
+      "applyTemplate": "Apply Template",
+      "classifiedHere": "Classified here: {n} recipients",
+      "addRule": "Add Rule",
+      "step3Title": "Step 3 — Enter Recipient Emails",
+      "step3Hint": "One email per line; AI auto-classifies by the rules above",
+      "classifying": "AI classifying…",
+      "autoClassify": "AI auto-classify",
+      "recognizedEmails": "{n} valid emails recognized",
+      "sendingN": "Sending… ({n})",
+      "startSendN": "Send {n} emails",
+      "sendResult": "Send Result",
+      "successN": "{ok}/{total} succeeded",
+      "sent": "Sent",
       "envNotice": "Set environment variables in Vercel:",
-      "ttsProvider": "TTS: ElevenLabs", "callProvider": "Calls: Bird (app.bird.com)", "vbeeLocked": "VBEE — coming later",
-      "voiceDialSettings": "Voice / Dial Settings", "elevenVoice": "ElevenLabs Voice", "birdCallerId": "Bird Caller ID *",
-      "phoneScript": "Phone Marketing Script", "aiGenerating": "AI generating…", "aiGenerate": "AI auto-generate",
-      "scriptPlaceholder": "Hello! I'm [Name] from [Company], I'm calling today to share with you…", "scriptCount": "{n} chars · recommended 100-200 chars (~30-60s)",
-      "genVoice": "Generating voice…", "previewVoice": "Preview Voice",
-      "phoneList": "Phone Number List", "recognizedPhones": "{n} recognized", "phoneHint": "One number per line, or comma-separated; international format supported (with country code)",
-      "callingN": "Calling… ({n})", "startCallN": "Start calling {n} numbers", "callResult": "Call Result", "callOk": "Call succeeded"
+      "ttsProvider": "TTS: ElevenLabs",
+      "callProvider": "Calls: Bird (app.bird.com)",
+      "vbeeLocked": "VBEE — coming later",
+      "voiceDialSettings": "Voice / Dial Settings",
+      "elevenVoice": "ElevenLabs Voice",
+      "birdCallerId": "Bird Caller ID *",
+      "phoneScript": "Phone Marketing Script",
+      "aiGenerating": "AI generating…",
+      "aiGenerate": "AI auto-generate",
+      "scriptPlaceholder": "Hello! I'm [Name] from [Company], I'm calling today to share with you…",
+      "scriptCount": "{n} chars · recommended 100-200 chars (~30-60s)",
+      "genVoice": "Generating voice…",
+      "previewVoice": "Preview Voice",
+      "phoneList": "Phone Number List",
+      "recognizedPhones": "{n} recognized",
+      "phoneHint": "One number per line, or comma-separated; international format supported (with country code)",
+      "callingN": "Calling… ({n})",
+      "startCallN": "Start calling {n} numbers",
+      "callResult": "Call Result",
+      "callOk": "Call succeeded"
     },
     "u11": {
-      "ratio": { "16:9": "Landscape 16:9", "9:16": "Portrait 9:16", "1:1": "Square 1:1" },
-      "ratioDesc": { "youtube": "YouTube / Ads", "reels": "Reels / TikTok", "ig": "Instagram" },
-      "bg": { "white": "White", "black": "Black", "lightBlue": "Light Blue", "lightOrange": "Light Orange", "lightGreen": "Light Green" },
-      "errAvatar": "Please select an avatar", "errVoice": "Please select a voice", "errScript": "First check \"🎙️ Anchor Script\" in Unit 4 Copy and generate it", "submitFailed": "Submission failed",
-      "title": "Anchor Marketing", "subtitle": "Generate marketing videos with HeyGen virtual anchors", "aiAvatarVideo": "AI Avatar Video", "autoSave": "Auto-saved to Supabase",
-      "loadAssets": "Load HeyGen anchor assets", "loading": "Loading…", "reloadAssets": "Reload avatar & voice list",
-      "selectAvatar": "Select Avatar", "nAvailable": "{n} available", "selectVoice": "Select Voice", "chooseVoice": "— Select voice —",
-      "formatBg": "Video Format & Background", "bgColor": "Background:", "customColor": "Custom color",
-      "anchorScript": "Anchor Script", "durStyle": "{dur}s · {style}", "fromUnit4": "From Unit 4 Copy ({n} chars) · to edit, return to Unit 4 and regenerate",
-      "noScript": "No anchor script yet", "noScriptHint": "Go to Unit 4 Copy → check \"🎙️ Anchor Script\" → set duration → generate copy",
-      "submitting": "Submitting…", "genVideo": "Generate Anchor Video",
-      "videoLog": "Anchor Video Log", "nVideos": "{n}",
-      "stDone": "✓ Done", "stFailed": "✗ Failed", "stProcessing": "⏳ Processing", "downloadVideo": "Download video",
+      "ratio": {
+        "16:9": "Landscape 16:9",
+        "9:16": "Portrait 9:16",
+        "1:1": "Square 1:1"
+      },
+      "ratioDesc": {
+        "youtube": "YouTube / Ads",
+        "reels": "Reels / TikTok",
+        "ig": "Instagram"
+      },
+      "bg": {
+        "white": "White",
+        "black": "Black",
+        "lightBlue": "Light Blue",
+        "lightOrange": "Light Orange",
+        "lightGreen": "Light Green"
+      },
+      "errAvatar": "Please select an avatar",
+      "errVoice": "Please select a voice",
+      "errScript": "First check \"🎙️ Anchor Script\" in Unit 4 Copy and generate it",
+      "submitFailed": "Submission failed",
+      "title": "Anchor Marketing",
+      "subtitle": "Generate marketing videos with HeyGen virtual anchors",
+      "aiAvatarVideo": "AI Avatar Video",
+      "autoSave": "Auto-saved to Supabase",
+      "loadAssets": "Load HeyGen anchor assets",
+      "loading": "Loading…",
+      "reloadAssets": "Reload avatar & voice list",
+      "selectAvatar": "Select Avatar",
+      "nAvailable": "{n} available",
+      "selectVoice": "Select Voice",
+      "chooseVoice": "— Select voice —",
+      "formatBg": "Video Format & Background",
+      "bgColor": "Background:",
+      "customColor": "Custom color",
+      "anchorScript": "Anchor Script",
+      "durStyle": "{dur}s · {style}",
+      "fromUnit4": "From Unit 4 Copy ({n} chars) · to edit, return to Unit 4 and regenerate",
+      "noScript": "No anchor script yet",
+      "noScriptHint": "Go to Unit 4 Copy → check \"🎙️ Anchor Script\" → set duration → generate copy",
+      "submitting": "Submitting…",
+      "genVideo": "Generate Anchor Video",
+      "videoLog": "Anchor Video Log",
+      "nVideos": "{n}",
+      "stDone": "✓ Done",
+      "stFailed": "✗ Failed",
+      "stProcessing": "⏳ Processing",
+      "downloadVideo": "Download video",
       "envHint": "Environment variables required:"
     },
     "u12": {
-      "step": { "product": "Tour/Product/Room selection", "date_depart": "Departure date", "date_checkin": "Check-in date", "date_checkout": "Check-out date", "timeslot": "Time slot/Session", "headcount": "Headcount (adult/child/infant)", "passenger_id": "Passenger info (name+DOB+ID, per person)", "booker_name": "Booker name", "quote": "Quote (AI calculates total via pricing calculator)", "email": "Email", "plate": "License plate", "phone": "Contact phone", "special_req": "Special requests" },
-      "industry": { "homestay": "B&B / Travel", "ecommerce": "E-commerce / Retail", "restaurant": "Restaurant / F&B", "clinic": "Clinic / Aesthetics", "beauty": "Beauty / Hair / SPA", "education": "Education / Tutoring" },
-      "cred": { "waVerify": "Verify Token (any custom string)", "waSecret": "App Secret (verifies webhook signature, strongly recommended)", "metaKey": "Meta app secret", "tgToken": "Bot Token (from @BotFather)", "tgAdmin": "Admin Chat ID (optional)", "tgAdminPh": "Your personal Chat ID, from @userinfobot", "tgSecret": "Webhook Secret (setWebhook secret_token, strongly recommended)", "anyString": "Any custom string", "wechatToken": "Token (server-configured Token, for signature verification)" },
-      "jsonError": "JSON format error: {error}", "shoppingConfig": "Shopping Config",
-      "tgRegFailed": "Registration failed", "tgRegOk": "Webhook registered successfully", "tgReturned": "Telegram returned: {data}", "tgTestSent": "✅ Test message sent",
-      "imageTag": "[Image]", "serverError": "Server response error (HTTP {status})", "errorMsg": "Error: {error}", "unknownError": "Unknown error", "connError": "Connection error: {error}",
+      "step": {
+        "product": "Tour/Product/Room selection",
+        "date_depart": "Departure date",
+        "date_checkin": "Check-in date",
+        "date_checkout": "Check-out date",
+        "timeslot": "Time slot/Session",
+        "headcount": "Headcount (adult/child/infant)",
+        "passenger_id": "Passenger info (name+DOB+ID, per person)",
+        "booker_name": "Booker name",
+        "quote": "Quote (AI calculates total via pricing calculator)",
+        "email": "Email",
+        "plate": "License plate",
+        "phone": "Contact phone",
+        "special_req": "Special requests"
+      },
+      "industry": {
+        "homestay": "B&B / Travel",
+        "ecommerce": "E-commerce / Retail",
+        "restaurant": "Restaurant / F&B",
+        "clinic": "Clinic / Aesthetics",
+        "beauty": "Beauty / Hair / SPA",
+        "education": "Education / Tutoring"
+      },
+      "cred": {
+        "waVerify": "Verify Token (any custom string)",
+        "waSecret": "App Secret (verifies webhook signature, strongly recommended)",
+        "metaKey": "Meta app secret",
+        "tgToken": "Bot Token (from @BotFather)",
+        "tgAdmin": "Admin Chat ID (optional)",
+        "tgAdminPh": "Your personal Chat ID, from @userinfobot",
+        "tgSecret": "Webhook Secret (setWebhook secret_token, strongly recommended)",
+        "anyString": "Any custom string",
+        "wechatToken": "Token (server-configured Token, for signature verification)"
+      },
+      "jsonError": "JSON format error: {error}",
+      "shoppingConfig": "Shopping Config",
+      "tgRegFailed": "Registration failed",
+      "tgRegOk": "Webhook registered successfully",
+      "tgReturned": "Telegram returned: {data}",
+      "tgTestSent": "✅ Test message sent",
+      "imageTag": "[Image]",
+      "serverError": "Server response error (HTTP {status})",
+      "errorMsg": "Error: {error}",
+      "unknownError": "Unknown error",
+      "connError": "Connection error: {error}",
       "surveyMsg": "Thank you for contacting us! Did this resolve your concern?\n\n1️⃣ Resolved, very satisfied\n2️⃣ Resolved, okay\n3️⃣ Not resolved, need more help\n\nFeel free to reach out anytime 🙏",
-      "ticketSubject": "Support Ticket", "roleCustomer": "Customer", "testUser": "Test User",
-      "tkOpen": "Open", "tkInProgress": "In Progress", "tkResolved": "Resolved", "tkClosed": "Closed",
-      "prUrgent": "Urgent", "prHigh": "High", "prMedium": "Medium", "prLow": "Low",
-      "title": "Smart Customer Service", "subtitle": "Gemini Flash intent classification · Claude Sonnet high-risk escalation",
-      "tabPlatforms": "Platforms", "tabAiSettings": "AI Settings", "tabKnowledge": "Knowledge Base", "tabDataSources": "Data Sources", "tabPricing": "Pricing Calculator", "tabTest": "Test", "tabLogs": "Logs", "tabTickets": "Tickets", "tabInbox": "Inbox",
+      "ticketSubject": "Support Ticket",
+      "roleCustomer": "Customer",
+      "testUser": "Test User",
+      "tkOpen": "Open",
+      "tkInProgress": "In Progress",
+      "tkResolved": "Resolved",
+      "tkClosed": "Closed",
+      "prUrgent": "Urgent",
+      "prHigh": "High",
+      "prMedium": "Medium",
+      "prLow": "Low",
+      "title": "Smart Customer Service",
+      "subtitle": "Gemini Flash intent classification · Claude Sonnet high-risk escalation",
+      "tabPlatforms": "Platforms",
+      "tabAiSettings": "AI Settings",
+      "tabKnowledge": "Knowledge Base",
+      "tabDataSources": "Data Sources",
+      "tabPricing": "Pricing Calculator",
+      "tabTest": "Test",
+      "tabLogs": "Logs",
+      "tabTickets": "Tickets",
+      "tabInbox": "Inbox",
       "platformsIntro": "Set each platform's API key, then copy the Webhook URL into the platform's backend.",
-      "connected": "Connected", "notSet": "Not set", "configure": "Configure", "loginToShow": "(shown after login)", "copy": "Copy", "officialDocs": "Official docs",
-      "tgRegistering": "Registering...", "tgReregister": "Re-register Webhook", "tgQuerying": "Querying...", "tgCheckStatus": "Check error status",
-      "tgEndpoint": "Webhook endpoint", "tgRedirected": "Still redirected, wait for Vercel deploy to finish and retry", "tgAccessible": "Accessible",
-      "tgNotSet": "(not set)", "tgLastError": "Last error", "tgTime": "Time", "tgHistoricError": "This is a historic error; the Webhook endpoint is now OK (HTTP 200)", "tgWebhookOk": "Webhook OK, no error records",
-      "tgRecentChats": "Recent chats (click to fill):", "tgAdminId": "Admin Chat ID", "tgForwardHere": "Customer messages forwarded here", "tgNoAdminId": "No admin Chat ID set; customer messages won't be forwarded to you. Go to \"Configure credentials\" and enter your Chat ID (from @userinfobot)", "tgBadToken": "Invalid Bot Token",
-      "tgTestHint": "Send a test message (click \"Check error status\" first to auto-fetch Chat ID)", "tgChatIdPh": "Chat ID, e.g. 123456789", "tgSending": "Sending...", "tgSend": "Send",
-      "waConnectedPhone": "Connected: +{phone}", "waConnected": "WhatsApp connected", "waScanQr": "Scan the QR code below with WhatsApp", "waConnecting": "Connecting...", "waReconnecting": "Reconnecting...", "waNotConnected": "Not connected", "waDisconnected": "Disconnected, please reconnect", "waDisconnect": "Disconnect", "waStarting": "Starting...", "waWaiting": "Waiting for scan...", "waScanConnect": "Scan QR to connect", "waQrHint": "Open WhatsApp → Linked devices → scan this QR code", "waBridgeHint": "First set WHATSAPP_BRIDGE_URL and WHATSAPP_BRIDGE_API_KEY in Vercel env vars",
-      "fieldSet": "✓ set", "keepOriginal": "Leave blank to keep current", "save": "Save", "saving": "Saving...", "cancel": "Cancel",
-      "tplTitle": "{name} Template", "tplDesc": "Apply the default system prompt and guided flow", "applyTemplate": "Apply Template", "noPromptHint": "No system prompt set yet; click \"Apply Template\" to quick-start", "quickApplyTpl": "Quick-apply industry template",
-      "routingTitle": "AI Routing", "routingFlash": "Intent classification · low/medium-risk replies", "routingClaude": "High-risk escalation · complex issues", "routingNote": "High-risk intents: <b>returns/refunds, complaints, legal/contracts</b> (auto-escalate to Claude)",
-      "escalationThreshold": "Escalation Threshold", "escHighLabel": "Escalate only high-risk", "escHighDesc": "Only complaints/refunds/legal → Claude", "escMedLabel": "Escalate medium and above", "escMedDesc": "Both medium + high → Claude",
-      "replyLanguage": "Reply Language", "autoDetect": "Auto-detect (follow customer's language)",
-      "systemPrompt": "System Prompt", "aiRoleTag": "AI Role Setting", "nChars": "{n} chars", "systemPromptHint": "Define the AI agent's <b>role, tone and behavior rules</b>. E.g. \"You are XX brand's agent, reply in a friendly tone.\"<br></br>⚠️ This is <b>not</b> for FAQ or product data — set those in the \"Knowledge Base\" tab.", "systemPromptPlaceholder": "E.g. You are AI GATE's professional agent; reply to customers in a friendly, professional tone. If unsure, proactively offer to escalate to a human agent.",
-      "bookingFlow": "Booking Guided Flow", "bookingFlowHint": "When on, AI auto-triggers the matching flow by customer intent and collects booking info step by step",
-      "flowN": "Flow {n}", "quickBooking": "Quick booking", "edit": "Edit", "delete": "Delete", "triggerKw": "Trigger keywords: ", "notConfigured": "(not set)", "simpleModeFlow": "After AI quote confirmed → pop up booking form → push to LINE", "collectSteps": "Steps: ",
-      "addBookingType": "Add Booking Type", "defaultPayment": "Default payment note (used when a flow has none)", "paymentPlaceholder": "E.g. Please transfer to E.SUN Bank 123-456789, account: OO Co., then send a receipt screenshot to confirm.",
-      "flowEditorTitle": "Configure Booking Flow", "flowName": "Flow Name", "flowNamePlaceholder": "E.g. Whale-watching booking, room booking, parking",
-      "triggerKwLabel": "Trigger keywords (comma-separated)", "triggerKwHint": "When customers mention these words, AI auto-starts this flow", "triggerKwPlaceholder": "E.g. whale-watching,boat trip,island tour,ticket",
-      "dataHintLabel": "Related data keyword", "dataHintHint": "Tell the AI which data to find in the knowledge base and pricing calculator.<br></br>E.g. whale-watching tour → \"whale-watching\"; room booking → \"room type\" or room name", "dataHintPlaceholder": "E.g. whale-watching, ocean-view king room, parking",
-      "simpleMode": "Quick Booking Mode", "simpleModeHint": "When on: AI only asks plan, headcount and quote; after the customer confirms, a form pops up to collect details (name/DOB/ID) and pushes to the agent's LINE.", "requireId": "Require ID number (infants always exempt)",
-      "collectStepsLabel": "Collection steps (drag ↑↓ to reorder)", "flowPaymentLabel": "Payment note (this flow only; blank uses default)", "flowPaymentPlaceholder": "E.g. Please transfer to ...", "saveFlow": "Save This Flow",
-      "discountTitle": "AI Deal-closing Permissions", "salesTool": "Sales tool", "discountDesc": "Set the discounts and gifts the AI may proactively offer when a customer hesitates or finds it pricey. AI mentions only one at a time, naturally woven into the conversation.",
-      "maxDiscount": "Max discount", "maxDiscountHint": "0 = no discount", "maxDiscountOk": "✓ AI may offer up to {pct}% off", "giftItems": "Giftable items", "onePerLine": "one per line", "giftPlaceholder": "Free breakfast (one person)\nLate checkout to 12 PM\nFree parking for a day\nSuite upgrade (subject to availability)", "giftHint": "When a customer hesitates, AI picks one item to offer; once confirmed it's added to the order confirmation list.",
-      "vipTitle": "VIP Customer List", "live": "Live", "vipDesc": "One keyword per line (customer name, Line nickname, last 4 phone digits, etc.). When detected in a conversation, a \"VIP priority\" badge shows automatically.",
-      "autoClose": "Auto-close", "autoCloseDesc": "After pressing \"Close\", if the customer doesn't respond within the set time, the system auto-closes the ticket. 0 means no auto-close.", "minutesAutoClose": "minutes then auto-close", "enabled": "✓ Enabled",
-      "ticketNotify": "Ticket Notifications", "ticketNotifyTag": "Auto-push when a ticket is created", "ticketNotifyDesc": "When a customer requests a human agent or a ticket is created, automatically notify the designated contact. Supports LINE Messaging API, Telegram Bot and custom Webhook.",
-      "whLabelPh": "Note name (e.g. Store manager group)", "whLineToken": "Channel Access Token (from LINE Developers)", "whLineTarget": "Target ID: User ID (starts with U) or Group ID (starts with C)", "whTgToken": "Bot Token (from @BotFather, format: 123456:ABC-DEF...)", "whTgChatId": "Chat ID (user/group/channel ID, e.g. -1001234567890)", "whTgHint": "After adding the bot to a group, message @userinfobot to find the Chat ID", "addNotifyChannel": "Add notification channel", "saveSettings": "Save Settings",
-      "kbHint": "The AI agent looks here for answers first, falling back to company data (Unit 2)", "kbDirectInput": "Enter knowledge directly", "kbFaqTag": "FAQ / Product data", "kbDesc": "Put <b>concrete info</b> like FAQ, product specs and prices here; the AI agent looks here for answers.<br></br>This is <b>not</b> the Prompt — set the Prompt in the \"AI Settings\" tab.", "kbPlaceholder": "E.g.:\nQ: How do I request a trial?\nA: Fill out the form on our website; we'll reply within 1 business day.\n\nQ: What are the pricing plans?\nA: We offer monthly and annual plans; see the pricing page for details.",
-      "uploadDoc": "Upload documents (PDF / DOCX / XLSX / CSV / TXT)", "uploadingShort": "Uploading…", "clickUpload50": "Click to upload · max 50MB", "noFiles": "No files uploaded yet", "extractedChars": "{n} chars extracted", "noTextContent": "No text content", "deleteFile": "Delete this file", "saveKb": "Save Knowledge Base",
-      "extSources": "External Data Sources", "extSourcesHint": "When a customer enters a trigger keyword, AI auto-queries the matching Google Sheets", "add": "Add",
-      "sourceSwitch": "AI Source Switch", "sourceSwitchHint": "If you don't use the \"Booking System\", you can switch to the data source / pricing calculator below.",
-      "roomPrice": "Room price / Dynamic price", "roomPriceHint": "Where AI gets the price when asked", "bookingSystem": "Booking System",
-      "checkinPwd": "Check-in password / Room no.", "checkinPwdHint": "Where AI gets it when given an order number", "pwdSheet": "Order Password Sheet",
-      "checkinTime": "Check-in time", "checkinTimeHint": "Before this time, AI won't provide password / room no. (HH:MM). Blank uses the B&B's setting, default 15:00",
-      "recommendedSheets": "Recommended Google Sheets ({name})", "sheetN": "Sheet {n}", "queryColumn": "Query column: ", "returnColExample": "Return columns example: ", "triggerWord": "Triggers: ", "triggerMode": "Trigger mode: ", "tmNumeric": "Numeric trigger", "tmBoth": "Keyword + numeric", "tmKeyword": "Keyword trigger",
-      "dsTip1": "<b>Pricing queries</b> go in the \"Pricing Calculator\" tab — here only put non-pricing data that needs real-time lookup (orders, schedules, time slots)", "dsTip2": "After creating the Google Sheets as recommended above, click \"Add\" and enter the API Key and Spreadsheet ID",
-      "loadingShort": "Loading…", "noDataSources": "No data sources yet. Click \"Add\" to set up a Google Sheets query.", "toolDivision": "Tool division", "toolSheets": "<b>Google Sheets (this page)</b>: real-time dynamic data like order lookup, schedules, available slots", "toolPricing": "<b>Pricing Calculator</b>: price calc for rooms/treatments/packages; AI auto-applies the formula to quote", "toolKb": "<b>Knowledge Base</b>: FAQ, policies, static product intros",
-      "enable": "Enabled", "disable": "Disabled",
-      "editSource": "Edit Data Source", "addSource": "Add Data Source", "dsName": "Name", "dsNamePh": "E.g. Order password sheet, room pricing", "dsSpreadsheetPh": "1BxiMVs0... (the middle part of the URL)", "dsSheetName": "Sheet Name", "dsSheetNamePh": "Sheet1", "dsKeyColumn": "Query column name (header row column)", "dsKeyColumnPh": "E.g. Order ID, room type name",
-      "dsReturnCols": "Return columns (one per line; blank returns all)", "dsReturnColsPh": "Room no.\nMain door code\nRoom code", "dsReturnColsHint": "One column name per line (must exactly match the Google Sheets header row)",
-      "dsTriggerMode": "Trigger mode", "dsTmKeyword": "Keyword trigger (customer message contains a specific word)", "dsTmNumeric": "Numeric trigger (customer enters an 8+ digit order number, auto exact-match)", "dsTmBoth": "Both", "dsNumericHint": "Detects 8+ pure digits (not starting with 0 or +), exact-matches the \"query column\", and returns only that record.",
-      "dsTriggerKw": "Trigger keywords (comma-separated; query only when message contains them)", "dsTriggerKwPh": "E.g. order,password,query",
-      "howToGetId": "How to get the Spreadsheet ID:", "howToGetIdBody": "Copy from the Google Sheets URL: docs.google.com/spreadsheets/d/<b>[this part]</b>/edit", "sheetsPermHint": "Google Sheets must be set to \"Anyone with the link can view\" and the Sheets API enabled.",
-      "usageNotes": "Usage notes", "usage1": "Each user can add multiple data sources, each with their own Google API Key and spreadsheet.", "usage2": "\"Keyword trigger\": when the customer's message contains a trigger word, AI queries the whole sheet and attaches the result.", "usage3": "\"Numeric trigger\": customer enters an 8+ digit order number (not starting with 0/+) → exact-match the row → returns only that record's room no., door code, room code, etc.", "usage4": "You can list multiple return columns, e.g. room no., main door code, room door code; AI returns all of them to the customer.",
-      "shopTitle": "B&B Shopping Config", "shopHint": "After a customer orders via LINE AI, it's auto-sent to your Google Apps Script, which pushes to the LINE group and saves to Sheets (e.g. breakfast booking, supplies, event sign-up)", "noShopConfig": "No shopping config yet. Click \"Add\" to add breakfast, supplies, etc.", "shopMeta": "Cutoff: {cutoff}　Delivery: {delivery}　Options: {count}",
-      "editShopConfig": "Edit Shopping Config", "addShopConfig": "Add Shopping Config", "shopName": "Name", "shopNamePh": "E.g. breakfast booking, supplies, event sign-up", "appsScriptUrl": "Apps Script Web App URL", "appsScriptHint": "The /exec URL you get after deploying Apps Script as a Web App",
-      "cutoffTime": "Cutoff time", "deliveryTime": "Estimated delivery time", "roomList": "Room list (one per line, format: room-no room-type)", "itemMenu": "Item menu (one option per line)", "itemMenuHint": "When taking orders, AI lists these options for the customer",
-      "orderFlowTitle": "AI ordering flow once configured:", "orderFlow1": "1. Customer asks about the service → AI confirms room no. → lists the menu above", "orderFlow2": "2. Customer picks items and quantities → AI compiles a confirmation list", "orderFlow3": "3. Customer confirms → system auto-POSTs to Apps Script → Script pushes to LINE group + saves to Sheets",
-      "pricingHint": "AI applies exact numbers when querying pricing and never estimates on its own", "pcTour": "Tour", "pcAccommodation": "Lodging", "pcCustom": "Custom", "noPricing": "No pricing config yet", "noPricingHint": "Use the buttons above to add tour or lodging pricing",
-      "editPricing": "Edit Pricing Config", "addPricing": "Add Pricing Config", "pcNamePh": "E.g. room pricing, tour pricing", "pricingJson": "Pricing JSON (just edit the numbers)", "loadTourTpl": "Load tour template", "loadAccTpl": "Load lodging template", "loadCustomTpl": "Load custom template",
-      "jsonFields": "JSON field guide", "jfTrigger": ": triggers when the customer message contains these words, e.g. [\"whale-watching\",\"tour\"]", "jfPrice": ": weekday / weekend price (number, no commas)", "jfPackages": ": package deals, AI recommends them first", "jfGroup": ": group discount rules", "jfCancel": ": cancellation policy",
-      "pcUsage1": "To add products later: click \"+ Custom\", enter trigger words and pricing notes.", "pcUsage2": "When AI receives a message containing a trigger word, it auto-loads the pricing table and calculates step by step, never estimating on its own.", "pcUsage3": "Whale-watching / lodging configured together won't conflict; AI picks the matching pricing table by message content.",
-      "testChat": "CS Test Chat", "testRouting": "Gemini + Claude routing", "draftMode": "Draft mode ", "on": "on", "off": "off", "summary": "Summary", "createTicket": "Create ticket", "closeCase": "Close case", "clear": "Clear",
-      "testEmptyHint": "Type a simulated customer message below to test the AI agent's reply.", "vipPriority": "VIP customer — priority", "churnWarning": "Churn warning: customer may consider canceling or leaving",
-      "riskHigh": "High risk", "riskMedium": "Medium risk", "riskLow": "Low risk", "addToKb": "Add to KB", "aiDrafting": "AI drafting…", "aiThinking": "AI thinking…",
-      "smartDraft": "Smart Draft", "draftFor": "Draft reply for \"{msg}\"", "adoptSend": "Adopt & send", "discard": "Discard", "imageSelected": "Image selected", "remove": "Remove", "uploadImage": "Upload image", "send": "Send",
-      "autoCloseCountdown": "Auto-close countdown", "autoCloseIn": "auto-close ticket in {time}", "caseAutoClosed": "Ticket auto-closed", "convSummary": "Conversation Summary", "quickPhrases": "Quick test phrases:",
-      "autoLearnFaq": "Auto-learning FAQ", "autoLearnFaqHint": "After an agent answers, add it to the KB; next time AI cites the standard answer for similar questions", "manualAdd": "Add manually", "noFaqRecords": "No learning records yet. In the \"Test\" tab, click \"📚 Add to KB\" next to an AI reply to add one.",
-      "totalConv": "Total conversations", "avgSpeed": "Avg response speed", "highRiskConv": "High-risk conversations", "claudeEscalated": "Claude escalations", "riskDist": "Risk distribution", "hotIntents": "Top 5 hot intents", "sentimentTrend": "Sentiment trend (last 7 days)",
-      "convLog": "Conversation Log", "nRecords": "{n}", "noConvLog": "No conversation records yet", "customerLabel": "Customer: ", "aiLabel": "AI: ",
-      "ticketSystem": "Ticket System", "filterAll": "All", "ticketTip": "Go to the \"Test\" tab, chat with AI, then click \"Create ticket\" to move it into the ticket system", "noTickets": "No tickets yet", "priorityLabel": "{p} priority",
-      "unifiedInbox": "Unified Inbox", "sourceNote": "Source guide", "sourceTest": "🧪 Test: auto-saved from chats in the \"Test\" tab", "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram: actual platform Webhook messages (set up in the \"Platforms\" tab first)", "noInbox": "No message records yet", "noInboxHint": "Send a few messages in the \"Test\" tab to see them here",
-      "bookingFormTitle": "Booking Details", "participants": "Participants", "ageAdult": "Adult", "ageChild": "Child", "ageInfant": "Infant", "ageYears": " ({age} yrs)", "pName": "Name", "pBirthday": "Birthday", "pIdNumber": "ID number", "infantExempt": "Infants (under 3) exempt from ID",
-      "contactPhone": "Contact phone", "contactPhoneHint": "Enter the contact phone of one participant", "bookingThanks": "Thank you for your booking! Our team will contact you shortly — please keep your phone available.", "submitting2": "Submitting…", "confirmSubmit": "Confirm & submit",
-      "faqQ": "Customer question (Q)", "faqQPh": "E.g. What time is check-in?", "faqA": "Standard answer (A)", "faqAPh": "Enter the correct support reply…", "faqKw": "Trigger keywords (comma-separated; blank = AI auto-suggests)", "faqKwPh": "E.g. check-in,what time,check in", "aiAnalyzing": "AI analyzing…", "saveToKb": "Save to Knowledge Base",
+      "connected": "Connected",
+      "notSet": "Not set",
+      "configure": "Configure",
+      "loginToShow": "(shown after login)",
+      "copy": "Copy",
+      "officialDocs": "Official docs",
+      "tgRegistering": "Registering...",
+      "tgReregister": "Re-register Webhook",
+      "tgQuerying": "Querying...",
+      "tgCheckStatus": "Check error status",
+      "tgEndpoint": "Webhook endpoint",
+      "tgRedirected": "Still redirected, wait for Vercel deploy to finish and retry",
+      "tgAccessible": "Accessible",
+      "tgNotSet": "(not set)",
+      "tgLastError": "Last error",
+      "tgTime": "Time",
+      "tgHistoricError": "This is a historic error; the Webhook endpoint is now OK (HTTP 200)",
+      "tgWebhookOk": "Webhook OK, no error records",
+      "tgRecentChats": "Recent chats (click to fill):",
+      "tgAdminId": "Admin Chat ID",
+      "tgForwardHere": "Customer messages forwarded here",
+      "tgNoAdminId": "No admin Chat ID set; customer messages won't be forwarded to you. Go to \"Configure credentials\" and enter your Chat ID (from @userinfobot)",
+      "tgBadToken": "Invalid Bot Token",
+      "tgTestHint": "Send a test message (click \"Check error status\" first to auto-fetch Chat ID)",
+      "tgChatIdPh": "Chat ID, e.g. 123456789",
+      "tgSending": "Sending...",
+      "tgSend": "Send",
+      "waConnectedPhone": "Connected: +{phone}",
+      "waConnected": "WhatsApp connected",
+      "waScanQr": "Scan the QR code below with WhatsApp",
+      "waConnecting": "Connecting...",
+      "waReconnecting": "Reconnecting...",
+      "waNotConnected": "Not connected",
+      "waDisconnected": "Disconnected, please reconnect",
+      "waDisconnect": "Disconnect",
+      "waStarting": "Starting...",
+      "waWaiting": "Waiting for scan...",
+      "waScanConnect": "Scan QR to connect",
+      "waQrHint": "Open WhatsApp → Linked devices → scan this QR code",
+      "waBridgeHint": "First set WHATSAPP_BRIDGE_URL and WHATSAPP_BRIDGE_API_KEY in Vercel env vars",
+      "fieldSet": "✓ set",
+      "keepOriginal": "Leave blank to keep current",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "tplTitle": "{name} Template",
+      "tplDesc": "Apply the default system prompt and guided flow",
+      "applyTemplate": "Apply Template",
+      "noPromptHint": "No system prompt set yet; click \"Apply Template\" to quick-start",
+      "quickApplyTpl": "Quick-apply industry template",
+      "routingTitle": "AI Routing",
+      "routingFlash": "Intent classification · low/medium-risk replies",
+      "routingClaude": "High-risk escalation · complex issues",
+      "routingNote": "High-risk intents: <b>returns/refunds, complaints, legal/contracts</b> (auto-escalate to Claude)",
+      "escalationThreshold": "Escalation Threshold",
+      "escHighLabel": "Escalate only high-risk",
+      "escHighDesc": "Only complaints/refunds/legal → Claude",
+      "escMedLabel": "Escalate medium and above",
+      "escMedDesc": "Both medium + high → Claude",
+      "replyLanguage": "Reply Language",
+      "autoDetect": "Auto-detect (follow customer's language)",
+      "systemPrompt": "System Prompt",
+      "aiRoleTag": "AI Role Setting",
+      "nChars": "{n} chars",
+      "systemPromptHint": "Define the AI agent's <b>role, tone and behavior rules</b>. E.g. \"You are XX brand's agent, reply in a friendly tone.\"<br></br>⚠️ This is <b>not</b> for FAQ or product data — set those in the \"Knowledge Base\" tab.",
+      "systemPromptPlaceholder": "E.g. You are AI GATE's professional agent; reply to customers in a friendly, professional tone. If unsure, proactively offer to escalate to a human agent.",
+      "bookingFlow": "Booking Guided Flow",
+      "bookingFlowHint": "When on, AI auto-triggers the matching flow by customer intent and collects booking info step by step",
+      "flowN": "Flow {n}",
+      "quickBooking": "Quick booking",
+      "edit": "Edit",
+      "delete": "Delete",
+      "triggerKw": "Trigger keywords: ",
+      "notConfigured": "(not set)",
+      "simpleModeFlow": "After AI quote confirmed → pop up booking form → push to LINE",
+      "collectSteps": "Steps: ",
+      "addBookingType": "Add Booking Type",
+      "defaultPayment": "Default payment note (used when a flow has none)",
+      "paymentPlaceholder": "E.g. Please transfer to E.SUN Bank 123-456789, account: OO Co., then send a receipt screenshot to confirm.",
+      "flowEditorTitle": "Configure Booking Flow",
+      "flowName": "Flow Name",
+      "flowNamePlaceholder": "E.g. Whale-watching booking, room booking, parking",
+      "triggerKwLabel": "Trigger keywords (comma-separated)",
+      "triggerKwHint": "When customers mention these words, AI auto-starts this flow",
+      "triggerKwPlaceholder": "E.g. whale-watching,boat trip,island tour,ticket",
+      "dataHintLabel": "Related data keyword",
+      "dataHintHint": "Tell the AI which data to find in the knowledge base and pricing calculator.<br></br>E.g. whale-watching tour → \"whale-watching\"; room booking → \"room type\" or room name",
+      "dataHintPlaceholder": "E.g. whale-watching, ocean-view king room, parking",
+      "simpleMode": "Quick Booking Mode",
+      "simpleModeHint": "When on: AI only asks plan, headcount and quote; after the customer confirms, a form pops up to collect details (name/DOB/ID) and pushes to the agent's LINE.",
+      "requireId": "Require ID number (infants always exempt)",
+      "collectStepsLabel": "Collection steps (drag ↑↓ to reorder)",
+      "flowPaymentLabel": "Payment note (this flow only; blank uses default)",
+      "flowPaymentPlaceholder": "E.g. Please transfer to ...",
+      "saveFlow": "Save This Flow",
+      "discountTitle": "AI Deal-closing Permissions",
+      "salesTool": "Sales tool",
+      "discountDesc": "Set the discounts and gifts the AI may proactively offer when a customer hesitates or finds it pricey. AI mentions only one at a time, naturally woven into the conversation.",
+      "maxDiscount": "Max discount",
+      "maxDiscountHint": "0 = no discount",
+      "maxDiscountOk": "✓ AI may offer up to {pct}% off",
+      "giftItems": "Giftable items",
+      "onePerLine": "one per line",
+      "giftPlaceholder": "Free breakfast (one person)\nLate checkout to 12 PM\nFree parking for a day\nSuite upgrade (subject to availability)",
+      "giftHint": "When a customer hesitates, AI picks one item to offer; once confirmed it's added to the order confirmation list.",
+      "vipTitle": "VIP Customer List",
+      "live": "Live",
+      "vipDesc": "One keyword per line (customer name, Line nickname, last 4 phone digits, etc.). When detected in a conversation, a \"VIP priority\" badge shows automatically.",
+      "autoClose": "Auto-close",
+      "autoCloseDesc": "After pressing \"Close\", if the customer doesn't respond within the set time, the system auto-closes the ticket. 0 means no auto-close.",
+      "minutesAutoClose": "minutes then auto-close",
+      "enabled": "✓ Enabled",
+      "ticketNotify": "Ticket Notifications",
+      "ticketNotifyTag": "Auto-push when a ticket is created",
+      "ticketNotifyDesc": "When a customer requests a human agent or a ticket is created, automatically notify the designated contact. Supports LINE Messaging API, Telegram Bot and custom Webhook.",
+      "whLabelPh": "Note name (e.g. Store manager group)",
+      "whLineToken": "Channel Access Token (from LINE Developers)",
+      "whLineTarget": "Target ID: User ID (starts with U) or Group ID (starts with C)",
+      "whTgToken": "Bot Token (from @BotFather, format: 123456:ABC-DEF...)",
+      "whTgChatId": "Chat ID (user/group/channel ID, e.g. -1001234567890)",
+      "whTgHint": "After adding the bot to a group, message @userinfobot to find the Chat ID",
+      "addNotifyChannel": "Add notification channel",
+      "saveSettings": "Save Settings",
+      "kbHint": "The AI agent looks here for answers first, falling back to company data (Unit 2)",
+      "kbDirectInput": "Enter knowledge directly",
+      "kbFaqTag": "FAQ / Product data",
+      "kbDesc": "Put <b>concrete info</b> like FAQ, product specs and prices here; the AI agent looks here for answers.<br></br>This is <b>not</b> the Prompt — set the Prompt in the \"AI Settings\" tab.",
+      "kbPlaceholder": "E.g.:\nQ: How do I request a trial?\nA: Fill out the form on our website; we'll reply within 1 business day.\n\nQ: What are the pricing plans?\nA: We offer monthly and annual plans; see the pricing page for details.",
+      "uploadDoc": "Upload documents (PDF / DOCX / XLSX / CSV / TXT)",
+      "uploadingShort": "Uploading…",
+      "clickUpload50": "Click to upload · max 50MB",
+      "noFiles": "No files uploaded yet",
+      "extractedChars": "{n} chars extracted",
+      "noTextContent": "No text content",
+      "deleteFile": "Delete this file",
+      "saveKb": "Save Knowledge Base",
+      "extSources": "External Data Sources",
+      "extSourcesHint": "When a customer enters a trigger keyword, AI auto-queries the matching Google Sheets",
+      "add": "Add",
+      "sourceSwitch": "AI Source Switch",
+      "sourceSwitchHint": "If you don't use the \"Booking System\", you can switch to the data source / pricing calculator below.",
+      "roomPrice": "Room price / Dynamic price",
+      "roomPriceHint": "Where AI gets the price when asked",
+      "bookingSystem": "Booking System",
+      "checkinPwd": "Check-in password / Room no.",
+      "checkinPwdHint": "Where AI gets it when given an order number",
+      "pwdSheet": "Order Password Sheet",
+      "checkinTime": "Check-in time",
+      "checkinTimeHint": "Before this time, AI won't provide password / room no. (HH:MM). Blank uses the B&B's setting, default 15:00",
+      "recommendedSheets": "Recommended Google Sheets ({name})",
+      "sheetN": "Sheet {n}",
+      "queryColumn": "Query column: ",
+      "returnColExample": "Return columns example: ",
+      "triggerWord": "Triggers: ",
+      "triggerMode": "Trigger mode: ",
+      "tmNumeric": "Numeric trigger",
+      "tmBoth": "Keyword + numeric",
+      "tmKeyword": "Keyword trigger",
+      "dsTip1": "<b>Pricing queries</b> go in the \"Pricing Calculator\" tab — here only put non-pricing data that needs real-time lookup (orders, schedules, time slots)",
+      "dsTip2": "After creating the Google Sheets as recommended above, click \"Add\" and enter the API Key and Spreadsheet ID",
+      "loadingShort": "Loading…",
+      "noDataSources": "No data sources yet. Click \"Add\" to set up a Google Sheets query.",
+      "toolDivision": "Tool division",
+      "toolSheets": "<b>Google Sheets (this page)</b>: real-time dynamic data like order lookup, schedules, available slots",
+      "toolPricing": "<b>Pricing Calculator</b>: price calc for rooms/treatments/packages; AI auto-applies the formula to quote",
+      "toolKb": "<b>Knowledge Base</b>: FAQ, policies, static product intros",
+      "enable": "Enabled",
+      "disable": "Disabled",
+      "editSource": "Edit Data Source",
+      "addSource": "Add Data Source",
+      "dsName": "Name",
+      "dsNamePh": "E.g. Order password sheet, room pricing",
+      "dsSpreadsheetPh": "1BxiMVs0... (the middle part of the URL)",
+      "dsSheetName": "Sheet Name",
+      "dsSheetNamePh": "Sheet1",
+      "dsKeyColumn": "Query column name (header row column)",
+      "dsKeyColumnPh": "E.g. Order ID, room type name",
+      "dsReturnCols": "Return columns (one per line; blank returns all)",
+      "dsReturnColsPh": "Room no.\nMain door code\nRoom code",
+      "dsReturnColsHint": "One column name per line (must exactly match the Google Sheets header row)",
+      "dsTriggerMode": "Trigger mode",
+      "dsTmKeyword": "Keyword trigger (customer message contains a specific word)",
+      "dsTmNumeric": "Numeric trigger (customer enters an 8+ digit order number, auto exact-match)",
+      "dsTmBoth": "Both",
+      "dsNumericHint": "Detects 8+ pure digits (not starting with 0 or +), exact-matches the \"query column\", and returns only that record.",
+      "dsTriggerKw": "Trigger keywords (comma-separated; query only when message contains them)",
+      "dsTriggerKwPh": "E.g. order,password,query",
+      "howToGetId": "How to get the Spreadsheet ID:",
+      "howToGetIdBody": "Copy from the Google Sheets URL: docs.google.com/spreadsheets/d/<b>[this part]</b>/edit",
+      "sheetsPermHint": "Google Sheets must be set to \"Anyone with the link can view\" and the Sheets API enabled.",
+      "usageNotes": "Usage notes",
+      "usage1": "Each user can add multiple data sources, each with their own Google API Key and spreadsheet.",
+      "usage2": "\"Keyword trigger\": when the customer's message contains a trigger word, AI queries the whole sheet and attaches the result.",
+      "usage3": "\"Numeric trigger\": customer enters an 8+ digit order number (not starting with 0/+) → exact-match the row → returns only that record's room no., door code, room code, etc.",
+      "usage4": "You can list multiple return columns, e.g. room no., main door code, room door code; AI returns all of them to the customer.",
+      "shopTitle": "B&B Shopping Config",
+      "shopHint": "After a customer orders via LINE AI, it's auto-sent to your Google Apps Script, which pushes to the LINE group and saves to Sheets (e.g. breakfast booking, supplies, event sign-up)",
+      "noShopConfig": "No shopping config yet. Click \"Add\" to add breakfast, supplies, etc.",
+      "shopMeta": "Cutoff: {cutoff}　Delivery: {delivery}　Options: {count}",
+      "editShopConfig": "Edit Shopping Config",
+      "addShopConfig": "Add Shopping Config",
+      "shopName": "Name",
+      "shopNamePh": "E.g. breakfast booking, supplies, event sign-up",
+      "appsScriptUrl": "Apps Script Web App URL",
+      "appsScriptHint": "The /exec URL you get after deploying Apps Script as a Web App",
+      "cutoffTime": "Cutoff time",
+      "deliveryTime": "Estimated delivery time",
+      "roomList": "Room list (one per line, format: room-no room-type)",
+      "itemMenu": "Item menu (one option per line)",
+      "itemMenuHint": "When taking orders, AI lists these options for the customer",
+      "orderFlowTitle": "AI ordering flow once configured:",
+      "orderFlow1": "1. Customer asks about the service → AI confirms room no. → lists the menu above",
+      "orderFlow2": "2. Customer picks items and quantities → AI compiles a confirmation list",
+      "orderFlow3": "3. Customer confirms → system auto-POSTs to Apps Script → Script pushes to LINE group + saves to Sheets",
+      "pricingHint": "AI applies exact numbers when querying pricing and never estimates on its own",
+      "pcTour": "Tour",
+      "pcAccommodation": "Lodging",
+      "pcCustom": "Custom",
+      "noPricing": "No pricing config yet",
+      "noPricingHint": "Use the buttons above to add tour or lodging pricing",
+      "editPricing": "Edit Pricing Config",
+      "addPricing": "Add Pricing Config",
+      "pcNamePh": "E.g. room pricing, tour pricing",
+      "pricingJson": "Pricing JSON (just edit the numbers)",
+      "loadTourTpl": "Load tour template",
+      "loadAccTpl": "Load lodging template",
+      "loadCustomTpl": "Load custom template",
+      "jsonFields": "JSON field guide",
+      "jfTrigger": ": triggers when the customer message contains these words, e.g. [\"whale-watching\",\"tour\"]",
+      "jfPrice": ": weekday / weekend price (number, no commas)",
+      "jfPackages": ": package deals, AI recommends them first",
+      "jfGroup": ": group discount rules",
+      "jfCancel": ": cancellation policy",
+      "pcUsage1": "To add products later: click \"+ Custom\", enter trigger words and pricing notes.",
+      "pcUsage2": "When AI receives a message containing a trigger word, it auto-loads the pricing table and calculates step by step, never estimating on its own.",
+      "pcUsage3": "Whale-watching / lodging configured together won't conflict; AI picks the matching pricing table by message content.",
+      "testChat": "CS Test Chat",
+      "testRouting": "Gemini + Claude routing",
+      "draftMode": "Draft mode ",
+      "on": "on",
+      "off": "off",
+      "summary": "Summary",
+      "createTicket": "Create ticket",
+      "closeCase": "Close case",
+      "clear": "Clear",
+      "testEmptyHint": "Type a simulated customer message below to test the AI agent's reply.",
+      "vipPriority": "VIP customer — priority",
+      "churnWarning": "Churn warning: customer may consider canceling or leaving",
+      "riskHigh": "High risk",
+      "riskMedium": "Medium risk",
+      "riskLow": "Low risk",
+      "addToKb": "Add to KB",
+      "aiDrafting": "AI drafting…",
+      "aiThinking": "AI thinking…",
+      "smartDraft": "Smart Draft",
+      "draftFor": "Draft reply for \"{msg}\"",
+      "adoptSend": "Adopt & send",
+      "discard": "Discard",
+      "imageSelected": "Image selected",
+      "remove": "Remove",
+      "uploadImage": "Upload image",
+      "send": "Send",
+      "autoCloseCountdown": "Auto-close countdown",
+      "autoCloseIn": "auto-close ticket in {time}",
+      "caseAutoClosed": "Ticket auto-closed",
+      "convSummary": "Conversation Summary",
+      "quickPhrases": "Quick test phrases:",
+      "autoLearnFaq": "Auto-learning FAQ",
+      "autoLearnFaqHint": "After an agent answers, add it to the KB; next time AI cites the standard answer for similar questions",
+      "manualAdd": "Add manually",
+      "noFaqRecords": "No learning records yet. In the \"Test\" tab, click \"📚 Add to KB\" next to an AI reply to add one.",
+      "totalConv": "Total conversations",
+      "avgSpeed": "Avg response speed",
+      "highRiskConv": "High-risk conversations",
+      "claudeEscalated": "Claude escalations",
+      "riskDist": "Risk distribution",
+      "hotIntents": "Top 5 hot intents",
+      "sentimentTrend": "Sentiment trend (last 7 days)",
+      "convLog": "Conversation Log",
+      "nRecords": "{n}",
+      "noConvLog": "No conversation records yet",
+      "customerLabel": "Customer: ",
+      "aiLabel": "AI: ",
+      "ticketSystem": "Ticket System",
+      "filterAll": "All",
+      "ticketTip": "Go to the \"Test\" tab, chat with AI, then click \"Create ticket\" to move it into the ticket system",
+      "noTickets": "No tickets yet",
+      "priorityLabel": "{p} priority",
+      "unifiedInbox": "Unified Inbox",
+      "sourceNote": "Source guide",
+      "sourceTest": "🧪 Test: auto-saved from chats in the \"Test\" tab",
+      "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram: actual platform Webhook messages (set up in the \"Platforms\" tab first)",
+      "noInbox": "No message records yet",
+      "noInboxHint": "Send a few messages in the \"Test\" tab to see them here",
+      "bookingFormTitle": "Booking Details",
+      "participants": "Participants",
+      "ageAdult": "Adult",
+      "ageChild": "Child",
+      "ageInfant": "Infant",
+      "ageYears": " ({age} yrs)",
+      "pName": "Name",
+      "pBirthday": "Birthday",
+      "pIdNumber": "ID number",
+      "infantExempt": "Infants (under 3) exempt from ID",
+      "contactPhone": "Contact phone",
+      "contactPhoneHint": "Enter the contact phone of one participant",
+      "bookingThanks": "Thank you for your booking! Our team will contact you shortly — please keep your phone available.",
+      "submitting2": "Submitting…",
+      "confirmSubmit": "Confirm & submit",
+      "faqQ": "Customer question (Q)",
+      "faqQPh": "E.g. What time is check-in?",
+      "faqA": "Standard answer (A)",
+      "faqAPh": "Enter the correct support reply…",
+      "faqKw": "Trigger keywords (comma-separated; blank = AI auto-suggests)",
+      "faqKwPh": "E.g. check-in,what time,check in",
+      "aiAnalyzing": "AI analyzing…",
+      "saveToKb": "Save to Knowledge Base",
       "platformSettings": "Platform Connection Settings"
     },
     "comingSoon": "Under construction, stay tuned",
     "unit": {
-      "1": { "name": "Collect Info", "desc": "News, web, maps, reviews" },
-      "3": { "name": "Analyze Data", "desc": "Market, competitors, video/copy analysis" },
-      "4": { "name": "Copy Generation", "desc": "AI-generated marketing copy" },
-      "5": { "name": "Image Scripts", "desc": "Generate image description scripts" },
-      "6": { "name": "Image Generation", "desc": "AI-generated marketing images" },
-      "7": { "name": "Video Scripts", "desc": "Generate storyboard scripts" },
-      "8": { "name": "Video Generation", "desc": "AI-generated marketing videos" },
-      "9": { "name": "Upload to Platforms", "desc": "Auto-upload to FB/IG/YouTube, etc." },
-      "11": { "name": "Anchor Marketing", "desc": "HeyGen virtual anchor videos" }
+      "1": {
+        "name": "Collect Info",
+        "desc": "News, web, maps, reviews"
+      },
+      "3": {
+        "name": "Analyze Data",
+        "desc": "Market, competitors, video/copy analysis"
+      },
+      "4": {
+        "name": "Copy Generation",
+        "desc": "AI-generated marketing copy"
+      },
+      "5": {
+        "name": "Image Scripts",
+        "desc": "Generate image description scripts"
+      },
+      "6": {
+        "name": "Image Generation",
+        "desc": "AI-generated marketing images"
+      },
+      "7": {
+        "name": "Video Scripts",
+        "desc": "Generate storyboard scripts"
+      },
+      "8": {
+        "name": "Video Generation",
+        "desc": "AI-generated marketing videos"
+      },
+      "9": {
+        "name": "Upload to Platforms",
+        "desc": "Auto-upload to FB/IG/YouTube, etc."
+      },
+      "11": {
+        "name": "Anchor Marketing",
+        "desc": "HeyGen virtual anchor videos"
+      }
     },
     "mp": {
-      "untitled": "Untitled Marketing Project", "csConfigTitle": "{name} CS Config", "backToCs": "Back to CS overview",
-      "saved": "Saved", "notCreated": "Not created", "newProject": "New project", "rename": "Rename", "confirmDelete": "Delete \"{title}\"?", "delete": "Delete",
-      "noProjects": "No projects yet", "projectNamePh": "Project name…", "creating": "Creating…", "createProject": "Create project", "underConstruction": "Under construction",
-      "otherTools": "Other tools", "automation": "Automation pipeline", "linked": "Linked", "companySettings": "Company Data Settings"
+      "untitled": "Untitled Marketing Project",
+      "csConfigTitle": "{name} CS Config",
+      "backToCs": "Back to CS overview",
+      "saved": "Saved",
+      "notCreated": "Not created",
+      "newProject": "New project",
+      "rename": "Rename",
+      "confirmDelete": "Delete \"{title}\"?",
+      "delete": "Delete",
+      "noProjects": "No projects yet",
+      "projectNamePh": "Project name…",
+      "creating": "Creating…",
+      "createProject": "Create project",
+      "underConstruction": "Under construction",
+      "otherTools": "Other tools",
+      "automation": "Automation pipeline",
+      "linked": "Linked",
+      "companySettings": "Company Data Settings"
     }
   },
   "Work": {
@@ -2078,7 +3763,13 @@
     "dMin": "{n}m",
     "statusLabel": "Status",
     "statusPlaceholder": "Enter current status…",
-    "presets": ["Not started", "In progress", "Blocked", "Needs review", "Done"],
+    "presets": [
+      "Not started",
+      "In progress",
+      "Blocked",
+      "Needs review",
+      "Done"
+    ],
     "commentsTitle": "Comments",
     "commentsEmpty": "No comments yet — leave the first status update or idea",
     "commentsPlaceholder": "Type a status update or comment… (Ctrl/⌘ + Enter to send)",
@@ -2096,6 +3787,20 @@
     "joined": "Joined",
     "pending": "Pending",
     "removeMember": "Remove",
-    "translatedNote": "🌐 {text}"
+    "translatedNote": "🌐 {text}",
+    "statusCustom": "Custom…",
+    "reportsTitle": "Reports",
+    "reportText": "Paste text",
+    "reportLink": "Link",
+    "reportFile": "Upload file",
+    "reportTextPh": "Paste report content…",
+    "reportLinkPh": "Paste a URL…",
+    "openLink": "Open link",
+    "uploading": "Uploading…",
+    "toSubitem": "To sub-item",
+    "subitems": "Sub-items",
+    "addSubitem": "Add sub-item",
+    "subitemPh": "Sub-item title…",
+    "ownerOnlyDone": "Only the owner can mark done"
   }
 }

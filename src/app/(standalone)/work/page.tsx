@@ -15,6 +15,7 @@ type T = ReturnType<typeof useTranslations>
 interface Item {
   id: string
   ownerId: string
+  parentId: string | null
   title: string
   status: string
   done: boolean
@@ -25,6 +26,7 @@ interface Item {
 type Row = {
   id: string
   user_id: string
+  parent_id: string | null
   title: string
   status: string
   done: boolean
@@ -35,6 +37,7 @@ function fromRow(r: Row): Item {
   return {
     id: r.id,
     ownerId: r.user_id,
+    parentId: r.parent_id ?? null,
     title: r.title,
     status: r.status ?? '',
     done: !!r.done,
@@ -59,6 +62,9 @@ interface Comment {
   author_id: string
   author_name: string
   content: string
+  kind: 'text' | 'link' | 'file'
+  url: string | null
+  file_name: string | null
   created_at: string
 }
 interface Me {
@@ -231,10 +237,11 @@ export default function WorkPage() {
       const meObj: Me = { id: user.id, email: user.email ?? '', name: profile?.full_name || user.email || 'me' }
       setMe(meObj)
 
-      // RLS 已限定：本人擁有 + 被指派協作的項目
+      // RLS 已限定：本人擁有 + 被指派協作的項目（只取頂層，子項目另載）
       const { data } = await supabase
         .from('work_docs')
-        .select('id, user_id, title, status, done, deadline, updated_at')
+        .select('id, user_id, parent_id, title, status, done, deadline, updated_at')
+        .is('parent_id', null)
         .order('updated_at', { ascending: false })
       const list = (data ?? []).map(fromRow as (r: unknown) => Item)
       if (!alive) return
@@ -260,6 +267,7 @@ export default function WorkPage() {
           return
         }
         const incoming = fromRow(payload.new as Row)
+        if (incoming.parentId) return // 子項目不進頂層清單
         setItems(prev => {
           if (pending.current.has(incoming.id)) return prev
           const idx = prev.findIndex(i => i.id === incoming.id)
@@ -321,7 +329,7 @@ export default function WorkPage() {
     const { data } = await supabase
       .from('work_docs')
       .insert({ title: v })
-      .select('id, user_id, title, status, done, deadline, updated_at')
+      .select('id, user_id, parent_id, title, status, done, deadline, updated_at')
       .single()
     if (data) setItems(prev => [fromRow(data as Row), ...prev])
   }
@@ -602,7 +610,18 @@ function ItemRow({
   const [expanded, setExpanded] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
   const [memberCount, setMemberCount] = useState<number | null>(null)
+  const [subVer, setSubVer] = useState(0)
   const statusText = item.status ? tr(item.status) : ''
+
+  const createSubitem = useCallback(
+    async (childTitle: string) => {
+      const v = childTitle.trim()
+      if (!v) return
+      await supabase.from('work_docs').insert({ title: v, parent_id: item.id })
+      setSubVer(x => x + 1)
+    },
+    [supabase, item.id]
+  )
 
   useEffect(() => {
     if (!isOwner) return
@@ -673,35 +692,24 @@ function ItemRow({
             )}
           </div>
 
-          {/* 目前狀態 */}
-          <div className="space-y-1.5 rounded-lg bg-muted/40 p-2.5">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">{t('statusLabel')}</span>
-              <Input value={item.status} onChange={e => onStatus(e.target.value)} placeholder={t('statusPlaceholder')} className="h-7 flex-1 text-xs" />
-            </div>
-            <TranslatedNote t={t} original={item.status} tr={tr} />
-            <div className="flex flex-wrap gap-1">
-              {presets.map(s => (
-                <button
-                  key={s}
-                  onClick={() => onStatus(s)}
-                  className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
-                    item.status === s ? 'border-primary bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+          {/* 目前狀態：一行下拉（含自訂） */}
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">{t('statusLabel')}</span>
+            <StatusSelect t={t} presets={presets} value={item.status} onChange={onStatus} />
           </div>
+          <TranslatedNote t={t} original={item.status} tr={tr} />
 
-          {/* 意見區 */}
-          <CommentsSection t={t} locale={locale} supabase={supabase} me={me} item={item} />
+          {/* 子項目 */}
+          <SubItems t={t} tr={tr} supabase={supabase} parent={item} refresh={subVer} onCreate={createSubitem} />
 
-          {/* 完成 */}
-          <label className="flex cursor-pointer items-center gap-2 border-t pt-2.5 text-sm">
-            <input type="checkbox" checked={item.done} onChange={onToggle} className="h-4 w-4" />
+          {/* 報告（文字／連結／檔案，可轉子項目） */}
+          <ReportsSection t={t} locale={locale} supabase={supabase} me={me} item={item} onMakeSubitem={createSubitem} />
+
+          {/* 完成（僅持有人可勾選） */}
+          <label className={`flex items-center gap-2 border-t pt-2.5 text-sm ${isOwner ? 'cursor-pointer' : 'cursor-not-allowed'}`} title={isOwner ? '' : t('ownerOnlyDone')}>
+            <input type="checkbox" checked={item.done} onChange={onToggle} disabled={!isOwner} className="h-4 w-4" />
             <span className={item.done ? 'font-medium text-green-600' : 'text-muted-foreground'}>{item.done ? t('doneLabel') : t('markDone')}</span>
+            {!isOwner && <span className="text-[11px] text-muted-foreground">（{t('ownerOnlyDone')}）</span>}
           </label>
         </div>
       )}
@@ -709,21 +717,144 @@ function ItemRow({
   )
 }
 
-function CommentsSection({ t, locale, supabase, me, item }: { t: T; locale: string; supabase: SB; me: Me; item: Item }) {
+function StatusSelect({ t, presets, value, onChange }: { t: T; presets: string[]; value: string; onChange: (v: string) => void }) {
+  const isPreset = value === '' || presets.includes(value)
+  const [custom, setCustom] = useState(!isPreset)
+  return (
+    <div className="flex flex-1 items-center gap-2">
+      <select
+        value={custom ? '__custom__' : value}
+        onChange={e => {
+          if (e.target.value === '__custom__') {
+            setCustom(true)
+            onChange('')
+          } else {
+            setCustom(false)
+            onChange(e.target.value)
+          }
+        }}
+        className="h-7 rounded-md border bg-background px-2 text-xs outline-none"
+      >
+        <option value="">—</option>
+        {presets.map(s => (
+          <option key={s} value={s}>{s}</option>
+        ))}
+        <option value="__custom__">{t('statusCustom')}</option>
+      </select>
+      {custom && (
+        <Input value={value} onChange={e => onChange(e.target.value)} placeholder={t('statusPlaceholder')} className="h-7 flex-1 text-xs" />
+      )}
+    </div>
+  )
+}
+
+function SubItems({
+  t,
+  tr,
+  supabase,
+  parent,
+  refresh,
+  onCreate,
+}: {
+  t: T
+  tr: (s: string) => string
+  supabase: SB
+  parent: Item
+  refresh: number
+  onCreate: (title: string) => Promise<void>
+}) {
+  const [subs, setSubs] = useState<Item[]>([])
+  const [title, setTitle] = useState('')
+
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from('work_docs')
+      .select('id, user_id, parent_id, title, status, done, deadline, updated_at')
+      .eq('parent_id', parent.id)
+      .order('created_at', { ascending: true })
+    setSubs((data ?? []).map(fromRow as (r: unknown) => Item))
+  }, [supabase, parent.id])
+
+  useEffect(() => {
+    load()
+  }, [load, refresh])
+
+  async function add() {
+    const v = title.trim()
+    if (!v) return
+    setTitle('')
+    await onCreate(v)
+    load()
+  }
+
+  async function toggle(s: Item) {
+    setSubs(prev => prev.map(x => (x.id === s.id ? { ...x, done: !x.done } : x)))
+    await supabase.from('work_docs').update({ done: !s.done, updated_at: new Date().toISOString() }).eq('id', s.id)
+  }
+
+  async function remove(id: string) {
+    setSubs(prev => prev.filter(x => x.id !== id))
+    await supabase.from('work_docs').delete().eq('id', id)
+  }
+
+  return (
+    <div className="space-y-1.5 rounded-lg border p-2.5">
+      <p className="text-xs font-medium text-muted-foreground">{t('subitems')}{subs.length ? ` (${subs.length})` : ''}</p>
+      {subs.map(s => {
+        const trd = tr(s.title)
+        return (
+          <div key={s.id} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={s.done} onChange={() => toggle(s)} className="h-3.5 w-3.5 shrink-0" />
+            <span className={`min-w-0 flex-1 truncate ${s.done ? 'text-muted-foreground line-through' : ''}`}>{trd}</span>
+            <button onClick={() => remove(s.id)} className="shrink-0 text-xs text-muted-foreground hover:text-red-500">✕</button>
+          </div>
+        )
+      })}
+      <div className="flex gap-2">
+        <Input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') add()
+          }}
+          placeholder={t('subitemPh')}
+          className="h-7 text-xs"
+        />
+        <Button size="sm" onClick={add} disabled={!title.trim()}>{t('addSubitem')}</Button>
+      </div>
+    </div>
+  )
+}
+
+function ReportsSection({
+  t,
+  locale,
+  supabase,
+  me,
+  item,
+  onMakeSubitem,
+}: {
+  t: T
+  locale: string
+  supabase: SB
+  me: Me
+  item: Item
+  onMakeSubitem: (title: string) => Promise<void>
+}) {
   const [open, setOpen] = useState(false)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [text, setText] = useState('')
+  const [reports, setReports] = useState<Comment[]>([])
   const [count, setCount] = useState<number | null>(null)
+  const [mode, setMode] = useState<'text' | 'link' | 'file'>('text')
+  const [text, setText] = useState('')
+  const [link, setLink] = useState('')
+  const [uploading, setUploading] = useState(false)
   const loadedOnce = useRef(false)
 
-  const tr = useAutoTranslate(comments.map(c => c.content), locale)
+  const tr = useAutoTranslate(reports.filter(r => r.kind === 'text').map(r => r.content), locale)
 
   useEffect(() => {
     ;(async () => {
-      const { count: c } = await supabase
-        .from('work_comments')
-        .select('id', { count: 'exact', head: true })
-        .eq('item_id', item.id)
+      const { count: c } = await supabase.from('work_comments').select('id', { count: 'exact', head: true }).eq('item_id', item.id)
       setCount(c ?? 0)
     })()
   }, [supabase, item.id])
@@ -731,10 +862,10 @@ function CommentsSection({ t, locale, supabase, me, item }: { t: T; locale: stri
   const load = useCallback(async () => {
     const { data } = await supabase
       .from('work_comments')
-      .select('id, author_id, author_name, content, created_at')
+      .select('id, author_id, author_name, content, kind, url, file_name, created_at')
       .eq('item_id', item.id)
       .order('created_at', { ascending: true })
-    setComments((data ?? []) as Comment[])
+    setReports((data ?? []) as Comment[])
     setCount((data ?? []).length)
   }, [supabase, item.id])
 
@@ -748,73 +879,133 @@ function CommentsSection({ t, locale, supabase, me, item }: { t: T; locale: stri
   useEffect(() => {
     if (!open) return
     const ch = supabase
-      .channel(`work_comments_${item.id}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'work_comments', filter: `item_id=eq.${item.id}` },
-        payload => {
-          const c = payload.new as Comment
-          setComments(prev => (prev.some(x => x.id === c.id) ? prev : [...prev, c]))
-          setCount(prev => (prev ?? 0) + 1)
-        }
-      )
+      .channel(`work_reports_${item.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'work_comments', filter: `item_id=eq.${item.id}` }, payload => {
+        const c = payload.new as Comment
+        setReports(prev => (prev.some(x => x.id === c.id) ? prev : [...prev, c]))
+        setCount(prev => (prev ?? 0) + 1)
+      })
       .subscribe()
     return () => {
       supabase.removeChannel(ch)
     }
   }, [supabase, item.id, open])
 
-  async function send() {
-    const c = text.trim()
-    if (!c) return
-    setText('')
+  async function insertReport(payload: { content: string; kind: 'text' | 'link' | 'file'; url?: string; file_name?: string }) {
     const { data } = await supabase
       .from('work_comments')
-      .insert({ item_id: item.id, owner_id: item.ownerId, author_name: me.name, content: c })
-      .select('id, author_id, author_name, content, created_at')
+      .insert({ item_id: item.id, owner_id: item.ownerId, author_name: me.name, ...payload })
+      .select('id, author_id, author_name, content, kind, url, file_name, created_at')
       .single()
     if (data) {
-      setComments(prev => (prev.some(x => x.id === data.id) ? prev : [...prev, data as Comment]))
+      setReports(prev => (prev.some(x => x.id === data.id) ? prev : [...prev, data as Comment]))
       setCount(prev => (prev ?? 0) + 1)
     }
+  }
+
+  async function submit() {
+    if (mode === 'text') {
+      const c = text.trim()
+      if (!c) return
+      setText('')
+      await insertReport({ content: c, kind: 'text' })
+    } else if (mode === 'link') {
+      const u = link.trim()
+      if (!u) return
+      setLink('')
+      await insertReport({ content: u, kind: 'link', url: u })
+    }
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    setUploading(true)
+    try {
+      const path = `${item.id}/${Date.now()}-${f.name}`
+      const { error } = await supabase.storage.from('work-reports').upload(path, f)
+      if (!error) {
+        const { data: pub } = supabase.storage.from('work-reports').getPublicUrl(path)
+        await insertReport({ content: f.name, kind: 'file', url: pub.publicUrl, file_name: f.name })
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // 報告文字 → 依行轉成多個子項目
+  async function toSubitems(content: string) {
+    const lines = content.split('\n').map(l => l.replace(/^[-*•\d.\s]+/, '').trim()).filter(Boolean)
+    for (const l of lines) await onMakeSubitem(l)
   }
 
   return (
     <div>
       <button onClick={() => setOpen(v => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground">
-        💬 {t('commentsTitle')}{count ? ` (${count})` : ''} {open ? '▲' : '▼'}
+        📋 {t('reportsTitle')}{count ? ` (${count})` : ''} {open ? '▲' : '▼'}
       </button>
 
       {open && (
         <div className="mt-2 space-y-2">
-          {comments.length === 0 && <p className="text-xs text-muted-foreground">{t('commentsEmpty')}</p>}
-          {comments.map(c => {
-            const translated = tr(c.content)
-            const showOriginal = translated.trim() !== c.content.trim()
+          {reports.length === 0 && <p className="text-xs text-muted-foreground">{t('commentsEmpty')}</p>}
+          {reports.map(r => {
+            const translated = r.kind === 'text' ? tr(r.content) : r.content
+            const showOriginal = r.kind === 'text' && translated.trim() !== r.content.trim()
             return (
-              <div key={c.id} className="rounded-lg border bg-background p-2">
+              <div key={r.id} className="rounded-lg border bg-background p-2">
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <span className="font-medium text-foreground">{c.author_name || t('authorFallback')}</span>
-                  <span>{fmtTime(c.created_at)}</span>
+                  <span className="font-medium text-foreground">{r.author_name || t('authorFallback')}</span>
+                  <span>{fmtTime(r.created_at)}</span>
                 </div>
-                <p className="mt-0.5 whitespace-pre-wrap text-sm">{translated}</p>
-                {showOriginal && <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-muted-foreground">{c.content}</p>}
+                {r.kind === 'link' && (
+                  <a href={r.url ?? '#'} target="_blank" rel="noreferrer" className="mt-0.5 block break-all text-sm text-blue-600 underline">🔗 {r.content}</a>
+                )}
+                {r.kind === 'file' && (
+                  <a href={r.url ?? '#'} target="_blank" rel="noreferrer" className="mt-0.5 block break-all text-sm text-blue-600 underline">📎 {r.file_name || r.content}</a>
+                )}
+                {r.kind === 'text' && (
+                  <>
+                    <p className="mt-0.5 whitespace-pre-wrap text-sm">{translated}</p>
+                    {showOriginal && <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-muted-foreground">{r.content}</p>}
+                  </>
+                )}
+                {(r.kind === 'text' || r.kind === 'link' || r.kind === 'file') && (
+                  <button onClick={() => toSubitems(r.kind === 'text' ? r.content : r.file_name || r.content)} className="mt-1 text-[11px] text-primary hover:underline">
+                    ➕ {t('toSubitem')}
+                  </button>
+                )}
               </div>
             )
           })}
-          <div className="flex items-end gap-2">
-            <Textarea
-              value={text}
-              onChange={e => setText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send()
-              }}
-              placeholder={t('commentsPlaceholder')}
-              rows={2}
-              className="flex-1 text-sm"
-            />
-            <Button size="sm" onClick={send} disabled={!text.trim()}>{t('send')}</Button>
+
+          {/* 新增報告：文字／連結／檔案 */}
+          <div className="flex gap-1">
+            {(['text', 'link', 'file'] as const).map(m => (
+              <Button key={m} size="sm" variant={mode === m ? 'default' : 'ghost'} onClick={() => setMode(m)}>
+                {m === 'text' ? t('reportText') : m === 'link' ? t('reportLink') : t('reportFile')}
+              </Button>
+            ))}
           </div>
+
+          {mode === 'text' && (
+            <div className="flex items-end gap-2">
+              <Textarea value={text} onChange={e => setText(e.target.value)} placeholder={t('reportTextPh')} rows={2} className="flex-1 text-sm" />
+              <Button size="sm" onClick={submit} disabled={!text.trim()}>{t('send')}</Button>
+            </div>
+          )}
+          {mode === 'link' && (
+            <div className="flex items-center gap-2">
+              <Input value={link} onChange={e => setLink(e.target.value)} placeholder={t('reportLinkPh')} className="h-8 flex-1 text-sm" />
+              <Button size="sm" onClick={submit} disabled={!link.trim()}>{t('send')}</Button>
+            </div>
+          )}
+          {mode === 'file' && (
+            <div className="flex items-center gap-2">
+              <input type="file" onChange={onFile} disabled={uploading} className="text-xs" />
+              {uploading && <span className="text-xs text-muted-foreground">{t('uploading')}</span>}
+            </div>
+          )}
         </div>
       )}
     </div>

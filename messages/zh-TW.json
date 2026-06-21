@@ -1,5 +1,8 @@
 {
-  "Nav": { "backHome": "返回首頁", "backToMenu": "返回主選單" },
+  "Nav": {
+    "backHome": "返回首頁",
+    "backToMenu": "返回主選單"
+  },
   "Landing": {
     "signIn": "登入",
     "freeTrial": "免費試用",
@@ -124,12 +127,30 @@
     "locked": "未開放",
     "assistantCount": "{count} 個助理",
     "modules": {
-      "chat": { "label": "AI 對話", "desc": "文字對話、畫圖、影片生成、RAG 助理" },
-      "marketing": { "label": "行銷自動化", "desc": "內容生成、圖片影片、流程自動化" },
-      "cs": { "label": "客服系統", "desc": "LINE / WhatsApp / Telegram 智能客服" },
-      "leads": { "label": "潛在客戶", "desc": "行銷電話腳本、潛客分析" },
-      "resume": { "label": "履歷優化", "desc": "AI 履歷潤稿與職缺媒合" },
-      "booking": { "label": "訂房系統", "desc": "房源、訂單、定價與線上訂房" }
+      "chat": {
+        "label": "AI 對話",
+        "desc": "文字對話、畫圖、影片生成、RAG 助理"
+      },
+      "marketing": {
+        "label": "行銷自動化",
+        "desc": "內容生成、圖片影片、流程自動化"
+      },
+      "cs": {
+        "label": "客服系統",
+        "desc": "LINE / WhatsApp / Telegram 智能客服"
+      },
+      "leads": {
+        "label": "潛在客戶",
+        "desc": "行銷電話腳本、潛客分析"
+      },
+      "resume": {
+        "label": "履歷優化",
+        "desc": "AI 履歷潤稿與職缺媒合"
+      },
+      "booking": {
+        "label": "訂房系統",
+        "desc": "房源、訂單、定價與線上訂房"
+      }
     },
     "routes": {
       "daily": "日常對話",
@@ -185,8 +206,22 @@
     "empty1": "尚無客戶資料。",
     "empty2": "客戶透過 LINE 等通路對話後會自動出現在這裡。",
     "footer": "共 {count} 位客戶 · 問價次數越多代表越接近成交，建議優先跟進議價中的客戶。",
-    "stages": { "new": "新客", "inquiring": "洽詢中", "quoted": "已報價", "negotiating": "議價中", "won": "已成交", "lost": "流失" },
-    "col": { "customer": "客戶", "stage": "階段", "priceAsk": "問價", "messages": "訊息", "lastIntent": "最後洽詢", "lastContact": "最後聯絡" }
+    "stages": {
+      "new": "新客",
+      "inquiring": "洽詢中",
+      "quoted": "已報價",
+      "negotiating": "議價中",
+      "won": "已成交",
+      "lost": "流失"
+    },
+    "col": {
+      "customer": "客戶",
+      "stage": "階段",
+      "priceAsk": "問價",
+      "messages": "訊息",
+      "lastIntent": "最後洽詢",
+      "lastContact": "最後聯絡"
+    }
   },
   "CsInbox": {
     "title": "統一收件匣",
@@ -203,7 +238,14 @@
     "agentLabel": "真人客服",
     "sendNote": "送出訊息後將自動切換為「真人接管」，AI 暫停自動回覆。",
     "replyPlaceholder": "回覆 {name}…（Enter 送出，Shift+Enter 換行）",
-    "stages": { "new": "新客", "inquiring": "洽詢中", "quoted": "已報價", "negotiating": "議價中", "won": "已成交", "lost": "流失" }
+    "stages": {
+      "new": "新客",
+      "inquiring": "洽詢中",
+      "quoted": "已報價",
+      "negotiating": "議價中",
+      "won": "已成交",
+      "lost": "流失"
+    }
   },
   "CsDashboard": {
     "running": "系統運行中",
@@ -268,42 +310,76 @@
     "ctaNote": "免費使用・不限對話次數・資料加密保護",
     "ind_homestay_name": "民宿 / 旅遊",
     "ind_homestay_desc": "房型查詢、預訂流程、退訂政策、行程安排",
-    "ind_homestay_tag0": "房型預訂", "ind_homestay_tag1": "日期選擇", "ind_homestay_tag2": "退訂政策", "ind_homestay_tag3": "行程推薦",
+    "ind_homestay_tag0": "房型預訂",
+    "ind_homestay_tag1": "日期選擇",
+    "ind_homestay_tag2": "退訂政策",
+    "ind_homestay_tag3": "行程推薦",
     "ind_ecommerce_name": "電商 / 零售",
     "ind_ecommerce_desc": "訂單查詢、退換貨、物流追蹤、促銷諮詢",
-    "ind_ecommerce_tag0": "訂單狀態", "ind_ecommerce_tag1": "退換貨", "ind_ecommerce_tag2": "物流追蹤", "ind_ecommerce_tag3": "商品諮詢",
+    "ind_ecommerce_tag0": "訂單狀態",
+    "ind_ecommerce_tag1": "退換貨",
+    "ind_ecommerce_tag2": "物流追蹤",
+    "ind_ecommerce_tag3": "商品諮詢",
     "ind_restaurant_name": "餐廳 / 餐飲",
     "ind_restaurant_desc": "訂位、外送查詢、菜單介紹、優惠活動",
-    "ind_restaurant_tag0": "線上訂位", "ind_restaurant_tag1": "菜單查詢", "ind_restaurant_tag2": "外送時間", "ind_restaurant_tag3": "包廂服務",
+    "ind_restaurant_tag0": "線上訂位",
+    "ind_restaurant_tag1": "菜單查詢",
+    "ind_restaurant_tag2": "外送時間",
+    "ind_restaurant_tag3": "包廂服務",
     "ind_clinic_name": "診所 / 醫美",
     "ind_clinic_desc": "預約掛號、療程諮詢、術後照護、費用說明",
-    "ind_clinic_tag0": "線上預約", "ind_clinic_tag1": "療程說明", "ind_clinic_tag2": "費用查詢", "ind_clinic_tag3": "術後問題",
+    "ind_clinic_tag0": "線上預約",
+    "ind_clinic_tag1": "療程說明",
+    "ind_clinic_tag2": "費用查詢",
+    "ind_clinic_tag3": "術後問題",
     "ind_beauty_name": "美容 / 美髮 / SPA",
     "ind_beauty_desc": "預約服務、價目表、設計師介紹、護理建議",
-    "ind_beauty_tag0": "服務預約", "ind_beauty_tag1": "設計師選擇", "ind_beauty_tag2": "價格諮詢", "ind_beauty_tag3": "護理建議",
+    "ind_beauty_tag0": "服務預約",
+    "ind_beauty_tag1": "設計師選擇",
+    "ind_beauty_tag2": "價格諮詢",
+    "ind_beauty_tag3": "護理建議",
     "ind_education_name": "教育 / 補習班",
     "ind_education_desc": "課程諮詢、試聽預約、學費方案、師資介紹",
-    "ind_education_tag0": "課程介紹", "ind_education_tag1": "試聽預約", "ind_education_tag2": "學費方案", "ind_education_tag3": "師資查詢",
+    "ind_education_tag0": "課程介紹",
+    "ind_education_tag1": "試聽預約",
+    "ind_education_tag2": "學費方案",
+    "ind_education_tag3": "師資查詢",
     "fg_ai_title": "🤖 AI 智能核心",
-    "fg_ai_intent_label": "意圖識別", "fg_ai_intent_desc": "自動判斷用戶目的（退款/查詢/投訴/購買），分流更精準",
-    "fg_ai_lang_label": "多語言自動偵測", "fg_ai_lang_desc": "自動偵測客戶語言並切換回覆（中/英/越/日/韓等）",
-    "fg_ai_draft_label": "智慧草稿", "fg_ai_draft_desc": "AI 根據對話生成回覆建議，客服一鍵採用或微調",
-    "fg_ai_summary_label": "對話摘要", "fg_ai_summary_desc": "長對話自動濃縮，交接時不用從頭看",
+    "fg_ai_intent_label": "意圖識別",
+    "fg_ai_intent_desc": "自動判斷用戶目的（退款/查詢/投訴/購買），分流更精準",
+    "fg_ai_lang_label": "多語言自動偵測",
+    "fg_ai_lang_desc": "自動偵測客戶語言並切換回覆（中/英/越/日/韓等）",
+    "fg_ai_draft_label": "智慧草稿",
+    "fg_ai_draft_desc": "AI 根據對話生成回覆建議，客服一鍵採用或微調",
+    "fg_ai_summary_label": "對話摘要",
+    "fg_ai_summary_desc": "長對話自動濃縮，交接時不用從頭看",
     "fg_analytics_title": "📊 數據與報表",
-    "fg_analytics_report_label": "客服績效報表", "fg_analytics_report_desc": "回應速度、解決率、滿意度自動統計",
-    "fg_analytics_trend_label": "情緒趨勢圖", "fg_analytics_trend_desc": "某時段、某產品的負面情緒爆發點視覺化",
-    "fg_analytics_hot_label": "熱點問題統計", "fg_analytics_hot_desc": "每週最多人問什麼，反映產品缺陷或服務痛點",
-    "fg_analytics_survey_label": "自動滿意度問卷", "fg_analytics_survey_desc": "問題解決後自動發問卷，無回應自動結案",
+    "fg_analytics_report_label": "客服績效報表",
+    "fg_analytics_report_desc": "回應速度、解決率、滿意度自動統計",
+    "fg_analytics_trend_label": "情緒趨勢圖",
+    "fg_analytics_trend_desc": "某時段、某產品的負面情緒爆發點視覺化",
+    "fg_analytics_hot_label": "熱點問題統計",
+    "fg_analytics_hot_desc": "每週最多人問什麼，反映產品缺陷或服務痛點",
+    "fg_analytics_survey_label": "自動滿意度問卷",
+    "fg_analytics_survey_desc": "問題解決後自動發問卷，無回應自動結案",
     "fg_crm_title": "🎯 客戶管理",
-    "fg_crm_vip_label": "VIP 識別", "fg_crm_vip_desc": "串接 CRM，高價值客戶自動優先排隊、升級處理",
-    "fg_crm_churn_label": "流失預警", "fg_crm_churn_desc": "偵測「考慮取消」「不想用了」語意，主動介入挽留",
-    "fg_crm_order_label": "訂單查詢串接", "fg_crm_order_desc": "用戶輸入訂單號直接查狀態，不用轉人工",
-    "fg_crm_ticket_label": "工單系統", "fg_crm_ticket_desc": "複雜問題轉工單追蹤，不怕漏接",
+    "fg_crm_vip_label": "VIP 識別",
+    "fg_crm_vip_desc": "串接 CRM，高價值客戶自動優先排隊、升級處理",
+    "fg_crm_churn_label": "流失預警",
+    "fg_crm_churn_desc": "偵測「考慮取消」「不想用了」語意，主動介入挽留",
+    "fg_crm_order_label": "訂單查詢串接",
+    "fg_crm_order_desc": "用戶輸入訂單號直接查狀態，不用轉人工",
+    "fg_crm_ticket_label": "工單系統",
+    "fg_crm_ticket_desc": "複雜問題轉工單追蹤，不怕漏接",
     "fg_int_title": "⚙️ 系統整合",
-    "fg_int_inbox_label": "統一收件匣", "fg_int_inbox_desc": "LINE / IG / Email 多平台對話集中一個後台管理",
-    "fg_int_kb_label": "知識庫搜尋", "fg_int_kb_desc": "客服輸入關鍵字，AI 即時推薦相關答案",
-    "fg_int_pricing_label": "定價計算機", "fg_int_pricing_desc": "AI 自動套公式計算並告知客戶報價",
-    "fg_int_close_label": "自動結案", "fg_int_close_desc": "問題解決後自動發滿意度問卷，無回應自動關閉"
+    "fg_int_inbox_label": "統一收件匣",
+    "fg_int_inbox_desc": "LINE / IG / Email 多平台對話集中一個後台管理",
+    "fg_int_kb_label": "知識庫搜尋",
+    "fg_int_kb_desc": "客服輸入關鍵字，AI 即時推薦相關答案",
+    "fg_int_pricing_label": "定價計算機",
+    "fg_int_pricing_desc": "AI 自動套公式計算並告知客戶報價",
+    "fg_int_close_label": "自動結案",
+    "fg_int_close_desc": "問題解決後自動發滿意度問卷，無回應自動關閉"
   },
   "Booking": {
     "title": "訂房管理",
@@ -364,7 +440,15 @@
       "closedDates": "已關閉選取日期",
       "openedDates": "已開放選取日期",
       "orderFallback": "訂單",
-      "day": { "0": "日", "1": "一", "2": "二", "3": "三", "4": "四", "5": "五", "6": "六" }
+      "day": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      }
     },
     "reviews": {
       "platformManual": "手動新增",
@@ -527,14 +611,40 @@
       }
     },
     "pricing": {
-      "tabs": { "daily": "每日定價", "calendar": "格狀視圖", "rules": "定價規則", "compare": "周邊比價" },
-      "statusOpen": "開放", "statusClosed": "關閉", "statusAdmin": "後台",
-      "ruleTypes": {
-        "weekend": "週末", "holiday": "假日", "seasonal": "季節性", "occupancy": "住房率",
-        "advance_booking": "臨時訂（N天內）", "early_bird": "早鳥訂（N天以上）", "market": "市場跟隨（排程自動）"
+      "tabs": {
+        "daily": "每日定價",
+        "calendar": "格狀視圖",
+        "rules": "定價規則",
+        "compare": "周邊比價"
       },
-      "fields": { "price": "房價", "deposit": "訂金", "extraPerson": "加人價", "largeBed": "加大床", "smallBed": "加小床" },
-      "weekdays": { "0": "週一", "1": "週二", "2": "週三", "3": "週四", "4": "週五", "5": "週六", "6": "週日" },
+      "statusOpen": "開放",
+      "statusClosed": "關閉",
+      "statusAdmin": "後台",
+      "ruleTypes": {
+        "weekend": "週末",
+        "holiday": "假日",
+        "seasonal": "季節性",
+        "occupancy": "住房率",
+        "advance_booking": "臨時訂（N天內）",
+        "early_bird": "早鳥訂（N天以上）",
+        "market": "市場跟隨（排程自動）"
+      },
+      "fields": {
+        "price": "房價",
+        "deposit": "訂金",
+        "extraPerson": "加人價",
+        "largeBed": "加大床",
+        "smallBed": "加小床"
+      },
+      "weekdays": {
+        "0": "週一",
+        "1": "週二",
+        "2": "週三",
+        "3": "週四",
+        "4": "週五",
+        "5": "週六",
+        "6": "週日"
+      },
       "roomLabel": "房型：",
       "weekendNote": "（粉紅底為週五～日；國定假日請於「定價規則」另設）",
       "quickFill": "快速填入",
@@ -575,7 +685,14 @@
       "noRules": "尚無定價規則，點擊「新增規則」開始建立",
       "priorityShort": "優先級 {n}",
       "allRoomTypes": "全部房型",
-      "col": { "ruleName": "規則名稱", "type": "類型", "adjust": "調整幅度", "applyRoom": "套用房型", "status": "狀態", "actions": "操作" },
+      "col": {
+        "ruleName": "規則名稱",
+        "type": "類型",
+        "adjust": "調整幅度",
+        "applyRoom": "套用房型",
+        "status": "狀態",
+        "actions": "操作"
+      },
       "compareSubtitle": "查詢同地區其他飯店／民宿在指定入住日的房價（Google Hotels）",
       "locationKeyword": "地區關鍵字",
       "locationPlaceholder": "自動帶入民宿所在地，或輸入：宜蘭礁溪",
@@ -589,14 +706,19 @@
       "watchlistHint": "指定要特別盯的飯店／民宿，查價後會在清單中標示並置頂；周邊未涵蓋的可單獨精準查。",
       "watchPlaceholder": "輸入飯店／民宿名稱",
       "cacheNote": "↺ 此結果來自快取（未消耗額度）。需要最新報價請按「強制重查」。",
-      "statMin": "最低", "statMedian": "中位數", "statAvg": "平均", "statMax": "最高",
+      "statMin": "最低",
+      "statMedian": "中位數",
+      "statAvg": "平均",
+      "statMax": "最高",
       "yourVsMedian": "你的定價 vs 周邊中位數（NT$ {median}）",
-      "higher": "高", "lower": "低",
+      "higher": "高",
+      "lower": "低",
       "applyToDynamic": "套用到動態定價",
       "applyToDynamicHint": "以本次查到的行情為基準、加減幅度後寫入每日定價（你審核後套用，會覆蓋區間內既有訂價）。",
       "basis": "基準",
       "adjustPct": "調整 %",
-      "from": "起", "to": "迄",
+      "from": "起",
+      "to": "迄",
       "weekday": "星期",
       "roomType": "房型",
       "noneEqualsAll": "未選＝全部",
@@ -616,7 +738,9 @@
       "overridePrice": "覆蓋價",
       "blankClearOverride": "空白=清除覆蓋",
       "selectedCount": "已選 {count} 格",
-      "openBooking": "開放訂房", "adminOnly": "僅後台", "notBookable": "不可訂",
+      "openBooking": "開放訂房",
+      "adminOnly": "僅後台",
+      "notBookable": "不可訂",
       "setPrice": "設定價格",
       "batchTitle": "批次設定房價",
       "batchSubtitle": "可多選假期，或手動輸入日期範圍",
@@ -628,10 +752,13 @@
       "consecutiveHolidays": "🎉 連續假期",
       "schoolHolidays": "🏫 學期假期",
       "manualRange": "額外手動日期範圍（選填）",
-      "startDate": "起始日", "endDate": "結束日",
+      "startDate": "起始日",
+      "endDate": "結束日",
       "totalDays": "合計：{count} 天（假期+手動日期合併，星期篩選後）",
       "applyWeekday": "套用星期",
-      "dowAll": "全部", "dowWeekday": "平日", "dowWeekend": "週末",
+      "dowAll": "全部",
+      "dowWeekday": "平日",
+      "dowWeekend": "週末",
       "applyRoomType": "套用房型",
       "deselectAll": "取消全選",
       "overrideRoomPrice": "覆蓋房價",
@@ -639,9 +766,11 @@
       "overrideNote": "設定後會覆蓋各日期的基本價與動態定價",
       "bookingStatusOptional": "訂購狀態（選填）",
       "noChange": "不更改",
-      "adminOnlyFull": "僅供後台", "notBookableFull": "不可訂房",
+      "adminOnlyFull": "僅供後台",
+      "notBookableFull": "不可訂房",
       "applyDays": "套用 {count} 天",
-      "editRule": "編輯規則", "addRuleTitle": "新增定價規則",
+      "editRule": "編輯規則",
+      "addRuleTitle": "新增定價規則",
       "ruleNameLabel": "規則名稱 *",
       "ruleNamePlaceholder": "例：週末加價 20%",
       "ruleTypeLabel": "規則類型 *",
@@ -659,9 +788,13 @@
       "earlyBirdLabel": "🐦 早鳥訂：入住前至少 N 天訂房才觸發",
       "earlyBirdHint": "例：N=90 → 90 天以前訂房才算早鳥；N=30 → 30 天以前訂都算",
       "marketRuleHint": "📈 市場跟隨：排程每天自動抓周邊行情，以「基準價 ＋ 上方調整幅度」算出價格寫入每日定價（夾在下／上限之間）。需先在「周邊比價」確認民宿所在地已填。",
-      "nearbyMedian": "周邊中位數", "nearbyMin": "周邊最低", "nearbyAvg": "周邊平均",
-      "priceFloor": "價格下限（選填）", "priceCeil": "價格上限（選填）",
-      "notBelow": "不低於", "notAbove": "不高於",
+      "nearbyMedian": "周邊中位數",
+      "nearbyMin": "周邊最低",
+      "nearbyAvg": "周邊平均",
+      "priceFloor": "價格下限（選填）",
+      "priceCeil": "價格上限（選填）",
+      "notBelow": "不低於",
+      "notAbove": "不高於",
       "priorityLabel": "優先級（數字越大越先套用）",
       "saveRule": "儲存規則"
     },
@@ -779,10 +912,22 @@
       "bodyPlaceholder": "留空則使用預設模板…",
       "enableThis": "啟用此模板",
       "types": {
-        "confirmation": { "label": "訂房確認信", "desc": "訂單建立後，手動發送給旅客" },
-        "reminder": { "label": "入住提醒信", "desc": "入住前 1–2 天發送" },
-        "checkout": { "label": "退房提醒", "desc": "退房當天發送" },
-        "cancellation": { "label": "取消通知", "desc": "訂單取消時發送" }
+        "confirmation": {
+          "label": "訂房確認信",
+          "desc": "訂單建立後，手動發送給旅客"
+        },
+        "reminder": {
+          "label": "入住提醒信",
+          "desc": "入住前 1–2 天發送"
+        },
+        "checkout": {
+          "label": "退房提醒",
+          "desc": "退房當天發送"
+        },
+        "cancellation": {
+          "label": "取消通知",
+          "desc": "訂單取消時發送"
+        }
       }
     },
     "reports": {
@@ -1082,14 +1227,49 @@
       "other": "其他服務"
     },
     "amenities": {
-      "海景": "海景", "山景": "山景", "河景": "河景", "市景": "市景", "無邊際泳池": "無邊際泳池", "私人泳池": "私人泳池",
-      "露台": "露台", "陽台": "陽台", "私人花園": "私人花園", "庭院": "庭院", "BBQ 區": "BBQ 區",
-      "雙人床": "雙人床", "加大雙人床": "加大雙人床", "兩張單人床": "兩張單人床", "上下鋪": "上下鋪", "沙發床": "沙發床",
-      "冷氣": "冷氣", "電視": "電視", "第四台/串流": "第四台/串流", "冰箱": "冰箱", "保險箱": "保險箱", "書桌": "書桌", "沙發": "沙發",
-      "獨立衛浴": "獨立衛浴", "浴缸": "浴缸", "淋浴間": "淋浴間", "吹風機": "吹風機", "盥洗用品": "盥洗用品", "免治馬桶": "免治馬桶",
-      "WiFi": "WiFi", "停車位": "停車位", "廚房": "廚房", "公共廚房": "公共廚房", "洗衣機": "洗衣機", "烘衣機": "烘衣機",
-      "早餐": "早餐", "下午茶": "下午茶", "迷你吧": "迷你吧", "咖啡/茶": "咖啡/茶",
-      "24H 入住": "24H 入住", "行李寄存": "行李寄存", "機場接送": "機場接送", "腳踏車租借": "腳踏車租借"
+      "海景": "海景",
+      "山景": "山景",
+      "河景": "河景",
+      "市景": "市景",
+      "無邊際泳池": "無邊際泳池",
+      "私人泳池": "私人泳池",
+      "露台": "露台",
+      "陽台": "陽台",
+      "私人花園": "私人花園",
+      "庭院": "庭院",
+      "BBQ 區": "BBQ 區",
+      "雙人床": "雙人床",
+      "加大雙人床": "加大雙人床",
+      "兩張單人床": "兩張單人床",
+      "上下鋪": "上下鋪",
+      "沙發床": "沙發床",
+      "冷氣": "冷氣",
+      "電視": "電視",
+      "第四台/串流": "第四台/串流",
+      "冰箱": "冰箱",
+      "保險箱": "保險箱",
+      "書桌": "書桌",
+      "沙發": "沙發",
+      "獨立衛浴": "獨立衛浴",
+      "浴缸": "浴缸",
+      "淋浴間": "淋浴間",
+      "吹風機": "吹風機",
+      "盥洗用品": "盥洗用品",
+      "免治馬桶": "免治馬桶",
+      "WiFi": "WiFi",
+      "停車位": "停車位",
+      "廚房": "廚房",
+      "公共廚房": "公共廚房",
+      "洗衣機": "洗衣機",
+      "烘衣機": "烘衣機",
+      "早餐": "早餐",
+      "下午茶": "下午茶",
+      "迷你吧": "迷你吧",
+      "咖啡/茶": "咖啡/茶",
+      "24H 入住": "24H 入住",
+      "行李寄存": "行李寄存",
+      "機場接送": "機場接送",
+      "腳踏車租借": "腳踏車租借"
     },
     "profile": {
       "title": "民宿基本資料",
@@ -1253,7 +1433,11 @@
       "score": "算機會分數",
       "scoring": "評分中...",
       "opp": "機會分數（搜尋訊號 × 商業意圖 × AI 端稀缺）",
-      "src": { "measured": "實測", "estimated": "推估", "unknown": "AI 推測" },
+      "src": {
+        "measured": "實測",
+        "estimated": "推估",
+        "unknown": "AI 推測"
+      },
       "cluster": "規劃聚叢",
       "clustering": "聚叢中...",
       "clusterHint": "點選一個叢即套用該叢問句（一叢一篇，避免一問一篇的內容農場）。👑 為 Pillar 支柱長文。",
@@ -1330,7 +1514,11 @@
       "secretSetPh": "已設定，留空則沿用既有",
       "save": "儲存設定",
       "saved": "已儲存",
-      "lang": { "zh-TW": "繁中版", "en": "英文版", "vi": "越南文版" },
+      "lang": {
+        "zh-TW": "繁中版",
+        "en": "英文版",
+        "vi": "越南文版"
+      },
       "generate": "產出文章＋JSON-LD",
       "generating": "產出中...",
       "regenerate": "重新產出",
@@ -1341,20 +1529,110 @@
       "copied": "已複製",
       "errTopic": "請輸入主題",
       "errPick": "請至少勾選一個問句",
-      "intent": { "info": "資訊", "local": "在地", "compare": "比較", "transact": "成交" }
+      "intent": {
+        "info": "資訊",
+        "local": "在地",
+        "compare": "比較",
+        "transact": "成交"
+      }
     },
     "features": {
-      "auto": { "title": "行銷自動化", "desc": "從資料蒐集、競品分析、文案生成、圖片影片製作，到平台上傳的全流程自動化行銷系統", "badge": "完整功能", "tags": ["資料蒐集", "文案生成", "圖片影片", "自動上傳"] },
-      "designer": { "title": "AI 產品行銷設計師", "desc": "上傳產品圖片，AI 自動生成行銷策略、內容組合、市場分析與 SEO 內容策略，四步驟產出完整行銷包", "badge": "新功能", "tags": ["策略規劃", "內容組合", "市場分析", "SEO 策略"] },
-      "geo": { "title": "GEO 內容寫手", "desc": "填主題與獨家資訊，AI 探勘高意圖問句並產出容易被 ChatGPT／Perplexity／Google AIO 引用的文章＋JSON-LD", "badge": "新功能", "tags": ["問句探勘", "意圖分類", "JSON-LD", "AI 引用優化"] },
-      "pipeline": { "title": "行銷流水線", "desc": "視覺化行銷任務排程與進度追蹤，管理多個行銷活動的執行狀態與 Telegram 審核流程", "badge": "進階功能", "tags": ["任務排程", "進度追蹤", "Telegram 審核", "多活動管理"] },
-      "prospect": { "title": "潛在客戶行銷", "desc": "自動蒐集組織 → AI 篩選分類 → 距離計算 → 電話撥打 / Email 寄送，主動開發潛在客戶", "badge": "開發工具", "tags": ["自動蒐集", "AI 篩選", "電話行銷", "Email 行銷"] },
-      "swot": { "title": "市場競品分析", "desc": "SWOT 分析、競爭對手監控、消費者行為洞察，AI 深度分析讓決策更有依據", "badge": "整合於行銷自動化", "tags": ["SWOT 分析", "競品監控", "消費者洞察", "AI 分析"] },
-      "audience": { "title": "目標客群模擬", "desc": "多維度消費者模擬引擎，預測行銷活動對不同受眾群體的反應與轉換率", "badge": "整合於行銷自動化", "tags": ["受眾模擬", "轉換預測", "情緒分析", "策略優化"] },
-      "brand": { "title": "品牌資料庫", "desc": "集中管理品牌素材、公司資料與行銷知識庫，AI 快取技術節省每次調用的 Token 成本", "badge": "設定中管理", "tags": ["素材管理", "公司資料", "AI 快取", "Token 節省"] }
+      "auto": {
+        "title": "行銷自動化",
+        "desc": "從資料蒐集、競品分析、文案生成、圖片影片製作，到平台上傳的全流程自動化行銷系統",
+        "badge": "完整功能",
+        "tags": [
+          "資料蒐集",
+          "文案生成",
+          "圖片影片",
+          "自動上傳"
+        ]
+      },
+      "designer": {
+        "title": "AI 產品行銷設計師",
+        "desc": "上傳產品圖片，AI 自動生成行銷策略、內容組合、市場分析與 SEO 內容策略，四步驟產出完整行銷包",
+        "badge": "新功能",
+        "tags": [
+          "策略規劃",
+          "內容組合",
+          "市場分析",
+          "SEO 策略"
+        ]
+      },
+      "geo": {
+        "title": "GEO 內容寫手",
+        "desc": "填主題與獨家資訊，AI 探勘高意圖問句並產出容易被 ChatGPT／Perplexity／Google AIO 引用的文章＋JSON-LD",
+        "badge": "新功能",
+        "tags": [
+          "問句探勘",
+          "意圖分類",
+          "JSON-LD",
+          "AI 引用優化"
+        ]
+      },
+      "pipeline": {
+        "title": "行銷流水線",
+        "desc": "視覺化行銷任務排程與進度追蹤，管理多個行銷活動的執行狀態與 Telegram 審核流程",
+        "badge": "進階功能",
+        "tags": [
+          "任務排程",
+          "進度追蹤",
+          "Telegram 審核",
+          "多活動管理"
+        ]
+      },
+      "prospect": {
+        "title": "潛在客戶行銷",
+        "desc": "自動蒐集組織 → AI 篩選分類 → 距離計算 → 電話撥打 / Email 寄送，主動開發潛在客戶",
+        "badge": "開發工具",
+        "tags": [
+          "自動蒐集",
+          "AI 篩選",
+          "電話行銷",
+          "Email 行銷"
+        ]
+      },
+      "swot": {
+        "title": "市場競品分析",
+        "desc": "SWOT 分析、競爭對手監控、消費者行為洞察，AI 深度分析讓決策更有依據",
+        "badge": "整合於行銷自動化",
+        "tags": [
+          "SWOT 分析",
+          "競品監控",
+          "消費者洞察",
+          "AI 分析"
+        ]
+      },
+      "audience": {
+        "title": "目標客群模擬",
+        "desc": "多維度消費者模擬引擎，預測行銷活動對不同受眾群體的反應與轉換率",
+        "badge": "整合於行銷自動化",
+        "tags": [
+          "受眾模擬",
+          "轉換預測",
+          "情緒分析",
+          "策略優化"
+        ]
+      },
+      "brand": {
+        "title": "品牌資料庫",
+        "desc": "集中管理品牌素材、公司資料與行銷知識庫，AI 快取技術節省每次調用的 Token 成本",
+        "badge": "設定中管理",
+        "tags": [
+          "素材管理",
+          "公司資料",
+          "AI 快取",
+          "Token 節省"
+        ]
+      }
     },
     "pd": {
-      "steps": { "1": "策略規劃", "2": "內容組合", "3": "市場分析", "4": "內容策略" },
+      "steps": {
+        "1": "策略規劃",
+        "2": "內容組合",
+        "3": "市場分析",
+        "4": "內容策略"
+      },
       "errProductName": "請輸入產品名稱",
       "errSelectRoute": "請先選擇行銷路線",
       "step1Title": "第一步：策略規劃",
@@ -1403,7 +1681,12 @@
       "visual": "視覺：",
       "persuasion": "說服角度：",
       "imagePrompts": "圖片提示詞：",
-      "aida": { "A": "注意", "I": "興趣", "D": "慾望", "action": "行動" },
+      "aida": {
+        "A": "注意",
+        "I": "興趣",
+        "D": "慾望",
+        "action": "行動"
+      },
       "genImage": "生成圖片",
       "visualSummary": "視覺摘要：",
       "coreValueProp": "核心價值主張",
@@ -1451,33 +1734,78 @@
     "phaseAnalyze": "DeepSeek-R1 分析",
     "phaseWrite": "Claude 撰寫",
     "categories": {
-      "job-search": { "label": "🔍 求職階段", "desc": "履歷、求職信、面試、薪資談判" },
-      "workplace": { "label": "💼 職場日常", "desc": "Email、報告、簡報、會議記錄" },
-      "advanced": { "label": "🧠 進階場景", "desc": "話術、績效、升職、工作量化" },
-      "thinking": { "label": "🎯 思維決策", "desc": "名家思維模型拆解你的決策與難題" }
+      "job-search": {
+        "label": "🔍 求職階段",
+        "desc": "履歷、求職信、面試、薪資談判"
+      },
+      "workplace": {
+        "label": "💼 職場日常",
+        "desc": "Email、報告、簡報、會議記錄"
+      },
+      "advanced": {
+        "label": "🧠 進階場景",
+        "desc": "話術、績效、升職、工作量化"
+      },
+      "thinking": {
+        "label": "🎯 思維決策",
+        "desc": "名家思維模型拆解你的決策與難題"
+      }
     },
     "optimize": {
       "cardDesc": "選擇填寫方式，越詳細結果越精準",
-      "modeUpload": "上傳檔案", "modeForm": "手動填寫", "modeBoth": "兩者皆有",
-      "jdLabel": "目標職缺 JD", "jdPlaceholder": "貼上職缺描述（Job Description）…",
+      "modeUpload": "上傳檔案",
+      "modeForm": "手動填寫",
+      "modeBoth": "兩者皆有",
+      "jdLabel": "目標職缺 JD",
+      "jdPlaceholder": "貼上職缺描述（Job Description）…",
       "processing": "處理中…",
-      "emptyTitle": "雙模型協作", "emptyDesc1": "DeepSeek-R1 分析落差", "emptyDesc2": "Claude Sonnet 撰寫優化履歷"
+      "emptyTitle": "雙模型協作",
+      "emptyDesc1": "DeepSeek-R1 分析落差",
+      "emptyDesc2": "Claude Sonnet 撰寫優化履歷"
     },
     "cover": {
       "cardDesc": "選擇模板並填寫 JD 與經歷",
-      "selectTemplate": "選擇求職信模板", "loadingTemplates": "載入模板中…",
-      "freeform": "✨ 自由發揮（不使用模板）", "freeformDesc": "AI 自主決定最適合的求職信結構",
-      "jdLabel": "目標職缺 JD", "jdPlaceholder": "貼上職缺描述…",
-      "expLabel": "過往經歷", "expPlaceholder": "描述您的工作經歷、技能與成就…",
-      "extraLabel": "額外要求（選填）", "extraPlaceholder": "例如：請用英文撰寫、語氣偏輕鬆…",
-      "emptyTitle": "尚無求職信", "emptyDesc1": "選擇模板並填寫 JD 與經歷", "emptyDesc2": "Claude 將為你撰寫求職信"
+      "selectTemplate": "選擇求職信模板",
+      "loadingTemplates": "載入模板中…",
+      "freeform": "✨ 自由發揮（不使用模板）",
+      "freeformDesc": "AI 自主決定最適合的求職信結構",
+      "jdLabel": "目標職缺 JD",
+      "jdPlaceholder": "貼上職缺描述…",
+      "expLabel": "過往經歷",
+      "expPlaceholder": "描述您的工作經歷、技能與成就…",
+      "extraLabel": "額外要求（選填）",
+      "extraPlaceholder": "例如：請用英文撰寫、語氣偏輕鬆…",
+      "emptyTitle": "尚無求職信",
+      "emptyDesc1": "選擇模板並填寫 JD 與經歷",
+      "emptyDesc2": "Claude 將為你撰寫求職信"
     },
     "form": {
-      "basicSection": "一、基本資料", "name": "姓名", "phone": "聯絡電話", "email": "電子郵件", "targetPosition": "應徵職位",
-      "eduSection": "二、學歷與證照", "eduN": "學歷 {n}", "school": "學校名稱", "major": "科系", "degree": "學士／碩士", "eduPeriod": "就讀期間", "addEdu": "新增學歷", "certs": "相關證照、語言考試…",
-      "expSection": "三、工作／實習經驗", "expN": "經歷 {n}", "company": "公司名稱", "jobTitle": "職稱", "expPeriod": "期間", "expDesc": "重點成果（建議量化）", "addExp": "新增經歷",
-      "skillsSection": "四、技能與語言", "skills": "專業技能：Python、Excel、Figma…", "languages": "語言能力：中文（母語）、英文（多益 880）…",
-      "otherSection": "五、其他（選填）", "selfIntro": "自我介紹（3–5 行）", "otherField": "其他加分項目"
+      "basicSection": "一、基本資料",
+      "name": "姓名",
+      "phone": "聯絡電話",
+      "email": "電子郵件",
+      "targetPosition": "應徵職位",
+      "eduSection": "二、學歷與證照",
+      "eduN": "學歷 {n}",
+      "school": "學校名稱",
+      "major": "科系",
+      "degree": "學士／碩士",
+      "eduPeriod": "就讀期間",
+      "addEdu": "新增學歷",
+      "certs": "相關證照、語言考試…",
+      "expSection": "三、工作／實習經驗",
+      "expN": "經歷 {n}",
+      "company": "公司名稱",
+      "jobTitle": "職稱",
+      "expPeriod": "期間",
+      "expDesc": "重點成果（建議量化）",
+      "addExp": "新增經歷",
+      "skillsSection": "四、技能與語言",
+      "skills": "專業技能：Python、Excel、Figma…",
+      "languages": "語言能力：中文（母語）、英文（多益 880）…",
+      "otherSection": "五、其他（選填）",
+      "selfIntro": "自我介紹（3–5 行）",
+      "otherField": "其他加分項目"
     },
     "upload": {
       "onlyTypes": "僅支援 JPG、PDF、Word",
@@ -1487,79 +1815,383 @@
       "imageNote": "✓ JPG 圖片將由 Claude 視覺辨識分析"
     },
     "tools": {
-      "resume-optimize": { "label": "履歷優化", "desc": "貼入 JD，AI 雙模型分析並重寫 ATS 優化履歷", "submit": "開始優化" },
-      "cover-letter": { "label": "求職信撰寫", "desc": "選模板、輸入 JD 與經歷，Claude 生成完整求職信", "submit": "生成求職信" },
-      "interview-practice": { "label": "面試問題練習", "desc": "模擬面試常見問題 + STAR 框架建議回答", "submit": "生成面試題", "fields": {
-        "jd": { "label": "目標職缺 JD", "placeholder": "貼入職缺描述，AI 更精準…" },
-        "background": { "label": "個人背景簡述", "placeholder": "簡述你的學歷、工作年資、主要技能…" } } },
-      "salary-negotiation": { "label": "薪資談判話術", "desc": "提供完整談判劇本，幫你爭取應得的薪資", "submit": "生成談判話術", "fields": {
-        "position": { "label": "目標職位與產業", "placeholder": "例如：行銷企劃／科技業" },
-        "currentSalary": { "label": "目前薪資（月薪）", "placeholder": "例如：35,000" },
-        "targetSalary": { "label": "期望薪資（月薪）", "placeholder": "例如：45,000" },
-        "highlights": { "label": "個人亮點與成就", "placeholder": "你的競爭力、過去成果、特殊技能…" } } },
-      "resume-clinic": { "label": "履歷健檢診斷", "desc": "像 HR 一樣直說：這份 JD 該不該投、勝算幾成、卡在哪、怎麼補", "submit": "開始健檢", "fields": {
-        "jd": { "label": "目標職缺 JD", "placeholder": "貼上職缺描述…" },
-        "background": { "label": "你的背景 / 履歷重點", "placeholder": "學歷、年資、主要技能、代表作…" },
-        "company": { "label": "目標公司（選填）", "placeholder": "例如：某外商、新創、上市公司…" } } },
-      "career-advisor": { "label": "升學擇業顧問", "desc": "接地氣分析科系、行業、城市選擇，給實用不灌雞湯的建議", "submit": "給我建議", "fields": {
-        "situation": { "label": "你的處境", "options": ["高中生選科系", "大學生選方向/轉系", "應屆畢業選行業", "在職轉職", "考研/考公猶豫"] },
-        "background": { "label": "背景條件", "placeholder": "科系、成績/級分、年資、所在城市、家庭考量…" },
-        "options": { "label": "正在考慮的選項", "placeholder": "例如：資工 vs 電機、留在台北 vs 回中部…" },
-        "concern": { "label": "最在意的點", "placeholder": "例如：薪資、穩定性、興趣、發展性…" } } },
-      "email-draft": { "label": "Email 草稿", "desc": "道歉信、催款、跨部門溝通，一鍵生成得體 Email", "submit": "生成 Email", "fields": {
-        "type": { "label": "Email 類型", "options": ["道歉信", "催款/追款", "跨部門請求協助", "拒絕請求", "匯報進度", "感謝信", "其他"] },
-        "relationship": { "label": "收件人與關係", "placeholder": "例如：主管（直屬）、客戶、跨部門同事…" },
-        "context": { "label": "情境說明", "placeholder": "描述事情背景與你想達到的目的…" },
-        "keyPoints": { "label": "需強調的重點（選填）", "placeholder": "例如：強調誠意、保持專業但不卑微…" } } },
-      "report-writing": { "label": "報告／提案撰寫", "desc": "輸入主題與重點，AI 生成完整報告結構與內容", "submit": "生成報告", "fields": {
-        "topic": { "label": "報告主題", "placeholder": "例如：Q3 銷售成果分析" },
-        "context": { "label": "背景情境", "placeholder": "說明報告的目的與背景…" },
-        "mainPoints": { "label": "主要論點／數據", "placeholder": "列出你有的數據、結論或論點…" },
-        "audience": { "label": "目標受眾", "placeholder": "例如：高階主管、客戶、全體員工…" } } },
-      "presentation-outline": { "label": "簡報大綱生成", "desc": "主題 + 受眾 → AI 生成每頁大綱與視覺化建議", "submit": "生成簡報大綱", "fields": {
-        "topic": { "label": "簡報主題", "placeholder": "例如：2025 年品牌策略規劃" },
-        "audience": { "label": "目標受眾", "placeholder": "例如：董事會、潛在客戶…" },
-        "coreMessage": { "label": "核心訊息（聽眾應記住的）", "placeholder": "用一句話說出你最想傳達的訊息…" },
-        "duration": { "label": "簡報時長", "placeholder": "例如：10 分鐘、30 分鐘" } } },
-      "meeting-minutes": { "label": "會議記錄整理", "desc": "貼入雜亂的會議記錄，自動整理成結構化文件", "submit": "整理會議記錄", "fields": {
-        "rawNotes": { "label": "原始會議記錄", "placeholder": "貼入你的會議記錄文字（可以很雜亂）…" } } },
-      "workplace-phrases": { "label": "職場話術", "desc": "被刁難主管、拒絕額外工作…提供多套應對話術", "submit": "生成話術建議", "fields": {
-        "scenario": { "label": "場景類型", "options": ["被主管刁難", "拒絕額外工作", "向上管理", "應對搶功同事", "提出反對意見", "談論加薪", "其他"] },
-        "context": { "label": "具體情境描述", "placeholder": "說明具體發生了什麼事…" },
-        "goal": { "label": "期望達到的結果", "placeholder": "你希望這次溝通達成什麼目標…" } } },
-      "workplace-relationship": { "label": "職場關係軍師", "desc": "讀懂主管／同事／下屬的動機，給相處與向上管理策略", "submit": "分析關係策略", "fields": {
-        "role": { "label": "對象", "options": ["直屬主管", "老闆 / 高層", "平行同事", "下屬", "前輩 / 導師", "跨部門窗口"] },
-        "situation": { "label": "具體情況", "placeholder": "描述對方的行為、你們的互動、目前的卡點…" },
-        "goal": { "label": "你想達成的目標", "placeholder": "例如：取得信任、爭取資源、化解誤會、保護自己…" } } },
-      "performance-review": { "label": "績效自評撰寫", "desc": "輸入工作內容與成果，AI 幫你寫出有說服力的自評", "submit": "生成績效自評", "fields": {
-        "position": { "label": "職位與部門", "placeholder": "例如：行銷部 數位行銷專員" },
-        "workContent": { "label": "本期主要工作內容", "placeholder": "列出你這期負責的主要工作項目…" },
-        "achievements": { "label": "重要成果（盡量含數字）", "placeholder": "例如：完成 XX 項目，成長 XX%…" },
-        "challenges": { "label": "克服的挑戰（選填）", "placeholder": "說明你遇到的困難與如何解決…" } } },
-      "promotion-letter": { "label": "升職申請信", "desc": "撰寫有力的升職申請信，突出你的貢獻與價值", "submit": "生成升職申請信", "fields": {
-        "positions": { "label": "目前職位 → 申請職位", "placeholder": "例如：業務專員 → 業務主任" },
-        "background": { "label": "個人背景與年資", "placeholder": "例如：在職 3 年，理工背景…" },
-        "achievements": { "label": "重要貢獻與成就", "placeholder": "列出你對公司的具體貢獻（含數字更好）…" },
-        "reason": { "label": "申請理由", "placeholder": "為什麼你是這個職位的最佳人選…" } } },
-      "quantify-work": { "label": "工作內容量化", "desc": "把「我負責 XXX」變成有數字、有影響力的亮點句", "submit": "量化我的工作", "fields": {
-        "jobContent": { "label": "工作描述（每行一條）", "placeholder": "例如：\n負責社群媒體管理\n協助舉辦年度活動\n處理客戶投訴" } } },
-      "munger-mental-models": { "label": "多元思維決策", "desc": "芒格式多元思維模型 + 反向思考，拆解你的決策與盲點", "submit": "開始分析", "fields": {
-        "decision": { "label": "你要做的決定 / 問題", "placeholder": "例：該不該離職創業？要不要接這個案子？" },
-        "context": { "label": "背景與限制", "placeholder": "相關資訊、資源、時間、在意的點…" },
-        "options": { "label": "正在考慮的選項", "placeholder": "列出你目前想到的幾個選擇" } } },
-      "first-principles": { "label": "第一性原理拆解", "desc": "馬斯克式思考：拆到根本事實，再從零重建解法", "submit": "拆解問題", "fields": {
-        "problem": { "label": "要解決的問題", "placeholder": "例：如何把成本降一半？如何快速學會某技能？" },
-        "assumptions": { "label": "現有做法 / 既有假設", "placeholder": "目前大家怎麼做、你預設的限制是什麼…" } } },
-      "value-investing": { "label": "價值投資視角", "desc": "巴菲特式評估：能力圈、護城河、安全邊際（非投資建議）", "submit": "評估機會", "fields": {
-        "target": { "label": "標的 / 生意 / 機會", "placeholder": "例：某檔股票、加盟一間店、投資朋友的新創" },
-        "info": { "label": "已知資訊", "placeholder": "商業模式、財務、競爭、價格、你了解的程度…" },
-        "concern": { "label": "最想釐清的問題", "placeholder": "例：現在的價格合理嗎？風險在哪？" } } },
-      "antifragile-risk": { "label": "反脆弱風險評估", "desc": "塔勒布式風險思考：下行風險、不對稱性、保命底線", "submit": "評估風險", "fields": {
-        "decision": { "label": "要評估的決策 / 計畫", "placeholder": "例：把存款 all in 一個項目、辭職全職做某件事" },
-        "downside": { "label": "你擔心的最壞情況", "placeholder": "最糟可能發生什麼、會損失什麼…" } } },
-      "naval-leverage": { "label": "人生槓桿與選擇", "desc": "納瓦爾式視角：特定知識、槓桿、長期主義與選擇", "submit": "給我方向", "fields": {
-        "situation": { "label": "你的處境", "placeholder": "例：30 歲、上班族、想累積資產但不知方向" },
-        "question": { "label": "你想釐清的問題", "placeholder": "例：該專精一技還是多方嘗試？怎麼建立被動收入？" } } }
+      "resume-optimize": {
+        "label": "履歷優化",
+        "desc": "貼入 JD，AI 雙模型分析並重寫 ATS 優化履歷",
+        "submit": "開始優化"
+      },
+      "cover-letter": {
+        "label": "求職信撰寫",
+        "desc": "選模板、輸入 JD 與經歷，Claude 生成完整求職信",
+        "submit": "生成求職信"
+      },
+      "interview-practice": {
+        "label": "面試問題練習",
+        "desc": "模擬面試常見問題 + STAR 框架建議回答",
+        "submit": "生成面試題",
+        "fields": {
+          "jd": {
+            "label": "目標職缺 JD",
+            "placeholder": "貼入職缺描述，AI 更精準…"
+          },
+          "background": {
+            "label": "個人背景簡述",
+            "placeholder": "簡述你的學歷、工作年資、主要技能…"
+          }
+        }
+      },
+      "salary-negotiation": {
+        "label": "薪資談判話術",
+        "desc": "提供完整談判劇本，幫你爭取應得的薪資",
+        "submit": "生成談判話術",
+        "fields": {
+          "position": {
+            "label": "目標職位與產業",
+            "placeholder": "例如：行銷企劃／科技業"
+          },
+          "currentSalary": {
+            "label": "目前薪資（月薪）",
+            "placeholder": "例如：35,000"
+          },
+          "targetSalary": {
+            "label": "期望薪資（月薪）",
+            "placeholder": "例如：45,000"
+          },
+          "highlights": {
+            "label": "個人亮點與成就",
+            "placeholder": "你的競爭力、過去成果、特殊技能…"
+          }
+        }
+      },
+      "resume-clinic": {
+        "label": "履歷健檢診斷",
+        "desc": "像 HR 一樣直說：這份 JD 該不該投、勝算幾成、卡在哪、怎麼補",
+        "submit": "開始健檢",
+        "fields": {
+          "jd": {
+            "label": "目標職缺 JD",
+            "placeholder": "貼上職缺描述…"
+          },
+          "background": {
+            "label": "你的背景 / 履歷重點",
+            "placeholder": "學歷、年資、主要技能、代表作…"
+          },
+          "company": {
+            "label": "目標公司（選填）",
+            "placeholder": "例如：某外商、新創、上市公司…"
+          }
+        }
+      },
+      "career-advisor": {
+        "label": "升學擇業顧問",
+        "desc": "接地氣分析科系、行業、城市選擇，給實用不灌雞湯的建議",
+        "submit": "給我建議",
+        "fields": {
+          "situation": {
+            "label": "你的處境",
+            "options": [
+              "高中生選科系",
+              "大學生選方向/轉系",
+              "應屆畢業選行業",
+              "在職轉職",
+              "考研/考公猶豫"
+            ]
+          },
+          "background": {
+            "label": "背景條件",
+            "placeholder": "科系、成績/級分、年資、所在城市、家庭考量…"
+          },
+          "options": {
+            "label": "正在考慮的選項",
+            "placeholder": "例如：資工 vs 電機、留在台北 vs 回中部…"
+          },
+          "concern": {
+            "label": "最在意的點",
+            "placeholder": "例如：薪資、穩定性、興趣、發展性…"
+          }
+        }
+      },
+      "email-draft": {
+        "label": "Email 草稿",
+        "desc": "道歉信、催款、跨部門溝通，一鍵生成得體 Email",
+        "submit": "生成 Email",
+        "fields": {
+          "type": {
+            "label": "Email 類型",
+            "options": [
+              "道歉信",
+              "催款/追款",
+              "跨部門請求協助",
+              "拒絕請求",
+              "匯報進度",
+              "感謝信",
+              "其他"
+            ]
+          },
+          "relationship": {
+            "label": "收件人與關係",
+            "placeholder": "例如：主管（直屬）、客戶、跨部門同事…"
+          },
+          "context": {
+            "label": "情境說明",
+            "placeholder": "描述事情背景與你想達到的目的…"
+          },
+          "keyPoints": {
+            "label": "需強調的重點（選填）",
+            "placeholder": "例如：強調誠意、保持專業但不卑微…"
+          }
+        }
+      },
+      "report-writing": {
+        "label": "報告／提案撰寫",
+        "desc": "輸入主題與重點，AI 生成完整報告結構與內容",
+        "submit": "生成報告",
+        "fields": {
+          "topic": {
+            "label": "報告主題",
+            "placeholder": "例如：Q3 銷售成果分析"
+          },
+          "context": {
+            "label": "背景情境",
+            "placeholder": "說明報告的目的與背景…"
+          },
+          "mainPoints": {
+            "label": "主要論點／數據",
+            "placeholder": "列出你有的數據、結論或論點…"
+          },
+          "audience": {
+            "label": "目標受眾",
+            "placeholder": "例如：高階主管、客戶、全體員工…"
+          }
+        }
+      },
+      "presentation-outline": {
+        "label": "簡報大綱生成",
+        "desc": "主題 + 受眾 → AI 生成每頁大綱與視覺化建議",
+        "submit": "生成簡報大綱",
+        "fields": {
+          "topic": {
+            "label": "簡報主題",
+            "placeholder": "例如：2025 年品牌策略規劃"
+          },
+          "audience": {
+            "label": "目標受眾",
+            "placeholder": "例如：董事會、潛在客戶…"
+          },
+          "coreMessage": {
+            "label": "核心訊息（聽眾應記住的）",
+            "placeholder": "用一句話說出你最想傳達的訊息…"
+          },
+          "duration": {
+            "label": "簡報時長",
+            "placeholder": "例如：10 分鐘、30 分鐘"
+          }
+        }
+      },
+      "meeting-minutes": {
+        "label": "會議記錄整理",
+        "desc": "貼入雜亂的會議記錄，自動整理成結構化文件",
+        "submit": "整理會議記錄",
+        "fields": {
+          "rawNotes": {
+            "label": "原始會議記錄",
+            "placeholder": "貼入你的會議記錄文字（可以很雜亂）…"
+          }
+        }
+      },
+      "workplace-phrases": {
+        "label": "職場話術",
+        "desc": "被刁難主管、拒絕額外工作…提供多套應對話術",
+        "submit": "生成話術建議",
+        "fields": {
+          "scenario": {
+            "label": "場景類型",
+            "options": [
+              "被主管刁難",
+              "拒絕額外工作",
+              "向上管理",
+              "應對搶功同事",
+              "提出反對意見",
+              "談論加薪",
+              "其他"
+            ]
+          },
+          "context": {
+            "label": "具體情境描述",
+            "placeholder": "說明具體發生了什麼事…"
+          },
+          "goal": {
+            "label": "期望達到的結果",
+            "placeholder": "你希望這次溝通達成什麼目標…"
+          }
+        }
+      },
+      "workplace-relationship": {
+        "label": "職場關係軍師",
+        "desc": "讀懂主管／同事／下屬的動機，給相處與向上管理策略",
+        "submit": "分析關係策略",
+        "fields": {
+          "role": {
+            "label": "對象",
+            "options": [
+              "直屬主管",
+              "老闆 / 高層",
+              "平行同事",
+              "下屬",
+              "前輩 / 導師",
+              "跨部門窗口"
+            ]
+          },
+          "situation": {
+            "label": "具體情況",
+            "placeholder": "描述對方的行為、你們的互動、目前的卡點…"
+          },
+          "goal": {
+            "label": "你想達成的目標",
+            "placeholder": "例如：取得信任、爭取資源、化解誤會、保護自己…"
+          }
+        }
+      },
+      "performance-review": {
+        "label": "績效自評撰寫",
+        "desc": "輸入工作內容與成果，AI 幫你寫出有說服力的自評",
+        "submit": "生成績效自評",
+        "fields": {
+          "position": {
+            "label": "職位與部門",
+            "placeholder": "例如：行銷部 數位行銷專員"
+          },
+          "workContent": {
+            "label": "本期主要工作內容",
+            "placeholder": "列出你這期負責的主要工作項目…"
+          },
+          "achievements": {
+            "label": "重要成果（盡量含數字）",
+            "placeholder": "例如：完成 XX 項目，成長 XX%…"
+          },
+          "challenges": {
+            "label": "克服的挑戰（選填）",
+            "placeholder": "說明你遇到的困難與如何解決…"
+          }
+        }
+      },
+      "promotion-letter": {
+        "label": "升職申請信",
+        "desc": "撰寫有力的升職申請信，突出你的貢獻與價值",
+        "submit": "生成升職申請信",
+        "fields": {
+          "positions": {
+            "label": "目前職位 → 申請職位",
+            "placeholder": "例如：業務專員 → 業務主任"
+          },
+          "background": {
+            "label": "個人背景與年資",
+            "placeholder": "例如：在職 3 年，理工背景…"
+          },
+          "achievements": {
+            "label": "重要貢獻與成就",
+            "placeholder": "列出你對公司的具體貢獻（含數字更好）…"
+          },
+          "reason": {
+            "label": "申請理由",
+            "placeholder": "為什麼你是這個職位的最佳人選…"
+          }
+        }
+      },
+      "quantify-work": {
+        "label": "工作內容量化",
+        "desc": "把「我負責 XXX」變成有數字、有影響力的亮點句",
+        "submit": "量化我的工作",
+        "fields": {
+          "jobContent": {
+            "label": "工作描述（每行一條）",
+            "placeholder": "例如：\n負責社群媒體管理\n協助舉辦年度活動\n處理客戶投訴"
+          }
+        }
+      },
+      "munger-mental-models": {
+        "label": "多元思維決策",
+        "desc": "芒格式多元思維模型 + 反向思考，拆解你的決策與盲點",
+        "submit": "開始分析",
+        "fields": {
+          "decision": {
+            "label": "你要做的決定 / 問題",
+            "placeholder": "例：該不該離職創業？要不要接這個案子？"
+          },
+          "context": {
+            "label": "背景與限制",
+            "placeholder": "相關資訊、資源、時間、在意的點…"
+          },
+          "options": {
+            "label": "正在考慮的選項",
+            "placeholder": "列出你目前想到的幾個選擇"
+          }
+        }
+      },
+      "first-principles": {
+        "label": "第一性原理拆解",
+        "desc": "馬斯克式思考：拆到根本事實，再從零重建解法",
+        "submit": "拆解問題",
+        "fields": {
+          "problem": {
+            "label": "要解決的問題",
+            "placeholder": "例：如何把成本降一半？如何快速學會某技能？"
+          },
+          "assumptions": {
+            "label": "現有做法 / 既有假設",
+            "placeholder": "目前大家怎麼做、你預設的限制是什麼…"
+          }
+        }
+      },
+      "value-investing": {
+        "label": "價值投資視角",
+        "desc": "巴菲特式評估：能力圈、護城河、安全邊際（非投資建議）",
+        "submit": "評估機會",
+        "fields": {
+          "target": {
+            "label": "標的 / 生意 / 機會",
+            "placeholder": "例：某檔股票、加盟一間店、投資朋友的新創"
+          },
+          "info": {
+            "label": "已知資訊",
+            "placeholder": "商業模式、財務、競爭、價格、你了解的程度…"
+          },
+          "concern": {
+            "label": "最想釐清的問題",
+            "placeholder": "例：現在的價格合理嗎？風險在哪？"
+          }
+        }
+      },
+      "antifragile-risk": {
+        "label": "反脆弱風險評估",
+        "desc": "塔勒布式風險思考：下行風險、不對稱性、保命底線",
+        "submit": "評估風險",
+        "fields": {
+          "decision": {
+            "label": "要評估的決策 / 計畫",
+            "placeholder": "例：把存款 all in 一個項目、辭職全職做某件事"
+          },
+          "downside": {
+            "label": "你擔心的最壞情況",
+            "placeholder": "最糟可能發生什麼、會損失什麼…"
+          }
+        }
+      },
+      "naval-leverage": {
+        "label": "人生槓桿與選擇",
+        "desc": "納瓦爾式視角：特定知識、槓桿、長期主義與選擇",
+        "submit": "給我方向",
+        "fields": {
+          "situation": {
+            "label": "你的處境",
+            "placeholder": "例：30 歲、上班族、想累積資產但不知方向"
+          },
+          "question": {
+            "label": "你想釐清的問題",
+            "placeholder": "例：該專精一技還是多方嘗試？怎麼建立被動收入？"
+          }
+        }
+      }
     }
   },
   "Pipeline": {
@@ -1588,9 +2220,19 @@
     "enabled": "已啟用",
     "disabled": "已停用",
     "frequency": "頻率",
-    "freqDaily": "每日", "freqWeekly": "每週", "freqMonthly": "每月",
+    "freqDaily": "每日",
+    "freqWeekly": "每週",
+    "freqMonthly": "每月",
     "weekday": "星期幾",
-    "weekdayOpt": { "0": "星期日", "1": "星期一", "2": "星期二", "3": "星期三", "4": "星期四", "5": "星期五", "6": "星期六" },
+    "weekdayOpt": {
+      "0": "星期日",
+      "1": "星期一",
+      "2": "星期二",
+      "3": "星期三",
+      "4": "星期四",
+      "5": "星期五",
+      "6": "星期六"
+    },
     "monthDay": "每月第幾日",
     "runTime": "執行時間",
     "hourUnit": "{h}時",
@@ -1609,17 +2251,50 @@
     "statPending": "{count} 待執行",
     "untitledCampaign": "未命名專案",
     "steps": {
-      "1": { "name": "蒐集資訊", "desc": "新聞/網頁/地圖/評論" },
-      "2": { "name": "公司資料", "desc": "來自行銷自動化專案" },
-      "3": { "name": "分析資料", "desc": "SWOT/競爭對手/市場" },
-      "4": { "name": "文案產出", "desc": "多平台行銷文案" },
-      "5": { "name": "圖片腳本", "desc": "視覺腳本生成" },
-      "6": { "name": "圖片產出", "desc": "AI 圖片生成" },
-      "7": { "name": "影片腳本", "desc": "分鏡腳本生成" },
-      "8": { "name": "影片產出", "desc": "AI 影片生成" },
-      "9": { "name": "上傳平台", "desc": "自動上傳各平台" },
-      "10": { "name": "潛在客戶行銷", "desc": "電話 / Email 批次行銷" },
-      "11": { "name": "主播行銷", "desc": "HeyGen 主播影片" }
+      "1": {
+        "name": "蒐集資訊",
+        "desc": "新聞/網頁/地圖/評論"
+      },
+      "2": {
+        "name": "公司資料",
+        "desc": "來自行銷自動化專案"
+      },
+      "3": {
+        "name": "分析資料",
+        "desc": "SWOT/競爭對手/市場"
+      },
+      "4": {
+        "name": "文案產出",
+        "desc": "多平台行銷文案"
+      },
+      "5": {
+        "name": "圖片腳本",
+        "desc": "視覺腳本生成"
+      },
+      "6": {
+        "name": "圖片產出",
+        "desc": "AI 圖片生成"
+      },
+      "7": {
+        "name": "影片腳本",
+        "desc": "分鏡腳本生成"
+      },
+      "8": {
+        "name": "影片產出",
+        "desc": "AI 影片生成"
+      },
+      "9": {
+        "name": "上傳平台",
+        "desc": "自動上傳各平台"
+      },
+      "10": {
+        "name": "潛在客戶行銷",
+        "desc": "電話 / Email 批次行銷"
+      },
+      "11": {
+        "name": "主播行銷",
+        "desc": "HeyGen 主播影片"
+      }
     },
     "log": {
       "start": "開始執行：{name}",
@@ -1641,412 +2316,1422 @@
     },
     "out": {
       "loadedSkip": "已從行銷專案載入，略過重新執行",
-      "collectFailed": "蒐集失敗", "collectDone": "蒐集完成",
-      "analyzeFailed": "分析失敗（HTTP {status}）", "analyzeDone": "分析完成", "simDone": "消費者模擬完成",
-      "copyFailed": "文案生成失敗", "copyDone": "文案完成 · {count} 份",
-      "imgScriptFailed": "圖片腳本失敗", "imgScriptDone": "圖片腳本完成 · {count} 份", "noImgScript": "無圖片腳本，請先執行單元 5",
+      "collectFailed": "蒐集失敗",
+      "collectDone": "蒐集完成",
+      "analyzeFailed": "分析失敗（HTTP {status}）",
+      "analyzeDone": "分析完成",
+      "simDone": "消費者模擬完成",
+      "copyFailed": "文案生成失敗",
+      "copyDone": "文案完成 · {count} 份",
+      "imgScriptFailed": "圖片腳本失敗",
+      "imgScriptDone": "圖片腳本完成 · {count} 份",
+      "noImgScript": "無圖片腳本，請先執行單元 5",
       "imgDone": "圖片生成完成 · {count} 張",
-      "videoScriptFailed": "影片腳本失敗", "videoScriptDone": "影片腳本完成 · {count} 份", "noVideoScript": "無影片腳本，請先執行單元 7",
-      "videoSubmitFailed": "影片提交失敗", "aborted": "已中止", "videoDone": "影片生成完成", "videoFailed": "影片生成失敗", "videoTimeout": "影片生成逾時",
+      "videoScriptFailed": "影片腳本失敗",
+      "videoScriptDone": "影片腳本完成 · {count} 份",
+      "noVideoScript": "無影片腳本，請先執行單元 7",
+      "videoSubmitFailed": "影片提交失敗",
+      "aborted": "已中止",
+      "videoDone": "影片生成完成",
+      "videoFailed": "影片生成失敗",
+      "videoTimeout": "影片生成逾時",
       "noUploadPlatforms": "無上傳平台設定，請在行銷自動化中設定 Unit 9 平台",
-      "uploadFailed": "上傳失敗", "waitAnchorUpload": "{platforms}（等待主播影片生成後上傳）", "uploadDone": "上傳完成",
+      "uploadFailed": "上傳失敗",
+      "waitAnchorUpload": "{platforms}（等待主播影片生成後上傳）",
+      "uploadDone": "上傳完成",
       "defaultCallScript": "您好，感謝您對我們的關注。",
-      "phoneResult": "電話：{success}/{total} 成功", "phoneFailed": "電話失敗：{error}",
+      "phoneResult": "電話：{success}/{total} 成功",
+      "phoneFailed": "電話失敗：{error}",
       "defaultEmailSubject": "行銷訊息",
-      "emailResult": "Email：{success}/{total} 成功", "emailFailed": "Email 失敗：{error}",
-      "noLeadsList": "無電話或 Email 名單，請在行銷自動化中設定 Unit 10", "leadsDone": "潛在客戶行銷完成",
+      "emailResult": "Email：{success}/{total} 成功",
+      "emailFailed": "Email 失敗：{error}",
+      "noLeadsList": "無電話或 Email 名單，請在行銷自動化中設定 Unit 10",
+      "leadsDone": "潛在客戶行銷完成",
       "noAnchorConfig": "無主播設定，請在行銷自動化中設定 Unit 11 Avatar & Voice ID",
       "defaultAnchorStyle": "專業親切",
-      "anchorScriptGenFailed": "主播腳本自動生成失敗：{error}", "unknownError": "未知錯誤",
+      "anchorScriptGenFailed": "主播腳本自動生成失敗：{error}",
+      "unknownError": "未知錯誤",
       "heygenSubmitFailed": "HeyGen 提交失敗",
-      "uploadedTo": "已上傳至 {platforms}", "uploadFailedShort": "上傳失敗：{error}",
-      "anchorVideoDone": "主播影片完成", "anchorVideoFailed": "主播影片生成失敗", "heygenTimeout": "HeyGen 逾時",
+      "uploadedTo": "已上傳至 {platforms}",
+      "uploadFailedShort": "上傳失敗：{error}",
+      "anchorVideoDone": "主播影片完成",
+      "anchorVideoFailed": "主播影片生成失敗",
+      "heygenTimeout": "HeyGen 逾時",
       "unitNotSupported": "Unit {unitId} 不支援自動執行"
     }
   },
   "Prospect": {
     "title": "潛在客戶行銷",
     "subtitle": "自動蒐集組織 → AI 篩選 + 分類 → 距離計算 → 電話撥打 / Email 寄送",
-    "tabPhone": "電話行銷", "tabEmail": "Email 行銷", "tabSchedule": "定時執行",
-    "cats": { "factory": "製造/工廠", "hotel": "住宿/民宿", "restaurant": "餐飲/食品", "financial": "金融/保險", "retail": "零售/商店", "healthcare": "醫療/診所", "education": "教育/培訓", "realestate": "房地產", "logistics": "物流/運輸", "other": "其他" },
-    "cond": { "mobile": "行動電話", "landline": "座機", "empRange": "{min}–{max}人", "empMin": "≥{min}人", "empMax": "≤{max}人", "catchAll": "其他（全部符合）", "keyword": "關鍵字：{tag}", "all": "（全部符合）" },
-    "voice": { "mlFemale": "多語言，女", "mlMale": "多語言，男", "brMale": "英式英語，男", "usFemale": "美式英語，女" },
-    "def": { "script": "預設腳本", "scriptText": "您好，我們是...", "template": "預設模板", "generalCustomer": "一般客戶", "generalCustomerDesc": "一般潛在客戶或不明身份", "marketingTeam": "行銷團隊", "scriptN": "腳本 {n}", "ruleN": "規則 {n}", "templateN": "模板 {n}", "categoryN": "分類 {n}" },
-    "rule": { "namePlaceholder": "規則名稱", "phoneType": "電話類型", "any": "任何", "aiCategory": "AI 分類", "anyCategory": "— 任何分類 —", "minEmp": "最少人數（0=不限）", "maxEmp": "最多人數（0=不限）", "maxDist": "距離上限 km（0=不限）", "customTag": "自訂關鍵字（名稱或原始分類含此字即符合）", "customTagPlaceholder": "例如：美妝、工廠…（空白或填「其他」=全部符合，可做兜底規則）", "useScript": "使用腳本", "noCall": "— 不撥打 —", "condPrefix": "條件：" },
-    "err": { "noEmailOrgs": "所選規則沒有符合條件且有 Email 的組織", "noKeywords": "請填寫搜尋關鍵字", "collectFailed": "蒐集失敗", "aborted": "已中止", "aiFailed": "AI 分析失敗" },
-    "msg": { "collected": "已蒐集 {count} 字元", "selected": "入選 {selected} / {total} 家", "called": "撥出 {count} 支" },
+    "tabPhone": "電話行銷",
+    "tabEmail": "Email 行銷",
+    "tabSchedule": "定時執行",
+    "cats": {
+      "factory": "製造/工廠",
+      "hotel": "住宿/民宿",
+      "restaurant": "餐飲/食品",
+      "financial": "金融/保險",
+      "retail": "零售/商店",
+      "healthcare": "醫療/診所",
+      "education": "教育/培訓",
+      "realestate": "房地產",
+      "logistics": "物流/運輸",
+      "other": "其他"
+    },
+    "cond": {
+      "mobile": "行動電話",
+      "landline": "座機",
+      "empRange": "{min}–{max}人",
+      "empMin": "≥{min}人",
+      "empMax": "≤{max}人",
+      "catchAll": "其他（全部符合）",
+      "keyword": "關鍵字：{tag}",
+      "all": "（全部符合）"
+    },
+    "voice": {
+      "mlFemale": "多語言，女",
+      "mlMale": "多語言，男",
+      "brMale": "英式英語，男",
+      "usFemale": "美式英語，女"
+    },
+    "def": {
+      "script": "預設腳本",
+      "scriptText": "您好，我們是...",
+      "template": "預設模板",
+      "generalCustomer": "一般客戶",
+      "generalCustomerDesc": "一般潛在客戶或不明身份",
+      "marketingTeam": "行銷團隊",
+      "scriptN": "腳本 {n}",
+      "ruleN": "規則 {n}",
+      "templateN": "模板 {n}",
+      "categoryN": "分類 {n}"
+    },
+    "rule": {
+      "namePlaceholder": "規則名稱",
+      "phoneType": "電話類型",
+      "any": "任何",
+      "aiCategory": "AI 分類",
+      "anyCategory": "— 任何分類 —",
+      "minEmp": "最少人數（0=不限）",
+      "maxEmp": "最多人數（0=不限）",
+      "maxDist": "距離上限 km（0=不限）",
+      "customTag": "自訂關鍵字（名稱或原始分類含此字即符合）",
+      "customTagPlaceholder": "例如：美妝、工廠…（空白或填「其他」=全部符合，可做兜底規則）",
+      "useScript": "使用腳本",
+      "noCall": "— 不撥打 —",
+      "condPrefix": "條件："
+    },
+    "err": {
+      "noEmailOrgs": "所選規則沒有符合條件且有 Email 的組織",
+      "noKeywords": "請填寫搜尋關鍵字",
+      "collectFailed": "蒐集失敗",
+      "aborted": "已中止",
+      "aiFailed": "AI 分析失敗"
+    },
+    "msg": {
+      "collected": "已蒐集 {count} 字元",
+      "selected": "入選 {selected} / {total} 家",
+      "called": "撥出 {count} 支"
+    },
     "sched": {
-      "enable": "啟用定時執行", "enableHint": "系統每小時自動檢查，依設定時間觸發蒐集＋篩選",
-      "mode": "執行模式", "modeBoth": "兩者都執行",
+      "enable": "啟用定時執行",
+      "enableHint": "系統每小時自動檢查，依設定時間觸發蒐集＋篩選",
+      "mode": "執行模式",
+      "modeBoth": "兩者都執行",
       "modePhoneHint": "系統完成蒐集篩選後，將以 Telegram 通知您進行電話撥打",
       "modeEmailHint": "系統完成蒐集篩選後，自動依規則批次寄送 Email",
       "modeBothHint": "系統完成蒐集篩選後，自動寄送 Email 並以 Telegram 通知您撥打電話",
-      "frequency": "執行頻率", "daily": "每天", "weekly": "每週", "monthly": "每月",
-      "weekday": "執行星期", "dow": { "0": "日", "1": "一", "2": "二", "3": "三", "4": "四", "5": "五", "6": "六" },
-      "monthDay": "每月幾號", "monthDayHint": "最大 28（避免月份天數問題）",
-      "time": "執行時間", "hourUnit": "{h} 時", "minUnit": "{m} 分",
-      "statusTitle": "執行狀態", "lastRun": "上次執行：", "nextRun": "下次執行：",
-      "lastResult": "上次結果：蒐集 {total} 家 → 入選 ", "lastResultSuffix": " 家",
-      "saving": "儲存中…", "saved": "已儲存！", "save": "儲存排程設定",
+      "frequency": "執行頻率",
+      "daily": "每天",
+      "weekly": "每週",
+      "monthly": "每月",
+      "weekday": "執行星期",
+      "dow": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      },
+      "monthDay": "每月幾號",
+      "monthDayHint": "最大 28（避免月份天數問題）",
+      "time": "執行時間",
+      "hourUnit": "{h} 時",
+      "minUnit": "{m} 分",
+      "statusTitle": "執行狀態",
+      "lastRun": "上次執行：",
+      "nextRun": "下次執行：",
+      "lastResult": "上次結果：蒐集 {total} 家 → 入選 ",
+      "lastResultSuffix": " 家",
+      "saving": "儲存中…",
+      "saved": "已儲存！",
+      "save": "儲存排程設定",
       "saveHint": "儲存後系統每小時自動檢查，到時間即觸發執行。結果透過 Telegram 通知。"
     },
-    "s1": { "title": "Step 1 — 蒐集來源", "keywords": "搜尋關鍵字 *", "keywordsPlaceholder": "每行或逗號分隔一個關鍵字，各自獨立搜尋\n例如：\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea", "keywordsHint": "多個關鍵字會分別搜尋，結果合併去重", "location": "地區（選填）", "locationPlaceholder": "例如：台南市、新竹縣", "limit": "每個關鍵字最多筆數", "limitHint": "多個關鍵字會分別搜尋並合併，總筆數 = 筆數 × 關鍵字數", "channels": "蒐集管道" },
-    "src": { "map": "地圖", "web": "網頁" },
-    "s2": { "title": "Step 2 — 篩選條件", "criteria": "篩選條件（AI 理解）", "criteriaPlaceholder": "例如：只要製造業和工廠；員工人數 50 人以上；排除小型個人工作室", "minEmp": "最低員工人數", "unlimited": "0 = 不限" },
-    "s3": { "title": "Step 3 — 距離設定", "enable": "啟用距離篩選", "enableHint": "關閉時不依距離淘汰，仍顯示最近門市距離", "noBranches": "尚未設定門市。請前往「行銷自動化 → 公司資料 → 門市/分公司」新增。", "branchesLoaded": "已載入 <b>{total}</b> 個門市，其中 <b>{coords}</b> 個有經緯度可計算距離。", "maxDist": "距離上限（km）", "maxDistPlaceholder": "例如：5", "maxDistHint": "超過此距離的組織將被淘汰（需門市有設定經緯度）。" },
-    "s4p": { "title": "Step 4 — 語音腳本", "scriptName": "腳本名稱", "scriptTextPlaceholder": "輸入語音腳本內容...", "addScript": "新增腳本" },
-    "s5p": { "title": "Step 5 — 撥打規則", "hint1": "依序比對每條規則，<b>第一個符合的規則</b>勝出。可按電話類型、AI 分類、人數、距離等任意組合。", "hint2": "未匹配任何規則的組織將歸入「未分配」群組，不會自動撥打。", "empty": "尚未建立規則，點擊「新增規則」開始設定", "addRule": "新增規則" },
-    "s6p": { "title": "Step 6 — 撥話設定", "callerId": "Bird 顯示號碼（Caller ID）", "callerIdHint": " — 接收方看到的來電號碼（你的公司號碼）", "callerIdWarn": "⚠️ 未填寫則無法撥打，請填入 Bird 帳號中已驗證的號碼", "dialList": "待撥清單（共 {count} 支有效號碼）", "fromFilter": " — 來自篩選結果", "needRules": "請先在 Step 5 建立撥打規則", "dialable": "{has} 支可撥 / {no} 支無號碼", "andMore": "…還有 {count} 支", "noPhonePrefix": "無號碼：", "unmappedNoCall": "未分配（無匹配規則）{count} 家 — 不會被撥打", "noSelected": "篩選後無入選組織，無待撥號碼", "runFirst": "執行 Pipeline 後，待撥清單將顯示於此" },
-    "s4e": { "title": "Step 4 — Email 腳本模板", "hint": "定義 Email 內容模板，在發送規則中選用。", "templateName": "模板名稱", "subject": "Email 主旨", "body": "Email 內文（支援換行）", "addTemplate": "新增模板" },
-    "s5e": { "title": "Step 5 — 發送規則", "hint": "自訂分類名稱與條件，指定套用哪個模板。依序比對，第一個符合的規則生效。", "categoryName": "分類名稱（例如：美妝博主）", "tagPlaceholder": "例如：美妝、工廠、博主（空白不限）", "applyTemplate": "套用模板" },
-    "s6e": { "title": "Step 6 — 寄件設定", "fromName": "寄件人名稱", "fromEmail": "寄件人 Email（Resend 已驗證網域）", "envNote": "需設定環境變數：" },
-    "run": { "running": "執行中…", "exec": "執行 Pipeline", "collect": "蒐集", "analyze": "分析", "call": "撥打" },
-    "stat": { "total": "蒐集總數", "selected": "入選", "rejected": "淘汰" },
-    "email": { "sendTitle": "Email 寄送", "noEmailTitle": "⚠️ 未自動抓到任何 Email", "noEmailHint": "Google 地圖不提供 Email 資料。建議在 Step 1 蒐集管道加選 <b>Facebook</b> 或 <b>網頁</b>，系統會嘗試從廠商資料中萃取 Email。", "manualHint": "您也可以在下方表格手動填入各組織的 Email。", "perOrgEmail": "各組織 Email", "filledCount": "{filled}/{total} 筆已填", "templateLabel": "模板：{name}", "notSet": "未設定", "hasEmail": "{count} 個有 Email", "sending": "寄送中…", "sendN": "寄送 {count} 封", "subjectPrefix": "主旨：" },
-    "res": { "success": "✓ 成功 {n}", "fail": "✗ 失敗 {n}" },
-    "phone": { "groupTitle": "規則分組撥打", "matchedPhones": "{matched} 家 · {phones} 支有效電話", "calling": "撥打中…", "callN": "撥打 {count} 支", "noScript": "未指定腳本", "scriptPrefix": "腳本：", "noPhone": "無電話", "unmappedCount": "未分配（無匹配規則）{count} 家", "rejectedCount": "淘汰組織 {count} 家（點擊展開）", "selectedListCount": "入選完整列表 {count} 家", "colOrg": "組織", "colCategory": "分類", "colPhone": "電話", "colRule": "規則", "unassigned": "未分配" }
+    "s1": {
+      "title": "Step 1 — 蒐集來源",
+      "keywords": "搜尋關鍵字 *",
+      "keywordsPlaceholder": "每行或逗號分隔一個關鍵字，各自獨立搜尋\n例如：\nMILKTEA\nTrà Sữa Trân Châu\nFeeling Tea",
+      "keywordsHint": "多個關鍵字會分別搜尋，結果合併去重",
+      "location": "地區（選填）",
+      "locationPlaceholder": "例如：台南市、新竹縣",
+      "limit": "每個關鍵字最多筆數",
+      "limitHint": "多個關鍵字會分別搜尋並合併，總筆數 = 筆數 × 關鍵字數",
+      "channels": "蒐集管道"
+    },
+    "src": {
+      "map": "地圖",
+      "web": "網頁"
+    },
+    "s2": {
+      "title": "Step 2 — 篩選條件",
+      "criteria": "篩選條件（AI 理解）",
+      "criteriaPlaceholder": "例如：只要製造業和工廠；員工人數 50 人以上；排除小型個人工作室",
+      "minEmp": "最低員工人數",
+      "unlimited": "0 = 不限"
+    },
+    "s3": {
+      "title": "Step 3 — 距離設定",
+      "enable": "啟用距離篩選",
+      "enableHint": "關閉時不依距離淘汰，仍顯示最近門市距離",
+      "noBranches": "尚未設定門市。請前往「行銷自動化 → 公司資料 → 門市/分公司」新增。",
+      "branchesLoaded": "已載入 <b>{total}</b> 個門市，其中 <b>{coords}</b> 個有經緯度可計算距離。",
+      "maxDist": "距離上限（km）",
+      "maxDistPlaceholder": "例如：5",
+      "maxDistHint": "超過此距離的組織將被淘汰（需門市有設定經緯度）。"
+    },
+    "s4p": {
+      "title": "Step 4 — 語音腳本",
+      "scriptName": "腳本名稱",
+      "scriptTextPlaceholder": "輸入語音腳本內容...",
+      "addScript": "新增腳本"
+    },
+    "s5p": {
+      "title": "Step 5 — 撥打規則",
+      "hint1": "依序比對每條規則，<b>第一個符合的規則</b>勝出。可按電話類型、AI 分類、人數、距離等任意組合。",
+      "hint2": "未匹配任何規則的組織將歸入「未分配」群組，不會自動撥打。",
+      "empty": "尚未建立規則，點擊「新增規則」開始設定",
+      "addRule": "新增規則"
+    },
+    "s6p": {
+      "title": "Step 6 — 撥話設定",
+      "callerId": "Bird 顯示號碼（Caller ID）",
+      "callerIdHint": " — 接收方看到的來電號碼（你的公司號碼）",
+      "callerIdWarn": "⚠️ 未填寫則無法撥打，請填入 Bird 帳號中已驗證的號碼",
+      "dialList": "待撥清單（共 {count} 支有效號碼）",
+      "fromFilter": " — 來自篩選結果",
+      "needRules": "請先在 Step 5 建立撥打規則",
+      "dialable": "{has} 支可撥 / {no} 支無號碼",
+      "andMore": "…還有 {count} 支",
+      "noPhonePrefix": "無號碼：",
+      "unmappedNoCall": "未分配（無匹配規則）{count} 家 — 不會被撥打",
+      "noSelected": "篩選後無入選組織，無待撥號碼",
+      "runFirst": "執行 Pipeline 後，待撥清單將顯示於此"
+    },
+    "s4e": {
+      "title": "Step 4 — Email 腳本模板",
+      "hint": "定義 Email 內容模板，在發送規則中選用。",
+      "templateName": "模板名稱",
+      "subject": "Email 主旨",
+      "body": "Email 內文（支援換行）",
+      "addTemplate": "新增模板"
+    },
+    "s5e": {
+      "title": "Step 5 — 發送規則",
+      "hint": "自訂分類名稱與條件，指定套用哪個模板。依序比對，第一個符合的規則生效。",
+      "categoryName": "分類名稱（例如：美妝博主）",
+      "tagPlaceholder": "例如：美妝、工廠、博主（空白不限）",
+      "applyTemplate": "套用模板"
+    },
+    "s6e": {
+      "title": "Step 6 — 寄件設定",
+      "fromName": "寄件人名稱",
+      "fromEmail": "寄件人 Email（Resend 已驗證網域）",
+      "envNote": "需設定環境變數："
+    },
+    "run": {
+      "running": "執行中…",
+      "exec": "執行 Pipeline",
+      "collect": "蒐集",
+      "analyze": "分析",
+      "call": "撥打"
+    },
+    "stat": {
+      "total": "蒐集總數",
+      "selected": "入選",
+      "rejected": "淘汰"
+    },
+    "email": {
+      "sendTitle": "Email 寄送",
+      "noEmailTitle": "⚠️ 未自動抓到任何 Email",
+      "noEmailHint": "Google 地圖不提供 Email 資料。建議在 Step 1 蒐集管道加選 <b>Facebook</b> 或 <b>網頁</b>，系統會嘗試從廠商資料中萃取 Email。",
+      "manualHint": "您也可以在下方表格手動填入各組織的 Email。",
+      "perOrgEmail": "各組織 Email",
+      "filledCount": "{filled}/{total} 筆已填",
+      "templateLabel": "模板：{name}",
+      "notSet": "未設定",
+      "hasEmail": "{count} 個有 Email",
+      "sending": "寄送中…",
+      "sendN": "寄送 {count} 封",
+      "subjectPrefix": "主旨："
+    },
+    "res": {
+      "success": "✓ 成功 {n}",
+      "fail": "✗ 失敗 {n}"
+    },
+    "phone": {
+      "groupTitle": "規則分組撥打",
+      "matchedPhones": "{matched} 家 · {phones} 支有效電話",
+      "calling": "撥打中…",
+      "callN": "撥打 {count} 支",
+      "noScript": "未指定腳本",
+      "scriptPrefix": "腳本：",
+      "noPhone": "無電話",
+      "unmappedCount": "未分配（無匹配規則）{count} 家",
+      "rejectedCount": "淘汰組織 {count} 家（點擊展開）",
+      "selectedListCount": "入選完整列表 {count} 家",
+      "colOrg": "組織",
+      "colCategory": "分類",
+      "colPhone": "電話",
+      "colRule": "規則",
+      "unassigned": "未分配"
+    }
   },
   "MA": {
-    "status": { "running": "執行中", "done": "完成", "error": "錯誤" },
+    "status": {
+      "running": "執行中",
+      "done": "完成",
+      "error": "錯誤"
+    },
     "ct": {
-      "map": { "label": "地圖搜尋", "desc": "組織: 公司/門市等" },
-      "tiktok": { "label": "TikTok", "desc": "影音搜尋 / 評論" },
-      "facebook": { "label": "Facebook", "desc": "內文 / 評論" },
-      "instagram": { "label": "Instagram", "desc": "內文 / 評論" },
-      "threads": { "label": "Threads", "desc": "內文 / 評論" },
-      "youtube": { "label": "YouTube", "desc": "短影音 / 長影音 / 評論" },
-      "amazon": { "label": "Amazon", "desc": "產品 / 評論" },
-      "shopee": { "label": "Shopee", "desc": "產品 / 評論 (可選國家)" },
-      "ios_android": { "label": "iOS / Android", "desc": "App Store / Google Play 評論" },
-      "news": { "label": "新聞搜尋", "desc": "Google Alerts RSS" },
-      "web": { "label": "網頁搜尋", "desc": "Tavily 深度搜尋" },
-      "competitors": { "label": "競爭對手", "desc": "Tavily 競品分析" },
-      "trend": { "label": "社群熱點", "desc": "Reddit · HN · Polymarket 近30天" },
-      "dcard": { "label": "Dcard", "desc": "台灣最大論壇，旅遊/生活版" },
-      "booking": { "label": "訂房平台評論", "desc": "Booking.com + Airbnb 住客評論" }
+      "map": {
+        "label": "地圖搜尋",
+        "desc": "組織: 公司/門市等"
+      },
+      "tiktok": {
+        "label": "TikTok",
+        "desc": "影音搜尋 / 評論"
+      },
+      "facebook": {
+        "label": "Facebook",
+        "desc": "內文 / 評論"
+      },
+      "instagram": {
+        "label": "Instagram",
+        "desc": "內文 / 評論"
+      },
+      "threads": {
+        "label": "Threads",
+        "desc": "內文 / 評論"
+      },
+      "youtube": {
+        "label": "YouTube",
+        "desc": "短影音 / 長影音 / 評論"
+      },
+      "amazon": {
+        "label": "Amazon",
+        "desc": "產品 / 評論"
+      },
+      "shopee": {
+        "label": "Shopee",
+        "desc": "產品 / 評論 (可選國家)"
+      },
+      "ios_android": {
+        "label": "iOS / Android",
+        "desc": "App Store / Google Play 評論"
+      },
+      "news": {
+        "label": "新聞搜尋",
+        "desc": "Google Alerts RSS"
+      },
+      "web": {
+        "label": "網頁搜尋",
+        "desc": "Tavily 深度搜尋"
+      },
+      "competitors": {
+        "label": "競爭對手",
+        "desc": "Tavily 競品分析"
+      },
+      "trend": {
+        "label": "社群熱點",
+        "desc": "Reddit · HN · Polymarket 近30天"
+      },
+      "dcard": {
+        "label": "Dcard",
+        "desc": "台灣最大論壇，旅遊/生活版"
+      },
+      "booking": {
+        "label": "訂房平台評論",
+        "desc": "Booking.com + Airbnb 住客評論"
+      }
     },
     "sub": {
-      "map": { "info": "基本資訊 (名稱/地址/電話)", "coordinates": "經緯度/距離計算", "reviews": "MAP 評論", "hours": "營業時間" },
-      "tiktok": { "videos": "影音搜尋", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "facebook": { "posts": "內文", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "instagram": { "posts": "內文", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "threads": { "posts": "內文", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "youtube": { "shorts": "短影音", "videos": "長影音", "comments": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "amazon": { "products": "產品", "reviews": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "shopee": { "products": "產品", "reviews": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "ios_android": { "reviews": "評論", "vendor_info": "廠商資料 (名稱/電話/Email)" },
-      "trend": { "reddit": "Reddit 熱門討論", "hackernews": "Hacker News", "polymarket": "Polymarket 市場預測" },
-      "booking": { "booking": "Booking.com 評論", "airbnb": "Airbnb 評論" }
+      "map": {
+        "info": "基本資訊 (名稱/地址/電話)",
+        "coordinates": "經緯度/距離計算",
+        "reviews": "MAP 評論",
+        "hours": "營業時間"
+      },
+      "tiktok": {
+        "videos": "影音搜尋",
+        "comments": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "facebook": {
+        "posts": "內文",
+        "comments": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "instagram": {
+        "posts": "內文",
+        "comments": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "threads": {
+        "posts": "內文",
+        "comments": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "youtube": {
+        "shorts": "短影音",
+        "videos": "長影音",
+        "comments": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "amazon": {
+        "products": "產品",
+        "reviews": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "shopee": {
+        "products": "產品",
+        "reviews": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "ios_android": {
+        "reviews": "評論",
+        "vendor_info": "廠商資料 (名稱/電話/Email)"
+      },
+      "trend": {
+        "reddit": "Reddit 熱門討論",
+        "hackernews": "Hacker News",
+        "polymarket": "Polymarket 市場預測"
+      },
+      "booking": {
+        "booking": "Booking.com 評論",
+        "airbnb": "Airbnb 評論"
+      }
     },
-    "shopee": { "tw": "台灣", "vn": "越南", "id": "印尼", "ph": "菲律賓", "my": "馬來西亞", "th": "泰國", "sg": "新加坡", "br": "巴西", "mx": "墨西哥", "co": "哥倫比亞" },
+    "shopee": {
+      "tw": "台灣",
+      "vn": "越南",
+      "id": "印尼",
+      "ph": "菲律賓",
+      "my": "馬來西亞",
+      "th": "泰國",
+      "sg": "新加坡",
+      "br": "巴西",
+      "mx": "墨西哥",
+      "co": "哥倫比亞"
+    },
     "u1": {
-      "errKeywords": "請輸入關鍵字", "errTypes": "請至少選一種蒐集類型",
-      "keywords": "關鍵字 / 搜尋主題", "keywordsPlaceholder": "例如：火鍋餐廳、手機殼品牌、健身房...",
-      "selectChannels": "選擇蒐集管道", "mapSettings": "地圖搜尋設定",
-      "locationLabel": "地點 / 城市 / 地址（用於定位搜尋範圍）", "locationPlaceholder": "例如：台北市信義區、新北市板橋區...",
+      "errKeywords": "請輸入關鍵字",
+      "errTypes": "請至少選一種蒐集類型",
+      "keywords": "關鍵字 / 搜尋主題",
+      "keywordsPlaceholder": "例如：火鍋餐廳、手機殼品牌、健身房...",
+      "selectChannels": "選擇蒐集管道",
+      "mapSettings": "地圖搜尋設定",
+      "locationLabel": "地點 / 城市 / 地址（用於定位搜尋範圍）",
+      "locationPlaceholder": "例如：台北市信義區、新北市板橋區...",
       "shopeeCountry": "Shopee 國家",
-      "appIdTitle": "App ID（App Store / Google Play，每行一個）", "appIdHint": "App Store: id 開頭數字 ID｜Google Play: package name",
-      "rssTitle": "Google Alerts RSS URL（每行一個）", "rssHint": "前往 google.com/alerts → 管理 → 訂閱 → 選「RSS 訂閱」後複製 URL",
-      "perTypeCount": "每類資料筆數", "countUnit": "{n} 筆", "language": "語言",
-      "collecting": "蒐集中，請稍候…", "startCollect": "開始蒐集",
-      "resultTitle": "蒐集結果", "tabSummary": "AI 摘要", "tabRaw": "原始資料", "recollect": "重新蒐集"
+      "appIdTitle": "App ID（App Store / Google Play，每行一個）",
+      "appIdHint": "App Store: id 開頭數字 ID｜Google Play: package name",
+      "rssTitle": "Google Alerts RSS URL（每行一個）",
+      "rssHint": "前往 google.com/alerts → 管理 → 訂閱 → 選「RSS 訂閱」後複製 URL",
+      "perTypeCount": "每類資料筆數",
+      "countUnit": "{n} 筆",
+      "language": "語言",
+      "collecting": "蒐集中，請稍候…",
+      "startCollect": "開始蒐集",
+      "resultTitle": "蒐集結果",
+      "tabSummary": "AI 摘要",
+      "tabRaw": "原始資料",
+      "recollect": "重新蒐集"
     },
     "opt": {
-      "科技/軟體": "科技/軟體", "製造業": "製造業", "零售/電商": "零售/電商", "金融服務": "金融服務", "醫療健康": "醫療健康", "餐飲/消費": "餐飲/消費", "教育培訓": "教育培訓", "房地產": "房地產", "物流/運輸": "物流/運輸", "廣告/行銷": "廣告/行銷", "其他": "其他",
-      "1-10人": "1-10人", "11-50人": "11-50人", "51-200人": "51-200人", "201-500人": "201-500人", "501-1000人": "501-1000人", "1000人以上": "1000人以上",
-      "專業/正式": "專業/正式", "活潑/年輕": "活潑/年輕", "溫暖/親切": "溫暖/親切", "創新/前衛": "創新/前衛", "奢華/高端": "奢華/高端", "親民/平易": "親民/平易"
+      "科技/軟體": "科技/軟體",
+      "製造業": "製造業",
+      "零售/電商": "零售/電商",
+      "金融服務": "金融服務",
+      "醫療健康": "醫療健康",
+      "餐飲/消費": "餐飲/消費",
+      "教育培訓": "教育培訓",
+      "房地產": "房地產",
+      "物流/運輸": "物流/運輸",
+      "廣告/行銷": "廣告/行銷",
+      "其他": "其他",
+      "1-10人": "1-10人",
+      "11-50人": "11-50人",
+      "51-200人": "51-200人",
+      "201-500人": "201-500人",
+      "501-1000人": "501-1000人",
+      "1000人以上": "1000人以上",
+      "專業/正式": "專業/正式",
+      "活潑/年輕": "活潑/年輕",
+      "溫暖/親切": "溫暖/親切",
+      "創新/前衛": "創新/前衛",
+      "奢華/高端": "奢華/高端",
+      "親民/平易": "親民/平易"
     },
     "u2": {
-      "clickUpload": "點擊上傳", "uploading": "上傳中…", "textExtracted": "· 已萃取文字",
-      "basicInfo": "基本資料", "companyName": "公司名稱 *", "companyNamePlaceholder": "例如：台灣科技股份有限公司",
-      "industry": "產業別", "pleaseSelect": "請選擇", "employees": "員工人數",
-      "capital": "資本額", "capitalPlaceholder": "例如：新台幣 1,000 萬元",
-      "founded": "成立年份", "foundedPlaceholder": "例如：2010", "website": "官方網站",
-      "address": "公司地址", "addressPlaceholder": "縣市 + 區 + 街道",
-      "bizDesc": "業務描述", "intro": "公司簡介", "introPlaceholder": "簡述公司背景、發展歷程、核心價值…",
-      "products": "主要產品 / 服務", "productsPlaceholder": "描述主要產品或服務項目、特色功能…",
-      "audience": "目標客群", "audiencePlaceholder": "描述主要客戶群體、年齡層、消費習慣…",
-      "advantage": "核心競爭優勢", "advantagePlaceholder": "相較競爭對手，公司最大的優勢是…",
-      "brandSettings": "品牌設定", "brandTone": "品牌語調",
-      "branches": "門市 / 分公司", "addBranch": "新增門市", "noBranches": "尚未新增任何門市，點擊「新增門市」開始建立",
-      "branchName": "門市名稱 *", "branchNamePlaceholder": "例如：台北信義門市",
-      "phone": "電話", "phonePlaceholder": "例如：02-1234-5678",
-      "branchAddress": "地址 *", "branchAddressPlaceholder": "例如：台北市信義區信義路五段7號",
-      "lat": "緯度（選填）", "lng": "經度（選填）", "notes": "備註", "notesPlaceholder": "例如：週末延長營業",
-      "saveBranch": "儲存門市", "cancel": "取消", "branchCountHint": "共 {count} 個門市。可輸入經緯度以啟用最近門市計算功能。",
-      "materials": "素材上傳", "matLogo": "Logo / 品牌標誌", "matImage": "產品 / 情境圖片", "matDoc": "公司簡介 / 型錄", "matFaq": "FAQ / 對答資料",
+      "clickUpload": "點擊上傳",
+      "uploading": "上傳中…",
+      "textExtracted": "· 已萃取文字",
+      "basicInfo": "基本資料",
+      "companyName": "公司名稱 *",
+      "companyNamePlaceholder": "例如：台灣科技股份有限公司",
+      "industry": "產業別",
+      "pleaseSelect": "請選擇",
+      "employees": "員工人數",
+      "capital": "資本額",
+      "capitalPlaceholder": "例如：新台幣 1,000 萬元",
+      "founded": "成立年份",
+      "foundedPlaceholder": "例如：2010",
+      "website": "官方網站",
+      "address": "公司地址",
+      "addressPlaceholder": "縣市 + 區 + 街道",
+      "bizDesc": "業務描述",
+      "intro": "公司簡介",
+      "introPlaceholder": "簡述公司背景、發展歷程、核心價值…",
+      "products": "主要產品 / 服務",
+      "productsPlaceholder": "描述主要產品或服務項目、特色功能…",
+      "audience": "目標客群",
+      "audiencePlaceholder": "描述主要客戶群體、年齡層、消費習慣…",
+      "advantage": "核心競爭優勢",
+      "advantagePlaceholder": "相較競爭對手，公司最大的優勢是…",
+      "brandSettings": "品牌設定",
+      "brandTone": "品牌語調",
+      "branches": "門市 / 分公司",
+      "addBranch": "新增門市",
+      "noBranches": "尚未新增任何門市，點擊「新增門市」開始建立",
+      "branchName": "門市名稱 *",
+      "branchNamePlaceholder": "例如：台北信義門市",
+      "phone": "電話",
+      "phonePlaceholder": "例如：02-1234-5678",
+      "branchAddress": "地址 *",
+      "branchAddressPlaceholder": "例如：台北市信義區信義路五段7號",
+      "lat": "緯度（選填）",
+      "lng": "經度（選填）",
+      "notes": "備註",
+      "notesPlaceholder": "例如：週末延長營業",
+      "saveBranch": "儲存門市",
+      "cancel": "取消",
+      "branchCountHint": "共 {count} 個門市。可輸入經緯度以啟用最近門市計算功能。",
+      "materials": "素材上傳",
+      "matLogo": "Logo / 品牌標誌",
+      "matImage": "產品 / 情境圖片",
+      "matDoc": "公司簡介 / 型錄",
+      "matFaq": "FAQ / 對答資料",
       "materialsHint": "Excel/Word/PDF 文件將自動萃取文字，供 AI 分析與客服回覆使用。",
-      "saving": "儲存中…", "saveCompany": "儲存公司資料", "saved": "已儲存",
-      "overview": "資料概覽", "companyNameShort": "公司名稱", "industryShort": "產業",
-      "branchCount": "門市數量", "nBranches": "{n} 間", "withCoords": "含經緯度",
-      "uploadedFiles": "上傳檔案", "nFiles": "{n} 份", "textMaterials": "文字素材", "nExtracted": "{n} 份已萃取"
+      "saving": "儲存中…",
+      "saveCompany": "儲存公司資料",
+      "saved": "已儲存",
+      "overview": "資料概覽",
+      "companyNameShort": "公司名稱",
+      "industryShort": "產業",
+      "branchCount": "門市數量",
+      "nBranches": "{n} 間",
+      "withCoords": "含經緯度",
+      "uploadedFiles": "上傳檔案",
+      "nFiles": "{n} 份",
+      "textMaterials": "文字素材",
+      "nExtracted": "{n} 份已萃取"
     },
     "u3": {
       "errTypes": "請至少選一種分析類型",
       "type": {
-        "swot": { "label": "SWOT 分析", "desc": "優勢/劣勢/機會/威脅全面評估" },
-        "company": { "label": "公司分析", "desc": "業態、規模、營業情況、風險" },
-        "competitor_activity": { "label": "競爭對手活動分析", "desc": "競品行銷手法、渠道、內容" },
-        "competitor_performance": { "label": "競爭對手業績分析", "desc": "市場份額、定價、客戶口碑" },
-        "content": { "label": "影片/文案擷取分析", "desc": "競品內容策略、高績效內容特徵" },
-        "marketing": { "label": "行銷文案分析", "desc": "文案風格趨勢、訴求點、關鍵字" }
+        "swot": {
+          "label": "SWOT 分析",
+          "desc": "優勢/劣勢/機會/威脅全面評估"
+        },
+        "company": {
+          "label": "公司分析",
+          "desc": "業態、規模、營業情況、風險"
+        },
+        "competitor_activity": {
+          "label": "競爭對手活動分析",
+          "desc": "競品行銷手法、渠道、內容"
+        },
+        "competitor_performance": {
+          "label": "競爭對手業績分析",
+          "desc": "市場份額、定價、客戶口碑"
+        },
+        "content": {
+          "label": "影片/文案擷取分析",
+          "desc": "競品內容策略、高績效內容特徵"
+        },
+        "marketing": {
+          "label": "行銷文案分析",
+          "desc": "文案風格趨勢、訴求點、關鍵字"
+        }
       },
-      "unit1": "單元1 蒐集資料", "loaded": "已載入", "notRun": "尚未執行",
-      "unit2": "單元2 公司資料", "notFilled": "尚未填寫",
-      "extraTitle": "補充參考資料（選填）", "extraHint": "上傳企劃案、新聞文章、競品報告等，AI 分析時會一併參考",
-      "uploading": "上傳中…", "chooseFile": "選擇檔案",
-      "selectItems": "選擇分析項目", "analyzing": "Gemini 分析中，請稍候…", "startAnalyze": "開始分析",
-      "mOpportunity": "市場機會指數", "mCompetitors": "競品數量", "nCompetitors": "{n} 家", "mAudience": "目標受眾", "mScore": "競爭力評分",
+      "unit1": "單元1 蒐集資料",
+      "loaded": "已載入",
+      "notRun": "尚未執行",
+      "unit2": "單元2 公司資料",
+      "notFilled": "尚未填寫",
+      "extraTitle": "補充參考資料（選填）",
+      "extraHint": "上傳企劃案、新聞文章、競品報告等，AI 分析時會一併參考",
+      "uploading": "上傳中…",
+      "chooseFile": "選擇檔案",
+      "selectItems": "選擇分析項目",
+      "analyzing": "Gemini 分析中，請稍候…",
+      "startAnalyze": "開始分析",
+      "mOpportunity": "市場機會指數",
+      "mCompetitors": "競品數量",
+      "nCompetitors": "{n} 家",
+      "mAudience": "目標受眾",
+      "mScore": "競爭力評分",
       "reanalyze": "重新分析",
-      "simTitle": "行銷消費者模擬", "simHint": "模擬不同消費族群反應、陣營對撞、公關危機偵測",
-      "simulating": "模擬中…", "runSim": "執行消費者模擬"
+      "simTitle": "行銷消費者模擬",
+      "simHint": "模擬不同消費族群反應、陣營對撞、公關危機偵測",
+      "simulating": "模擬中…",
+      "runSim": "執行消費者模擬"
     },
     "u4": {
-      "errTypes": "請至少選一種文案類型", "anchorGenFailed": "主播文案生成失敗：{error}",
-      "ctxCollect": "蒐集資料", "ctxCompany": "公司資料", "ctxAnalysis": "分析資料",
+      "errTypes": "請至少選一種文案類型",
+      "anchorGenFailed": "主播文案生成失敗：{error}",
+      "ctxCollect": "蒐集資料",
+      "ctxCompany": "公司資料",
+      "ctxAnalysis": "分析資料",
       "selectTypes": "選擇文案類型",
-      "group": { "social": "社群", "video": "影片", "ad": "廣告", "email": "電郵", "other": "其他", "anchor": "主播" },
-      "copy": {
-        "facebook_post": "Facebook 貼文", "instagram_caption": "Instagram 說明", "threads_post": "Threads 貼文", "line_message": "LINE 訊息", "twitter_post": "Twitter/X 推文", "linkedin_post": "LinkedIn 貼文", "youtube_description": "YouTube 說明欄", "ad_headline": "廣告標題組", "email_subject": "Email 主旨", "email_body": "Email 內文", "press_release": "新聞稿", "anchor_script": "🎙️ 主播口播腳本"
+      "group": {
+        "social": "社群",
+        "video": "影片",
+        "ad": "廣告",
+        "email": "電郵",
+        "other": "其他",
+        "anchor": "主播"
       },
-      "anchorTitle": "主播口播腳本設定", "anchorSubtitle": "（此腳本將直接用於 Unit 11 主播影片生成）",
-      "videoDuration": "影片時長", "durationOpt": "{s} 秒（約 {chars} 字）",
+      "copy": {
+        "facebook_post": "Facebook 貼文",
+        "instagram_caption": "Instagram 說明",
+        "threads_post": "Threads 貼文",
+        "line_message": "LINE 訊息",
+        "twitter_post": "Twitter/X 推文",
+        "linkedin_post": "LinkedIn 貼文",
+        "youtube_description": "YouTube 說明欄",
+        "ad_headline": "廣告標題組",
+        "email_subject": "Email 主旨",
+        "email_body": "Email 內文",
+        "press_release": "新聞稿",
+        "anchor_script": "🎙️ 主播口播腳本"
+      },
+      "anchorTitle": "主播口播腳本設定",
+      "anchorSubtitle": "（此腳本將直接用於 Unit 11 主播影片生成）",
+      "videoDuration": "影片時長",
+      "durationOpt": "{s} 秒（約 {chars} 字）",
       "anchorStyle": "口播風格",
-      "style": { "專業親切": "專業親切", "熱情活力": "熱情活力", "沉穩信任": "沉穩信任", "輕鬆幽默": "輕鬆幽默", "商務正式": "商務正式" },
+      "style": {
+        "專業親切": "專業親切",
+        "熱情活力": "熱情活力",
+        "沉穩信任": "沉穩信任",
+        "輕鬆幽默": "輕鬆幽默",
+        "商務正式": "商務正式"
+      },
       "anchorNote": "生成後 Unit 11 主播行銷會自動使用此腳本，無需重新輸入。",
-      "userRules": "使用者特別規定", "userRulesHint": "（選填，可指定風格、禁用字詞、必帶訊息等）",
+      "userRules": "使用者特別規定",
+      "userRulesHint": "（選填，可指定風格、禁用字詞、必帶訊息等）",
       "userRulesPlaceholder": "例如：禁止使用『最好』『最強』等誇大字眼；必須提及限時優惠；文案要帶有緊迫感…",
-      "generating": "Claude 生成中…", "generate": "產生文案", "editableHint": " — Claude Sonnet · 可直接編輯", "regenerate": "重新生成",
-      "feedbackTitle": "輸入修改意見，重新生成所有文案", "feedbackPlaceholder": "例如：語調太正式，改成輕鬆活潑；加入限時優惠感…", "regenAll": "重生成"
+      "generating": "Claude 生成中…",
+      "generate": "產生文案",
+      "editableHint": " — Claude Sonnet · 可直接編輯",
+      "regenerate": "重新生成",
+      "feedbackTitle": "輸入修改意見，重新生成所有文案",
+      "feedbackPlaceholder": "例如：語調太正式，改成輕鬆活潑；加入限時優惠感…",
+      "regenAll": "重生成"
     },
     "u5": {
-      "ctxCopy": "文案資料", "imageCount": "產出圖片數量", "targetPlatforms": "目標發布平台",
-      "specialRules": "特別規定", "specialRulesHint": "（選填，可指定圖片風格、禁止元素、必帶資訊等）",
+      "ctxCopy": "文案資料",
+      "imageCount": "產出圖片數量",
+      "targetPlatforms": "目標發布平台",
+      "specialRules": "特別規定",
+      "specialRulesHint": "（選填，可指定圖片風格、禁止元素、必帶資訊等）",
       "specialRulesPlaceholder": "例如：必須包含產品照片；風格要高端奢華；禁止使用紅色；圖片要帶有品牌 Logo 位置…",
-      "refImage": "搭配參考圖片（選填）", "enable": "啟用", "drivePickLabel": "從 Google Drive 隨機取圖，腳本將配合此圖片生成",
-      "generatingScript": "Claude 生成腳本中…", "genWithRef": "以參考圖片產生腳本", "genScript": "產生圖片腳本",
-      "imageN": "圖片 {n}", "scriptTitle": "圖片 {n} 視覺腳本 — Claude Sonnet", "totalImages": "共 {n} 張",
-      "refImageLabel": "參考圖片", "refGenerated": "腳本已根據此圖片風格生成",
-      "feedbackTitle": "輸入修改意見，重新生成所有腳本", "feedbackPlaceholder": "例如：風格改成更年輕活潑；加入更多產品細節；色調改為暖色系…",
-      "tipTitle": "使用提示", "tipBody": "每張腳本末尾的 <b>AI 生成 Prompt</b> 可直接複製至 Midjourney、DALL-E 3、Stable Diffusion 等工具生成圖片。完成後前往 <b>單元6 圖片產出</b> 進行 AI 生成。"
+      "refImage": "搭配參考圖片（選填）",
+      "enable": "啟用",
+      "drivePickLabel": "從 Google Drive 隨機取圖，腳本將配合此圖片生成",
+      "generatingScript": "Claude 生成腳本中…",
+      "genWithRef": "以參考圖片產生腳本",
+      "genScript": "產生圖片腳本",
+      "imageN": "圖片 {n}",
+      "scriptTitle": "圖片 {n} 視覺腳本 — Claude Sonnet",
+      "totalImages": "共 {n} 張",
+      "refImageLabel": "參考圖片",
+      "refGenerated": "腳本已根據此圖片風格生成",
+      "feedbackTitle": "輸入修改意見，重新生成所有腳本",
+      "feedbackPlaceholder": "例如：風格改成更年輕活潑；加入更多產品細節；色調改為暖色系…",
+      "tipTitle": "使用提示",
+      "tipBody": "每張腳本末尾的 <b>AI 生成 Prompt</b> 可直接複製至 Midjourney、DALL-E 3、Stable Diffusion 等工具生成圖片。完成後前往 <b>單元6 圖片產出</b> 進行 AI 生成。"
     },
     "u6": {
-      "promptEmpty": "Prompt 不可為空", "promptRequired": "請輸入 Prompt", "selectModel": "選擇生成模型",
+      "promptEmpty": "Prompt 不可為空",
+      "promptRequired": "請輸入 Prompt",
+      "selectModel": "選擇生成模型",
       "model": {
-        "flux": { "desc": "高品質寫實，最適合行銷圖", "badge": "推薦" },
-        "dalle3": { "desc": "語意理解強，圖中文字清晰", "badge": "OpenAI" },
-        "nano": { "desc": "速度快，適合快速草稿預覽", "badge": "快速" }
+        "flux": {
+          "desc": "高品質寫實，最適合行銷圖",
+          "badge": "推薦"
+        },
+        "dalle3": {
+          "desc": "語意理解強，圖中文字清晰",
+          "badge": "OpenAI"
+        },
+        "nano": {
+          "desc": "速度快，適合快速草稿預覽",
+          "badge": "快速"
+        }
       },
-      "costUnit": "/張", "imageSettings": "圖片設定", "sizeRatio": "尺寸比例",
-      "size": { "1:1": "1:1 正方形", "9:16": "9:16 直式", "16:9": "16:9 橫式" },
-      "quality": "品質", "qStandard": "標準", "qHd": "HD 高清",
-      "styleLabel": "風格", "sVivid": "鮮豔生動", "sNatural": "自然寫實",
-      "refImgTitle": "參考圖片（img2img）", "enabled": "已啟用", "useRefImg": "使用參考圖片生成",
-      "refImgPickLabel": "圖片生成參考圖", "refImgChosen": "已選擇參考圖片，所有圖片將以此圖風格生成（img2img）",
+      "costUnit": "/張",
+      "imageSettings": "圖片設定",
+      "sizeRatio": "尺寸比例",
+      "size": {
+        "1:1": "1:1 正方形",
+        "9:16": "9:16 直式",
+        "16:9": "16:9 橫式"
+      },
+      "quality": "品質",
+      "qStandard": "標準",
+      "qHd": "HD 高清",
+      "styleLabel": "風格",
+      "sVivid": "鮮豔生動",
+      "sNatural": "自然寫實",
+      "refImgTitle": "參考圖片（img2img）",
+      "enabled": "已啟用",
+      "useRefImg": "使用參考圖片生成",
+      "refImgPickLabel": "圖片生成參考圖",
+      "refImgChosen": "已選擇參考圖片，所有圖片將以此圖風格生成（img2img）",
       "refImgHint": "啟用後可從 Google Drive 選取圖片作為生成基礎，實現 img2img 效果",
-      "fromScripts": "從單元5腳本生成（共 {n} 張）", "generated": "已生成",
-      "aiPrompt": "AI 生成 Prompt", "editable": "（可編輯）", "promptPlaceholder": "輸入英文 Prompt…",
-      "modelGenerating": "{model} 生成中…", "genWithModel": "用 {model} 生成", "download": "下載", "revisedPrompt": "模型修訂 Prompt：",
+      "fromScripts": "從單元5腳本生成（共 {n} 張）",
+      "generated": "已生成",
+      "aiPrompt": "AI 生成 Prompt",
+      "editable": "（可編輯）",
+      "promptPlaceholder": "輸入英文 Prompt…",
+      "modelGenerating": "{model} 生成中…",
+      "genWithModel": "用 {model} 生成",
+      "download": "下載",
+      "revisedPrompt": "模型修訂 Prompt：",
       "noUnit5": "<b>尚未執行單元5（圖片腳本）</b>，可直接在下方輸入自訂 Prompt 生成圖片。",
-      "manualPrompt": "手動輸入 Prompt", "manualPlaceholder": "輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble...",
-      "generatingShort": "生成中…", "successHint": "已生成 {n} 張圖片，儲存於 Supabase Storage，可於單元9上傳至各平台。"
+      "manualPrompt": "手動輸入 Prompt",
+      "manualPlaceholder": "輸入英文 Prompt，例如：Professional marketing photo of luxury skincare products on white marble...",
+      "generatingShort": "生成中…",
+      "successHint": "已生成 {n} 張圖片，儲存於 Supabase Storage，可於單元9上傳至各平台。"
     },
     "u7": {
-      "errTypes": "請至少選一種影片類型", "errPlatforms": "請至少選一個平台",
-      "platform": { "youtube": "YouTube 一般" },
+      "errTypes": "請至少選一種影片類型",
+      "errPlatforms": "請至少選一個平台",
+      "platform": {
+        "youtube": "YouTube 一般"
+      },
       "ctxImageScript": "圖片腳本",
-      "videoCount": "產出影片數量", "videoDuration": "影片時長", "durSec": "{s}秒",
+      "videoCount": "產出影片數量",
+      "videoDuration": "影片時長",
+      "durSec": "{s}秒",
       "videoType": "影片類型",
       "vtype": {
-        "short_video": { "label": "短影音", "desc": "直接吸睛，快節奏" },
-        "ad": { "label": "廣告影片", "desc": "AIDA 結構，促轉換" },
-        "tutorial": { "label": "教學影片", "desc": "示範產品/服務使用" },
-        "testimonial": { "label": "客戶見證", "desc": "真實口碑，建立信任" },
-        "brand_story": { "label": "品牌故事", "desc": "情感連結，品牌形象" }
+        "short_video": {
+          "label": "短影音",
+          "desc": "直接吸睛，快節奏"
+        },
+        "ad": {
+          "label": "廣告影片",
+          "desc": "AIDA 結構，促轉換"
+        },
+        "tutorial": {
+          "label": "教學影片",
+          "desc": "示範產品/服務使用"
+        },
+        "testimonial": {
+          "label": "客戶見證",
+          "desc": "真實口碑，建立信任"
+        },
+        "brand_story": {
+          "label": "品牌故事",
+          "desc": "情感連結，品牌形象"
+        }
       },
-      "refImgTitle": "參考圖片（提供給 Claude Vision）", "useRefImg": "使用參考圖片", "refImgHint": "啟用後 Claude 會根據圖片場景與風格生成更貼切的腳本",
-      "unit6Image": "單元6 生成圖片", "refImgPickLabel": "影片腳本參考圖", "pickUnit6": "選擇一張單元6已生成的圖片作為參考", "noUnit6Images": "尚未在單元6生成圖片，請先完成單元6或改用 Drive 圖片。",
-      "optional": "（選填）", "rulesPlaceholder": "例如：必須出現產品特寫；旁白要用台語；開頭用問句勾起好奇心…",
-      "genWithRef": "以參考圖片產生腳本", "genScript": "產生影片腳本",
-      "videoN": "影片 {n}", "scriptTitle": "影片 {n} 分鏡腳本 — Claude Sonnet · {dur}秒", "totalVideos": "共 {n} 支",
+      "refImgTitle": "參考圖片（提供給 Claude Vision）",
+      "useRefImg": "使用參考圖片",
+      "refImgHint": "啟用後 Claude 會根據圖片場景與風格生成更貼切的腳本",
+      "unit6Image": "單元6 生成圖片",
+      "refImgPickLabel": "影片腳本參考圖",
+      "pickUnit6": "選擇一張單元6已生成的圖片作為參考",
+      "noUnit6Images": "尚未在單元6生成圖片，請先完成單元6或改用 Drive 圖片。",
+      "optional": "（選填）",
+      "rulesPlaceholder": "例如：必須出現產品特寫；旁白要用台語；開頭用問句勾起好奇心…",
+      "genWithRef": "以參考圖片產生腳本",
+      "genScript": "產生影片腳本",
+      "videoN": "影片 {n}",
+      "scriptTitle": "影片 {n} 分鏡腳本 — Claude Sonnet · {dur}秒",
+      "totalVideos": "共 {n} 支",
       "feedbackPlaceholder": "例如：節奏太慢；開頭不夠吸引人；加入更多產品細節…",
       "tipBody": "腳本完成後，前往 <b>單元8 影片產出</b> 使用 KLING（5/10秒）、Google VEO3（25秒）或 SORA（60秒）將腳本轉換為實際影片。"
     },
     "u8": {
       "model": {
-        "kling-standard": "KLING Standard", "kling-pro": "KLING Pro", "kling-img2video": "KLING 圖生影片",
-        "veo3": "Google VEO3", "veo3-img2video": "VEO3 圖生影片", "sora": "SORA", "sora-img2video": "SORA 圖生影片"
+        "kling-standard": "KLING Standard",
+        "kling-pro": "KLING Pro",
+        "kling-img2video": "KLING 圖生影片",
+        "veo3": "Google VEO3",
+        "veo3-img2video": "VEO3 圖生影片",
+        "sora": "SORA",
+        "sora-img2video": "SORA 圖生影片"
       },
-      "gen": { "kling": "KLING 生成中…", "veo3": "VEO3 生成中…", "sora": "SORA 生成中…" },
+      "gen": {
+        "kling": "KLING 生成中…",
+        "veo3": "VEO3 生成中…",
+        "sora": "SORA 生成中…"
+      },
       "promptEmpty": "影片 Prompt 不可為空，請先完成單元 7 腳本或手動輸入描述",
       "selectDuration": "選擇影片時長",
-      "durHint": { "5": "超短 · 快速", "10": "短影音", "25": "中長影音", "60": "長影片" },
-      "klingStandard": "Standard（較快）", "klingPro": "Pro（旗艦品質）",
-      "img2video": "圖片生成影片", "img2videoHint": "使用單元6圖片作為起始畫面", "currentModel": "目前模型：",
-      "videoSettings": "影片設定", "aspectRatio": "畫面比例",
-      "aspect": { "16:9": "16:9 橫式", "9:16": "9:16 直式", "1:1": "1:1 正方形" },
-      "selectSourceImg": "選擇來源圖片", "driveImage": "Google Drive 圖片",
+      "durHint": {
+        "5": "超短 · 快速",
+        "10": "短影音",
+        "25": "中長影音",
+        "60": "長影片"
+      },
+      "klingStandard": "Standard（較快）",
+      "klingPro": "Pro（旗艦品質）",
+      "img2video": "圖片生成影片",
+      "img2videoHint": "使用單元6圖片作為起始畫面",
+      "currentModel": "目前模型：",
+      "videoSettings": "影片設定",
+      "aspectRatio": "畫面比例",
+      "aspect": {
+        "16:9": "16:9 橫式",
+        "9:16": "9:16 直式",
+        "1:1": "1:1 正方形"
+      },
+      "selectSourceImg": "選擇來源圖片",
+      "driveImage": "Google Drive 圖片",
       "noUnit6Images": "尚未在單元6生成圖片。請先完成單元6，或改用 Drive 圖片。",
-      "driveChosen": "已選擇 Drive 圖片，將以此圖生成影片", "noDriveImg": "尚未在單元5/6/7 選取 Google Drive 圖片，請先前往任一單元選取。",
+      "driveChosen": "已選擇 Drive 圖片，將以此圖生成影片",
+      "noDriveImg": "尚未在單元5/6/7 選取 Google Drive 圖片，請先前往任一單元選取。",
       "fromScripts": "從單元7腳本生成（共 {n} 支）",
-      "processing": "生成中（約1-3分鐘）", "failed": "失敗",
-      "videoPrompt": "影片 Prompt", "videoPromptPlaceholder": "描述影片畫面與動作…", "genVideo": "生成影片",
+      "processing": "生成中（約1-3分鐘）",
+      "failed": "失敗",
+      "videoPrompt": "影片 Prompt",
+      "videoPromptPlaceholder": "描述影片畫面與動作…",
+      "genVideo": "生成影片",
       "noUnit7": "<b>尚未執行單元7（影片腳本）</b>，可在下方直接輸入 Prompt 生成影片。",
       "manualPlaceholder": "描述影片畫面，例如：A woman holds a skincare product and smiles, close-up shot, warm lighting, smooth camera movement…",
       "notice": "<b>注意：</b>影片生成通常需要 <b>1-3 分鐘</b>，提交後頁面會自動每 6 秒輪詢狀態，請勿離開此頁面。生成完成後影片將自動顯示。",
       "successHint": "已生成 {n} 支影片，可於單元9上傳至各平台。"
     },
     "u9": {
-      "errPlatform": "請至少選一個平台", "errCopy": "請輸入發文文案",
-      "imgCount": "圖片 {n} 張", "vidCount": "影片 {n} 支", "copy": "文案", "ready": "已備妥", "notGenerated": "尚未生成",
-      "platformSettings": "平台連結設定", "imgPlatforms": "圖片發布平台", "vidPlatforms": "影片發布平台",
-      "pickImage": "選擇上傳圖片", "noImages": "尚未在單元6生成圖片。", "pickVideo": "選擇上傳影片", "noVideos": "尚未在單元8生成影片。",
-      "postCopy": "發文文案", "quickLoad": "快速載入：", "anchorTag": "🎙️主播",
-      "copyPlaceholder": "輸入或從單元4載入文案…", "charCount": "{n} 字",
-      "uploading": "上傳中…", "publishTo": "一鍵發布至 {n} 個平台",
-      "uploadResult": "上傳結果", "publishOk": "發布成功", "publishFail": "發布失敗", "updateToken": "→ 前往設定更新 Token",
+      "errPlatform": "請至少選一個平台",
+      "errCopy": "請輸入發文文案",
+      "imgCount": "圖片 {n} 張",
+      "vidCount": "影片 {n} 支",
+      "copy": "文案",
+      "ready": "已備妥",
+      "notGenerated": "尚未生成",
+      "platformSettings": "平台連結設定",
+      "imgPlatforms": "圖片發布平台",
+      "vidPlatforms": "影片發布平台",
+      "pickImage": "選擇上傳圖片",
+      "noImages": "尚未在單元6生成圖片。",
+      "pickVideo": "選擇上傳影片",
+      "noVideos": "尚未在單元8生成影片。",
+      "postCopy": "發文文案",
+      "quickLoad": "快速載入：",
+      "anchorTag": "🎙️主播",
+      "copyPlaceholder": "輸入或從單元4載入文案…",
+      "charCount": "{n} 字",
+      "uploading": "上傳中…",
+      "publishTo": "一鍵發布至 {n} 個平台",
+      "uploadResult": "上傳結果",
+      "publishOk": "發布成功",
+      "publishFail": "發布失敗",
+      "updateToken": "→ 前往設定更新 Token",
       "successCount": "{ok}/{total} 個平台成功"
     },
     "u10": {
-      "voice": { "mlFemale": "多語言，女", "mlMale": "多語言，男", "brMale": "英式英語，男", "usFemale": "美式英語，女" },
-      "defMarketingTeam": "行銷團隊", "defScript": "預設腳本", "defGeneralCustomer": "一般客戶", "defGeneralDesc": "一般潛在客戶或不明身份", "groupDefault": "一般",
-      "scriptN": "腳本 {n}", "categoryN": "分類 {n}",
-      "errNeedRule": "請先定義至少一條發送規則", "errNeedRecipients": "請輸入收件人清單", "errNeedTemplate": "請為至少一個腳本填寫主旨與內文", "sendFailed": "寄送失敗",
-      "errNeedScript2": "請先輸入或生成腳本", "errNeedScript": "請先輸入腳本", "errNeedPhone": "請輸入至少一個電話號碼",
-      "tabPhone": "電話行銷", "tabEmail": "Email 行銷",
-      "sendService": "寄送服務：Resend", "fromName": "寄件人名稱", "fromEmail": "寄件人 Email（需在 Resend 驗證）",
-      "step1Title": "Step 1 — Email 模板（腳本）", "step1Hint": "定義不同的 Email 內容模板，稍後在發送規則中選用",
-      "applyUnit4All": "套用 Unit 4 至所有模板", "templateNamePlaceholder": "模板名稱（例如：博主版腳本）", "applyUnit4": "套用 Unit 4",
-      "emailSubject": "Email 主旨", "emailSubjectPlaceholder": "Email 主旨…", "emailBody": "Email 內文", "emailBodyPlaceholder": "Email 內文…", "addTemplate": "新增模板",
-      "step2Title": "Step 2 — 發送規則", "step2Hint": "定義分類名稱與 AI 判斷依據，並指定套用哪個模板。AI 依序比對，第一個符合的規則生效。",
-      "categoryNamePlaceholder": "分類名稱（例如：美妝博主）", "aiBasis": "AI 分類依據（描述這類收件人特徵）", "aiBasisPlaceholder": "例如：個人美妝博主，以社交媒體影響力為主的個人",
-      "applyTemplate": "套用模板", "classifiedHere": "已分類至此：{n} 個收件人", "addRule": "新增規則",
-      "step3Title": "Step 3 — 輸入收件人 Email", "step3Hint": "每行一個 Email，AI 依上方規則自動歸類",
-      "classifying": "AI 分類中…", "autoClassify": "AI 自動分類", "recognizedEmails": "已識別 {n} 個有效 Email",
-      "sendingN": "寄送中…（{n} 封）", "startSendN": "開始寄送 {n} 封 Email", "sendResult": "寄送結果", "successN": "{ok}/{total} 成功", "sent": "已寄出",
+      "voice": {
+        "mlFemale": "多語言，女",
+        "mlMale": "多語言，男",
+        "brMale": "英式英語，男",
+        "usFemale": "美式英語，女"
+      },
+      "defMarketingTeam": "行銷團隊",
+      "defScript": "預設腳本",
+      "defGeneralCustomer": "一般客戶",
+      "defGeneralDesc": "一般潛在客戶或不明身份",
+      "groupDefault": "一般",
+      "scriptN": "腳本 {n}",
+      "categoryN": "分類 {n}",
+      "errNeedRule": "請先定義至少一條發送規則",
+      "errNeedRecipients": "請輸入收件人清單",
+      "errNeedTemplate": "請為至少一個腳本填寫主旨與內文",
+      "sendFailed": "寄送失敗",
+      "errNeedScript2": "請先輸入或生成腳本",
+      "errNeedScript": "請先輸入腳本",
+      "errNeedPhone": "請輸入至少一個電話號碼",
+      "tabPhone": "電話行銷",
+      "tabEmail": "Email 行銷",
+      "sendService": "寄送服務：Resend",
+      "fromName": "寄件人名稱",
+      "fromEmail": "寄件人 Email（需在 Resend 驗證）",
+      "step1Title": "Step 1 — Email 模板（腳本）",
+      "step1Hint": "定義不同的 Email 內容模板，稍後在發送規則中選用",
+      "applyUnit4All": "套用 Unit 4 至所有模板",
+      "templateNamePlaceholder": "模板名稱（例如：博主版腳本）",
+      "applyUnit4": "套用 Unit 4",
+      "emailSubject": "Email 主旨",
+      "emailSubjectPlaceholder": "Email 主旨…",
+      "emailBody": "Email 內文",
+      "emailBodyPlaceholder": "Email 內文…",
+      "addTemplate": "新增模板",
+      "step2Title": "Step 2 — 發送規則",
+      "step2Hint": "定義分類名稱與 AI 判斷依據，並指定套用哪個模板。AI 依序比對，第一個符合的規則生效。",
+      "categoryNamePlaceholder": "分類名稱（例如：美妝博主）",
+      "aiBasis": "AI 分類依據（描述這類收件人特徵）",
+      "aiBasisPlaceholder": "例如：個人美妝博主，以社交媒體影響力為主的個人",
+      "applyTemplate": "套用模板",
+      "classifiedHere": "已分類至此：{n} 個收件人",
+      "addRule": "新增規則",
+      "step3Title": "Step 3 — 輸入收件人 Email",
+      "step3Hint": "每行一個 Email，AI 依上方規則自動歸類",
+      "classifying": "AI 分類中…",
+      "autoClassify": "AI 自動分類",
+      "recognizedEmails": "已識別 {n} 個有效 Email",
+      "sendingN": "寄送中…（{n} 封）",
+      "startSendN": "開始寄送 {n} 封 Email",
+      "sendResult": "寄送結果",
+      "successN": "{ok}/{total} 成功",
+      "sent": "已寄出",
       "envNotice": "需在 Vercel 設定環境變數：",
-      "ttsProvider": "TTS：ElevenLabs", "callProvider": "撥打：Bird (app.bird.com)", "vbeeLocked": "VBEE — 待日後啟用",
-      "voiceDialSettings": "語音 / 撥號設定", "elevenVoice": "ElevenLabs 語音", "birdCallerId": "Bird 顯示號碼 *",
-      "phoneScript": "電話行銷腳本", "aiGenerating": "AI 生成中…", "aiGenerate": "AI 自動生成",
-      "scriptPlaceholder": "您好！我是來自[公司]的[姓名]，今天打電話是想和您分享…", "scriptCount": "{n} 字 · 建議 100-200 字（約 30-60 秒）",
-      "genVoice": "生成語音中…", "previewVoice": "試聽語音",
-      "phoneList": "電話號碼清單", "recognizedPhones": "已識別 {n} 個", "phoneHint": "每行一個號碼，或用逗號分隔，支援國際格式（需含國碼）",
-      "callingN": "撥打中…（{n} 通）", "startCallN": "開始撥打 {n} 通電話", "callResult": "撥打結果", "callOk": "撥出成功"
+      "ttsProvider": "TTS：ElevenLabs",
+      "callProvider": "撥打：Bird (app.bird.com)",
+      "vbeeLocked": "VBEE — 待日後啟用",
+      "voiceDialSettings": "語音 / 撥號設定",
+      "elevenVoice": "ElevenLabs 語音",
+      "birdCallerId": "Bird 顯示號碼 *",
+      "phoneScript": "電話行銷腳本",
+      "aiGenerating": "AI 生成中…",
+      "aiGenerate": "AI 自動生成",
+      "scriptPlaceholder": "您好！我是來自[公司]的[姓名]，今天打電話是想和您分享…",
+      "scriptCount": "{n} 字 · 建議 100-200 字（約 30-60 秒）",
+      "genVoice": "生成語音中…",
+      "previewVoice": "試聽語音",
+      "phoneList": "電話號碼清單",
+      "recognizedPhones": "已識別 {n} 個",
+      "phoneHint": "每行一個號碼，或用逗號分隔，支援國際格式（需含國碼）",
+      "callingN": "撥打中…（{n} 通）",
+      "startCallN": "開始撥打 {n} 通電話",
+      "callResult": "撥打結果",
+      "callOk": "撥出成功"
     },
     "u11": {
-      "ratio": { "16:9": "橫式 16:9", "9:16": "直式 9:16", "1:1": "方形 1:1" },
-      "ratioDesc": { "youtube": "YouTube / 廣告", "reels": "Reels / TikTok", "ig": "Instagram" },
-      "bg": { "white": "白色", "black": "黑色", "lightBlue": "淡藍", "lightOrange": "淡橙", "lightGreen": "淡綠" },
-      "errAvatar": "請選擇主播 Avatar", "errVoice": "請選擇聲音", "errScript": "請先在 Unit 4 文案產出中勾選「🎙️ 主播口播腳本」並生成", "submitFailed": "提交失敗",
-      "title": "主播行銷", "subtitle": "使用 HeyGen 虛擬主播生成行銷影片", "aiAvatarVideo": "AI Avatar 影片", "autoSave": "自動存入 Supabase",
-      "loadAssets": "載入 HeyGen 主播資源", "loading": "載入中…", "reloadAssets": "重新載入主播 & 聲音清單",
-      "selectAvatar": "選擇主播 Avatar", "nAvailable": "{n} 個可用", "selectVoice": "選擇聲音", "chooseVoice": "— 選擇聲音 —",
-      "formatBg": "影片格式 & 背景", "bgColor": "背景色：", "customColor": "自訂顏色",
-      "anchorScript": "主播口播腳本", "durStyle": "{dur}秒 · {style}", "fromUnit4": "來自 Unit 4 文案產出（{n} 字）· 如需修改請返回 Unit 4 重新生成",
-      "noScript": "尚無主播腳本", "noScriptHint": "請前往 Unit 4 文案產出 → 勾選「🎙️ 主播口播腳本」→ 設定秒數 → 產生文案",
-      "submitting": "提交生成中…", "genVideo": "生成主播影片",
-      "videoLog": "主播影片記錄", "nVideos": "{n} 部",
-      "stDone": "✓ 完成", "stFailed": "✗ 失敗", "stProcessing": "⏳ 生成中", "downloadVideo": "下載影片",
+      "ratio": {
+        "16:9": "橫式 16:9",
+        "9:16": "直式 9:16",
+        "1:1": "方形 1:1"
+      },
+      "ratioDesc": {
+        "youtube": "YouTube / 廣告",
+        "reels": "Reels / TikTok",
+        "ig": "Instagram"
+      },
+      "bg": {
+        "white": "白色",
+        "black": "黑色",
+        "lightBlue": "淡藍",
+        "lightOrange": "淡橙",
+        "lightGreen": "淡綠"
+      },
+      "errAvatar": "請選擇主播 Avatar",
+      "errVoice": "請選擇聲音",
+      "errScript": "請先在 Unit 4 文案產出中勾選「🎙️ 主播口播腳本」並生成",
+      "submitFailed": "提交失敗",
+      "title": "主播行銷",
+      "subtitle": "使用 HeyGen 虛擬主播生成行銷影片",
+      "aiAvatarVideo": "AI Avatar 影片",
+      "autoSave": "自動存入 Supabase",
+      "loadAssets": "載入 HeyGen 主播資源",
+      "loading": "載入中…",
+      "reloadAssets": "重新載入主播 & 聲音清單",
+      "selectAvatar": "選擇主播 Avatar",
+      "nAvailable": "{n} 個可用",
+      "selectVoice": "選擇聲音",
+      "chooseVoice": "— 選擇聲音 —",
+      "formatBg": "影片格式 & 背景",
+      "bgColor": "背景色：",
+      "customColor": "自訂顏色",
+      "anchorScript": "主播口播腳本",
+      "durStyle": "{dur}秒 · {style}",
+      "fromUnit4": "來自 Unit 4 文案產出（{n} 字）· 如需修改請返回 Unit 4 重新生成",
+      "noScript": "尚無主播腳本",
+      "noScriptHint": "請前往 Unit 4 文案產出 → 勾選「🎙️ 主播口播腳本」→ 設定秒數 → 產生文案",
+      "submitting": "提交生成中…",
+      "genVideo": "生成主播影片",
+      "videoLog": "主播影片記錄",
+      "nVideos": "{n} 部",
+      "stDone": "✓ 完成",
+      "stFailed": "✗ 失敗",
+      "stProcessing": "⏳ 生成中",
+      "downloadVideo": "下載影片",
       "envHint": "需要設定的環境變數："
     },
     "u12": {
-      "step": { "product": "行程/產品/房型 選擇", "date_depart": "出發日期", "date_checkin": "入住日期", "date_checkout": "退房日期", "timeslot": "時段/班次", "headcount": "人數（大人/小孩/嬰兒）", "passenger_id": "乘客資料（姓名+生日+身分證，逐人收集）", "booker_name": "訂房/訂位人姓名", "quote": "報價（AI 套定價計算機計算總價並告知客人）", "email": "電子郵件", "plate": "車牌號碼", "phone": "聯絡電話", "special_req": "特殊需求" },
-      "industry": { "homestay": "民宿 / 旅遊", "ecommerce": "電商 / 零售", "restaurant": "餐廳 / 餐飲", "clinic": "診所 / 醫美", "beauty": "美容 / 美髮 / SPA", "education": "教育 / 補習班" },
-      "cred": { "waVerify": "Verify Token（自訂任意字串）", "waSecret": "App Secret（驗證 webhook 簽章，強烈建議填）", "metaKey": "Meta 應用程式密鑰", "tgToken": "Bot Token（從 @BotFather 取得）", "tgAdmin": "管理員 Chat ID（選填）", "tgAdminPh": "你的個人 Chat ID，從 @userinfobot 取得", "tgSecret": "Webhook Secret（setWebhook 的 secret_token，強烈建議填）", "anyString": "自訂任意字串", "wechatToken": "Token（伺服器設定的 Token，驗證簽章用）" },
-      "jsonError": "JSON 格式錯誤：{error}", "shoppingConfig": "購物設定",
-      "tgRegFailed": "註冊失敗", "tgRegOk": "Webhook 已成功註冊", "tgReturned": "Telegram 回傳：{data}", "tgTestSent": "✅ 測試訊息已送出",
-      "imageTag": "[圖片]", "serverError": "伺服器回應錯誤 (HTTP {status})", "errorMsg": "錯誤：{error}", "unknownError": "未知錯誤", "connError": "連線錯誤：{error}",
+      "step": {
+        "product": "行程/產品/房型 選擇",
+        "date_depart": "出發日期",
+        "date_checkin": "入住日期",
+        "date_checkout": "退房日期",
+        "timeslot": "時段/班次",
+        "headcount": "人數（大人/小孩/嬰兒）",
+        "passenger_id": "乘客資料（姓名+生日+身分證，逐人收集）",
+        "booker_name": "訂房/訂位人姓名",
+        "quote": "報價（AI 套定價計算機計算總價並告知客人）",
+        "email": "電子郵件",
+        "plate": "車牌號碼",
+        "phone": "聯絡電話",
+        "special_req": "特殊需求"
+      },
+      "industry": {
+        "homestay": "民宿 / 旅遊",
+        "ecommerce": "電商 / 零售",
+        "restaurant": "餐廳 / 餐飲",
+        "clinic": "診所 / 醫美",
+        "beauty": "美容 / 美髮 / SPA",
+        "education": "教育 / 補習班"
+      },
+      "cred": {
+        "waVerify": "Verify Token（自訂任意字串）",
+        "waSecret": "App Secret（驗證 webhook 簽章，強烈建議填）",
+        "metaKey": "Meta 應用程式密鑰",
+        "tgToken": "Bot Token（從 @BotFather 取得）",
+        "tgAdmin": "管理員 Chat ID（選填）",
+        "tgAdminPh": "你的個人 Chat ID，從 @userinfobot 取得",
+        "tgSecret": "Webhook Secret（setWebhook 的 secret_token，強烈建議填）",
+        "anyString": "自訂任意字串",
+        "wechatToken": "Token（伺服器設定的 Token，驗證簽章用）"
+      },
+      "jsonError": "JSON 格式錯誤：{error}",
+      "shoppingConfig": "購物設定",
+      "tgRegFailed": "註冊失敗",
+      "tgRegOk": "Webhook 已成功註冊",
+      "tgReturned": "Telegram 回傳：{data}",
+      "tgTestSent": "✅ 測試訊息已送出",
+      "imageTag": "[圖片]",
+      "serverError": "伺服器回應錯誤 (HTTP {status})",
+      "errorMsg": "錯誤：{error}",
+      "unknownError": "未知錯誤",
+      "connError": "連線錯誤：{error}",
       "surveyMsg": "感謝您的聯繫！請問本次問題有解決您的疑慮嗎？\n\n1️⃣ 已解決，非常滿意\n2️⃣ 已解決，尚可\n3️⃣ 未解決，需進一步協助\n\n如有其他問題，歡迎隨時聯繫我們 🙏",
-      "ticketSubject": "客服工單", "roleCustomer": "客戶", "testUser": "測試用戶",
-      "tkOpen": "待處理", "tkInProgress": "處理中", "tkResolved": "已解決", "tkClosed": "已結案",
-      "prUrgent": "緊急", "prHigh": "高", "prMedium": "中", "prLow": "低",
-      "title": "智能客服系統", "subtitle": "Gemini Flash 意圖分類 · Claude Sonnet 高風險升級",
-      "tabPlatforms": "平台", "tabAiSettings": "AI 設定", "tabKnowledge": "知識庫", "tabDataSources": "資料來源", "tabPricing": "定價計算機", "tabTest": "測試", "tabLogs": "記錄", "tabTickets": "工單", "tabInbox": "收件匣",
+      "ticketSubject": "客服工單",
+      "roleCustomer": "客戶",
+      "testUser": "測試用戶",
+      "tkOpen": "待處理",
+      "tkInProgress": "處理中",
+      "tkResolved": "已解決",
+      "tkClosed": "已結案",
+      "prUrgent": "緊急",
+      "prHigh": "高",
+      "prMedium": "中",
+      "prLow": "低",
+      "title": "智能客服系統",
+      "subtitle": "Gemini Flash 意圖分類 · Claude Sonnet 高風險升級",
+      "tabPlatforms": "平台",
+      "tabAiSettings": "AI 設定",
+      "tabKnowledge": "知識庫",
+      "tabDataSources": "資料來源",
+      "tabPricing": "定價計算機",
+      "tabTest": "測試",
+      "tabLogs": "記錄",
+      "tabTickets": "工單",
+      "tabInbox": "收件匣",
       "platformsIntro": "設定各平台的 API Key，再將 Webhook URL 複製到對應平台後台。",
-      "connected": "已連線", "notSet": "未設定", "configure": "設定", "loginToShow": "(登入後顯示)", "copy": "複製", "officialDocs": "官方說明",
-      "tgRegistering": "註冊中...", "tgReregister": "重新註冊 Webhook", "tgQuerying": "查詢中...", "tgCheckStatus": "查看錯誤狀態",
-      "tgEndpoint": "Webhook 端點", "tgRedirected": "仍被重導，等待 Vercel 部署完成後再試", "tgAccessible": "正常可存取",
-      "tgNotSet": "（未設定）", "tgLastError": "最後錯誤", "tgTime": "時間", "tgHistoricError": "此為歷史錯誤，目前 Webhook 端點已正常（HTTP 200）", "tgWebhookOk": "Webhook 正常，無錯誤紀錄",
-      "tgRecentChats": "最近對話（點選填入）：", "tgAdminId": "管理員 Chat ID", "tgForwardHere": "客戶訊息會轉發至此", "tgNoAdminId": "未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）", "tgBadToken": "Bot Token 無效",
-      "tgTestHint": "傳送測試訊息（先點「查看錯誤狀態」自動抓取 Chat ID）", "tgChatIdPh": "Chat ID，例如 123456789", "tgSending": "送出中...", "tgSend": "送出",
-      "waConnectedPhone": "已連線：+{phone}", "waConnected": "WhatsApp 已連線", "waScanQr": "請用 WhatsApp 掃描下方 QR Code", "waConnecting": "連線中...", "waReconnecting": "重新連線中...", "waNotConnected": "未連線", "waDisconnected": "已斷線，請重新連線", "waDisconnect": "斷線", "waStarting": "啟動中...", "waWaiting": "等待掃描...", "waScanConnect": "掃 QR 連線", "waQrHint": "打開 WhatsApp → 選「已連結的裝置」→ 掃描此 QR Code", "waBridgeHint": "請先在 Vercel 環境變數設定 WHATSAPP_BRIDGE_URL 和 WHATSAPP_BRIDGE_API_KEY",
-      "fieldSet": "✓ 已設定", "keepOriginal": "留空保留原值", "save": "儲存", "saving": "儲存中...", "cancel": "取消",
-      "tplTitle": "{name} 模板", "tplDesc": "套用預設系統提示詞與引導流程", "applyTemplate": "套用模板", "noPromptHint": "尚未設定系統提示詞，點「套用模板」快速啟動", "quickApplyTpl": "快速套用行業模板",
-      "routingTitle": "AI 路由架構", "routingFlash": "意圖分類 · 低/中風險回覆", "routingClaude": "高風險升級 · 複雜問題", "routingNote": "高風險意圖：<b>退換貨/退款、投訴/抱怨、法律/合約</b>（自動升級至 Claude）",
-      "escalationThreshold": "升級閾值", "escHighLabel": "高風險才升級", "escHighDesc": "僅投訴/退款/法律 → Claude", "escMedLabel": "中風險以上升級", "escMedDesc": "中+高風險均 → Claude",
-      "replyLanguage": "回覆語言", "autoDetect": "自動偵測（跟隨客戶語言）",
-      "systemPrompt": "系統提示詞（System Prompt）", "aiRoleTag": "AI 角色設定", "nChars": "{n} 字", "systemPromptHint": "定義 AI 客服的<b>角色、語氣與行為準則</b>。例如：「你是 XX 品牌的客服，請用親切語氣回覆」。<br></br>⚠️ 這裡<b>不是</b>放 FAQ 或產品資料，那些請到「知識庫」分頁設定。", "systemPromptPlaceholder": "例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。",
-      "bookingFlow": "預訂引導流程", "bookingFlowHint": "開啟後 AI 依客人意圖自動觸發對應流程，逐步收集預訂資料",
-      "flowN": "流程 {n}", "quickBooking": "快速報名", "edit": "編輯", "delete": "刪除", "triggerKw": "觸發關鍵字：", "notConfigured": "(未設定)", "simpleModeFlow": "AI 報價確認後 → 彈出報名表單 → 推送 LINE", "collectSteps": "收集步驟：",
-      "addBookingType": "新增預訂類型", "defaultPayment": "預設付款說明（各流程未設定時使用）", "paymentPlaceholder": "例：請匯款至玉山銀行 123-456789 戶名：OO 公司，匯款後傳收據截圖確認。",
-      "flowEditorTitle": "設定預訂流程", "flowName": "流程名稱", "flowNamePlaceholder": "例：賞鯨行程預訂、訂房、停車",
-      "triggerKwLabel": "觸發關鍵字（逗號分隔）", "triggerKwHint": "客人說到這些字詞時，AI 自動啟動此流程", "triggerKwPlaceholder": "例：賞鯨,出海,繞島,訂票",
-      "dataHintLabel": "關聯資料關鍵字", "dataHintHint": "告訴 AI 要從知識庫和定價計算機中找哪一類資料。<br></br>例：賞鯨行程 → 填「賞鯨」；訂房 → 填「房型」或房間名稱", "dataHintPlaceholder": "例：賞鯨、海景大床房、停車",
-      "simpleMode": "快速報名模式", "simpleModeHint": "啟用後：AI 只問方案和人數、報價，客人確認後彈出表單收集詳細資料（姓名/生日/身分證），並推送至客服 LINE。", "requireId": "需要填身分證號（幼兒永遠免填）",
-      "collectStepsLabel": "收集步驟（拖動 ↑↓ 調整順序）", "flowPaymentLabel": "付款說明（此流程專用，留空則用預設）", "flowPaymentPlaceholder": "例：請轉帳至 ...", "saveFlow": "儲存此流程",
-      "discountTitle": "AI 促成優惠權限", "salesTool": "業務工具", "discountDesc": "設定 AI 在客人猶豫或嫌貴時，可主動提出的折扣與贈品。AI 每次只說一項，不一次全列，自然融入對話。",
-      "maxDiscount": "最大折扣", "maxDiscountHint": "0 = 不提供折扣", "maxDiscountOk": "✓ AI 最多可讓 {pct}% 折扣", "giftItems": "可贈送項目", "onePerLine": "一行一項", "giftPlaceholder": "免費早餐（一人）\n延遲退房至 12 點\n免費停車一天\n升級套房（視空房狀況）", "giftHint": "客人猶豫時 AI 會從清單中挑一項主動提出，確認後列入訂單確認清單。",
-      "vipTitle": "VIP 客戶名單", "live": "已上線", "vipDesc": "每行一個關鍵字（客戶名稱、Line 暱稱、手機號後4碼等）。對話中偵測到時，自動顯示「VIP 優先處理」標示。",
-      "autoClose": "自動結案", "autoCloseDesc": "按下「結案」後，若客戶在指定時間內無回應，系統自動關閉工單。設為 0 表示不自動結案。", "minutesAutoClose": "分鐘後自動結案", "enabled": "✓ 已啟用",
-      "ticketNotify": "工單通知", "ticketNotifyTag": "建立工單時自動推播", "ticketNotifyDesc": "客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。",
-      "whLabelPh": "備註名稱（如：店長群組）", "whLineToken": "Channel Access Token（LINE Developers 取得）", "whLineTarget": "目標 ID：User ID（U 開頭）或 Group ID（C 開頭）", "whTgToken": "Bot Token（@BotFather 取得，格式：123456:ABC-DEF...）", "whTgChatId": "Chat ID（用戶/群組/頻道 ID，如：-1001234567890）", "whTgHint": "將 Bot 加入群組後，傳訊息給 @userinfobot 可查詢 Chat ID", "addNotifyChannel": "新增通知管道", "saveSettings": "儲存設定",
-      "kbHint": "AI 客服優先從這裡查找答案，找不到才回到公司資料（Unit 2）", "kbDirectInput": "直接輸入知識內容", "kbFaqTag": "FAQ / 產品資料", "kbDesc": "放 FAQ、產品規格、價格等<b>具體資訊</b>，AI 客服會從這裡查找答案。<br></br>這裡<b>不是</b> Prompt 設定，Prompt 請到「AI 設定」分頁設定。", "kbPlaceholder": "例：\nQ: 如何申請試用？\nA: 請至官網填寫申請表，我們會在 1 個工作天內回覆。\n\nQ: 收費方案為何？\nA: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。",
-      "uploadDoc": "上傳文件（PDF / DOCX / XLSX / CSV / TXT）", "uploadingShort": "上傳中…", "clickUpload50": "點擊上傳 · 最大 50MB", "noFiles": "尚未上傳任何文件", "extractedChars": "已萃取 {n} 字", "noTextContent": "無文字內容", "deleteFile": "刪除此檔案", "saveKb": "儲存知識庫",
-      "extSources": "外部資料來源", "extSourcesHint": "客戶輸入觸發關鍵字時，AI 自動查詢對應 Google Sheets", "add": "新增",
-      "sourceSwitch": "AI 取得來源切換", "sourceSwitchHint": "沒有使用「訂單系統」的話，可切換成由下方資料來源／定價計算機取得。",
-      "roomPrice": "房價／動態價格", "roomPriceHint": "客人問價時 AI 從哪取得", "bookingSystem": "訂單系統",
-      "checkinPwd": "入住密碼／房號", "checkinPwdHint": "客人給訂單號時 AI 從哪取得", "pwdSheet": "訂單密碼表",
-      "checkinTime": "入住時間", "checkinTimeHint": "未到此時間，AI 不提供密碼／房號（HH:MM）。留空則用民宿資料設定，預設 15:00",
-      "recommendedSheets": "建議設定的 Google Sheets（{name}）", "sheetN": "表格 {n}", "queryColumn": "查詢欄位：", "returnColExample": "回傳欄位範例：", "triggerWord": "觸發詞：", "triggerMode": "觸發模式：", "tmNumeric": "數字觸發", "tmBoth": "關鍵字+數字", "tmKeyword": "關鍵字觸發",
-      "dsTip1": "<b>定價查詢</b>請到「定價計算機」分頁設定 — 這裡只放需要即時查詢的非定價資料（訂單、排班、時段）", "dsTip2": "依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID",
-      "loadingShort": "載入中…", "noDataSources": "尚無資料來源。點擊「新增」設定 Google Sheets 查詢。", "toolDivision": "工具分工說明", "toolSheets": "<b>Google Sheets（此頁）</b>：訂單查詢、排班、可用時段等即時動態資料", "toolPricing": "<b>定價計算機</b>：房型/療程/套餐等定價計算，AI 自動套公式報價", "toolKb": "<b>知識庫</b>：FAQ、政策說明、靜態產品介紹",
-      "enable": "啟用", "disable": "停用",
-      "editSource": "編輯資料來源", "addSource": "新增資料來源", "dsName": "名稱", "dsNamePh": "例：訂單密碼表、房型定價", "dsSpreadsheetPh": "1BxiMVs0...（網址列中間那段）", "dsSheetName": "工作表名稱（Sheet Name）", "dsSheetNamePh": "工作表1 或 Sheet1", "dsKeyColumn": "查詢欄位名稱（標題列的欄名）", "dsKeyColumnPh": "例：訂單編號、房型名稱",
-      "dsReturnCols": "回傳欄位（每行一個，留空回傳所有欄位）", "dsReturnColsPh": "房號\n大門密碼\n房間密碼", "dsReturnColsHint": "每行填一個欄位名稱（需與 Google Sheets 標題列完全一致）",
-      "dsTriggerMode": "觸發方式", "dsTmKeyword": "關鍵字觸發（客戶訊息含特定詞）", "dsTmNumeric": "數字觸發（客戶輸入8位以上訂單號，自動精確比對）", "dsTmBoth": "兩者皆可", "dsNumericHint": "偵測 8 位以上純數字（非 0 開頭、非 + 開頭），精確比對「查詢欄位」後只回覆對應那筆資料。",
-      "dsTriggerKw": "觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）", "dsTriggerKwPh": "例：訂單,密碼,查詢",
-      "howToGetId": "如何取得 Spreadsheet ID：", "howToGetIdBody": "從 Google Sheets 網址複製：docs.google.com/spreadsheets/d/<b>【這段】</b>/edit", "sheetsPermHint": "Google Sheets 需設為「知道連結的人可以查看」，並啟用 Sheets API。",
-      "usageNotes": "使用說明", "usage1": "每位使用者可新增多個資料來源，各自填入自己的 Google API Key 與試算表。", "usage2": "「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。", "usage3": "「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。", "usage4": "回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。",
-      "shopTitle": "民宿購物設定", "shopHint": "客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets（舉例：早餐預訂、備品補充、活動報名）", "noShopConfig": "尚無購物設定。點擊「新增」加入早餐、備品等項目。", "shopMeta": "截止：{cutoff}　送達：{delivery}　選項：{count} 項",
-      "editShopConfig": "編輯購物設定", "addShopConfig": "新增購物設定", "shopName": "名稱", "shopNamePh": "例：早餐預訂、備品補充、活動報名", "appsScriptUrl": "Apps Script Web App 網址", "appsScriptHint": "部署 Apps Script 為 Web App 後取得的 /exec 網址",
-      "cutoffTime": "截止時間", "deliveryTime": "預計送達時間", "roomList": "房間列表（每行一間，格式：房號 房型名稱）", "itemMenu": "物品選單（每行一個選項）", "itemMenuHint": "AI 點餐時會直接列出這些選項給客人選擇",
-      "orderFlowTitle": "設定完成後 AI 的點餐流程：", "orderFlow1": "1. 客人詢問相關服務 → AI 確認房號 → 列出上方選單", "orderFlow2": "2. 客人選好品項與份數 → AI 整理確認清單", "orderFlow3": "3. 客人確認 → 系統自動 POST 到 Apps Script → Script 推 LINE 群組 + 存 Sheets",
-      "pricingHint": "AI 查詢定價時精確套用數字，不會自行估算", "pcTour": "行程", "pcAccommodation": "住宿", "pcCustom": "自訂", "noPricing": "尚無定價設定", "noPricingHint": "選擇上方按鈕新增行程或住宿定價",
-      "editPricing": "編輯定價設定", "addPricing": "新增定價設定", "pcNamePh": "例：訂房定價、行程定價", "pricingJson": "定價 JSON（直接修改數字即可）", "loadTourTpl": "載入行程模板", "loadAccTpl": "載入住宿模板", "loadCustomTpl": "載入自訂模板",
-      "jsonFields": "JSON 欄位說明", "jfTrigger": "：客戶訊息含這些詞時觸發，例：[\"賞鯨\",\"行程\"]", "jfPrice": "：平日 / 假日價格（數字，不含逗號）", "jfPackages": "：套餐方案，AI 會優先推薦", "jfGroup": "：團體折扣規則", "jfCancel": "：取消政策說明",
-      "pcUsage1": "日後新增產品：點「+ 自訂」按鈕，填入觸發詞和價格說明即可。", "pcUsage2": "AI 收到含觸發詞的訊息時，會自動帶入定價表並逐步計算，不會自行估算。", "pcUsage3": "賞鯨 / 住宿同時設定不會衝突，AI 會根據訊息內容選擇對應的定價表。",
-      "testChat": "客服測試對話", "testRouting": "Gemini + Claude 路由", "draftMode": "草稿模式", "on": "開", "off": "關", "summary": "摘要", "createTicket": "建立工單", "closeCase": "結案", "clear": "清除",
-      "testEmptyHint": "在下方輸入框模擬客戶訊息，測試 AI 客服回覆。", "vipPriority": "VIP 客戶 — 優先處理", "churnWarning": "流失預警：客戶可能考慮取消或離開",
-      "riskHigh": "高風險", "riskMedium": "中風險", "riskLow": "低風險", "addToKb": "加入知識庫", "aiDrafting": "AI 生成草稿中…", "aiThinking": "AI 思考中…",
-      "smartDraft": "智慧草稿", "draftFor": "針對「{msg}」的草稿回覆", "adoptSend": "採用送出", "discard": "捨棄", "imageSelected": "圖片已選取", "remove": "移除", "uploadImage": "上傳圖片", "send": "送出",
-      "autoCloseCountdown": "自動結案倒數", "autoCloseIn": "{time} 後自動關閉工單", "caseAutoClosed": "工單已自動結案", "convSummary": "對話摘要", "quickPhrases": "快速測試語句：",
-      "autoLearnFaq": "自動學習 FAQ", "autoLearnFaqHint": "客服回答後加入知識庫，AI 下次遇到類似問題直接引用標準答案", "manualAdd": "手動新增", "noFaqRecords": "尚無學習記錄。在「測試」Tab 的 AI 回覆旁點「📚 加入知識庫」即可新增。",
-      "totalConv": "總對話數", "avgSpeed": "平均回應速度", "highRiskConv": "高風險對話", "claudeEscalated": "Claude 升級處理", "riskDist": "風險分佈", "hotIntents": "熱點問題 TOP 5", "sentimentTrend": "情緒趨勢（近 7 天）",
-      "convLog": "對話記錄", "nRecords": "{n} 筆", "noConvLog": "尚無對話記錄", "customerLabel": "客戶：", "aiLabel": "AI：",
-      "ticketSystem": "工單系統", "filterAll": "全部", "ticketTip": "切換到「測試」Tab，與 AI 對話後點「建立工單」即可轉入工單系統", "noTickets": "尚無工單", "priorityLabel": "{p}優先",
-      "unifiedInbox": "統一收件匣", "sourceNote": "來源說明", "sourceTest": "🧪 測試：透過「測試」Tab 的對話自動儲存", "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram：實際平台 Webhook 訊息（需先在「平台」Tab 設定）", "noInbox": "尚無訊息記錄", "noInboxHint": "先在「測試」Tab 發送幾則訊息，即可在此查看",
-      "bookingFormTitle": "報名資料填寫", "participants": "參加人員", "ageAdult": "成人", "ageChild": "小孩", "ageInfant": "幼兒", "ageYears": "（{age}歲）", "pName": "姓名", "pBirthday": "生日", "pIdNumber": "身分證號", "infantExempt": "幼兒（3歲以下）免填身分證",
-      "contactPhone": "聯絡電話", "contactPhoneHint": "填寫其中一位參加者的聯絡電話", "bookingThanks": "感謝您的報名！客服會盡快與您聯繫，請保持電話暢通。", "submitting2": "送出中…", "confirmSubmit": "確認送出",
-      "faqQ": "客戶問題（Q）", "faqQPh": "例：幾點可以入住？", "faqA": "標準答案（A）", "faqAPh": "輸入正確的客服回覆內容…", "faqKw": "觸發關鍵字（逗號分隔，留空由 AI 自動建議）", "faqKwPh": "例：入住,幾點,check in", "aiAnalyzing": "AI 分析中…", "saveToKb": "儲存至知識庫",
+      "connected": "已連線",
+      "notSet": "未設定",
+      "configure": "設定",
+      "loginToShow": "(登入後顯示)",
+      "copy": "複製",
+      "officialDocs": "官方說明",
+      "tgRegistering": "註冊中...",
+      "tgReregister": "重新註冊 Webhook",
+      "tgQuerying": "查詢中...",
+      "tgCheckStatus": "查看錯誤狀態",
+      "tgEndpoint": "Webhook 端點",
+      "tgRedirected": "仍被重導，等待 Vercel 部署完成後再試",
+      "tgAccessible": "正常可存取",
+      "tgNotSet": "（未設定）",
+      "tgLastError": "最後錯誤",
+      "tgTime": "時間",
+      "tgHistoricError": "此為歷史錯誤，目前 Webhook 端點已正常（HTTP 200）",
+      "tgWebhookOk": "Webhook 正常，無錯誤紀錄",
+      "tgRecentChats": "最近對話（點選填入）：",
+      "tgAdminId": "管理員 Chat ID",
+      "tgForwardHere": "客戶訊息會轉發至此",
+      "tgNoAdminId": "未設定管理員 Chat ID，客戶訊息不會轉發給你。請到「設定憑證」填入你的 Chat ID（可從 @userinfobot 取得）",
+      "tgBadToken": "Bot Token 無效",
+      "tgTestHint": "傳送測試訊息（先點「查看錯誤狀態」自動抓取 Chat ID）",
+      "tgChatIdPh": "Chat ID，例如 123456789",
+      "tgSending": "送出中...",
+      "tgSend": "送出",
+      "waConnectedPhone": "已連線：+{phone}",
+      "waConnected": "WhatsApp 已連線",
+      "waScanQr": "請用 WhatsApp 掃描下方 QR Code",
+      "waConnecting": "連線中...",
+      "waReconnecting": "重新連線中...",
+      "waNotConnected": "未連線",
+      "waDisconnected": "已斷線，請重新連線",
+      "waDisconnect": "斷線",
+      "waStarting": "啟動中...",
+      "waWaiting": "等待掃描...",
+      "waScanConnect": "掃 QR 連線",
+      "waQrHint": "打開 WhatsApp → 選「已連結的裝置」→ 掃描此 QR Code",
+      "waBridgeHint": "請先在 Vercel 環境變數設定 WHATSAPP_BRIDGE_URL 和 WHATSAPP_BRIDGE_API_KEY",
+      "fieldSet": "✓ 已設定",
+      "keepOriginal": "留空保留原值",
+      "save": "儲存",
+      "saving": "儲存中...",
+      "cancel": "取消",
+      "tplTitle": "{name} 模板",
+      "tplDesc": "套用預設系統提示詞與引導流程",
+      "applyTemplate": "套用模板",
+      "noPromptHint": "尚未設定系統提示詞，點「套用模板」快速啟動",
+      "quickApplyTpl": "快速套用行業模板",
+      "routingTitle": "AI 路由架構",
+      "routingFlash": "意圖分類 · 低/中風險回覆",
+      "routingClaude": "高風險升級 · 複雜問題",
+      "routingNote": "高風險意圖：<b>退換貨/退款、投訴/抱怨、法律/合約</b>（自動升級至 Claude）",
+      "escalationThreshold": "升級閾值",
+      "escHighLabel": "高風險才升級",
+      "escHighDesc": "僅投訴/退款/法律 → Claude",
+      "escMedLabel": "中風險以上升級",
+      "escMedDesc": "中+高風險均 → Claude",
+      "replyLanguage": "回覆語言",
+      "autoDetect": "自動偵測（跟隨客戶語言）",
+      "systemPrompt": "系統提示詞（System Prompt）",
+      "aiRoleTag": "AI 角色設定",
+      "nChars": "{n} 字",
+      "systemPromptHint": "定義 AI 客服的<b>角色、語氣與行為準則</b>。例如：「你是 XX 品牌的客服，請用親切語氣回覆」。<br></br>⚠️ 這裡<b>不是</b>放 FAQ 或產品資料，那些請到「知識庫」分頁設定。",
+      "systemPromptPlaceholder": "例：你是 AI GATE 的專業客服，請用親切且專業的語氣回答客戶問題。若無法確定答案，請主動告知將轉交人工客服處理。",
+      "bookingFlow": "預訂引導流程",
+      "bookingFlowHint": "開啟後 AI 依客人意圖自動觸發對應流程，逐步收集預訂資料",
+      "flowN": "流程 {n}",
+      "quickBooking": "快速報名",
+      "edit": "編輯",
+      "delete": "刪除",
+      "triggerKw": "觸發關鍵字：",
+      "notConfigured": "(未設定)",
+      "simpleModeFlow": "AI 報價確認後 → 彈出報名表單 → 推送 LINE",
+      "collectSteps": "收集步驟：",
+      "addBookingType": "新增預訂類型",
+      "defaultPayment": "預設付款說明（各流程未設定時使用）",
+      "paymentPlaceholder": "例：請匯款至玉山銀行 123-456789 戶名：OO 公司，匯款後傳收據截圖確認。",
+      "flowEditorTitle": "設定預訂流程",
+      "flowName": "流程名稱",
+      "flowNamePlaceholder": "例：賞鯨行程預訂、訂房、停車",
+      "triggerKwLabel": "觸發關鍵字（逗號分隔）",
+      "triggerKwHint": "客人說到這些字詞時，AI 自動啟動此流程",
+      "triggerKwPlaceholder": "例：賞鯨,出海,繞島,訂票",
+      "dataHintLabel": "關聯資料關鍵字",
+      "dataHintHint": "告訴 AI 要從知識庫和定價計算機中找哪一類資料。<br></br>例：賞鯨行程 → 填「賞鯨」；訂房 → 填「房型」或房間名稱",
+      "dataHintPlaceholder": "例：賞鯨、海景大床房、停車",
+      "simpleMode": "快速報名模式",
+      "simpleModeHint": "啟用後：AI 只問方案和人數、報價，客人確認後彈出表單收集詳細資料（姓名/生日/身分證），並推送至客服 LINE。",
+      "requireId": "需要填身分證號（幼兒永遠免填）",
+      "collectStepsLabel": "收集步驟（拖動 ↑↓ 調整順序）",
+      "flowPaymentLabel": "付款說明（此流程專用，留空則用預設）",
+      "flowPaymentPlaceholder": "例：請轉帳至 ...",
+      "saveFlow": "儲存此流程",
+      "discountTitle": "AI 促成優惠權限",
+      "salesTool": "業務工具",
+      "discountDesc": "設定 AI 在客人猶豫或嫌貴時，可主動提出的折扣與贈品。AI 每次只說一項，不一次全列，自然融入對話。",
+      "maxDiscount": "最大折扣",
+      "maxDiscountHint": "0 = 不提供折扣",
+      "maxDiscountOk": "✓ AI 最多可讓 {pct}% 折扣",
+      "giftItems": "可贈送項目",
+      "onePerLine": "一行一項",
+      "giftPlaceholder": "免費早餐（一人）\n延遲退房至 12 點\n免費停車一天\n升級套房（視空房狀況）",
+      "giftHint": "客人猶豫時 AI 會從清單中挑一項主動提出，確認後列入訂單確認清單。",
+      "vipTitle": "VIP 客戶名單",
+      "live": "已上線",
+      "vipDesc": "每行一個關鍵字（客戶名稱、Line 暱稱、手機號後4碼等）。對話中偵測到時，自動顯示「VIP 優先處理」標示。",
+      "autoClose": "自動結案",
+      "autoCloseDesc": "按下「結案」後，若客戶在指定時間內無回應，系統自動關閉工單。設為 0 表示不自動結案。",
+      "minutesAutoClose": "分鐘後自動結案",
+      "enabled": "✓ 已啟用",
+      "ticketNotify": "工單通知",
+      "ticketNotifyTag": "建立工單時自動推播",
+      "ticketNotifyDesc": "客人要求真人客服、工單建立時，自動通知指定聯絡人。支援 LINE Messaging API、Telegram Bot 及自訂 Webhook。",
+      "whLabelPh": "備註名稱（如：店長群組）",
+      "whLineToken": "Channel Access Token（LINE Developers 取得）",
+      "whLineTarget": "目標 ID：User ID（U 開頭）或 Group ID（C 開頭）",
+      "whTgToken": "Bot Token（@BotFather 取得，格式：123456:ABC-DEF...）",
+      "whTgChatId": "Chat ID（用戶/群組/頻道 ID，如：-1001234567890）",
+      "whTgHint": "將 Bot 加入群組後，傳訊息給 @userinfobot 可查詢 Chat ID",
+      "addNotifyChannel": "新增通知管道",
+      "saveSettings": "儲存設定",
+      "kbHint": "AI 客服優先從這裡查找答案，找不到才回到公司資料（Unit 2）",
+      "kbDirectInput": "直接輸入知識內容",
+      "kbFaqTag": "FAQ / 產品資料",
+      "kbDesc": "放 FAQ、產品規格、價格等<b>具體資訊</b>，AI 客服會從這裡查找答案。<br></br>這裡<b>不是</b> Prompt 設定，Prompt 請到「AI 設定」分頁設定。",
+      "kbPlaceholder": "例：\nQ: 如何申請試用？\nA: 請至官網填寫申請表，我們會在 1 個工作天內回覆。\n\nQ: 收費方案為何？\nA: 我們提供月繳與年繳方案，詳情請參考官網定價頁面。",
+      "uploadDoc": "上傳文件（PDF / DOCX / XLSX / CSV / TXT）",
+      "uploadingShort": "上傳中…",
+      "clickUpload50": "點擊上傳 · 最大 50MB",
+      "noFiles": "尚未上傳任何文件",
+      "extractedChars": "已萃取 {n} 字",
+      "noTextContent": "無文字內容",
+      "deleteFile": "刪除此檔案",
+      "saveKb": "儲存知識庫",
+      "extSources": "外部資料來源",
+      "extSourcesHint": "客戶輸入觸發關鍵字時，AI 自動查詢對應 Google Sheets",
+      "add": "新增",
+      "sourceSwitch": "AI 取得來源切換",
+      "sourceSwitchHint": "沒有使用「訂單系統」的話，可切換成由下方資料來源／定價計算機取得。",
+      "roomPrice": "房價／動態價格",
+      "roomPriceHint": "客人問價時 AI 從哪取得",
+      "bookingSystem": "訂單系統",
+      "checkinPwd": "入住密碼／房號",
+      "checkinPwdHint": "客人給訂單號時 AI 從哪取得",
+      "pwdSheet": "訂單密碼表",
+      "checkinTime": "入住時間",
+      "checkinTimeHint": "未到此時間，AI 不提供密碼／房號（HH:MM）。留空則用民宿資料設定，預設 15:00",
+      "recommendedSheets": "建議設定的 Google Sheets（{name}）",
+      "sheetN": "表格 {n}",
+      "queryColumn": "查詢欄位：",
+      "returnColExample": "回傳欄位範例：",
+      "triggerWord": "觸發詞：",
+      "triggerMode": "觸發模式：",
+      "tmNumeric": "數字觸發",
+      "tmBoth": "關鍵字+數字",
+      "tmKeyword": "關鍵字觸發",
+      "dsTip1": "<b>定價查詢</b>請到「定價計算機」分頁設定 — 這裡只放需要即時查詢的非定價資料（訂單、排班、時段）",
+      "dsTip2": "依照上方建議建立 Google Sheets 後，點「新增」填入 API Key 和 Spreadsheet ID",
+      "loadingShort": "載入中…",
+      "noDataSources": "尚無資料來源。點擊「新增」設定 Google Sheets 查詢。",
+      "toolDivision": "工具分工說明",
+      "toolSheets": "<b>Google Sheets（此頁）</b>：訂單查詢、排班、可用時段等即時動態資料",
+      "toolPricing": "<b>定價計算機</b>：房型/療程/套餐等定價計算，AI 自動套公式報價",
+      "toolKb": "<b>知識庫</b>：FAQ、政策說明、靜態產品介紹",
+      "enable": "啟用",
+      "disable": "停用",
+      "editSource": "編輯資料來源",
+      "addSource": "新增資料來源",
+      "dsName": "名稱",
+      "dsNamePh": "例：訂單密碼表、房型定價",
+      "dsSpreadsheetPh": "1BxiMVs0...（網址列中間那段）",
+      "dsSheetName": "工作表名稱（Sheet Name）",
+      "dsSheetNamePh": "工作表1 或 Sheet1",
+      "dsKeyColumn": "查詢欄位名稱（標題列的欄名）",
+      "dsKeyColumnPh": "例：訂單編號、房型名稱",
+      "dsReturnCols": "回傳欄位（每行一個，留空回傳所有欄位）",
+      "dsReturnColsPh": "房號\n大門密碼\n房間密碼",
+      "dsReturnColsHint": "每行填一個欄位名稱（需與 Google Sheets 標題列完全一致）",
+      "dsTriggerMode": "觸發方式",
+      "dsTmKeyword": "關鍵字觸發（客戶訊息含特定詞）",
+      "dsTmNumeric": "數字觸發（客戶輸入8位以上訂單號，自動精確比對）",
+      "dsTmBoth": "兩者皆可",
+      "dsNumericHint": "偵測 8 位以上純數字（非 0 開頭、非 + 開頭），精確比對「查詢欄位」後只回覆對應那筆資料。",
+      "dsTriggerKw": "觸發關鍵字（逗號分隔，客戶訊息含此詞才查詢）",
+      "dsTriggerKwPh": "例：訂單,密碼,查詢",
+      "howToGetId": "如何取得 Spreadsheet ID：",
+      "howToGetIdBody": "從 Google Sheets 網址複製：docs.google.com/spreadsheets/d/<b>【這段】</b>/edit",
+      "sheetsPermHint": "Google Sheets 需設為「知道連結的人可以查看」，並啟用 Sheets API。",
+      "usageNotes": "使用說明",
+      "usage1": "每位使用者可新增多個資料來源，各自填入自己的 Google API Key 與試算表。",
+      "usage2": "「關鍵字觸發」：客戶訊息含觸發詞時，AI 查詢整張表並附上結果。",
+      "usage3": "「數字觸發」：客戶直接輸入 8 位以上訂單號（非 0/+ 開頭）→ 精確比對對應列 → 只回覆那筆的房號、大門密碼、房門密碼等欄位。",
+      "usage4": "回傳欄位可填多個，例：房號,大門密碼,房門密碼，AI 會將所有欄位一併回覆給客戶。",
+      "shopTitle": "民宿購物設定",
+      "shopHint": "客人透過 LINE AI 點餐後，自動送出到你的 Google Apps Script，再由 Script 推送到 LINE 群組並存入 Sheets（舉例：早餐預訂、備品補充、活動報名）",
+      "noShopConfig": "尚無購物設定。點擊「新增」加入早餐、備品等項目。",
+      "shopMeta": "截止：{cutoff}　送達：{delivery}　選項：{count} 項",
+      "editShopConfig": "編輯購物設定",
+      "addShopConfig": "新增購物設定",
+      "shopName": "名稱",
+      "shopNamePh": "例：早餐預訂、備品補充、活動報名",
+      "appsScriptUrl": "Apps Script Web App 網址",
+      "appsScriptHint": "部署 Apps Script 為 Web App 後取得的 /exec 網址",
+      "cutoffTime": "截止時間",
+      "deliveryTime": "預計送達時間",
+      "roomList": "房間列表（每行一間，格式：房號 房型名稱）",
+      "itemMenu": "物品選單（每行一個選項）",
+      "itemMenuHint": "AI 點餐時會直接列出這些選項給客人選擇",
+      "orderFlowTitle": "設定完成後 AI 的點餐流程：",
+      "orderFlow1": "1. 客人詢問相關服務 → AI 確認房號 → 列出上方選單",
+      "orderFlow2": "2. 客人選好品項與份數 → AI 整理確認清單",
+      "orderFlow3": "3. 客人確認 → 系統自動 POST 到 Apps Script → Script 推 LINE 群組 + 存 Sheets",
+      "pricingHint": "AI 查詢定價時精確套用數字，不會自行估算",
+      "pcTour": "行程",
+      "pcAccommodation": "住宿",
+      "pcCustom": "自訂",
+      "noPricing": "尚無定價設定",
+      "noPricingHint": "選擇上方按鈕新增行程或住宿定價",
+      "editPricing": "編輯定價設定",
+      "addPricing": "新增定價設定",
+      "pcNamePh": "例：訂房定價、行程定價",
+      "pricingJson": "定價 JSON（直接修改數字即可）",
+      "loadTourTpl": "載入行程模板",
+      "loadAccTpl": "載入住宿模板",
+      "loadCustomTpl": "載入自訂模板",
+      "jsonFields": "JSON 欄位說明",
+      "jfTrigger": "：客戶訊息含這些詞時觸發，例：[\"賞鯨\",\"行程\"]",
+      "jfPrice": "：平日 / 假日價格（數字，不含逗號）",
+      "jfPackages": "：套餐方案，AI 會優先推薦",
+      "jfGroup": "：團體折扣規則",
+      "jfCancel": "：取消政策說明",
+      "pcUsage1": "日後新增產品：點「+ 自訂」按鈕，填入觸發詞和價格說明即可。",
+      "pcUsage2": "AI 收到含觸發詞的訊息時，會自動帶入定價表並逐步計算，不會自行估算。",
+      "pcUsage3": "賞鯨 / 住宿同時設定不會衝突，AI 會根據訊息內容選擇對應的定價表。",
+      "testChat": "客服測試對話",
+      "testRouting": "Gemini + Claude 路由",
+      "draftMode": "草稿模式",
+      "on": "開",
+      "off": "關",
+      "summary": "摘要",
+      "createTicket": "建立工單",
+      "closeCase": "結案",
+      "clear": "清除",
+      "testEmptyHint": "在下方輸入框模擬客戶訊息，測試 AI 客服回覆。",
+      "vipPriority": "VIP 客戶 — 優先處理",
+      "churnWarning": "流失預警：客戶可能考慮取消或離開",
+      "riskHigh": "高風險",
+      "riskMedium": "中風險",
+      "riskLow": "低風險",
+      "addToKb": "加入知識庫",
+      "aiDrafting": "AI 生成草稿中…",
+      "aiThinking": "AI 思考中…",
+      "smartDraft": "智慧草稿",
+      "draftFor": "針對「{msg}」的草稿回覆",
+      "adoptSend": "採用送出",
+      "discard": "捨棄",
+      "imageSelected": "圖片已選取",
+      "remove": "移除",
+      "uploadImage": "上傳圖片",
+      "send": "送出",
+      "autoCloseCountdown": "自動結案倒數",
+      "autoCloseIn": "{time} 後自動關閉工單",
+      "caseAutoClosed": "工單已自動結案",
+      "convSummary": "對話摘要",
+      "quickPhrases": "快速測試語句：",
+      "autoLearnFaq": "自動學習 FAQ",
+      "autoLearnFaqHint": "客服回答後加入知識庫，AI 下次遇到類似問題直接引用標準答案",
+      "manualAdd": "手動新增",
+      "noFaqRecords": "尚無學習記錄。在「測試」Tab 的 AI 回覆旁點「📚 加入知識庫」即可新增。",
+      "totalConv": "總對話數",
+      "avgSpeed": "平均回應速度",
+      "highRiskConv": "高風險對話",
+      "claudeEscalated": "Claude 升級處理",
+      "riskDist": "風險分佈",
+      "hotIntents": "熱點問題 TOP 5",
+      "sentimentTrend": "情緒趨勢（近 7 天）",
+      "convLog": "對話記錄",
+      "nRecords": "{n} 筆",
+      "noConvLog": "尚無對話記錄",
+      "customerLabel": "客戶：",
+      "aiLabel": "AI：",
+      "ticketSystem": "工單系統",
+      "filterAll": "全部",
+      "ticketTip": "切換到「測試」Tab，與 AI 對話後點「建立工單」即可轉入工單系統",
+      "noTickets": "尚無工單",
+      "priorityLabel": "{p}優先",
+      "unifiedInbox": "統一收件匣",
+      "sourceNote": "來源說明",
+      "sourceTest": "🧪 測試：透過「測試」Tab 的對話自動儲存",
+      "sourcePlatforms": "💬 LINE / 📱 WhatsApp / ✈️ Telegram：實際平台 Webhook 訊息（需先在「平台」Tab 設定）",
+      "noInbox": "尚無訊息記錄",
+      "noInboxHint": "先在「測試」Tab 發送幾則訊息，即可在此查看",
+      "bookingFormTitle": "報名資料填寫",
+      "participants": "參加人員",
+      "ageAdult": "成人",
+      "ageChild": "小孩",
+      "ageInfant": "幼兒",
+      "ageYears": "（{age}歲）",
+      "pName": "姓名",
+      "pBirthday": "生日",
+      "pIdNumber": "身分證號",
+      "infantExempt": "幼兒（3歲以下）免填身分證",
+      "contactPhone": "聯絡電話",
+      "contactPhoneHint": "填寫其中一位參加者的聯絡電話",
+      "bookingThanks": "感謝您的報名！客服會盡快與您聯繫，請保持電話暢通。",
+      "submitting2": "送出中…",
+      "confirmSubmit": "確認送出",
+      "faqQ": "客戶問題（Q）",
+      "faqQPh": "例：幾點可以入住？",
+      "faqA": "標準答案（A）",
+      "faqAPh": "輸入正確的客服回覆內容…",
+      "faqKw": "觸發關鍵字（逗號分隔，留空由 AI 自動建議）",
+      "faqKwPh": "例：入住,幾點,check in",
+      "aiAnalyzing": "AI 分析中…",
+      "saveToKb": "儲存至知識庫",
       "platformSettings": "平台連結設定"
     },
     "comingSoon": "建設中，敬請期待",
     "unit": {
-      "1": { "name": "蒐集資訊", "desc": "新聞、網頁、地圖、評論" },
-      "3": { "name": "分析資料", "desc": "市場、競爭對手、影片/文案分析" },
-      "4": { "name": "文案產出", "desc": "行銷文案 AI 生成" },
-      "5": { "name": "圖片腳本", "desc": "圖片描述腳本生成" },
-      "6": { "name": "圖片產出", "desc": "行銷圖片 AI 生成" },
-      "7": { "name": "影片腳本", "desc": "分鏡腳本生成" },
-      "8": { "name": "影片產出", "desc": "行銷影片 AI 生成" },
-      "9": { "name": "上傳平台", "desc": "FB/IG/YouTube 等自動上傳" },
-      "11": { "name": "主播行銷", "desc": "HeyGen 虛擬主播影片" }
+      "1": {
+        "name": "蒐集資訊",
+        "desc": "新聞、網頁、地圖、評論"
+      },
+      "3": {
+        "name": "分析資料",
+        "desc": "市場、競爭對手、影片/文案分析"
+      },
+      "4": {
+        "name": "文案產出",
+        "desc": "行銷文案 AI 生成"
+      },
+      "5": {
+        "name": "圖片腳本",
+        "desc": "圖片描述腳本生成"
+      },
+      "6": {
+        "name": "圖片產出",
+        "desc": "行銷圖片 AI 生成"
+      },
+      "7": {
+        "name": "影片腳本",
+        "desc": "分鏡腳本生成"
+      },
+      "8": {
+        "name": "影片產出",
+        "desc": "行銷影片 AI 生成"
+      },
+      "9": {
+        "name": "上傳平台",
+        "desc": "FB/IG/YouTube 等自動上傳"
+      },
+      "11": {
+        "name": "主播行銷",
+        "desc": "HeyGen 虛擬主播影片"
+      }
     },
     "mp": {
-      "untitled": "未命名行銷專案", "csConfigTitle": "{name} 客服設定", "backToCs": "返回客服統整頁",
-      "saved": "已儲存", "notCreated": "尚未建立", "newProject": "新建專案", "rename": "更名", "confirmDelete": "確定刪除「{title}」？", "delete": "刪除",
-      "noProjects": "尚無專案", "projectNamePh": "專案名稱…", "creating": "建立中…", "createProject": "建立專案", "underConstruction": "建設中",
-      "otherTools": "其他工具", "automation": "自動化流程", "linked": "串接中", "companySettings": "公司資料設定"
+      "untitled": "未命名行銷專案",
+      "csConfigTitle": "{name} 客服設定",
+      "backToCs": "返回客服統整頁",
+      "saved": "已儲存",
+      "notCreated": "尚未建立",
+      "newProject": "新建專案",
+      "rename": "更名",
+      "confirmDelete": "確定刪除「{title}」？",
+      "delete": "刪除",
+      "noProjects": "尚無專案",
+      "projectNamePh": "專案名稱…",
+      "creating": "建立中…",
+      "createProject": "建立專案",
+      "underConstruction": "建設中",
+      "otherTools": "其他工具",
+      "automation": "自動化流程",
+      "linked": "串接中",
+      "companySettings": "公司資料設定"
     }
   },
   "Work": {
@@ -2078,7 +3763,13 @@
     "dMin": "{n} 分",
     "statusLabel": "目前狀態",
     "statusPlaceholder": "輸入目前狀態…",
-    "presets": ["未開始", "進行中", "卡關", "待確認", "已完成"],
+    "presets": [
+      "未開始",
+      "進行中",
+      "卡關",
+      "待確認",
+      "已完成"
+    ],
     "commentsTitle": "意見區",
     "commentsEmpty": "尚無意見，留下第一則回報或想法",
     "commentsPlaceholder": "輸入狀態回報或意見…（Ctrl/⌘ + Enter 送出）",
@@ -2096,6 +3787,20 @@
     "joined": "已加入",
     "pending": "待加入",
     "removeMember": "移除",
-    "translatedNote": "🌐 {text}"
+    "translatedNote": "🌐 {text}",
+    "statusCustom": "自訂…",
+    "reportsTitle": "報告",
+    "reportText": "貼上文字",
+    "reportLink": "連結",
+    "reportFile": "上傳檔案",
+    "reportTextPh": "貼上報告內容…",
+    "reportLinkPh": "貼上連結網址…",
+    "openLink": "開啟連結",
+    "uploading": "上傳中…",
+    "toSubitem": "轉為子項目",
+    "subitems": "子項目",
+    "addSubitem": "新增子項目",
+    "subitemPh": "子項目標題…",
+    "ownerOnlyDone": "僅持有人可標記完成"
   }
 }
