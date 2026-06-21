@@ -778,7 +778,7 @@ export default function WorkerToolsPage() {
         </div>
         <Link href="/work" className="ml-auto">
           <Button variant="outline" size="sm" className="gap-1.5">
-            <NotebookPen className="h-4 w-4" />工作區
+            <NotebookPen className="h-4 w-4" />{t('workArea')}
           </Button>
         </Link>
       </div>

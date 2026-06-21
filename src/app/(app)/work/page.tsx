@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
 type SB = ReturnType<typeof createClient>
+type T = ReturnType<typeof useTranslations>
 
 interface Item {
   id: string
@@ -63,7 +65,45 @@ interface Me {
   name: string
 }
 
-const STATUS_PRESETS = ['未開始', '進行中', '卡關', '待確認', '已完成']
+// ── 內容自動翻譯（跨元件共用快取） ──
+const transCache = new Map<string, string>()
+const ck = (l: string, t: string) => l + '' + t
+
+function useAutoTranslate(texts: string[], locale: string) {
+  const [, setTick] = useState(0)
+  const joined = texts.join('')
+  useEffect(() => {
+    const uniq = Array.from(new Set(texts.map(t => (t ?? '').trim()).filter(Boolean)))
+    const missing = uniq.filter(t => !transCache.has(ck(locale, t)))
+    if (!missing.length) return
+    let alive = true
+    fetch('/api/work/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts: missing, target: locale }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (!alive || !Array.isArray(d.translations)) return
+        missing.forEach((t, i) => transCache.set(ck(locale, t), d.translations[i] ?? t))
+        setTick(x => x + 1)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale, joined])
+
+  return useCallback(
+    (t: string) => {
+      const k = (t ?? '').trim()
+      return k ? transCache.get(ck(locale, k)) ?? t : t
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [locale, joined]
+  )
+}
 
 function useNow(intervalMs = 30000) {
   const [now, setNow] = useState(() => Date.now())
@@ -74,15 +114,23 @@ function useNow(intervalMs = 30000) {
   return now
 }
 
-function deadlineInfo(deadline: number, now: number): { label: string; tone: 'over' | 'soon' | 'normal' } {
+function deadlineParts(deadline: number, now: number): { over: boolean; n: number; unit: 'dDay' | 'dHour' | 'dMin'; tone: 'over' | 'soon' | 'normal' } {
   const diff = deadline - now
   const abs = Math.abs(diff)
   const d = Math.floor(abs / 86400000)
-  const h = Math.floor((abs % 86400000) / 3600000)
-  const m = Math.floor((abs % 3600000) / 60000)
-  const span = d > 0 ? `${d} 天` : h > 0 ? `${h} 小時` : `${m} 分`
-  if (diff < 0) return { label: `逾期 ${span}`, tone: 'over' }
-  return { label: `剩 ${span}`, tone: diff < 86400000 ? 'soon' : 'normal' }
+  const h = Math.floor(abs / 3600000)
+  const m = Math.floor(abs / 60000)
+  const over = diff < 0
+  const tone: 'over' | 'soon' | 'normal' = over ? 'over' : diff < 86400000 ? 'soon' : 'normal'
+  if (d > 0) return { over, n: d, unit: 'dDay', tone }
+  if (h > 0) return { over, n: h, unit: 'dHour', tone }
+  return { over, n: m, unit: 'dMin', tone }
+}
+
+function deadlineLabel(t: T, deadline: number, now: number) {
+  const p = deadlineParts(deadline, now)
+  const span = t(p.unit, { n: p.n })
+  return { label: p.over ? t('deadlineOverdue', { span }) : t('deadlineLeft', { span }), tone: p.tone }
 }
 
 function toDateInput(ms?: number) {
@@ -96,7 +144,15 @@ function fmtTime(iso: string) {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function TranslatedNote({ t, original, tr }: { t: T; original: string; tr: (s: string) => string }) {
+  const translated = tr(original)
+  if (!original.trim() || translated.trim() === original.trim()) return null
+  return <p className="mt-0.5 text-[11px] text-muted-foreground">{t('translatedNote', { text: translated })}</p>
+}
+
 export default function WorkPage() {
+  const t = useTranslations('Work')
+  const locale = useLocale()
   const supabase = useRef(createClient()).current
   const [me, setMe] = useState<Me | null>(null)
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
@@ -111,6 +167,9 @@ export default function WorkPage() {
   const ownerRef = useRef<string | null>(null)
   ownerRef.current = ownerId
 
+  // 翻譯項目標題與狀態
+  const tr = useAutoTranslate(items.flatMap(i => [i.title, i.status]), locale)
+
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -121,7 +180,7 @@ export default function WorkPage() {
       await supabase.rpc('claim_work_invitations')
 
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-      const meObj: Me = { id: user.id, email: user.email ?? '', name: profile?.full_name || user.email || '我' }
+      const meObj: Me = { id: user.id, email: user.email ?? '', name: profile?.full_name || user.email || 'me' }
       setMe(meObj)
 
       const { data: memberships } = await supabase
@@ -130,9 +189,9 @@ export default function WorkPage() {
         .eq('member_id', user.id)
         .eq('status', 'active')
 
-      const ws: Workspace[] = [{ ownerId: user.id, label: '我的工作區' }]
+      const ws: Workspace[] = [{ ownerId: user.id, label: t('workspaceMine') }]
       for (const m of (memberships ?? []) as unknown as { owner_id: string; owner: { email?: string; full_name?: string } | null }[]) {
-        ws.push({ ownerId: m.owner_id, label: `${m.owner?.full_name || m.owner?.email || '協作'} 的工作區` })
+        ws.push({ ownerId: m.owner_id, label: t('workspaceOther', { name: m.owner?.full_name || m.owner?.email || '' }) })
       }
       if (!alive) return
       setWorkspaces(ws)
@@ -142,6 +201,7 @@ export default function WorkPage() {
     return () => {
       alive = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   useEffect(() => {
@@ -189,8 +249,8 @@ export default function WorkPage() {
 
   const queueSave = useCallback(
     (item: Item) => {
-      const t = pending.current.get(item.id)
-      if (t) clearTimeout(t)
+      const tm = pending.current.get(item.id)
+      if (tm) clearTimeout(tm)
       pending.current.set(
         item.id,
         setTimeout(async () => {
@@ -226,12 +286,12 @@ export default function WorkPage() {
   )
 
   async function add() {
-    const t = title.trim()
-    if (!t || !ownerId) return
+    const v = title.trim()
+    if (!v || !ownerId) return
     setTitle('')
     const { data } = await supabase
       .from('work_docs')
-      .insert({ title: t, user_id: ownerId })
+      .insert({ title: v, user_id: ownerId })
       .select('id, user_id, title, status, done, deadline, updated_at')
       .single()
     if (data) setItems(prev => [fromRow(data as Row), ...prev])
@@ -243,7 +303,7 @@ export default function WorkPage() {
   }
 
   if (!loaded) {
-    return <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center text-muted-foreground">載入中…</div>
+    return <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center text-muted-foreground">{t('loading')}</div>
   }
 
   const isOwn = ownerId === me?.id
@@ -267,12 +327,12 @@ export default function WorkPage() {
     <div className="mx-auto max-w-2xl space-y-5 p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">工作項目</h1>
-          <p className="text-sm text-muted-foreground">建立工作項目，deadline 可選。協作者可回報狀態、在意見區討論，跨裝置即時同步。</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         {isOwn && (
           <Button variant="outline" size="sm" onClick={() => setShowMembers(v => !v)}>
-            👥 協作者
+            👥 {t('collaborators')}
           </Button>
         )}
       </div>
@@ -287,7 +347,7 @@ export default function WorkPage() {
         </div>
       )}
 
-      {isOwn && showMembers && me && <MembersPanel supabase={supabase} ownerId={me.id} />}
+      {isOwn && showMembers && me && <MembersPanel t={t} supabase={supabase} ownerId={me.id} />}
 
       <Card className="flex gap-2 p-3">
         <Input
@@ -296,18 +356,18 @@ export default function WorkPage() {
           onKeyDown={e => {
             if (e.key === 'Enter') add()
           }}
-          placeholder="輸入工作項目，按 Enter 新增…"
+          placeholder={t('addPlaceholder')}
         />
-        <Button onClick={add} disabled={!title.trim()}>新增</Button>
+        <Button onClick={add} disabled={!title.trim()}>{t('add')}</Button>
       </Card>
 
       <div className="flex gap-1">
         {([
-          ['active', `進行中 (${counts.active})`],
-          ['done', `已完成 (${counts.done})`],
-          ['all', `全部 (${counts.all})`],
+          ['active', t('filterActive', { count: counts.active })],
+          ['done', t('filterDone', { count: counts.done })],
+          ['all', t('filterAll', { count: counts.all })],
         ] as const).map(([key, label]) => (
-          <Button key={key} size="sm" variant={filter === key ? 'default' : 'ghost'} onClick={() => setFilter(key)}>
+          <Button key={key} size="sm" variant={filter === key ? 'default' : 'ghost'} onClick={() => setFilter(key as typeof filter)}>
             {label}
           </Button>
         ))}
@@ -315,14 +375,15 @@ export default function WorkPage() {
 
       <div className="space-y-2">
         {filtered.length === 0 && (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            {filter === 'done' ? '尚無已完成項目' : '尚無工作項目，從上方新增'}
-          </p>
+          <p className="py-10 text-center text-sm text-muted-foreground">{filter === 'done' ? t('emptyDone') : t('empty')}</p>
         )}
         {filtered.map(item =>
           me ? (
             <ItemRow
               key={item.id}
+              t={t}
+              locale={locale}
+              tr={tr}
               supabase={supabase}
               me={me}
               item={item}
@@ -340,7 +401,7 @@ export default function WorkPage() {
   )
 }
 
-function MembersPanel({ supabase, ownerId }: { supabase: SB; ownerId: string }) {
+function MembersPanel({ t, supabase, ownerId }: { t: T; supabase: SB; ownerId: string }) {
   const [members, setMembers] = useState<Member[]>([])
   const [email, setEmail] = useState('')
   const [err, setErr] = useState('')
@@ -364,7 +425,7 @@ function MembersPanel({ supabase, ownerId }: { supabase: SB; ownerId: string }) 
     if (!e) return
     const { error } = await supabase.from('work_members').insert({ owner_id: ownerId, invited_email: e })
     if (error) {
-      setErr(error.code === '23505' ? '已邀請過此 email' : error.message)
+      setErr(error.code === '23505' ? t('inviteDup') : error.message)
       return
     }
     setEmail('')
@@ -379,8 +440,8 @@ function MembersPanel({ supabase, ownerId }: { supabase: SB; ownerId: string }) 
   return (
     <Card className="space-y-3 p-4">
       <div>
-        <p className="text-sm font-medium">協作者</p>
-        <p className="text-xs text-muted-foreground">以對方 email 邀請。對方用同一個 email 登入後即自動加入，可一起編輯此工作區。</p>
+        <p className="text-sm font-medium">{t('collaborators')}</p>
+        <p className="text-xs text-muted-foreground">{t('membersDesc')}</p>
       </div>
       <div className="flex gap-2">
         <Input
@@ -390,18 +451,18 @@ function MembersPanel({ supabase, ownerId }: { supabase: SB; ownerId: string }) 
           onKeyDown={e => {
             if (e.key === 'Enter') invite()
           }}
-          placeholder="collaborator@example.com"
+          placeholder={t('invitePlaceholder')}
         />
-        <Button onClick={invite} disabled={!email.trim()}>邀請</Button>
+        <Button onClick={invite} disabled={!email.trim()}>{t('invite')}</Button>
       </div>
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="space-y-1">
-        {members.length === 0 && <p className="text-xs text-muted-foreground">尚無協作者</p>}
+        {members.length === 0 && <p className="text-xs text-muted-foreground">{t('noMembers')}</p>}
         {members.map(m => (
           <div key={m.id} className="flex items-center gap-2 text-sm">
             <span className="truncate">{m.invited_email}</span>
-            <Badge variant={m.status === 'active' ? 'success' : 'secondary'}>{m.status === 'active' ? '已加入' : '待加入'}</Badge>
-            <button onClick={() => removeMember(m.id)} className="ml-auto text-xs text-muted-foreground hover:text-red-500">移除</button>
+            <Badge variant={m.status === 'active' ? 'success' : 'secondary'}>{m.status === 'active' ? t('joined') : t('pending')}</Badge>
+            <button onClick={() => removeMember(m.id)} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('removeMember')}</button>
           </div>
         ))}
       </div>
@@ -410,6 +471,9 @@ function MembersPanel({ supabase, ownerId }: { supabase: SB; ownerId: string }) 
 }
 
 function ItemRow({
+  t,
+  locale,
+  tr,
   supabase,
   me,
   item,
@@ -420,6 +484,9 @@ function ItemRow({
   onDeadline,
   onDelete,
 }: {
+  t: T
+  locale: string
+  tr: (s: string) => string
   supabase: SB
   me: Me
   item: Item
@@ -430,7 +497,8 @@ function ItemRow({
   onDeadline: (ms?: number) => void
   onDelete: () => void
 }) {
-  const info = item.deadline ? deadlineInfo(item.deadline, now) : null
+  const dl = item.deadline ? deadlineLabel(t, item.deadline, now) : null
+  const presets = t.raw('presets') as string[]
 
   return (
     <Card className={`space-y-3 p-3 ${item.done ? 'opacity-70' : ''}`}>
@@ -441,6 +509,7 @@ function ItemRow({
           onChange={e => onTitle(e.target.value)}
           className={`w-full bg-transparent text-sm font-semibold outline-none ${item.done ? 'text-muted-foreground line-through' : ''}`}
         />
+        <TranslatedNote t={t} original={item.title} tr={tr} />
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
             <Input
@@ -450,31 +519,27 @@ function ItemRow({
               className="h-7 w-36 text-xs"
             />
             {item.deadline && (
-              <button onClick={() => onDeadline(undefined)} className="text-xs text-muted-foreground hover:text-foreground" title="清除截止日期">✕</button>
+              <button onClick={() => onDeadline(undefined)} className="text-xs text-muted-foreground hover:text-foreground" title={t('clearDeadline')}>✕</button>
             )}
           </div>
-          {info && !item.done && (
-            <Badge variant={info.tone === 'over' ? 'destructive' : 'secondary'} className={info.tone === 'soon' ? 'bg-amber-500 text-white' : ''}>
-              ⏱ {info.label}
+          {dl && !item.done && (
+            <Badge variant={dl.tone === 'over' ? 'destructive' : 'secondary'} className={dl.tone === 'soon' ? 'bg-amber-500 text-white' : ''}>
+              ⏱ {dl.label}
             </Badge>
           )}
-          <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">刪除</button>
+          <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('delete')}</button>
         </div>
       </div>
 
       {/* 目前狀態 */}
       <div className="space-y-1.5 rounded-lg bg-muted/40 p-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">目前狀態</span>
-          <Input
-            value={item.status}
-            onChange={e => onStatus(e.target.value)}
-            placeholder="輸入目前狀態…"
-            className="h-7 flex-1 text-xs"
-          />
+          <span className="text-xs font-medium text-muted-foreground">{t('statusLabel')}</span>
+          <Input value={item.status} onChange={e => onStatus(e.target.value)} placeholder={t('statusPlaceholder')} className="h-7 flex-1 text-xs" />
         </div>
+        <TranslatedNote t={t} original={item.status} tr={tr} />
         <div className="flex flex-wrap gap-1">
-          {STATUS_PRESETS.map(s => (
+          {presets.map(s => (
             <button
               key={s}
               onClick={() => onStatus(s)}
@@ -489,27 +554,26 @@ function ItemRow({
       </div>
 
       {/* 意見區 */}
-      <CommentsSection supabase={supabase} me={me} item={item} />
+      <CommentsSection t={t} locale={locale} supabase={supabase} me={me} item={item} />
 
       {/* 完成（放最後，含文字） */}
       <label className="flex cursor-pointer items-center gap-2 border-t pt-2.5 text-sm">
         <input type="checkbox" checked={item.done} onChange={onToggle} className="h-4 w-4" />
-        <span className={item.done ? 'font-medium text-green-600' : 'text-muted-foreground'}>
-          {item.done ? '✅ 已完成' : '標記為完成'}
-        </span>
+        <span className={item.done ? 'font-medium text-green-600' : 'text-muted-foreground'}>{item.done ? t('doneLabel') : t('markDone')}</span>
       </label>
     </Card>
   )
 }
 
-function CommentsSection({ supabase, me, item }: { supabase: SB; me: Me; item: Item }) {
+function CommentsSection({ t, locale, supabase, me, item }: { t: T; locale: string; supabase: SB; me: Me; item: Item }) {
   const [open, setOpen] = useState(false)
   const [comments, setComments] = useState<Comment[]>([])
   const [text, setText] = useState('')
   const [count, setCount] = useState<number | null>(null)
   const loadedOnce = useRef(false)
 
-  // 數量
+  const tr = useAutoTranslate(comments.map(c => c.content), locale)
+
   useEffect(() => {
     ;(async () => {
       const { count: c } = await supabase
@@ -537,7 +601,6 @@ function CommentsSection({ supabase, me, item }: { supabase: SB; me: Me; item: I
     }
   }, [open, load])
 
-  // Realtime：此項目新意見
   useEffect(() => {
     if (!open) return
     const ch = supabase
@@ -575,21 +638,26 @@ function CommentsSection({ supabase, me, item }: { supabase: SB; me: Me; item: I
   return (
     <div>
       <button onClick={() => setOpen(v => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground">
-        💬 意見區{count ? ` (${count})` : ''} {open ? '▲' : '▼'}
+        💬 {t('commentsTitle')}{count ? ` (${count})` : ''} {open ? '▲' : '▼'}
       </button>
 
       {open && (
         <div className="mt-2 space-y-2">
-          {comments.length === 0 && <p className="text-xs text-muted-foreground">尚無意見，留下第一則回報或想法</p>}
-          {comments.map(c => (
-            <div key={c.id} className="rounded-lg border bg-background p-2">
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <span className="font-medium text-foreground">{c.author_name || '協作者'}</span>
-                <span>{fmtTime(c.created_at)}</span>
+          {comments.length === 0 && <p className="text-xs text-muted-foreground">{t('commentsEmpty')}</p>}
+          {comments.map(c => {
+            const translated = tr(c.content)
+            const showOriginal = translated.trim() !== c.content.trim()
+            return (
+              <div key={c.id} className="rounded-lg border bg-background p-2">
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="font-medium text-foreground">{c.author_name || t('authorFallback')}</span>
+                  <span>{fmtTime(c.created_at)}</span>
+                </div>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm">{translated}</p>
+                {showOriginal && <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-muted-foreground">{c.content}</p>}
               </div>
-              <p className="mt-0.5 whitespace-pre-wrap text-sm">{c.content}</p>
-            </div>
-          ))}
+            )
+          })}
           <div className="flex items-end gap-2">
             <Textarea
               value={text}
@@ -597,11 +665,11 @@ function CommentsSection({ supabase, me, item }: { supabase: SB; me: Me; item: I
               onKeyDown={e => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send()
               }}
-              placeholder="輸入狀態回報或意見…（Ctrl/⌘ + Enter 送出）"
+              placeholder={t('commentsPlaceholder')}
               rows={2}
               className="flex-1 text-sm"
             />
-            <Button size="sm" onClick={send} disabled={!text.trim()}>送出</Button>
+            <Button size="sm" onClick={send} disabled={!text.trim()}>{t('send')}</Button>
           </div>
         </div>
       )}
