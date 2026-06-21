@@ -163,6 +163,7 @@ export default function WorkPage() {
   const [loaded, setLoaded] = useState(false)
   const [title, setTitle] = useState('')
   const [filter, setFilter] = useState<'active' | 'done' | 'all'>('active')
+  const [scope, setScope] = useState<'all' | 'mine' | 'shared'>('all')
   const now = useNow()
   const pending = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -334,7 +335,9 @@ export default function WorkPage() {
     return <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center text-muted-foreground">{t('loading')}</div>
   }
 
+  const myId = me?.id
   const filtered = items
+    .filter(i => (scope === 'mine' ? i.ownerId === myId : scope === 'shared' ? i.ownerId !== myId : true))
     .filter(i => (filter === 'active' ? !i.done : filter === 'done' ? i.done : true))
     .sort((a, b) => {
       if (a.done !== b.done) return a.done ? 1 : -1
@@ -344,10 +347,15 @@ export default function WorkPage() {
       return b.updatedAt - a.updatedAt
     })
 
+  const scoped = items.filter(i => (scope === 'mine' ? i.ownerId === myId : scope === 'shared' ? i.ownerId !== myId : true))
   const counts = {
-    active: items.filter(i => !i.done).length,
-    done: items.filter(i => i.done).length,
-    all: items.length,
+    active: scoped.filter(i => !i.done).length,
+    done: scoped.filter(i => i.done).length,
+    all: scoped.length,
+  }
+  const scopeCounts = {
+    mine: items.filter(i => i.ownerId === myId).length,
+    shared: items.filter(i => i.ownerId !== myId).length,
   }
 
   return (
@@ -369,6 +377,20 @@ export default function WorkPage() {
         <Button onClick={add} disabled={!title.trim()}>{t('add')}</Button>
       </Card>
 
+      {/* 來源：我的 / 與我共享 */}
+      <div className="flex gap-1 border-b pb-2">
+        {([
+          ['all', t('scopeAll')],
+          ['mine', `${t('scopeMine')} (${scopeCounts.mine})`],
+          ['shared', `${t('scopeShared')} (${scopeCounts.shared})`],
+        ] as const).map(([key, label]) => (
+          <Button key={key} size="sm" variant={scope === key ? 'default' : 'ghost'} onClick={() => setScope(key as typeof scope)}>
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      {/* 狀態：進行中 / 已完成 / 全部 */}
       <div className="flex gap-1">
         {([
           ['active', t('filterActive', { count: counts.active })],
