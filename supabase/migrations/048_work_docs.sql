@@ -4,6 +4,7 @@ create table if not exists public.work_docs (
   user_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
   title text not null default '未命名項目',
   notes text not null default '',
+  status text not null default '',
   done boolean not null default false,
   blocks jsonb not null default '[]',
   deadline timestamptz,
@@ -67,3 +68,26 @@ drop policy if exists "work_docs access" on public.work_docs;
 create policy "work_docs access" on public.work_docs
   for all using (auth.uid() = user_id or public.is_work_member(user_id))
   with check (auth.uid() = user_id or public.is_work_member(user_id));
+
+-- ── 意見區：協作者針對工作項目回報狀態/意見 ──
+create table if not exists public.work_comments (
+  id uuid primary key default gen_random_uuid(),
+  item_id uuid not null references public.work_docs(id) on delete cascade,
+  owner_id uuid not null,
+  author_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  author_name text not null default '',
+  content text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists work_comments_item_idx on public.work_comments (item_id, created_at);
+alter table public.work_comments enable row level security;
+
+drop policy if exists "work_comments access" on public.work_comments;
+create policy "work_comments access" on public.work_comments
+  for all using (auth.uid() = owner_id or public.is_work_member(owner_id))
+  with check (
+    author_id = auth.uid()
+    and (auth.uid() = owner_id or public.is_work_member(owner_id))
+  );
+
+alter publication supabase_realtime add table public.work_comments;
