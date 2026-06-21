@@ -377,8 +377,8 @@ export default function WorkPage() {
         <Button onClick={add} disabled={!title.trim()}>{t('add')}</Button>
       </Card>
 
-      {/* 來源：我的 / 與我共享 */}
-      <div className="flex gap-1 border-b pb-2">
+      {/* 來源 + 狀態：同一列，小螢幕自動換行 */}
+      <div className="flex flex-wrap items-center gap-1">
         {([
           ['all', t('scopeAll')],
           ['mine', `${t('scopeMine')} (${scopeCounts.mine})`],
@@ -388,10 +388,7 @@ export default function WorkPage() {
             {label}
           </Button>
         ))}
-      </div>
-
-      {/* 狀態：進行中 / 已完成 / 全部 */}
-      <div className="flex gap-1">
+        <span className="mx-1 hidden h-5 w-px bg-border sm:inline-block" />
         {([
           ['active', t('filterActive', { count: counts.active })],
           ['done', t('filterDone', { count: counts.done })],
