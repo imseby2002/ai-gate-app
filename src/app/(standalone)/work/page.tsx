@@ -599,8 +599,10 @@ function ItemRow({
   const dl = item.deadline ? deadlineLabel(t, item.deadline, now) : null
   const presets = t.raw('presets') as string[]
   const isOwner = ownerName === null
+  const [expanded, setExpanded] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
   const [memberCount, setMemberCount] = useState<number | null>(null)
+  const statusText = item.status ? tr(item.status) : ''
 
   useEffect(() => {
     if (!isOwner) return
@@ -614,77 +616,95 @@ function ItemRow({
   }, [supabase, item.id, isOwner, showMembers])
 
   return (
-    <Card className={`space-y-3 p-3 ${item.done ? 'opacity-70' : ''}`}>
-      {/* 標題 + 期限 */}
-      <div className="space-y-1.5">
-        {ownerName !== null && (
-          <Badge variant="secondary" className="mb-1">{t('sharedBy', { name: ownerName })}</Badge>
+    <Card className={`p-3 ${item.done ? 'opacity-70' : ''}`}>
+      {/* 精簡列：標題 + 目前狀態 + deadline（一眼可看完） */}
+      <div className="flex items-center gap-2">
+        <button onClick={() => setExpanded(v => !v)} className="shrink-0 text-xs text-muted-foreground hover:text-foreground" title="展開">
+          {expanded ? '▾' : '▸'}
+        </button>
+        <button onClick={() => setExpanded(v => !v)} className="min-w-0 flex-1 text-left">
+          <span className={`text-sm font-semibold ${item.done ? 'text-muted-foreground line-through' : ''}`}>
+            {item.done && '✅ '}
+            {item.title || '—'}
+          </span>
+          {ownerName !== null && <span className="ml-2 text-[11px] text-muted-foreground">· {t('sharedBy', { name: ownerName })}</span>}
+        </button>
+        {statusText && (
+          <Badge variant="secondary" className="shrink-0 max-w-[10rem] truncate">{statusText}</Badge>
         )}
-        <input
-          value={item.title}
-          onChange={e => onTitle(e.target.value)}
-          className={`w-full bg-transparent text-sm font-semibold outline-none ${item.done ? 'text-muted-foreground line-through' : ''}`}
-        />
-        <TranslatedNote t={t} original={item.title} tr={tr} />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Input
-              type="date"
-              value={toDateInput(item.deadline)}
-              onChange={e => onDeadline(e.target.value ? new Date(e.target.value + 'T23:59:59').getTime() : undefined)}
-              className="h-7 w-36 text-xs"
+        {dl && !item.done && (
+          <Badge variant={dl.tone === 'over' ? 'destructive' : 'secondary'} className={`shrink-0 ${dl.tone === 'soon' ? 'bg-amber-500 text-white' : ''}`}>
+            ⏱ {dl.label}
+          </Badge>
+        )}
+      </div>
+
+      {/* 展開後的完整內容 */}
+      {expanded && (
+        <div className="mt-3 space-y-3">
+          <div className="space-y-1.5">
+            <input
+              value={item.title}
+              onChange={e => onTitle(e.target.value)}
+              className={`w-full bg-transparent text-sm font-semibold outline-none ${item.done ? 'text-muted-foreground line-through' : ''}`}
             />
-            {item.deadline && (
-              <button onClick={() => onDeadline(undefined)} className="text-xs text-muted-foreground hover:text-foreground" title={t('clearDeadline')}>✕</button>
+            <TranslatedNote t={t} original={item.title} tr={tr} />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Input
+                  type="date"
+                  value={toDateInput(item.deadline)}
+                  onChange={e => onDeadline(e.target.value ? new Date(e.target.value + 'T23:59:59').getTime() : undefined)}
+                  className="h-7 w-36 text-xs"
+                />
+                {item.deadline && (
+                  <button onClick={() => onDeadline(undefined)} className="text-xs text-muted-foreground hover:text-foreground" title={t('clearDeadline')}>✕</button>
+                )}
+              </div>
+              {isOwner && (
+                <button onClick={() => setShowMembers(v => !v)} className="text-xs text-muted-foreground hover:text-foreground">
+                  👥 {t('itemCollaborators', { count: memberCount ?? 0 })}
+                </button>
+              )}
+              {isOwner && <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('delete')}</button>}
+            </div>
+            {isOwner && showMembers && (
+              <ItemMembersPanel t={t} supabase={supabase} itemId={item.id} ownerId={me.id} contacts={contacts} onContactsChange={onContactsChange} />
             )}
           </div>
-          {dl && !item.done && (
-            <Badge variant={dl.tone === 'over' ? 'destructive' : 'secondary'} className={dl.tone === 'soon' ? 'bg-amber-500 text-white' : ''}>
-              ⏱ {dl.label}
-            </Badge>
-          )}
-          {isOwner && (
-            <button onClick={() => setShowMembers(v => !v)} className="text-xs text-muted-foreground hover:text-foreground">
-              👥 {t('itemCollaborators', { count: memberCount ?? 0 })}
-            </button>
-          )}
-          {isOwner && <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('delete')}</button>}
-        </div>
-        {isOwner && showMembers && (
-          <ItemMembersPanel t={t} supabase={supabase} itemId={item.id} ownerId={me.id} contacts={contacts} onContactsChange={onContactsChange} />
-        )}
-      </div>
 
-      {/* 目前狀態 */}
-      <div className="space-y-1.5 rounded-lg bg-muted/40 p-2.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{t('statusLabel')}</span>
-          <Input value={item.status} onChange={e => onStatus(e.target.value)} placeholder={t('statusPlaceholder')} className="h-7 flex-1 text-xs" />
-        </div>
-        <TranslatedNote t={t} original={item.status} tr={tr} />
-        <div className="flex flex-wrap gap-1">
-          {presets.map(s => (
-            <button
-              key={s}
-              onClick={() => onStatus(s)}
-              className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
-                item.status === s ? 'border-primary bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
+          {/* 目前狀態 */}
+          <div className="space-y-1.5 rounded-lg bg-muted/40 p-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">{t('statusLabel')}</span>
+              <Input value={item.status} onChange={e => onStatus(e.target.value)} placeholder={t('statusPlaceholder')} className="h-7 flex-1 text-xs" />
+            </div>
+            <TranslatedNote t={t} original={item.status} tr={tr} />
+            <div className="flex flex-wrap gap-1">
+              {presets.map(s => (
+                <button
+                  key={s}
+                  onClick={() => onStatus(s)}
+                  className={`rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+                    item.status === s ? 'border-primary bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* 意見區 */}
-      <CommentsSection t={t} locale={locale} supabase={supabase} me={me} item={item} />
+          {/* 意見區 */}
+          <CommentsSection t={t} locale={locale} supabase={supabase} me={me} item={item} />
 
-      {/* 完成（放最後，含文字） */}
-      <label className="flex cursor-pointer items-center gap-2 border-t pt-2.5 text-sm">
-        <input type="checkbox" checked={item.done} onChange={onToggle} className="h-4 w-4" />
-        <span className={item.done ? 'font-medium text-green-600' : 'text-muted-foreground'}>{item.done ? t('doneLabel') : t('markDone')}</span>
-      </label>
+          {/* 完成 */}
+          <label className="flex cursor-pointer items-center gap-2 border-t pt-2.5 text-sm">
+            <input type="checkbox" checked={item.done} onChange={onToggle} className="h-4 w-4" />
+            <span className={item.done ? 'font-medium text-green-600' : 'text-muted-foreground'}>{item.done ? t('doneLabel') : t('markDone')}</span>
+          </label>
+        </div>
+      )}
     </Card>
   )
 }
