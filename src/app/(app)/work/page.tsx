@@ -48,6 +48,12 @@ interface Member {
   invited_email: string
   status: string
 }
+interface Contact {
+  email: string
+  name: string
+  memberId?: string
+  joined: boolean
+}
 interface Comment {
   id: string
   author_id: string
@@ -153,6 +159,7 @@ export default function WorkPage() {
   const [me, setMe] = useState<Me | null>(null)
   const [items, setItems] = useState<Item[]>([])
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({})
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [loaded, setLoaded] = useState(false)
   const [title, setTitle] = useState('')
   const [filter, setFilter] = useState<'active' | 'done' | 'all'>('active')
@@ -177,6 +184,39 @@ export default function WorkPage() {
     [supabase, ownerNames]
   )
 
+  // 收集「曾邀請過的人」作為聯絡人名單（含姓名）
+  const loadContacts = useCallback(
+    async (myId: string) => {
+      const { data } = await supabase
+        .from('work_item_members')
+        .select('invited_email, member_id, status')
+        .eq('owner_id', myId)
+      const rows = (data ?? []) as { invited_email: string; member_id: string | null; status: string }[]
+      const byEmail = new Map<string, { email: string; memberId?: string; joined: boolean }>()
+      for (const r of rows) {
+        const email = r.invited_email.toLowerCase()
+        const cur = byEmail.get(email)
+        const joined = r.status === 'active'
+        if (!cur || (joined && !cur.joined)) byEmail.set(email, { email, memberId: r.member_id ?? cur?.memberId, joined: joined || !!cur?.joined })
+      }
+      const memberIds = Array.from(byEmail.values()).map(c => c.memberId).filter(Boolean) as string[]
+      const names: Record<string, string> = {}
+      if (memberIds.length) {
+        const { data: profs } = await supabase.from('profiles').select('id, full_name, email').in('id', memberIds)
+        for (const p of (profs ?? []) as { id: string; full_name?: string; email?: string }[]) names[p.id] = p.full_name || p.email || ''
+      }
+      const list: Contact[] = Array.from(byEmail.values()).map(c => ({
+        email: c.email,
+        memberId: c.memberId,
+        joined: c.joined,
+        name: (c.memberId && names[c.memberId]) || c.email,
+      }))
+      list.sort((a, b) => a.name.localeCompare(b.name))
+      setContacts(list)
+    },
+    [supabase]
+  )
+
   useEffect(() => {
     let alive = true
     ;(async () => {
@@ -199,6 +239,7 @@ export default function WorkPage() {
       if (!alive) return
       setItems(list)
       resolveOwners(list, user.id)
+      loadContacts(user.id)
       setLoaded(true)
     })()
     return () => {
@@ -356,6 +397,8 @@ export default function WorkPage() {
               item={item}
               now={now}
               ownerName={item.ownerId === me.id ? null : ownerNames[item.ownerId] ?? ''}
+              contacts={contacts}
+              onContactsChange={() => loadContacts(me.id)}
               onToggle={() => update(item.id, { done: !item.done })}
               onTitle={v => update(item.id, { title: v })}
               onStatus={v => update(item.id, { status: v })}
@@ -369,7 +412,21 @@ export default function WorkPage() {
   )
 }
 
-function ItemMembersPanel({ t, supabase, itemId, ownerId }: { t: T; supabase: SB; itemId: string; ownerId: string }) {
+function ItemMembersPanel({
+  t,
+  supabase,
+  itemId,
+  ownerId,
+  contacts,
+  onContactsChange,
+}: {
+  t: T
+  supabase: SB
+  itemId: string
+  ownerId: string
+  contacts: Contact[]
+  onContactsChange: () => void
+}) {
   const [members, setMembers] = useState<Member[]>([])
   const [email, setEmail] = useState('')
   const [err, setErr] = useState('')
@@ -387,10 +444,37 @@ function ItemMembersPanel({ t, supabase, itemId, ownerId }: { t: T; supabase: SB
     load()
   }, [load])
 
-  async function invite() {
+  const onItem = new Set(members.map(m => m.invited_email.toLowerCase()))
+  const nameOf = (mail: string) => contacts.find(c => c.email === mail.toLowerCase())?.name ?? mail
+  const available = contacts.filter(c => !onItem.has(c.email))
+
+  // 加入既有聯絡人（已加入過者直接生效，免重登）
+  async function addContact(c: Contact) {
+    setErr('')
+    const payload: Record<string, unknown> = { item_id: itemId, owner_id: ownerId, invited_email: c.email }
+    if (c.memberId) {
+      payload.member_id = c.memberId
+      payload.status = 'active'
+    }
+    const { error } = await supabase.from('work_item_members').insert(payload)
+    if (error && error.code !== '23505') {
+      setErr(error.message)
+      return
+    }
+    load()
+  }
+
+  // 邀請全新 email
+  async function inviteNew() {
     const e = email.trim().toLowerCase()
     setErr('')
     if (!e) return
+    const known = contacts.find(c => c.email === e)
+    if (known) {
+      await addContact(known)
+      setEmail('')
+      return
+    }
     const { error } = await supabase.from('work_item_members').insert({ item_id: itemId, owner_id: ownerId, invited_email: e })
     if (error) {
       setErr(error.code === '23505' ? t('inviteDup') : error.message)
@@ -398,6 +482,7 @@ function ItemMembersPanel({ t, supabase, itemId, ownerId }: { t: T; supabase: SB
     }
     setEmail('')
     load()
+    onContactsChange()
   }
 
   async function removeMember(id: string) {
@@ -407,31 +492,54 @@ function ItemMembersPanel({ t, supabase, itemId, ownerId }: { t: T; supabase: SB
 
   return (
     <div className="space-y-2 rounded-lg border bg-muted/30 p-2.5">
-      <p className="text-[11px] text-muted-foreground">{t('membersDesc')}</p>
+      {/* 目前此項目的協作者 */}
+      <div className="space-y-1">
+        {members.length === 0 && <p className="text-xs text-muted-foreground">{t('noMembers')}</p>}
+        {members.map(m => (
+          <div key={m.id} className="flex items-center gap-2 text-xs">
+            <span className="truncate font-medium">{nameOf(m.invited_email)}</span>
+            <span className="truncate text-muted-foreground">{m.invited_email}</span>
+            <Badge variant={m.status === 'active' ? 'success' : 'secondary'}>{m.status === 'active' ? t('joined') : t('pending')}</Badge>
+            <button onClick={() => removeMember(m.id)} className="ml-auto text-muted-foreground hover:text-red-500">{t('removeMember')}</button>
+          </div>
+        ))}
+      </div>
+
+      {/* 從既有聯絡人挑選 */}
+      {available.length > 0 && (
+        <select
+          value=""
+          onChange={e => {
+            const c = available.find(x => x.email === e.target.value)
+            if (c) addContact(c)
+          }}
+          className="h-8 w-full rounded-md border bg-background px-2 text-xs outline-none"
+        >
+          <option value="">{t('selectContact')}</option>
+          {available.map(c => (
+            <option key={c.email} value={c.email}>
+              {c.name === c.email ? c.email : `${c.name} (${c.email})`}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {/* 邀請新 email */}
       <div className="flex gap-2">
         <Input
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter') invite()
+            if (e.key === 'Enter') inviteNew()
           }}
-          placeholder={t('invitePlaceholder')}
+          placeholder={t('newEmail')}
           className="h-8 text-xs"
         />
-        <Button size="sm" onClick={invite} disabled={!email.trim()}>{t('invite')}</Button>
+        <Button size="sm" onClick={inviteNew} disabled={!email.trim()}>{t('addContact')}</Button>
       </div>
+      <p className="text-[11px] text-muted-foreground">{t('membersDesc')}</p>
       {err && <p className="text-xs text-red-500">{err}</p>}
-      <div className="space-y-1">
-        {members.length === 0 && <p className="text-xs text-muted-foreground">{t('noMembers')}</p>}
-        {members.map(m => (
-          <div key={m.id} className="flex items-center gap-2 text-xs">
-            <span className="truncate">{m.invited_email}</span>
-            <Badge variant={m.status === 'active' ? 'success' : 'secondary'}>{m.status === 'active' ? t('joined') : t('pending')}</Badge>
-            <button onClick={() => removeMember(m.id)} className="ml-auto text-muted-foreground hover:text-red-500">{t('removeMember')}</button>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
@@ -445,6 +553,8 @@ function ItemRow({
   item,
   now,
   ownerName,
+  contacts,
+  onContactsChange,
   onToggle,
   onTitle,
   onStatus,
@@ -459,6 +569,8 @@ function ItemRow({
   item: Item
   now: number
   ownerName: string | null // null = 自己擁有
+  contacts: Contact[]
+  onContactsChange: () => void
   onToggle: () => void
   onTitle: (v: string) => void
   onStatus: (v: string) => void
@@ -519,7 +631,9 @@ function ItemRow({
           )}
           {isOwner && <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('delete')}</button>}
         </div>
-        {isOwner && showMembers && <ItemMembersPanel t={t} supabase={supabase} itemId={item.id} ownerId={me.id} />}
+        {isOwner && showMembers && (
+          <ItemMembersPanel t={t} supabase={supabase} itemId={item.id} ownerId={me.id} contacts={contacts} onContactsChange={onContactsChange} />
+        )}
       </div>
 
       {/* 目前狀態 */}
