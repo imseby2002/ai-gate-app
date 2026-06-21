@@ -43,10 +43,6 @@ function fromRow(r: Row): Item {
   }
 }
 
-interface Workspace {
-  ownerId: string
-  label: string
-}
 interface Member {
   id: string
   invited_email: string
@@ -67,11 +63,11 @@ interface Me {
 
 // ── 內容自動翻譯（跨元件共用快取） ──
 const transCache = new Map<string, string>()
-const ck = (l: string, t: string) => l + '' + t
+const ck = (l: string, t: string) => l + '' + t
 
 function useAutoTranslate(texts: string[], locale: string) {
   const [, setTick] = useState(0)
-  const joined = texts.join('')
+  const joined = texts.join('')
   useEffect(() => {
     const uniq = Array.from(new Set(texts.map(t => (t ?? '').trim()).filter(Boolean)))
     const missing = uniq.filter(t => !transCache.has(ck(locale, t)))
@@ -155,20 +151,31 @@ export default function WorkPage() {
   const locale = useLocale()
   const supabase = useRef(createClient()).current
   const [me, setMe] = useState<Me | null>(null)
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [ownerId, setOwnerId] = useState<string | null>(null)
   const [items, setItems] = useState<Item[]>([])
+  const [ownerNames, setOwnerNames] = useState<Record<string, string>>({})
   const [loaded, setLoaded] = useState(false)
   const [title, setTitle] = useState('')
   const [filter, setFilter] = useState<'active' | 'done' | 'all'>('active')
-  const [showMembers, setShowMembers] = useState(false)
   const now = useNow()
   const pending = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-  const ownerRef = useRef<string | null>(null)
-  ownerRef.current = ownerId
 
-  // 翻譯項目標題與狀態
   const tr = useAutoTranslate(items.flatMap(i => [i.title, i.status]), locale)
+
+  // 解析非本人擁有者的顯示名稱
+  const resolveOwners = useCallback(
+    async (its: Item[], myId: string) => {
+      const ids = Array.from(new Set(its.map(i => i.ownerId).filter(id => id !== myId)))
+      const unknown = ids.filter(id => !(id in ownerNames))
+      if (!unknown.length) return
+      const { data } = await supabase.from('profiles').select('id, full_name, email').in('id', unknown)
+      const map: Record<string, string> = {}
+      for (const p of (data ?? []) as { id: string; full_name?: string; email?: string }[]) {
+        map[p.id] = p.full_name || p.email || ''
+      }
+      setOwnerNames(prev => ({ ...prev, ...map }))
+    },
+    [supabase, ownerNames]
+  )
 
   useEffect(() => {
     let alive = true
@@ -183,19 +190,15 @@ export default function WorkPage() {
       const meObj: Me = { id: user.id, email: user.email ?? '', name: profile?.full_name || user.email || 'me' }
       setMe(meObj)
 
-      const { data: memberships } = await supabase
-        .from('work_members')
-        .select('owner_id, owner:profiles!work_members_owner_id_fkey(email, full_name)')
-        .eq('member_id', user.id)
-        .eq('status', 'active')
-
-      const ws: Workspace[] = [{ ownerId: user.id, label: t('workspaceMine') }]
-      for (const m of (memberships ?? []) as unknown as { owner_id: string; owner: { email?: string; full_name?: string } | null }[]) {
-        ws.push({ ownerId: m.owner_id, label: t('workspaceOther', { name: m.owner?.full_name || m.owner?.email || '' }) })
-      }
+      // RLS 已限定：本人擁有 + 被指派協作的項目
+      const { data } = await supabase
+        .from('work_docs')
+        .select('id, user_id, title, status, done, deadline, updated_at')
+        .order('updated_at', { ascending: false })
+      const list = (data ?? []).map(fromRow as (r: unknown) => Item)
       if (!alive) return
-      setWorkspaces(ws)
-      setOwnerId(user.id)
+      setItems(list)
+      resolveOwners(list, user.id)
       setLoaded(true)
     })()
     return () => {
@@ -204,22 +207,7 @@ export default function WorkPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
-  useEffect(() => {
-    if (!ownerId) return
-    let alive = true
-    ;(async () => {
-      const { data } = await supabase
-        .from('work_docs')
-        .select('id, user_id, title, status, done, deadline, updated_at')
-        .eq('user_id', ownerId)
-        .order('updated_at', { ascending: false })
-      if (alive) setItems((data ?? []).map(fromRow as (r: unknown) => Item))
-    })()
-    return () => {
-      alive = false
-    }
-  }, [supabase, ownerId])
-
+  // Realtime（postgres_changes 受 RLS 限制，僅收到可存取的列）
   useEffect(() => {
     const ch = supabase
       .channel('work_items_sync')
@@ -230,7 +218,6 @@ export default function WorkPage() {
           return
         }
         const incoming = fromRow(payload.new as Row)
-        if (incoming.ownerId !== ownerRef.current) return
         setItems(prev => {
           if (pending.current.has(incoming.id)) return prev
           const idx = prev.findIndex(i => i.id === incoming.id)
@@ -287,11 +274,11 @@ export default function WorkPage() {
 
   async function add() {
     const v = title.trim()
-    if (!v || !ownerId) return
+    if (!v) return
     setTitle('')
     const { data } = await supabase
       .from('work_docs')
-      .insert({ title: v, user_id: ownerId })
+      .insert({ title: v })
       .select('id, user_id, title, status, done, deadline, updated_at')
       .single()
     if (data) setItems(prev => [fromRow(data as Row), ...prev])
@@ -306,7 +293,6 @@ export default function WorkPage() {
     return <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center text-muted-foreground">{t('loading')}</div>
   }
 
-  const isOwn = ownerId === me?.id
   const filtered = items
     .filter(i => (filter === 'active' ? !i.done : filter === 'done' ? i.done : true))
     .sort((a, b) => {
@@ -325,29 +311,10 @@ export default function WorkPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-        </div>
-        {isOwn && (
-          <Button variant="outline" size="sm" onClick={() => setShowMembers(v => !v)}>
-            👥 {t('collaborators')}
-          </Button>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
-
-      {workspaces.length > 1 && (
-        <div className="flex flex-wrap gap-1">
-          {workspaces.map(w => (
-            <Button key={w.ownerId} size="sm" variant={w.ownerId === ownerId ? 'default' : 'ghost'} onClick={() => setOwnerId(w.ownerId)}>
-              {w.label}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {isOwn && showMembers && me && <MembersPanel t={t} supabase={supabase} ownerId={me.id} />}
 
       <Card className="flex gap-2 p-3">
         <Input
@@ -388,6 +355,7 @@ export default function WorkPage() {
               me={me}
               item={item}
               now={now}
+              ownerName={item.ownerId === me.id ? null : ownerNames[item.ownerId] ?? ''}
               onToggle={() => update(item.id, { done: !item.done })}
               onTitle={v => update(item.id, { title: v })}
               onStatus={v => update(item.id, { status: v })}
@@ -401,19 +369,19 @@ export default function WorkPage() {
   )
 }
 
-function MembersPanel({ t, supabase, ownerId }: { t: T; supabase: SB; ownerId: string }) {
+function ItemMembersPanel({ t, supabase, itemId, ownerId }: { t: T; supabase: SB; itemId: string; ownerId: string }) {
   const [members, setMembers] = useState<Member[]>([])
   const [email, setEmail] = useState('')
   const [err, setErr] = useState('')
 
   const load = useCallback(async () => {
     const { data } = await supabase
-      .from('work_members')
+      .from('work_item_members')
       .select('id, invited_email, status')
-      .eq('owner_id', ownerId)
+      .eq('item_id', itemId)
       .order('created_at', { ascending: true })
     setMembers((data ?? []) as Member[])
-  }, [supabase, ownerId])
+  }, [supabase, itemId])
 
   useEffect(() => {
     load()
@@ -423,7 +391,7 @@ function MembersPanel({ t, supabase, ownerId }: { t: T; supabase: SB; ownerId: s
     const e = email.trim().toLowerCase()
     setErr('')
     if (!e) return
-    const { error } = await supabase.from('work_members').insert({ owner_id: ownerId, invited_email: e })
+    const { error } = await supabase.from('work_item_members').insert({ item_id: itemId, owner_id: ownerId, invited_email: e })
     if (error) {
       setErr(error.code === '23505' ? t('inviteDup') : error.message)
       return
@@ -433,16 +401,13 @@ function MembersPanel({ t, supabase, ownerId }: { t: T; supabase: SB; ownerId: s
   }
 
   async function removeMember(id: string) {
-    await supabase.from('work_members').delete().eq('id', id)
+    await supabase.from('work_item_members').delete().eq('id', id)
     load()
   }
 
   return (
-    <Card className="space-y-3 p-4">
-      <div>
-        <p className="text-sm font-medium">{t('collaborators')}</p>
-        <p className="text-xs text-muted-foreground">{t('membersDesc')}</p>
-      </div>
+    <div className="space-y-2 rounded-lg border bg-muted/30 p-2.5">
+      <p className="text-[11px] text-muted-foreground">{t('membersDesc')}</p>
       <div className="flex gap-2">
         <Input
           type="email"
@@ -452,21 +417,22 @@ function MembersPanel({ t, supabase, ownerId }: { t: T; supabase: SB; ownerId: s
             if (e.key === 'Enter') invite()
           }}
           placeholder={t('invitePlaceholder')}
+          className="h-8 text-xs"
         />
-        <Button onClick={invite} disabled={!email.trim()}>{t('invite')}</Button>
+        <Button size="sm" onClick={invite} disabled={!email.trim()}>{t('invite')}</Button>
       </div>
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="space-y-1">
         {members.length === 0 && <p className="text-xs text-muted-foreground">{t('noMembers')}</p>}
         {members.map(m => (
-          <div key={m.id} className="flex items-center gap-2 text-sm">
+          <div key={m.id} className="flex items-center gap-2 text-xs">
             <span className="truncate">{m.invited_email}</span>
             <Badge variant={m.status === 'active' ? 'success' : 'secondary'}>{m.status === 'active' ? t('joined') : t('pending')}</Badge>
-            <button onClick={() => removeMember(m.id)} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('removeMember')}</button>
+            <button onClick={() => removeMember(m.id)} className="ml-auto text-muted-foreground hover:text-red-500">{t('removeMember')}</button>
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   )
 }
 
@@ -478,6 +444,7 @@ function ItemRow({
   me,
   item,
   now,
+  ownerName,
   onToggle,
   onTitle,
   onStatus,
@@ -491,6 +458,7 @@ function ItemRow({
   me: Me
   item: Item
   now: number
+  ownerName: string | null // null = 自己擁有
   onToggle: () => void
   onTitle: (v: string) => void
   onStatus: (v: string) => void
@@ -499,11 +467,28 @@ function ItemRow({
 }) {
   const dl = item.deadline ? deadlineLabel(t, item.deadline, now) : null
   const presets = t.raw('presets') as string[]
+  const isOwner = ownerName === null
+  const [showMembers, setShowMembers] = useState(false)
+  const [memberCount, setMemberCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isOwner) return
+    ;(async () => {
+      const { count } = await supabase
+        .from('work_item_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('item_id', item.id)
+      setMemberCount(count ?? 0)
+    })()
+  }, [supabase, item.id, isOwner, showMembers])
 
   return (
     <Card className={`space-y-3 p-3 ${item.done ? 'opacity-70' : ''}`}>
       {/* 標題 + 期限 */}
       <div className="space-y-1.5">
+        {ownerName !== null && (
+          <Badge variant="secondary" className="mb-1">{t('sharedBy', { name: ownerName })}</Badge>
+        )}
         <input
           value={item.title}
           onChange={e => onTitle(e.target.value)}
@@ -527,8 +512,14 @@ function ItemRow({
               ⏱ {dl.label}
             </Badge>
           )}
-          <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('delete')}</button>
+          {isOwner && (
+            <button onClick={() => setShowMembers(v => !v)} className="text-xs text-muted-foreground hover:text-foreground">
+              👥 {t('itemCollaborators', { count: memberCount ?? 0 })}
+            </button>
+          )}
+          {isOwner && <button onClick={onDelete} className="ml-auto text-xs text-muted-foreground hover:text-red-500">{t('delete')}</button>}
         </div>
+        {isOwner && showMembers && <ItemMembersPanel t={t} supabase={supabase} itemId={item.id} ownerId={me.id} />}
       </div>
 
       {/* 目前狀態 */}

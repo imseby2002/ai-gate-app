@@ -2055,6 +2055,8 @@
     "collaborators": "協作者",
     "workspaceMine": "我的工作區",
     "workspaceOther": "{name} 的工作區",
+    "sharedBy": "{name} 共享",
+    "itemCollaborators": "協作者 ({count})",
     "addPlaceholder": "輸入工作項目，按 Enter 新增…",
     "add": "新增",
     "filterActive": "進行中 ({count})",

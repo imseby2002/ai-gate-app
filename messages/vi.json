@@ -2055,6 +2055,8 @@
     "collaborators": "Cộng tác viên",
     "workspaceMine": "Không gian của tôi",
     "workspaceOther": "Không gian của {name}",
+    "sharedBy": "{name} chia sẻ",
+    "itemCollaborators": "Cộng tác viên ({count})",
     "addPlaceholder": "Nhập hạng mục công việc, nhấn Enter để thêm…",
     "add": "Thêm",
     "filterActive": "Đang làm ({count})",

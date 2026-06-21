@@ -2055,6 +2055,8 @@
     "collaborators": "Collaborators",
     "workspaceMine": "My workspace",
     "workspaceOther": "{name}'s workspace",
+    "sharedBy": "Shared by {name}",
+    "itemCollaborators": "Collaborators ({count})",
     "addPlaceholder": "Type a work item, press Enter to add…",
     "add": "Add",
     "filterActive": "Active ({count})",
