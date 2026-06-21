@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import {
@@ -7,7 +8,7 @@ import {
   Brain, Pencil, Mail, FileCheck, ChevronDown, ChevronUp, Plus, Trash2,
   User, GraduationCap, Briefcase, Wrench, Star, ArrowLeft,
   MessageSquare, DollarSign, BarChart2, Presentation, ClipboardList,
-  MessageCircle, TrendingUp, Zap,
+  MessageCircle, TrendingUp, Zap, NotebookPen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -775,6 +776,11 @@ export default function WorkerToolsPage() {
           {!selectedTool && <p className="text-gray-500 text-sm mt-1">{t('pageSubtitle')}</p>}
           {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
         </div>
+        <Link href="/work" className="ml-auto">
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <NotebookPen className="h-4 w-4" />工作區
+          </Button>
+        </Link>
       </div>
 
       {/* Tool View */}
