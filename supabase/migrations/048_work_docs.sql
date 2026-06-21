@@ -1,8 +1,10 @@
--- 工作區（類 Notion）頁面：每位使用者多份文件，含區塊與時間限制，跨裝置同步
+-- 工作項目：每位使用者多筆工作項目，deadline 可選，跨裝置同步
 create table if not exists public.work_docs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references public.profiles(id) on delete cascade,
-  title text not null default '未命名頁面',
+  title text not null default '未命名項目',
+  notes text not null default '',
+  done boolean not null default false,
   blocks jsonb not null default '[]',
   deadline timestamptz,
   created_at timestamptz not null default now(),
