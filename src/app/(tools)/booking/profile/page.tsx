@@ -42,6 +42,8 @@ interface BnbProfile {
   template_id: string; hero_cta_text: string
   booking_instructions: string; cancellation_policy: string
   contact_map_embed: string; contact_note: string
+  latitude: number | null; longitude: number | null; country: string
+  google_feed_enabled: boolean
 }
 
 const DEFAULT_BREAKFAST: BreakfastSettings = {
@@ -67,6 +69,8 @@ const DEFAULT: BnbProfile = {
   template_id: 'natural', hero_cta_text: '',
   booking_instructions: '', cancellation_policy: '',
   contact_map_embed: '', contact_note: '',
+  latitude: null, longitude: null, country: 'TW',
+  google_feed_enabled: false,
 }
 
 type ImportStep = 'input' | 'parsing' | 'preview' | 'done'
@@ -484,6 +488,29 @@ export default function BnbProfilePage() {
               className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           </div>
         </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">緯度 latitude</label>
+            <input type="number" step="0.000001" value={form.latitude ?? ''}
+              onChange={e => set('latitude', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="25.034000"
+              className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">經度 longitude</label>
+            <input type="number" step="0.000001" value={form.longitude ?? ''}
+              onChange={e => set('longitude', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="121.564500"
+              className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">國別代碼</label>
+            <input value={form.country} onChange={e => set('country', e.target.value.toUpperCase())}
+              placeholder="TW" maxLength={2}
+              className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+        </div>
+        <p className="text-[11px] text-gray-400">座標供 Google 訂房連結比對地點用，可在 Google 地圖右鍵「這是哪裡？」取得。</p>
       </section>
 
       {/* 聯絡方式 */}
@@ -697,6 +724,44 @@ export default function BnbProfilePage() {
         </div>
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); e.target.value = '' }} />
+      </section>
+
+      {/* Google 訂房連結 (Free Booking Links) */}
+      <section className="bg-white rounded-xl border p-4 sm:p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-gray-700">Google 訂房連結（地圖/搜尋顯示官方房價）</h2>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={form.google_feed_enabled}
+            onChange={e => set('google_feed_enabled', e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-300" />
+          啟用 Google 房價 feed
+        </label>
+        {form.google_feed_enabled && (
+          <div className="space-y-2 text-xs">
+            {(!form.slug || form.latitude == null || form.longitude == null) && (
+              <p className="text-amber-600">請先設定 網址代稱(slug) 與 緯度/經度，feed 才會包含資料。</p>
+            )}
+            <p className="text-gray-500">在 Google Hotel Center 設定以下兩個 feed 網址：</p>
+            {(['hotel-list', 'pricing'] as const).map(kind => {
+              const url = typeof window !== 'undefined'
+                ? `${window.location.origin}/api/book/${form.slug || '<slug>'}/google/${kind}` : ''
+              const label = kind === 'hotel-list' ? 'Hotel List Feed（房源資料）' : 'Pricing Feed（每日最低房價）'
+              return (
+                <div key={kind} className="space-y-1">
+                  <div className="text-gray-600">{label}</div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 break-all bg-gray-50 border rounded px-2 py-1 text-[11px]">{url}</code>
+                    <button type="button" onClick={() => navigator.clipboard.writeText(url)}
+                      className="shrink-0 px-2 py-1 rounded border text-gray-600 hover:bg-gray-50">複製</button>
+                  </div>
+                </div>
+              )
+            })}
+            <p className="text-gray-400 leading-relaxed">
+              啟用後仍須到 hotelcenter.google.com 申請帳號、把民宿對應到 Google 商家檔案，並填入上方 feed 網址。
+              旅客在 Google 地圖點房價後會導回你的訂房頁完成預訂。
+            </p>
+          </div>
+        )}
       </section>
 
       <div className="text-xs text-gray-400 pb-4">
