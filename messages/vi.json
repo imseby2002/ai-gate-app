@@ -3801,6 +3801,7 @@
     "subitems": "Mục con",
     "addSubitem": "Thêm mục con",
     "subitemPh": "Tiêu đề mục con…",
-    "ownerOnlyDone": "Chỉ chủ sở hữu mới đánh dấu hoàn thành"
+    "ownerOnlyDone": "Chỉ chủ sở hữu mới đánh dấu hoàn thành",
+    "deadlineFieldLabel": "Hạn chót"
   }
 }

@@ -641,17 +641,25 @@ function ItemRow({
         <button onClick={() => setExpanded(v => !v)} className="shrink-0 text-xs text-muted-foreground hover:text-foreground" title="展開">
           {expanded ? '▾' : '▸'}
         </button>
-        <button onClick={() => setExpanded(v => !v)} className="min-w-0 flex-1 text-left">
-          <span className={`text-sm font-semibold ${item.done ? 'text-muted-foreground line-through' : ''}`}>
-            {item.done && '✅ '}
-            {item.title || '—'}
-          </span>
-          {ownerName !== null && <span className="ml-2 text-[11px] text-muted-foreground">· {t('sharedBy', { name: ownerName })}</span>}
-        </button>
-        {statusText && (
+        {expanded ? (
+          <input
+            value={item.title}
+            onChange={e => onTitle(e.target.value)}
+            className={`min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none ${item.done ? 'text-muted-foreground line-through' : ''}`}
+          />
+        ) : (
+          <button onClick={() => setExpanded(true)} className="min-w-0 flex-1 text-left">
+            <span className={`text-sm font-semibold ${item.done ? 'text-muted-foreground line-through' : ''}`}>
+              {item.done && '✅ '}
+              {item.title || '—'}
+            </span>
+            {ownerName !== null && <span className="ml-2 text-[11px] text-muted-foreground">· {t('sharedBy', { name: ownerName })}</span>}
+          </button>
+        )}
+        {!expanded && statusText && (
           <Badge variant="secondary" className="shrink-0 max-w-[10rem] truncate">{statusText}</Badge>
         )}
-        {dl && !item.done && (
+        {!expanded && dl && !item.done && (
           <Badge variant={dl.tone === 'over' ? 'destructive' : 'secondary'} className={`shrink-0 ${dl.tone === 'soon' ? 'bg-amber-500 text-white' : ''}`}>
             ⏱ {dl.label}
           </Badge>
@@ -662,13 +670,9 @@ function ItemRow({
       {expanded && (
         <div className="mt-3 space-y-3">
           <div className="space-y-1.5">
-            <input
-              value={item.title}
-              onChange={e => onTitle(e.target.value)}
-              className={`w-full bg-transparent text-sm font-semibold outline-none ${item.done ? 'text-muted-foreground line-through' : ''}`}
-            />
             <TranslatedNote t={t} original={item.title} tr={tr} />
             <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">{t('deadlineFieldLabel')}</span>
               <div className="flex items-center gap-1">
                 <Input
                   type="date"
@@ -678,6 +682,11 @@ function ItemRow({
                 />
                 {item.deadline && (
                   <button onClick={() => onDeadline(undefined)} className="text-xs text-muted-foreground hover:text-foreground" title={t('clearDeadline')}>✕</button>
+                )}
+                {dl && !item.done && (
+                  <Badge variant={dl.tone === 'over' ? 'destructive' : 'secondary'} className={`ml-1 ${dl.tone === 'soon' ? 'bg-amber-500 text-white' : ''}`}>
+                    ⏱ {dl.label}
+                  </Badge>
                 )}
               </div>
               {isOwner && (

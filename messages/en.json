@@ -3801,6 +3801,7 @@
     "subitems": "Sub-items",
     "addSubitem": "Add sub-item",
     "subitemPh": "Sub-item title…",
-    "ownerOnlyDone": "Only the owner can mark done"
+    "ownerOnlyDone": "Only the owner can mark done",
+    "deadlineFieldLabel": "Due date"
   }
 }

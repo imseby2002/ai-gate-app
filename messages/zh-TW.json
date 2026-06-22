@@ -3801,6 +3801,7 @@
     "subitems": "子項目",
     "addSubitem": "新增子項目",
     "subitemPh": "子項目標題…",
-    "ownerOnlyDone": "僅持有人可標記完成"
+    "ownerOnlyDone": "僅持有人可標記完成",
+    "deadlineFieldLabel": "執行截止日"
   }
 }
