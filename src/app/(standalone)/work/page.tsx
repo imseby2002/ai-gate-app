@@ -949,6 +949,14 @@ function ReportsSection({
     for (const l of lines) await onMakeSubitem(l)
   }
 
+  async function deleteReport(id: string) {
+    setReports(prev => prev.filter(r => r.id !== id))
+    setCount(prev => Math.max(0, (prev ?? 1) - 1))
+    await supabase.from('work_comments').delete().eq('id', id)
+  }
+
+  const isOwner = item.ownerId === me.id
+
   return (
     <div>
       <button onClick={() => setOpen(v => !v)} className="text-xs font-medium text-muted-foreground hover:text-foreground">
@@ -979,11 +987,16 @@ function ReportsSection({
                     {showOriginal && <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-muted-foreground">{r.content}</p>}
                   </>
                 )}
-                {(r.kind === 'text' || r.kind === 'link' || r.kind === 'file') && (
-                  <button onClick={() => toSubitems(r.kind === 'text' ? r.content : r.file_name || r.content)} className="mt-1 text-[11px] text-primary hover:underline">
+                <div className="mt-1 flex items-center gap-3">
+                  <button onClick={() => toSubitems(r.kind === 'text' ? r.content : r.file_name || r.content)} className="text-[11px] text-primary hover:underline">
                     ➕ {t('toSubitem')}
                   </button>
-                )}
+                  {(isOwner || r.author_id === me.id) && (
+                    <button onClick={() => deleteReport(r.id)} className="text-[11px] text-muted-foreground hover:text-red-500">
+                      🗑 {t('delete')}
+                    </button>
+                  )}
+                </div>
               </div>
             )
           })}
