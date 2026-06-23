@@ -5,11 +5,13 @@
  * - 客戶按鍵 → 依 campaign+digit 找對應通路，建立 ivr_join_event 並派送加入短連結
  *
  * 公開端點（來自 Bird，無 session），以 service role 寫入。
- * TODO: 補 Bird webhook 簽章驗證（待後台確認簽章標頭與密鑰）。
+ * 簽章驗證：HMAC-SHA256(rawBody, BIRD_WEBHOOK_SECRET)。
+ * TODO: 確認 Bird 實際簽章標頭名（暫涵蓋 X-Bird-Signature / Bird-Signature / Messagebird-Signature）。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateShortToken, buildShortUrl, dispatchJoinLink, type DispatchChannel } from '@/lib/ivr/dispatch'
+import { verifyBirdSignature } from '@/lib/ivr/verify'
 
 // 將 Bird 通話狀態正規化為本系統狀態
 function normalizeStatus(s?: string): string | null {
@@ -24,7 +26,18 @@ function normalizeStatus(s?: string): string | null {
 
 export async function POST(req: NextRequest) {
   const sb = createAdminClient()
-  const payload = await req.json().catch(() => null)
+
+  const rawBody = await req.text()
+  const signature =
+    req.headers.get('x-bird-signature') ||
+    req.headers.get('bird-signature') ||
+    req.headers.get('messagebird-signature')
+  if (!verifyBirdSignature(rawBody, signature)) {
+    return NextResponse.json({ error: 'invalid_signature' }, { status: 401 })
+  }
+
+  let payload: Record<string, any> | null = null
+  try { payload = JSON.parse(rawBody) } catch { payload = null }
   if (!payload) return NextResponse.json({ error: 'bad_payload' }, { status: 400 })
 
   // Bird payload 欄位名待後台確認，先涵蓋常見命名

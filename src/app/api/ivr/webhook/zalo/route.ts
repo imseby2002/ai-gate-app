@@ -5,10 +5,12 @@
  * - follow/互動 → 回填對應 ivr_join_event.joined_at（依手機號對應最近一筆未完成的 zalo 事件）
  *
  * 公開端點（來自 Zalo，無 session），以 service role 寫入。
- * TODO: 補 Zalo webhook appsecret 簽章驗證；確認實際 event_name 與欄位。
+ * 簽章驗證：SHA256(ZALO_OA_SECRET + rawBody + timestamp)，標頭 X-ZEvent-Signature。
+ * TODO: 確認實際 event_name 與欄位。
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyZaloSignature } from '@/lib/ivr/verify'
 
 const FOLLOW_EVENTS = new Set([
   'follow', 'user_follow_oa', 'oa_follow', 'user_received_message', 'user_send_text',
@@ -19,8 +21,16 @@ const DELIVERED_EVENTS = new Set([
 
 export async function POST(req: NextRequest) {
   const sb = createAdminClient()
-  const payload = await req.json().catch(() => null)
+
+  const rawBody = await req.text()
+  let payload: Record<string, any> | null = null
+  try { payload = JSON.parse(rawBody) } catch { payload = null }
   if (!payload) return NextResponse.json({ error: 'bad_payload' }, { status: 400 })
+
+  const signature = req.headers.get('x-zevent-signature')
+  if (!verifyZaloSignature(rawBody, signature, payload.timestamp)) {
+    return NextResponse.json({ error: 'invalid_signature' }, { status: 401 })
+  }
 
   const eventName: string = String(payload.event_name || payload.event || '').toLowerCase()
   // Zalo 可能以 user_id_by_app 或 tracking_id 帶手機；先涵蓋常見命名

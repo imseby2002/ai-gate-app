@@ -88,8 +88,10 @@ BIRD_WORKSPACE_ID
 BIRD_VOICE_CHANNEL_ID
 BIRD_IVR_FLOW_ID          # 用 Bird Flow 做按鍵分支時
 BIRD_SMS_CHANNEL_ID
+BIRD_WEBHOOK_SECRET       # webhook 簽章驗證(未設則放行)
 ZALO_OA_ACCESS_TOKEN
 ZALO_ZNS_TEMPLATE_ID
+ZALO_OA_SECRET           # webhook 簽章驗證(未設則放行)
 NEXT_PUBLIC_APP_URL       # 短連結 base（既有）
 ```
 
