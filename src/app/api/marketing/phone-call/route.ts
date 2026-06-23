@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     // 有按鍵加入社群設定 → 建立/更新活動，撥打後記錄通話供 webhook 對應
     const campaignId = collectDtmf ? await ensureIvrCampaign(supabase, user.id, mappings) : null
-    const admin = campaignId ? createAdminClient() : null
+    const admin = campaignId ? await createAdminClient() : null
     const recordCall = async (p: string, callId: string) => {
       if (!admin || !campaignId || !callId) return
       await admin.from('ivr_calls').insert({
