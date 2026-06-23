@@ -21,7 +21,54 @@
  * }
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+
+type KeyMapping = { digit: string; channel: string; target_type?: string; join_url: string; label?: string }
+
+/**
+ * 確保此用戶有一個「電話行銷」按鍵活動，並以最新對應覆蓋按鍵設定。
+ * 回傳 campaign_id 供 ivr_calls 關聯；webhook 收到 DTMF 時據此查對應。
+ */
+async function ensureIvrCampaign(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  mappings: KeyMapping[],
+): Promise<string | null> {
+  const valid = mappings.filter((m) => m?.digit && m?.join_url)
+  if (valid.length === 0) return null
+
+  let { data: campaign } = await supabase
+    .from('ivr_campaigns')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('name', '電話行銷')
+    .maybeSingle()
+
+  if (!campaign) {
+    const { data } = await supabase
+      .from('ivr_campaigns')
+      .insert({ user_id: userId, name: '電話行銷' })
+      .select('id')
+      .single()
+    campaign = data
+  }
+  if (!campaign) return null
+
+  // 以最新設定覆蓋按鍵對應
+  await supabase.from('ivr_key_mappings').delete().eq('campaign_id', campaign.id)
+  await supabase.from('ivr_key_mappings').insert(
+    valid.map((m) => ({
+      user_id: userId,
+      campaign_id: campaign!.id,
+      digit: m.digit,
+      channel: m.channel,
+      target_type: m.target_type ?? 'official',
+      join_url: m.join_url,
+      label: m.label ?? null,
+    }))
+  )
+  return campaign.id
+}
 
 // ── ElevenLabs TTS → Supabase Storage ─────────────────────────────────────────
 async function elevenLabsTTS(
@@ -71,12 +118,43 @@ async function birdCall(
   phone: string,
   audioUrl: string,
   callerId: string,
+  collectDtmf = false,
 ): Promise<{ callId: string }> {
   const apiKey = process.env.BIRD_API_KEY
   const workspaceId = process.env.BIRD_WORKSPACE_ID
   if (!apiKey) throw new Error('BIRD_API_KEY 未設定')
   if (!workspaceId) throw new Error('BIRD_WORKSPACE_ID 未設定')
   if (!callerId) throw new Error('Bird 顯示號碼未填寫')
+
+  // 有按鍵加入社群設定時，播完音檔改為收集 1 碼按鍵後掛斷；
+  // 按鍵結果由 Bird call events 推送至 /api/ivr/webhook/voice。
+  // TODO: 確認 Bird gatherDtmf 步驟確切 schema。
+  const steps = collectDtmf
+    ? [
+        {
+          id: 'play-audio',
+          type: 'playAudio',
+          properties: { url: audioUrl },
+          onSuccess: 'gather',
+        },
+        {
+          id: 'gather',
+          type: 'gatherDtmf',
+          properties: { maxDigits: 1, timeout: 8 },
+          onSuccess: 'hangup',
+          onError: 'hangup',
+        },
+        { id: 'hangup', type: 'hangup' },
+      ]
+    : [
+        {
+          id: 'play-audio',
+          type: 'playAudio',
+          properties: { url: audioUrl },
+          onSuccess: 'hangup',
+        },
+        { id: 'hangup', type: 'hangup' },
+      ]
 
   const res = await fetch(`https://api.bird.com/workspaces/${workspaceId}/calls`, {
     method: 'POST',
@@ -93,18 +171,7 @@ async function birdCall(
       },
       flow: {
         title: 'Marketing Call',
-        steps: [
-          {
-            id: 'play-audio',
-            type: 'playAudio',
-            properties: { url: audioUrl },
-            onSuccess: 'hangup',
-          },
-          {
-            id: 'hangup',
-            type: 'hangup',
-          },
-        ],
+        steps,
       },
     }),
   })
@@ -133,9 +200,13 @@ export async function POST(req: NextRequest) {
     voiceId = 'EXAVITQu4vr4xnSDxMaL',
     modelId = 'eleven_multilingual_v2',
     birdCallerId = '',
+    keyMappings = [],
   } = body
 
   if (!script.trim()) return NextResponse.json({ error: '腳本不可為空' }, { status: 400 })
+
+  const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
+  const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
 
   try {
     // ── TTS only ─────────────────────────────────────────────────────────────
@@ -144,11 +215,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ audioUrl, provider: 'ElevenLabs' })
     }
 
+    // 有按鍵加入社群設定 → 建立/更新活動，撥打後記錄通話供 webhook 對應
+    const campaignId = collectDtmf ? await ensureIvrCampaign(supabase, user.id, mappings) : null
+    const admin = campaignId ? createAdminClient() : null
+    const recordCall = async (p: string, callId: string) => {
+      if (!admin || !campaignId || !callId) return
+      await admin.from('ivr_calls').insert({
+        user_id: user.id, campaign_id: campaignId, phone: p,
+        provider: 'bird', provider_call_id: callId, status: 'dialing',
+      })
+    }
+
     // ── Single call ───────────────────────────────────────────────────────────
     if (action === 'call') {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
-      const result = await birdCall(phone, audioUrl, birdCallerId)
+      const result = await birdCall(phone, audioUrl, birdCallerId, collectDtmf)
+      await recordCall(phone, result.callId)
       return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: 'Bird' })
     }
 
@@ -163,7 +246,8 @@ export async function POST(req: NextRequest) {
       const results: { phone: string; ok: boolean; id?: string; error?: string }[] = []
       for (const p of list) {
         try {
-          const r = await birdCall(p, audioUrl, birdCallerId)
+          const r = await birdCall(p, audioUrl, birdCallerId, collectDtmf)
+          await recordCall(p, r.callId)
           results.push({ phone: p, ok: true, id: r.callId })
         } catch (e) {
           results.push({ phone: p, ok: false, error: String(e) })

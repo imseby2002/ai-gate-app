@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, PhoneOutgoing,
+  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -42,7 +42,6 @@ const TOOL_NAV: NavItem[] = [
   { labelKey: 'work',          href: '/work',            icon: NotebookPen,  module: null, alwaysShow: true },
   { labelKey: 'resume',        href: '/resume',          icon: FileText,     module: 'resume' },
   { labelKey: 'marketing',     href: '/marketing-auto',   icon: Megaphone,    module: 'marketing' },
-  { labelKey: 'ivr',           label: '電話行銷',          href: '/ivr',       icon: PhoneOutgoing, module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
   { labelKey: 'booking',       href: '/booking',         icon: CalendarDays, module: 'booking' },
 ]

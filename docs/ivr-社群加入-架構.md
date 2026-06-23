@@ -50,15 +50,25 @@ Bird Voice webhook → /api/ivr/webhook/voice
 - 營運類：僅 select 給 `accessible_owner_ids('ivr')`；寫入由 webhook/server 以 **service role** 進行
 - 協作者授權靠 `bnb_members` 加 `scope='ivr'` 列（scope 函式為泛用，無需改 schema）
 
+## 整併說明（重要）
+
+外撥**不另立模組**，併入既有「電話行銷」頁 `/prospect-call`（潛在客戶撥號）：
+- 撥打沿用 `POST /api/marketing/phone-call`（ElevenLabs TTS + Bird flow）
+- 該 API 收到 `keyMappings` 時：Bird flow 自動加 `gatherDtmf` 收按鍵步驟，並
+  以 service role 寫入 `ivr_calls`（含 provider_call_id），同時 upsert 一個名為
+  「電話行銷」的 `ivr_campaign` + 覆蓋其 `ivr_key_mappings`
+- 按鍵對應 UI 在 `/prospect-call` 的「撥號後按鍵加入社群」區塊設定（存於該頁 Config）
+- DTMF 結果由 Bird call events 推送至 `/api/ivr/webhook/voice`，據 provider_call_id
+  找到 call → campaign → key_mappings → 派送加入短連結
+
 ## API 端點
 
 ```
-POST /api/ivr/campaigns          建立活動與按鍵對應
-POST /api/ivr/calls/start        觸發 Bird 外撥
-POST /api/ivr/webhook/voice      Bird Voice callback：通話狀態 + DTMF 按鍵
-POST /api/ivr/webhook/message    Bird inbound：WhatsApp/LINE 加入事件
-POST /api/ivr/webhook/zalo       Zalo ZNS / OA follow 事件
+POST /api/marketing/phone-call   撥打(既有) + keyMappings → DTMF flow + 寫 ivr_calls
+POST /api/ivr/webhook/voice      Bird Voice callback：通話狀態 + DTMF 按鍵 → 派送
+POST /api/ivr/webhook/zalo       Zalo ZNS / OA follow 事件 → joined_at
 GET  /api/ivr/r/{token}          短連結：記 clicked_at 後 302 導向 join_url
+POST /api/ivr/campaigns          (保留) 程式化管理活動與按鍵對應
 ```
 
 ## DTMF 收按鍵：兩種做法
@@ -75,11 +85,13 @@ GET  /api/ivr/r/{token}          短連結：記 clicked_at 後 302 導向 join_
 - [x] migration `052_ivr_social_join.sql`（4 表 + RLS scope=ivr）
 - [x] `GET /api/ivr/r/[token]` 短連結轉址 + clicked_at
 - [x] `POST /api/ivr/webhook/voice` Bird 通話狀態 + DTMF 派送
-- [x] `POST /api/ivr/campaigns` GET/POST 活動與按鍵
-- [x] `POST /api/ivr/calls/start` 觸發 Bird 外撥
 - [x] `POST /api/ivr/webhook/zalo` ZNS 送達 / OA follow 回填
-- [ ] 前端管理頁（活動設定、外撥名單、成效漏斗）
+- [x] `POST /api/ivr/campaigns`（保留，程式化用）
+- [x] 整併：`/api/marketing/phone-call` 加 DTMF flow + 寫 ivr_calls
+- [x] 整併：`/prospect-call` 加「撥號後按鍵加入社群」設定 UI
+- [x] 撤除重複：獨立 `/ivr` 頁、`/api/ivr/calls/start`、側邊選單入口
 - [ ] LINE/WhatsApp 的 joined_at 回報（接既有 cs-webhook 或新 message webhook）
+- [ ] 成效漏斗報表
 
 ## 需要的環境變數
 ```

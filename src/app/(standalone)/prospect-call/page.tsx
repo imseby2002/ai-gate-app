@@ -45,6 +45,17 @@ interface VoiceScript {
   id: string; name: string; text: string; voiceId: string
 }
 
+// 撥號後按鍵加入社群：digit → 通路加入連結
+type JoinChannel = 'line' | 'whatsapp' | 'zalo'
+type JoinTarget = 'personal' | 'group' | 'official'
+interface KeyMapping {
+  digit: string
+  channel: JoinChannel
+  target_type: JoinTarget
+  join_url: string
+  label?: string
+}
+
 interface RuleCondition {
   phoneType: PhoneType        // any / mobile(行動) / landline(座機)
   aiCategory: string          // '' = 任何
@@ -99,6 +110,7 @@ interface Config {
   birdCallerId: string
   voiceScripts: VoiceScript[]
   routingRules: RoutingRule[]
+  keyMappings: KeyMapping[]   // 撥號後按鍵加入社群
   emailTemplates: EmailTemplate[]
   emailRules: EmailRule[]
   fromName: string
@@ -156,6 +168,7 @@ function makeDefaultConfig(t: Translate): Config {
       { id: 'script-1', name: t('def.script'), text: t('def.scriptText'), voiceId: 'EXAVITQu4vr4xnSDxMaL' },
     ],
     routingRules: [],
+    keyMappings: [],
     emailTemplates: [
       { id: 'email-1', name: t('def.template'), subject: '', body: '' },
     ],
@@ -508,6 +521,16 @@ export default function ProspectCallPage() {
   const removeScript = (id: string) =>
     setC('voiceScripts', config.voiceScripts.filter(s => s.id !== id))
 
+  // ── 撥號後按鍵加入社群 ──────────────────────────────────────────────────────
+  const km = config.keyMappings ?? []
+  const addMapping = () => setC('keyMappings', [...km, {
+    digit: '', channel: 'line' as JoinChannel, target_type: 'official' as JoinTarget, join_url: '', label: '',
+  }])
+  const updateMapping = (i: number, patch: Partial<KeyMapping>) =>
+    setC('keyMappings', km.map((m, j) => j === i ? { ...m, ...patch } : m))
+  const removeMapping = (i: number) =>
+    setC('keyMappings', km.filter((_, j) => j !== i))
+
   // ── Routing rules CRUD ────────────────────────────────────────────────────
 
   const addRule = () => setC('routingRules', [...config.routingRules, {
@@ -725,6 +748,7 @@ export default function ProspectCallPage() {
               phones,
               voiceId: script.voiceId,
               birdCallerId: config.birdCallerId,
+              keyMappings: config.keyMappings,
             }),
           })
           const data = await res.json()
@@ -770,6 +794,7 @@ export default function ProspectCallPage() {
           phones,
           voiceId: script.voiceId,
           birdCallerId: config.birdCallerId,
+          keyMappings: config.keyMappings,
         }),
       })
       const data = await res.json()
@@ -1242,6 +1267,47 @@ export default function ProspectCallPage() {
                 {orgs.length === 0 && (
                   <p className="text-[10px] text-gray-400">{t('s6p.runFirst')}</p>
                 )}
+              </div>
+            </Section>
+
+            {/* Step 7: 撥號後按鍵加入社群 */}
+            <Section title="撥號後按鍵加入社群" icon={Phone}
+              open={openSections.mapping} onToggle={() => toggleSection('mapping')}>
+              <p className="text-xs text-gray-500 mb-3">
+                客戶聽完語音後按數字鍵，系統自動以簡訊／ZNS 傳送加入連結（LINE／WhatsApp／ZALO）。語音腳本內請提示按鍵說明，例：「加 LINE 請按 1」。未設定則維持純語音播報。
+              </p>
+              <div className="space-y-2">
+                {km.map((m, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2 p-2 rounded-lg border bg-gray-50">
+                    <input value={m.digit} maxLength={1}
+                      onChange={e => updateMapping(i, { digit: e.target.value.replace(/\D/g, '').slice(0, 1) })}
+                      placeholder="鍵"
+                      className="w-10 h-8 px-2 rounded-lg border text-sm text-center outline-none focus:ring-2 bg-white" />
+                    <select value={m.channel} onChange={e => updateMapping(i, { channel: e.target.value as JoinChannel })}
+                      className="h-8 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+                      <option value="line">LINE</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="zalo">ZALO</option>
+                    </select>
+                    <select value={m.target_type} onChange={e => updateMapping(i, { target_type: e.target.value as JoinTarget })}
+                      className="h-8 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
+                      <option value="official">官方帳號</option>
+                      <option value="group">群組</option>
+                      <option value="personal">個人</option>
+                    </select>
+                    <input value={m.join_url} onChange={e => updateMapping(i, { join_url: e.target.value })}
+                      placeholder="加入連結 https://..."
+                      className="flex-1 min-w-[180px] h-8 px-2 rounded-lg border text-sm outline-none focus:ring-2 bg-white" />
+                    <button type="button" onClick={() => removeMapping(i)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={addMapping}
+                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 transition-colors justify-center">
+                  <Plus className="h-3.5 w-3.5" />新增按鍵
+                </button>
               </div>
             </Section>
 
