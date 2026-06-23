@@ -36,47 +36,19 @@ Bird Voice webhook → /api/ivr/webhook/voice
 
 ## 資料結構 (Supabase)
 
-```sql
--- IVR 活動設定
-ivr_campaigns (
-  id, tenant_id, name, voice_script,
-  created_by, created_at
-)
+實作於 `supabase/migrations/052_ivr_social_join.sql`。沿用本專案慣例：每表 `user_id`(→profiles) + scope ACL，**非 tenant_id**。
 
--- 按鍵 → 動作 對應
-ivr_key_mappings (
-  id, campaign_id,
-  digit,          -- '1','2','3'
-  channel,        -- 'line' | 'whatsapp' | 'zalo'
-  target_type,    -- 'personal' | 'group' | 'official'
-  join_url,       -- 加入連結
-  label
-)
+| 表 | 類型 | 重點欄位 |
+|----|------|----------|
+| `ivr_campaigns` | 設定類 | user_id, name, voice_script, is_active |
+| `ivr_key_mappings` | 設定類 | campaign_id, digit, channel, target_type, join_url；unique(campaign_id, digit) |
+| `ivr_calls` | 營運類 | campaign_id, contact_id, phone, provider='bird', provider_call_id, status, pressed_digit |
+| `ivr_join_events` | 營運類 | call_id, channel, delivery_method, short_token(unique), delivered_at, clicked_at, joined_at |
 
--- 每通外撥
-ivr_calls (
-  id, campaign_id, tenant_id,
-  phone, contact_id,          -- nullable
-  provider,                   -- 'bird'
-  provider_call_id,           -- Bird call id
-  status,                     -- dialing|answered|no_answer|completed
-  pressed_digit,              -- nullable
-  started_at, ended_at
-)
-
--- 按鍵後派送與轉換追蹤
-ivr_join_events (
-  id, call_id,
-  channel, target_type, join_url,
-  delivery_method,   -- 'sms' | 'whatsapp' | 'line' | 'zns'
-  short_token,       -- 短連結 token
-  delivered_at,
-  clicked_at,        -- nullable
-  joined_at          -- nullable，平台回報加入/follow
-)
-```
-
-多租戶沿用既有 `tenant_id` 慣例。
+**RLS（新 scope = `'ivr'`）**
+- 設定類：讀 `accessible_owner_ids('ivr')`、寫 `settings_owner_ids('ivr')`
+- 營運類：僅 select 給 `accessible_owner_ids('ivr')`；寫入由 webhook/server 以 **service role** 進行
+- 協作者授權靠 `bnb_members` 加 `scope='ivr'` 列（scope 函式為泛用，無需改 schema）
 
 ## API 端點
 
