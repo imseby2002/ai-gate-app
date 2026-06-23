@@ -71,6 +71,28 @@ GET  /api/ivr/r/{token}          短連結：記 clicked_at 後 302 導向 join_
 外撥數 → 接聽率 → 按鍵率(意願) → 短連結點擊率 → 實際加入率
 各段落在上述四張表，後續可做活動成效報表。
 
+## 實作進度
+- [x] migration `052_ivr_social_join.sql`（4 表 + RLS scope=ivr）
+- [x] `GET /api/ivr/r/[token]` 短連結轉址 + clicked_at
+- [x] `POST /api/ivr/webhook/voice` Bird 通話狀態 + DTMF 派送
+- [x] `POST /api/ivr/campaigns` GET/POST 活動與按鍵
+- [x] `POST /api/ivr/calls/start` 觸發 Bird 外撥
+- [x] `POST /api/ivr/webhook/zalo` ZNS 送達 / OA follow 回填
+- [ ] 前端管理頁（活動設定、外撥名單、成效漏斗）
+- [ ] LINE/WhatsApp 的 joined_at 回報（接既有 cs-webhook 或新 message webhook）
+
+## 需要的環境變數
+```
+BIRD_API_KEY
+BIRD_WORKSPACE_ID
+BIRD_VOICE_CHANNEL_ID
+BIRD_IVR_FLOW_ID          # 用 Bird Flow 做按鍵分支時
+BIRD_SMS_CHANNEL_ID
+ZALO_OA_ACCESS_TOKEN
+ZALO_ZNS_TEMPLATE_ID
+NEXT_PUBLIC_APP_URL       # 短連結 base（既有）
+```
+
 ## 待辦 / 待確認
 - [ ] Bird 後台確認：語音越南/台灣本地外顯號碼、WhatsApp 範本、LINE OA 綁定
 - [ ] Zalo OA 開通 + ZNS 範本送審（含 CTA 配置）

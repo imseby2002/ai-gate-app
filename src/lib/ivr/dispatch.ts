@@ -43,6 +43,38 @@ export async function dispatchJoinLink(params: {
   return { deliveryMethod: 'sms', delivered: ok }
 }
 
+// ── Bird 外撥語音(IVR) ─────────────────────────────────────────────────────────
+/**
+ * 觸發 Bird 外撥並進入 IVR Flow（按鍵分支於 Bird Flow 設定）。
+ * 回傳 provider_call_id 供寫入 ivr_calls；缺設定時回傳 null（待補）。
+ * TODO: 確認 Bird Voice 外撥端點與 Flow 綁定參數。
+ */
+export async function startBirdCall(phone: string): Promise<string | null> {
+  const apiKey = process.env.BIRD_API_KEY
+  const workspaceId = process.env.BIRD_WORKSPACE_ID
+  const voiceChannelId = process.env.BIRD_VOICE_CHANNEL_ID
+  const flowId = process.env.BIRD_IVR_FLOW_ID
+  if (!apiKey || !workspaceId || !voiceChannelId) return null
+
+  const res = await fetch(
+    `https://api.bird.com/workspaces/${workspaceId}/channels/${voiceChannelId}/calls`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `AccessKey ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        receiver: { contacts: [{ identifierValue: phone }] },
+        ...(flowId ? { flowId } : {}),
+      }),
+    }
+  )
+  if (!res.ok) return null
+  const data = await res.json().catch(() => null)
+  return data?.id || data?.callId || null
+}
+
 // ── Bird SMS ────────────────────────────────────────────────────────────────
 async function sendBirdSms(phone: string, body: string): Promise<boolean> {
   const apiKey = process.env.BIRD_API_KEY
