@@ -32,13 +32,14 @@ export async function dispatchJoinLink(params: {
   const { channel, phone, shortUrl, label } = params
   const text = `${label ? label + '：' : ''}${shortUrl}`
 
-  if (channel === 'zalo') {
-    // ZALO → Zalo 官方 ZNS 範本訊息（CTA 導 OA）
+  // ZALO：ZNS 已設定 → 走官方 ZNS 範本（CTA 導 OA）；
+  // 尚未過審/未設定 → 自動退回 SMS 夾帶 zalo.me 短連結（一樣可加入）。
+  if (channel === 'zalo' && zaloZnsConfigured()) {
     const ok = await sendZaloZns(phone, shortUrl, label).catch(() => false)
     return { deliveryMethod: 'zns', delivered: ok }
   }
 
-  // line / whatsapp → 先以 Bird SMS 派送短連結（最穩共通底層）
+  // line / whatsapp / zalo(未設 ZNS) → Bird SMS 派送短連結（最穩共通底層）
   const ok = await sendBirdSms(phone, text).catch(() => false)
   return { deliveryMethod: 'sms', delivered: ok }
 }
@@ -100,6 +101,10 @@ async function sendBirdSms(phone: string, body: string): Promise<boolean> {
 }
 
 // ── Zalo ZNS ─────────────────────────────────────────────────────────────────
+function zaloZnsConfigured(): boolean {
+  return !!(process.env.ZALO_OA_ACCESS_TOKEN && process.env.ZALO_ZNS_TEMPLATE_ID)
+}
+
 async function sendZaloZns(phone: string, shortUrl: string, label?: string | null): Promise<boolean> {
   const accessToken = process.env.ZALO_OA_ACCESS_TOKEN
   const templateId = process.env.ZALO_ZNS_TEMPLATE_ID
