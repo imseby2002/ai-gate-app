@@ -1,8 +1,9 @@
 /**
  * IVR 派送工具：產生短連結 token、組短連結網址、依通路派送加入連結
- * 主力通路走 Bird（SMS/WhatsApp/LINE），ZALO 走 Zalo 官方 ZNS。
+ * SMS 走可切換的 telephony provider（Bird / Stringee），ZALO 走 Zalo 官方 ZNS。
  */
 import { randomBytes } from 'crypto'
+import { getTelephonyProvider } from '@/lib/telephony'
 
 export function generateShortToken(): string {
   // 16 字元 base64url，足夠唯一且短
@@ -39,65 +40,9 @@ export async function dispatchJoinLink(params: {
     return { deliveryMethod: 'zns', delivered: ok }
   }
 
-  // line / whatsapp / zalo(未設 ZNS) → Bird SMS 派送短連結（最穩共通底層）
-  const ok = await sendBirdSms(phone, text).catch(() => false)
+  // line / whatsapp / zalo(未設 ZNS) → 經 telephony provider 發 SMS 夾短連結
+  const ok = await getTelephonyProvider().sendSms({ phone, text }).catch(() => false)
   return { deliveryMethod: 'sms', delivered: ok }
-}
-
-// ── Bird 外撥語音(IVR) ─────────────────────────────────────────────────────────
-/**
- * 觸發 Bird 外撥並進入 IVR Flow（按鍵分支於 Bird Flow 設定）。
- * 回傳 provider_call_id 供寫入 ivr_calls；缺設定時回傳 null（待補）。
- * TODO: 確認 Bird Voice 外撥端點與 Flow 綁定參數。
- */
-export async function startBirdCall(phone: string): Promise<string | null> {
-  const apiKey = process.env.BIRD_API_KEY
-  const workspaceId = process.env.BIRD_WORKSPACE_ID
-  const voiceChannelId = process.env.BIRD_VOICE_CHANNEL_ID
-  const flowId = process.env.BIRD_IVR_FLOW_ID
-  if (!apiKey || !workspaceId || !voiceChannelId) return null
-
-  const res = await fetch(
-    `https://api.bird.com/workspaces/${workspaceId}/channels/${voiceChannelId}/calls`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `AccessKey ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        receiver: { contacts: [{ identifierValue: phone }] },
-        ...(flowId ? { flowId } : {}),
-      }),
-    }
-  )
-  if (!res.ok) return null
-  const data = await res.json().catch(() => null)
-  return data?.id || data?.callId || null
-}
-
-// ── Bird SMS ────────────────────────────────────────────────────────────────
-async function sendBirdSms(phone: string, body: string): Promise<boolean> {
-  const apiKey = process.env.BIRD_API_KEY
-  const workspaceId = process.env.BIRD_WORKSPACE_ID
-  const channelId = process.env.BIRD_SMS_CHANNEL_ID
-  if (!apiKey || !workspaceId || !channelId) return false // 尚未設定，待補
-
-  const res = await fetch(
-    `https://api.bird.com/workspaces/${workspaceId}/channels/${channelId}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `AccessKey ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        receiver: { contacts: [{ identifierValue: phone }] },
-        body: { type: 'text', text: { text: body } },
-      }),
-    }
-  )
-  return res.ok
 }
 
 // ── Zalo ZNS ─────────────────────────────────────────────────────────────────

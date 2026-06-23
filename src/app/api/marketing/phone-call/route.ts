@@ -22,6 +22,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getTelephonyProvider } from '@/lib/telephony'
 
 type KeyMapping = { digit: string; channel: string; target_type?: string; join_url: string; label?: string }
 
@@ -112,79 +113,6 @@ async function elevenLabsTTS(
   return publicUrl
 }
 
-// ── Bird Outbound Call ──────────────────────────────────────────────────────────
-// Docs: https://docs.bird.com/api/calls-api/outbound-calls
-async function birdCall(
-  phone: string,
-  audioUrl: string,
-  callerId: string,
-  collectDtmf = false,
-): Promise<{ callId: string }> {
-  const apiKey = process.env.BIRD_API_KEY
-  const workspaceId = process.env.BIRD_WORKSPACE_ID
-  if (!apiKey) throw new Error('BIRD_API_KEY 未設定')
-  if (!workspaceId) throw new Error('BIRD_WORKSPACE_ID 未設定')
-  if (!callerId) throw new Error('Bird 顯示號碼未填寫')
-
-  // 有按鍵加入社群設定時，播完音檔改為收集 1 碼按鍵後掛斷；
-  // 按鍵結果由 Bird call events 推送至 /api/ivr/webhook/voice。
-  // TODO: 確認 Bird gatherDtmf 步驟確切 schema。
-  const steps = collectDtmf
-    ? [
-        {
-          id: 'play-audio',
-          type: 'playAudio',
-          properties: { url: audioUrl },
-          onSuccess: 'gather',
-        },
-        {
-          id: 'gather',
-          type: 'gatherDtmf',
-          properties: { maxDigits: 1, timeout: 8 },
-          onSuccess: 'hangup',
-          onError: 'hangup',
-        },
-        { id: 'hangup', type: 'hangup' },
-      ]
-    : [
-        {
-          id: 'play-audio',
-          type: 'playAudio',
-          properties: { url: audioUrl },
-          onSuccess: 'hangup',
-        },
-        { id: 'hangup', type: 'hangup' },
-      ]
-
-  const res = await fetch(`https://api.bird.com/workspaces/${workspaceId}/calls`, {
-    method: 'POST',
-    headers: {
-      Authorization: `AccessKey ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      receiver: {
-        contacts: [{ identifierValue: phone }],
-      },
-      sender: {
-        identifierValue: callerId,
-      },
-      flow: {
-        title: 'Marketing Call',
-        steps,
-      },
-    }),
-  })
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err?.message ?? err?.error ?? `Bird 撥打失敗 (${res.status})`)
-  }
-
-  const data = await res.json()
-  return { callId: data?.id ?? data?.callId ?? '' }
-}
-
 // ── Main Handler ───────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -208,6 +136,8 @@ export async function POST(req: NextRequest) {
   const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
   const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
 
+  const provider = getTelephonyProvider()  // Bird / Stringee（依 TELEPHONY_PROVIDER）
+
   try {
     // ── TTS only ─────────────────────────────────────────────────────────────
     if (action === 'tts') {
@@ -218,11 +148,11 @@ export async function POST(req: NextRequest) {
     // 有按鍵加入社群設定 → 建立/更新活動，撥打後記錄通話供 webhook 對應
     const campaignId = collectDtmf ? await ensureIvrCampaign(supabase, user.id, mappings) : null
     const admin = campaignId ? await createAdminClient() : null
-    const recordCall = async (p: string, callId: string) => {
+    const recordCall = async (p: string, callId: string | null) => {
       if (!admin || !campaignId || !callId) return
       await admin.from('ivr_calls').insert({
         user_id: user.id, campaign_id: campaignId, phone: p,
-        provider: 'bird', provider_call_id: callId, status: 'dialing',
+        provider: provider.name, provider_call_id: callId, status: 'dialing',
       })
     }
 
@@ -230,9 +160,9 @@ export async function POST(req: NextRequest) {
     if (action === 'call') {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
-      const result = await birdCall(phone, audioUrl, birdCallerId, collectDtmf)
+      const result = await provider.call({ phone, audioUrl, callerId: birdCallerId, collectDtmf })
       await recordCall(phone, result.callId)
-      return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: 'Bird' })
+      return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: provider.name })
     }
 
     // ── Batch calls ───────────────────────────────────────────────────────────
@@ -246,9 +176,9 @@ export async function POST(req: NextRequest) {
       const results: { phone: string; ok: boolean; id?: string; error?: string }[] = []
       for (const p of list) {
         try {
-          const r = await birdCall(p, audioUrl, birdCallerId, collectDtmf)
+          const r = await provider.call({ phone: p, audioUrl, callerId: birdCallerId, collectDtmf })
           await recordCall(p, r.callId)
-          results.push({ phone: p, ok: true, id: r.callId })
+          results.push({ phone: p, ok: true, id: r.callId ?? undefined })
         } catch (e) {
           results.push({ phone: p, ok: false, error: String(e) })
         }
@@ -260,7 +190,7 @@ export async function POST(req: NextRequest) {
         audioUrl,
         total: list.length,
         success: results.filter(r => r.ok).length,
-        provider: 'Bird',
+        provider: provider.name,
       })
     }
 

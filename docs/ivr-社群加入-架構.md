@@ -93,18 +93,36 @@ POST /api/ivr/campaigns          (保留) 程式化管理活動與按鍵對應
 - [ ] LINE/WhatsApp 的 joined_at 回報（接既有 cs-webhook 或新 message webhook）
 - [ ] 成效漏斗報表
 
+## Provider 抽象層（可切換 Bird / Stringee）
+
+撥打與 SMS 都經 `src/lib/telephony` 的 `TelephonyProvider` 介面：
+- `getTelephonyProvider()` 依 `TELEPHONY_PROVIDER`（預設 `bird`）回傳實作
+- `bird.ts`：國際 CPaaS，語音+SMS 一家做（已完成）
+- `stringee.ts`：越南本地，量大時成本低（骨架，JWT 簽發與 SCCO/SMS 端點待補）
+- `phone-call` 撥打、`dispatch.ts` 發 SMS 都改用此介面；ZALO ZNS 仍走 Zalo（非 telephony provider）
+- 日後切換只改環境變數，程式不動
+
 ## 需要的環境變數
 ```
+TELEPHONY_PROVIDER        # 'bird'(預設) | 'stringee'
+# ── Bird ──
 BIRD_API_KEY
 BIRD_WORKSPACE_ID
-BIRD_VOICE_CHANNEL_ID
-BIRD_IVR_FLOW_ID          # 用 Bird Flow 做按鍵分支時
 BIRD_SMS_CHANNEL_ID
 BIRD_WEBHOOK_SECRET       # webhook 簽章驗證(未設則放行)
+# ── Stringee(越南本地，選用) ──
+STRINGEE_API_KEY_SID
+STRINGEE_API_KEY_SECRET
+STRINGEE_FROM_NUMBER
+STRINGEE_SMS_BRANDNAME
+STRINGEE_ANSWER_URL
+# ── ZALO ZNS(選用，未設自動退回 SMS) ──
 ZALO_OA_ACCESS_TOKEN
 ZALO_ZNS_TEMPLATE_ID
 ZALO_OA_SECRET           # webhook 簽章驗證(未設則放行)
+# ── 其他 ──
 NEXT_PUBLIC_APP_URL       # 短連結 base（既有）
+ELEVENLABS_API_KEY        # 語音合成（既有）
 ```
 
 ## 潛在客戶名單持久化 + 去重（migration 053）
