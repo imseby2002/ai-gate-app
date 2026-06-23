@@ -107,6 +107,15 @@ ZALO_OA_SECRET           # webhook 簽章驗證(未設則放行)
 NEXT_PUBLIC_APP_URL       # 短連結 base（既有）
 ```
 
+## 潛在客戶名單持久化 + 去重（migration 053）
+
+- 表 `prospect_orgs`：每用戶累積的客戶主檔，RLS self（user_id=auth.uid()）
+- 去重鍵 `dedup_key`：有正規化電話用電話，否則 名稱+地址 SHA1
+- `POST /api/marketing/prospect-orgs`：批次 upsert 合併，重複者 `search_count+1`、刷新 `last_seen_at`、保留 selected/call_status；回傳合併後完整名單（含 added/duplicated）
+- `GET`：頁面載入直接讀回名單續做；`PATCH`：更新 selected/call_status；`DELETE`：清空
+- 各步驟狀態存 `marketing_campaigns` 的 `__prospect__` 列 `unit_data._workState`（stepStatus/stepMsg/callResults）
+- 前端 `/prospect-call`：載入時還原名單+步驟狀態；搜尋後自動合併去重；「💾 存檔進度」按鈕可改天續做
+
 ## 待辦 / 待確認
 - [ ] Bird 後台確認：語音越南/台灣本地外顯號碼、WhatsApp 範本、LINE OA 綁定
 - [ ] Zalo OA 開通 + ZNS 範本送審（含 CTA 配置）

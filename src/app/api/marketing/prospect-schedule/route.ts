@@ -31,6 +31,7 @@ export async function GET() {
       schedule:    unitData._schedule    ?? null,
       config:      unitData._prospectConfig ?? null,
       last_result: unitData._prospectResult ?? null,
+      work_state:  unitData._workState   ?? null,
       updated_at:  data?.updated_at ?? null,
     }
   })
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { config, schedule } = await req.json()
+  const { config, schedule, workState } = await req.json()
 
   // Compute nextRunAt
   let scheduleToSave = { ...schedule }
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
     ...((existing?.unit_data ?? {}) as Record<string, unknown>),
     _schedule:       scheduleToSave,
     _prospectConfig: config,
+    ...(workState !== undefined ? { _workState: workState } : {}),
   }
 
   let error

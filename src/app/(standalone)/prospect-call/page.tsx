@@ -79,6 +79,24 @@ interface ProspectOrg {
   rating?: number; website?: string; email?: string
   nearestBranch?: string; nearestBranchDistance?: number
   selected: boolean; filterReason?: string
+  callStatus?: string        // 'called' | 'joined'（已撥/已加入標記，來自主檔）
+  searchCount?: number       // 累計被搜尋到的次數
+}
+
+// 主檔(DB)列 → 前端 ProspectOrg
+function dbRowToOrg(r: Record<string, any>): ProspectOrg {
+  const raw = (r.raw ?? {}) as Partial<ProspectOrg>
+  return {
+    ...raw,
+    id: r.id,
+    name: r.name,
+    phoneNormalized: r.phone_normalized ?? raw.phoneNormalized,
+    address: r.address ?? raw.address,
+    aiCategory: r.ai_category ?? raw.aiCategory ?? '',
+    selected: r.selected ?? true,
+    callStatus: r.call_status ?? undefined,
+    searchCount: r.search_count ?? 1,
+  } as ProspectOrg
 }
 
 interface EmailTemplate {
@@ -465,7 +483,7 @@ export default function ProspectCallPage() {
       .catch(() => { })
   }, [])
 
-  // Load schedule from server
+  // Load schedule + 工作狀態 from server
   useEffect(() => {
     fetch('/api/marketing/prospect-schedule')
       .then(r => r.json())
@@ -477,10 +495,46 @@ export default function ProspectCallPage() {
             setConfig(prev => ({ ...prev, ...d.data.config }))
           if (d.data.last_result)
             setScheduleLastResult(d.data.last_result)
+          // 還原各步驟狀態（續做）
+          const ws = d.data.work_state
+          if (ws) {
+            if (ws.stepStatus) setStepStatus(ws.stepStatus)
+            if (ws.stepMsg) setStepMsg(ws.stepMsg)
+            if (ws.callResults) setCallResults(ws.callResults)
+          }
         }
       })
       .catch(() => { })
   }, [])
+
+  // 載入已存的客戶名單（搜尋結果持久化 → 直接抓回續做）
+  useEffect(() => {
+    fetch('/api/marketing/prospect-orgs')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.orgs) && d.orgs.length > 0) {
+          setOrgs(d.orgs.map(dbRowToOrg))
+        }
+      })
+      .catch(() => { })
+  }, [])
+
+  // 手動存檔：設定 + 排程 + 各步驟工作狀態
+  const [progressSaved, setProgressSaved] = useState(false)
+  const saveProgress = async () => {
+    try {
+      await fetch('/api/marketing/prospect-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config, schedule,
+          workState: { stepStatus, stepMsg, callResults },
+        }),
+      })
+      setProgressSaved(true)
+      setTimeout(() => setProgressSaved(false), 2000)
+    } catch { /* skip */ }
+  }
 
   const saveSchedule = async () => {
     setScheduleSaving(true)
@@ -715,10 +769,29 @@ export default function ProspectCallPage() {
       const filterData = await filterRes.json()
       if (!filterRes.ok) throw new Error(filterData.error || t('err.aiFailed'))
       const result: ProspectOrg[] = filterData.orgs || []
-      setOrgs(result)
       const selected = result.filter(o => o.selected)
+
+      // 合併去重寫入主檔，回傳含歷史的完整名單供顯示（重複者標記、累計次數）
+      let dedupNote = ''
+      try {
+        const mergeRes = await fetch('/api/marketing/prospect-orgs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orgs: result }),
+        })
+        const mergeData = await mergeRes.json()
+        if (mergeRes.ok && Array.isArray(mergeData.orgs)) {
+          setOrgs(mergeData.orgs.map(dbRowToOrg))
+          dedupNote = `（新增 ${mergeData.added}、重複 ${mergeData.duplicated}）`
+        } else {
+          setOrgs(result)
+        }
+      } catch {
+        setOrgs(result)
+      }
+
       setStepStatus(p => ({ ...p, filter: 'done', call: 'running' }))
-      setStepMsg(p => ({ ...p, filter: t('msg.selected', { selected: selected.length, total: result.length }) }))
+      setStepMsg(p => ({ ...p, filter: t('msg.selected', { selected: selected.length, total: result.length }) + dedupNote }))
 
       // ── 自動依規則撥打 ──────────────────────────────────────────────────────
       // 計算每個 org 對應的規則（inline，不依賴 React state）
@@ -1440,6 +1513,14 @@ export default function ProspectCallPage() {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
                 style={{ background: 'var(--primary)' }}>
                 {running ? <><Loader2 className="h-4 w-4 animate-spin" />{t('run.running')}</> : <><Play className="h-4 w-4" />{t('run.exec')}</>}
+              </button>
+
+              {/* 存檔進度：設定 + 步驟狀態存後端，客戶名單已自動持久化，可改天續做 */}
+              <button type="button" onClick={saveProgress}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium border hover:bg-gray-50 transition-colors">
+                {progressSaved
+                  ? <><CheckCircle2 className="h-4 w-4 text-green-500" />已存檔</>
+                  : <>💾 存檔進度（可改天續做）</>}
               </button>
 
               {(Object.keys(stepStatus).length > 0) && (
