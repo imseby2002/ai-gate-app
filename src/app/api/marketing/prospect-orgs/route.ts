@@ -129,12 +129,17 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-export async function DELETE() {
+// DELETE ?id=<uuid> 刪單筆；無 id 清空全部
+export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { error } = await supabase.from('prospect_orgs').delete().eq('user_id', user.id)
+  const id = new URL(req.url).searchParams.get('id')
+  let q = supabase.from('prospect_orgs').delete().eq('user_id', user.id)
+  if (id) q = q.eq('id', id)
+
+  const { error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

@@ -536,6 +536,53 @@ export default function ProspectCallPage() {
     } catch { /* skip */ }
   }
 
+  // 撥打成功 → 標記主檔 call_status='called'（避免重撥）
+  const markCalled = async (phones: string[], pool?: ProspectOrg[]) => {
+    const set = new Set(phones.filter(Boolean))
+    const src = pool ?? orgs
+    const targets = src.filter(o => o.phoneNormalized && set.has(o.phoneNormalized) && o.callStatus !== 'called')
+    if (targets.length === 0) return
+    const ids = new Set(targets.map(o => o.id))
+    setOrgs(prev => prev.map(o => ids.has(o.id) ? { ...o, callStatus: 'called' } : o))
+    await Promise.all(targets.map(o =>
+      fetch('/api/marketing/prospect-orgs', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: o.id, call_status: 'called' }),
+      }).catch(() => { })
+    ))
+  }
+
+  // 名單管理：勾選 / 刪除 / 匯出
+  const toggleSelected = async (o: ProspectOrg) => {
+    const next = !o.selected
+    setOrgs(prev => prev.map(x => x.id === o.id ? { ...x, selected: next } : x))
+    await fetch('/api/marketing/prospect-orgs', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: o.id, selected: next }),
+    }).catch(() => { })
+  }
+  const deleteOrg = async (o: ProspectOrg) => {
+    setOrgs(prev => prev.filter(x => x.id !== o.id))
+    await fetch(`/api/marketing/prospect-orgs?id=${encodeURIComponent(o.id)}`, { method: 'DELETE' }).catch(() => { })
+  }
+  const exportCsv = () => {
+    const header = ['名稱', '分類', '電話', '地址', '狀態', '搜尋次數', '已選取']
+    const rows = orgs.map(o => [
+      o.name, o.aiCategory ?? '', o.phoneNormalized ?? '', o.address ?? '',
+      o.callStatus === 'called' ? '已撥' : o.callStatus === 'joined' ? '已加入' : '',
+      String(o.searchCount ?? 1), o.selected ? 'Y' : 'N',
+    ])
+    const esc = (c: string) => `"${String(c).replace(/"/g, '""')}"`
+    const csv = [header, ...rows].map(r => r.map(esc).join(',')).join('\r\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `prospects-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const saveSchedule = async () => {
     setScheduleSaving(true)
     try {
@@ -773,6 +820,7 @@ export default function ProspectCallPage() {
 
       // 合併去重寫入主檔，回傳含歷史的完整名單供顯示（重複者標記、累計次數）
       let dedupNote = ''
+      let mergedOrgs: ProspectOrg[] = result
       try {
         const mergeRes = await fetch('/api/marketing/prospect-orgs', {
           method: 'POST',
@@ -781,14 +829,16 @@ export default function ProspectCallPage() {
         })
         const mergeData = await mergeRes.json()
         if (mergeRes.ok && Array.isArray(mergeData.orgs)) {
-          setOrgs(mergeData.orgs.map(dbRowToOrg))
+          mergedOrgs = mergeData.orgs.map(dbRowToOrg)
           dedupNote = `（新增 ${mergeData.added}、重複 ${mergeData.duplicated}）`
-        } else {
-          setOrgs(result)
         }
-      } catch {
-        setOrgs(result)
-      }
+      } catch { /* 合併失敗則沿用本次結果 */ }
+      setOrgs(mergedOrgs)
+
+      // 已撥過的電話（避免重撥）
+      const calledPhones = new Set(
+        mergedOrgs.filter(o => o.callStatus === 'called' && o.phoneNormalized).map(o => o.phoneNormalized!)
+      )
 
       setStepStatus(p => ({ ...p, filter: 'done', call: 'running' }))
       setStepMsg(p => ({ ...p, filter: t('msg.selected', { selected: selected.length, total: result.length }) + dedupNote }))
@@ -808,7 +858,7 @@ export default function ProspectCallPage() {
         const script = config.voiceScripts.find(s => s.id === rule.scriptId)
         if (!script) continue
         const phones = selected
-          .filter(o => orgRuleMapLocal[o.id] === rule.id && o.phoneNormalized)
+          .filter(o => orgRuleMapLocal[o.id] === rule.id && o.phoneNormalized && !calledPhones.has(o.phoneNormalized))
           .map(o => o.phoneNormalized!)
         if (phones.length === 0) continue
         try {
@@ -831,6 +881,7 @@ export default function ProspectCallPage() {
               [rule.id]: { ok: data.success ?? 0, fail: (data.total ?? 0) - (data.success ?? 0) },
             }))
             totalCalled += phones.length
+            await markCalled(phones, mergedOrgs)  // 標記已撥
           }
         } catch (e) {
           setError(String(e))  // 顯示錯誤（如 Bird Caller ID 未填、API Key 未設）
@@ -876,6 +927,7 @@ export default function ProspectCallPage() {
         ...prev,
         [ruleId]: { ok: data.success ?? 0, fail: (data.total ?? 0) - (data.success ?? 0) },
       }))
+      await markCalled(phones)  // 標記已撥
     } catch (e) {
       setError(String(e))
     } finally {
@@ -1749,6 +1801,48 @@ export default function ProspectCallPage() {
                   ))}
                 </div>
               </details>
+            )}
+
+            {/* 客戶名單管理：勾選 / 刪除 / 匯出 */}
+            {activeTab === 'phone' && orgs.length > 0 && (
+              <div className="border rounded-xl">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <span className="text-xs font-medium text-gray-700">客戶名單（{orgs.length}）· 已選 {selectedOrgs.length}</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={exportCsv}
+                      className="px-2.5 py-1 rounded-lg border text-[11px] hover:bg-gray-50">⬇️ 匯出 CSV</button>
+                    <button type="button"
+                      onClick={() => { if (confirm('確定清空整份客戶名單？此動作無法復原。')) { setOrgs([]); fetch('/api/marketing/prospect-orgs', { method: 'DELETE' }).catch(() => {}) } }}
+                      className="px-2.5 py-1 rounded-lg border text-[11px] text-red-500 hover:bg-red-50">清空</button>
+                  </div>
+                </div>
+                <div className="max-h-72 overflow-y-auto divide-y">
+                  {orgs.map(o => (
+                    <div key={o.id} className="flex items-center gap-2 px-3 py-2 text-[11px] hover:bg-gray-50">
+                      <input type="checkbox" checked={o.selected} onChange={() => toggleSelected(o)}
+                        className="flex-shrink-0 h-3.5 w-3.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">
+                          {o.name}
+                          {o.callStatus === 'called' && <span className="ml-1.5 px-1 py-0.5 rounded bg-amber-100 text-amber-700">已撥</span>}
+                          {o.callStatus === 'joined' && <span className="ml-1.5 px-1 py-0.5 rounded bg-green-100 text-green-700">已加入</span>}
+                          {(o.searchCount ?? 1) > 1 && <span className="ml-1.5 text-gray-400">×{o.searchCount}</span>}
+                        </div>
+                        {o.address && <div className="text-gray-400 truncate">{o.address}</div>}
+                      </div>
+                      <div className="flex-shrink-0 text-right text-gray-500 whitespace-nowrap">
+                        {o.phoneNormalized
+                          ? <span className="text-green-600">{isMobile(o.phoneNormalized) ? '📱' : '☎️'} {o.phoneNormalized}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </div>
+                      <button type="button" onClick={() => deleteOrg(o)}
+                        className="flex-shrink-0 p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* All selected orgs table */}
