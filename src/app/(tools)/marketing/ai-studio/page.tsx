@@ -29,6 +29,9 @@ interface PipelineNode {
   videoDuration: string
   videoAspect: string
   maskDataUrl: string | null
+  inpaintMode: 'text' | 'reference'
+  referenceImageDataUrl: string | null
+  referenceImageMimeType: string | null
   status: NodeStatus
   error: string | null
   videoRequestId: string | null
@@ -65,6 +68,9 @@ function makeNode(type: NodeType, id: string): PipelineNode {
     strength: 0.75,
     videoDuration: '5', videoAspect: '16:9',
     maskDataUrl: null,
+    inpaintMode: 'text',
+    referenceImageDataUrl: null,
+    referenceImageMimeType: null,
     status: 'idle', error: null, videoRequestId: null,
   }
 }
@@ -158,6 +164,9 @@ export default function AiStudioPage() {
           updateNode(nodeId, { status: 'error', error: t('studio.errNoMask') })
           return
         }
+        const refBase64 = node.referenceImageDataUrl
+          ? node.referenceImageDataUrl.replace(/^data:[^;]+;base64,/, '')
+          : undefined
         const res = await fetch('/api/marketing/ai-studio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -166,6 +175,8 @@ export default function AiStudioPage() {
             imageUrl: inputUrl,
             maskDataUrl: node.maskDataUrl,
             prompt: node.prompt,
+            referenceImageBase64: refBase64,
+            referenceImageMimeType: node.referenceImageMimeType ?? 'image/jpeg',
           }),
         })
         const data = await res.json()
@@ -262,6 +273,9 @@ export default function AiStudioPage() {
             updateNode(node.id, { status: 'error', error: t('studio.errNoMask') })
             break
           }
+          const refBase64 = node.referenceImageDataUrl
+            ? node.referenceImageDataUrl.replace(/^data:[^;]+;base64,/, '')
+            : undefined
           const res = await fetch('/api/marketing/ai-studio', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -270,6 +284,8 @@ export default function AiStudioPage() {
               imageUrl: lastOutput,
               maskDataUrl: node.maskDataUrl,
               prompt: node.prompt,
+              referenceImageBase64: refBase64,
+              referenceImageMimeType: node.referenceImageMimeType ?? 'image/jpeg',
             }),
           })
           const data = await res.json()
@@ -708,13 +724,49 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               onMaskChange={maskDataUrl => onUpdate({ maskDataUrl })}
               t={t}
             />
-            <Textarea
-              value={node.prompt}
-              onChange={e => onUpdate({ prompt: e.target.value })}
-              placeholder={t('studio.inpaintPromptPh')}
-              rows={2}
-              className="text-xs resize-none"
-            />
+            {/* Mode toggle */}
+            <div className="flex rounded-lg border border-border overflow-hidden text-[10px] font-medium">
+              <button
+                onClick={() => onUpdate({ inpaintMode: 'text' })}
+                className={cn(
+                  'flex-1 py-1.5 transition-colors',
+                  node.inpaintMode === 'text'
+                    ? 'bg-rose-500 text-white'
+                    : 'text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-800',
+                )}
+              >
+                {t('studio.inpaintModeText')}
+              </button>
+              <button
+                onClick={() => onUpdate({ inpaintMode: 'reference' })}
+                className={cn(
+                  'flex-1 py-1.5 transition-colors',
+                  node.inpaintMode === 'reference'
+                    ? 'bg-rose-500 text-white'
+                    : 'text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-800',
+                )}
+              >
+                {t('studio.inpaintModeRef')}
+              </button>
+            </div>
+
+            {node.inpaintMode === 'text' ? (
+              <Textarea
+                value={node.prompt}
+                onChange={e => onUpdate({ prompt: e.target.value })}
+                placeholder={t('studio.inpaintPromptPh')}
+                rows={2}
+                className="text-xs resize-none"
+              />
+            ) : (
+              <InpaintReferenceUpload
+                referenceImageDataUrl={node.referenceImageDataUrl}
+                onRefChange={(dataUrl, mimeType) => onUpdate({ referenceImageDataUrl: dataUrl, referenceImageMimeType: mimeType })}
+                additionalPrompt={node.prompt}
+                onAdditionalPromptChange={p => onUpdate({ prompt: p })}
+                t={t}
+              />
+            )}
           </div>
         )}
 
@@ -779,7 +831,9 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
             disabled={
               node.status === 'processing' ||
               !node.inputUrl ||
-              (node.type === 'inpaint' && !node.maskDataUrl)
+              (node.type === 'inpaint' && !node.maskDataUrl) ||
+              (node.type === 'inpaint' && node.inpaintMode === 'text' && !node.prompt.trim()) ||
+              (node.type === 'inpaint' && node.inpaintMode === 'reference' && !node.referenceImageDataUrl)
             }
             className="w-full mt-2 h-7 text-xs gap-1.5"
             variant={node.status === 'done' ? 'outline' : 'default'}
@@ -1008,6 +1062,74 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t }: MaskCanvasProps)
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Inpaint Reference Image Uploader ─────────────────────────────────────────
+
+interface InpaintReferenceUploadProps {
+  referenceImageDataUrl: string | null
+  onRefChange: (dataUrl: string | null, mimeType: string | null) => void
+  additionalPrompt: string
+  onAdditionalPromptChange: (p: string) => void
+  t: ReturnType<typeof useTranslations<'Marketing'>>
+}
+
+function InpaintReferenceUpload({
+  referenceImageDataUrl, onRefChange, additionalPrompt, onAdditionalPromptChange, t,
+}: InpaintReferenceUploadProps) {
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const mime = file.type
+    const reader = new FileReader()
+    reader.onload = ev => onRefChange(ev.target?.result as string, mime)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  return (
+    <div className="space-y-2">
+      <div
+        onClick={() => fileRef.current?.click()}
+        className={cn(
+          'relative border-2 border-dashed rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5',
+          referenceImageDataUrl ? 'border-rose-300 p-1' : 'border-border hover:border-rose-300 p-4',
+        )}
+      >
+        {referenceImageDataUrl ? (
+          <div className="relative w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={referenceImageDataUrl} alt="reference" className="w-full max-h-32 object-contain rounded-lg" />
+            <button
+              onClick={e => { e.stopPropagation(); onRefChange(null, null) }}
+              className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <Upload className="h-5 w-5 text-muted-foreground" />
+            <p className="text-[10px] text-muted-foreground text-center">{t('studio.inpaintRefHint')}</p>
+          </>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFile} />
+
+      <div>
+        <p className="text-[10px] text-muted-foreground mb-1">{t('studio.inpaintRefExtra')}</p>
+        <Textarea
+          value={additionalPrompt}
+          onChange={e => onAdditionalPromptChange(e.target.value)}
+          placeholder={t('studio.inpaintRefExtraPh')}
+          rows={1}
+          className="text-xs resize-none"
+        />
       </div>
     </div>
   )

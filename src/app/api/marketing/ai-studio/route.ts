@@ -3,17 +3,20 @@
  * ComfyUI-inspired pipeline node executor
  *
  * Body: {
- *   type: 'edit' | 'style' | 'enhance' | 'bg-remove'
- *   imageUrl: string        (input image URL)
- *   prompt?: string         (for edit/style)
- *   strength?: number       (0.1–1.0, default 0.75)
- *   stylePreset?: string    (watercolor|anime|illustration|cinematic|realistic)
+ *   type: 'edit' | 'style' | 'enhance' | 'bg-remove' | 'inpaint'
+ *   imageUrl: string
+ *   prompt?: string
+ *   strength?: number
+ *   stylePreset?: string
+ *   maskDataUrl?: string           (inpaint: base64 PNG mask)
+ *   referenceImageBase64?: string  (inpaint: reference image base64)
+ *   referenceImageMimeType?: string
  * }
- *
- * Returns: { url: string, cost: number }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { generateText } from 'ai'
 
 const FAL_BASE = 'https://fal.run'
 
@@ -54,7 +57,10 @@ export async function POST(req: NextRequest) {
   if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
 
   const body = await req.json()
-  const { type, imageUrl, prompt = '', strength = 0.75, stylePreset, maskDataUrl } = body
+  const {
+    type, imageUrl, prompt = '', strength = 0.75, stylePreset,
+    maskDataUrl, referenceImageBase64, referenceImageMimeType,
+  } = body
 
   if (!imageUrl?.trim()) return NextResponse.json({ error: '缺少 imageUrl' }, { status: 400 })
 
@@ -64,9 +70,42 @@ export async function POST(req: NextRequest) {
   try {
     if (type === 'inpaint') {
       if (!maskDataUrl) return NextResponse.json({ error: '缺少遮罩圖' }, { status: 400 })
-      if (!prompt?.trim()) return NextResponse.json({ error: '請描述要在遮罩區域放什麼' }, { status: 400 })
 
-      // Upload mask to Supabase first to get a permanent URL
+      // Resolve the final prompt: text, reference image via Claude Vision, or both
+      let finalPrompt = prompt?.trim() ?? ''
+
+      if (referenceImageBase64) {
+        const anthropicKey = process.env.ANTHROPIC_API_KEY
+        if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
+
+        const anthropic = createAnthropic({ apiKey: anthropicKey })
+        const mimeType = (referenceImageMimeType ?? 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+
+        const { text: refDescription } = await generateText({
+          model: anthropic('claude-sonnet-4-6'),
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', image: referenceImageBase64, mimeType },
+              {
+                type: 'text',
+                text: 'Describe this reference image in detail as a prompt for AI image inpainting. Focus on: visual style, colors, textures, lighting, key elements, composition. Be specific. Output only the visual description, no preamble.',
+              },
+            ],
+          }],
+          maxTokens: 200,
+        })
+
+        // Combine reference description with any additional text from user
+        finalPrompt = finalPrompt
+          ? `${refDescription.trim()}, ${finalPrompt}`
+          : refDescription.trim()
+        cost += 0.01 // small Claude cost
+      }
+
+      if (!finalPrompt) return NextResponse.json({ error: '請提供文字描述或參考圖片' }, { status: 400 })
+
+      // Upload mask to Supabase to get a permanent URL
       const maskBase64 = maskDataUrl.replace(/^data:image\/[^;]+;base64,/, '')
       const maskBuffer = Buffer.from(maskBase64, 'base64')
       const maskFileName = `${user.id}/mask-${Date.now()}.png`
@@ -80,17 +119,17 @@ export async function POST(req: NextRequest) {
       }
       const { data: { publicUrl: maskUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(maskFileName)
 
-      // FLUX inpainting (fill)
+      // FLUX Pro Fill (inpainting)
       const data = await falPost('fal-ai/flux-pro/v1/fill', {
         image_url: imageUrl,
         mask_url: maskUrl,
-        prompt: prompt.trim(),
+        prompt: finalPrompt,
         num_inference_steps: 28,
         guidance_scale: 3.5,
         num_images: 1,
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost = 0.08
+      cost += 0.08
 
     } else if (type === 'edit') {
       // FLUX dev image-to-image
