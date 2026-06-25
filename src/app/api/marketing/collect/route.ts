@@ -705,14 +705,20 @@ export async function POST(req: NextRequest) {
     baseURL: 'https://api.deepseek.com/v1',
   })
 
+  const LANG_NAMES: Record<string, string> = {
+    'zh-TW': '繁體中文', 'zh-CN': '简体中文', 'en': 'English', 'vi': 'Tiếng Việt',
+  }
+  const langName = LANG_NAMES[language] ?? '繁體中文'
+
   const { text: summary } = await generateText({
     model: deepseek.chat('deepseek-chat'),
     messages: [{
       role: 'system',
-      content: '你是一位市場調查分析師，擅長從多元來源資料中提煉行銷洞察，以繁體中文輸出清晰結構化報告。',
+      content: `你是一位市場調查分析師，擅長從多元來源資料中提煉行銷洞察。請務必「全部」以 ${langName} 輸出清晰結構化報告，包含所有區段標題與內容；即使原始資料是其他語言，也要翻譯成 ${langName}。`,
     }, {
       role: 'user',
-      content: `請根據以下蒐集到的資料，整理成完整的行銷情報摘要：
+      content: `請根據以下蒐集到的資料，整理成完整的行銷情報摘要。
+輸出語言：${langName}（所有標題與內容都必須使用此語言）。
 
 關鍵字：${kw}
 地區：${location || '未指定'}
