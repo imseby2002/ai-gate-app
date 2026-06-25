@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useId } from 'react'
+import React, { useState, useRef, useCallback, useId, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
   ArrowRight, Play, Download, Copy, RefreshCw, MessageSquare,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Brush, Eraser, Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils/cn'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type NodeType = 'input' | 'edit' | 'style' | 'enhance' | 'bg-remove' | 'video'
+type NodeType = 'input' | 'edit' | 'style' | 'enhance' | 'bg-remove' | 'video' | 'inpaint'
 type NodeStatus = 'idle' | 'processing' | 'done' | 'error'
 
 interface PipelineNode {
@@ -28,6 +28,7 @@ interface PipelineNode {
   strength: number
   videoDuration: string
   videoAspect: string
+  maskDataUrl: string | null
   status: NodeStatus
   error: string | null
   videoRequestId: string | null
@@ -36,6 +37,7 @@ interface PipelineNode {
 const NODE_META: Record<NodeType, { labelKey: string; icon: React.ElementType; color: string; descKey: string }> = {
   input:      { labelKey: 'studio.nodes.input',    icon: Upload,         color: 'from-slate-500 to-gray-600',    descKey: 'studio.nodes.inputDesc' },
   edit:       { labelKey: 'studio.nodes.edit',     icon: Wand2,          color: 'from-violet-500 to-purple-600', descKey: 'studio.nodes.editDesc' },
+  inpaint:    { labelKey: 'studio.nodes.inpaint',  icon: Brush,          color: 'from-rose-500 to-pink-600',     descKey: 'studio.nodes.inpaintDesc' },
   style:      { labelKey: 'studio.nodes.style',    icon: Palette,        color: 'from-pink-500 to-rose-600',     descKey: 'studio.nodes.styleDesc' },
   enhance:    { labelKey: 'studio.nodes.enhance',  icon: ArrowUpToLine,  color: 'from-blue-500 to-cyan-600',     descKey: 'studio.nodes.enhanceDesc' },
   'bg-remove':{ labelKey: 'studio.nodes.bgRemove', icon: Scissors,       color: 'from-teal-500 to-emerald-600',  descKey: 'studio.nodes.bgRemoveDesc' },
@@ -53,7 +55,7 @@ const STYLE_PRESETS = [
   { key: 'cyberpunk',    labelKey: 'studio.style.cyberpunk' },
 ]
 
-const ADDABLE_TYPES: NodeType[] = ['edit', 'style', 'enhance', 'bg-remove', 'video']
+const ADDABLE_TYPES: NodeType[] = ['edit', 'inpaint', 'style', 'enhance', 'bg-remove', 'video']
 
 function makeNode(type: NodeType, id: string): PipelineNode {
   return {
@@ -62,6 +64,7 @@ function makeNode(type: NodeType, id: string): PipelineNode {
     prompt: '', stylePreset: 'watercolor',
     strength: 0.75,
     videoDuration: '5', videoAspect: '16:9',
+    maskDataUrl: null,
     status: 'idle', error: null, videoRequestId: null,
   }
 }
@@ -134,7 +137,6 @@ export default function AiStudioPage() {
 
     try {
       if (node.type === 'video') {
-        // Submit to video gen API (async)
         const res = await fetch('/api/marketing/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -150,8 +152,32 @@ export default function AiStudioPage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         updateNode(nodeId, { videoRequestId: data.requestId, status: 'processing' })
-        // Poll for result
         await pollVideo(nodeId, data.requestId, 'kling-img2video')
+      } else if (node.type === 'inpaint') {
+        if (!node.maskDataUrl) {
+          updateNode(nodeId, { status: 'error', error: t('studio.errNoMask') })
+          return
+        }
+        const res = await fetch('/api/marketing/ai-studio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'inpaint',
+            imageUrl: inputUrl,
+            maskDataUrl: node.maskDataUrl,
+            prompt: node.prompt,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        const outUrl = data.url
+        updateNode(nodeId, { status: 'done', outputUrl: outUrl, error: null })
+        setNodes(prev => {
+          const idx = prev.findIndex(n => n.id === nodeId)
+          if (idx === -1 || idx + 1 >= prev.length) return prev
+          if (prev[idx + 1].type === 'input') return prev
+          return prev.map((n, i) => i === idx + 1 ? { ...n, inputUrl: outUrl } : n)
+        })
       } else {
         const res = await fetch('/api/marketing/ai-studio', {
           method: 'POST',
@@ -168,12 +194,10 @@ export default function AiStudioPage() {
         if (!res.ok) throw new Error(data.error)
         const outUrl = data.url
         updateNode(nodeId, { status: 'done', outputUrl: outUrl, error: null })
-        // Propagate output to next node
         setNodes(prev => {
           const idx = prev.findIndex(n => n.id === nodeId)
           if (idx === -1 || idx + 1 >= prev.length) return prev
-          const next = prev[idx + 1]
-          if (next.type === 'input') return prev
+          if (prev[idx + 1].type === 'input') return prev
           return prev.map((n, i) => i === idx + 1 ? { ...n, inputUrl: outUrl } : n)
         })
       }
@@ -232,8 +256,26 @@ export default function AiStudioPage() {
           if (!res.ok) throw new Error(data.error)
           updateNode(node.id, { videoRequestId: data.requestId })
           await pollVideo(node.id, data.requestId, 'kling-img2video')
-          // video nodes don't feed into next node as image
           break
+        } else if (node.type === 'inpaint') {
+          if (!node.maskDataUrl) {
+            updateNode(node.id, { status: 'error', error: t('studio.errNoMask') })
+            break
+          }
+          const res = await fetch('/api/marketing/ai-studio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'inpaint',
+              imageUrl: lastOutput,
+              maskDataUrl: node.maskDataUrl,
+              prompt: node.prompt,
+            }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error)
+          lastOutput = data.url
+          updateNode(node.id, { status: 'done', outputUrl: lastOutput, error: null })
         } else {
           const res = await fetch('/api/marketing/ai-studio', {
             method: 'POST',
@@ -257,7 +299,7 @@ export default function AiStudioPage() {
       }
     }
     setRunningAll(false)
-  }, [nodes, updateNode, pollVideo])
+  }, [nodes, t, updateNode, pollVideo])
 
   const inputNode = nodes.find(n => n.type === 'input')
   const canRunAll = !!inputNode?.outputUrl && !runningAll
@@ -657,6 +699,25 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
           </div>
         )}
 
+        {/* Inpaint node */}
+        {node.type === 'inpaint' && (
+          <div className="space-y-2">
+            <MaskCanvas
+              imageUrl={node.inputUrl}
+              maskDataUrl={node.maskDataUrl}
+              onMaskChange={maskDataUrl => onUpdate({ maskDataUrl })}
+              t={t}
+            />
+            <Textarea
+              value={node.prompt}
+              onChange={e => onUpdate({ prompt: e.target.value })}
+              placeholder={t('studio.inpaintPromptPh')}
+              rows={2}
+              className="text-xs resize-none"
+            />
+          </div>
+        )}
+
         {/* Enhance node */}
         {node.type === 'enhance' && (
           <p className="text-xs text-muted-foreground py-1">{t('studio.enhanceNote')}</p>
@@ -715,7 +776,11 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
           <Button
             size="sm"
             onClick={onRun}
-            disabled={node.status === 'processing' || !node.inputUrl}
+            disabled={
+              node.status === 'processing' ||
+              !node.inputUrl ||
+              (node.type === 'inpaint' && !node.maskDataUrl)
+            }
             className="w-full mt-2 h-7 text-xs gap-1.5"
             variant={node.status === 'done' ? 'outline' : 'default'}
           >
@@ -727,6 +792,221 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               <><Sparkles className="h-3 w-3" />{t('studio.run')}</>
             )}
           </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Mask Canvas ───────────────────────────────────────────────────────────────
+
+interface MaskCanvasProps {
+  imageUrl: string | null
+  maskDataUrl: string | null
+  onMaskChange: (dataUrl: string | null) => void
+  t: ReturnType<typeof useTranslations<'Marketing'>>
+}
+
+function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t }: MaskCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [brushSize, setBrushSize] = useState(24)
+  const [mode, setMode] = useState<'draw' | 'erase'>('draw')
+  const [hasMask, setHasMask] = useState(false)
+  const lastPos = useRef<{ x: number; y: number } | null>(null)
+
+  // Draw image + semi-transparent mask overlay when imageUrl changes
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !imageUrl) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      canvas.width = img.width
+      canvas.height = img.height
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+    }
+    img.src = imageUrl
+  }, [imageUrl])
+
+  const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    }
+  }
+
+  const drawStroke = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.globalCompositeOperation = mode === 'draw' ? 'source-over' : 'destination-out'
+    ctx.strokeStyle = 'rgba(255,80,80,0.6)'
+    ctx.lineWidth = brushSize
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    ctx.moveTo(from.x, from.y)
+    ctx.lineTo(to.x, to.y)
+    ctx.stroke()
+    if (mode === 'draw') setHasMask(true)
+    exportMask()
+  }
+
+  const exportMask = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    // Create a proper black/white mask canvas
+    const maskCanvas = document.createElement('canvas')
+    maskCanvas.width = canvas.width
+    maskCanvas.height = canvas.height
+    const mCtx = maskCanvas.getContext('2d')
+    if (!mCtx) return
+    mCtx.fillStyle = 'black'
+    mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height)
+    // Draw white where user painted (alpha > 0 on overlay canvas = white on mask)
+    const srcData = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height)
+    if (!srcData) return
+    const maskData = mCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height)
+    for (let i = 0; i < srcData.data.length; i += 4) {
+      if (srcData.data[i + 3] > 10) {
+        maskData.data[i] = 255
+        maskData.data[i + 1] = 255
+        maskData.data[i + 2] = 255
+        maskData.data[i + 3] = 255
+      }
+    }
+    mCtx.putImageData(maskData, 0, 0)
+    onMaskChange(maskCanvas.toDataURL('image/png'))
+  }
+
+  const clearMask = () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx?.clearRect(0, 0, canvas.width, canvas.height)
+    setHasMask(false)
+    onMaskChange(null)
+  }
+
+  const onMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const pos = getPos(e)
+    if (!pos) return
+    setIsDrawing(true)
+    lastPos.current = pos
+    drawStroke(pos, pos)
+  }
+  const onMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return
+    const pos = getPos(e)
+    if (!pos || !lastPos.current) return
+    drawStroke(lastPos.current, pos)
+    lastPos.current = pos
+  }
+  const onMouseUp = () => { setIsDrawing(false); lastPos.current = null }
+
+  const onTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const pos = getPos(e)
+    if (!pos) return
+    setIsDrawing(true)
+    lastPos.current = pos
+    drawStroke(pos, pos)
+  }
+  const onTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    if (!isDrawing) return
+    const pos = getPos(e)
+    if (!pos || !lastPos.current) return
+    drawStroke(lastPos.current, pos)
+    lastPos.current = pos
+  }
+
+  if (!imageUrl) {
+    return (
+      <div className="text-xs text-muted-foreground py-2 text-center border border-dashed rounded-lg">
+        {t('studio.inpaintNoImage')}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-medium text-muted-foreground">{t('studio.inpaintHint')}</p>
+        {hasMask && (
+          <button onClick={clearMask} className="flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700">
+            <Trash2 className="h-2.5 w-2.5" />{t('studio.inpaintClear')}
+          </button>
+        )}
+      </div>
+
+      {/* Brush toolbar */}
+      <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-2 py-1.5">
+        <button
+          onClick={() => setMode('draw')}
+          className={cn('flex items-center gap-1 text-[10px] px-2 py-1 rounded-md font-medium transition-colors',
+            mode === 'draw' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' : 'text-muted-foreground hover:text-foreground')}
+        >
+          <Brush className="h-3 w-3" />{t('studio.inpaintDraw')}
+        </button>
+        <button
+          onClick={() => setMode('erase')}
+          className={cn('flex items-center gap-1 text-[10px] px-2 py-1 rounded-md font-medium transition-colors',
+            mode === 'erase' ? 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300' : 'text-muted-foreground hover:text-foreground')}
+        >
+          <Eraser className="h-3 w-3" />{t('studio.inpaintErase')}
+        </button>
+        <div className="flex-1 flex items-center gap-1.5 ml-1">
+          <span className="text-[9px] text-muted-foreground shrink-0">{t('studio.inpaintBrush')}</span>
+          <input
+            type="range" min={8} max={80} step={4}
+            value={brushSize}
+            onChange={e => setBrushSize(parseInt(e.target.value))}
+            className="flex-1 h-1 accent-rose-500"
+          />
+        </div>
+      </div>
+
+      {/* Canvas overlay */}
+      <div
+        ref={containerRef}
+        className="relative rounded-lg overflow-hidden border border-border cursor-crosshair"
+        style={{ touchAction: 'none' }}
+      >
+        {/* Background image */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt="base" className="w-full block pointer-events-none select-none" />
+        {/* Paint canvas (transparent background, red overlay) */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ mixBlendMode: 'multiply' }}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onMouseUp}
+        />
+        {!hasMask && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="bg-black/50 text-white text-[10px] px-3 py-1.5 rounded-full font-medium">
+              {t('studio.inpaintPaintHint')}
+            </div>
+          </div>
         )}
       </div>
     </div>

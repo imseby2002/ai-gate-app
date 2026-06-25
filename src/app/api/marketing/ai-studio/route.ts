@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   if (!apiKey) return NextResponse.json({ error: 'FAL_AI_API_KEY 未設定' }, { status: 500 })
 
   const body = await req.json()
-  const { type, imageUrl, prompt = '', strength = 0.75, stylePreset } = body
+  const { type, imageUrl, prompt = '', strength = 0.75, stylePreset, maskDataUrl } = body
 
   if (!imageUrl?.trim()) return NextResponse.json({ error: '缺少 imageUrl' }, { status: 400 })
 
@@ -62,7 +62,37 @@ export async function POST(req: NextRequest) {
   let cost = 0.05
 
   try {
-    if (type === 'edit') {
+    if (type === 'inpaint') {
+      if (!maskDataUrl) return NextResponse.json({ error: '缺少遮罩圖' }, { status: 400 })
+      if (!prompt?.trim()) return NextResponse.json({ error: '請描述要在遮罩區域放什麼' }, { status: 400 })
+
+      // Upload mask to Supabase first to get a permanent URL
+      const maskBase64 = maskDataUrl.replace(/^data:image\/[^;]+;base64,/, '')
+      const maskBuffer = Buffer.from(maskBase64, 'base64')
+      const maskFileName = `${user.id}/mask-${Date.now()}.png`
+
+      const { error: maskUploadError } = await supabase.storage
+        .from('marketing-assets')
+        .upload(maskFileName, maskBuffer, { contentType: 'image/png', upsert: false })
+
+      if (maskUploadError) {
+        return NextResponse.json({ error: `Mask 上傳失敗：${maskUploadError.message}` }, { status: 500 })
+      }
+      const { data: { publicUrl: maskUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(maskFileName)
+
+      // FLUX inpainting (fill)
+      const data = await falPost('fal-ai/flux-pro/v1/fill', {
+        image_url: imageUrl,
+        mask_url: maskUrl,
+        prompt: prompt.trim(),
+        num_inference_steps: 28,
+        guidance_scale: 3.5,
+        num_images: 1,
+      }, apiKey)
+      tempUrl = data?.images?.[0]?.url ?? ''
+      cost = 0.08
+
+    } else if (type === 'edit') {
       // FLUX dev image-to-image
       const data = await falPost('fal-ai/flux/dev/image-to-image', {
         image_url: imageUrl,
