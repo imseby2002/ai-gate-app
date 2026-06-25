@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { langInstruction } from '@/lib/marketing/lang'
 
 export const maxDuration = 120
 
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
     companyName: legacyName,
     topic,
     industry,
+    language,
   } = body
 
   const selectedTypes: CopyType[] = copyTypes
@@ -119,7 +121,8 @@ export async function POST(req: NextRequest) {
       model: anthropic('claude-sonnet-4-6'),
       system: `你是一位頂尖的多平台行銷文案撰寫人，擅長根據品牌特性與受眾習慣，撰寫各平台最佳化的行銷文案。
 文案要：具感染力、清晰傳遞價值主張、符合各平台格式規範、促進轉換行動。
-輸出格式：每個文案類型用「===【類型名稱】===」作為分隔標題，直接輸出文案內容，不需其他說明。`,
+輸出格式：每個文案類型用「===【類型名稱】===」作為分隔標題，直接輸出文案內容，不需其他說明。
+${langInstruction(language)}（分隔標題的類型名稱維持原樣即可，文案內容用該語言）`,
       messages: [
         {
           role: 'user',

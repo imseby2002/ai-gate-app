@@ -910,6 +910,7 @@ function Unit3Analyze({
           collectedData: unit1Data?.summary ?? '',
           companyData: unit2Data ?? {},
           extraContext,
+          language,
         }),
       })
       const data = await res.json()
@@ -937,6 +938,7 @@ function Unit3Analyze({
           analysisData: result ?? {},
           personaCount: 10,
           scenario: scenario ?? '',
+          language,
         }),
       })
       const data = await res.json()
@@ -1245,6 +1247,7 @@ function Unit4Copy({
             analysisData: unit3Data ?? {},
             collectedSummary: unit1Data?.summary ?? '',
             feedback: fb ?? '',
+            language,
           }),
         })
         const data = await res.json()
@@ -1265,6 +1268,7 @@ function Unit4Copy({
             analysisData: unit3Data ?? {},
             collectedSummary: unit1Data?.summary ?? '',
             existingCopies: results,
+            language,
           }),
         })
         const data = await res.json()
@@ -1542,6 +1546,7 @@ function Unit5ImageScript({
           collectedSummary: unit1Data?.summary ?? '',
           feedback: fb ?? '',
           referenceImage: refImg,
+          language,
         }),
       })
       const data = await res.json()
@@ -2329,6 +2334,7 @@ function Unit7VideoScript({
           imageScripts: unit5Data ?? {},
           collectedSummary: unit1Data?.summary ?? '',
           feedback: fb ?? '',
+          language,
           ...(refImg ? { referenceImage: refImg } : {}),
         }),
       })

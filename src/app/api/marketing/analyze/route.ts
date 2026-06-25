@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
+import { langInstruction } from '@/lib/marketing/lang'
 
 export const maxDuration = 60
 
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
     companyInfo: legacyInfo,
     topic,
     industry,
+    language,
   } = body
 
   const selectedTypes: AnalysisType[] = types
@@ -137,7 +139,7 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: 'user',
-              content: `你是資深行銷策略顧問，請用繁體中文、條列格式，精簡回答（每點1-2句）。
+              content: `你是資深行銷策略顧問，請用條列格式，精簡回答（每點1-2句）。${langInstruction(language)}
 
 ${baseCtx}
 

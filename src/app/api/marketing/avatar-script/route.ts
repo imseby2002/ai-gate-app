@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { langInstruction } from '@/lib/marketing/lang'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
     analysisData:      inlineAnalysis,
     collectedSummary:  inlineCollected,
     existingCopies:    inlineCopies,
+    language,
   } = body
 
   let companyName      = '未知'
@@ -134,7 +136,7 @@ ${copySample || '無'}
 ===【腳本 2】===
 （腳本內容）
 
-以此類推。`,
+以此類推。${langInstruction(language)}（分隔標題「===【腳本 N】===」維持原樣，腳本內容用該語言；秒數字數估算依該語言調整）`,
     }],
   })
 

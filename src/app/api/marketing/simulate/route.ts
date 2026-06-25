@@ -3,6 +3,7 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateObject } from 'ai'
 import { z } from 'zod'
+import { langInstruction } from '@/lib/marketing/lang'
 
 export const maxDuration = 60
 
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
       analysisData,
       personaCount = 10,
       scenario,
+      language,
     } = body
 
     const parts: string[] = []
@@ -120,7 +122,7 @@ Persona 類型需多樣化，需涵蓋（不限於）：精打細算型、品牌
 4. 提取最能引起共鳴的核心行銷訊息（依影響力高低排列）
 5. 預測社群媒體傳播效應（organic + negative + neutral 三者加總 = 100）
 
-所有輸出請使用繁體中文。Persona ID 格式：p1, p2, p3...`,
+${langInstruction(language)} Persona ID 格式：p1, p2, p3...`,
     })
 
     return NextResponse.json(object)

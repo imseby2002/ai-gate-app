@@ -23,6 +23,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { langName, langInstruction } from '@/lib/marketing/lang'
 
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)
@@ -40,7 +41,10 @@ export async function POST(req: NextRequest) {
     collectedSummary,
     feedback,
     referenceImage,
+    language,
   } = body
+
+  const langTxt = langName(language)
 
   const company = companyData ?? {}
   const companyCtx = `
@@ -127,7 +131,7 @@ ${feedbackSection}
 2. 行銷目的：這張圖片要達成的目標（引起注意/建立信任/促進行動等）
 3. 視覺場景：描述畫面構圖、主要視覺元素、人物或物品配置（參考上方圖片風格）
 4. 色調風格：主色調、輔助色、整體風格（極簡/活潑/高端/溫馨等）
-5. 文字疊加：建議放在圖片上的標題文字與副文案（繁體中文）
+5. 文字疊加：建議放在圖片上的標題文字與副文案（${langTxt}）
 6. 情感訴求：圖片要傳達的核心情感或價值
 7. 適用平台：最適合發布此圖的平台及比例建議（如 1:1 Instagram、4:5 Facebook）
 8. AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖（須反映參考圖片的風格）
@@ -159,7 +163,7 @@ ${feedbackSection}
 2. 行銷目的：這張圖片要達成的目標（引起注意/建立信任/促進行動等）
 3. 視覺場景：描述畫面構圖、主要視覺元素、人物或物品配置
 4. 色調風格：主色調、輔助色、整體風格（極簡/活潑/高端/溫馨等）
-5. 文字疊加：建議放在圖片上的標題文字與副文案（繁體中文）
+5. 文字疊加：建議放在圖片上的標題文字與副文案（${langTxt}）
 6. 情感訴求：圖片要傳達的核心情感或價值
 7. 適用平台：最適合發布此圖的平台及比例建議（如 1:1 Instagram、4:5 Facebook）
 8. AI 生成 Prompt：英文，30-60字，可直接用於 Midjourney/DALL-E/Stable Diffusion 生成此圖
@@ -170,7 +174,8 @@ ${feedbackSection}
     model: anthropic('claude-sonnet-4-5'),
     system: `你是一位頂尖的視覺行銷設計顧問，擅長根據品牌特性與行銷文案，撰寫清晰可執行的圖片視覺腳本。
 每張圖片的腳本應包含：視覺場景、色調風格、主要元素、文字疊加、情感訴求、設計建議，以及 AI 圖片生成的英文 Prompt。
-輸出格式：每張圖片用「===【圖片 N】===」作為分隔標題，直接輸出腳本內容，不需其他說明。`,
+輸出格式：每張圖片用「===【圖片 N】===」作為分隔標題，直接輸出腳本內容，不需其他說明。
+${langInstruction(language)}（分隔標題「===【圖片 N】===」維持原樣；唯有「AI 生成 Prompt」一律用英文，其餘文字疊加與說明用該語言）`,
     messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })

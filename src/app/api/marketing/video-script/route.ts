@@ -22,6 +22,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import { langInstruction } from '@/lib/marketing/lang'
 
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
     collectedSummary,
     feedback,
     referenceImage,
+    language,
   } = body
 
   const company = companyData ?? {}
@@ -162,7 +164,8 @@ ${feedbackSection}
     model: anthropic('claude-sonnet-4-5'),
     system: `你是一位頂尖的影片行銷導演，擅長為各社群平台撰寫高轉換率的影片分鏡腳本。
 你熟知短影音的黃金法則：前3秒必須抓住觀眾、節奏明快、視覺衝擊強、CTA清晰。
-輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。`,
+輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。
+${langInstruction(language)}（分隔標題「===【影片 N】===」維持原樣，腳本內容用該語言）`,
     messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })
