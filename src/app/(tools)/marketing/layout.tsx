@@ -2,12 +2,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2 } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
   { href: '/marketing-auto',             labelKey: 'nav.auto',     icon: LayoutDashboard },
   { href: '/marketing/product-designer', labelKey: 'nav.designer', icon: Palette },
+  { href: '/marketing/ai-studio',        labelKey: 'nav.studio',   icon: Wand2 },
   { href: '/marketing/geo-writer',       labelKey: 'nav.geo',      icon: Search },
   { href: '/marketing/skills',           labelKey: 'nav.expert',   icon: Sparkles },
   { href: '/prospect-call',              labelKey: 'nav.prospect', icon: Phone },

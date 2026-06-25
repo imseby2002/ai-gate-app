@@ -1410,9 +1410,64 @@
     "nav": {
       "auto": "行銷自動化",
       "designer": "產品設計師",
+      "studio": "AI 視覺工坊",
       "geo": "GEO 內容",
       "expert": "專家模式",
       "prospect": "潛在客戶行銷"
+    },
+    "studio": {
+      "title": "AI 視覺工坊",
+      "badge": "ComfyUI 風格",
+      "hint": "像 ComfyUI 一樣，把圖片和影片的修改串成一條流水線——每個節點負責一件事，用自然語言告訴 AI 你要什麼，按一下就跑完整個流程",
+      "palette": "節點面板",
+      "tipTitle": "使用提示",
+      "tip": "先上傳圖片，再從左側面板加入節點，在每個節點用中文描述你想要的效果，最後點「執行全部」",
+      "runAll": "執行全部",
+      "running": "執行中...",
+      "clickUpload": "點擊上傳圖片",
+      "replaceImage": "更換圖片",
+      "uploadImage": "上傳圖片",
+      "waitingInput": "等待上一節點輸出",
+      "processing": "AI 處理中...",
+      "videoProcessing": "影片生成中（約 60 秒）...",
+      "rerun": "重新執行",
+      "run": "執行此節點",
+      "errNoInput": "請先完成上一個節點或上傳圖片",
+      "advancedConfig": "進階設定",
+      "strength": "修改強度",
+      "subtleEdit": "微調",
+      "boldEdit": "大改",
+      "editPromptPh": "描述你想改什麼，例如：把背景換成海邊夕陽，保留人物",
+      "stylePromptPh": "附加說明（選填），例如：維持原本的人物姿勢",
+      "videoPromptPh": "描述影片動態，例如：緩慢推鏡，鏡頭輕輕搖晃，電影感",
+      "enhanceNote": "自動放大 2× 並銳化細節，不需要輸入任何提示詞",
+      "bgRemoveNote": "AI 自動偵測主體並移除背景，輸出透明 PNG",
+      "duration": "長度",
+      "aspect": "比例",
+      "nodes": {
+        "input": "原始圖片",
+        "inputDesc": "上傳或貼上圖片作為起點",
+        "edit": "AI 修改",
+        "editDesc": "用自然語言描述修改內容",
+        "style": "風格轉換",
+        "styleDesc": "套用預設畫風",
+        "enhance": "高清放大",
+        "enhanceDesc": "放大 2× 並提升細節",
+        "bgRemove": "去除背景",
+        "bgRemoveDesc": "輸出透明 PNG",
+        "video": "生成影片",
+        "videoDesc": "從圖片生成短影片"
+      },
+      "style": {
+        "watercolor": "水彩畫",
+        "anime": "動漫風",
+        "illustration": "插畫風",
+        "cinematic": "電影感",
+        "realistic": "照片寫實",
+        "oilpainting": "油畫",
+        "sketch": "鉛筆素描",
+        "cyberpunk": "賽博龐克"
+      }
     },
     "geo": {
       "title": "GEO 內容寫手",
@@ -1557,6 +1612,17 @@
           "內容組合",
           "市場分析",
           "SEO 策略"
+        ]
+      },
+      "studio": {
+        "title": "AI 視覺工坊",
+        "desc": "ComfyUI 概念的圖片＋影片流水線——上傳圖片，用自然語言串接多個 AI 操作節點（修改、風格、高清、去背、生影片），一鍵跑完",
+        "badge": "新功能",
+        "tags": [
+          "AI 修圖",
+          "風格轉換",
+          "去除背景",
+          "圖生影片"
         ]
       },
       "geo": {

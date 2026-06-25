@@ -1410,9 +1410,64 @@
     "nav": {
       "auto": "Marketing Automation",
       "designer": "Product Designer",
+      "studio": "AI Visual Studio",
       "geo": "GEO Content",
       "expert": "Expert Mode",
       "prospect": "Prospect Marketing"
+    },
+    "studio": {
+      "title": "AI Visual Studio",
+      "badge": "ComfyUI Style",
+      "hint": "Like ComfyUI, chain image and video edits into a visual pipeline — each node does one thing, describe what you want in plain language, and run the whole flow with one click",
+      "palette": "Node Palette",
+      "tipTitle": "How to use",
+      "tip": "Upload an image, add nodes from the left panel, describe the effect you want in each node, then click \"Run All\"",
+      "runAll": "Run All",
+      "running": "Running...",
+      "clickUpload": "Click to upload image",
+      "replaceImage": "Replace Image",
+      "uploadImage": "Upload Image",
+      "waitingInput": "Waiting for previous node",
+      "processing": "AI processing...",
+      "videoProcessing": "Generating video (~60s)...",
+      "rerun": "Re-run",
+      "run": "Run this node",
+      "errNoInput": "Please complete the previous node or upload an image first",
+      "advancedConfig": "Advanced settings",
+      "strength": "Edit strength",
+      "subtleEdit": "Subtle",
+      "boldEdit": "Bold",
+      "editPromptPh": "Describe what to change, e.g.: replace the background with a sunset beach, keep the person",
+      "stylePromptPh": "Additional notes (optional), e.g.: keep the original pose",
+      "videoPromptPh": "Describe the motion, e.g.: slow push-in, gentle camera sway, cinematic",
+      "enhanceNote": "Automatically upscales 2× and sharpens detail — no prompt needed",
+      "bgRemoveNote": "AI detects the subject and removes the background, outputting a transparent PNG",
+      "duration": "Duration",
+      "aspect": "Aspect",
+      "nodes": {
+        "input": "Source Image",
+        "inputDesc": "Upload or paste an image as the starting point",
+        "edit": "AI Edit",
+        "editDesc": "Describe changes in plain language",
+        "style": "Style Transfer",
+        "styleDesc": "Apply a preset art style",
+        "enhance": "HD Upscale",
+        "enhanceDesc": "2× upscale with detail boost",
+        "bgRemove": "Remove Background",
+        "bgRemoveDesc": "Output transparent PNG",
+        "video": "Generate Video",
+        "videoDesc": "Create a short video from the image"
+      },
+      "style": {
+        "watercolor": "Watercolor",
+        "anime": "Anime",
+        "illustration": "Illustration",
+        "cinematic": "Cinematic",
+        "realistic": "Realistic",
+        "oilpainting": "Oil Painting",
+        "sketch": "Pencil Sketch",
+        "cyberpunk": "Cyberpunk"
+      }
     },
     "geo": {
       "title": "GEO Content Writer",
@@ -1557,6 +1612,17 @@
           "Content Sets",
           "Market Analysis",
           "SEO Strategy"
+        ]
+      },
+      "studio": {
+        "title": "AI Visual Studio",
+        "desc": "ComfyUI-inspired image + video pipeline — upload an image, chain AI nodes (edit, style, upscale, background remove, video) in plain language, run them all in one click",
+        "badge": "New",
+        "tags": [
+          "AI Editing",
+          "Style Transfer",
+          "Remove BG",
+          "Image to Video"
         ]
       },
       "geo": {
