@@ -87,14 +87,14 @@ export async function POST(req: NextRequest) {
           messages: [{
             role: 'user',
             content: [
-              { type: 'image', image: referenceImageBase64, mimeType },
+              { type: 'image', image: referenceImageBase64, mediaType: mimeType },
               {
                 type: 'text',
                 text: 'Describe this reference image in detail as a prompt for AI image inpainting. Focus on: visual style, colors, textures, lighting, key elements, composition. Be specific. Output only the visual description, no preamble.',
               },
             ],
           }],
-          maxTokens: 200,
+          maxOutputTokens: 200,
         })
 
         // Combine reference description with any additional text from user
@@ -148,14 +148,14 @@ export async function POST(req: NextRequest) {
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', image: sourceBCropBase64, mimeType: bMimeType },
+            { type: 'image', image: sourceBCropBase64, mediaType: bMimeType },
             {
               type: 'text',
               text: 'Describe this image region in detail for AI inpainting: visual style, colors, textures, lighting, shapes, composition. Be specific and visual. Output only the description, no preamble.',
             },
           ],
         }],
-        maxTokens: 200,
+        maxOutputTokens: 200,
       })
 
       const finalPrompt = prompt?.trim()
