@@ -1434,6 +1434,8 @@
       "run": "執行此節點",
       "errNoInput": "請先完成上一個節點或上傳圖片",
       "errNoMask": "請先在圖片上塗抹要修改的區域",
+      "errNoMaskA": "請先在主圖（A）上塗抹要替換的區域",
+      "errNoBSource": "請先上傳來源圖（B）並塗抹要取用的部分",
       "advancedConfig": "進階設定",
       "strength": "修改強度",
       "subtleEdit": "微調",
@@ -1472,7 +1474,9 @@
         "bgRemove": "去除背景",
         "bgRemoveDesc": "輸出透明 PNG",
         "video": "生成影片",
-        "videoDesc": "從圖片生成短影片"
+        "videoDesc": "從圖片生成短影片",
+        "composite": "融合貼入",
+        "compositeDesc": "把 B 圖的局部貼入 A 圖指定區域"
       },
       "style": {
         "watercolor": "水彩畫",
@@ -1483,6 +1487,18 @@
         "oilpainting": "油畫",
         "sketch": "鉛筆素描",
         "cyberpunk": "賽博龐克"
+      },
+      "composite": {
+        "maskALabel": "第一步：在主圖塗抹目標區域",
+        "maskAHint": "塗抹你要替換的位置（紅色）",
+        "uploadBLabel": "第二步：上傳來源圖（B）",
+        "uploadBHint": "上傳你要取用的圖片",
+        "maskBLabel": "第三步：在來源圖塗抹要取用的部分",
+        "maskBHint": "塗抹你要融合進去的部分",
+        "blendPrompt": "融合風格說明（選填）",
+        "blendPromptPh": "例如：自然融合，保持原圖光線，邊緣羽化",
+        "noAImageYet": "請先完成上一節點，取得主圖",
+        "noBImageYet": "請先上傳來源圖（B）再塗抹"
       }
     },
     "geo": {

@@ -7,7 +7,7 @@ import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
   ArrowRight, Play, Download, Copy, RefreshCw, MessageSquare,
-  ChevronDown, ChevronUp, Brush, Eraser, Trash2,
+  ChevronDown, ChevronUp, Brush, Eraser, Trash2, Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils/cn'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type NodeType = 'input' | 'edit' | 'style' | 'enhance' | 'bg-remove' | 'video' | 'inpaint'
+type NodeType = 'input' | 'edit' | 'style' | 'enhance' | 'bg-remove' | 'video' | 'inpaint' | 'composite'
 type NodeStatus = 'idle' | 'processing' | 'done' | 'error'
 
 interface PipelineNode {
@@ -32,19 +32,25 @@ interface PipelineNode {
   inpaintMode: 'text' | 'reference'
   referenceImageDataUrl: string | null
   referenceImageMimeType: string | null
+  // composite node: source B
+  sourceBImageDataUrl: string | null
+  sourceBImageMimeType: string | null
+  sourceBMaskDataUrl: string | null
+  compositePrompt: string
   status: NodeStatus
   error: string | null
   videoRequestId: string | null
 }
 
 const NODE_META: Record<NodeType, { labelKey: string; icon: React.ElementType; color: string; descKey: string }> = {
-  input:      { labelKey: 'studio.nodes.input',    icon: Upload,         color: 'from-slate-500 to-gray-600',    descKey: 'studio.nodes.inputDesc' },
-  edit:       { labelKey: 'studio.nodes.edit',     icon: Wand2,          color: 'from-violet-500 to-purple-600', descKey: 'studio.nodes.editDesc' },
-  inpaint:    { labelKey: 'studio.nodes.inpaint',  icon: Brush,          color: 'from-rose-500 to-pink-600',     descKey: 'studio.nodes.inpaintDesc' },
-  style:      { labelKey: 'studio.nodes.style',    icon: Palette,        color: 'from-pink-500 to-rose-600',     descKey: 'studio.nodes.styleDesc' },
-  enhance:    { labelKey: 'studio.nodes.enhance',  icon: ArrowUpToLine,  color: 'from-blue-500 to-cyan-600',     descKey: 'studio.nodes.enhanceDesc' },
-  'bg-remove':{ labelKey: 'studio.nodes.bgRemove', icon: Scissors,       color: 'from-teal-500 to-emerald-600',  descKey: 'studio.nodes.bgRemoveDesc' },
-  video:      { labelKey: 'studio.nodes.video',    icon: Video,          color: 'from-orange-500 to-amber-600',  descKey: 'studio.nodes.videoDesc' },
+  input:      { labelKey: 'studio.nodes.input',     icon: Upload,        color: 'from-slate-500 to-gray-600',     descKey: 'studio.nodes.inputDesc' },
+  edit:       { labelKey: 'studio.nodes.edit',      icon: Wand2,         color: 'from-violet-500 to-purple-600',  descKey: 'studio.nodes.editDesc' },
+  inpaint:    { labelKey: 'studio.nodes.inpaint',   icon: Brush,         color: 'from-rose-500 to-pink-600',      descKey: 'studio.nodes.inpaintDesc' },
+  composite:  { labelKey: 'studio.nodes.composite', icon: Layers,        color: 'from-amber-500 to-orange-600',   descKey: 'studio.nodes.compositeDesc' },
+  style:      { labelKey: 'studio.nodes.style',     icon: Palette,       color: 'from-pink-500 to-rose-600',      descKey: 'studio.nodes.styleDesc' },
+  enhance:    { labelKey: 'studio.nodes.enhance',   icon: ArrowUpToLine, color: 'from-blue-500 to-cyan-600',      descKey: 'studio.nodes.enhanceDesc' },
+  'bg-remove':{ labelKey: 'studio.nodes.bgRemove',  icon: Scissors,      color: 'from-teal-500 to-emerald-600',   descKey: 'studio.nodes.bgRemoveDesc' },
+  video:      { labelKey: 'studio.nodes.video',     icon: Video,         color: 'from-orange-500 to-amber-600',   descKey: 'studio.nodes.videoDesc' },
 }
 
 const STYLE_PRESETS = [
@@ -58,7 +64,57 @@ const STYLE_PRESETS = [
   { key: 'cyberpunk',    labelKey: 'studio.style.cyberpunk' },
 ]
 
-const ADDABLE_TYPES: NodeType[] = ['edit', 'inpaint', 'style', 'enhance', 'bg-remove', 'video']
+const ADDABLE_TYPES: NodeType[] = ['edit', 'inpaint', 'composite', 'style', 'enhance', 'bg-remove', 'video']
+
+// ─── Client-side crop helper ──────────────────────────────────────────────────
+// Extracts the bounding-box region of B masked by its mask, returns base64 PNG
+async function extractMaskedCrop(imageDataUrl: string, maskDataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const mask = new Image()
+    let loaded = 0
+    const onLoad = () => {
+      if (++loaded < 2) return
+      const maskCanvas = document.createElement('canvas')
+      maskCanvas.width = mask.width; maskCanvas.height = mask.height
+      const mCtx = maskCanvas.getContext('2d')!
+      mCtx.drawImage(mask, 0, 0)
+      const mData = mCtx.getImageData(0, 0, mask.width, mask.height).data
+
+      // Find bounding box of white pixels in mask
+      let minX = mask.width, minY = mask.height, maxX = 0, maxY = 0
+      for (let y = 0; y < mask.height; y++) {
+        for (let x = 0; x < mask.width; x++) {
+          const i = (y * mask.width + x) * 4
+          if (mData[i] > 128) { // white = area to extract
+            minX = Math.min(minX, x); minY = Math.min(minY, y)
+            maxX = Math.max(maxX, x); maxY = Math.max(maxY, y)
+          }
+        }
+      }
+      if (maxX < minX) { resolve(imageDataUrl); return } // no mask → use whole image
+
+      const cropW = maxX - minX + 1
+      const cropH = maxY - minY + 1
+      const scaleX = img.width / mask.width
+      const scaleY = img.height / mask.height
+
+      const cropCanvas = document.createElement('canvas')
+      cropCanvas.width = Math.round(cropW * scaleX)
+      cropCanvas.height = Math.round(cropH * scaleY)
+      const cCtx = cropCanvas.getContext('2d')!
+      cCtx.drawImage(
+        img,
+        Math.round(minX * scaleX), Math.round(minY * scaleY),
+        cropCanvas.width, cropCanvas.height,
+        0, 0, cropCanvas.width, cropCanvas.height,
+      )
+      resolve(cropCanvas.toDataURL('image/jpeg', 0.92).replace(/^data:[^;]+;base64,/, ''))
+    }
+    img.onload = onLoad; img.onerror = reject; img.src = imageDataUrl
+    mask.onload = onLoad; mask.onerror = reject; mask.src = maskDataUrl
+  })
+}
 
 function makeNode(type: NodeType, id: string): PipelineNode {
   return {
@@ -71,6 +127,10 @@ function makeNode(type: NodeType, id: string): PipelineNode {
     inpaintMode: 'text',
     referenceImageDataUrl: null,
     referenceImageMimeType: null,
+    sourceBImageDataUrl: null,
+    sourceBImageMimeType: null,
+    sourceBMaskDataUrl: null,
+    compositePrompt: '',
     status: 'idle', error: null, videoRequestId: null,
   }
 }
@@ -189,6 +249,39 @@ export default function AiStudioPage() {
           if (prev[idx + 1].type === 'input') return prev
           return prev.map((n, i) => i === idx + 1 ? { ...n, inputUrl: outUrl } : n)
         })
+      } else if (node.type === 'composite') {
+        if (!node.maskDataUrl) {
+          updateNode(nodeId, { status: 'error', error: t('studio.errNoMaskA') })
+          return
+        }
+        if (!node.sourceBImageDataUrl || !node.sourceBMaskDataUrl) {
+          updateNode(nodeId, { status: 'error', error: t('studio.errNoBSource') })
+          return
+        }
+        // Extract B's selected crop client-side
+        const bCropBase64 = await extractMaskedCrop(node.sourceBImageDataUrl, node.sourceBMaskDataUrl)
+        const res = await fetch('/api/marketing/ai-studio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'composite',
+            imageUrl: inputUrl,
+            maskDataUrl: node.maskDataUrl,
+            sourceBCropBase64: bCropBase64,
+            sourceBMimeType: node.sourceBImageMimeType ?? 'image/jpeg',
+            prompt: node.compositePrompt,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        const outUrl = data.url
+        updateNode(nodeId, { status: 'done', outputUrl: outUrl, error: null })
+        setNodes(prev => {
+          const idx = prev.findIndex(n => n.id === nodeId)
+          if (idx === -1 || idx + 1 >= prev.length) return prev
+          if (prev[idx + 1].type === 'input') return prev
+          return prev.map((n, i) => i === idx + 1 ? { ...n, inputUrl: outUrl } : n)
+        })
       } else {
         const res = await fetch('/api/marketing/ai-studio', {
           method: 'POST',
@@ -286,6 +379,28 @@ export default function AiStudioPage() {
               prompt: node.prompt,
               referenceImageBase64: refBase64,
               referenceImageMimeType: node.referenceImageMimeType ?? 'image/jpeg',
+            }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error)
+          lastOutput = data.url
+          updateNode(node.id, { status: 'done', outputUrl: lastOutput, error: null })
+        } else if (node.type === 'composite') {
+          if (!node.maskDataUrl || !node.sourceBImageDataUrl || !node.sourceBMaskDataUrl) {
+            updateNode(node.id, { status: 'error', error: t('studio.errNoBSource') })
+            break
+          }
+          const bCropBase64 = await extractMaskedCrop(node.sourceBImageDataUrl, node.sourceBMaskDataUrl)
+          const res = await fetch('/api/marketing/ai-studio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'composite',
+              imageUrl: lastOutput,
+              maskDataUrl: node.maskDataUrl,
+              sourceBCropBase64: bCropBase64,
+              sourceBMimeType: node.sourceBImageMimeType ?? 'image/jpeg',
+              prompt: node.compositePrompt,
             }),
           })
           const data = await res.json()
@@ -770,6 +885,15 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
           </div>
         )}
 
+        {/* Composite node */}
+        {node.type === 'composite' && (
+          <CompositeNodeConfig
+            node={node}
+            onUpdate={onUpdate}
+            t={t}
+          />
+        )}
+
         {/* Enhance node */}
         {node.type === 'enhance' && (
           <p className="text-xs text-muted-foreground py-1">{t('studio.enhanceNote')}</p>
@@ -833,7 +957,9 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               !node.inputUrl ||
               (node.type === 'inpaint' && !node.maskDataUrl) ||
               (node.type === 'inpaint' && node.inpaintMode === 'text' && !node.prompt.trim()) ||
-              (node.type === 'inpaint' && node.inpaintMode === 'reference' && !node.referenceImageDataUrl)
+              (node.type === 'inpaint' && node.inpaintMode === 'reference' && !node.referenceImageDataUrl) ||
+              (node.type === 'composite' && !node.maskDataUrl) ||
+              (node.type === 'composite' && (!node.sourceBImageDataUrl || !node.sourceBMaskDataUrl))
             }
             className="w-full mt-2 h-7 text-xs gap-1.5"
             variant={node.status === 'done' ? 'outline' : 'default'}
@@ -859,9 +985,11 @@ interface MaskCanvasProps {
   maskDataUrl: string | null
   onMaskChange: (dataUrl: string | null) => void
   t: ReturnType<typeof useTranslations<'Marketing'>>
+  hintOverride?: string
+  noImageKey?: string
 }
 
-function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t }: MaskCanvasProps) {
+function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t, hintOverride, noImageKey }: MaskCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -990,7 +1118,7 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t }: MaskCanvasProps)
   if (!imageUrl) {
     return (
       <div className="text-xs text-muted-foreground py-2 text-center border border-dashed rounded-lg">
-        {t('studio.inpaintNoImage')}
+        {noImageKey ? t(noImageKey as Parameters<typeof t>[0]) : t('studio.inpaintNoImage')}
       </div>
     )
   }
@@ -998,7 +1126,7 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t }: MaskCanvasProps)
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-medium text-muted-foreground">{t('studio.inpaintHint')}</p>
+        <p className="text-[10px] font-medium text-muted-foreground">{hintOverride ?? t('studio.inpaintHint')}</p>
         {hasMask && (
           <button onClick={clearMask} className="flex items-center gap-1 text-[10px] text-red-500 hover:text-red-700">
             <Trash2 className="h-2.5 w-2.5" />{t('studio.inpaintClear')}
@@ -1062,6 +1190,103 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t }: MaskCanvasProps)
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Composite Node Config ────────────────────────────────────────────────────
+
+interface CompositeNodeConfigProps {
+  node: PipelineNode
+  onUpdate: (patch: Partial<PipelineNode>) => void
+  t: ReturnType<typeof useTranslations<'Marketing'>>
+}
+
+function CompositeNodeConfig({ node, onUpdate, t }: CompositeNodeConfigProps) {
+  const bFileRef = useRef<HTMLInputElement>(null)
+
+  const handleBUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const mime = file.type
+    const reader = new FileReader()
+    reader.onload = ev => onUpdate({ sourceBImageDataUrl: ev.target?.result as string, sourceBImageMimeType: mime, sourceBMaskDataUrl: null })
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Step 1: Paint destination on A */}
+      <div>
+        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">{t('studio.composite.maskALabel')}</p>
+        <MaskCanvas
+          imageUrl={node.inputUrl}
+          maskDataUrl={node.maskDataUrl}
+          onMaskChange={maskDataUrl => onUpdate({ maskDataUrl })}
+          t={t}
+          hintOverride={t('studio.composite.maskAHint')}
+          noImageKey="studio.composite.noAImageYet"
+        />
+      </div>
+
+      {/* Step 2: Upload B */}
+      <div>
+        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">{t('studio.composite.uploadBLabel')}</p>
+        <div
+          onClick={() => bFileRef.current?.click()}
+          className={cn(
+            'relative border-2 border-dashed rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5',
+            node.sourceBImageDataUrl ? 'border-amber-300 p-1' : 'border-border hover:border-amber-400 p-3',
+          )}
+        >
+          {node.sourceBImageDataUrl ? (
+            <div className="relative w-full">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={node.sourceBImageDataUrl} alt="source B" className="w-full max-h-28 object-contain rounded-lg" />
+              <button
+                onClick={e => { e.stopPropagation(); onUpdate({ sourceBImageDataUrl: null, sourceBImageMimeType: null, sourceBMaskDataUrl: null }) }}
+                className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[10px] text-muted-foreground text-center">{t('studio.composite.uploadBHint')}</p>
+            </>
+          )}
+        </div>
+        <input ref={bFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleBUpload} />
+      </div>
+
+      {/* Step 3: Paint source area on B */}
+      {node.sourceBImageDataUrl && (
+        <div>
+          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">{t('studio.composite.maskBLabel')}</p>
+          <MaskCanvas
+            imageUrl={node.sourceBImageDataUrl}
+            maskDataUrl={node.sourceBMaskDataUrl}
+            onMaskChange={sourceBMaskDataUrl => onUpdate({ sourceBMaskDataUrl })}
+            t={t}
+            hintOverride={t('studio.composite.maskBHint')}
+            noImageKey="studio.composite.noBImageYet"
+          />
+        </div>
+      )}
+
+      {/* Optional blend prompt */}
+      <div>
+        <p className="text-[10px] text-muted-foreground mb-1">{t('studio.composite.blendPrompt')}</p>
+        <Textarea
+          value={node.compositePrompt}
+          onChange={e => onUpdate({ compositePrompt: e.target.value })}
+          placeholder={t('studio.composite.blendPromptPh')}
+          rows={2}
+          className="text-xs resize-none"
+        />
       </div>
     </div>
   )

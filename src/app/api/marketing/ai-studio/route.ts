@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
   const {
     type, imageUrl, prompt = '', strength = 0.75, stylePreset,
     maskDataUrl, referenceImageBase64, referenceImageMimeType,
+    sourceBCropBase64, sourceBMimeType,
   } = body
 
   if (!imageUrl?.trim()) return NextResponse.json({ error: '缺少 imageUrl' }, { status: 400 })
@@ -120,6 +121,64 @@ export async function POST(req: NextRequest) {
       const { data: { publicUrl: maskUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(maskFileName)
 
       // FLUX Pro Fill (inpainting)
+      const data = await falPost('fal-ai/flux-pro/v1/fill', {
+        image_url: imageUrl,
+        mask_url: maskUrl,
+        prompt: finalPrompt,
+        num_inference_steps: 28,
+        guidance_scale: 3.5,
+        num_images: 1,
+      }, apiKey)
+      tempUrl = data?.images?.[0]?.url ?? ''
+      cost += 0.08
+
+    } else if (type === 'composite') {
+      if (!maskDataUrl) return NextResponse.json({ error: '缺少主圖遮罩' }, { status: 400 })
+      if (!sourceBCropBase64) return NextResponse.json({ error: '缺少來源圖裁切' }, { status: 400 })
+
+      // Use Claude Vision to describe the B crop
+      const anthropicKey = process.env.ANTHROPIC_API_KEY
+      if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
+
+      const anthropic = createAnthropic({ apiKey: anthropicKey })
+      const bMimeType = (sourceBMimeType ?? 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+
+      const { text: bDescription } = await generateText({
+        model: anthropic('claude-sonnet-4-6'),
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', image: sourceBCropBase64, mimeType: bMimeType },
+            {
+              type: 'text',
+              text: 'Describe this image region in detail for AI inpainting: visual style, colors, textures, lighting, shapes, composition. Be specific and visual. Output only the description, no preamble.',
+            },
+          ],
+        }],
+        maxTokens: 200,
+      })
+
+      const finalPrompt = prompt?.trim()
+        ? `${bDescription.trim()}, ${prompt.trim()}`
+        : bDescription.trim()
+
+      cost += 0.01
+
+      // Upload A's mask to Supabase
+      const maskBase64 = maskDataUrl.replace(/^data:image\/[^;]+;base64,/, '')
+      const maskBuffer = Buffer.from(maskBase64, 'base64')
+      const maskFileName = `${user.id}/mask-composite-${Date.now()}.png`
+
+      const { error: maskUploadError } = await supabase.storage
+        .from('marketing-assets')
+        .upload(maskFileName, maskBuffer, { contentType: 'image/png', upsert: false })
+
+      if (maskUploadError) {
+        return NextResponse.json({ error: `Mask 上傳失敗：${maskUploadError.message}` }, { status: 500 })
+      }
+      const { data: { publicUrl: maskUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(maskFileName)
+
+      // FLUX Pro Fill: paste B's content into A's masked area
       const data = await falPost('fal-ai/flux-pro/v1/fill', {
         image_url: imageUrl,
         mask_url: maskUrl,

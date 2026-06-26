@@ -1434,6 +1434,8 @@
       "run": "Run this node",
       "errNoInput": "Please complete the previous node or upload an image first",
       "errNoMask": "Please paint the area you want to change first",
+      "errNoMaskA": "Please paint the destination area on the main image (A) first",
+      "errNoBSource": "Please upload the source image (B) and paint the area to use",
       "advancedConfig": "Advanced settings",
       "strength": "Edit strength",
       "subtleEdit": "Subtle",
@@ -1472,7 +1474,9 @@
         "bgRemove": "Remove Background",
         "bgRemoveDesc": "Output transparent PNG",
         "video": "Generate Video",
-        "videoDesc": "Create a short video from the image"
+        "videoDesc": "Create a short video from the image",
+        "composite": "Composite Blend",
+        "compositeDesc": "Paste a region of image B into image A"
       },
       "style": {
         "watercolor": "Watercolor",
@@ -1483,6 +1487,18 @@
         "oilpainting": "Oil Painting",
         "sketch": "Pencil Sketch",
         "cyberpunk": "Cyberpunk"
+      },
+      "composite": {
+        "maskALabel": "Step 1: Paint the target area on the main image",
+        "maskAHint": "Paint where you want to replace (shown in red)",
+        "uploadBLabel": "Step 2: Upload source image (B)",
+        "uploadBHint": "Upload the image you want to take content from",
+        "maskBLabel": "Step 3: Paint the source area on image B",
+        "maskBHint": "Paint the part you want to blend in",
+        "blendPrompt": "Blend style notes (optional)",
+        "blendPromptPh": "e.g.: blend naturally, match original lighting, feather edges",
+        "noAImageYet": "Please complete the previous node to get the main image",
+        "noBImageYet": "Please upload source image (B) before painting"
       }
     },
     "geo": {
