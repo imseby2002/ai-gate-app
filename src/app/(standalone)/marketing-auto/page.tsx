@@ -136,6 +136,7 @@ interface Unit1Data {
   shopeeCountry?: string
   appIds?: string[]
   alertRssUrls?: string[]
+  language?: string
 }
 
 function Unit1Collect({
@@ -209,6 +210,7 @@ function Unit1Collect({
         shopeeCountry,
         appIds: appIds.split('\n').map(s => s.trim()).filter(Boolean),
         alertRssUrls: alertRssUrls.split('\n').map(s => s.trim()).filter(Boolean),
+        language,
       }
       setResult(out)
       onDone(out)
@@ -848,10 +850,11 @@ function Unit3Analyze({
 }: {
   campaignId: string | null
   savedData?: Unit3Data
-  unit1Data?: { summary?: string; raw?: string }
+  unit1Data?: { summary?: string; raw?: string; language?: string }
   unit2Data?: Unit2Data
   onDone: (data: Unit3Data) => void
 }) {
+  const language = unit1Data?.language ?? 'zh-TW'
   const [selectedTypes, setSelectedTypes] = useState<AnalysisType[]>(
     savedData?.types ?? ['swot', 'marketing']
   )
@@ -1184,11 +1187,12 @@ function Unit4Copy({
 }: {
   campaignId: string | null
   savedData?: Unit4Data
-  unit1Data?: { summary?: string }
+  unit1Data?: { summary?: string; language?: string }
   unit2Data?: Unit2Data
   unit3Data?: Unit3Data
   onDone: (data: Unit4Data) => void
 }) {
+  const language = unit1Data?.language ?? 'zh-TW'
   const [selectedTypes, setSelectedTypes] = useState<CopyType[]>(
     savedData?.types ?? ['facebook_post', 'instagram_caption']
   )
@@ -1500,7 +1504,7 @@ function Unit5ImageScript({
 }: {
   campaignId: string | null
   savedData?: Unit5Data
-  unit1Data?: { summary?: string }
+  unit1Data?: { summary?: string; language?: string }
   unit2Data?: Unit2Data
   unit3Data?: Unit3Data
   unit4Data?: Unit4Data
@@ -1511,6 +1515,7 @@ function Unit5ImageScript({
   onDriveImagePicked: (img: DrivePickedImage | null) => void
   onDone: (data: Unit5Data) => void
 }) {
+  const language = unit1Data?.language ?? 'zh-TW'
   const [count, setCount] = useState(savedData?.count ?? 3)
   const [platforms, setPlatforms] = useState<string[]>(
     savedData?.platforms ?? ['facebook_post', 'instagram_caption']
@@ -2259,7 +2264,7 @@ function Unit7VideoScript({
 }: {
   campaignId: string | null
   savedData?: Unit7Data
-  unit1Data?: { summary?: string }
+  unit1Data?: { summary?: string; language?: string }
   unit2Data?: Unit2Data
   unit3Data?: Unit3Data
   unit4Data?: Unit4Data
@@ -2272,6 +2277,7 @@ function Unit7VideoScript({
   onDriveImagePicked: (img: DrivePickedImage | null) => void
   onDone: (data: Unit7Data) => void
 }) {
+  const language = unit1Data?.language ?? 'zh-TW'
   const [count, setCount] = useState(savedData?.count ?? 1)
   const [duration, setDuration] = useState(savedData?.duration ?? '10')
   const [videoTypes, setVideoTypes] = useState<string[]>(savedData?.videoTypes ?? ['short_video'])
