@@ -7,7 +7,7 @@ import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
   ArrowRight, Play, Download, Copy, RefreshCw, MessageSquare,
-  ChevronDown, ChevronUp, Brush, Eraser, Trash2, Layers,
+  Brush, Eraser, Trash2, Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -635,7 +635,6 @@ interface NodeCardProps {
 function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload, fileRef, t }: NodeCardProps) {
   const meta = NODE_META[node.type]
   const Icon = meta.icon
-  const [showConfig, setShowConfig] = useState(node.type === 'edit' || node.type === 'style')
   const localFileRef = useRef<HTMLInputElement>(null)
   const activeFileRef = fileRef ?? localFileRef
 
@@ -774,30 +773,7 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               rows={2}
               className="text-xs resize-none"
             />
-            <button
-              onClick={() => setShowConfig(p => !p)}
-              className="text-[10px] text-muted-foreground flex items-center gap-1 hover:text-foreground"
-            >
-              {showConfig ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {t('studio.advancedConfig')}
-            </button>
-            {showConfig && (
-              <div className="space-y-1.5">
-                <div>
-                  <p className="text-[10px] text-muted-foreground mb-1">{t('studio.strength')} {Math.round(node.strength * 100)}%</p>
-                  <input
-                    type="range" min={0.1} max={1.0} step={0.05}
-                    value={node.strength}
-                    onChange={e => onUpdate({ strength: parseFloat(e.target.value) })}
-                    className="w-full h-1 accent-violet-600"
-                  />
-                  <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
-                    <span>{t('studio.subtleEdit')}</span>
-                    <span>{t('studio.boldEdit')}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            <p className="text-[10px] text-muted-foreground leading-relaxed">{t('studio.editHint')}</p>
           </div>
         )}
 

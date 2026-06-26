@@ -191,16 +191,19 @@ export async function POST(req: NextRequest) {
       cost += 0.08
 
     } else if (type === 'edit') {
-      // FLUX dev image-to-image
-      const data = await falPost('fal-ai/flux/dev/image-to-image', {
+      // FLUX.1 Kontext — instruction-based editing (keeps the rest of the image,
+      // only changes what the prompt asks for; e.g. "change the signboard backing, keep the logo")
+      if (!prompt.trim()) return NextResponse.json({ error: '請描述要修改的內容' }, { status: 400 })
+      const data = await falPost('fal-ai/flux-pro/kontext', {
         image_url: imageUrl,
-        prompt: prompt.trim() || 'enhance and improve the image quality',
-        strength,
-        num_inference_steps: 28,
+        prompt: prompt.trim(),
+        guidance_scale: 3.5,
         num_images: 1,
+        output_format: 'jpeg',
+        safety_tolerance: '2',
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
-      cost = 0.06
+      cost = 0.08
 
     } else if (type === 'style') {
       const stylePrompt = STYLE_PROMPTS[stylePreset ?? 'realistic'] ?? STYLE_PROMPTS.realistic
