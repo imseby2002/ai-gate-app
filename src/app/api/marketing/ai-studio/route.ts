@@ -31,6 +31,39 @@ const STYLE_PROMPTS: Record<string, string> = {
   cyberpunk:     'cyberpunk style, neon lights, futuristic, dark urban, retrofuturistic',
 }
 
+/**
+ * FLUX models (Kontext / Fill) understand English far better than other languages.
+ * Use Claude to turn the user's instruction (often Chinese) into a precise English
+ * editing instruction, explicitly preserving whatever the user said to keep unchanged.
+ * Falls back to the raw text if anything fails.
+ */
+async function toEnglishEditInstruction(
+  userText: string,
+  kind: 'kontext' | 'inpaint',
+): Promise<string> {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!anthropicKey) return userText
+  // Skip if it's already plain English (no non-Latin / accented characters beyond basic ASCII)
+  const hasNonEnglish = [...userText].some(ch => ch.charCodeAt(0) > 0x00bf)
+  if (!hasNonEnglish) return userText
+
+  const guide = kind === 'kontext'
+    ? 'Rewrite the user\'s request as ONE concise English instruction for an instruction-based image editor (FLUX Kontext). Describe exactly what to change AND explicitly state what must stay identical (e.g. "keep the logo, text and layout exactly unchanged"). Output only the instruction, no quotes, no preamble.'
+    : 'The user is inpainting a masked region of an image. Rewrite their request as a short English phrase describing ONLY what the masked region should look like after editing (the new content/material/color/texture). Do not mention things outside the region. Output only the phrase, no quotes, no preamble.'
+
+  try {
+    const anthropic = createAnthropic({ apiKey: anthropicKey })
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-4-6'),
+      messages: [{ role: 'user', content: `${guide}\n\nUser request: ${userText}` }],
+      maxOutputTokens: 200,
+    })
+    return text.trim() || userText
+  } catch {
+    return userText
+  }
+}
+
 async function falPost(endpoint: string, body: Record<string, unknown>, apiKey: string) {
   const res = await fetch(`${FAL_BASE}/${endpoint}`, {
     method: 'POST',
@@ -105,6 +138,9 @@ export async function POST(req: NextRequest) {
       }
 
       if (!finalPrompt) return NextResponse.json({ error: '請提供文字描述或參考圖片' }, { status: 400 })
+
+      // FLUX Fill understands English best — translate the masked-region description
+      finalPrompt = await toEnglishEditInstruction(finalPrompt, 'inpaint')
 
       // Upload mask to Supabase to get a permanent URL
       const maskBase64 = maskDataUrl.replace(/^data:image\/[^;]+;base64,/, '')
@@ -194,9 +230,10 @@ export async function POST(req: NextRequest) {
       // FLUX.1 Kontext — instruction-based editing (keeps the rest of the image,
       // only changes what the prompt asks for; e.g. "change the signboard backing, keep the logo")
       if (!prompt.trim()) return NextResponse.json({ error: '請描述要修改的內容' }, { status: 400 })
+      const editInstruction = await toEnglishEditInstruction(prompt.trim(), 'kontext')
       const data = await falPost('fal-ai/flux-pro/kontext', {
         image_url: imageUrl,
-        prompt: prompt.trim(),
+        prompt: editInstruction,
         guidance_scale: 3.5,
         num_images: 1,
         output_format: 'jpeg',

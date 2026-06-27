@@ -1441,7 +1441,7 @@
       "subtleEdit": "Subtle",
       "boldEdit": "Bold",
       "editPromptPh": "Give an instruction, e.g.: only change the signboard backing to a wood texture, keep the logo and text unchanged",
-      "editHint": "Instruction-based editing: only what you describe is changed; the rest (logo, text, people) is preserved as much as possible. For precise control of the area, use the Inpaint node with a mask.",
+      "editHint": "Instruction-based editing (any language): state both what to change AND what to keep, e.g. \"only change the signboard backing to wood, keep the logo and store name unchanged\". Your text is auto-converted into a precise English instruction the model understands. To lock the logo 100%, use the Inpaint node with a mask.",
       "stylePromptPh": "Additional notes (optional), e.g.: keep the original pose",
       "videoPromptPh": "Describe the motion, e.g.: slow push-in, gentle camera sway, cinematic",
       "inpaintModeText": "Text description",
