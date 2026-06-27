@@ -155,6 +155,41 @@ export async function POST(req: NextRequest) {
 
   if (!imageUrl?.trim()) return NextResponse.json({ error: '缺少 imageUrl' }, { status: 400 })
 
+  // ── AI 建議：使用者沒方向時，讓 Claude 看圖提一個具體可套用的修改建議 ──
+  if (type === 'suggest') {
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (!anthropicKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 500 })
+    try {
+      const imgRes = await fetch(imageUrl)
+      if (!imgRes.ok) return NextResponse.json({ error: '無法讀取圖片' }, { status: 400 })
+      const mt = (imgRes.headers.get('content-type') ?? 'image/jpeg').split(';')[0]
+      const mediaType = (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mt) ? mt : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+      const b64 = Buffer.from(await imgRes.arrayBuffer()).toString('base64')
+
+      const isInpaint = body.mode === 'inpaint'
+      const ask = isInpaint
+        ? '使用者會用遮罩塗抹這張圖的某個區域（通常是招牌背板之類）做局部替換，但沒有想法。請看圖後，提出一個「具體、有品味、適合這個場景」的材質或外觀建議，只描述那塊區域可以換成什麼（含材質、顏色、質感），例如「深胡桃木色實木直紋，霧面質感」。'
+        : '使用者想用 AI 修改這張圖但沒有方向。請看圖後，提出一個「具體、有品味、能提升整體質感」的修改建議，明確說要改什麼、並保留招牌 LOGO 與文字，例如「把招牌背板換成深灰色拉絲金屬，保留 LOGO 與店名文字」。'
+
+      const { text } = await generateText({
+        model: createAnthropic({ apiKey: anthropicKey })('claude-sonnet-4-6'),
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', image: b64, mediaType },
+            { type: 'text', text: `${ask}\n\n用繁體中文輸出一句建議即可，不要前言、不要選項、不要引號。` },
+          ],
+        }],
+        maxOutputTokens: 150,
+      })
+      const suggestion = text.trim()
+      if (!suggestion) return NextResponse.json({ error: 'AI 無法產生建議，請再試一次' }, { status: 502 })
+      return NextResponse.json({ suggestion })
+    } catch (err) {
+      return NextResponse.json({ error: String(err) }, { status: 500 })
+    }
+  }
+
   let tempUrl = ''
   let cost = 0.05
 

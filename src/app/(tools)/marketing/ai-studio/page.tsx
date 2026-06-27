@@ -637,8 +637,25 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
   const Icon = meta.icon
   const localFileRef = useRef<HTMLInputElement>(null)
   const activeFileRef = fileRef ?? localFileRef
+  const [suggesting, setSuggesting] = useState(false)
 
   const displayUrl = node.outputUrl ?? node.inputUrl
+
+  const aiSuggest = async () => {
+    if (!node.inputUrl || suggesting) return
+    setSuggesting(true)
+    try {
+      const res = await fetch('/api/marketing/ai-studio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'suggest', imageUrl: node.inputUrl, mode: node.type }),
+      })
+      const data = await res.json()
+      if (res.ok && data.suggestion) onUpdate({ prompt: data.suggestion })
+    } catch { /* ignore */ } finally {
+      setSuggesting(false)
+    }
+  }
 
   return (
     <div className={cn(
@@ -773,6 +790,15 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               rows={2}
               className="text-xs resize-none"
             />
+            <button
+              type="button"
+              onClick={aiSuggest}
+              disabled={!node.inputUrl || suggesting}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium py-1.5 rounded-lg border border-violet-300 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 disabled:opacity-50 transition-colors"
+            >
+              {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {t('studio.aiSuggest')}
+            </button>
             <p className="text-[10px] text-muted-foreground leading-relaxed">{t('studio.editHint')}</p>
           </div>
         )}
@@ -842,13 +868,24 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
             </div>
 
             {node.inpaintMode === 'text' ? (
-              <Textarea
-                value={node.prompt}
-                onChange={e => onUpdate({ prompt: e.target.value })}
-                placeholder={t('studio.inpaintPromptPh')}
-                rows={2}
-                className="text-xs resize-none"
-              />
+              <div className="space-y-1.5">
+                <Textarea
+                  value={node.prompt}
+                  onChange={e => onUpdate({ prompt: e.target.value })}
+                  placeholder={t('studio.inpaintPromptPh')}
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+                <button
+                  type="button"
+                  onClick={aiSuggest}
+                  disabled={!node.inputUrl || suggesting}
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium py-1.5 rounded-lg border border-rose-300 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 disabled:opacity-50 transition-colors"
+                >
+                  {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  {t('studio.aiSuggest')}
+                </button>
+              </div>
             ) : (
               <InpaintReferenceUpload
                 referenceImageDataUrl={node.referenceImageDataUrl}
