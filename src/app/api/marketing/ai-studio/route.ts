@@ -49,7 +49,7 @@ async function toEnglishEditInstruction(
 
   const guide = kind === 'kontext'
     ? 'Rewrite the user\'s request as ONE concise English instruction for an instruction-based image editor (FLUX Kontext). Describe exactly what to change AND explicitly state what must stay identical (e.g. "keep the logo, text and layout exactly unchanged"). Output only the instruction, no quotes, no preamble.'
-    : 'The user is inpainting a masked region of an image. Rewrite their request as a short English phrase describing ONLY what the masked region should look like after editing (the new content/material/color/texture). Do not mention things outside the region. Output only the phrase, no quotes, no preamble.'
+    : 'The user is inpainting a masked region of an image (e.g. a storefront signboard panel). Rewrite their request as a CONCRETE, visually specific English phrase describing what the masked region should become — always include a concrete material, color, finish and texture so an image model has something definite to render. If the user is vague (e.g. "a different material", "change the panel"), COMMIT to one specific realistic material that suits the context and describe it concretely, e.g. "a brushed dark-grey metal panel with subtle horizontal grain" or "polished black marble with white veining". Never output vague words like "different material". Do not mention anything outside the region. Output only the phrase, no quotes, no preamble.'
 
   try {
     const anthropic = createAnthropic({ apiKey: anthropicKey })
