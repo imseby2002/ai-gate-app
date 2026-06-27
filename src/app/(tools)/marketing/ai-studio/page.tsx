@@ -7,7 +7,7 @@ import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
   ArrowRight, Play, Download, Copy, RefreshCw, MessageSquare,
-  Brush, Eraser, Trash2, Layers,
+  Brush, Eraser, Trash2, Layers, PenTool,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils/cn'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type NodeType = 'input' | 'edit' | 'style' | 'enhance' | 'bg-remove' | 'video' | 'inpaint' | 'composite'
+type NodeType = 'input' | 'edit' | 'redesign' | 'style' | 'enhance' | 'bg-remove' | 'video' | 'inpaint' | 'composite'
 type NodeStatus = 'idle' | 'processing' | 'done' | 'error'
 
 interface PipelineNode {
@@ -45,6 +45,7 @@ interface PipelineNode {
 const NODE_META: Record<NodeType, { labelKey: string; icon: React.ElementType; color: string; descKey: string }> = {
   input:      { labelKey: 'studio.nodes.input',     icon: Upload,        color: 'from-slate-500 to-gray-600',     descKey: 'studio.nodes.inputDesc' },
   edit:       { labelKey: 'studio.nodes.edit',      icon: Wand2,         color: 'from-violet-500 to-purple-600',  descKey: 'studio.nodes.editDesc' },
+  redesign:   { labelKey: 'studio.nodes.redesign',  icon: PenTool,       color: 'from-fuchsia-500 to-purple-600', descKey: 'studio.nodes.redesignDesc' },
   inpaint:    { labelKey: 'studio.nodes.inpaint',   icon: Brush,         color: 'from-rose-500 to-pink-600',      descKey: 'studio.nodes.inpaintDesc' },
   composite:  { labelKey: 'studio.nodes.composite', icon: Layers,        color: 'from-amber-500 to-orange-600',   descKey: 'studio.nodes.compositeDesc' },
   style:      { labelKey: 'studio.nodes.style',     icon: Palette,       color: 'from-pink-500 to-rose-600',      descKey: 'studio.nodes.styleDesc' },
@@ -64,7 +65,7 @@ const STYLE_PRESETS = [
   { key: 'cyberpunk',    labelKey: 'studio.style.cyberpunk' },
 ]
 
-const ADDABLE_TYPES: NodeType[] = ['edit', 'inpaint', 'composite', 'style', 'enhance', 'bg-remove', 'video']
+const ADDABLE_TYPES: NodeType[] = ['edit', 'redesign', 'inpaint', 'composite', 'style', 'enhance', 'bg-remove', 'video']
 
 // ─── Client-side crop helper ──────────────────────────────────────────────────
 // Extracts the bounding-box region of B masked by its mask, returns base64 PNG
@@ -816,6 +817,29 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
               {t('studio.aiSuggest')}
             </button>
             <p className="text-[10px] text-muted-foreground leading-relaxed">{t('studio.editHint')}</p>
+          </div>
+        )}
+
+        {/* Redesign node — AI designer (Gemini / Nano Banana) */}
+        {node.type === 'redesign' && (
+          <div className="space-y-2">
+            <Textarea
+              value={node.prompt}
+              onChange={e => onUpdate({ prompt: e.target.value })}
+              placeholder={t('studio.redesignPromptPh')}
+              rows={3}
+              className="text-xs resize-none"
+            />
+            <button
+              type="button"
+              onClick={aiSuggest}
+              disabled={!node.inputUrl || suggesting}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium py-1.5 rounded-lg border border-fuchsia-300 text-fuchsia-600 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 disabled:opacity-50 transition-colors"
+            >
+              {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              {t('studio.aiSuggest')}
+            </button>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">{t('studio.redesignHint')}</p>
           </div>
         )}
 

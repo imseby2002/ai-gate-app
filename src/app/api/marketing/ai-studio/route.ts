@@ -166,9 +166,10 @@ export async function POST(req: NextRequest) {
       const mediaType = (['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mt) ? mt : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
       const b64 = Buffer.from(await imgRes.arrayBuffer()).toString('base64')
 
-      const isInpaint = body.mode === 'inpaint'
-      const ask = isInpaint
+      const ask = body.mode === 'inpaint'
         ? '使用者會用遮罩塗抹這張圖的某個區域（通常是招牌背板之類）做局部替換，但沒有想法。請看圖後，提出一個「具體、有品味、適合這個場景」的材質或外觀建議，只描述那塊區域可以換成什麼（含材質、顏色、質感），例如「深胡桃木色實木直紋，霧面質感」。'
+        : body.mode === 'redesign'
+        ? '使用者想請 AI 設計師「重新設計」這間店面，但沒有想法。請以專業店面設計師角度，看圖後提出一個完整的改造方向（門面材質、配色、燈光、招牌風格、整體氛圍），並明確保留 LOGO、招牌文字與整體格局，例如「保留 LOGO 與格局，門面改為溫潤原木與暖白燈光的日系極簡風，招牌底改霧黑金屬」。'
         : '使用者想用 AI 修改這張圖但沒有方向。請看圖後，提出一個「具體、有品味、能提升整體質感」的修改建議，明確說要改什麼、並保留招牌 LOGO 與文字，例如「把招牌背板換成深灰色拉絲金屬，保留 LOGO 與店名文字」。'
 
       const { text } = await generateText({
@@ -341,6 +342,38 @@ export async function POST(req: NextRequest) {
       }, apiKey)
       tempUrl = data?.images?.[0]?.url ?? ''
       cost = 0.08
+
+    } else if (type === 'redesign') {
+      // AI 設計師 — Gemini 2.5 Flash Image (Nano Banana). Strong at creative,
+      // conversational redesign while preserving identity (logo / layout).
+      if (!prompt.trim()) return NextResponse.json({ error: '請描述你想怎麼重新設計' }, { status: 400 })
+
+      // Expand the user's request into a rich professional design brief (English).
+      let brief = prompt.trim()
+      const anthropicKey = process.env.ANTHROPIC_API_KEY
+      if (anthropicKey) {
+        try {
+          const { text } = await generateText({
+            model: createAnthropic({ apiKey: anthropicKey })('claude-sonnet-4-6'),
+            messages: [{
+              role: 'user',
+              content: `You are an art director briefing an AI image editor (Gemini) to redesign a real photo of a shop/storefront. Turn the user's request into ONE detailed English instruction. ALWAYS preserve: the existing brand logo (exact shape, colors, text), all sign text/wording, and the overall layout, structure and proportions of the building — unless the user explicitly asks to change them. Redesign the requested aspects (materials, colors, lighting, signage style, decor, finish) to look premium and professionally designed, photorealistic, consistent perspective. Output only the instruction.\n\nUser request: ${prompt.trim()}`,
+            }],
+            maxOutputTokens: 300,
+          })
+          if (text.trim()) brief = text.trim()
+          cost += 0.01
+        } catch { /* fall back to raw prompt */ }
+      }
+
+      const data = await falPost('fal-ai/nano-banana/edit', {
+        prompt: brief,
+        image_urls: [imageUrl],
+        num_images: 1,
+        output_format: 'jpeg',
+      }, apiKey)
+      tempUrl = data?.images?.[0]?.url ?? ''
+      cost += 0.05
 
     } else if (type === 'style') {
       const stylePrompt = STYLE_PROMPTS[stylePreset ?? 'realistic'] ?? STYLE_PROMPTS.realistic
