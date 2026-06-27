@@ -641,6 +641,24 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
 
   const displayUrl = node.outputUrl ?? node.inputUrl
 
+  const downloadImage = async (url: string, kind: string) => {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')
+      const objUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objUrl
+      a.download = `ai-studio-${kind}-${Date.now()}.${ext}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(objUrl)
+    } catch {
+      window.open(url, '_blank')   // fallback
+    }
+  }
+
   const aiSuggest = async () => {
     if (!node.inputUrl || suggesting) return
     setSuggesting(true)
@@ -739,15 +757,13 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
         {/* Done indicator */}
         {node.status === 'done' && node.outputUrl && (
           <div className="absolute top-2 right-2 flex gap-1">
-            <a
-              href={node.outputUrl}
-              download
+            <button
+              onClick={() => downloadImage(node.outputUrl!, node.type)}
               className="h-6 w-6 rounded-md bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
+              title={t('studio.download')}
             >
               <Download className="h-3 w-3" />
-            </a>
+            </button>
             <button
               onClick={() => navigator.clipboard.writeText(node.outputUrl!)}
               className="h-6 w-6 rounded-md bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
