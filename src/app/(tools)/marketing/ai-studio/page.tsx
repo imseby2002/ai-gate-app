@@ -967,12 +967,20 @@ interface MaskCanvasProps {
 
 function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t, hintOverride, noImageKey }: MaskCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const maskRef = useRef<HTMLCanvasElement | null>(null)   // offscreen: white strokes on transparent
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [brushSize, setBrushSize] = useState(24)
   const [mode, setMode] = useState<'draw' | 'erase'>('draw')
   const [hasMask, setHasMask] = useState(false)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
+
+  const ensureMaskCanvas = (w: number, h: number) => {
+    let m = maskRef.current
+    if (!m) { m = document.createElement('canvas'); maskRef.current = m }
+    if (m.width !== w || m.height !== h) { m.width = w; m.height = h }
+    return m
+  }
 
   // Draw image + semi-transparent mask overlay when imageUrl changes
   useEffect(() => {
@@ -983,9 +991,13 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t, hintOverride, noIm
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
+      canvas.width = img.naturalWidth || img.width
+      canvas.height = img.naturalHeight || img.height
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      // reset offscreen mask to the same size, fully transparent
+      const m = ensureMaskCanvas(canvas.width, canvas.height)
+      m.getContext('2d')?.clearRect(0, 0, m.width, m.height)
+      setHasMask(false)
     }
     img.src = imageUrl
   }, [imageUrl])
@@ -1009,6 +1021,7 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t, hintOverride, noIm
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    // 1) visible red overlay on the display canvas
     ctx.globalCompositeOperation = mode === 'draw' ? 'source-over' : 'destination-out'
     ctx.strokeStyle = 'rgba(255,80,80,0.6)'
     ctx.lineWidth = brushSize
@@ -1018,42 +1031,45 @@ function MaskCanvas({ imageUrl, maskDataUrl, onMaskChange, t, hintOverride, noIm
     ctx.moveTo(from.x, from.y)
     ctx.lineTo(to.x, to.y)
     ctx.stroke()
+    // 2) authoritative white-on-transparent stroke on the offscreen mask canvas
+    const m = ensureMaskCanvas(canvas.width, canvas.height)
+    const mCtx = m.getContext('2d')
+    if (mCtx) {
+      mCtx.globalCompositeOperation = mode === 'draw' ? 'source-over' : 'destination-out'
+      mCtx.strokeStyle = '#ffffff'
+      mCtx.lineWidth = brushSize
+      mCtx.lineCap = 'round'
+      mCtx.lineJoin = 'round'
+      mCtx.beginPath()
+      mCtx.moveTo(from.x, from.y)
+      mCtx.lineTo(to.x, to.y)
+      mCtx.stroke()
+    }
     if (mode === 'draw') setHasMask(true)
     exportMask()
   }
 
   const exportMask = () => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    // Create a proper black/white mask canvas
-    const maskCanvas = document.createElement('canvas')
-    maskCanvas.width = canvas.width
-    maskCanvas.height = canvas.height
-    const mCtx = maskCanvas.getContext('2d')
-    if (!mCtx) return
-    mCtx.fillStyle = 'black'
-    mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height)
-    // Draw white where user painted (alpha > 0 on overlay canvas = white on mask)
-    const srcData = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height)
-    if (!srcData) return
-    const maskData = mCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height)
-    for (let i = 0; i < srcData.data.length; i += 4) {
-      if (srcData.data[i + 3] > 10) {
-        maskData.data[i] = 255
-        maskData.data[i + 1] = 255
-        maskData.data[i + 2] = 255
-        maskData.data[i + 3] = 255
-      }
-    }
-    mCtx.putImageData(maskData, 0, 0)
-    onMaskChange(maskCanvas.toDataURL('image/png'))
+    const m = maskRef.current
+    if (!canvas || !m) return
+    // Composite the white strokes over a solid black background → black/white mask
+    const out = document.createElement('canvas')
+    out.width = canvas.width
+    out.height = canvas.height
+    const oCtx = out.getContext('2d')
+    if (!oCtx) return
+    oCtx.fillStyle = 'black'
+    oCtx.fillRect(0, 0, out.width, out.height)
+    oCtx.drawImage(m, 0, 0)
+    onMaskChange(out.toDataURL('image/png'))
   }
 
   const clearMask = () => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    ctx?.clearRect(0, 0, canvas.width, canvas.height)
+    if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+    const m = maskRef.current
+    if (m) m.getContext('2d')?.clearRect(0, 0, m.width, m.height)
     setHasMask(false)
     onMaskChange(null)
   }

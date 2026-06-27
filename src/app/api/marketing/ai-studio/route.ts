@@ -17,8 +17,65 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
+import zlib from 'node:zlib'
 
 const FAL_BASE = 'https://fal.run'
+
+/**
+ * Decode a canvas-produced PNG (8-bit RGBA, filter method 0) and report how many
+ * pixels are "white" (the inpaint region). Used to catch all-black / empty masks
+ * before wasting a generation, and to log dimension info for debugging.
+ */
+function inspectMaskPng(buf: Buffer): { w: number; h: number; white: number; total: number } | null {
+  if (buf.length < 8 || buf[0] !== 0x89 || buf[1] !== 0x50) return null
+  let w = 0, h = 0, bitDepth = 0, colorType = 0
+  const idat: Buffer[] = []
+  let p = 8
+  while (p + 8 <= buf.length) {
+    const len = buf.readUInt32BE(p)
+    const type = buf.toString('ascii', p + 4, p + 8)
+    const data = buf.subarray(p + 8, p + 8 + len)
+    if (type === 'IHDR') {
+      w = data.readUInt32BE(0); h = data.readUInt32BE(4); bitDepth = data[8]; colorType = data[9]
+    } else if (type === 'IDAT') {
+      idat.push(data)
+    } else if (type === 'IEND') break
+    p += 12 + len
+  }
+  if (!w || !h || bitDepth !== 8) return null
+  const channels = colorType === 6 ? 4 : colorType === 2 ? 3 : colorType === 0 ? 1 : 0
+  if (!channels) return null
+  let raw: Buffer
+  try { raw = zlib.inflateSync(Buffer.concat(idat)) } catch { return null }
+  const stride = w * channels
+  const out = Buffer.alloc(stride * h)
+  const paeth = (a: number, b: number, c: number) => {
+    const pp = a + b - c, pa = Math.abs(pp - a), pb = Math.abs(pp - b), pc = Math.abs(pp - c)
+    return pa <= pb && pa <= pc ? a : pb <= pc ? b : c
+  }
+  let sp = 0
+  for (let y = 0; y < h; y++) {
+    const filter = raw[sp++]
+    for (let x = 0; x < stride; x++) {
+      const rawV = raw[sp++]
+      const a = x >= channels ? out[y * stride + x - channels] : 0
+      const b = y > 0 ? out[(y - 1) * stride + x] : 0
+      const c = x >= channels && y > 0 ? out[(y - 1) * stride + x - channels] : 0
+      let v = rawV
+      if (filter === 1) v = rawV + a
+      else if (filter === 2) v = rawV + b
+      else if (filter === 3) v = rawV + ((a + b) >> 1)
+      else if (filter === 4) v = rawV + paeth(a, b, c)
+      out[y * stride + x] = v & 0xff
+    }
+  }
+  let white = 0
+  const total = w * h
+  for (let i = 0; i < total; i++) {
+    if (out[i * channels] > 200) white++
+  }
+  return { w, h, white, total }
+}
 
 const STYLE_PROMPTS: Record<string, string> = {
   watercolor:    'watercolor painting style, soft washes, paper texture, artistic',
@@ -145,6 +202,14 @@ export async function POST(req: NextRequest) {
       // Upload mask to Supabase to get a permanent URL
       const maskBase64 = maskDataUrl.replace(/^data:image\/[^;]+;base64,/, '')
       const maskBuffer = Buffer.from(maskBase64, 'base64')
+
+      // Guard: an all-black (empty) mask makes FLUX Fill return the image unchanged.
+      const maskInfo = inspectMaskPng(maskBuffer)
+      console.log('[ai-studio inpaint] mask', maskInfo, 'finalPrompt:', finalPrompt)
+      if (maskInfo && maskInfo.white === 0) {
+        return NextResponse.json({ error: '未偵測到塗抹區域（遮罩是空白的），請在圖片上塗抹要修改的範圍後再試。' }, { status: 422 })
+      }
+
       const maskFileName = `${user.id}/mask-${Date.now()}.png`
 
       const { error: maskUploadError } = await supabase.storage
