@@ -8,7 +8,7 @@ import {
   Brain, Pencil, Mail, FileCheck, ChevronDown, ChevronUp, Plus, Trash2,
   User, GraduationCap, Briefcase, Wrench, Star, ArrowLeft,
   MessageSquare, DollarSign, BarChart2, Presentation, ClipboardList,
-  MessageCircle, TrendingUp, Zap, NotebookPen,
+  MessageCircle, TrendingUp, Zap, NotebookPen, Building2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -776,11 +776,18 @@ export default function WorkerToolsPage() {
           {!selectedTool && <p className="text-gray-500 text-sm mt-1">{t('pageSubtitle')}</p>}
           {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
         </div>
-        <Link href="/work" className="ml-auto">
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <NotebookPen className="h-4 w-4" />{t('workArea')}
-          </Button>
-        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <Link href="/hr">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Building2 className="h-4 w-4" />人事管理
+            </Button>
+          </Link>
+          <Link href="/work">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <NotebookPen className="h-4 w-4" />{t('workArea')}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Tool View */}
