@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Link from 'next/link'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Building2 } from 'lucide-react'
 
 type SB = ReturnType<typeof createClient>
 type T = ReturnType<typeof useTranslations>
@@ -368,9 +370,16 @@ export default function WorkPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+        </div>
+        <Link href="/hr">
+          <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+            <Building2 className="h-4 w-4" />人事管理
+          </Button>
+        </Link>
       </div>
 
       <Card className="flex gap-2 p-3">

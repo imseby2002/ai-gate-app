@@ -100,7 +100,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
-      pathname.startsWith('/resume')
+      pathname.startsWith('/resume') ||
+      pathname.startsWith('/hr')
     )
 
     if (needsProfileCheck) {
