@@ -101,7 +101,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
       pathname.startsWith('/resume') ||
-      pathname.startsWith('/hr')
+      pathname.startsWith('/hr') ||
+      pathname.startsWith('/finance')
     )
 
     if (needsProfileCheck) {

@@ -17,7 +17,7 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
   cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
   marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call'] },
   leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
-  resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume', '/hr'] },
+  resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume', '/hr', '/finance'] },
 }
 
 export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)

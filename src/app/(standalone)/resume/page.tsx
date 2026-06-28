@@ -8,7 +8,7 @@ import {
   Brain, Pencil, Mail, FileCheck, ChevronDown, ChevronUp, Plus, Trash2,
   User, GraduationCap, Briefcase, Wrench, Star, ArrowLeft,
   MessageSquare, DollarSign, BarChart2, Presentation, ClipboardList,
-  MessageCircle, TrendingUp, Zap, NotebookPen, Building2,
+  MessageCircle, TrendingUp, Zap, NotebookPen, Building2, Wallet,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -780,6 +780,11 @@ export default function WorkerToolsPage() {
           <Link href="/hr">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Building2 className="h-4 w-4" />人事管理
+            </Button>
+          </Link>
+          <Link href="/finance">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Wallet className="h-4 w-4" />出納總務
             </Button>
           </Link>
           <Link href="/work">
