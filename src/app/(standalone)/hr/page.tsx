@@ -2,14 +2,25 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'employees' | 'payroll' | 'leave'
+type Tab = 'employees' | 'payroll' | 'leave' | 'cashflow'
+
+interface Cashflow {
+  id: string
+  type: 'income' | 'expense'
+  category: string
+  amount: number
+  date: string
+  description: string
+  notes: string
+  created_at: string
+}
 
 interface Employee {
   id: string
@@ -78,7 +89,11 @@ const LABELS: Record<string, string> = {
   'paternity': '陪產假', 'unpaid': '無薪假', 'other': '其他',
   'approved': '核准', 'pending': '待審', 'rejected': '拒絕',
   'paid': '已發放', 'pending_pay': '待發放',
+  'income': '收入', 'expense': '支出',
 }
+
+const INCOME_CATEGORIES = ['銷售收入', '服務費', '租金收入', '利息收入', '其他收入']
+const EXPENSE_CATEGORIES = ['薪資支出', '辦公費', '差旅費', '廣告費', '水電費', '租金支出', '採購費', '其他支出']
 
 const fmt = (n: number) => n.toLocaleString('zh-TW')
 const fmtDate = (s?: string | null) => s ? new Date(s).toLocaleDateString('zh-TW') : '—'
@@ -669,6 +684,230 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
   )
 }
 
+// ─── Cashflow Form ────────────────────────────────────────────────
+function CashflowForm({ initial, onSave, onCancel, saving }: {
+  initial: Omit<Cashflow, 'id' | 'created_at'>
+  onSave: (d: Omit<Cashflow, 'id' | 'created_at'>) => void
+  onCancel: () => void
+  saving: boolean
+}) {
+  const [d, setD] = useState(initial)
+  const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
+  const cats = d.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+
+  return (
+    <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="類型 *">
+          <SelectEl value={d.type} onChange={v => set('type', v)}
+            options={[{ value: 'income', label: '收入' }, { value: 'expense', label: '支出' }]}
+            disabled={saving} />
+        </Field>
+        <Field label="分類">
+          <div className="flex gap-1">
+            <SelectEl value={cats.includes(d.category) ? d.category : '__custom__'}
+              onChange={v => set('category', v === '__custom__' ? '' : v)}
+              options={[...cats.map(c => ({ value: c, label: c })), { value: '__custom__', label: '自訂...' }]}
+              disabled={saving} />
+            {!cats.includes(d.category) && (
+              <InputEl value={d.category} onChange={v => set('category', v)} placeholder="自訂分類" disabled={saving} />
+            )}
+          </div>
+        </Field>
+        <Field label="金額（元）*">
+          <InputEl value={d.amount} onChange={v => set('amount', Number(v) || 0)} type="number" placeholder="0" disabled={saving} />
+        </Field>
+        <Field label="日期 *">
+          <InputEl value={d.date} onChange={v => set('date', v)} type="date" disabled={saving} />
+        </Field>
+        <Field label="摘要" >
+          <InputEl value={d.description} onChange={v => set('description', v)} placeholder="說明用途" disabled={saving} />
+        </Field>
+        <Field label="備註">
+          <InputEl value={d.notes} onChange={v => set('notes', v)} placeholder="其他補充" disabled={saving} />
+        </Field>
+      </div>
+      <div className="flex justify-end gap-2 pt-1">
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>取消</Button>
+        <Button size="sm" onClick={() => onSave(d)} disabled={!d.amount || !d.date || saving}>
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+          儲存
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Cashflow Tab ─────────────────────────────────────────────────
+function CashflowTab() {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all')
+  const [records, setRecords] = useState<Cashflow[]>([])
+  const [loading, setLoading] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Cashflow | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const BLANK: Omit<Cashflow, 'id' | 'created_at'> = {
+    type: 'expense', category: '', amount: 0,
+    date: `${year}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    description: '', notes: '',
+  }
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams({ year: String(year), month: String(month) })
+    if (typeFilter !== 'all') params.set('type', typeFilter)
+    const res = await fetch(`/api/hr/cashflow?${params}`)
+    const d = await res.json()
+    setRecords(d.cashflow ?? [])
+    setLoading(false)
+  }, [year, month, typeFilter])
+
+  useEffect(() => { load() }, [load])
+
+  const save = async (data: Omit<Cashflow, 'id' | 'created_at'>) => {
+    setSaving(true); setErr('')
+    try {
+      if (editing) {
+        await fetch('/api/hr/cashflow', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...data }) })
+      } else {
+        await fetch('/api/hr/cashflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      }
+      setShowForm(false); setEditing(null); load()
+    } catch { setErr('儲存失敗') } finally { setSaving(false) }
+  }
+
+  const remove = async (id: string) => {
+    if (!confirm('確定刪除此筆記錄？')) return
+    await fetch('/api/hr/cashflow', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    load()
+  }
+
+  // 計算本月所有（不限 typeFilter）的收支
+  const allInMonth = records  // already filtered by year/month from API
+  const totalIncome  = records.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0)
+  const totalExpense = records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
+  const net = totalIncome - totalExpense
+
+  return (
+    <div className="space-y-4">
+      {/* Controls */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1 border rounded-lg px-2 py-1">
+          <button onClick={() => setYear(y => y - 1)} className="text-gray-400 hover:text-gray-700 px-1">‹</button>
+          <span className="text-sm font-medium w-12 text-center">{year}年</span>
+          <button onClick={() => setYear(y => y + 1)} className="text-gray-400 hover:text-gray-700 px-1">›</button>
+        </div>
+        <div className="flex gap-0.5">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+            <button key={m} onClick={() => setMonth(m)}
+              className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${month === m ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+              {m}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          {(['all', 'income', 'expense'] as const).map(t => (
+            <Button key={t} size="sm" variant={typeFilter === t ? 'default' : 'ghost'} onClick={() => setTypeFilter(t)}>
+              {t === 'all' ? '全部' : t === 'income' ? '收入' : '支出'}
+            </Button>
+          ))}
+        </div>
+        <Button size="sm" className="ml-auto gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+          <Plus className="h-4 w-4" />新增記錄
+        </Button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowUpCircle className="h-4 w-4 text-green-500" />
+            <span className="text-xs text-gray-500">本月收入</span>
+          </div>
+          <p className="text-xl font-bold text-green-600">NT$ {fmt(totalIncome)}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowDownCircle className="h-4 w-4 text-red-500" />
+            <span className="text-xs text-gray-500">本月支出</span>
+          </div>
+          <p className="text-xl font-bold text-red-500">NT$ {fmt(totalExpense)}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            {net >= 0 ? <TrendingUp className="h-4 w-4 text-blue-500" /> : <TrendingDown className="h-4 w-4 text-orange-500" />}
+            <span className="text-xs text-gray-500">淨收支</span>
+          </div>
+          <p className={`text-xl font-bold ${net >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>
+            {net >= 0 ? '+' : ''}NT$ {fmt(net)}
+          </p>
+        </Card>
+      </div>
+
+      {showForm && !editing && (
+        <CashflowForm initial={{ ...BLANK }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />
+      )}
+      {err && <p className="text-sm text-red-500">{err}</p>}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
+      ) : records.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <Wallet className="h-10 w-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">{year}年{month}月尚無出納記錄</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {records.map(r => (
+            <Card key={r.id} className={`p-3 border-l-4 ${r.type === 'income' ? 'border-l-green-400' : 'border-l-red-400'}`}>
+              <div className="flex items-center gap-3">
+                <div className="shrink-0">
+                  {r.type === 'income'
+                    ? <ArrowUpCircle className="h-5 w-5 text-green-500" />
+                    : <ArrowDownCircle className="h-5 w-5 text-red-400" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm">{r.description || r.category || '—'}</span>
+                    {r.category && r.description && <Badge variant="secondary">{r.category}</Badge>}
+                    {!r.description && r.category && <Badge variant="secondary">{r.category}</Badge>}
+                    <span className="text-xs text-gray-400">{fmtDate(r.date)}</span>
+                  </div>
+                  {r.notes && <p className="text-xs text-gray-400 mt-0.5">{r.notes}</p>}
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className={`font-bold tabular-nums ${r.type === 'income' ? 'text-green-600' : 'text-red-500'}`}>
+                    {r.type === 'income' ? '+' : '-'}NT$ {fmt(r.amount)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(r); setShowForm(false) }}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-500" onClick={() => remove(r.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              {editing?.id === r.id && (
+                <div className="mt-3">
+                  <CashflowForm initial={{ type: r.type, category: r.category, amount: r.amount, date: r.date, description: r.description, notes: r.notes }}
+                    onSave={save} onCancel={() => setEditing(null)} saving={saving} />
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────
 export default function HRPage() {
   const [tab, setTab] = useState<Tab>('employees')
@@ -692,6 +931,7 @@ export default function HRPage() {
     { id: 'employees', label: '員工管理', icon: <Users className="h-4 w-4" /> },
     { id: 'payroll',   label: '薪資管理', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'leave',     label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
+    { id: 'cashflow',  label: '出納帳務', icon: <Wallet className="h-4 w-4" /> },
   ]
 
   if (isAdmin === false) {
@@ -715,7 +955,7 @@ export default function HRPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">人事管理</h1>
-          <p className="text-sm text-gray-500">員工資料、薪資計算、請假管理</p>
+          <p className="text-sm text-gray-500">員工資料、薪資計算、請假管理、出納帳務</p>
         </div>
         <div className="ml-auto flex items-center gap-3">
           <span className="text-sm text-gray-400">
@@ -745,6 +985,7 @@ export default function HRPage() {
         {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
+        {tab === 'cashflow'  && <CashflowTab />}
       </Card>
     </div>
   )
