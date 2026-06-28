@@ -11,32 +11,32 @@ async function getAdminUser() {
   return { user, supabase }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const { user, supabase } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { searchParams } = new URL(req.url)
-  const year = searchParams.get('year')
-  const month = searchParams.get('month')
-  const type = searchParams.get('type')
-
-  let query = supabase
-    .from('hr_cashflow')
-    .select('*')
-    .eq('owner_id', user.id)
-
-  if (type) query = query.eq('type', type)
-  if (year && month) {
-    const from = `${year}-${String(month).padStart(2, '0')}-01`
-    const nextMonth = Number(month) === 12 ? `${Number(year) + 1}-01-01` : `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`
-    query = query.gte('date', from).lt('date', nextMonth)
-  } else if (year) {
-    query = query.gte('date', `${year}-01-01`).lt('date', `${Number(year) + 1}-01-01`)
-  }
-
-  const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false })
+  const [{ data: accounts, error }, { data: flows }] = await Promise.all([
+    supabase.from('hr_accounts').select('*').eq('owner_id', user.id)
+      .order('sort', { ascending: true }).order('created_at', { ascending: true }),
+    supabase.from('hr_cashflow').select('type, amount, account_id, to_account_id').eq('owner_id', user.id),
+  ])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ cashflow: data })
+
+  // 結餘 = 期初 + 收入(本帳) - 支出(本帳) - 轉出(本帳) + 轉入(目標帳)
+  const withBalance = (accounts ?? []).map(a => {
+    let bal = Number(a.opening_balance) || 0
+    for (const f of flows ?? []) {
+      const amt = Number(f.amount) || 0
+      if (f.account_id === a.id) {
+        if (f.type === 'income') bal += amt
+        else bal -= amt // expense / transfer-out
+      }
+      if (f.type === 'transfer' && f.to_account_id === a.id) bal += amt
+    }
+    return { ...a, balance: bal }
+  })
+
+  return NextResponse.json({ accounts: withBalance })
 }
 
 export async function POST(req: NextRequest) {
@@ -44,28 +44,22 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { type, category, amount, date, description, notes, account_id, to_account_id, receipt_url } = body
-  if (!type || !amount || !date) {
-    return NextResponse.json({ error: 'type, amount, date required' }, { status: 400 })
-  }
-  if (type === 'transfer' && (!account_id || !to_account_id || account_id === to_account_id)) {
-    return NextResponse.json({ error: '轉帳需指定不同的轉出與轉入帳戶' }, { status: 400 })
-  }
+  const { name, kind, opening_balance, currency, note, sort } = body
+  if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
   const { data, error } = await supabase
-    .from('hr_cashflow')
+    .from('hr_accounts')
     .insert({
-      owner_id: user.id, type, category: category ?? '',
-      amount: Number(amount), date,
-      description: description ?? '', notes: notes ?? '',
-      account_id: account_id || null,
-      to_account_id: type === 'transfer' ? (to_account_id || null) : null,
-      receipt_url: receipt_url ?? '',
+      owner_id: user.id, name,
+      kind: kind ?? 'cash',
+      opening_balance: Number(opening_balance) || 0,
+      currency: currency ?? 'TWD',
+      note: note ?? '', sort: Number(sort) || 0,
     })
     .select('*').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ cashflow: data })
+  return NextResponse.json({ account: data })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -77,13 +71,13 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
   const { data, error } = await supabase
-    .from('hr_cashflow')
+    .from('hr_accounts')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id).eq('owner_id', user.id)
     .select('*').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ cashflow: data })
+  return NextResponse.json({ account: data })
 }
 
 export async function DELETE(req: NextRequest) {
@@ -93,8 +87,16 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
+  // 有交易掛在此帳戶則擋下，避免結餘錯亂
+  const { count } = await supabase
+    .from('hr_cashflow').select('id', { count: 'exact', head: true })
+    .eq('owner_id', user.id).or(`account_id.eq.${id},to_account_id.eq.${id}`)
+  if ((count ?? 0) > 0) {
+    return NextResponse.json({ error: '此帳戶仍有交易記錄，無法刪除（可改為封存）' }, { status: 409 })
+  }
+
   const { error } = await supabase
-    .from('hr_cashflow').delete().eq('id', id).eq('owner_id', user.id)
+    .from('hr_accounts').delete().eq('id', id).eq('owner_id', user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
