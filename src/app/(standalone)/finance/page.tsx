@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'cashflow' | 'accounts' | 'reports'
+type Tab = 'cashflow' | 'accounts' | 'reports' | 'import'
 type FlowType = 'income' | 'expense' | 'transfer'
 
 interface Cashflow {
@@ -654,6 +654,230 @@ function ReportsTab() {
   )
 }
 
+// ─── CSV 工具 ─────────────────────────────────────────────────────
+function parseCSV(text: string, delim: string): string[][] {
+  const rows: string[][] = []
+  let field = '', row: string[] = [], inQ = false
+  text = text.replace(/^﻿/, '')
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++ } else inQ = false }
+      else field += c
+    } else {
+      if (c === '"') inQ = true
+      else if (c === delim) { row.push(field); field = '' }
+      else if (c === '\r') { /* skip */ }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = '' }
+      else field += c
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row) }
+  return rows.filter(r => r.some(c => c.trim() !== ''))
+}
+
+const pad2 = (s: string) => s.padStart(2, '0')
+function normDate(s: string): string {
+  s = (s || '').trim().split(' ')[0].split('T')[0]
+  if (!s) return ''
+  let m
+  if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`
+  if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/))) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}` // dd/mm/yyyy
+  if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2})$/))) return `20${m[3]}-${pad2(m[2])}-${pad2(m[1])}`
+  return ''
+}
+function normAmount(s: string): number {
+  const str = String(s ?? '')
+  const neg = str.includes('-')
+  const digits = str.replace(/[^\d]/g, '')
+  if (!digits) return 0
+  const n = parseInt(digits, 10)
+  return neg ? -n : n
+}
+
+// ─── Import Tab ───────────────────────────────────────────────────
+function ImportTab() {
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [fileName, setFileName] = useState('')
+  const [headers, setHeaders] = useState<string[]>([])
+  const [dataRows, setDataRows] = useState<string[][]>([])
+  const [importing, setImporting] = useState(false)
+  const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [err, setErr] = useState('')
+
+  // 對應設定
+  const [dateCol, setDateCol] = useState(-1)
+  const [amountCol, setAmountCol] = useState(-1)
+  const [typeMode, setTypeMode] = useState<'fixed' | 'column'>('fixed')
+  const [fixedType, setFixedType] = useState<'income' | 'expense'>('income')
+  const [typeCol, setTypeCol] = useState(-1)
+  const [catMode, setCatMode] = useState<'none' | 'fixed' | 'column'>('none')
+  const [fixedCat, setFixedCat] = useState('')
+  const [catCol, setCatCol] = useState(-1)
+  const [descCol, setDescCol] = useState(-1)
+  const [accountId, setAccountId] = useState('')
+
+  useEffect(() => {
+    fetch('/api/hr/accounts').then(r => r.json()).then(d => setAccounts(d.accounts ?? []))
+  }, [])
+
+  const onFile = async (file: File) => {
+    setErr(''); setResult(null)
+    const text = await file.text()
+    const firstLine = text.replace(/^﻿/, '').split(/\r?\n/)[0] || ''
+    const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ','
+    const all = parseCSV(text, delim)
+    if (all.length < 2) { setErr('檔案沒有資料列'); return }
+    setFileName(file.name)
+    setHeaders(all[0])
+    setDataRows(all.slice(1))
+    // 自動猜測欄位
+    const find = (kw: RegExp) => all[0].findIndex(h => kw.test(h))
+    setDateCol(find(/date|ngày|日期|時間|time/i))
+    setAmountCol(find(/amount|total|tổng|tiền|金額|thành tiền|doanh thu/i))
+    setDescCol(find(/desc|note|ghi chú|nội dung|摘要|tên|name/i))
+  }
+
+  const colOpts = (allowNone: boolean) => [
+    ...(allowNone ? [{ value: '-1', label: '— 不使用 —' }] : []),
+    ...headers.map((h, i) => ({ value: String(i), label: h || `欄位${i + 1}` })),
+  ]
+
+  const isIncome = (v: string) => /收|income|thu|\+|bán|doanh thu/i.test(v) && !/支|expense|chi/i.test(v)
+
+  const mapped = dataRows.map(r => {
+    const date = normDate(r[dateCol] ?? '')
+    const amount = normAmount(r[amountCol] ?? '')
+    let type: 'income' | 'expense' = fixedType
+    if (typeMode === 'column' && typeCol >= 0) type = isIncome(r[typeCol] ?? '') ? 'income' : 'expense'
+    const category = catMode === 'fixed' ? fixedCat : catMode === 'column' && catCol >= 0 ? (r[catCol] ?? '') : ''
+    const description = descCol >= 0 ? (r[descCol] ?? '') : ''
+    return { type, category, amount, date, description, account_id: accountId || null, valid: !!date && amount !== 0 }
+  })
+  const validRows = mapped.filter(m => m.valid)
+
+  const doImport = async () => {
+    setImporting(true); setErr(''); setResult(null)
+    try {
+      const res = await fetch('/api/hr/cashflow/import', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records: validRows.map(m => ({ type: m.type, category: m.category, amount: m.amount, date: m.date, description: m.description, account_id: m.account_id })) }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setErr(j.error || '匯入失敗'); return }
+      setResult({ imported: j.imported, skipped: j.skipped })
+      setHeaders([]); setDataRows([]); setFileName('')
+    } catch { setErr('匯入失敗') } finally { setImporting(false) }
+  }
+
+  const reset = () => { setHeaders([]); setDataRows([]); setFileName(''); setResult(null); setErr('') }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-blue-50/50 p-4 text-sm text-gray-600 space-y-1">
+        <p className="font-medium text-gray-800">從 iPOS 報表匯入</p>
+        <p>在 iPOS（POS／進銷存）匯出報表，存成 <b>CSV</b>（Excel 檔請「另存新檔 → CSV」），上傳後對應欄位即可批次寫入出納帳務。</p>
+        <p className="text-xs text-gray-400">支援逗號或分號分隔；日期支援 yyyy-mm-dd 與 dd/mm/yyyy；金額自動去除貨幣符號與千分位。</p>
+      </div>
+
+      {result && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
+          <p className="font-medium text-green-700">✓ 匯入完成：成功 {result.imported} 筆{result.skipped > 0 ? `，略過 ${result.skipped} 筆（缺日期或金額）` : ''}</p>
+        </div>
+      )}
+      {err && <p className="text-sm text-red-500">{err}</p>}
+
+      {headers.length === 0 ? (
+        <label className="flex flex-col items-center justify-center gap-2 py-12 rounded-xl border-2 border-dashed cursor-pointer hover:bg-gray-50 text-gray-400">
+          <Upload className="h-8 w-8" />
+          <span className="text-sm">點此選擇 CSV 檔案</span>
+          <input type="file" accept=".csv,text/csv" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
+        </label>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 text-sm">
+            <Badge variant="secondary">{fileName}</Badge>
+            <span className="text-gray-400">共 {dataRows.length} 列</span>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>重新選檔</Button>
+          </div>
+
+          {/* 欄位對應 */}
+          <div className="grid md:grid-cols-2 gap-3 p-4 rounded-xl border bg-gray-50">
+            <Field label="日期欄位 *">
+              <SelectEl value={String(dateCol)} onChange={v => setDateCol(Number(v))} options={colOpts(true)} />
+            </Field>
+            <Field label="金額欄位 *">
+              <SelectEl value={String(amountCol)} onChange={v => setAmountCol(Number(v))} options={colOpts(true)} />
+            </Field>
+            <Field label="類型">
+              <div className="flex gap-1">
+                <SelectEl value={typeMode} onChange={v => setTypeMode(v as 'fixed' | 'column')}
+                  options={[{ value: 'fixed', label: '固定' }, { value: 'column', label: '依欄位' }]} />
+                {typeMode === 'fixed'
+                  ? <SelectEl value={fixedType} onChange={v => setFixedType(v as 'income' | 'expense')} options={[{ value: 'income', label: '收入' }, { value: 'expense', label: '支出' }]} />
+                  : <SelectEl value={String(typeCol)} onChange={v => setTypeCol(Number(v))} options={colOpts(true)} />}
+              </div>
+            </Field>
+            <Field label="記入帳戶">
+              <SelectEl value={accountId} onChange={setAccountId}
+                options={[{ value: '', label: '— 不指定 —' }, ...accounts.map(a => ({ value: a.id, label: a.name }))]} />
+            </Field>
+            <Field label="分類">
+              <div className="flex gap-1">
+                <SelectEl value={catMode} onChange={v => setCatMode(v as 'none' | 'fixed' | 'column')}
+                  options={[{ value: 'none', label: '無' }, { value: 'fixed', label: '固定' }, { value: 'column', label: '依欄位' }]} />
+                {catMode === 'fixed' && <InputEl value={fixedCat} onChange={setFixedCat} placeholder="例：POS營收" />}
+                {catMode === 'column' && <SelectEl value={String(catCol)} onChange={v => setCatCol(Number(v))} options={colOpts(true)} />}
+              </div>
+            </Field>
+            <Field label="摘要欄位">
+              <SelectEl value={String(descCol)} onChange={v => setDescCol(Number(v))} options={colOpts(true)} />
+            </Field>
+          </div>
+
+          {/* 預覽 */}
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500">預覽（有效 <b className="text-gray-800">{validRows.length}</b> / {dataRows.length} 列）</p>
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 text-gray-500">
+                  <tr>
+                    <th className="px-2 py-1.5 text-left">日期</th>
+                    <th className="px-2 py-1.5 text-left">類型</th>
+                    <th className="px-2 py-1.5 text-right">金額</th>
+                    <th className="px-2 py-1.5 text-left">分類</th>
+                    <th className="px-2 py-1.5 text-left">摘要</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mapped.slice(0, 10).map((m, i) => (
+                    <tr key={i} className={`border-t ${m.valid ? '' : 'bg-red-50 text-red-400'}`}>
+                      <td className="px-2 py-1.5">{m.date || '✕ 無效'}</td>
+                      <td className="px-2 py-1.5">{m.type === 'income' ? '收入' : '支出'}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{fmt(m.amount)}</td>
+                      <td className="px-2 py-1.5">{m.category || '—'}</td>
+                      <td className="px-2 py-1.5 truncate max-w-[200px]">{m.description || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {dataRows.length > 10 && <p className="text-xs text-gray-400">（僅顯示前 10 列）</p>}
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={doImport} disabled={importing || dateCol < 0 || amountCol < 0 || validRows.length === 0} className="gap-1.5">
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              匯入 {validRows.length} 筆
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────
 export default function FinancePage() {
   const [tab, setTab] = useState<Tab>('cashflow')
@@ -667,6 +891,7 @@ export default function FinancePage() {
     { id: 'cashflow',  label: '出納帳務', icon: <Wallet className="h-4 w-4" /> },
     { id: 'accounts',  label: '帳戶管理', icon: <Landmark className="h-4 w-4" /> },
     { id: 'reports',   label: '財務報表', icon: <BarChart3 className="h-4 w-4" /> },
+    { id: 'import',    label: '資料匯入', icon: <Upload className="h-4 w-4" /> },
   ]
 
   if (isAdmin === false) {
@@ -722,6 +947,7 @@ export default function FinancePage() {
         {tab === 'cashflow'  && <CashflowTab />}
         {tab === 'accounts'  && <AccountsTab />}
         {tab === 'reports'   && <ReportsTab />}
+        {tab === 'import'    && <ImportTab />}
       </Card>
     </div>
   )
