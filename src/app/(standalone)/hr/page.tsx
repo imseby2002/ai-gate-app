@@ -108,7 +108,7 @@ const LABELS: Record<string, string> = {
   'approved': '核准', 'pending': '待審', 'rejected': '拒絕',
   'paid': '已發放', 'pending_pay': '待發放',
   'income': '收入', 'expense': '支出', 'transfer': '轉帳',
-  'cash': '現金', 'bank': '銀行', 'credit': '信用卡', 'ewallet': '電子錢包', 'other': '其他',
+  'cash': '現金', 'bank': '銀行', 'credit': '信用卡', 'ewallet': '電子錢包',
 }
 
 const INCOME_CATEGORIES = ['銷售收入', '服務費', '租金收入', '利息收入', '其他收入']
