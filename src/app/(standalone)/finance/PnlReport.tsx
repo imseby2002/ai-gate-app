@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Loader2, Plus, RefreshCw, X } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, X, Columns3, LineChart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  PNL_LINES, PNL_LINE_MAP, RENT_DETAIL_CODES, STORE_KIND_LABEL,
+  PNL_LINES, PNL_LINE_MAP, STORE_KIND_LABEL,
 } from './pnl-schema'
 
 interface Store { id: string; code: string; name: string; name_vi: string; kind: string; sort: number }
 interface Entry { store_id: string; line_code: string; amount: number }
+interface SeriesRow { period: string; line_code: string; amount: number }
 
 const fmt = (n: number) => n === 0 ? '–' : Math.round(n).toLocaleString('zh-TW')
 const pct = (v: number, base: number) => base ? (v / base * 100).toFixed(2) + '%' : '–'
@@ -30,12 +31,8 @@ function resolveStore(vals: Record<string, number>): Record<string, number> {
     let r = 0
     if (c.op === 'sum') r = c.codes.reduce((s, x) => s + get(x), 0)
     else if (c.op === 'sumSection') r = PNL_LINES.filter(l => l.section === c.section && l.kind === 'detail').reduce((s, l) => s + get(l.code), 0)
-    else if (c.op === 'sub') {
-      const right = c.right === '@rent_details'
-        ? RENT_DETAIL_CODES.reduce((s, x) => s + get(x), 0)
-        : get(c.right)
-      r = get(c.left) - right
-    }
+    else if (c.op === 'sub') r = get(c.left) - get(c.right)
+    else if (c.op === 'subMany') r = c.minus.reduce((s, x) => s - get(x), get(c.base))
     visiting.delete(code)
     out[code] = r
     return r
@@ -44,28 +41,79 @@ function resolveStore(vals: Record<string, number>): Record<string, number> {
   return out
 }
 
+const rowStyle = (kind: string) =>
+  kind === 'revenue' ? 'bg-primary/10 font-bold'
+    : kind === 'subtotal' ? 'bg-gray-100 font-semibold'
+      : ''
+
 export default function PnlReport() {
+  const [mode, setMode] = useState<'compare' | 'trend'>('compare')
   const [stores, setStores] = useState<Store[]>([])
+  const [adding, setAdding] = useState(false)
+
+  // 共用：載入門市清單（兩種檢視都要）
+  const loadStores = useCallback(async (): Promise<Store[]> => {
+    const res = await fetch('/api/hr/pnl')
+    const j = await res.json()
+    setStores(j.stores ?? [])
+    return j.stores ?? []
+  }, [])
+
+  useEffect(() => { loadStores() }, [loadStores])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 p-0.5 bg-gray-100 rounded-lg">
+          <button onClick={() => setMode('compare')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            style={mode === 'compare' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
+            <Columns3 className="h-4 w-4" />多店比較
+          </button>
+          <button onClick={() => setMode('trend')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+            style={mode === 'trend' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
+            <LineChart className="h-4 w-4" />單店趨勢
+          </button>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="gap-1.5 h-8 ml-auto">
+          <Plus className="h-4 w-4" />新增門市
+        </Button>
+      </div>
+
+      {adding && <AddStoreForm onClose={() => setAdding(false)} onSaved={() => { setAdding(false); loadStores() }} nextSort={stores.length} />}
+
+      {stores.length === 0 ? (
+        <div className="py-16 text-center text-gray-400 text-sm">
+          尚無門市。先「新增門市」，再以「資料匯入」帶入各月損益數字。
+        </div>
+      ) : mode === 'compare' ? (
+        <CompareView stores={stores} />
+      ) : (
+        <TrendView stores={stores} />
+      )}
+    </div>
+  )
+}
+
+// ── 多店比較：月份固定，門市並排（科目為列） ──
+function CompareView({ stores }: { stores: Store[] }) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [periods, setPeriods] = useState<string[]>([])
   const [period, setPeriod] = useState(thisMonth())
   const [loading, setLoading] = useState(false)
-  const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/hr/pnl?period=${period}`)
       const j = await res.json()
-      setStores(j.stores ?? [])
       setEntries(j.entries ?? [])
       setPeriods(j.periods ?? [])
     } finally { setLoading(false) }
   }, [period])
-
   useEffect(() => { load() }, [load])
 
-  // 解析每門市的科目值
   const resolved = useMemo(() => {
     const byStore: Record<string, Record<string, number>> = {}
     for (const s of stores) byStore[s.id] = {}
@@ -78,17 +126,10 @@ export default function PnlReport() {
     return out
   }, [stores, entries])
 
-  // 第一階段不顯示跨期比較行
   const lines = useMemo(() => PNL_LINES.filter(l => l.section !== 'compare'), [])
 
-  const rowStyle = (kind: string) =>
-    kind === 'revenue' ? 'bg-primary/10 font-bold'
-      : kind === 'subtotal' ? 'bg-gray-100 font-semibold'
-        : ''
-
   return (
-    <div className="space-y-4">
-      {/* 工具列 */}
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-gray-500">月份</span>
         <Input type="month" value={period} onChange={e => setPeriod(e.target.value)} className="h-8 w-40 text-sm" />
@@ -102,28 +143,104 @@ export default function PnlReport() {
         <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}重新整理
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="gap-1.5 h-8 ml-auto">
-          <Plus className="h-4 w-4" />新增門市
+      </div>
+
+      <div className="overflow-x-auto border rounded-xl">
+        <table className="text-sm border-collapse w-full">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">科目</th>
+              {stores.map(s => (
+                <th key={s.id} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap">
+                  <div className="font-semibold">{s.name}</div>
+                  <div className="text-[10px] font-normal text-gray-400">{STORE_KIND_LABEL[s.kind] ?? s.kind}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map(line => (
+              <tr key={line.code} className={rowStyle(line.kind)}>
+                <td className={`sticky left-0 z-10 px-3 py-1.5 border-b border-r whitespace-nowrap ${rowStyle(line.kind) || 'bg-white'}`}>
+                  {line.zh}<span className="ml-1.5 text-[10px] text-gray-400">{line.vi}</span>
+                </td>
+                {stores.map(s => {
+                  const v = resolved[s.id]?.[line.code] ?? 0
+                  const base = resolved[s.id]?.revenue ?? 0
+                  return (
+                    <td key={s.id} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
+                      <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v)}</span>
+                      {line.kind !== 'revenue' && <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── 單店趨勢：選一門市，月份並排（科目為列），看逐月走勢 ──
+function TrendView({ stores }: { stores: Store[] }) {
+  const [storeId, setStoreId] = useState(stores[0]?.id ?? '')
+  const [series, setSeries] = useState<SeriesRow[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => { if (!storeId && stores[0]) setStoreId(stores[0].id) }, [stores, storeId])
+
+  const load = useCallback(async () => {
+    if (!storeId) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/hr/pnl?store_id=${storeId}`)
+      const j = await res.json()
+      setSeries(j.series ?? [])
+    } finally { setLoading(false) }
+  }, [storeId])
+  useEffect(() => { load() }, [load])
+
+  // 所有出現過的月份（由新到舊）
+  const months = useMemo(() => Array.from(new Set(series.map(r => r.period))).sort().reverse(), [series])
+
+  // 每月解析後的科目值
+  const byMonth = useMemo(() => {
+    const raw: Record<string, Record<string, number>> = {}
+    for (const r of series) {
+      (raw[r.period] ??= {})[r.line_code] = Number(r.amount) || 0
+    }
+    const out: Record<string, Record<string, number>> = {}
+    for (const m of months) out[m] = resolveStore(raw[m] ?? {})
+    return out
+  }, [series, months])
+
+  const lines = useMemo(() => PNL_LINES.filter(l => l.section !== 'compare'), [])
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-gray-500">門市</span>
+        <select value={storeId} onChange={e => setStoreId(e.target.value)}
+          className="h-8 rounded-md border bg-background px-2 text-sm min-w-[140px]">
+          {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}重新整理
         </Button>
       </div>
 
-      {adding && <AddStoreForm onClose={() => setAdding(false)} onSaved={() => { setAdding(false); load() }} nextSort={stores.length} />}
-
-      {stores.length === 0 ? (
-        <div className="py-16 text-center text-gray-400 text-sm">
-          尚無門市。先「新增門市」，再以「資料匯入」帶入各月損益數字。
-        </div>
+      {months.length === 0 ? (
+        <div className="py-12 text-center text-gray-400 text-sm">此門市尚無任何月份資料。</div>
       ) : (
         <div className="overflow-x-auto border rounded-xl">
           <table className="text-sm border-collapse w-full">
             <thead>
               <tr className="bg-gray-50">
                 <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">科目</th>
-                {stores.map(s => (
-                  <th key={s.id} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap">
-                    <div className="font-semibold">{s.name}</div>
-                    <div className="text-[10px] font-normal text-gray-400">{STORE_KIND_LABEL[s.kind] ?? s.kind}</div>
-                  </th>
+                {months.map(m => (
+                  <th key={m} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap font-semibold">{m}</th>
                 ))}
               </tr>
             </thead>
@@ -131,18 +248,15 @@ export default function PnlReport() {
               {lines.map(line => (
                 <tr key={line.code} className={rowStyle(line.kind)}>
                   <td className={`sticky left-0 z-10 px-3 py-1.5 border-b border-r whitespace-nowrap ${rowStyle(line.kind) || 'bg-white'}`}>
-                    {line.zh}
-                    <span className="ml-1.5 text-[10px] text-gray-400">{line.vi}</span>
+                    {line.zh}<span className="ml-1.5 text-[10px] text-gray-400">{line.vi}</span>
                   </td>
-                  {stores.map(s => {
-                    const v = resolved[s.id]?.[line.code] ?? 0
-                    const base = resolved[s.id]?.revenue ?? 0
+                  {months.map(m => {
+                    const v = byMonth[m]?.[line.code] ?? 0
+                    const base = byMonth[m]?.revenue ?? 0
                     return (
-                      <td key={s.id} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
+                      <td key={m} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
                         <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v)}</span>
-                        {line.kind !== 'revenue' && (
-                          <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>
-                        )}
+                        {line.kind !== 'revenue' && <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>}
                       </td>
                     )
                   })}
