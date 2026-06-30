@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'cashflow' | 'accounts' | 'reports' | 'import'
+import PnlReport from './PnlReport'
+
+type Tab = 'cashflow' | 'accounts' | 'reports' | 'pnl' | 'import'
 type FlowType = 'income' | 'expense' | 'transfer'
 
 interface Cashflow {
@@ -891,6 +893,7 @@ export default function FinancePage() {
     { id: 'cashflow',  label: '出納帳務', icon: <Wallet className="h-4 w-4" /> },
     { id: 'accounts',  label: '帳戶管理', icon: <Landmark className="h-4 w-4" /> },
     { id: 'reports',   label: '財務報表', icon: <BarChart3 className="h-4 w-4" /> },
+    { id: 'pnl',       label: '業績報表', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'import',    label: '資料匯入', icon: <Upload className="h-4 w-4" /> },
   ]
 
@@ -947,6 +950,7 @@ export default function FinancePage() {
         {tab === 'cashflow'  && <CashflowTab />}
         {tab === 'accounts'  && <AccountsTab />}
         {tab === 'reports'   && <ReportsTab />}
+        {tab === 'pnl'       && <PnlReport />}
         {tab === 'import'    && <ImportTab />}
       </Card>
     </div>
