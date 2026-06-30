@@ -39,7 +39,7 @@ const MAIN_NAV: NavItem[] = [
 ]
 
 const TOOL_NAV: NavItem[] = [
-  { labelKey: 'work',          href: '/work',            icon: NotebookPen,  module: null, alwaysShow: true },
+  { labelKey: 'work',          href: '/work',            icon: NotebookPen,  module: 'work' },
   { labelKey: 'resume',        href: '/resume',          icon: FileText,     module: 'resume' },
   { labelKey: 'marketing',     href: '/marketing-auto',   icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },

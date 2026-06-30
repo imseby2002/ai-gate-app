@@ -165,6 +165,8 @@ export default function WorkPage() {
   const locale = useLocale()
   const supabase = useRef(createClient()).current
   const [me, setMe] = useState<Me | null>(null)
+  const [canHr, setCanHr] = useState(false)
+  const [canFinance, setCanFinance] = useState(false)
   const [items, setItems] = useState<Item[]>([])
   const [ownerNames, setOwnerNames] = useState<Record<string, string>>({})
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -235,9 +237,13 @@ export default function WorkPage() {
 
       await supabase.rpc('claim_work_invitations')
 
-      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      const { data: profile } = await supabase.from('profiles').select('full_name, user_type, enabled_modules').eq('id', user.id).single()
       const meObj: Me = { id: user.id, email: user.email ?? '', name: profile?.full_name || user.email || 'me' }
       setMe(meObj)
+      const isAdmin = profile?.user_type === 'admin'
+      const mods: string[] = profile?.enabled_modules ?? []
+      setCanHr(isAdmin || mods.includes('hr'))
+      setCanFinance(isAdmin || mods.includes('finance'))
 
       // RLS 已限定：本人擁有 + 被指派協作的項目（只取頂層，子項目另載）
       const { data } = await supabase
@@ -376,16 +382,20 @@ export default function WorkPage() {
           <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Link href="/hr">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />人事管理
-            </Button>
-          </Link>
-          <Link href="/finance">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Wallet className="h-4 w-4" />出納總務
-            </Button>
-          </Link>
+          {canHr && (
+            <Link href="/hr">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Building2 className="h-4 w-4" />人事管理
+              </Button>
+            </Link>
+          )}
+          {canFinance && (
+            <Link href="/finance">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Wallet className="h-4 w-4" />出納總務
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

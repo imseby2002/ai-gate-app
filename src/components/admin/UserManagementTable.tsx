@@ -12,6 +12,9 @@ const ALL_MODULES = [
   { id: 'leads',     label: '潛在客戶' },
   { id: 'resume',    label: '職場助手' },
   { id: 'booking',   label: '訂房系統' },
+  { id: 'work',      label: '工作管理' },
+  { id: 'hr',        label: '人事管理' },
+  { id: 'finance',   label: '出納總務' },
 ] as const
 
 type ModuleId = typeof ALL_MODULES[number]['id']

@@ -101,6 +101,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
       pathname.startsWith('/resume') ||
+      pathname.startsWith('/work') ||
       pathname.startsWith('/hr') ||
       pathname.startsWith('/finance')
     )
@@ -135,6 +136,9 @@ export async function middleware(request: NextRequest) {
           '/cs':             ['cs'],
           '/prospect-call':  ['leads', 'marketing'],
           '/resume':         ['resume'],
+          '/work':           ['work'],
+          '/hr':             ['hr'],
+          '/finance':        ['finance'],
         }
         for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
           if (pathname.startsWith(route)) {
