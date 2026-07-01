@@ -1,12 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Loader2, Plus, RefreshCw, X, Columns3, LineChart } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, X, Columns3, LineChart, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  PNL_LINES, PNL_LINE_MAP, STORE_KIND_LABEL,
-} from './pnl-schema'
+import { STORE_KIND_LABEL, type PnlLine } from './pnl-schema'
+import PnlSchemaEditor from './PnlSchemaEditor'
 
 interface Store { id: string; code: string; name: string; name_vi: string; kind: string; sort: number }
 interface Entry { store_id: string; line_code: string; amount: number }
@@ -17,27 +16,27 @@ const pct = (v: number, base: number) => base ? (v / base * 100).toFixed(2) + '%
 const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 
 // 依存值＋科目樹公式，解出單一門市每個科目的最終值（存值優先，缺值才套公式）
-function resolveStore(vals: Record<string, number>): Record<string, number> {
+function resolveStore(vals: Record<string, number>, lines: PnlLine[], map: Record<string, PnlLine>): Record<string, number> {
   const out: Record<string, number> = {}
   const visiting = new Set<string>()
   const get = (code: string): number => {
     if (code in out) return out[code]
     if (code in vals) { out[code] = vals[code]; return out[code] }
-    const line = PNL_LINE_MAP[code]
+    const line = map[code]
     if (!line?.compute) { out[code] = 0; return 0 }
     if (visiting.has(code)) return 0
     visiting.add(code)
     const c = line.compute
     let r = 0
     if (c.op === 'sum') r = c.codes.reduce((s, x) => s + get(x), 0)
-    else if (c.op === 'sumSection') r = PNL_LINES.filter(l => l.section === c.section && l.kind === 'detail').reduce((s, l) => s + get(l.code), 0)
+    else if (c.op === 'sumSection') r = lines.filter(l => l.section === c.section && l.kind === 'detail').reduce((s, l) => s + get(l.code), 0)
     else if (c.op === 'sub') r = get(c.left) - get(c.right)
     else if (c.op === 'subMany') r = c.minus.reduce((s, x) => s - get(x), get(c.base))
     visiting.delete(code)
     out[code] = r
     return r
   }
-  for (const l of PNL_LINES) get(l.code)
+  for (const l of lines) get(l.code)
   return out
 }
 
@@ -49,7 +48,10 @@ const rowStyle = (kind: string) =>
 export default function PnlReport() {
   const [mode, setMode] = useState<'compare' | 'trend'>('compare')
   const [stores, setStores] = useState<Store[]>([])
+  const [lines, setLines] = useState<PnlLine[]>([])
+  const [loadingSchema, setLoadingSchema] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   // 共用：載入門市清單（兩種檢視都要）
   const loadStores = useCallback(async (): Promise<Store[]> => {
@@ -59,7 +61,27 @@ export default function PnlReport() {
     return j.stores ?? []
   }, [])
 
-  useEffect(() => { loadStores() }, [loadStores])
+  // 載入自訂科目樹（首次由後端種入預設 + 建一個 A門市）
+  const loadSchema = useCallback(async () => {
+    setLoadingSchema(true)
+    try {
+      const res = await fetch('/api/hr/pnl/schema')
+      const j = await res.json()
+      setLines(j.lines ?? [])
+    } finally { setLoadingSchema(false) }
+  }, [])
+
+  useEffect(() => { loadStores(); loadSchema() }, [loadStores, loadSchema])
+
+  if (editing) {
+    return (
+      <PnlSchemaEditor
+        initial={lines}
+        onClose={() => setEditing(false)}
+        onSaved={() => { setEditing(false); loadSchema(); loadStores() }}
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -76,32 +98,39 @@ export default function PnlReport() {
             <LineChart className="h-4 w-4" />單店趨勢
           </button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="gap-1.5 h-8 ml-auto">
+        <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 h-8 ml-auto">
+          <Settings2 className="h-4 w-4" />科目設定
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="gap-1.5 h-8">
           <Plus className="h-4 w-4" />新增門市
         </Button>
       </div>
 
       {adding && <AddStoreForm onClose={() => setAdding(false)} onSaved={() => { setAdding(false); loadStores() }} nextSort={stores.length} />}
 
-      {stores.length === 0 ? (
+      {loadingSchema ? (
+        <div className="flex items-center justify-center py-16 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
+      ) : stores.length === 0 ? (
         <div className="py-16 text-center text-gray-400 text-sm">
           尚無門市。先「新增門市」，再以「資料匯入」帶入各月損益數字。
         </div>
       ) : mode === 'compare' ? (
-        <CompareView stores={stores} />
+        <CompareView stores={stores} lines={lines} />
       ) : (
-        <TrendView stores={stores} />
+        <TrendView stores={stores} lines={lines} />
       )}
     </div>
   )
 }
 
 // ── 多店比較：月份固定，門市並排（科目為列） ──
-function CompareView({ stores }: { stores: Store[] }) {
+function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLine[] }) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [periods, setPeriods] = useState<string[]>([])
   const [period, setPeriod] = useState(thisMonth())
   const [loading, setLoading] = useState(false)
+
+  const lineMap = useMemo(() => Object.fromEntries(allLines.map(l => [l.code, l])), [allLines])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -122,11 +151,11 @@ function CompareView({ stores }: { stores: Store[] }) {
       byStore[e.store_id][e.line_code] = Number(e.amount) || 0
     }
     const out: Record<string, Record<string, number>> = {}
-    for (const s of stores) out[s.id] = resolveStore(byStore[s.id] ?? {})
+    for (const s of stores) out[s.id] = resolveStore(byStore[s.id] ?? {}, allLines, lineMap)
     return out
-  }, [stores, entries])
+  }, [stores, entries, allLines, lineMap])
 
-  const lines = useMemo(() => PNL_LINES.filter(l => l.section !== 'compare'), [])
+  const lines = useMemo(() => allLines.filter(l => l.section !== 'compare' && !l.archived), [allLines])
 
   return (
     <div className="space-y-3">
@@ -184,10 +213,12 @@ function CompareView({ stores }: { stores: Store[] }) {
 }
 
 // ── 單店趨勢：選一門市，月份並排（科目為列），看逐月走勢 ──
-function TrendView({ stores }: { stores: Store[] }) {
+function TrendView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLine[] }) {
   const [storeId, setStoreId] = useState(stores[0]?.id ?? '')
   const [series, setSeries] = useState<SeriesRow[]>([])
   const [loading, setLoading] = useState(false)
+
+  const lineMap = useMemo(() => Object.fromEntries(allLines.map(l => [l.code, l])), [allLines])
 
   useEffect(() => { if (!storeId && stores[0]) setStoreId(stores[0].id) }, [stores, storeId])
 
@@ -212,11 +243,11 @@ function TrendView({ stores }: { stores: Store[] }) {
       (raw[r.period] ??= {})[r.line_code] = Number(r.amount) || 0
     }
     const out: Record<string, Record<string, number>> = {}
-    for (const m of months) out[m] = resolveStore(raw[m] ?? {})
+    for (const m of months) out[m] = resolveStore(raw[m] ?? {}, allLines, lineMap)
     return out
-  }, [series, months])
+  }, [series, months, allLines, lineMap])
 
-  const lines = useMemo(() => PNL_LINES.filter(l => l.section !== 'compare'), [])
+  const lines = useMemo(() => allLines.filter(l => l.section !== 'compare' && !l.archived), [allLines])
 
   return (
     <div className="space-y-3">

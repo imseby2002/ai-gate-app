@@ -16,9 +16,10 @@ export interface PnlLine {
   code: string
   zh: string
   vi: string
-  section: PnlSection
+  section: PnlSection | string
   kind: PnlLineKind
-  compute?: PnlCompute
+  compute?: PnlCompute | null
+  archived?: boolean
 }
 
 // 小計計算規則（缺存值時用）
