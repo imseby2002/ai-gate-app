@@ -24,7 +24,7 @@ export interface PnlLine {
 
 // 小計計算規則（缺存值時用）
 export type PnlCompute =
-  | { op: 'sumSection'; section: PnlSection }      // 該分區所有 detail 加總
+  | { op: 'sumSection'; section: PnlSection | string } // 該分區所有 detail 加總
   | { op: 'sum'; codes: string[] }                 // 指定科目加總
   | { op: 'sub'; left: string; right: string }     // left − right
   | { op: 'subMany'; base: string; minus: string[] } // base − Σminus
