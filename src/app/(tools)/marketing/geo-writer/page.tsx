@@ -81,8 +81,14 @@ export default function GeoWriterPage() {
   const [loadingP, setLoadingP] = useState(false)
   const [loadingTr, setLoadingTr] = useState(false)
 
+  // 三個輔助面板（素材庫 / GEO工具 / 發布設定）互斥，一次只開一個
+  const [panel, setPanel] = useState<'material' | 'tools' | 'settings' | null>(null)
+  const togglePanel = (p: 'material' | 'tools' | 'settings') => setPanel(cur => cur === p ? null : p)
+  const showMaterial = panel === 'material'
+  const showTools = panel === 'tools'
+  const showSettings = panel === 'settings'
+
   // 發佈設定（per-user）
-  const [showSettings, setShowSettings] = useState(false)
   const [wpBaseUrl, setWpBaseUrl] = useState('')
   const [wpUser, setWpUser] = useState('')
   const [wpAppPassword, setWpAppPassword] = useState('')
@@ -94,7 +100,6 @@ export default function GeoWriterPage() {
   const [settingsSaved, setSettingsSaved] = useState(false)
 
   // 素材庫
-  const [showMaterial, setShowMaterial] = useState(false)
   const [business, setBusiness] = useState<BusinessProfile>({})
   const [authors, setAuthors] = useState<AuthorProfile[]>([])
   const [facts, setFacts] = useState<FactItem[]>([])
@@ -136,7 +141,6 @@ export default function GeoWriterPage() {
   const bz = (k: keyof BusinessProfile, v: string) => setBusiness(b => ({ ...b, [k]: v }))
 
   // GEO 技術工具
-  const [showTools, setShowTools] = useState(false)
   const [crawlerReport, setCrawlerReport] = useState<CrawlerReport | null>(null)
   const [loadingCr, setLoadingCr] = useState(false)
   const [auditInput, setAuditInput] = useState('')
@@ -457,13 +461,13 @@ export default function GeoWriterPage() {
             </h1>
             <p className="text-sm text-muted-foreground">{t('geo.subtitle')}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowMaterial(s => !s)}>
+          <Button variant={showMaterial ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('material')}>
             <Library className="h-3.5 w-3.5" /> {t('geo.material')}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowTools(s => !s)}>
+          <Button variant={showTools ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('tools')}>
             <Wrench className="h-3.5 w-3.5" /> {t('geo.tools')}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowSettings(s => !s)}>
+          <Button variant={showSettings ? 'default' : 'outline'} size="sm" onClick={() => togglePanel('settings')}>
             <Settings className="h-3.5 w-3.5" /> {t('geo.publishSettings')}
           </Button>
         </div>
