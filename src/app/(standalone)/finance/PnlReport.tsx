@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Loader2, Plus, RefreshCw, X, Columns3, LineChart, Settings2 } from 'lucide-react'
+import { Loader2, Plus, RefreshCw, X, Columns3, LineChart, Settings2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { STORE_KIND_LABEL, type PnlLine } from './pnl-schema'
 import PnlSchemaEditor from './PnlSchemaEditor'
+import PnlImportSchema from './PnlImportSchema'
 
 interface Store { id: string; code: string; name: string; name_vi: string; kind: string; sort: number }
 interface Entry { store_id: string; line_code: string; amount: number }
@@ -52,6 +53,7 @@ export default function PnlReport() {
   const [loadingSchema, setLoadingSchema] = useState(true)
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   // 共用：載入門市清單（兩種檢視都要）
   const loadStores = useCallback(async (): Promise<Store[]> => {
@@ -83,6 +85,15 @@ export default function PnlReport() {
     )
   }
 
+  if (importing) {
+    return (
+      <PnlImportSchema
+        onClose={() => setImporting(false)}
+        onSaved={() => { setImporting(false); loadSchema(); loadStores() }}
+      />
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -98,7 +109,10 @@ export default function PnlReport() {
             <LineChart className="h-4 w-4" />單店趨勢
           </button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 h-8 ml-auto">
+        <Button variant="outline" size="sm" onClick={() => setImporting(true)} className="gap-1.5 h-8 ml-auto">
+          <Upload className="h-4 w-4" />報表匯入
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 h-8">
           <Settings2 className="h-4 w-4" />科目設定
         </Button>
         <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="gap-1.5 h-8">
