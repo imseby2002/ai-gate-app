@@ -156,6 +156,54 @@ async function hasOpenHandoff(userId: string, customerId: string): Promise<boole
   }
 }
 
+// ── 專員訂單通知（LINE OA push；LINE Notify 已停用，改用個人 LINE 加 OA）─────────
+// LINE OA push（主動推播，非 reply）
+async function pushLine(to: string, text: string, token: string) {
+  await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
+  })
+}
+
+// 通知名單存於 cs_data_sources(type='notify_line').config.recipients: LINE userId[]
+async function getNotifyLineRecipients(userId: string): Promise<string[]> {
+  try {
+    const { data } = await getServiceClient()
+      .from('cs_data_sources').select('config')
+      .eq('user_id', userId).eq('type', 'notify_line').maybeSingle()
+    const r = (data?.config as { recipients?: string[] } | null)?.recipients
+    return Array.isArray(r) ? r : []
+  } catch { return [] }
+}
+
+async function setNotifyLineRecipients(userId: string, recipients: string[], industry: string): Promise<void> {
+  const sb = getServiceClient()
+  const { data } = await sb.from('cs_data_sources').select('id')
+    .eq('user_id', userId).eq('type', 'notify_line').maybeSingle()
+  if (data?.id) {
+    await sb.from('cs_data_sources').update({ config: { recipients } }).eq('id', data.id)
+  } else {
+    await sb.from('cs_data_sources').insert({
+      user_id: userId, type: 'notify_line', name: '訂單通知專員', industry, enabled: true,
+      config: { recipients },
+    })
+  }
+}
+
+// 訂單確認 → 用租戶自己的 LINE OA push 通知已綁定的專員
+async function notifyStaffOrder(userId: string, orderDetail: string): Promise<void> {
+  try {
+    const recipients = await getNotifyLineRecipients(userId)
+    if (!recipients.length) return
+    const token = (await loadCredentials(userId, 'line')).line_channel_access_token
+      || (await loadCredentials(userId, 'line-oa')).line_channel_access_token || ''
+    if (!token) return
+    const msg = `🔔 有新訂單已確認，請盡快跟進：\n\n${orderDetail.slice(0, 900)}`
+    await Promise.all(recipients.map(to => pushLine(to, msg, token).catch(() => {})))
+  } catch { /* 不中斷主流程 */ }
+}
+
 // Customer confirming a completed booking. Fires only when the previous assistant
 // turn was the booking-confirmation list (from detectBookingCompletion) and the
 // customer's reply is affirmative — mirrors the "以上資訊是否正確？" → 客人確認 flow.
@@ -189,6 +237,8 @@ async function maybeCreateOrderTicket(
       description: `客人已確認訂單，請專員跟進。\n\n【訂單確認內容】\n${lastAssistant.slice(0, 1000)}`,
       priority: 'high', intent: '新訂單待跟進',
     })
+    // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員
+    void notifyStaffOrder(userId, lastAssistant)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -1120,6 +1170,26 @@ export async function POST(
       const history = await loadHistory(userId, customerId)
 
       let text = msgType === 'text' ? (event.message.text as string) : ''
+
+      // 專員綁定：個人 LINE 加 OA 後輸入指令即登記 / 解除訂單通知
+      if (msgType === 'text') {
+        const t = text.trim()
+        if (/^(綁定專員|專員綁定|#專員|加入通知)/.test(t)) {
+          const list = await getNotifyLineRecipients(userId)
+          if (!list.includes(customerId)) await setNotifyLineRecipients(userId, [...list, customerId], knowledge.industry)
+          if (token && replyToken) await replyLine(replyToken, '✅ 已將您加入訂單通知名單，之後有客人確認訂單會即時通知您。輸入「解除專員」可取消。', token)
+          continue
+        }
+        if (/^(解除專員|取消專員|#取消專員|解除通知)/.test(t)) {
+          const list = await getNotifyLineRecipients(userId)
+          await setNotifyLineRecipients(userId, list.filter(id => id !== customerId), knowledge.industry)
+          if (token && replyToken) await replyLine(replyToken, '已將您移出訂單通知名單。', token)
+          continue
+        }
+        // 已綁定的專員 → OA 不對其做 AI 客服對話（不把專員當客人）
+        if ((await getNotifyLineRecipients(userId)).includes(customerId)) continue
+      }
+
       let imgBuf: Buffer | undefined; let imgMime: string | undefined
       if (msgType === 'image' && token) {
         const img = await fetchLineImage(event.message.id, token)
