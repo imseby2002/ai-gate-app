@@ -101,6 +101,7 @@ export default function RoundtablePage() {
   const byRound = [1, 2, 3].map(r => ({ round: r, items: blocks.filter(b => b.round === r) }))
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-bold">AI 圓桌研議</h1>
@@ -157,6 +158,7 @@ export default function RoundtablePage() {
           <div className="whitespace-pre-wrap text-sm leading-relaxed">{report}</div>
         </Card>
       )}
+    </div>
     </div>
   )
 }
