@@ -156,6 +156,42 @@ async function hasOpenHandoff(userId: string, customerId: string): Promise<boole
   }
 }
 
+// Customer confirming a completed booking. Fires only when the previous assistant
+// turn was the booking-confirmation list (from detectBookingCompletion) and the
+// customer's reply is affirmative — mirrors the "以上資訊是否正確？" → 客人確認 flow.
+const ORDER_CONFIRM_MARKER_RE = /以上資訊是否正確|預訂確認/
+const ORDER_CONFIRM_RE = /正確|沒錯|沒問題|是的|對了|確認|可以|好的|好喔|^好$|^對$|ok|okay|yes/i
+const ORDER_DENY_RE = /不對|不正確|錯了|有錯|不要|取消|等等|先不|不用|修改|改一下|再想|不是/
+
+// Order confirmed → open a follow-up ticket so staff see it in the inbox.
+// The AI only *says* "會安排專員跟進"; without this nothing notifies staff.
+async function maybeCreateOrderTicket(
+  userId: string, platform: string, customerId: string, industry: string,
+  history: HistoryMsg[], text: string,
+): Promise<void> {
+  try {
+    const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
+    if (!ORDER_CONFIRM_MARKER_RE.test(lastAssistant)) return  // 上一則不是訂單確認清單
+    if (ORDER_DENY_RE.test(text)) return                       // 客人表示有誤/取消
+    if (!ORDER_CONFIRM_RE.test(text)) return                   // 客人未給肯定確認
+    // 同一客戶已有未結的訂單工單 → 不重複建立
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '新訂單待跟進')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    if (existing?.length) return
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId,
+      subject: '新訂單待跟進',
+      description: `客人已確認訂單，請專員跟進。\n\n【訂單確認內容】\n${lastAssistant.slice(0, 1000)}`,
+      priority: 'high', intent: '新訂單待跟進',
+    })
+  } catch { /* 不中斷主流程 */ }
+}
+
 // Build the next history array; only record the assistant turn when the bot actually replied
 function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMsg[] {
   const h: HistoryMsg[] = [...history, { role: 'user', content: text }]
@@ -207,6 +243,11 @@ async function replyToCustomer(
 
   const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), imageBuffer, imageMimeType)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+
+  // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
+  if (knowledge.bookingFlowEnabled) {
+    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text)
+  }
 
   try {
     let stage = cust?.stage ?? 'new'
