@@ -78,6 +78,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
   const [helpNote, setHelpNote] = useState('')
   const [helpSending, setHelpSending] = useState(false)
   const [helpSent, setHelpSent] = useState(false)
+  const [helpError, setHelpError] = useState<string | null>(null)
 
   useEffect(() => { setOrigin(window.location.origin) }, [])
 
@@ -125,13 +126,18 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
 
   const sendHelpRequest = async () => {
     setHelpSending(true)
+    setHelpError(null)
     try {
       const res = await fetch('/api/marketing/cs-setup-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contact: helpContact, note: helpNote }),
       })
+      const data = await res.json()
       if (res.ok) { setHelpSent(true); setHelpContact(''); setHelpNote('') }
+      else setHelpError(data.error ?? '送出失敗，請稍後再試')
+    } catch {
+      setHelpError('網路錯誤，請稍後再試')
     } finally { setHelpSending(false) }
   }
 
@@ -200,6 +206,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                   取消
                 </button>
               </div>
+              {helpError && <p className="text-xs text-red-500">{helpError}</p>}
             </div>
           )}
         </div>
