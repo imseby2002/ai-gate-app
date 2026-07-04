@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock,
+  ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock, LifeBuoy, Send,
 } from 'lucide-react'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
@@ -73,6 +73,11 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
   const [msg, setMsg] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [origin, setOrigin] = useState('')
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [helpContact, setHelpContact] = useState('')
+  const [helpNote, setHelpNote] = useState('')
+  const [helpSending, setHelpSending] = useState(false)
+  const [helpSent, setHelpSent] = useState(false)
 
   useEffect(() => { setOrigin(window.location.origin) }, [])
 
@@ -118,6 +123,18 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
     finally { setSaving(null); setTimeout(() => setMsg(null), 3000) }
   }
 
+  const sendHelpRequest = async () => {
+    setHelpSending(true)
+    try {
+      const res = await fetch('/api/marketing/cs-setup-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contact: helpContact, note: helpNote }),
+      })
+      if (res.ok) { setHelpSent(true); setHelpContact(''); setHelpNote('') }
+    } finally { setHelpSending(false) }
+  }
+
   const webhookUrl = (pid: string) => `${origin}/api/marketing/cs-webhook/${pid}/${ownerId}`
   const copy = async (text: string, id: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(id); setTimeout(() => setCopied(null), 1500) } catch { /* noop */ }
@@ -142,6 +159,50 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         {msg && (
           <div className="mb-4 text-sm rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-3 py-2">{msg}</div>
         )}
+
+        {/* 找人幫我設定 */}
+        <div className="mb-5 rounded-xl border bg-card p-4">
+          {helpSent ? (
+            <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+              <Check className="h-4 w-4" /> 已送出，我們會盡快聯繫你協助設定。
+            </div>
+          ) : !helpOpen ? (
+            <button onClick={() => setHelpOpen(true)}
+              className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
+              <LifeBuoy className="h-4 w-4" /> 不會設定？找人幫我設定
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <LifeBuoy className="h-4 w-4 text-primary" /> 找人幫我設定
+              </div>
+              <p className="text-xs text-muted-foreground">留下聯絡方式，我們會主動聯繫，協助你綁定頻道與設定客服內容。</p>
+              <input
+                value={helpContact}
+                onChange={e => setHelpContact(e.target.value)}
+                placeholder="聯絡方式（電話 / LINE ID，方便我們聯繫你）"
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <textarea
+                value={helpNote}
+                onChange={e => setHelpNote(e.target.value)}
+                placeholder="想說明的需求（選填）"
+                rows={2}
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <div className="flex items-center gap-2">
+                <button onClick={sendHelpRequest} disabled={helpSending}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
+                  {helpSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  送出請求
+                </button>
+                <button onClick={() => setHelpOpen(false)} className="px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground">
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
