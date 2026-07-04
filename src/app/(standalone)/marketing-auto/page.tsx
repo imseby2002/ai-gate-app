@@ -15,6 +15,7 @@ import {
 import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 import { SimulationPanel } from '@/components/marketing/SimulationPanel'
 import type { SimulationResult } from '@/app/api/marketing/simulate/route'
+import { HelpTip } from '@/components/cs/HelpTip'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -5863,7 +5864,12 @@ function Unit12CustomerService({
             <Headphones className="h-4 w-4" style={{ color: 'var(--primary)' }} />
             {t('u12.title')}
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('u12.subtitle')}</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {t('u12.subtitle')}
+            <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="ml-2 text-primary font-medium hover:underline">
+              完整設定教學 →
+            </a>
+          </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
@@ -5900,8 +5906,11 @@ function Unit12CustomerService({
       {/* ── Tab: Platforms ──────────────────────────────────────────────────── */}
       {tab === 'platforms' && (
         <div className="space-y-3">
-          <p className="text-xs text-gray-500">
-            {t('u12.platformsIntro')}
+          <p className="text-xs text-gray-500 flex items-start gap-1.5">
+            <span>{t('u12.platformsIntro')}</span>
+            <HelpTip title="平台連結怎麼設定？" href="/cs/help#channels">
+              這裡跟「頻道綁定」頁是同一份資料，用來確認每個平台是否已連線、對 Telegram 做診斷或送測試訊息。若還沒綁定過任何平台，建議先看完整教學再開始填。
+            </HelpTip>
           </p>
           <div className="grid grid-cols-1 gap-3">
             {CS_PLATFORMS.map(p => (
@@ -6160,6 +6169,13 @@ function Unit12CustomerService({
       {/* ── Tab: AI Settings ────────────────────────────────────────────────── */}
       {tab === 'ai-settings' && (
         <div className="space-y-4">
+
+          <p className="text-xs text-gray-500 flex items-start gap-1.5">
+            <span>設定 AI 客服的角色、語氣、報價流程、優惠與 VIP 規則。</span>
+            <HelpTip title="AI 設定放什麼？" href="/cs/help#ai-settings">
+              「系統提示詞」放 AI 的個性和講話方式，不要放 FAQ 或價格——具體資料請到「知識庫」分頁，價格請到「定價計算機」分頁，AI 才不會亂猜。
+            </HelpTip>
+          </p>
 
           {/* Industry template banner */}
           {industry && CS_INDUSTRY_TEMPLATES[industry] && (
@@ -6649,7 +6665,12 @@ function Unit12CustomerService({
       {tab === 'dialogue-files' && (
         <div className="space-y-4">
           <div>
-            <div className="text-sm font-medium text-gray-700">{t('u12.tabKnowledge')}</div>
+            <div className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+              {t('u12.tabKnowledge')}
+              <HelpTip title="知識庫要放什麼？" href="/cs/help#dialogue-files">
+                放常見問題與答案、房型/商品介紹、規定條款等「具體資訊」，AI 會優先從這裡找答案。內容愈完整，AI 答錯機率愈低。
+              </HelpTip>
+            </div>
             <div className="text-xs text-gray-400 mt-0.5">{t('u12.kbHint')}</div>
           </div>
 
@@ -6729,7 +6750,12 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700">{t('u12.extSources')}</div>
+              <div className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                {t('u12.extSources')}
+                <HelpTip title="資料來源怎麼串接？" href="/cs/help#data-sources">
+                  把 Google Sheets 權限改成「知道連結的人可以查看」，貼上表單網址、設定查詢欄位與觸發關鍵字，AI 就能即時查表回答（例如訂單密碼、物流狀態）。
+                </HelpTip>
+              </div>
               <div className="text-xs text-gray-400 mt-0.5">{t('u12.extSourcesHint')}</div>
             </div>
             <button onClick={openAddDs}
@@ -7097,7 +7123,12 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700">{t('u12.tabPricing')}</div>
+              <div className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                {t('u12.tabPricing')}
+                <HelpTip title="報價計算機怎麼用？" href="/cs/help#pricing">
+                  填入房型/票種的平日價、假日價、團體折扣後，AI 回覆價格時會精確套用這裡的數字計算，不會用猜的。設定完可到「測試」分頁實際問價驗證。
+                </HelpTip>
+              </div>
               <div className="text-xs text-gray-400 mt-0.5">{t('u12.pricingHint')}</div>
             </div>
             {!editingPc && (
@@ -7231,6 +7262,9 @@ function Unit12CustomerService({
               <div className="w-2 h-2 rounded-full bg-green-400" />
               <span className="text-xs font-medium text-gray-700">{t('u12.testChat')}</span>
               <span className="text-[10px] text-gray-400">{t('u12.testRouting')}</span>
+              <HelpTip title="測試對話怎麼用？" href="/cs/help#test">
+                在下方輸入框假裝自己是客人打字提問，確認 AI 有沒有正確套用知識庫、報價與升級規則。滿意的回答可以一鍵加入知識庫。
+              </HelpTip>
 
               <div className="ml-auto flex items-center gap-1.5 flex-wrap">
                 {/* 智慧草稿 toggle */}
@@ -7543,6 +7577,12 @@ function Unit12CustomerService({
       {/* ── Tab: Logs ───────────────────────────────────────────────────────── */}
       {tab === 'logs' && (
         <div className="space-y-4">
+          <p className="text-xs text-gray-500 flex items-start gap-1.5">
+            <span>回答量、風險分布、回應速度與熱門問題統計，幫你了解客服狀況、找出還要補強知識庫的地方。</span>
+            <HelpTip title="紀錄與報表怎麼看？" href="/cs/help#logs">
+              「熱點問題」代表最多客人問但知識庫可能還沒涵蓋好的內容，可以優先補進「知識庫」分頁。
+            </HelpTip>
+          </p>
           {/* ── 客服績效報表 ── */}
           {logs.length > 0 && (() => {
             const total = logs.length
@@ -7716,6 +7756,9 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{t('u12.ticketSystem')}</span>
+            <HelpTip title="工單系統怎麼用？" href="/cs/help#tickets">
+              客人要求真人協助、或 AI 判斷需要升級處理時會自動建立工單，在這裡追蹤處理進度即可，不用另外開表格記錄。
+            </HelpTip>
             <div className="flex gap-1.5 ml-auto flex-wrap">
               {['all', 'open', 'in_progress', 'resolved', 'closed'].map(s => (
                 <button key={s} onClick={() => setTicketFilter(s)}
@@ -7794,6 +7837,9 @@ function Unit12CustomerService({
         <div className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{t('u12.unifiedInbox')}</span>
+            <HelpTip title="統一收件匣怎麼用？" href="/cs/help#inbox">
+              所有平台的對話都集中在這裡，可以直接回覆客人，也能切換「AI 自動回覆」或「真人接管」。也可以安裝成手機 App，方便隨時查看。
+            </HelpTip>
             <div className="flex gap-1.5 ml-auto flex-wrap">
               {['all', 'line', 'whatsapp', 'telegram', 'test'].map(p => (
                 <button key={p} onClick={() => { setInboxPlatformFilter(p); }}

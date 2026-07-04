@@ -153,6 +153,9 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         <div className="flex items-center gap-3 mb-5">
           <Link href="/cs" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
           <h1 className="text-lg sm:text-xl font-bold">客服頻道綁定</h1>
+          <Link href="/cs/help#channels" target="_blank" className="ml-auto text-xs text-primary font-medium hover:underline whitespace-nowrap">
+            查看設定教學 →
+          </Link>
         </div>
 
         {!isOwner && (
