@@ -79,6 +79,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
   const [helpSending, setHelpSending] = useState(false)
   const [helpSent, setHelpSent] = useState(false)
   const [helpError, setHelpError] = useState<string | null>(null)
+  const [helpPriceUsd, setHelpPriceUsd] = useState<number | null>(null)
 
   useEffect(() => { setOrigin(window.location.origin) }, [])
 
@@ -134,8 +135,10 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         body: JSON.stringify({ contact: helpContact, note: helpNote }),
       })
       const data = await res.json()
-      if (res.ok) { setHelpSent(true); setHelpContact(''); setHelpNote('') }
-      else setHelpError(data.error ?? '送出失敗，請稍後再試')
+      if (res.ok) {
+        setHelpSent(true); setHelpContact(''); setHelpNote('')
+        setHelpPriceUsd(data.isFree ? 0 : (data.priceUsd ?? null))
+      } else setHelpError(data.error ?? '送出失敗，請稍後再試')
     } catch {
       setHelpError('網路錯誤，請稍後再試')
     } finally { setHelpSending(false) }
@@ -173,7 +176,9 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         <div className="mb-5 rounded-xl border bg-card p-4">
           {helpSent ? (
             <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
-              <Check className="h-4 w-4" /> 已送出，我們會盡快聯繫你協助設定。
+              <Check className="h-4 w-4" />
+              已送出，我們會盡快聯繫你協助設定。
+              {helpPriceUsd != null && (helpPriceUsd > 0 ? `（本次協助費用 $${helpPriceUsd} 美元）` : '（本次為免費額度內）')}
             </div>
           ) : !helpOpen ? (
             <button onClick={() => setHelpOpen(true)}
