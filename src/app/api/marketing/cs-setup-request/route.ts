@@ -2,14 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
+import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { Resend } from 'resend'
 
-const MONTHLY_QUOTA = 2
+// 純防灌爆用的安全上限，跟方案的免費額度是兩件事——免費額度用完仍可送出（改收費），
+// 但不能無限送出洗版客服信箱。
+const HARD_CAP_PER_MONTH = 10
 
 // POST /api/marketing/cs-setup-request
 // 民宿擁有者不會自己綁定頻道/設知識庫時，送出「找人幫我設定」請求。
 // 存進 cs_setup_requests，並 email 通知客服人員跟進。
-// 每間民宿（依 owner_id，不分哪個協作者送出）每月最多 MONTHLY_QUOTA 次。
+// 每個方案的免費額度不同（見 getCsEntitlements）；超過免費額度仍可送出，
+// 但會標記 is_free=false 需另外收費——目前是人工對帳，尚未接自動扣款。
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const ctx = await getBnbContext(supabase, 'cs')
@@ -17,9 +21,11 @@ export async function POST(req: NextRequest) {
 
   const { industry = 'homestay', contact = '', note = '' } = await req.json()
 
-  // 用 admin client 計數：RLS 只讓使用者看到自己送出的請求，
+  // 用 admin client 查方案與計數：RLS 只讓使用者看到自己送出的請求，
   // 但額度要以民宿（owner_id）為單位，涵蓋所有協作者送出的請求。
   const admin = createAdminClient()
+  const { features } = await getCsEntitlements(admin, ctx.ownerId)
+
   const nowTaipei = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }))
   const monthStart = `${nowTaipei.getFullYear()}-${String(nowTaipei.getMonth() + 1).padStart(2, '0')}-01T00:00:00+08:00`
   const { count } = await admin
@@ -28,12 +34,17 @@ export async function POST(req: NextRequest) {
     .eq('owner_id', ctx.ownerId)
     .gte('created_at', monthStart)
 
-  if ((count ?? 0) >= MONTHLY_QUOTA) {
+  const usedThisMonth = count ?? 0
+
+  if (usedThisMonth >= HARD_CAP_PER_MONTH) {
     return NextResponse.json(
-      { error: `本月已達 ${MONTHLY_QUOTA} 次協助設定申請上限，如需更多次請儲值後再申請或聯繫我們加購。` },
+      { error: '本月申請次數過多，請聯繫我們確認狀況。' },
       { status: 429 },
     )
   }
+
+  const isFree = usedThisMonth < features.assistedSetup.freePerMonth
+  const priceUsd = features.assistedSetup.priceUsd
 
   const { data: row, error } = await supabase
     .from('cs_setup_requests')
@@ -43,6 +54,7 @@ export async function POST(req: NextRequest) {
       industry,
       contact: contact?.trim() || null,
       note: note?.trim() || null,
+      is_free: isFree,
     })
     .select('id')
     .single()
@@ -57,13 +69,14 @@ export async function POST(req: NextRequest) {
       await resend.emails.send({
         from: `AI GATE 客服協助 <${fromEmail}>`,
         to: [notifyTo],
-        subject: `[CS 設定協助] ${ctx.user.email ?? ctx.user.id} 提出請求`,
+        subject: `[CS 設定協助] ${ctx.user.email ?? ctx.user.id} 提出請求${isFree ? '' : `（需收費 $${priceUsd}）`}`,
         text: [
           `帳號 email：${ctx.user.email ?? '（未知）'}`,
           `owner_id：${ctx.ownerId}`,
           `產業：${industry}`,
           `聯絡方式：${contact || '（未留）'}`,
           `留言：${note || '（無）'}`,
+          `計費：${isFree ? '免費額度內' : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
         ].join('\n'),
       })
     } catch {
@@ -71,5 +84,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, id: row.id })
+  return NextResponse.json({ ok: true, id: row.id, isFree, priceUsd: isFree ? 0 : priceUsd })
 }
