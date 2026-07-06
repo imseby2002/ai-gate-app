@@ -13,6 +13,7 @@ import { generateText } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
+import { getCsEntitlements } from '@/lib/cs/entitlements'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -982,10 +983,13 @@ async function getAIReply(
     ]
 
     // High risk → try Claude first (Claude also supports vision)
+    // 免費方案不解鎖 Claude 升級，一律用 Gemini 回覆（見 cs_subscriptions 方案設定）
     const HIGH_RISK_KEYWORDS = ['退款', '退貨', '投訴', '抱怨', '法律', 'refund', 'complaint', 'lawsuit']
     const isHighRisk = HIGH_RISK_KEYWORDS.some(kw => message.toLowerCase().includes(kw.toLowerCase()))
+    const { features: planFeatures } = await getCsEntitlements(getServiceClient(), userId)
+    const claudeAllowed = planFeatures.claudeEscalation !== 'off'
 
-    if (isHighRisk) {
+    if (isHighRisk && claudeAllowed) {
       const anthropicKey = process.env.ANTHROPIC_API_KEY
       if (anthropicKey) {
         try {

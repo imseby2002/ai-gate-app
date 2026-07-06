@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getCsEntitlements } from '@/lib/cs/entitlements'
 
 // Fields that are NOT sensitive and can be returned as plain text
 const NON_SECRET_FIELDS = new Set([
@@ -65,11 +66,12 @@ export async function POST(req: NextRequest) {
   // Merge with existing credentials — empty string fields keep the old value
   const { data: existing } = await supabase
     .from('social_platform_credentials')
-    .select('credentials')
+    .select('credentials, is_connected')
     .eq('user_id', user.id)
     .eq('platform', platform)
     .single()
 
+  const alreadyConnected = existing?.is_connected ?? false
   const existingCreds = (existing?.credentials as Record<string, string>) ?? {}
   const merged: Record<string, string> = { ...existingCreds }
 
@@ -80,6 +82,24 @@ export async function POST(req: NextRequest) {
   }
 
   const is_connected = Object.values(merged).some(v => String(v).trim() !== '')
+
+  // 方案的平台數上限：只在「新增一個尚未連線的平台」時檢查，已連線平台可以繼續編輯憑證
+  if (is_connected && !alreadyConnected) {
+    const { features } = await getCsEntitlements(supabase, user.id)
+    if (Number.isFinite(features.platformLimit)) {
+      const { count } = await supabase
+        .from('social_platform_credentials')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_connected', true)
+      if ((count ?? 0) >= features.platformLimit) {
+        return NextResponse.json(
+          { error: `目前方案最多可綁定 ${features.platformLimit} 個平台，請升級方案或先取消其他平台的綁定。` },
+          { status: 403 },
+        )
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('social_platform_credentials')
