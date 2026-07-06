@@ -5,6 +5,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock, LifeBuoy, Send,
 } from 'lucide-react'
+import { CsPlanUpgrade } from './CsPlanUpgrade'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -160,6 +161,8 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
             查看設定教學 →
           </Link>
         </div>
+
+        {isOwner && <CsPlanUpgrade />}
 
         {!isOwner && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
