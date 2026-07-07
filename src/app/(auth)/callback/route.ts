@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) {
+      console.error('[callback] exchangeCodeForSession 失敗:', error.message, { code: error.code, status: error.status })
+    }
     if (!error) {
       // 功能頁落回對應子域：callback 可能落在 www，依系統重建子域 host。
       // session cookie 已設 domain=.im-tourist.com 跨子域共享，跳轉後仍保持登入。
@@ -40,5 +43,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  if (!code) {
+    console.error('[callback] 缺少 code 參數', { url: request.url })
+  }
   return NextResponse.redirect(`${origin}/login?error=auth_callback_error`)
 }

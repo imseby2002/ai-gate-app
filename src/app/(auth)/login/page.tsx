@@ -7,7 +7,12 @@ import { SYSTEM_LIST } from '@/lib/systems'
 export const dynamic = 'force-dynamic'
 
 // 系統選擇頁（全功能主登入頁）：已登入者一律導回 /apps（功能選單）
-export default async function LoginChooser() {
+export default async function LoginChooser({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error: authError } = await searchParams
   const supabase = await createClient()
   // 過期/失效的 refresh token（殘留的無效 session cookie）會讓 getUser() 拋出例外，
   // 沒有 try/catch 會直接讓這個 server component 掛掉；當作未登入處理即可。
@@ -29,6 +34,12 @@ export default async function LoginChooser() {
           </div>
           <p className="text-gray-500 text-sm">請選擇要進入的系統</p>
         </div>
+
+        {authError && (
+          <div className="mb-4 p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200 text-center">
+            Google 登入未完成，請重新登入一次；若持續發生請聯繫管理員。
+          </div>
+        )}
 
         <div className="space-y-2.5">
           {SYSTEM_LIST.map(s => (
