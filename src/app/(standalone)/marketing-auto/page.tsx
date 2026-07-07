@@ -5890,6 +5890,9 @@ function Unit12CustomerService({
             <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="ml-2 text-primary font-medium hover:underline">
               完整設定教學 →
             </a>
+            <a href="/cs/settings" className="ml-2 text-primary font-medium hover:underline">
+              升級方案 →
+            </a>
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
