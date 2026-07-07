@@ -7,6 +7,7 @@ import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
+import { getCsEntitlements } from '@/lib/cs/entitlements'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -972,9 +973,13 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   const customerSection = sellLines.join('\n')
 
   // ── Build system prompt ───────────────────────────────────────────────────
+  // 免費方案不解鎖 Claude 升級，測試分頁的行為要跟正式客服一致
+  const { features: planFeatures } = await getCsEntitlements(supabase, user.id)
+  const claudeAllowed = planFeatures.claudeEscalation !== 'off'
   const shouldEscalate =
-    risk === 'high' ||
-    (escalationThreshold === 'medium' && (risk === 'medium' || risk === 'high'))
+    claudeAllowed &&
+    (risk === 'high' ||
+      (escalationThreshold === 'medium' && (risk === 'medium' || risk === 'high')))
 
   const langInstruction = language === 'auto'
     ? '請使用與客戶相同的語言回覆。'

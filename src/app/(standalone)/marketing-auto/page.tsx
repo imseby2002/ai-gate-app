@@ -16,6 +16,8 @@ import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 import { SimulationPanel } from '@/components/marketing/SimulationPanel'
 import type { SimulationResult } from '@/app/api/marketing/simulate/route'
 import { HelpTip } from '@/components/cs/HelpTip'
+import { Lock } from 'lucide-react'
+import type { CsPlanFeatures } from '@/lib/cs/entitlements'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -4915,6 +4917,25 @@ function Unit12CustomerService({
   const industryLabel = (id: string) => t.has(`u12.industry.${id}`) ? t(`u12.industry.${id}`) : (CS_INDUSTRY_TEMPLATES[id]?.label ?? id)
   const [tab, setTab] = useState<Cs12Tab>('platforms')
 
+  // CS 方案權限（決定哪些分頁要鎖定顯示升級提示）
+  const [csFeatures, setCsFeatures] = useState<CsPlanFeatures | null>(null)
+  useEffect(() => {
+    fetch('/api/marketing/cs-plan')
+      .then(r => r.json())
+      .then(d => setCsFeatures(d.features ?? null))
+      .catch(() => {})
+  }, [])
+
+  const renderLockedUpgrade = (featureName: string) => (
+    <div className="border-2 border-dashed rounded-xl p-8 text-center space-y-3 bg-gray-50">
+      <Lock className="h-6 w-6 text-gray-400 mx-auto" />
+      <p className="text-sm font-medium text-gray-700">「{featureName}」為付費方案功能</p>
+      <p className="text-xs text-gray-400">升級方案即可解鎖使用。</p>
+      <a href="/cs/help" target="_blank" rel="noopener noreferrer"
+        className="inline-block text-xs text-primary font-medium hover:underline">了解方案 →</a>
+    </div>
+  )
+
   // AI settings
   const [systemPrompt, setSystemPrompt] = useState(savedData?.systemPrompt ?? '')
   const [knowledgeBase, setKnowledgeBase] = useState(savedData?.knowledgeBase ?? '')
@@ -5881,6 +5902,13 @@ function Unit12CustomerService({
               inbox: t('u12.tabInbox'),
             }
             const isNew = (tb === 'tickets' || tb === 'inbox') && tab !== tb
+            const gatedFlag: Partial<Record<Cs12Tab, boolean>> = {
+              'data-sources': csFeatures?.dataSources,
+              pricing: csFeatures?.pricingCalculator,
+              tickets: csFeatures?.tickets,
+              inbox: csFeatures?.inbox,
+            }
+            const isLocked = csFeatures != null && gatedFlag[tb] === false
             return (
               <button key={tb}
                 onClick={() => {
@@ -5889,10 +5917,11 @@ function Unit12CustomerService({
                   if (tb === 'inbox') loadInbox()
                   if (tb === 'data-sources') loadFaq(industry ?? 'homestay')
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative flex items-center gap-1 ${
                   tab === tb ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
                 style={tab === tb ? { background: 'var(--primary)' } : {}}>
+                {isLocked && <Lock className="h-3 w-3" />}
                 {labels[tb]}
                 {isNew && tb === 'inbox' && inboxMessages.length === 0 && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
@@ -6253,6 +6282,19 @@ function Unit12CustomerService({
             </div>
           </div>
 
+          {/* 進階 AI 設定（免費方案僅開放系統提示詞，以下全部鎖定） */}
+          <div className={csFeatures && csFeatures.aiSettingsScope === 'basic' ? 'relative' : ''}>
+            {csFeatures && csFeatures.aiSettingsScope === 'basic' && (
+              <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-[1px] rounded-xl flex items-center justify-center p-4">
+                <div className="bg-white border rounded-xl shadow-lg px-6 py-4 text-center space-y-2 max-w-xs">
+                  <Lock className="h-5 w-5 text-gray-400 mx-auto" />
+                  <p className="text-sm font-medium text-gray-700">進階 AI 設定為付費方案功能</p>
+                  <p className="text-xs text-gray-400">升級方案即可解鎖升級門檻、報價流程、優惠、VIP 等設定</p>
+                  <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-primary font-medium hover:underline">了解方案 →</a>
+                </div>
+              </div>
+            )}
+          <div className={`space-y-4 ${csFeatures && csFeatures.aiSettingsScope === 'basic' ? 'opacity-30 pointer-events-none select-none' : ''}`}>
           {/* Escalation threshold */}
           <div className="border rounded-xl p-4 space-y-3">
             <span className="font-medium text-sm text-gray-700">{t('u12.escalationThreshold')}</span>
@@ -6643,6 +6685,8 @@ function Unit12CustomerService({
               className="text-xs text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 flex items-center gap-1"
             >+ {t('u12.addNotifyChannel')}</button>
           </div>
+          </div>
+          </div>
 
           <button onClick={saveSettings} disabled={savingSettings}
             className="w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70"
@@ -6746,7 +6790,7 @@ function Unit12CustomerService({
       )}
 
       {/* ── Tab: Data Sources ───────────────────────────────────────────────── */}
-      {tab === 'data-sources' && (
+      {tab === 'data-sources' && (csFeatures && !csFeatures.dataSources ? renderLockedUpgrade('資料來源') : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -7116,10 +7160,10 @@ function Unit12CustomerService({
             )}
           </div>
         </div>
-      )}
+      ))}
 
       {/* ── Tab: Pricing Calculator ─────────────────────────────────────────── */}
-      {tab === 'pricing' && (
+      {tab === 'pricing' && (csFeatures && !csFeatures.pricingCalculator ? renderLockedUpgrade('報價計算機') : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -7251,7 +7295,7 @@ function Unit12CustomerService({
             <div>• {t('u12.pcUsage3')}</div>
           </div>
         </div>
-      )}
+      ))}
 
       {/* ── Tab: Test ───────────────────────────────────────────────────────── */}
       {tab === 'test' && (
@@ -7530,7 +7574,7 @@ function Unit12CustomerService({
       )}
 
       {/* ── FAQ 知識庫管理（data-sources tab 內） ──────────────────────────────── */}
-      {tab === 'data-sources' && (
+      {tab === 'data-sources' && csFeatures?.dataSources && (
         <div className="space-y-3 mt-2">
           <div className="flex items-center justify-between">
             <div>
@@ -7752,7 +7796,7 @@ function Unit12CustomerService({
       )}
 
       {/* ── Tab: Tickets ──────────────────────────────────────────────────────── */}
-      {tab === 'tickets' && (
+      {tab === 'tickets' && (csFeatures && !csFeatures.tickets ? renderLockedUpgrade('工單系統') : (
         <div className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{t('u12.ticketSystem')}</span>
@@ -7830,10 +7874,10 @@ function Unit12CustomerService({
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {/* ── Tab: Inbox ────────────────────────────────────────────────────────── */}
-      {tab === 'inbox' && (
+      {tab === 'inbox' && (csFeatures && !csFeatures.inbox ? renderLockedUpgrade('統一收件匣') : (
         <div className="space-y-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-semibold text-gray-800">{t('u12.unifiedInbox')}</span>
@@ -7902,7 +7946,7 @@ function Unit12CustomerService({
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {/* ── 報名表單 Modal ── */}
       {bookingFormOpen && bookingFormConfig && (
