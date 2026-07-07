@@ -41,6 +41,12 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
         setAllowed(admin || !prof?.enabled_modules || prof.enabled_modules.includes(system))
       }
       setChecking(false)
+    }).catch(async () => {
+      // 過期/失效的 refresh token 會讓 getUser() 直接 reject（例如殘留的無效 session cookie），
+      // 沒有 catch 的話 checking 永遠不會變 false，畫面卡在轉圈圈。清掉壞掉的 session 後正常顯示登入表單。
+      try { await sb.auth.signOut() } catch { /* ignore */ }
+      setSessionEmail(null)
+      setChecking(false)
     })
   }, [system])
 

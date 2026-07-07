@@ -9,7 +9,13 @@ export const dynamic = 'force-dynamic'
 // 系統選擇頁（全功能主登入頁）：已登入者一律導回 /apps（功能選單）
 export default async function LoginChooser() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // 過期/失效的 refresh token（殘留的無效 session cookie）會讓 getUser() 拋出例外，
+  // 沒有 try/catch 會直接讓這個 server component 掛掉；當作未登入處理即可。
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch { /* 視為未登入 */ }
   if (user) {
     redirect('/apps')
   }
