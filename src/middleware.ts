@@ -23,43 +23,9 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    let supabaseResponse = NextResponse.next({ request })
-
     // im-tourist 多子域：auth cookie 設 domain=.im-tourist.com 跨子域共享。localhost/preview 不設。
     const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
     const cookieDomain = host.endsWith('im-tourist.com') ? '.im-tourist.com' : undefined
-
-    // 這裡是伺服器端呼叫 Supabase（不是瀏覽器直接呼叫），Supabase 預設看到的 IP
-    // 會是 Vercel 自己的出口 IP，等於全站所有使用者共用同一組 rate limit 額度。
-    // 轉發真實客戶端 IP，讓限流以實際使用者為單位計算。
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-      || request.headers.get('x-real-ip')
-      || undefined
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
-        ...(clientIp ? { global: { headers: { 'Sb-Forwarded-For': clientIp } } } : {}),
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value)
-            )
-            supabaseResponse = NextResponse.next({ request })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
-            )
-          },
-        },
-      }
-    )
-
-    const { data: { user } } = await supabase.auth.getUser()
 
     // ── 子域名映射 ────────────────────────────────────────────
     // cs.im-tourist.com / → /cs 首頁；功能內 /cs/* 路徑在該子域名下照常運作。
@@ -101,7 +67,61 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/api/marketing/cs-webhook') ||
       pathname.startsWith('/api/marketing/telegram-webhook')
 
-    if (!user && !isPublic) {
+    // API 呼叫一律不在 middleware 做驗證：每支 API route 自己會用
+    // lib/supabase/server.ts 的 createClient() 檢查登入狀態，middleware 這裡
+    // 完全是多餘的。一個頁面同時載入時可能夾帶幾十個 API 請求，每個都在
+    // middleware 呼叫 getUser()（觸發 token 刷新）會同時搶用同一組
+    // （一次性）refresh token，是先前 rate limit 風暴的主因。
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.next({ request })
+    }
+
+    // 公開頁面不需要知道使用者是誰，略過 getUser()（同樣是為了不讓每個
+    // manifest/sw.js/靜態頁請求都各自觸發一次 token 刷新）。
+    if (isPublic) {
+      if (needSubRewrite) {
+        const url = request.nextUrl.clone()
+        url.pathname = subHome!
+        return NextResponse.rewrite(url, { request })
+      }
+      return NextResponse.next({ request })
+    }
+
+    let supabaseResponse = NextResponse.next({ request })
+
+    // 這裡是伺服器端呼叫 Supabase（不是瀏覽器直接呼叫），Supabase 預設看到的 IP
+    // 會是 Vercel 自己的出口 IP，等於全站所有使用者共用同一組 rate limit 額度。
+    // 轉發真實客戶端 IP，讓限流以實際使用者為單位計算。
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || undefined
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
+        ...(clientIp ? { global: { headers: { 'Sb-Forwarded-For': clientIp } } } : {}),
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            )
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
       const redirectUrl = request.nextUrl.clone()
       // 導向登入頁：優先依「子域名」決定系統（避免 /marketing-auto 路徑反查歧義），
       // 無對應子域時才退回依路徑反查；都無則導向系統選擇頁
