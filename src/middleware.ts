@@ -9,6 +9,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request })
   }
 
+  // Next.js 的連結預先載入（prefetch）會在畫面渲染時，對畫面上每個連結各發一次請求。
+  // 一個頁面有好幾個連結時，這些 prefetch 幾乎同時抵達，每次都會呼叫 getUser()
+  // 嘗試刷新 token，變成好幾個請求同時搶用同一組（一次性）refresh token，
+  // 觸發 Supabase 的 rate limit。Prefetch 本來就是「猜測性」載入，之後真的
+  // 點擊時 middleware 還是會照常執行一次，這裡跳過不影響正確性。
+  const isPrefetch =
+    request.headers.get('next-router-prefetch') === '1' ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('sec-purpose') === 'prefetch'
+  if (isPrefetch) {
+    return NextResponse.next({ request })
+  }
+
   try {
     let supabaseResponse = NextResponse.next({ request })
 
