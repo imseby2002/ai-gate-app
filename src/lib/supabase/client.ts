@@ -17,7 +17,14 @@ export function createClient() {
   browserClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    domain ? { cookieOptions: { domain } } : undefined
+    {
+      ...(domain ? { cookieOptions: { domain } } : {}),
+      // 暫時關閉背景自動刷新計時器：目前線上有殘留的壞掉 refresh token 造成
+      // 持續重試風暴（每秒十幾筆打 /token），懷疑跟這個背景計時器的重試行為
+      // 有關。關閉後 session 快過期時不會在背景自動換新，使用者可能需要
+      // 偶爾重新登入，但先止血比較重要。問題排除後應該要拿掉這個設定。
+      auth: { autoRefreshToken: false },
+    }
   )
   return browserClient
 }
