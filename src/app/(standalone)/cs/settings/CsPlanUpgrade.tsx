@@ -172,7 +172,7 @@ export function CsPlanUpgrade() {
 
       <p className="text-[11px] text-muted-foreground border-t pt-2">
         「協助設定」與「客製功能」不同：協助設定僅協助頻道串接與參數設定，依方案有免費額度；
-        客製功能是提供方案本身沒有的功能或需要改寫程式，一律付費、沒有免費額度——
+        客製功能是提供方案本身沒有的功能或需要改寫程式——
         基礎客製固定 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsd}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}），
         進階或複雜功能{CS_FEATURE_REQUEST_PRICING.advancedNote}。
       </p>
