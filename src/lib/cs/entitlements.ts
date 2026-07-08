@@ -16,7 +16,6 @@ export interface CsPlanFeatures {
   autoLearning: boolean
   pricingCalculator: boolean
   assistedSetup: { freePerMonth: number; priceUsd: number }
-  featureRequest?: { freePerMonth: number; priceUsd: number; scope: 'basic' | 'advanced' }
 }
 
 export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
@@ -55,7 +54,6 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     autoLearning: true,
     pricingCalculator: false,
     assistedSetup: { freePerMonth: 1, priceUsd: 15 },
-    featureRequest: { freePerMonth: 1, priceUsd: 20, scope: 'basic' },
   },
   enterprise: {
     platformLimit: Infinity,
@@ -68,8 +66,16 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     autoLearning: true,
     pricingCalculator: true,
     assistedSetup: { freePerMonth: 2, priceUsd: 15 },
-    featureRequest: { freePerMonth: 1, priceUsd: 15, scope: 'advanced' },
   },
+}
+
+// 客製功能（新增功能／需改寫程式）：與「協助設定」（僅頻道串接與設定）不同，
+// 一律付費、沒有免費額度，所有方案適用同一套定價。
+// 基礎客製：固定 $15/次，需審核是否可行；進階／複雜功能：無固定價，個別報價。
+export const CS_FEATURE_REQUEST_PRICING = {
+  basicPriceUsd: 15,
+  basicNote: '需審核',
+  advancedNote: '另外報價',
 }
 
 /**

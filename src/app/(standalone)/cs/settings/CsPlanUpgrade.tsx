@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2, Check, Sparkles } from 'lucide-react'
+import { CS_FEATURE_REQUEST_PRICING } from '@/lib/cs/entitlements'
 
 type CsPlan = 'free' | 'pro' | 'team' | 'enterprise'
 type Cycle = 'monthly' | 'yearly'
@@ -21,12 +22,26 @@ const PLAN_CARDS: Array<{
   },
   {
     plan: 'team', name: 'TEAM', monthlyId: 'team_monthly', yearlyId: 'team_yearly', monthlyUsd: 29, yearlyUsd: 278,
-    features: ['包含 PRO 全部功能', '無限協作人員', '每月 1 次免費協助設定', '每月 1 次基本客製功能'],
+    features: ['包含 PRO 全部功能', '無限協作人員', '每月 1 次免費協助設定'],
   },
   {
     plan: 'enterprise', name: '企業', monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly', monthlyUsd: 41, yearlyUsd: 399,
     features: ['包含 TEAM 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'],
   },
+]
+
+// 功能比較表：每一列對應一個功能，四欄分別是免費／PRO／TEAM／企業的值
+const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, string] }> = [
+  { label: '平台串接數', values: ['1 個', '3 個', '3 個', '不限'] },
+  { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'] },
+  { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'] },
+  { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'] },
+  { label: '資料來源管理', values: ['—', '✓', '✓', '✓'] },
+  { label: '工單系統', values: ['—', '✓', '✓', '✓'] },
+  { label: '統一收件匣', values: ['—', '✓', '✓', '✓'] },
+  { label: '自動學習', values: ['—', '✓', '✓', '✓'] },
+  { label: '報價計算機', values: ['—', '—', '—', '✓'] },
+  { label: '協助設定（免費額度／月）', values: ['0（$25/次）', '0（$15/次）', '1 次', '2 次'] },
 ]
 
 export function CsPlanUpgrade() {
@@ -130,6 +145,37 @@ export function CsPlanUpgrade() {
         })}
       </div>
       <p className="text-[11px] text-muted-foreground">付款後方案立即生效，到期前不會自動續訂，需自行再次購買延續。</p>
+
+      <div className="overflow-x-auto -mx-1">
+        <table className="w-full text-[11px] border-collapse min-w-[480px]">
+          <thead>
+            <tr className="text-muted-foreground">
+              <th className="text-left font-medium py-1.5 px-1">功能比較</th>
+              <th className="text-center font-medium py-1.5 px-1">免費</th>
+              <th className="text-center font-medium py-1.5 px-1">PRO</th>
+              <th className="text-center font-medium py-1.5 px-1">TEAM</th>
+              <th className="text-center font-medium py-1.5 px-1">企業</th>
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARISON_ROWS.map(row => (
+              <tr key={row.label} className="border-t">
+                <td className="text-left py-1.5 px-1 text-muted-foreground">{row.label}</td>
+                {row.values.map((v, i) => (
+                  <td key={i} className="text-center py-1.5 px-1">{v}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground border-t pt-2">
+        「協助設定」與「客製功能」不同：協助設定僅協助頻道串接與參數設定，依方案有免費額度；
+        客製功能是提供方案本身沒有的功能或需要改寫程式，一律付費、沒有免費額度——
+        基礎客製固定 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsd}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}），
+        進階或複雜功能{CS_FEATURE_REQUEST_PRICING.advancedNote}。
+      </p>
     </div>
   )
 }
