@@ -43,7 +43,7 @@ export default async function LoginChooser({
 
         <div className="space-y-2.5">
           {SYSTEM_LIST.map(s => (
-            <Link key={s.key} href={`/login/${s.key}`}
+            <Link key={s.key} href={`/login/${s.key}`} prefetch={false}
               className="flex items-center justify-between gap-3 bg-white rounded-xl border p-4 hover:border-indigo-300 hover:shadow-sm transition-all group">
               <div className="min-w-0">
                 <div className="font-semibold text-gray-900">{s.label}</div>
