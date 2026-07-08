@@ -12,15 +12,28 @@ async function cookieDomain(): Promise<string | undefined> {
   }
 }
 
+// 伺服器端呼叫 Supabase 時，預設看到的 IP 是 Vercel 出口 IP（全站共用），
+// 轉發真實客戶端 IP 讓 Supabase 的 rate limit 以實際使用者為單位計算。
+async function clientIp(): Promise<string | undefined> {
+  try {
+    const h = await headers()
+    return h.get('x-forwarded-for')?.split(',')[0]?.trim() || h.get('x-real-ip') || undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function createClient() {
   const cookieStore = await cookies()
   const domain = await cookieDomain()
+  const ip = await clientIp()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       ...(domain ? { cookieOptions: { domain } } : {}),
+      ...(ip ? { global: { headers: { 'Sb-Forwarded-For': ip } } } : {}),
       cookies: {
         getAll() {
           return cookieStore.getAll()

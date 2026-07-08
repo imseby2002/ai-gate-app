@@ -16,11 +16,19 @@ export async function middleware(request: NextRequest) {
     const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
     const cookieDomain = host.endsWith('im-tourist.com') ? '.im-tourist.com' : undefined
 
+    // 這裡是伺服器端呼叫 Supabase（不是瀏覽器直接呼叫），Supabase 預設看到的 IP
+    // 會是 Vercel 自己的出口 IP，等於全站所有使用者共用同一組 rate limit 額度。
+    // 轉發真實客戶端 IP，讓限流以實際使用者為單位計算。
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || undefined
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         ...(cookieDomain ? { cookieOptions: { domain: cookieDomain } } : {}),
+        ...(clientIp ? { global: { headers: { 'Sb-Forwarded-For': clientIp } } } : {}),
         cookies: {
           getAll() {
             return request.cookies.getAll()
