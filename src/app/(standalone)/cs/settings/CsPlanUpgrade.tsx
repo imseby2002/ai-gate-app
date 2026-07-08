@@ -119,16 +119,29 @@ export function CsPlanUpgrade() {
         {PLAN_CARDS.map(c => {
           const isCurrent = plan === c.plan
           const packageId = cycle === 'monthly' ? c.monthlyId : c.yearlyId
-          const price = cycle === 'monthly' ? c.monthlyUsd : c.yearlyUsd
+          const yearlyMonthlyEquiv = c.yearlyUsd / 12
+          const savingsPct = Math.round((1 - c.yearlyUsd / (c.monthlyUsd * 12)) * 100)
           return (
             <div key={c.plan} className={`rounded-xl border p-4 space-y-2 ${isCurrent ? 'border-primary bg-primary/5' : ''}`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold">{c.name}</span>
                 {isCurrent && <span className="text-[10px] flex items-center gap-1 text-primary"><Check className="h-3 w-3" />使用中</span>}
               </div>
-              <div className="text-lg font-bold">
-                ${price} <span className="text-xs font-normal text-muted-foreground">美元/{cycle === 'monthly' ? '月' : '年'}</span>
-              </div>
+              {cycle === 'monthly' ? (
+                <div className="text-lg font-bold">
+                  ${c.monthlyUsd} <span className="text-xs font-normal text-muted-foreground">美元/月</span>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-xs line-through text-muted-foreground">${c.monthlyUsd}</span>
+                    <span className="text-lg font-bold">${yearlyMonthlyEquiv.toFixed(2)}</span>
+                    <span className="text-xs font-normal text-muted-foreground">美元/月</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">省 {savingsPct}%</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">年繳 ${c.yearlyUsd} 美元</div>
+                </div>
+              )}
               <ul className="text-[11px] text-muted-foreground space-y-1">
                 {c.features.map(f => <li key={f}>· {f}</li>)}
               </ul>
