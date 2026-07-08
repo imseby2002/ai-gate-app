@@ -4931,8 +4931,7 @@ function Unit12CustomerService({
       <Lock className="h-6 w-6 text-gray-400 mx-auto" />
       <p className="text-sm font-medium text-gray-700">「{featureName}」為付費方案功能</p>
       <p className="text-xs text-gray-400">升級方案即可解鎖使用。</p>
-      <a href="/cs/help" target="_blank" rel="noopener noreferrer"
-        className="inline-block text-xs text-primary font-medium hover:underline">了解方案 →</a>
+      <a href="/cs/settings" className="inline-block text-xs text-primary font-medium hover:underline">升級方案 →</a>
     </div>
   )
 
@@ -5879,7 +5878,7 @@ function Unit12CustomerService({
     <>
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
             <Headphones className="h-4 w-4" style={{ color: 'var(--primary)' }} />
@@ -5890,11 +5889,16 @@ function Unit12CustomerService({
             <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="ml-2 text-primary font-medium hover:underline">
               完整設定教學 →
             </a>
-            <a href="/cs/settings" className="ml-2 text-primary font-medium hover:underline">
-              升級方案 →
-            </a>
           </p>
         </div>
+        <a href="/cs/settings"
+          className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+          style={{ background: 'var(--primary)' }}>
+          <Zap className="h-3.5 w-3.5" />
+          升級方案
+        </a>
+      </div>
+      <div className="flex justify-end">
         <div className="flex flex-wrap gap-1.5">
           {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
             const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
@@ -6293,7 +6297,7 @@ function Unit12CustomerService({
                   <Lock className="h-5 w-5 text-gray-400 mx-auto" />
                   <p className="text-sm font-medium text-gray-700">進階 AI 設定為付費方案功能</p>
                   <p className="text-xs text-gray-400">升級方案即可解鎖升級門檻、報價流程、優惠、VIP 等設定</p>
-                  <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="inline-block text-xs text-primary font-medium hover:underline">了解方案 →</a>
+                  <a href="/cs/settings" className="inline-block text-xs text-primary font-medium hover:underline">升級方案 →</a>
                 </div>
               </div>
             )}
