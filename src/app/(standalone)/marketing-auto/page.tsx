@@ -5891,12 +5891,17 @@ function Unit12CustomerService({
             </a>
           </p>
         </div>
-        <a href="/cs/settings"
-          className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
-          style={{ background: 'var(--primary)' }}>
-          <Zap className="h-3.5 w-3.5" />
-          升級方案
-        </a>
+        <div className="flex items-center gap-2 shrink-0">
+          <a href="/settings" className="text-xs text-primary font-medium hover:underline whitespace-nowrap">
+            儲值點數 →
+          </a>
+          <a href="/cs/settings"
+            className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+            style={{ background: 'var(--primary)' }}>
+            <Zap className="h-3.5 w-3.5" />
+            升級方案
+          </a>
+        </div>
       </div>
       <div className="flex justify-end">
         <div className="flex flex-wrap gap-1.5">
