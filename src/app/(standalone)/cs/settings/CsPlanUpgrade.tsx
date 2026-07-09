@@ -46,7 +46,7 @@ const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, s
 
 export function CsPlanUpgrade() {
   const [plan, setPlan] = useState<CsPlan | null>(null)
-  const [cycle, setCycle] = useState<Cycle>('monthly')
+  const [cycle, setCycle] = useState<Cycle>('yearly')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -96,21 +96,24 @@ export function CsPlanUpgrade() {
   return (
     <div className="mb-5 rounded-xl border bg-card p-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Sparkles className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">CS 方案</span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
             目前：{plan === 'free' ? '免費' : plan.toUpperCase()}
           </span>
+          <a href="/settings" className="text-xs text-primary font-medium hover:underline">
+            儲值點數 →
+          </a>
         </div>
         <div className="flex gap-1 text-xs">
-          <button onClick={() => setCycle('monthly')}
-            className={`px-2.5 py-1 rounded-lg ${cycle === 'monthly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
-            月繳
-          </button>
           <button onClick={() => setCycle('yearly')}
             className={`px-2.5 py-1 rounded-lg ${cycle === 'yearly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
             年繳（約 8 折）
+          </button>
+          <button onClick={() => setCycle('monthly')}
+            className={`px-2.5 py-1 rounded-lg ${cycle === 'monthly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
+            月繳
           </button>
         </div>
       </div>
