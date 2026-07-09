@@ -55,6 +55,21 @@ export async function verifyCheckMac(
   return received.toUpperCase() === expected.toUpperCase()
 }
 
+// 綠界要求的交易時間格式：yyyy/MM/dd HH:mm:ss（24 小時制、數字補零）。
+// 用 toLocaleString 組字串會依 Node/ICU 版本不同而不穩定（例如某些 ICU
+// 版本 hour12:false 午夜會印出 24:00:00、或日期時間中間帶逗號），
+// 改用 formatToParts 自己取欄位組字串，並明確指定 hourCycle: 'h23' 避免此問題。
+export function formatEcpayTradeDate(date: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00'
+  return `${get('year')}/${get('month')}/${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`
+}
+
 // 產生唯一訂單編號（綠界限制 20 字元英數）
 export function generateTradeNo(userId: string): string {
   const now = Date.now().toString(36).toUpperCase()

@@ -4,6 +4,7 @@ import {
   getEcpayConfig,
   generateCheckMac,
   generateTradeNo,
+  formatEcpayTradeDate,
 } from '@/lib/ecpay/client'
 import { CS_PLAN_PACKAGES, type CsPlanPackageId } from '@/lib/ecpay/cs-plans'
 
@@ -20,12 +21,7 @@ export async function POST(req: NextRequest) {
 
   const config = getEcpayConfig()
   const tradeNo = generateTradeNo(user.id)
-  const tradeDate = new Date().toLocaleString('zh-TW', {
-    timeZone: 'Asia/Taipei',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false,
-  }).replace(/\//g, '/').replace(',', '')
+  const tradeDate = formatEcpayTradeDate()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
 
