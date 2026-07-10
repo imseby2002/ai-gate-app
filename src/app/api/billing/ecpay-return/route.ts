@@ -108,6 +108,37 @@ export async function POST(req: NextRequest) {
     return new NextResponse('1|OK', { status: 200 })
   }
 
+  // 找不到 CS 方案訂單 → 檢查是否為訂房方案升級訂單
+  const { data: bookingPurchase } = await supabase
+    .from('booking_plan_purchases')
+    .select('id, user_id, plan, billing_cycle')
+    .eq('trade_no', MerchantTradeNo)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (bookingPurchase) {
+    const days = bookingPurchase.billing_cycle === 'yearly' ? 365 : 30
+    const periodEnd = new Date(Date.now() + days * 86400000).toISOString()
+
+    await supabase
+      .from('booking_plan_purchases')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', bookingPurchase.id)
+
+    await supabase
+      .from('booking_subscriptions')
+      .upsert({
+        user_id: bookingPurchase.user_id,
+        plan: bookingPurchase.plan,
+        billing_cycle: bookingPurchase.billing_cycle,
+        status: 'active',
+        current_period_end: periodEnd,
+      }, { onConflict: 'user_id' })
+
+    console.log('[ECPay] 訂房方案升級成功', { userId: bookingPurchase.user_id, plan: bookingPurchase.plan })
+    return new NextResponse('1|OK', { status: 200 })
+  }
+
   console.error('[ECPay] 找不到對應的訂單記錄', { MerchantTradeNo })
   return new NextResponse('1|OK', { status: 200 })
 }
