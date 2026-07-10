@@ -4,11 +4,11 @@ import { Check, X, Sparkles } from 'lucide-react'
 
 const PLAN_CARDS = [
   {
-    id: 'free', name: '免費', price: '$0', unit: '',
+    id: 'free', name: '免費', price: '$0', unit: '', highlight: false,
     features: ['1 房源（不可加購）', '官網 AI 設計', 'iCal 同步'],
   },
   {
-    id: 'core', name: 'CORE', price: '$5', unit: '美元/月',
+    id: 'core', name: 'CORE', price: '$5', unit: '美元/月', highlight: false,
     features: ['5 房源（+$4/房源）', '1 位協作者', '動態定價規則', 'Email 同步（OTA信件轉單）'],
   },
   {
@@ -16,7 +16,7 @@ const PLAN_CARDS = [
     features: ['5 房源（+$3/房源）', '2 位協作者', '即時同步 60+ 平台（秒級防超賣）', '與 CS 串接（訂單密碼連動）', '每月 1 次免費協助設定'],
   },
   {
-    id: 'enterprise', name: '企業', price: '$39', unit: '美元/月起',
+    id: 'enterprise', name: '企業', price: '$39', unit: '美元/月起', highlight: false,
     features: ['15 房源（+$2/房源）', '無上限協作者', '動態定價客製規則', '每月 2 次免費協助設定'],
   },
 ] as const
