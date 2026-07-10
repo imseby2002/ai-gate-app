@@ -1391,13 +1391,18 @@
       "reviews": "評價管理",
       "reports": "數據報表",
       "ical": "iCal 同步",
-      "email": "Email 擷取"
+      "email": "Email 擷取",
+      "plan": "訂閱方案"
     },
     "group": {
       "property": "民宿設定",
       "orders": "訂單管理",
       "guest": "旅客互動",
       "data": "數據與同步"
+    },
+    "plan": {
+      "title": "訂閱方案",
+      "subtitle": "依房源數與功能選擇適合的方案，隨時可升級"
     }
   },
   "Marketing": {

@@ -1391,13 +1391,18 @@
       "reviews": "Reviews",
       "reports": "Reports",
       "ical": "iCal Sync",
-      "email": "Email Import"
+      "email": "Email Import",
+      "plan": "Subscription"
     },
     "group": {
       "property": "Property Settings",
       "orders": "Order Management",
       "guest": "Guest Interaction",
       "data": "Data & Sync"
+    },
+    "plan": {
+      "title": "Subscription Plans",
+      "subtitle": "Choose a plan based on property count and features — upgrade anytime"
     }
   },
   "Marketing": {

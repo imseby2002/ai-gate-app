@@ -7,7 +7,7 @@ import BnbSwitcher from './BnbSwitcher'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
-  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users,
+  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard,
 } from 'lucide-react'
 
 type NavItem = { href: string; labelKey: string; icon: React.ElementType }
@@ -18,6 +18,7 @@ const NAV_GROUPS: NavGroup[] = [
     titleKey: '',
     items: [
       { href: '/admin', labelKey: 'nav.overview', icon: Home },
+      { href: '/booking/plan', labelKey: 'nav.plan', icon: CreditCard },
     ],
   },
   {

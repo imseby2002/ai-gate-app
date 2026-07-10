@@ -1391,13 +1391,18 @@
       "reviews": "Đánh giá",
       "reports": "Báo cáo",
       "ical": "Đồng bộ iCal",
-      "email": "Trích xuất Email"
+      "email": "Trích xuất Email",
+      "plan": "Gói đăng ký"
     },
     "group": {
       "property": "Cài đặt nhà nghỉ",
       "orders": "Quản lý đơn",
       "guest": "Tương tác khách",
       "data": "Dữ liệu & Đồng bộ"
+    },
+    "plan": {
+      "title": "Gói đăng ký",
+      "subtitle": "Chọn gói phù hợp theo số lượng phòng và tính năng — có thể nâng cấp bất cứ lúc nào"
     }
   },
   "Marketing": {
