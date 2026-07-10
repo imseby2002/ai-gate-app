@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
+import { getBookingEntitlements } from '@/lib/booking/entitlements'
 
 export async function GET() {
   const supabase = await createClient()
@@ -25,6 +26,14 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { name, description, room_count = 1, max_guests = 2, base_price, extra_guest_fee, currency = 'TWD', amenities = [], images = [], name_aliases = [] } = body
   if (!name?.trim()) return NextResponse.json({ error: '房源名稱必填' }, { status: 400 })
+
+  const [{ count: existingCount }, { propertyLimit }] = await Promise.all([
+    supabase.from('properties').select('id', { count: 'exact', head: true }).eq('user_id', ctx.ownerId),
+    getBookingEntitlements(supabase, ctx.ownerId),
+  ])
+  if ((existingCount ?? 0) >= propertyLimit) {
+    return NextResponse.json({ error: `目前方案最多可建立 ${propertyLimit} 個房源，請升級方案或加購房源額度。` }, { status: 403 })
+  }
 
   const { data, error } = await supabase
     .from('properties')

@@ -42,6 +42,7 @@ export default function PropertiesPage() {
   const [form, setForm]         = useState(EMPTY_FORM)
   const [aliasInput, setAliasInput] = useState('')
   const [saving, setSaving]     = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [modalTab, setModalTab] = useState<ModalTab>('basic')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -66,6 +67,7 @@ export default function PropertiesPage() {
     })
     setAliasInput('')
     setModalTab('basic')
+    setSaveError('')
   }
 
   function openAdd() {
@@ -73,6 +75,7 @@ export default function PropertiesPage() {
     setForm(EMPTY_FORM)
     setAliasInput('')
     setModalTab('basic')
+    setSaveError('')
   }
 
   function addAlias() {
@@ -119,7 +122,7 @@ export default function PropertiesPage() {
   }
 
   async function save() {
-    setSaving(true)
+    setSaving(true); setSaveError('')
     try {
       const body = {
         ...form,
@@ -132,6 +135,7 @@ export default function PropertiesPage() {
           body: JSON.stringify({ id: editing.id, ...body }),
         })
         const d = await res.json()
+        if (!res.ok) { setSaveError(d.error ?? '儲存失敗'); return }
         if (d.property) setProperties(prev => prev.map(p => p.id === editing.id ? d.property : p))
       } else {
         const res = await fetch('/api/booking/properties', {
@@ -139,6 +143,7 @@ export default function PropertiesPage() {
           body: JSON.stringify(body),
         })
         const d = await res.json()
+        if (!res.ok) { setSaveError(d.error ?? '儲存失敗'); return }
         if (d.property) setProperties(prev => [...prev, d.property])
       }
       setEditing(null); setAdding(false); setForm(EMPTY_FORM)
@@ -395,6 +400,9 @@ export default function PropertiesPage() {
             </div>
 
             {/* Footer buttons */}
+            {saveError && (
+              <div className="shrink-0 mx-5 mb-2 px-3 py-2 rounded-lg bg-red-50 text-red-600 text-xs">{saveError}</div>
+            )}
             <div className="shrink-0 flex gap-2 px-5 py-4 border-t">
               <button onClick={() => { setAdding(false); setEditing(null) }}
                 className="flex-1 py-2 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>

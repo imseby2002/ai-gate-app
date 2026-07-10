@@ -122,6 +122,8 @@ export default function PricingPage() {
   // Rule modal
   const [ruleModal, setRuleModal] = useState<Partial<PricingRule> | null>(null)
   const [ruleSaving, setRuleSaving] = useState(false)
+  const [ruleSaveError, setRuleSaveError] = useState('')
+  function openRuleModal(rule: Partial<PricingRule> | null) { setRuleModal(rule); setRuleSaveError('') }
 
   // 周邊比價（SerpApi Google Hotels）
   const [cmpLocation, setCmpLocation] = useState('')
@@ -502,13 +504,14 @@ export default function PricingPage() {
 
   async function saveRule() {
     if (!ruleModal?.name || !ruleModal.rule_type) return
-    setRuleSaving(true)
+    setRuleSaving(true); setRuleSaveError('')
     try {
-      await fetch('/api/booking/pricing/rules', {
+      const res = await fetch('/api/booking/pricing/rules', {
         method: ruleModal.id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(ruleModal),
       })
+      if (!res.ok) { const d = await res.json(); setRuleSaveError(d.error ?? '儲存失敗'); return }
       setRuleModal(null)
       await fetchData()
     } finally { setRuleSaving(false) }
@@ -755,7 +758,7 @@ export default function PricingPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => setRuleModal({ enabled: true, adjustment_type: 'percent', adjustment_value: 0, priority: 0, conditions: {} })}
+                  onClick={() => openRuleModal({ enabled: true, adjustment_type: 'percent', adjustment_value: 0, priority: 0, conditions: {} })}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
                   <Plus className="h-3.5 w-3.5" />
                   {t('pricing.addRule')}
@@ -800,7 +803,7 @@ export default function PricingPage() {
                               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform
                                 ${rule.enabled ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
                             </button>
-                            <button onClick={() => setRuleModal(rule)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+                            <button onClick={() => openRuleModal(rule)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
                               <Edit2 className="h-4 w-4" />
                             </button>
                             <button onClick={() => deleteRule(rule.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500">
@@ -851,7 +854,7 @@ export default function PricingPage() {
                             </td>
                             <td className="px-3 py-3 text-center">
                               <div className="flex items-center justify-center gap-1">
-                                <button onClick={() => setRuleModal(rule)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Edit2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => openRuleModal(rule)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Edit2 className="h-3.5 w-3.5" /></button>
                                 <button onClick={() => deleteRule(rule.id)} className="p-1.5 rounded hover:bg-red-50 text-gray-500 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
                               </div>
                             </td>
@@ -1541,6 +1544,9 @@ export default function PricingPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
+            {ruleSaveError && (
+              <div className="px-3 py-2 rounded-lg bg-red-50 text-red-600 text-xs">{ruleSaveError}</div>
+            )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setRuleModal(null)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={saveRule} disabled={!ruleModal.name || !ruleModal.rule_type || ruleSaving}
