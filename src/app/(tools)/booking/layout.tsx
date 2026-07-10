@@ -17,7 +17,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titleKey: '',
     items: [
-      { href: '/admin', labelKey: 'nav.overview', icon: Home },
+      { href: '/booking', labelKey: 'nav.overview', icon: Home },
       { href: '/booking/plan', labelKey: 'nav.plan', icon: CreditCard },
     ],
   },
