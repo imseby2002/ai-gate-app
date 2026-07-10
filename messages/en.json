@@ -898,9 +898,6 @@
     "notif": {
       "title": "Notification Settings",
       "subtitle": "Set up notification email templates and send them to guests with one click from Bookings",
-      "helpTitle": "Setup Notes",
-      "helpEnv": "Set RESEND_API_KEY and RESEND_FROM_EMAIL in Vercel environment variables (the sender address must be on a domain verified in Resend).",
-      "helpPlaceholders": "Template content can use the placeholders below to auto-fill booking data.",
       "enabled": "Enabled",
       "disabled": "Disabled",
       "subjectPrefix": "Subject: {subject}",
