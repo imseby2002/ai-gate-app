@@ -898,9 +898,6 @@
     "notif": {
       "title": "通知信設定",
       "subtitle": "設定各類通知信模板，在訂單管理中一鍵發送給旅客",
-      "helpTitle": "設定說明",
-      "helpEnv": "需在 Vercel 環境變數設定 RESEND_API_KEY 及 RESEND_FROM_EMAIL（寄件地址需在 Resend 驗證網域）。",
-      "helpPlaceholders": "模板內容可使用下方佔位符自動填入訂單資料。",
       "enabled": "啟用",
       "disabled": "停用",
       "subjectPrefix": "主旨：{subject}",

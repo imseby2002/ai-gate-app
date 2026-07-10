@@ -898,9 +898,6 @@
     "notif": {
       "title": "Cài đặt thông báo",
       "subtitle": "Thiết lập mẫu email thông báo và gửi cho khách chỉ với một nhấp từ trang Đơn",
-      "helpTitle": "Hướng dẫn cài đặt",
-      "helpEnv": "Cần đặt RESEND_API_KEY và RESEND_FROM_EMAIL trong biến môi trường Vercel (địa chỉ gửi phải thuộc tên miền đã xác minh trong Resend).",
-      "helpPlaceholders": "Nội dung mẫu có thể dùng các trình giữ chỗ bên dưới để tự điền dữ liệu đơn.",
       "enabled": "Bật",
       "disabled": "Tắt",
       "subjectPrefix": "Tiêu đề: {subject}",

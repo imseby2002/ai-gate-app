@@ -91,12 +91,6 @@ export default function NotificationsPage() {
         <p className="text-sm text-gray-500 mt-0.5">{t('notif.subtitle')}</p>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700 space-y-1">
-        <p className="font-semibold">{t('notif.helpTitle')}</p>
-        <p>{t('notif.helpEnv')}</p>
-        <p>{t('notif.helpPlaceholders')}</p>
-      </div>
-
       <div className="space-y-3">
         {TEMPLATE_TYPES.map(({ type, icon }) => {
           const tpl = templates[type]
