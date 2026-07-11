@@ -32,6 +32,7 @@ interface Copy {
   networkError: string
   footnote1: string
   legalNote: string
+  assistScopeNote: string
   featureCol: string
   cards: Record<BookingPlan, string[]>
   rows: Array<{ label: string; values: [string, string, string, string] }>
@@ -52,7 +53,8 @@ const COPY: Record<Locale, Copy> = {
     checkoutFailed: '建立訂單失敗',
     networkError: '網路錯誤，請稍後再試',
     footnote1: '付款後方案立即生效，到期前不會自動續訂，需自行再次購買延續。房源加購請聯繫客服調整。',
-    legalNote: '房源數超過基本額度以加購方式計算；房源上限請留意民宿法規（一般地區最多 8 間，原住民族地區／休閒農場／休閒農業區／觀光地區／偏遠地區／離島最多 15 間），超出法定上限請自行確認執照規範。',
+    legalNote: '房源數超過基本額度以加購方式計算；房源上限請留意民宿法規，超出法定上限請自行確認執照規範。',
+    assistScopeNote: '「人工協助設置」範圍：協助完成各平台通路串接與本站內各項功能設定；民宿／飯店向各平台申請上架帳號不含在協助設置內，需另外付費委託。',
     featureCol: '功能',
     cards: {
       free: ['1 房源（不可加購）', '官網 AI 設計', 'iCal 同步'],
@@ -86,7 +88,8 @@ const COPY: Record<Locale, Copy> = {
     checkoutFailed: 'Failed to create order',
     networkError: 'Network error, please try again later',
     footnote1: 'Your plan activates immediately after payment and does not auto-renew — repurchase before it expires to continue. Contact support to add extra properties.',
-    legalNote: 'Properties beyond the base allowance are billed as add-ons. Please note local B&B regulations on room limits (up to 8 rooms in general areas; up to 15 rooms in indigenous areas, leisure farms, agritourism zones, scenic areas, remote areas, or outlying islands) — confirm your license\'s actual limit if you exceed these.',
+    legalNote: 'Properties beyond the base allowance are billed as add-ons. Please note local B&B regulations on room limits — confirm your license\'s actual limit if you exceed these.',
+    assistScopeNote: '"Setup assist" covers: connecting OTA channels and configuring in-app features. It does not include applying for new listing accounts on OTA platforms — that\'s a separate paid service.',
     featureCol: 'Feature',
     cards: {
       free: ['1 property (no add-ons)', 'AI website design', 'iCal sync'],
@@ -120,7 +123,8 @@ const COPY: Record<Locale, Copy> = {
     checkoutFailed: 'Tạo đơn hàng thất bại',
     networkError: 'Lỗi mạng, vui lòng thử lại sau',
     footnote1: 'Gói có hiệu lực ngay sau khi thanh toán, không tự động gia hạn — cần mua lại trước khi hết hạn. Liên hệ hỗ trợ để mua thêm phòng.',
-    legalNote: 'Số phòng vượt hạn mức cơ bản sẽ tính theo mua thêm. Lưu ý quy định pháp luật về số phòng nhà nghỉ (tối đa 8 phòng ở khu vực thông thường; tối đa 15 phòng ở khu vực người bản địa/trang trại nghỉ dưỡng/khu nông nghiệp giải trí/khu du lịch/khu vực xa xôi/hải đảo) — vượt quá cần tự xác nhận theo giấy phép.',
+    legalNote: 'Số phòng vượt hạn mức cơ bản sẽ tính theo mua thêm. Lưu ý quy định pháp luật về số phòng nhà nghỉ — vượt quá cần tự xác nhận theo giấy phép.',
+    assistScopeNote: 'Phạm vi "Hỗ trợ cài đặt": hỗ trợ kết nối các kênh OTA và cấu hình các tính năng trong hệ thống. Không bao gồm việc đăng ký tài khoản mới trên các nền tảng OTA — đây là dịch vụ tính phí riêng.',
     featureCol: 'Tính năng',
     cards: {
       free: ['1 phòng (không mua thêm)', 'Thiết kế website AI', 'Đồng bộ iCal'],
@@ -311,6 +315,7 @@ export default function BookingPlanPage() {
         </table>
       </div>
 
+      <p className="text-[11px] text-gray-400">{copy.assistScopeNote}</p>
       <p className="text-[11px] text-gray-400">{copy.legalNote}</p>
     </div>
   )
