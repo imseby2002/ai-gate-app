@@ -1389,7 +1389,8 @@
       "reports": "Báo cáo",
       "ical": "Đồng bộ iCal",
       "email": "Trích xuất Email",
-      "plan": "Gói đăng ký"
+      "plan": "Gói đăng ký",
+      "sync": "Đồng bộ tức thời"
     },
     "group": {
       "property": "Cài đặt nhà nghỉ",

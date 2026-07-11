@@ -1389,7 +1389,8 @@
       "reports": "數據報表",
       "ical": "iCal 同步",
       "email": "Email 擷取",
-      "plan": "訂閱方案"
+      "plan": "訂閱方案",
+      "sync": "即時同步"
     },
     "group": {
       "property": "民宿設定",

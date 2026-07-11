@@ -7,7 +7,7 @@ import BnbSwitcher from './BnbSwitcher'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
   BedDouble, BarChart2, Tag, ChevronLeft, ChevronRight, Menu, X,
-  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard,
+  LayoutGrid, Percent, Bell, Star, Globe, ClipboardList, Users, CreditCard, Zap,
 } from 'lucide-react'
 
 type NavItem = { href: string; labelKey: string; icon: React.ElementType }
@@ -53,6 +53,7 @@ const NAV_GROUPS: NavGroup[] = [
     titleKey: 'group.data',
     items: [
       { href: '/booking/reports', labelKey: 'nav.reports', icon: BarChart2 },
+      { href: '/booking/sync',    labelKey: 'nav.sync',    icon: Zap },
       { href: '/booking/ical',    labelKey: 'nav.ical',    icon: RefreshCw },
       { href: '/booking/email',   labelKey: 'nav.email',   icon: Mail },
     ],

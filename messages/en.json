@@ -1389,7 +1389,8 @@
       "reports": "Reports",
       "ical": "iCal Sync",
       "email": "Email Import",
-      "plan": "Subscription"
+      "plan": "Subscription",
+      "sync": "Real-time Sync"
     },
     "group": {
       "property": "Property Settings",
