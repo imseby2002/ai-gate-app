@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
+import { getBookingEntitlements } from '@/lib/booking/entitlements'
 
 export async function GET() {
   const supabase = await createClient()
@@ -31,6 +32,11 @@ export async function POST(req: NextRequest) {
 
   if (!name?.trim() || !rule_type)
     return NextResponse.json({ error: '名稱和類型必填' }, { status: 400 })
+
+  const { features } = await getBookingEntitlements(supabase, ctx.ownerId)
+  if (!features.dynamicPricing) {
+    return NextResponse.json({ error: '目前方案不支援動態定價規則，請升級方案。' }, { status: 403 })
+  }
 
   const { data, error } = await supabase
     .from('pricing_rules')

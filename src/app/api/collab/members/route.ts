@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
+import { getBookingEntitlements } from '@/lib/booking/entitlements'
 
 const MODULES = ['booking', 'cs'] as const
 type Scope = (typeof MODULES)[number]
@@ -108,6 +109,27 @@ export async function POST(req: NextRequest) {
           error: features.collaboratorLimit === 0
             ? '目前方案不支援邀請客服協作者，請升級方案。'
             : `目前方案最多可邀請 ${features.collaboratorLimit} 位客服協作者，請升級方案或先移除其他協作者。`,
+        },
+        { status: 403 },
+      )
+    }
+  }
+
+  // 訂房協作人數上限：只在邀請 booking 模組、且對象是新人時才計入額度
+  if (modules.booking) {
+    const { count: existingBookingCount } = await supabase
+      .from('bnb_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', user.id)
+      .eq('scope', 'booking')
+      .neq('invited_email', normEmail)
+    const { features } = await getBookingEntitlements(supabase, user.id)
+    if (Number.isFinite(features.collaboratorLimit) && (existingBookingCount ?? 0) >= features.collaboratorLimit) {
+      return NextResponse.json(
+        {
+          error: features.collaboratorLimit === 0
+            ? '目前方案不支援邀請訂房協作者，請升級方案。'
+            : `目前方案最多可邀請 ${features.collaboratorLimit} 位訂房協作者，請升級方案或先移除其他協作者。`,
         },
         { status: 403 },
       )
