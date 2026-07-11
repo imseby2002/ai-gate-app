@@ -1,3 +1,5 @@
+import { getBookingEntitlements } from '@/lib/booking/entitlements'
+
 // 入住時間判斷（民宿資料 check_in_time 可設，預設 15:00）。
 // 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到入住時間一律不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,8 +32,13 @@ export async function checkBeforeCheckin(supabase: any, userId: string): Promise
 
 // 依訂單號碼從「訂單系統」(bnb_daily_records → bookings) 查今日入住資訊與門鎖密碼。
 // cs-chat 沙盒與 cs-webhook 生產共用。
+// 與訂房模組的串接（讓 CS 讀訂房每日入住資料）是訂房 PRO 以上才有的功能，
+// 沒有訂房方案或方案不足時直接回 null，讓呼叫端照既有「查無資料」流程處理，不額外洩露方案資訊給訪客。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function queryBnbCheckin(supabase: any, userId: string, orderNum: string): Promise<string | null> {
+  const { features } = await getBookingEntitlements(supabase, userId)
+  if (!features.csIntegration) return null
+
   const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
 
   // 入住時間（民宿資料可設，預設 15:00）；未到入住時間不提供密碼
