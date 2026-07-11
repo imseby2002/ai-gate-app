@@ -13,6 +13,7 @@ export interface BookingPlanFeatures {
   emailSync: boolean
   realtimeSync: boolean
   csIntegration: boolean
+  promoCodes: boolean
   assistedSetup: { freePerMonth: number; priceUsd: number }
 }
 
@@ -25,6 +26,7 @@ export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
     emailSync: false,
     realtimeSync: false,
     csIntegration: false,
+    promoCodes: false,
     assistedSetup: { freePerMonth: 0, priceUsd: 20 },
   },
   core: {
@@ -35,6 +37,7 @@ export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
     emailSync: true,
     realtimeSync: false,
     csIntegration: false,
+    promoCodes: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 20 },
   },
   pro: {
@@ -45,6 +48,7 @@ export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
     emailSync: true,
     realtimeSync: true,
     csIntegration: true,
+    promoCodes: true,
     assistedSetup: { freePerMonth: 1, priceUsd: 20 },
   },
   enterprise: {
@@ -55,6 +59,7 @@ export const BOOKING_PLAN_FEATURES: Record<BookingPlan, BookingPlanFeatures> = {
     emailSync: true,
     realtimeSync: true,
     csIntegration: true,
+    promoCodes: true,
     assistedSetup: { freePerMonth: 2, priceUsd: 20 },
   },
 }
