@@ -12,9 +12,9 @@ const PLAN_NAME: Record<BookingPlan, string> = { free: 'FREE', core: 'CORE', pro
 
 const PLAN_META = [
   { id: 'free' as BookingPlan, monthlyUsd: 0, yearlyUsd: 0, highlight: false, monthlyId: undefined as string | undefined, yearlyId: undefined as string | undefined },
-  { id: 'core' as BookingPlan, monthlyUsd: 5, yearlyUsd: 46, highlight: false, monthlyId: 'core_monthly', yearlyId: 'core_yearly' },
-  { id: 'pro' as BookingPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly' },
-  { id: 'enterprise' as BookingPlan, monthlyUsd: 39, yearlyUsd: 374, highlight: false, monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly' },
+  { id: 'core' as BookingPlan, monthlyUsd: 5, yearlyUsd: 54, highlight: false, monthlyId: 'core_monthly', yearlyId: 'core_yearly' },
+  { id: 'pro' as BookingPlan, monthlyUsd: 19, yearlyUsd: 205, highlight: true, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly' },
+  { id: 'enterprise' as BookingPlan, monthlyUsd: 39, yearlyUsd: 421, highlight: false, monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly' },
 ]
 
 interface Copy {
@@ -40,7 +40,7 @@ interface Copy {
 const COPY: Record<Locale, Copy> = {
   'zh-TW': {
     currentBadge: (plan, limit) => `目前：${plan}（房源上限 ${limit}）`,
-    cycleYearly: '年繳（約 8 折）',
+    cycleYearly: '年繳（約 9 折）',
     cycleMonthly: '月繳',
     perMonthUnit: '美元/月',
     yearlyTotal: amt => `年繳 $${amt} 美元`,
@@ -74,7 +74,7 @@ const COPY: Record<Locale, Copy> = {
   },
   en: {
     currentBadge: (plan, limit) => `Current: ${plan} (property limit ${limit})`,
-    cycleYearly: 'Yearly (~20% off)',
+    cycleYearly: 'Yearly (~10% off)',
     cycleMonthly: 'Monthly',
     perMonthUnit: 'USD/mo',
     yearlyTotal: amt => `$${amt}/year`,
@@ -108,7 +108,7 @@ const COPY: Record<Locale, Copy> = {
   },
   vi: {
     currentBadge: (plan, limit) => `Hiện tại: ${plan} (giới hạn phòng ${limit})`,
-    cycleYearly: 'Trả năm (giảm ~20%)',
+    cycleYearly: 'Trả năm (giảm ~10%)',
     cycleMonthly: 'Trả tháng',
     perMonthUnit: 'USD/tháng',
     yearlyTotal: amt => `$${amt}/năm`,
