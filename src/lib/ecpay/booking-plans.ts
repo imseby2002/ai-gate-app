@@ -5,8 +5,8 @@ export const BOOKING_PLAN_PACKAGES = [
   { id: 'core_yearly',        plan: 'core',       cycle: 'yearly',  twdAmount: 1440,  usdPrice: 46,  label: 'CORE 方案（年繳）' },
   { id: 'pro_monthly',        plan: 'pro',        cycle: 'monthly', twdAmount: 600,   usdPrice: 19,  label: 'PRO 方案（月繳）' },
   { id: 'pro_yearly',         plan: 'pro',        cycle: 'yearly',  twdAmount: 5800,  usdPrice: 182, label: 'PRO 方案（年繳）' },
-  { id: 'enterprise_monthly', plan: 'enterprise', cycle: 'monthly', twdAmount: 1230,  usdPrice: 39,  label: '企業方案（月繳）' },
-  { id: 'enterprise_yearly',  plan: 'enterprise', cycle: 'yearly',  twdAmount: 11800, usdPrice: 374, label: '企業方案（年繳）' },
+  { id: 'enterprise_monthly', plan: 'enterprise', cycle: 'monthly', twdAmount: 1230,  usdPrice: 39,  label: 'MAX 方案（月繳）' },
+  { id: 'enterprise_yearly',  plan: 'enterprise', cycle: 'yearly',  twdAmount: 11800, usdPrice: 374, label: 'MAX 方案（年繳）' },
 ] as const
 
 export type BookingPlanPackageId = typeof BOOKING_PLAN_PACKAGES[number]['id']
