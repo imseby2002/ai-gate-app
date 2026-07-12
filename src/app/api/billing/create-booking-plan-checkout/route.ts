@@ -33,6 +33,17 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     if (!referrer) return NextResponse.json({ error: '推薦碼不存在，請確認後再試' }, { status: 400 })
     if (referrer.user_id === user.id) return NextResponse.json({ error: '不能使用自己的推薦碼' }, { status: 400 })
+
+    // 推薦碼僅限首次付費使用，已經是付費客戶不能事後補用推薦碼賺天數
+    const { data: priorPaid } = await admin
+      .from('booking_plan_purchases')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'paid')
+      .limit(1)
+      .maybeSingle()
+    if (priorPaid) return NextResponse.json({ error: '推薦碼僅限首次付費使用' }, { status: 400 })
+
     referralCodeUsed = trimmedCode
   }
 
