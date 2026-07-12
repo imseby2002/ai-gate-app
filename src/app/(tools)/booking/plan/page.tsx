@@ -12,9 +12,9 @@ const PLAN_NAME: Record<BookingPlan, string> = { free: 'FREE', core: 'CORE', pro
 
 const PLAN_META = [
   { id: 'free' as BookingPlan, monthlyUsd: 0, yearlyUsd: 0, highlight: false, monthlyId: undefined as string | undefined, yearlyId: undefined as string | undefined },
-  { id: 'core' as BookingPlan, monthlyUsd: 5, yearlyUsd: 54, highlight: false, monthlyId: 'core_monthly', yearlyId: 'core_yearly' },
-  { id: 'pro' as BookingPlan, monthlyUsd: 19, yearlyUsd: 205, highlight: true, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly' },
-  { id: 'enterprise' as BookingPlan, monthlyUsd: 39, yearlyUsd: 421, highlight: false, monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly' },
+  { id: 'core' as BookingPlan, monthlyUsd: 8, yearlyUsd: 67, highlight: false, monthlyId: 'core_monthly', yearlyId: 'core_yearly' },
+  { id: 'pro' as BookingPlan, monthlyUsd: 29, yearlyUsd: 244, highlight: true, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly' },
+  { id: 'enterprise' as BookingPlan, monthlyUsd: 49, yearlyUsd: 412, highlight: false, monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly' },
 ]
 
 interface Copy {
@@ -36,8 +36,6 @@ interface Copy {
   featureCol: string
   cards: Record<BookingPlan, string[]>
   rows: Array<{ label: string; values: [string, string, string, string] }>
-  foundingBadge: string
-  foundingBody: string
   compareTitle: string
   compareUsLabel: string
   compareMarketLabel: string
@@ -47,7 +45,7 @@ interface Copy {
 const COPY: Record<Locale, Copy> = {
   'zh-TW': {
     currentBadge: (plan, limit) => `目前：${plan}（房源上限 ${limit}）`,
-    cycleYearly: '年繳（約 9 折）',
+    cycleYearly: '年繳（限時 7 折）',
     cycleMonthly: '月繳',
     perMonthUnit: '美元/月',
     yearlyTotal: amt => `年繳 $${amt} 美元`,
@@ -80,8 +78,6 @@ const COPY: Record<Locale, Copy> = {
       { label: '與 CS 串接（訂單密碼連動）', values: ['—', '—', '✓', '✓'] },
       { label: '人工協助設置（超額單價 $20）', values: ['0 次/月', '0 次/月', '1 次/月', '2 次/月'] },
     ],
-    foundingBadge: '🎉 早鳥創始優惠',
-    foundingBody: '現在訂閱鎖定今日價格，未來調漲不影響已訂閱的方案',
     compareTitle: '為什麼比市場同類系統划算',
     compareUsLabel: 'AI GATE',
     compareMarketLabel: '市場同類系統常見狀況',
@@ -93,7 +89,7 @@ const COPY: Record<Locale, Copy> = {
   },
   en: {
     currentBadge: (plan, limit) => `Current: ${plan} (property limit ${limit})`,
-    cycleYearly: 'Yearly (~10% off)',
+    cycleYearly: 'Yearly (30% off, limited time)',
     cycleMonthly: 'Monthly',
     perMonthUnit: 'USD/mo',
     yearlyTotal: amt => `$${amt}/year`,
@@ -126,8 +122,6 @@ const COPY: Record<Locale, Copy> = {
       { label: 'CS integration (order password lookup)', values: ['—', '—', '✓', '✓'] },
       { label: 'Setup assist (overage $20/session)', values: ['0/month', '0/month', '1/month', '2/month'] },
     ],
-    foundingBadge: '🎉 Founding member offer',
-    foundingBody: 'Subscribe now to lock in today\'s price — future increases won\'t affect your existing subscription',
     compareTitle: 'Why we\'re better value than comparable systems',
     compareUsLabel: 'AI GATE',
     compareMarketLabel: 'Typical for comparable systems',
@@ -139,7 +133,7 @@ const COPY: Record<Locale, Copy> = {
   },
   vi: {
     currentBadge: (plan, limit) => `Hiện tại: ${plan} (giới hạn phòng ${limit})`,
-    cycleYearly: 'Trả năm (giảm ~10%)',
+    cycleYearly: 'Trả năm (giảm 30%, có hạn)',
     cycleMonthly: 'Trả tháng',
     perMonthUnit: 'USD/tháng',
     yearlyTotal: amt => `$${amt}/năm`,
@@ -172,8 +166,6 @@ const COPY: Record<Locale, Copy> = {
       { label: 'Tích hợp CS (tra mật khẩu đơn)', values: ['—', '—', '✓', '✓'] },
       { label: 'Hỗ trợ cài đặt (vượt hạn mức $20/lần)', values: ['0 lần/tháng', '0 lần/tháng', '1 lần/tháng', '2 lần/tháng'] },
     ],
-    foundingBadge: '🎉 Ưu đãi thành viên sáng lập',
-    foundingBody: 'Đăng ký ngay để giữ nguyên giá hiện tại — tăng giá sau này không ảnh hưởng đến gói bạn đã đăng ký',
     compareTitle: 'Vì sao đáng giá hơn các hệ thống tương tự trên thị trường',
     compareUsLabel: 'AI GATE',
     compareMarketLabel: 'Tình trạng thường thấy ở hệ thống tương tự',
@@ -241,11 +233,6 @@ export default function BookingPlanPage() {
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-6 max-w-5xl">
-      <div className="flex items-center gap-2 flex-wrap rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
-        <span className="text-sm font-semibold text-amber-800">{copy.foundingBadge}</span>
-        <span className="text-xs text-amber-700">{copy.foundingBody}</span>
-      </div>
-
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{t('plan.title')}</h1>
