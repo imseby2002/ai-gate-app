@@ -54,7 +54,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
   ]
 
   const quickActions = [
-    { icon: Sparkles,      label: '升級方案',      desc: '解鎖多平台、工單、報價計算機',      href: '/cs/settings', color: 'bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-400' },
+    { icon: Sparkles,      label: '升級方案',      desc: '解鎖多平台、工單、報價計算機',      href: '/cs/plan', color: 'bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-400' },
     { icon: MessageSquare, label: t('actionUnifiedInboxLabel'), desc: t('actionUnifiedInboxDesc'), href: `/cs/inbox?industry=${industry}`, color: 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400' },
     { icon: Inbox,       label: t('actionInboxLabel'),     desc: t('actionInboxDesc'),     href: csUrl, color: 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400' },
     { icon: FlaskConical,label: t('actionTestLabel'),      desc: t('actionTestDesc'),      href: csUrl, color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' },
