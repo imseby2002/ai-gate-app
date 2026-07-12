@@ -189,12 +189,13 @@ export async function POST(req: NextRequest) {
       streamResult = fallback.stream
       // Free proxy models cost 0 (unknown ids fall through calculateCost → 0)
       effectiveModelId = fallback.usedVia === 'direct' ? fallback.usedModel : `proxy:${fallback.usedModel}`
+    } else if (provider === 'google' || intent === 'vision') {
+      // Vision or Google → direct Gemini (multimodal needs native support)
+      // 有圖片時優先於其他 provider，避免圖片被丟棄
+      streamResult = await streamGemini({ ...chatParams, imageBase64 })
     } else if (provider === 'perplexity') {
       // Legal/web search → always direct Perplexity (needs real web)
       streamResult = await streamPerplexity(chatParams)
-    } else if (provider === 'google' || intent === 'vision') {
-      // Vision or Google → direct Gemini (multimodal needs native support)
-      streamResult = await streamGemini({ ...chatParams, imageBase64 })
     } else if (provider === 'deepseek') {
       streamResult = await streamDeepSeek(chatParams)
     } else if (provider === 'anthropic') {

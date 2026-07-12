@@ -62,6 +62,9 @@ export function ChatInterface({
     if (!trimmed && !imagePreview) return
     if (isLoading) return
 
+    const capturedImage = imagePreview
+    setImagePreview(null)
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       conversation_id: currentConvId ?? '',
@@ -72,7 +75,7 @@ export function ChatInterface({
       input_tokens: 0,
       output_tokens: 0,
       cost_usd: 0,
-      image_urls: null,
+      image_urls: capturedImage ? [capturedImage] : null,
       video_url: null,
       file_refs: null,
       latency_ms: null,
@@ -84,9 +87,6 @@ export function ChatInterface({
     setInput('')
     setIsLoading(true)
     setStreaming({ content: '', modelId: '' })
-
-    const capturedImage = imagePreview
-    setImagePreview(null)
 
     try {
       const res = await fetch('/api/chat', {
@@ -102,7 +102,7 @@ export function ChatInterface({
       })
 
       if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({}))
         if (err.error === 'insufficient_credits') {
           setStreaming(null)
           setMessages(prev => [...prev, {
@@ -113,7 +113,9 @@ export function ChatInterface({
           }])
           return
         }
-        throw new Error(err.error)
+        if (res.status === 401) throw new Error('尚未登入或登入已過期，請重新登入')
+        if (res.status === 403) throw new Error('帳號已停用，請聯絡管理員')
+        throw new Error(err.error ?? `請求失敗（${res.status}）`)
       }
 
       const reader = res.body!.getReader()
@@ -122,6 +124,7 @@ export function ChatInterface({
       let finalModelId = ''
       let newConvId = currentConvId
       let buffer = ''
+      let terminalReceived = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -151,6 +154,7 @@ export function ChatInterface({
               fullContent += data.content
               setStreaming({ content: fullContent, modelId: finalModelId })
             } else if (data.type === 'done') {
+              terminalReceived = true
               const assistantMsg: Message = {
                 id: crypto.randomUUID(),
                 conversation_id: newConvId ?? '',
@@ -171,6 +175,7 @@ export function ChatInterface({
               setMessages(prev => [...prev, assistantMsg])
               setStreaming(null)
             } else if (data.type === 'error') {
+              terminalReceived = true
               setStreaming(null)
               setMessages(prev => [...prev, {
                 id: crypto.randomUUID(),
@@ -188,6 +193,25 @@ export function ChatInterface({
           } catch {}
         }
       }
+
+      // 連線中斷、未收到 done：保留已串流的內容，避免整段回覆消失
+      if (!terminalReceived) {
+        setStreaming(null)
+        if (fullContent) {
+          setMessages(prev => [...prev, {
+            id: crypto.randomUUID(),
+            conversation_id: newConvId ?? '',
+            user_id: '',
+            role: 'assistant',
+            content: fullContent + '\n\n⚠️ 連線中斷，回覆可能不完整。',
+            model_id: finalModelId || null,
+            input_tokens: 0, output_tokens: 0, cost_usd: 0,
+            image_urls: null, video_url: null, file_refs: null,
+            latency_ms: null, finish_reason: 'interrupted',
+            created_at: new Date().toISOString(),
+          }])
+        }
+      }
     } catch (error) {
       setStreaming(null)
       setMessages(prev => [...prev, {
@@ -195,7 +219,7 @@ export function ChatInterface({
         conversation_id: currentConvId ?? '',
         user_id: '',
         role: 'assistant',
-        content: `❌ 錯誤：${String(error)}`,
+        content: `❌ 錯誤：${error instanceof Error ? error.message : String(error)}`,
         model_id: null,
         input_tokens: 0, output_tokens: 0, cost_usd: 0,
         image_urls: null, video_url: null, file_refs: null,
