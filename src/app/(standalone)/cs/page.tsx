@@ -32,6 +32,7 @@ export default async function CsPage({
     { count: todayMessages },
     { count: openTickets },
     { data: channels },
+    { count: everMessages },
   ] = await Promise.all([
     supabase
       .from('cs_data_sources')
@@ -54,6 +55,11 @@ export default async function CsPage({
       .select('platform')
       .eq('user_id', user.id)
       .eq('enabled', true),
+    // 站內引導 checklist 用：曾經（不限今日）收過任何一則顧客訊息，代表已成功活化
+    supabase
+      .from('cs_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id),
   ])
 
   const industry = sources?.[0]?.industry ?? 'homestay'
@@ -64,6 +70,7 @@ export default async function CsPage({
       todayMessages={todayMessages ?? 0}
       openTickets={openTickets ?? 0}
       connectedPlatforms={(channels ?? []).map((c: { platform: string }) => c.platform)}
+      hasMessages={(everMessages ?? 0) > 0}
     />
   )
 }

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Ticket, Wifi, WifiOff, Settings, FlaskConical,
   Inbox, Database, ArrowRight, RefreshCw, CheckCircle2, Zap,
-  BarChart3, ChevronRight, Users, UserPlus, Sparkles,
+  BarChart3, ChevronRight, Users, UserPlus, Sparkles, Circle,
 } from 'lucide-react'
 
 const INDUSTRY_IDS = ['homestay', 'ecommerce', 'restaurant', 'clinic', 'beauty', 'education'] as const
@@ -35,13 +35,23 @@ interface Props {
   todayMessages: number
   openTickets: number
   connectedPlatforms: string[]
+  hasMessages: boolean
 }
 
-export function CsDashboard({ industry, todayMessages, openTickets, connectedPlatforms }: Props) {
+export function CsDashboard({ industry, todayMessages, openTickets, connectedPlatforms, hasMessages }: Props) {
   const t = useTranslations('CsDashboard')
   const id = (INDUSTRY_IDS.includes(industry as IndustryId) ? industry : 'homestay') as IndustryId
   const style = INDUSTRY_STYLES[id]
   const csUrl = `/marketing-auto?module=cs&industry=${industry}`
+
+  // 站內免費試用引導：綁定頻道 + 收到第一則顧客訊息，代表已活化成功，checklist 就不再顯示
+  const hasConnectedChannel = connectedPlatforms.length > 0
+  const onboardingDone = hasConnectedChannel && hasMessages
+  const onboardingSteps = [
+    { label: '選擇產業並建立客服設定', done: true, href: csUrl },
+    { label: '綁定第一個客服頻道（LINE / WhatsApp / Telegram）', done: hasConnectedChannel, href: '/cs/settings' },
+    { label: '收到第一則顧客訊息，確認 AI 能自動回覆', done: hasMessages, href: `${csUrl}` },
+  ]
 
   const quickActions = [
     { icon: Sparkles,      label: '升級方案',      desc: '解鎖多平台、工單、報價計算機',      href: '/cs/settings', color: 'bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-400' },
@@ -96,6 +106,31 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
             </div>
           </div>
         </div>
+
+        {/* ── Onboarding Checklist（活化前顯示，綁頻道+收到第一則訊息後自動消失）── */}
+        {!onboardingDone && (
+          <div className="bg-card rounded-2xl border p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold text-sm">新手上路：3 步驟開始使用</h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">完成以下步驟，體驗 AI 客服自動回覆的效果。</p>
+            <div className="space-y-2">
+              {onboardingSteps.map(step => (
+                <Link key={step.label} href={step.href}
+                  className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-colors ${
+                    step.done ? 'border-transparent bg-emerald-50 dark:bg-emerald-950/30' : 'hover:border-primary/40 hover:bg-muted/40'
+                  }`}>
+                  {step.done
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    : <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
+                  <span className={step.done ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}>{step.label}</span>
+                  {!step.done && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 ml-auto shrink-0" />}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Stats ── */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
