@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     bonusDays += existingSub?.bonus_days ?? 0
 
-    // 推薦碼核銷：被介紹人第一次用推薦碼付款成功，雙方各贈送 30 天
+    // 推薦碼核銷：僅限被介紹人「第一次付費」使用，已經是付費客戶不能事後補用推薦碼賺天數
     if (bookingPurchase.referral_code_used) {
       const { data: alreadyRedeemed } = await supabase
         .from('booking_referral_redemptions')
@@ -136,7 +136,15 @@ export async function POST(req: NextRequest) {
         .eq('referee_id', bookingPurchase.user_id)
         .maybeSingle()
 
-      if (!alreadyRedeemed) {
+      const { data: priorPaid } = await supabase
+        .from('booking_plan_purchases')
+        .select('id')
+        .eq('user_id', bookingPurchase.user_id)
+        .eq('status', 'paid')
+        .limit(1)
+        .maybeSingle()
+
+      if (!alreadyRedeemed && !priorPaid) {
         const { data: referrerSub } = await supabase
           .from('booking_subscriptions')
           .select('user_id, status, current_period_end, bonus_days')
