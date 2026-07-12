@@ -42,7 +42,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
   const t = useTranslations('CsDashboard')
   const id = (INDUSTRY_IDS.includes(industry as IndustryId) ? industry : 'homestay') as IndustryId
   const style = INDUSTRY_STYLES[id]
-  const csUrl = `/marketing-auto?module=cs&industry=${industry}`
+  const csUrl = `/cs/workspace?industry=${industry}`
 
   // 站內免費試用引導：綁定頻道 + 收到第一則顧客訊息，代表已活化成功，checklist 就不再顯示
   const hasConnectedChannel = connectedPlatforms.length > 0

@@ -20,7 +20,7 @@ export const MODULES = [
     id: 'cs',
     label: '客服系統',
     desc: 'LINE / WhatsApp / Telegram 智能客服',
-    href: '/marketing-auto?module=cs',
+    href: '/cs',
     emoji: '🎧',
     color: 'from-orange-500 to-amber-600',
     standalone: true,
