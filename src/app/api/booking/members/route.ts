@@ -1,24 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-const ROLES = ['admin', 'manager', 'viewer'] as const
-type Role = (typeof ROLES)[number]
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const DEFAULT_MODULES = ['chat', 'marketing', 'cs', 'leads', 'resume']
-
-type SB = Awaited<ReturnType<typeof createClient>>
-
-// 取得此用戶可自用的模組（admin 視為全部）。純協助者不可邀請成員。
-async function selfUsable(supabase: SB, userId: string) {
-  const { data: p } = await supabase
-    .from('profiles').select('user_type, enabled_modules').eq('id', userId).single()
-  const isAdmin = p?.user_type === 'admin'
-  const enabled: string[] = p?.enabled_modules ?? DEFAULT_MODULES
-  return {
-    canUse: (scope: string) => isAdmin || enabled.includes(scope),
-    canUseAny: isAdmin || enabled.includes('booking') || enabled.includes('cs'),
-  }
-}
+// 成員的邀請／修改／移除已統一走 /api/collab/members（含方案協作者上限檢查），
+// 這裡只保留 GET 供 BnbSwitcher 顯示「我管理的民宿／我參與的民宿」。
+// 舊的 POST/PATCH/DELETE 已移除：它們沒有方案人數檢查，直接打 API 可繞過協作者上限。
 
 async function profileMap(ids: string[]) {
   const uniq = [...new Set(ids.filter(Boolean))]
@@ -63,65 +48,4 @@ export async function GET() {
       owner: profiles[m.owner_id] ?? null,
     })),
   })
-}
-
-// 建立 / 更新邀請
-export async function POST(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { email, role = 'manager' } = await req.json()
-  const normEmail = String(email ?? '').trim().toLowerCase()
-  if (!EMAIL_RE.test(normEmail)) return NextResponse.json({ error: 'Email 格式錯誤' }, { status: 400 })
-  if (!ROLES.includes(role)) return NextResponse.json({ error: '角色錯誤' }, { status: 400 })
-  if (normEmail === (user.email ?? '').toLowerCase())
-    return NextResponse.json({ error: '不能邀請自己' }, { status: 400 })
-
-  const { data, error } = await supabase
-    .from('bnb_members')
-    .upsert(
-      { owner_id: user.id, invited_email: normEmail, role: role as Role, invited_by: user.id, status: 'pending', member_id: null, accepted_at: null },
-      { onConflict: 'owner_id,invited_email' }
-    )
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ member: { ...data, token: undefined } })
-}
-
-// 修改成員角色
-export async function PATCH(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { id, role } = await req.json()
-  if (!id || !ROLES.includes(role)) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
-
-  const { data, error } = await supabase
-    .from('bnb_members')
-    .update({ role })
-    .eq('id', id)
-    .eq('owner_id', user.id)
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ member: { ...data, token: undefined } })
-}
-
-// 移除成員 / 撤銷邀請
-export async function DELETE(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { id } = await req.json()
-  if (!id) return NextResponse.json({ error: 'id 必填' }, { status: 400 })
-
-  const { error } = await supabase.from('bnb_members').delete().eq('id', id).eq('owner_id', user.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
 }

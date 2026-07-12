@@ -75,22 +75,35 @@ export interface BookingEntitlements {
  * 取得某民宿（ownerId）目前的訂房方案與解析後的權限。
  * 沒有 booking_subscriptions 資料 = free（免遷移既有帳號）。
  * feature_overrides 可疊加在方案預設值之上，供企業客製功能使用。
+ *
+ * 訂閱查詢一律用 service role：booking_subscriptions 的 RLS 只允許讀自己的
+ * row，協作者操作老闆的民宿時（ownerId ≠ auth.uid()）用請求端 client 會查不到
+ * 訂閱而被誤判成 free。傳入的 supabase 參數保留是為了呼叫端相容，實際不再使用。
  */
 export async function getBookingEntitlements(
   supabase: SupabaseClient,
   ownerId: string,
 ): Promise<BookingEntitlements> {
-  const { data } = await supabase
+  void supabase
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { data } = await admin
     .from('booking_subscriptions')
-    .select('plan, status, extra_properties, feature_overrides')
+    .select('plan, status, extra_properties, feature_overrides, current_period_end')
     .eq('user_id', ownerId)
     .maybeSingle()
 
-  const plan: BookingPlan = (data?.status === 'active' && data?.plan && data.plan in BOOKING_PLAN_FEATURES)
+  // 到期即失效：一次性付款、無自動續訂與定時降級 cron，一律在讀取時檢查
+  // current_period_end，過期就視同免費方案（與 CS 模組同一套規則）。
+  // current_period_end 為 null 視為不到期（管理員手動指定的長期方案）。
+  const expired = !!data?.current_period_end && new Date(data.current_period_end).getTime() < Date.now()
+
+  const plan: BookingPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in BOOKING_PLAN_FEATURES)
     ? (data.plan as BookingPlan)
     : 'free'
 
-  const overrides = (data?.feature_overrides ?? {}) as Partial<BookingPlanFeatures>
+  // 過期訂閱連帶失效 feature_overrides；未過期時照常疊加（包括管理員對免費帳號手動加開的功能）
+  const overrides = (!expired ? data?.feature_overrides ?? {} : {}) as Partial<BookingPlanFeatures>
   const features: BookingPlanFeatures = { ...BOOKING_PLAN_FEATURES[plan], ...overrides }
   const extraProperties = data?.extra_properties ?? 0
 

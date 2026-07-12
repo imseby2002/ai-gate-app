@@ -75,6 +75,7 @@ export default function EmailPage() {
         body: JSON.stringify(id ? { setting_id: id, reset } : { reset }),
       })
       const d = await res.json()
+      if (!res.ok) { setSyncMsg(d.error ?? '同步失敗'); return }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const results: any[] = d.results ?? []
       const totalAdded = results.reduce((s, r) => s + (r.added ?? 0), 0)
