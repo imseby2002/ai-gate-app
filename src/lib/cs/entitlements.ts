@@ -89,15 +89,22 @@ export async function getCsEntitlements(
 ): Promise<{ plan: CsPlan; features: CsPlanFeatures }> {
   const { data } = await supabase
     .from('cs_subscriptions')
-    .select('plan, status, feature_overrides')
+    .select('plan, status, feature_overrides, current_period_end')
     .eq('user_id', ownerId)
     .maybeSingle()
 
-  const plan: CsPlan = (data?.status === 'active' && data?.plan && data.plan in CS_PLAN_FEATURES)
+  // 到期即失效：沒有自動續訂與定時降級 cron，一律在讀取時檢查
+  // current_period_end，過期就視同免費方案。current_period_end 為 null
+  // 視為不到期（管理員手動指定的長期方案）。
+  const expired = !!data?.current_period_end && new Date(data.current_period_end).getTime() < Date.now()
+
+  const plan: CsPlan = (data?.status === 'active' && !expired && data?.plan && data.plan in CS_PLAN_FEATURES)
     ? (data.plan as CsPlan)
     : 'free'
 
-  const overrides = (data?.feature_overrides ?? {}) as Partial<CsPlanFeatures>
+  // 過期訂閱連帶失效 feature_overrides（客製加開的功能不應在到期後繼續生效）；
+  // 未過期時照常疊加，包括管理員對免費帳號手動加開的功能。
+  const overrides = (!expired ? data?.feature_overrides ?? {} : {}) as Partial<CsPlanFeatures>
   const features: CsPlanFeatures = { ...CS_PLAN_FEATURES[plan], ...overrides }
 
   return { plan, features }
