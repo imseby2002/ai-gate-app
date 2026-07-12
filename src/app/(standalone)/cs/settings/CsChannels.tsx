@@ -194,6 +194,10 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                 <LifeBuoy className="h-4 w-4 text-primary" /> 找人幫我設定
               </div>
               <p className="text-xs text-muted-foreground">留下聯絡方式，我們會主動聯繫，協助你綁定頻道與設定客服內容。</p>
+              <p className="text-xs text-muted-foreground/80">
+                協助範圍：站內所有設定（資料來源、報價計算機等）與各平台串接皆包含在內；
+                <strong className="text-foreground">不包含</strong>知識庫內容建立、各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
+              </p>
               <input
                 value={helpContact}
                 onChange={e => setHelpContact(e.target.value)}
