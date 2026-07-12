@@ -5903,8 +5903,8 @@ function Unit12CustomerService({
           </a>
         </div>
       </div>
-      <div className="flex justify-end">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-col sm:flex-row gap-5 items-start">
+        <nav className="flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap sm:w-44 sm:shrink-0">
           {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
             const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
             const labels: Record<Cs12Tab, string> = {
@@ -5929,7 +5929,7 @@ function Unit12CustomerService({
                   if (tb === 'inbox') loadInbox()
                   if (tb === 'data-sources') loadFaq(industry ?? 'homestay')
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative flex items-center gap-1 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative flex items-center gap-1.5 sm:w-full sm:justify-start ${
                   tab === tb ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
                 style={tab === tb ? { background: 'var(--primary)' } : {}}>
@@ -5941,8 +5941,8 @@ function Unit12CustomerService({
               </button>
             )
           })}
-        </div>
-      </div>
+        </nav>
+        <div className="flex-1 min-w-0 space-y-5">
 
       {/* ── Tab: Platforms ──────────────────────────────────────────────────── */}
       {tab === 'platforms' && (
@@ -8137,6 +8137,8 @@ function Unit12CustomerService({
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
     </>
   )
