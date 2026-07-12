@@ -4931,7 +4931,7 @@ function Unit12CustomerService({
       <Lock className="h-6 w-6 text-gray-400 mx-auto" />
       <p className="text-sm font-medium text-gray-700">「{featureName}」為付費方案功能</p>
       <p className="text-xs text-gray-400">升級方案即可解鎖使用。</p>
-      <a href="/cs/settings" className="inline-block text-xs text-primary font-medium hover:underline">升級方案 →</a>
+      <a href="/cs/plan" className="inline-block text-xs text-primary font-medium hover:underline">升級方案 →</a>
     </div>
   )
 
@@ -5895,7 +5895,7 @@ function Unit12CustomerService({
           <a href="/settings" className="text-xs text-primary font-medium hover:underline whitespace-nowrap">
             儲值點數 →
           </a>
-          <a href="/cs/settings"
+          <a href="/cs/plan"
             className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
             style={{ background: 'var(--primary)' }}>
             <Zap className="h-3.5 w-3.5" />
@@ -6302,7 +6302,7 @@ function Unit12CustomerService({
                   <Lock className="h-5 w-5 text-gray-400 mx-auto" />
                   <p className="text-sm font-medium text-gray-700">進階 AI 設定為付費方案功能</p>
                   <p className="text-xs text-gray-400">升級方案即可解鎖升級門檻、報價流程、優惠、VIP 等設定</p>
-                  <a href="/cs/settings" className="inline-block text-xs text-primary font-medium hover:underline">升級方案 →</a>
+                  <a href="/cs/plan" className="inline-block text-xs text-primary font-medium hover:underline">升級方案 →</a>
                 </div>
               </div>
             )}
