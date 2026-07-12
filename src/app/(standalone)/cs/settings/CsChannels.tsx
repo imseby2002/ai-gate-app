@@ -3,9 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock, LifeBuoy, Send,
+  ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock, LifeBuoy, Send, Sparkles, ChevronRight,
 } from 'lucide-react'
-import { CsPlanUpgrade } from './CsPlanUpgrade'
 
 type Field = { key: string; label: string; placeholder: string; secret: boolean }
 type Platform = {
@@ -162,7 +161,17 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
           </Link>
         </div>
 
-        {isOwner && <CsPlanUpgrade />}
+        {isOwner && (
+          <Link href="/cs/plan"
+            className="mb-5 flex items-center gap-3 rounded-xl border bg-card p-4 hover:bg-muted/50 transition-colors">
+            <Sparkles className="h-5 w-5 text-primary shrink-0" />
+            <div className="flex-1">
+              <div className="text-sm font-semibold">訂閱方案</div>
+              <div className="text-xs text-muted-foreground mt-0.5">查看方案內容、升級解鎖多平台、工單、報價計算機</div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </Link>
+        )}
 
         {!isOwner && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">

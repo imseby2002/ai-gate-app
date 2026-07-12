@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
     TradeDesc:        encodeURIComponent(`AI GATE ${pkg.label}`),
     ItemName:         `AI GATE ${pkg.label}`,
     ReturnURL:        `${appUrl}/api/billing/ecpay-return`,
-    OrderResultURL:   `${appUrl}/cs/settings?upgrade=done`,
+    OrderResultURL:   `${appUrl}/cs/plan?upgrade=done`,
     ChoosePayment:    'ALL',
     EncryptType:      '1',
-    ClientBackURL:    `${appUrl}/cs/settings?upgrade=cancel`,
+    ClientBackURL:    `${appUrl}/cs/plan?upgrade=cancel`,
   }
 
   params.CheckMacValue = await generateCheckMac(params, config.hashKey, config.hashIV)
