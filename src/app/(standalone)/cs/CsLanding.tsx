@@ -117,7 +117,7 @@ export function CsLanding() {
             <h2 className="text-xl font-bold text-gray-900">{t('chooseIndustry')}</h2>
             <p className="text-sm text-gray-500 mt-0.5">{t('chooseIndustryDesc')}</p>
           </div>
-          <Link href="/marketing-auto?module=cs" className="hidden sm:flex items-center gap-1.5 text-sm text-primary font-medium hover:underline">
+          <Link href="/cs/workspace" className="hidden sm:flex items-center gap-1.5 text-sm text-primary font-medium hover:underline">
             {t('skip')} <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
@@ -131,7 +131,7 @@ export function CsLanding() {
             return (
               <Link
                 key={id}
-                href={`/marketing-auto?module=cs&industry=${id}`}
+                href={`/cs/workspace?industry=${id}`}
                 onMouseEnter={() => setHoveredIndustry(id)}
                 onMouseLeave={() => setHoveredIndustry(null)}
                 className={`group relative rounded-2xl border-2 p-5 bg-white hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer ${
@@ -157,7 +157,7 @@ export function CsLanding() {
         </div>
 
         <div className="mt-3 text-center">
-          <Link href="/marketing-auto?module=cs" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          <Link href="/cs/workspace" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
             {t('manualConfig')}
           </Link>
         </div>
@@ -212,7 +212,7 @@ export function CsLanding() {
           <p className="text-gray-500 text-sm mb-6">{t('ctaDesc')}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/marketing-auto?module=cs"
+              href="/cs/workspace"
               className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold text-white shadow-lg transition-all hover:shadow-xl hover:-translate-y-0.5"
               style={{ background: 'linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--primary) 60%, violet))' }}
             >
