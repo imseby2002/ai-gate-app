@@ -111,14 +111,68 @@ export async function POST(req: NextRequest) {
   // 找不到 CS 方案訂單 → 檢查是否為訂房方案升級訂單
   const { data: bookingPurchase } = await supabase
     .from('booking_plan_purchases')
-    .select('id, user_id, plan, billing_cycle')
+    .select('id, user_id, plan, billing_cycle, referral_code_used')
     .eq('trade_no', MerchantTradeNo)
     .eq('status', 'pending')
     .maybeSingle()
 
   if (bookingPurchase) {
     const days = bookingPurchase.billing_cycle === 'yearly' ? 365 : 30
-    const periodEnd = new Date(Date.now() + days * 86400000).toISOString()
+    let bonusDays = 0
+
+    // 先前累積的推薦贈送天數（介紹人在免費方案時暫存），這次付款一併加上
+    const { data: existingSub } = await supabase
+      .from('booking_subscriptions')
+      .select('bonus_days')
+      .eq('user_id', bookingPurchase.user_id)
+      .maybeSingle()
+    bonusDays += existingSub?.bonus_days ?? 0
+
+    // 推薦碼核銷：被介紹人第一次用推薦碼付款成功，雙方各贈送 30 天
+    if (bookingPurchase.referral_code_used) {
+      const { data: alreadyRedeemed } = await supabase
+        .from('booking_referral_redemptions')
+        .select('id')
+        .eq('referee_id', bookingPurchase.user_id)
+        .maybeSingle()
+
+      if (!alreadyRedeemed) {
+        const { data: referrerSub } = await supabase
+          .from('booking_subscriptions')
+          .select('user_id, status, current_period_end, bonus_days')
+          .eq('referral_code', bookingPurchase.referral_code_used)
+          .maybeSingle()
+
+        if (referrerSub && referrerSub.user_id !== bookingPurchase.user_id) {
+          bonusDays += 30 // 被介紹人贈送 30 天
+
+          await supabase.from('booking_referral_redemptions').insert({
+            purchase_id: bookingPurchase.id,
+            referrer_id: referrerSub.user_id,
+            referee_id: bookingPurchase.user_id,
+          })
+
+          const referrerActive = referrerSub.status === 'active'
+            && !!referrerSub.current_period_end
+            && new Date(referrerSub.current_period_end) > new Date()
+
+          if (referrerActive) {
+            const newEnd = new Date(new Date(referrerSub.current_period_end!).getTime() + 30 * 86400000).toISOString()
+            await supabase.from('booking_subscriptions')
+              .update({ current_period_end: newEnd })
+              .eq('user_id', referrerSub.user_id)
+          } else {
+            await supabase.from('booking_subscriptions')
+              .update({ bonus_days: (referrerSub.bonus_days ?? 0) + 30 })
+              .eq('user_id', referrerSub.user_id)
+          }
+
+          console.log('[ECPay] 推薦碼核銷成功', { referrerId: referrerSub.user_id, refereeId: bookingPurchase.user_id })
+        }
+      }
+    }
+
+    const periodEnd = new Date(Date.now() + (days + bonusDays) * 86400000).toISOString()
 
     await supabase
       .from('booking_plan_purchases')
@@ -133,6 +187,7 @@ export async function POST(req: NextRequest) {
         billing_cycle: bookingPurchase.billing_cycle,
         status: 'active',
         current_period_end: periodEnd,
+        bonus_days: 0,
       }, { onConflict: 'user_id' })
 
     console.log('[ECPay] 訂房方案升級成功', { userId: bookingPurchase.user_id, plan: bookingPurchase.plan })

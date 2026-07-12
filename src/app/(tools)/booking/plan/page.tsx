@@ -40,6 +40,14 @@ interface Copy {
   compareUsLabel: string
   compareMarketLabel: string
   compareItems: Array<{ label: string; market: string }>
+  referralTitle: string
+  referralDesc: string
+  referralYourCode: string
+  referralCopy: string
+  referralCopied: string
+  referralCount: (n: number) => string
+  referralInputPlaceholder: string
+  referralApplied: string
 }
 
 const COPY: Record<Locale, Copy> = {
@@ -86,6 +94,14 @@ const COPY: Record<Locale, Copy> = {
       { label: '優惠碼功能', market: '通常不支援' },
       { label: '動態定價規則', market: '通常不支援或另外加購' },
     ],
+    referralTitle: '推薦好友',
+    referralDesc: '好友用你的推薦碼完成付款，雙方各贈送 30 天使用期限',
+    referralYourCode: '你的推薦碼',
+    referralCopy: '複製',
+    referralCopied: '已複製',
+    referralCount: n => `已成功推薦 ${n} 位`,
+    referralInputPlaceholder: '輸入好友的推薦碼（選填）',
+    referralApplied: '已套用推薦碼，付款成功後雙方各贈送 30 天',
   },
   en: {
     currentBadge: (plan, limit) => `Current: ${plan} (property limit ${limit})`,
@@ -130,6 +146,14 @@ const COPY: Record<Locale, Copy> = {
       { label: 'Promo codes', market: 'Usually not supported' },
       { label: 'Dynamic pricing rules', market: 'Usually not supported or a paid add-on' },
     ],
+    referralTitle: 'Refer a friend',
+    referralDesc: 'When a friend pays using your code, you both get 30 extra days',
+    referralYourCode: 'Your referral code',
+    referralCopy: 'Copy',
+    referralCopied: 'Copied',
+    referralCount: n => `${n} successful referral${n === 1 ? '' : 's'}`,
+    referralInputPlaceholder: "Friend's referral code (optional)",
+    referralApplied: 'Referral code applied — you both get 30 extra days after payment',
   },
   vi: {
     currentBadge: (plan, limit) => `Hiện tại: ${plan} (giới hạn phòng ${limit})`,
@@ -174,6 +198,14 @@ const COPY: Record<Locale, Copy> = {
       { label: 'Mã khuyến mãi', market: 'Thường không hỗ trợ' },
       { label: 'Quy tắc định giá động', market: 'Thường không hỗ trợ hoặc phải mua thêm' },
     ],
+    referralTitle: 'Giới thiệu bạn bè',
+    referralDesc: 'Khi bạn bè thanh toán bằng mã của bạn, cả hai đều được tặng thêm 30 ngày',
+    referralYourCode: 'Mã giới thiệu của bạn',
+    referralCopy: 'Sao chép',
+    referralCopied: 'Đã sao chép',
+    referralCount: n => `Đã giới thiệu thành công ${n} người`,
+    referralInputPlaceholder: 'Mã giới thiệu của bạn bè (không bắt buộc)',
+    referralApplied: 'Đã áp dụng mã giới thiệu — cả hai sẽ được tặng thêm 30 ngày sau khi thanh toán',
   },
 }
 
@@ -185,6 +217,10 @@ export default function BookingPlanPage() {
   const [propertyLimit, setPropertyLimit] = useState<number | null>(null)
   const [cycle, setCycle] = useState<Cycle>('yearly')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
+  const [myReferralCode, setMyReferralCode] = useState<string | null>(null)
+  const [referredCount, setReferredCount] = useState(0)
+  const [referralCopied, setReferralCopied] = useState(false)
+  const [referralInput, setReferralInput] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -193,9 +229,23 @@ export default function BookingPlanPage() {
       setPlan(data.plan ?? 'free')
       setPropertyLimit(data.propertyLimit ?? 1)
     } catch { setPlan('free'); setPropertyLimit(1) }
+    try {
+      const res = await fetch('/api/booking/referral')
+      const data = await res.json()
+      setMyReferralCode(data.code ?? null)
+      setReferredCount(data.referredCount ?? 0)
+    } catch { /* 推薦碼載入失敗不影響主流程 */ }
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const copyReferralCode = () => {
+    if (!myReferralCode) return
+    navigator.clipboard.writeText(myReferralCode).then(() => {
+      setReferralCopied(true)
+      setTimeout(() => setReferralCopied(false), 1500)
+    })
+  }
 
   const upgrade = async (packageId: string) => {
     setCheckingOut(packageId)
@@ -203,7 +253,7 @@ export default function BookingPlanPage() {
       const res = await fetch('/api/billing/create-booking-plan-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ packageId, referralCode: referralInput.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { alert(data.error ?? copy.checkoutFailed); return }
@@ -320,6 +370,34 @@ export default function BookingPlanPage() {
       </div>
 
       <p className="text-[11px] text-gray-400">{copy.footnote1}</p>
+
+      <div className="rounded-xl border bg-white p-4 space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-800">{copy.referralTitle}</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{copy.referralDesc}</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 space-y-1.5">
+            <div className="text-[11px] text-gray-400">{copy.referralYourCode}</div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-lg bg-gray-50 border font-mono text-sm font-semibold tracking-wider text-gray-800">
+                {myReferralCode ?? '—'}
+              </span>
+              <button onClick={copyReferralCode} disabled={!myReferralCode}
+                className="text-xs px-2.5 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50 disabled:opacity-40">
+                {referralCopied ? copy.referralCopied : copy.referralCopy}
+              </button>
+            </div>
+            {referredCount > 0 && <div className="text-[11px] text-green-600">{copy.referralCount(referredCount)}</div>}
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <input value={referralInput} onChange={e => setReferralInput(e.target.value)}
+              placeholder={copy.referralInputPlaceholder}
+              className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+            {referralInput.trim() && <div className="text-[11px] text-indigo-600">{copy.referralApplied}</div>}
+          </div>
+        </div>
+      </div>
 
       <div className="rounded-xl border bg-white p-4 space-y-3">
         <h2 className="text-sm font-semibold text-gray-800">{copy.compareTitle}</h2>
