@@ -36,6 +36,12 @@ interface Copy {
   featureCol: string
   cards: Record<BookingPlan, string[]>
   rows: Array<{ label: string; values: [string, string, string, string] }>
+  foundingBadge: string
+  foundingBody: string
+  compareTitle: string
+  compareUsLabel: string
+  compareMarketLabel: string
+  compareItems: Array<{ label: string; market: string }>
 }
 
 const COPY: Record<Locale, Copy> = {
@@ -74,6 +80,16 @@ const COPY: Record<Locale, Copy> = {
       { label: '與 CS 串接（訂單密碼連動）', values: ['—', '—', '✓', '✓'] },
       { label: '人工協助設置（超額單價 $20）', values: ['0 次/月', '0 次/月', '1 次/月', '2 次/月'] },
     ],
+    foundingBadge: '🎉 早鳥創始優惠',
+    foundingBody: '現在訂閱鎖定今日價格，未來調漲不影響已訂閱的方案',
+    compareTitle: '為什麼比市場同類系統划算',
+    compareUsLabel: 'AI GATE',
+    compareMarketLabel: '市場同類系統常見狀況',
+    compareItems: [
+      { label: '官網 AI 設計', market: '通常另外加購' },
+      { label: '優惠碼功能', market: '通常不支援' },
+      { label: '動態定價規則', market: '通常不支援或另外加購' },
+    ],
   },
   en: {
     currentBadge: (plan, limit) => `Current: ${plan} (property limit ${limit})`,
@@ -110,6 +126,16 @@ const COPY: Record<Locale, Copy> = {
       { label: 'CS integration (order password lookup)', values: ['—', '—', '✓', '✓'] },
       { label: 'Setup assist (overage $20/session)', values: ['0/month', '0/month', '1/month', '2/month'] },
     ],
+    foundingBadge: '🎉 Founding member offer',
+    foundingBody: 'Subscribe now to lock in today\'s price — future increases won\'t affect your existing subscription',
+    compareTitle: 'Why we\'re better value than comparable systems',
+    compareUsLabel: 'AI GATE',
+    compareMarketLabel: 'Typical for comparable systems',
+    compareItems: [
+      { label: 'AI website design', market: 'Usually a paid add-on' },
+      { label: 'Promo codes', market: 'Usually not supported' },
+      { label: 'Dynamic pricing rules', market: 'Usually not supported or a paid add-on' },
+    ],
   },
   vi: {
     currentBadge: (plan, limit) => `Hiện tại: ${plan} (giới hạn phòng ${limit})`,
@@ -145,6 +171,16 @@ const COPY: Record<Locale, Copy> = {
       { label: 'Đồng bộ tức thời 60+ kênh (chống overbooking)', values: ['—', '—', '✓ (tất cả phòng)', '✓ (tất cả phòng)'] },
       { label: 'Tích hợp CS (tra mật khẩu đơn)', values: ['—', '—', '✓', '✓'] },
       { label: 'Hỗ trợ cài đặt (vượt hạn mức $20/lần)', values: ['0 lần/tháng', '0 lần/tháng', '1 lần/tháng', '2 lần/tháng'] },
+    ],
+    foundingBadge: '🎉 Ưu đãi thành viên sáng lập',
+    foundingBody: 'Đăng ký ngay để giữ nguyên giá hiện tại — tăng giá sau này không ảnh hưởng đến gói bạn đã đăng ký',
+    compareTitle: 'Vì sao đáng giá hơn các hệ thống tương tự trên thị trường',
+    compareUsLabel: 'AI GATE',
+    compareMarketLabel: 'Tình trạng thường thấy ở hệ thống tương tự',
+    compareItems: [
+      { label: 'Thiết kế website AI', market: 'Thường phải mua thêm' },
+      { label: 'Mã khuyến mãi', market: 'Thường không hỗ trợ' },
+      { label: 'Quy tắc định giá động', market: 'Thường không hỗ trợ hoặc phải mua thêm' },
     ],
   },
 }
@@ -205,6 +241,11 @@ export default function BookingPlanPage() {
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-6 max-w-5xl">
+      <div className="flex items-center gap-2 flex-wrap rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
+        <span className="text-sm font-semibold text-amber-800">{copy.foundingBadge}</span>
+        <span className="text-xs text-amber-700">{copy.foundingBody}</span>
+      </div>
+
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{t('plan.title')}</h1>
@@ -292,6 +333,24 @@ export default function BookingPlanPage() {
       </div>
 
       <p className="text-[11px] text-gray-400">{copy.footnote1}</p>
+
+      <div className="rounded-xl border bg-white p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-gray-800">{copy.compareTitle}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {copy.compareItems.map(item => (
+            <div key={item.label} className="rounded-lg border p-3 space-y-1.5">
+              <div className="text-xs font-medium text-gray-700">{item.label}</div>
+              <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
+                <Check className="h-3.5 w-3.5 shrink-0" />{copy.compareUsLabel}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                <X className="h-3.5 w-3.5 shrink-0" />{item.market}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-gray-400">{copy.compareMarketLabel}</p>
+      </div>
 
       <div className="overflow-x-auto rounded-xl border bg-white">
         <table className="w-full text-xs border-collapse min-w-[640px]">
