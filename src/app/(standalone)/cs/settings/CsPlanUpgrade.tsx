@@ -33,6 +33,7 @@ const PLAN_CARDS: Array<{
 // 功能比較表：每一列對應一個功能，四欄分別是免費／PRO／TEAM／企業的值
 const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, string] }> = [
   { label: '平台串接數', values: ['1 個', '3 個', '3 個', '不限'] },
+  { label: '客服訊息則數', values: ['不限', '不限', '不限', '不限'] },
   { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'] },
   { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'] },
   { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'] },
