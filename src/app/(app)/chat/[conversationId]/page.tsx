@@ -21,12 +21,14 @@ export default async function ConversationPage({
 
   if (!conversation) redirect('/chat')
 
+  // 取最新 50 筆，再轉回時間正序顯示
   const { data: messages } = await supabase
     .from('messages')
     .select('*')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(50)
+  const orderedMessages = (messages ?? []).reverse()
 
   const { data: models } = await supabase
     .from('ai_models')
@@ -37,7 +39,7 @@ export default async function ConversationPage({
   return (
     <ChatInterface
       conversationId={conversationId}
-      initialMessages={messages ?? []}
+      initialMessages={orderedMessages}
       assistant={conversation.assistants ?? null}
       models={models ?? []}
     />

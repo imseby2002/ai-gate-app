@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Message required' }), { status: 400 })
   }
 
-  // Load assistant + files if provided
+  // Load assistant + files if provided (must belong to current user)
   let assistant = null
   let assistantFiles: Array<{ extracted_text: string | null; file_name: string }> = []
 
@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
       .from('assistants')
       .select('*')
       .eq('id', assistantId)
+      .eq('user_id', user.id)
       .single()
+    if (!asst) {
+      return new Response(JSON.stringify({ error: 'Assistant not found' }), { status: 404 })
+    }
     assistant = asst
 
     const { data: files } = await supabase
@@ -76,21 +80,45 @@ export async function POST(req: NextRequest) {
     assistantFiles = files ?? []
   }
 
-  // Load conversation history
+  // Detect intent + resolve model
+  const intent = detectIntent(message, !!imageBase64, assistant?.routing_tags ?? undefined)
+  const modelId = resolveModel(intent, modelOverride ?? assistant?.default_model)
+  const provider = getProviderFromModel(modelId)
+
+  // Reject image/video models in chat endpoint (before any writes)
+  if (isImageModel(modelId) || isVideoModel(modelId)) {
+    return new Response(
+      JSON.stringify({ error: 'Use /api/image/generate or /api/video/generate for media generation' }),
+      { status: 400 }
+    )
+  }
+
+  // Load conversation history (must belong to current user)
   let conversationMessages: Array<{ role: string; content: string }> = []
   let activeConversationId = conversationId
 
   if (conversationId) {
+    const { data: conv } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('id', conversationId)
+      .eq('user_id', user.id)
+      .single()
+    if (!conv) {
+      return new Response(JSON.stringify({ error: 'Conversation not found' }), { status: 404 })
+    }
+
+    // Latest 20 messages in chronological order
     const { data: msgs } = await supabase
       .from('messages')
       .select('role, content')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(20)
-    conversationMessages = msgs ?? []
+    conversationMessages = (msgs ?? []).reverse()
   } else {
     // Create new conversation
-    const title = message.slice(0, 60)
+    const title = message.trim().slice(0, 60) || '圖片對話'
     const { data: newConv } = await supabase
       .from('conversations')
       .insert({
@@ -100,20 +128,10 @@ export async function POST(req: NextRequest) {
       })
       .select('id')
       .single()
-    activeConversationId = newConv?.id
-  }
-
-  // Detect intent + resolve model
-  const intent = detectIntent(message, !!imageBase64, assistant?.routing_tags ?? undefined)
-  const modelId = resolveModel(intent, modelOverride ?? assistant?.default_model)
-  const provider = getProviderFromModel(modelId)
-
-  // Reject image/video models in chat endpoint
-  if (isImageModel(modelId) || isVideoModel(modelId)) {
-    return new Response(
-      JSON.stringify({ error: 'Use /api/image/generate or /api/video/generate for media generation' }),
-      { status: 400 }
-    )
+    if (!newConv?.id) {
+      return new Response(JSON.stringify({ error: 'Failed to create conversation' }), { status: 500 })
+    }
+    activeConversationId = newConv.id
   }
 
   // Build system prompt
@@ -148,6 +166,8 @@ export async function POST(req: NextRequest) {
   try {
     // Stream from appropriate provider
     let streamResult
+    // Actual model used for cost tracking (fallback chain may pick a different one)
+    let effectiveModelId = modelId
 
     const chatParams = {
       modelId,
@@ -161,13 +181,14 @@ export async function POST(req: NextRequest) {
 
     if (chainName && intent !== 'vision') {
       // Use fallback chain: CLI Proxy → FreeLLMAPI → Direct paid API
-      const imageInput = imageBase64 ? { base64: imageBase64, mimeType: 'image/jpeg' } : undefined
+      const imageMimeType = imageBase64?.match(/^data:(image\/\w+);base64,/)?.[1] ?? 'image/jpeg'
+      const imageInput = imageBase64
+        ? { base64: imageBase64.replace(/^data:image\/\w+;base64,/, ''), mimeType: imageMimeType }
+        : undefined
       const fallback = await streamByChain(chainName, chatParams, imageInput)
       streamResult = fallback.stream
-      // Override modelId for cost tracking (best-effort, free models cost 0)
-      if (fallback.usedVia !== 'direct') {
-        Object.assign(chatParams, { modelId: `proxy:${fallback.usedModel}` })
-      }
+      // Free proxy models cost 0 (unknown ids fall through calculateCost → 0)
+      effectiveModelId = fallback.usedVia === 'direct' ? fallback.usedModel : `proxy:${fallback.usedModel}`
     } else if (provider === 'perplexity') {
       // Legal/web search → always direct Perplexity (needs real web)
       streamResult = await streamPerplexity(chatParams)
@@ -198,7 +219,7 @@ export async function POST(req: NextRequest) {
 
         // Send metadata first
         controller.enqueue(encoder.encode(
-          `data: ${JSON.stringify({ type: 'meta', conversationId: activeConversationId, modelId })}\n\n`
+          `data: ${JSON.stringify({ type: 'meta', conversationId: activeConversationId, modelId: effectiveModelId })}\n\n`
         ))
 
         try {
@@ -216,7 +237,7 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          const costUsd = calculateCost(modelId, inputTokens, outputTokens)
+          const costUsd = calculateCost(effectiveModelId, inputTokens, outputTokens)
           const latencyMs = Date.now() - startTime
 
           // Save assistant message
@@ -225,7 +246,7 @@ export async function POST(req: NextRequest) {
             user_id: user.id,
             role: 'assistant',
             content: fullContent,
-            model_id: modelId,
+            model_id: effectiveModelId,
             input_tokens: inputTokens,
             output_tokens: outputTokens,
             cost_usd: costUsd,
@@ -236,7 +257,7 @@ export async function POST(req: NextRequest) {
             `data: ${JSON.stringify({
               type: 'done',
               conversationId: activeConversationId,
-              modelId,
+              modelId: effectiveModelId,
               inputTokens,
               outputTokens,
               costUsd,
@@ -245,7 +266,7 @@ export async function POST(req: NextRequest) {
           ))
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         } catch (err) {
-          console.error(`[chat] stream error (model=${modelId}):`, err)
+          console.error(`[chat] stream error (model=${effectiveModelId}):`, err)
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ type: 'error', error: String(err) })}\n\n`
           ))

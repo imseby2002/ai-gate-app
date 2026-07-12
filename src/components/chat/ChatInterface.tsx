@@ -46,7 +46,12 @@ export function ChatInterface({
 
   const handleImageAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      alert('圖片大小不可超過 5MB')
+      return
+    }
     const reader = new FileReader()
     reader.onload = (ev) => setImagePreview(ev.target?.result as string)
     reader.readAsDataURL(file)
@@ -116,13 +121,16 @@ export function ChatInterface({
       let fullContent = ''
       let finalModelId = ''
       let newConvId = currentConvId
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        // SSE 事件可能被切在 chunk 邊界，保留最後不完整的一行
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue

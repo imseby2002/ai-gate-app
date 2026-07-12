@@ -123,8 +123,11 @@ export function calculateCost(
     'gemini-2.0-flash':        { in: 0.000075, out: 0.0003   },
     'gemini-2.0-flash-thinking': { in: 0.000075, out: 0.0003 },
     'gemini-2.0-flash-vision': { in: 0.00125,  out: 0.00375  },
+    'gemini-2.5-flash':        { in: 0.0003,   out: 0.0025   },
     'claude-opus-4-5':         { in: 0.015,    out: 0.075    },
     'claude-sonnet-4-5':       { in: 0.003,    out: 0.015    },
+    'claude-sonnet-4-6':       { in: 0.003,    out: 0.015    },
+    'claude-haiku-4-5-20251001': { in: 0.001,  out: 0.005    },
     'perplexity-sonar-pro':    { in: 0.001,    out: 0.001    },
     // OpenRouter paid models
     'or-gpt-4o-mini':          { in: 0.00015,  out: 0.0006   },
