@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import {
   getEcpayConfig,
   generateCheckMac,
@@ -15,9 +16,25 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { packageId } = await req.json() as { packageId: BookingPlanPackageId }
+  const { packageId, referralCode } = await req.json() as { packageId: BookingPlanPackageId; referralCode?: string }
   const pkg = BOOKING_PLAN_PACKAGES.find(p => p.id === packageId)
   if (!pkg) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
+
+  // 推薦碼驗證：必須存在、且不能是自己的碼（防自我推薦）
+  let referralCodeUsed: string | null = null
+  const trimmedCode = referralCode?.trim().toUpperCase()
+  if (trimmedCode) {
+    // 推薦碼查詢需跨用戶讀取，RLS 只允許讀自己的 row，這裡改用 service role。
+    const admin = createAdminClient()
+    const { data: referrer } = await admin
+      .from('booking_subscriptions')
+      .select('user_id')
+      .eq('referral_code', trimmedCode)
+      .maybeSingle()
+    if (!referrer) return NextResponse.json({ error: '推薦碼不存在，請確認後再試' }, { status: 400 })
+    if (referrer.user_id === user.id) return NextResponse.json({ error: '不能使用自己的推薦碼' }, { status: 400 })
+    referralCodeUsed = trimmedCode
+  }
 
   const config = getEcpayConfig()
   const tradeNo = generateTradeNo(user.id)
@@ -32,6 +49,7 @@ export async function POST(req: NextRequest) {
     plan: pkg.plan,
     billing_cycle: pkg.cycle,
     twd_amount: pkg.twdAmount,
+    referral_code_used: referralCodeUsed,
   })
   if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 })
 
