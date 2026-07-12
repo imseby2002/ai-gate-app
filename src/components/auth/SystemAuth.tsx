@@ -57,8 +57,11 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
     }
     // 管理者不寫入 scope，保持自由導航；非管理者才鎖定分頁 scope
     if (!isAdmin) setScope(system)
+    // 注意：push() 之後不要緊接著呼叫 refresh()——refresh() 有機率搶在 push()
+    // 的導航完全生效前執行，導致實際落地的路由跟預期不一致（登入後跳回 /apps
+    // 而非目標系統首頁）。各頁面本身都會自行 fetch 資料，不需要靠 refresh()
+    // 拿到最新的伺服器端資料。
     router.push(def.home)
-    router.refresh()
   }
 
   // Email：先嘗試登入，查無帳號則自動註冊（登入即註冊）
