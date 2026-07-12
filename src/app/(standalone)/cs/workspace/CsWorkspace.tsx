@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
