@@ -91,7 +91,21 @@ export async function POST(req: NextRequest) {
 
   if (planPurchase) {
     const days = planPurchase.billing_cycle === 'yearly' ? 365 : 30
-    const periodEnd = new Date(Date.now() + days * 86400000).toISOString()
+
+    // 同方案續購 → 從原到期日往後延（提前續約不吃掉剩餘天數）；
+    // 不同方案（升級）→ 立即生效，從現在起算。
+    const { data: existingSub } = await supabase
+      .from('cs_subscriptions')
+      .select('plan, status, current_period_end')
+      .eq('user_id', planPurchase.user_id)
+      .maybeSingle()
+    const now = Date.now()
+    const remainingValid = existingSub?.status === 'active'
+      && existingSub.plan === planPurchase.plan
+      && !!existingSub.current_period_end
+      && new Date(existingSub.current_period_end).getTime() > now
+    const baseMs = remainingValid ? new Date(existingSub!.current_period_end!).getTime() : now
+    const periodEnd = new Date(baseMs + days * 86400000).toISOString()
 
     await supabase
       .from('cs_plan_purchases')
