@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
+import { deductCredits } from '@/lib/skills/billing'
+import { guardResumeAccess, RESUME_COSTS } from '@/lib/resume/billing'
 
 function sse(controller: ReadableStreamDefaultController, payload: object) {
   controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(payload)}\n\n`))
@@ -144,6 +146,15 @@ export async function POST(request: NextRequest) {
   const buildPrompt = SYSTEM_PROMPTS[toolId]
   if (!buildPrompt) {
     return new Response(JSON.stringify({ error: '未知工具' }), { status: 400 })
+  }
+
+  // ── 模組權限 + 執行前餘額檢查 + 扣點（未知工具已於上方 400，不扣款）──
+  const cost = RESUME_COSTS['worker-tools']
+  const denied = await guardResumeAccess(supabase, user.id, cost)
+  if (denied) return denied
+  const deduct = await deductCredits(user.id, cost, `[resume] worker-tools:${toolId}`)
+  if (!deduct.ok && deduct.reason === 'insufficient') {
+    return new Response(JSON.stringify({ error: '點數不足' }), { status: 402 })
   }
 
   const systemPrompt = buildPrompt(inputs)
