@@ -64,6 +64,10 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/api/auth/check-whitelist') ||
       pathname.startsWith('/favicon') ||
       pathname.startsWith('/api/health') ||
+      pathname.startsWith('/pos/kiosk') ||
+      pathname.startsWith('/api/pos/sync') ||
+      pathname.startsWith('/api/pos/orders') ||
+      pathname.startsWith('/api/pos/terminals') ||
       pathname.startsWith('/api/marketing/cs-webhook') ||
       pathname.startsWith('/api/marketing/telegram-webhook')
 
@@ -143,6 +147,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/prospect-call') ||
       pathname.startsWith('/resume') ||
       pathname.startsWith('/work') ||
+      pathname.startsWith('/pos') ||
       pathname.startsWith('/hr') ||
       pathname.startsWith('/finance')
     )
@@ -178,6 +183,7 @@ export async function middleware(request: NextRequest) {
           '/prospect-call':  ['leads', 'marketing'],
           '/resume':         ['resume'],
           '/work':           ['work'],
+          '/pos':            ['work'],
           '/hr':             ['hr'],
           '/finance':        ['finance'],
         }

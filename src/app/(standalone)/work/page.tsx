@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Building2, Wallet } from 'lucide-react'
+import { Building2, Wallet, UtensilsCrossed } from 'lucide-react'
 
 type SB = ReturnType<typeof createClient>
 type T = ReturnType<typeof useTranslations>
@@ -396,6 +396,11 @@ export default function WorkPage() {
               </Button>
             </Link>
           )}
+          <Link href="/pos">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <UtensilsCrossed className="h-4 w-4" />門市點單
+            </Button>
+          </Link>
         </div>
       </div>
 
