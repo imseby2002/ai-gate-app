@@ -61,6 +61,8 @@ export interface PosCategory {
   name: string
   sort_order: number
   is_active: boolean
+  image_url?: string | null
+  translations?: import('./i18n').PosTranslations
   created_at: string
   updated_at: string
 }
@@ -76,6 +78,7 @@ export interface PosItem {
   barcode: string | null
   image_url: string | null
   modifiers: PosModifierGroup[]
+  translations?: import('./i18n').PosTranslations
   sort_order: number
   is_active: boolean
   created_at: string
