@@ -3,6 +3,8 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, streamText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
+import { deductCredits } from '@/lib/skills/billing'
+import { guardResumeAccess, RESUME_COSTS } from '@/lib/resume/billing'
 
 // ── SSE helper ───────────────────────────────────────────────────
 function sse(controller: ReadableStreamDefaultController, payload: object) {
@@ -170,6 +172,11 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: '請提供職缺 JD 或過往經歷' }), { status: 400 })
   }
 
+  // ── 模組權限 + 執行前餘額檢查 ─────────────────────────────────
+  const cost = RESUME_COSTS['resume-optimize']
+  const denied = await guardResumeAccess(supabase, user.id, cost)
+  if (denied) return denied
+
   // ── 在 stream 外層先執行分析（確保 fallback 邏輯完整執行）──────
   let analysis = ''
   let analysisModel = ''
@@ -183,6 +190,12 @@ export async function POST(req: NextRequest) {
       JSON.stringify({ error: `AI 分析服務暫時無法使用，請稍後再試。(${String(err)})` }),
       { status: 503 },
     )
+  }
+
+  // ── 分析成功才扣點（DeepSeek/Claude 皆掛掉時上面已 503，不扣款）──
+  const deduct = await deductCredits(user.id, cost, '[resume] resume-optimize')
+  if (!deduct.ok && deduct.reason === 'insufficient') {
+    return new Response(JSON.stringify({ error: '點數不足' }), { status: 402 })
   }
 
   // ── 分析完成，開始串流履歷生成 ────────────────────────────────
