@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         const result = streamText({
-          model: anthropic('claude-sonnet-4-5'),
+          model: anthropic('claude-sonnet-4-6'),
           system: systemPrompt,
           prompt: '請開始生成，直接輸出結果，不需要重複題目或額外說明。',
           maxOutputTokens: 2000,

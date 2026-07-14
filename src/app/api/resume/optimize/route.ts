@@ -65,7 +65,7 @@ async function runAnalysis(jd: string, experience: string): Promise<{ text: stri
   // 後備：Claude（Phase 2 撰寫也在用同一把金鑰，DeepSeek 掛掉時履歷功能仍可用）
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
   const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-5'),
+    model: anthropic('claude-sonnet-4-6'),
     prompt,
     maxOutputTokens: 2000,
   })
@@ -129,7 +129,7 @@ ${experience || '（未提供）'}
   }
 
   return streamText({
-    model: anthropic('claude-sonnet-4-5'),
+    model: anthropic('claude-sonnet-4-6'),
     system: systemPrompt,
     messages: [{ role: 'user' as const, content }],
     maxOutputTokens: 3000,

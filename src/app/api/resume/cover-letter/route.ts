@@ -83,7 +83,7 @@ ${customInstructions ? `【額外要求】\n${customInstructions}` : ''}
         sse(controller, { type: 'phase', label: 'Claude Sonnet 撰寫求職信中...' })
 
         const claudeStream = await streamText({
-          model: anthropic('claude-sonnet-4-5'),
+          model: anthropic('claude-sonnet-4-6'),
           system: systemPrompt,
           messages: [{ role: 'user', content: userPrompt }],
           maxOutputTokens: 2000,

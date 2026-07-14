@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     try {
       const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
       const { text } = await generateText({
-        model: anthropic('claude-sonnet-4-5'),
+        model: anthropic('claude-sonnet-4-6'),
         system:
           `You are a translation engine. Translate each input string into ${langName}. ` +
           `If a string is already in the target language, return it unchanged. ` +
