@@ -3,12 +3,16 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { verifyCheckMac, getEcpayConfig } from '@/lib/ecpay/client'
 
 export async function POST(req: NextRequest) {
-  // ECPay 送來的是 application/x-www-form-urlencoded
+  // ECPay 送來的是 application/x-www-form-urlencoded。
+  // 必須用 URLSearchParams 解析：form-urlencoded 的空白編碼成「+」，
+  // decodeURIComponent 不會處理「+」。ECPay 回調必帶 PaymentDate
+  // （yyyy/MM/dd HH:mm:ss，含空白），手動 split + decodeURIComponent
+  // 會把它解析成「2026/07/12+10:00:00」，CheckMacValue 重算永遠對不上，
+  // 所有回調都被當驗證失敗丟掉，點數／方案永遠不會入帳。
   const body = await req.text()
   const params: Record<string, string> = {}
-  for (const pair of body.split('&')) {
-    const [k, v] = pair.split('=')
-    if (k) params[decodeURIComponent(k)] = decodeURIComponent(v ?? '')
+  for (const [k, v] of new URLSearchParams(body)) {
+    params[k] = v
   }
 
   const config = getEcpayConfig()
@@ -87,7 +91,21 @@ export async function POST(req: NextRequest) {
 
   if (planPurchase) {
     const days = planPurchase.billing_cycle === 'yearly' ? 365 : 30
-    const periodEnd = new Date(Date.now() + days * 86400000).toISOString()
+
+    // 同方案續購 → 從原到期日往後延（提前續約不吃掉剩餘天數）；
+    // 不同方案（升級）→ 立即生效，從現在起算。
+    const { data: existingSub } = await supabase
+      .from('cs_subscriptions')
+      .select('plan, status, current_period_end')
+      .eq('user_id', planPurchase.user_id)
+      .maybeSingle()
+    const now = Date.now()
+    const remainingValid = existingSub?.status === 'active'
+      && existingSub.plan === planPurchase.plan
+      && !!existingSub.current_period_end
+      && new Date(existingSub.current_period_end).getTime() > now
+    const baseMs = remainingValid ? new Date(existingSub!.current_period_end!).getTime() : now
+    const periodEnd = new Date(baseMs + days * 86400000).toISOString()
 
     await supabase
       .from('cs_plan_purchases')

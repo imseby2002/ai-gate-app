@@ -19,6 +19,25 @@ export async function POST(req: NextRequest) {
   const pkg = CS_PLAN_PACKAGES.find(p => p.id === packageId)
   if (!pkg) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
 
+  // 現有方案尚未到期時，禁止購買「較低」方案：付款回調會直接覆蓋訂閱，
+  // 等於立刻降級且剩餘天數全部消失。同方案續購（延長）與升級不受限。
+  const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, team: 2, enterprise: 3 }
+  const { data: currentSub } = await supabase
+    .from('cs_subscriptions')
+    .select('plan, status, current_period_end')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const subActive = currentSub?.status === 'active'
+    && (!currentSub.current_period_end || new Date(currentSub.current_period_end).getTime() > Date.now())
+  if (subActive && (PLAN_RANK[pkg.plan] ?? 0) < (PLAN_RANK[currentSub!.plan] ?? 0)) {
+    const endDate = currentSub!.current_period_end
+      ? new Date(currentSub!.current_period_end).toLocaleDateString('zh-TW')
+      : null
+    return NextResponse.json({
+      error: `目前的 ${String(currentSub!.plan).toUpperCase()} 方案尚未到期${endDate ? `（至 ${endDate}）` : ''}，購買較低方案會立即降級並喪失剩餘天數。請於到期後再購買，或聯繫客服協助變更。`,
+    }, { status: 400 })
+  }
+
   const config = getEcpayConfig()
   const tradeNo = generateTradeNo(user.id)
   const tradeDate = formatEcpayTradeDate()
