@@ -917,8 +917,13 @@ function ReportsSection({
       .channel(`work_reports_${item.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'work_comments', filter: `item_id=eq.${item.id}` }, payload => {
         const c = payload.new as Comment
-        setReports(prev => (prev.some(x => x.id === c.id) ? prev : [...prev, c]))
-        setCount(prev => (prev ?? 0) + 1)
+        // 只在「真的新增了一列」時才 +1；自己送出的報告 insertReport 已樂觀更新過，
+        // realtime 會再收到同一列，若無條件 +1 會重複計算。
+        setReports(prev => {
+          if (prev.some(x => x.id === c.id)) return prev
+          setCount(cnt => (cnt ?? 0) + 1)
+          return [...prev, c]
+        })
       })
       .subscribe()
     return () => {

@@ -40,20 +40,36 @@ ${experience || '（未提供）'}
 請給出具體分析，此分析將作為後續履歷撰寫的依據。`
 }
 
-// ── Phase 1: 分析（官方 DeepSeek-R1）────────────────────────────
+// ── Phase 1: 分析（首選 DeepSeek-R1，失敗後備 Claude）──────────────
 async function runAnalysis(jd: string, experience: string): Promise<{ text: string; usedModel: string }> {
   const prompt = buildAnalysisPrompt(jd, experience)
 
-  const deepseek = createOpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY!,
-    baseURL: 'https://api.deepseek.com/v1',
-  })
+  // 首選：DeepSeek-R1（推理型，分析性價比高）
+  if (process.env.DEEPSEEK_API_KEY) {
+    try {
+      const deepseek = createOpenAI({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        baseURL: 'https://api.deepseek.com/v1',
+      })
+      const { text } = await generateText({
+        model: deepseek.chat('deepseek-reasoner'),
+        prompt,
+        maxOutputTokens: 2000,
+      })
+      if (text.trim()) return { text, usedModel: '官方 DeepSeek-R1' }
+    } catch (err) {
+      console.error('[resume/optimize] DeepSeek 分析失敗，改用 Claude 後備:', err)
+    }
+  }
+
+  // 後備：Claude（Phase 2 撰寫也在用同一把金鑰，DeepSeek 掛掉時履歷功能仍可用）
+  const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
   const { text } = await generateText({
-    model: deepseek.chat('deepseek-reasoner'),
+    model: anthropic('claude-sonnet-4-5'),
     prompt,
     maxOutputTokens: 2000,
   })
-  return { text, usedModel: '官方 DeepSeek-R1' }
+  return { text, usedModel: 'Claude Sonnet' }
 }
 
 // ── Phase 2: Claude Sonnet 撰寫履歷 ──────────────────────────────
