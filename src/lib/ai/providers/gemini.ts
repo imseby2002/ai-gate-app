@@ -9,7 +9,7 @@ const MODEL_MAP: Record<string, string> = {
   'gemini-2.5-flash':          'gemini-2.5-flash',
 }
 
-export async function streamGemini(params: ChatParams & { imageBase64?: string }) {
+export async function streamGemini(params: ChatParams & { imageBase64?: string; imageMimeType?: string }) {
   const google = createGoogleGenerativeAI({
     apiKey: process.env.GOOGLE_AI_API_KEY!,
   })
@@ -26,6 +26,9 @@ export async function streamGemini(params: ChatParams & { imageBase64?: string }
     if (lastMsg.role === 'user') {
       const prior = baseMessages.slice(0, -1)
       const imageData = params.imageBase64.replace(/^data:image\/\w+;base64,/, '')
+      const mimeType = params.imageMimeType
+        ?? params.imageBase64.match(/^data:(image\/\w+);base64,/)?.[1]
+        ?? 'image/jpeg'
 
       const multiMessages = [
         ...prior,
@@ -33,7 +36,7 @@ export async function streamGemini(params: ChatParams & { imageBase64?: string }
           role: 'user' as const,
           content: [
             { type: 'text' as const, text: lastMsg.content as string },
-            { type: 'image' as const, image: imageData, mimeType: 'image/jpeg' as const },
+            { type: 'image' as const, image: imageData, mimeType },
           ],
         },
       ]
