@@ -37,6 +37,8 @@ export default function PosMenuPage() {
   const [itemPrice, setItemPrice] = useState('')
   const [itemCat, setItemCat] = useState('')
   const [itemScope, setItemScope] = useState('')
+  const [itemImage, setItemImage] = useState('')
+  const [newUploading, setNewUploading] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [editTranslations, setEditTranslations] = useState<PosTranslations>({})
   const [editDesc, setEditDesc] = useState('')
@@ -82,27 +84,44 @@ export default function PosMenuPage() {
         description: itemDesc,
         price_cents: Math.round(Number(itemPrice || 0) * 100),
         store_id: itemScope || null,
+        image_url: itemImage || null,
         modifiers: DEFAULT_MODIFIER_GROUPS,
       }),
     })
     setItemName('')
     setItemDesc('')
     setItemPrice('')
+    setItemImage('')
     load()
+  }
+
+  async function uploadToStorage(file: File): Promise<string | null> {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch('/api/pos/menu/upload', { method: 'POST', body: fd })
+    const d = await res.json()
+    return d.url ?? null
+  }
+
+  async function uploadNewImage(file: File) {
+    setNewUploading(true)
+    try {
+      const url = await uploadToStorage(file)
+      if (url) setItemImage(url)
+    } finally {
+      setNewUploading(false)
+    }
   }
 
   async function uploadImage(itemId: string, file: File) {
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/pos/menu/upload', { method: 'POST', body: fd })
-      const d = await res.json()
-      if (d.url) {
+      const url = await uploadToStorage(file)
+      if (url) {
         await fetch('/api/pos/menu/items', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: itemId, image_url: d.url }),
+          body: JSON.stringify({ id: itemId, image_url: url }),
         })
         load()
       }
@@ -204,7 +223,33 @@ export default function PosMenuPage() {
           </select>
           <Textarea className="sm:col-span-2" value={itemDesc} onChange={e => setItemDesc(e.target.value)} placeholder="描述（選填）" rows={2} />
         </div>
-        <Button onClick={addItem} disabled={!itemName.trim() || !itemCat}>新增品項</Button>
+        <div className="flex items-center gap-3">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border bg-muted">
+            {itemImage ? (
+              <Image src={itemImage} alt="預覽" fill className="object-cover" unoptimized />
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <Upload className="h-5 w-5" />
+              </div>
+            )}
+          </div>
+          <label className="inline-flex cursor-pointer">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadNewImage(f) }}
+            />
+            <span className="inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium hover:bg-accent">
+              {newUploading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Upload className="mr-1 h-4 w-4" />}
+              {itemImage ? '更換圖片' : '上傳圖片（選填）'}
+            </span>
+          </label>
+          {itemImage && (
+            <Button size="sm" variant="ghost" onClick={() => setItemImage('')}>移除</Button>
+          )}
+        </div>
+        <Button onClick={addItem} disabled={!itemName.trim() || !itemCat || newUploading}>新增品項</Button>
       </Card>
 
       <div className="space-y-4">
