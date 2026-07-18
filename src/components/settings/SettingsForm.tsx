@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, User, Wallet, Shield, CheckCircle2, MessageSquare, Eye, EyeOff, ExternalLink, Share2 } from 'lucide-react'
+import { Loader2, User, Wallet, Shield, CheckCircle2, MessageSquare, Eye, EyeOff, ExternalLink, Share2, ArrowRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
-import { CREDIT_PACKAGES, type PackageId } from '@/lib/ecpay/client'
 import { SocialPlatformSettings } from './SocialPlatformSettings'
 
 interface SettingsFormProps {
@@ -28,8 +27,6 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
   const [savedTg, setSavedTg] = useState(false)
   const [testingTg, setTestingTg] = useState(false)
   const [tgTestResult, setTgTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
-  const [topupLoading, setTopupLoading] = useState<PackageId | null>(null)
-  const [topupDone, setTopupDone] = useState(false)
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,40 +36,6 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
-  }
-
-  const handleTopup = async (packageId: PackageId) => {
-    setTopupLoading(packageId)
-    try {
-      const res = await fetch('/api/billing/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId, returnUrl: window.location.href }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-
-      const form = document.createElement('form')
-      form.method = 'POST'
-      form.action = data.paymentUrl
-      form.target = '_blank'
-      for (const [key, value] of Object.entries(data.params)) {
-        const input = document.createElement('input')
-        input.type = 'hidden'
-        input.name = key
-        input.value = String(value)
-        form.appendChild(input)
-      }
-      document.body.appendChild(form)
-      form.submit()
-      document.body.removeChild(form)
-      setTopupDone(true)
-    } catch (err) {
-      console.error('topup failed', err)
-      alert('Error processing payment. Please try again.')
-    } finally {
-      setTopupLoading(null)
-    }
   }
 
   const handleSaveTelegram = async (e: React.FormEvent) => {
@@ -114,11 +77,6 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
     } finally {
       setTestingTg(false)
     }
-  }
-
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('payment') === 'done' && !topupDone) setTopupDone(true)
   }
 
   const userTypeLabel = {
@@ -180,22 +138,13 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         </form>
       </div>
 
-      {/* Credit Balance & Top-up */}
-      <div className="bg-card rounded-2xl border p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-5">
+      {/* Credit Balance → 點數錢包 */}
+      <a href="/credits" className="block bg-card rounded-2xl border p-6 shadow-sm hover:border-primary/40 transition-colors">
+        <div className="flex items-center gap-2 mb-4">
           <Wallet className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">{t('credits')}</h2>
         </div>
-
-        {topupDone && (
-          <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm">
-            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-            {t('topupDoneMsg')}
-          </div>
-        )}
-
-        {/* Balance */}
-        <div className="flex items-center justify-between p-4 rounded-xl bg-muted/40 border mb-5">
+        <div className="flex items-center justify-between p-4 rounded-xl bg-muted/40 border">
           <div>
             <div className="text-sm text-muted-foreground">{t('currentBalance')}</div>
             <div className="text-2xl font-bold mt-0.5">
@@ -203,49 +152,11 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
               <span className="text-base font-normal text-muted-foreground/60 ml-1">USD</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'color-mix(in oklch, var(--primary) 15%, transparent)' }}>
-            <Wallet className="h-5 w-5" style={{ color: 'var(--primary)' }} />
-          </div>
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+            前往儲值 <ArrowRight className="h-4 w-4" />
+          </span>
         </div>
-
-        {/* Packages */}
-        <div className="mb-3 text-sm font-medium text-foreground/70">{t('topupPackages')}</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {CREDIT_PACKAGES.map(pkg => (
-            <div
-              key={pkg.id}
-              className="relative rounded-xl border-2 p-4 flex flex-col gap-2"
-              style={pkg.badge === '推薦' || pkg.badge === '最超值'
-                ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 5%, transparent)' }
-                : { borderColor: '#e5e7eb' }
-              }
-            >
-              {pkg.badge && (
-                <span
-                  className="absolute -top-2.5 left-3 px-2 py-0.5 rounded-full text-xs font-semibold text-white"
-                  style={{ background: 'var(--primary)' }}
-                >
-                  {pkg.badge}
-                </span>
-              )}
-              <div className="font-bold text-lg">{pkg.label}</div>
-              <div className="text-sm text-muted-foreground">{pkg.desc}</div>
-              <button
-                onClick={() => handleTopup(pkg.id as PackageId)}
-                disabled={topupLoading !== null}
-                className="mt-auto flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-                style={{ background: 'var(--primary)' }}
-              >
-                {topupLoading === pkg.id
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('topupProcessing')}</>
-                  : t('topupNow')
-                }
-              </button>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground/60">{t('ecpayNote')}</p>
-      </div>
+      </a>
 
       {/* Telegram Integration */}
       <div className="bg-card rounded-2xl border p-6 shadow-sm">

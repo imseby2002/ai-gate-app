@@ -1371,7 +1371,7 @@ function Unit12CustomerService({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <a href="/settings" className="text-xs text-primary font-medium hover:underline whitespace-nowrap">
+          <a href="/credits" className="text-xs text-primary font-medium hover:underline whitespace-nowrap">
             儲值點數 →
           </a>
           <a href="/cs/plan"

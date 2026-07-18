@@ -66,15 +66,19 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
       <div className="hidden md:block" />
 
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Credit balance */}
+        {/* Credit balance → 點數錢包（可點擊儲值） */}
         {profile.user_type === 'external' && creditBalance !== undefined && (
-          <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-sm">
+          <a
+            href="/credits"
+            title="點數錢包 · 儲值"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+          >
             <CreditCard className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             <span className="font-semibold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">
               ${creditBalance?.toFixed(2)}
             </span>
             <span className="hidden sm:inline text-emerald-600/70 dark:text-emerald-400/70 text-xs">{t('balance')}</span>
-          </div>
+          </a>
         )}
 
         <div className="hidden sm:block">
