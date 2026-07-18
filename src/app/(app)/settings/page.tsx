@@ -11,6 +11,9 @@ export default async function SettingsPage() {
 
   const t = await getTranslations('Settings')
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  // 餘額真相來源是 credit_transactions 加總（get_credit_balance RPC）。
+  // profiles 沒有 credit_balance 欄位，直接讀 profile.credit_balance 永遠是 0。
+  const { data: creditBalance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/50 dark:bg-background">
@@ -19,7 +22,7 @@ export default async function SettingsPage() {
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <p className="text-muted-foreground text-sm mt-1">{t('subtitle')}</p>
         </div>
-        <SettingsForm profile={profile} creditBalance={profile?.credit_balance ?? 0} />
+        <SettingsForm profile={profile} creditBalance={creditBalance ?? 0} />
 
         {/* Company Data Section */}
         <div>

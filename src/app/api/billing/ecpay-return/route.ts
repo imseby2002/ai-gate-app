@@ -51,17 +51,14 @@ export async function POST(req: NextRequest) {
       return new NextResponse('1|OK', { status: 200 })
     }
 
-    // 取得用戶當前餘額
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('credit_balance')
-      .eq('id', pending.user_id)
-      .single()
+    // 餘額真相來源是 credit_transactions 加總（get_credit_balance RPC）。
+    // profiles 沒有 credit_balance 欄位，餘額不需要（也不能）寫回 profiles；
+    // 只要把這筆 PENDING 的 amount_usd 補上，加總就會自動反映。
+    // balance_after 僅供交易紀錄顯示用，取「入帳後」的加總值。
+    const { data: currentBalance } = await supabase.rpc('get_credit_balance', { p_user_id: pending.user_id })
+    const newBalance = (currentBalance ?? 0) + usdCredit
 
-    const currentBalance = profile?.credit_balance ?? 0
-    const newBalance = currentBalance + usdCredit
-
-    // 更新 PENDING 記錄為正式交易
+    // 更新 PENDING 記錄為正式交易（amount_usd 補上後即計入餘額加總）
     await supabase
       .from('credit_transactions')
       .update({
@@ -70,12 +67,6 @@ export async function POST(req: NextRequest) {
         description: `ECPay 購買點數 ${parts[2] ?? ''} (${MerchantTradeNo})`,
       })
       .eq('id', pending.id)
-
-    // 更新用戶點數餘額
-    await supabase
-      .from('profiles')
-      .update({ credit_balance: newBalance })
-      .eq('id', pending.user_id)
 
     console.log('[ECPay] 付款成功', { userId: pending.user_id, usdCredit, newBalance })
     return new NextResponse('1|OK', { status: 200 })
