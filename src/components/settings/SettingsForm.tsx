@@ -47,7 +47,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
       const res = await fetch('/api/billing/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ packageId, returnUrl: window.location.href }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)

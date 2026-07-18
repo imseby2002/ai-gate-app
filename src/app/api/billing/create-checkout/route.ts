@@ -5,6 +5,7 @@ import {
   generateCheckMac,
   generateTradeNo,
   formatEcpayTradeDate,
+  resolvePayReturn,
   CREDIT_PACKAGES,
   type PackageId,
 } from '@/lib/ecpay/client'
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { packageId } = await req.json() as { packageId: PackageId }
+  const { packageId, returnUrl } = await req.json() as { packageId: PackageId; returnUrl?: string }
   const pkg = CREDIT_PACKAGES.find(p => p.id === packageId)
   if (!pkg) return NextResponse.json({ error: '無效的儲值方案' }, { status: 400 })
 
@@ -23,6 +24,9 @@ export async function POST(req: NextRequest) {
   const tradeDate = formatEcpayTradeDate()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  // 付款完成導回客戶原本所在子域的公開結果頁（免登入，顯示成功並帶回原頁）
+  const { origin, path } = resolvePayReturn(returnUrl)
+  const nextEnc = encodeURIComponent(path)
 
   // 先建立待處理記錄，讓回調時可以查到 userId
   await supabase.from('credit_transactions').insert({
@@ -43,10 +47,10 @@ export async function POST(req: NextRequest) {
     TradeDesc:        encodeURIComponent(`AI GATE 點數 ${pkg.label}`),
     ItemName:         `AI GATE 點數 ${pkg.label}`,
     ReturnURL:        `${appUrl}/api/billing/ecpay-return`,
-    OrderResultURL:   `${appUrl}/settings?payment=done`,
+    OrderResultURL:   `${origin}/pay/result?status=done&type=credit&next=${nextEnc}`,
     ChoosePayment:    'ALL',
     EncryptType:      '1',
-    ClientBackURL:    `${appUrl}/settings?payment=cancel`,
+    ClientBackURL:    `${origin}/pay/result?status=cancel&type=credit&next=${nextEnc}`,
   }
 
   params.CheckMacValue = await generateCheckMac(params, config.hashKey, config.hashIV)

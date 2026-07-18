@@ -57,7 +57,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       const res = await fetch('/api/billing/create-cs-plan-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ packageId, returnUrl: window.location.href }),
       })
       const data = await res.json()
       if (!res.ok) { alert(data.error ?? '建立訂單失敗'); return }

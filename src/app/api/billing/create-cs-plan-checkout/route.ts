@@ -5,6 +5,7 @@ import {
   generateCheckMac,
   generateTradeNo,
   formatEcpayTradeDate,
+  resolvePayReturn,
 } from '@/lib/ecpay/client'
 import { CS_PLAN_PACKAGES, type CsPlanPackageId } from '@/lib/ecpay/cs-plans'
 
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { packageId } = await req.json() as { packageId: CsPlanPackageId }
+  const { packageId, returnUrl } = await req.json() as { packageId: CsPlanPackageId; returnUrl?: string }
   const pkg = CS_PLAN_PACKAGES.find(p => p.id === packageId)
   if (!pkg) return NextResponse.json({ error: '無效的方案' }, { status: 400 })
 
@@ -43,6 +44,9 @@ export async function POST(req: NextRequest) {
   const tradeDate = formatEcpayTradeDate()
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  // 付款完成導回客戶原本所在子域的公開結果頁（免登入，顯示成功並帶回原頁）
+  const { origin, path } = resolvePayReturn(returnUrl)
+  const nextEnc = encodeURIComponent(path)
 
   // 先建立待處理訂單，ecpay-return 回調時依 trade_no 找到這筆並升級方案
   const { error: insertErr } = await supabase.from('cs_plan_purchases').insert({
@@ -63,10 +67,10 @@ export async function POST(req: NextRequest) {
     TradeDesc:        encodeURIComponent(`AI GATE ${pkg.label}`),
     ItemName:         `AI GATE ${pkg.label}`,
     ReturnURL:        `${appUrl}/api/billing/ecpay-return`,
-    OrderResultURL:   `${appUrl}/cs/plan?upgrade=done`,
+    OrderResultURL:   `${origin}/pay/result?status=done&type=plan&next=${nextEnc}`,
     ChoosePayment:    'ALL',
     EncryptType:      '1',
-    ClientBackURL:    `${appUrl}/cs/plan?upgrade=cancel`,
+    ClientBackURL:    `${origin}/pay/result?status=cancel&type=plan&next=${nextEnc}`,
   }
 
   params.CheckMacValue = await generateCheckMac(params, config.hashKey, config.hashIV)
