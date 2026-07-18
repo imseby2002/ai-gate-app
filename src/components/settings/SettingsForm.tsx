@@ -211,7 +211,10 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         {/* Packages */}
         <div className="mb-3 text-sm font-medium text-foreground/70">{t('topupPackages')}</div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {CREDIT_PACKAGES.map(pkg => (
+          {CREDIT_PACKAGES
+            // pkg_test 是金流驗證用的最小額測試包，只給管理員看到，一般用戶不顯示
+            .filter(pkg => pkg.id !== 'pkg_test' || profile?.user_type === 'admin')
+            .map(pkg => (
             <div
               key={pkg.id}
               className="relative rounded-xl border-2 p-4 flex flex-col gap-2"
