@@ -78,17 +78,7 @@ export function generateTradeNo(userId: string): string {
 }
 
 // 儲值方案（TWD → USD 以 1:32 換算，給用戶 5% 優惠）
-// 注意：pkg_test 為金流驗證用的最小額測試包（僅管理員可見，見 SettingsForm），
-// 用來以最低成本實測 ECPay 回調入帳流程，驗證完應移除。
 export const CREDIT_PACKAGES = [
-  {
-    id: 'pkg_test',
-    twdAmount: 5,
-    usdCredit: 0.15,
-    label: 'NT$5（測試）',
-    desc: '金流測試用，獲得 $0.15 點數',
-    badge: '測試',
-  },
   {
     id: 'pkg_300',
     twdAmount: 300,
