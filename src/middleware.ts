@@ -59,6 +59,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/api/cron/') ||
       pathname.startsWith('/manifest') ||
       pathname === '/sw.js' ||
+      pathname.startsWith('/pay/') ||
       pathname.startsWith('/api/billing/webhook') ||
       pathname.startsWith('/api/locale') ||
       pathname.startsWith('/api/auth/check-whitelist') ||

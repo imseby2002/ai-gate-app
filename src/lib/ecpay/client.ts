@@ -70,6 +70,29 @@ export function formatEcpayTradeDate(date: Date = new Date()): string {
   return `${get('year')}/${get('month')}/${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`
 }
 
+// 解析付款完成後要導回的頁面。ECPay 付款完會把「瀏覽器」導回 OrderResultURL，
+// 這是跨站 POST，不會帶登入 cookie，若落在需登入的頁面會被踢回登入頁（總覽）。
+// 因此我們把 OrderResultURL 指向客戶「原本所在子域」的公開結果頁 /pay/result，
+// 並帶上要返回的站內路徑（next）。回傳 origin 用來組 OrderResultURL、path 供結果頁返回。
+// 安全性：只信任本站網域（*.im-tourist.com / APP_URL host / localhost），
+// 避免被拿來把 OrderResultURL 導到任意外部網址。
+export function resolvePayReturn(returnUrl?: string): { origin: string; path: string } {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!
+  const fallback = { origin: appUrl, path: '/' }
+  if (!returnUrl) return fallback
+  try {
+    const u = new URL(returnUrl)
+    const host = u.hostname.toLowerCase()
+    const appHost = new URL(appUrl).hostname.toLowerCase()
+    const allowed = host === appHost || host === 'im-tourist.com' || host.endsWith('.im-tourist.com') || host === 'localhost'
+    if (allowed && (u.protocol === 'https:' || u.protocol === 'http:')) {
+      const path = u.pathname + u.search
+      return { origin: u.origin, path: path.startsWith('/') && !path.startsWith('//') ? path : '/' }
+    }
+  } catch { /* 非法 URL → 用 fallback */ }
+  return fallback
+}
+
 // 產生唯一訂單編號（綠界限制 20 字元英數）
 export function generateTradeNo(userId: string): string {
   const now = Date.now().toString(36).toUpperCase()
