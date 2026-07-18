@@ -15,14 +15,12 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('credit_balance')
-    .eq('id', user.id)
-    .single()
+  // 餘額真相來源是 credit_transactions 加總（get_credit_balance RPC）。
+  // profiles 沒有 credit_balance 欄位，直接讀會永遠是 0。
+  const { data: balance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
 
   return NextResponse.json({
-    balance: profile?.credit_balance ?? 0,
+    balance: balance ?? 0,
     transactions: transactions ?? [],
   })
 }
