@@ -5,20 +5,21 @@ import { Check, X, Sparkles, Loader2, Lock, RefreshCw } from 'lucide-react'
 import { CS_FEATURE_REQUEST_PRICING, type CsPlanFeatures } from '@/lib/cs/entitlements'
 import { CsSideNav } from '../CsSideNav'
 
-type CsPlan = 'free' | 'pro' | 'team' | 'enterprise'
+// 等級名稱在所有語言都固定用 FREE / CORE / PRO / MAX
+type CsPlan = 'free' | 'core' | 'pro' | 'max'
 type Cycle = 'monthly' | 'yearly'
 
-const PLAN_NAME: Record<CsPlan, string> = { free: '免費', pro: 'PRO', team: 'TEAM', enterprise: '企業' }
+const PLAN_NAME: Record<CsPlan, string> = { free: 'FREE', core: 'CORE', pro: 'PRO', max: 'MAX' }
 
 const PLAN_META = [
   { id: 'free' as CsPlan, monthlyUsd: 0, yearlyUsd: 0, highlight: false, monthlyId: undefined as string | undefined, yearlyId: undefined as string | undefined,
     features: ['3 個平台串接', '不限訊息則數', '基本 AI 設定'] },
-  { id: 'pro' as CsPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly',
+  { id: 'core' as CsPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'core_monthly', yearlyId: 'core_yearly',
     features: ['Claude 風險升級', 'WhatsApp 個人版', 'AI 設定全開', '資料來源／工單／收件匣'] },
-  { id: 'team' as CsPlan, monthlyUsd: 29, yearlyUsd: 278, highlight: false, monthlyId: 'team_monthly', yearlyId: 'team_yearly',
-    features: ['包含 PRO 全部功能', '無限協作人員', '每月 1 次免費協助設定'] },
-  { id: 'enterprise' as CsPlan, monthlyUsd: 41, yearlyUsd: 399, highlight: false, monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly',
-    features: ['包含 TEAM 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'] },
+  { id: 'pro' as CsPlan, monthlyUsd: 29, yearlyUsd: 278, highlight: false, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly',
+    features: ['包含 CORE 全部功能', '無限協作人員', '每月 1 次免費協助設定'] },
+  { id: 'max' as CsPlan, monthlyUsd: 41, yearlyUsd: 399, highlight: false, monthlyId: 'max_monthly', yearlyId: 'max_yearly',
+    features: ['包含 PRO 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'] },
 ]
 
 // 功能比較表：四欄方案值（免費／PRO／TEAM／企業）＋ market（市場常見模式，用來對比痛點）
@@ -272,7 +273,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
             <thead>
               <tr className="bg-muted/60 border-b">
                 <th className="text-left font-medium py-2.5 px-3 text-muted-foreground">功能</th>
-                {(['free', 'pro', 'team', 'enterprise'] as CsPlan[]).map(id => (
+                {(['free', 'core', 'pro', 'max'] as CsPlan[]).map(id => (
                   <th key={id} className="text-center font-medium py-2.5 px-3 text-muted-foreground">{PLAN_NAME[id]}</th>
                 ))}
                 <th className="text-center font-medium py-2.5 px-3 text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/30 whitespace-nowrap">市場常見模式</th>

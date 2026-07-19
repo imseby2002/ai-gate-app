@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   // 現有方案尚未到期時，禁止購買「較低」方案：付款回調會直接覆蓋訂閱，
   // 等於立刻降級且剩餘天數全部消失。同方案續購（延長）與升級不受限。
-  const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, team: 2, enterprise: 3 }
+  const PLAN_RANK: Record<string, number> = { free: 0, core: 1, pro: 2, max: 3 }
   const { data: currentSub } = await supabase
     .from('cs_subscriptions')
     .select('plan, status, current_period_end')

@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import type { CsPlan } from '@/lib/cs/entitlements'
 
-const VALID_PLANS: CsPlan[] = ['free', 'pro', 'team', 'enterprise']
+const VALID_PLANS: CsPlan[] = ['free', 'core', 'pro', 'max']
 
 async function assertAdmin() {
   const supabase = await createClient()

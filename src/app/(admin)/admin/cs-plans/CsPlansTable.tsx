@@ -3,9 +3,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Search, Loader2, Save } from 'lucide-react'
 
-type CsPlan = 'free' | 'pro' | 'team' | 'enterprise'
-const PLAN_LABEL: Record<CsPlan, string> = { free: '免費', pro: 'PRO', team: 'TEAM', enterprise: '企業' }
-const PLANS: CsPlan[] = ['free', 'pro', 'team', 'enterprise']
+type CsPlan = 'free' | 'core' | 'pro' | 'max'
+const PLAN_LABEL: Record<CsPlan, string> = { free: 'FREE', core: 'CORE', pro: 'PRO', max: 'MAX' }
+const PLANS: CsPlan[] = ['free', 'core', 'pro', 'max']
 
 interface Row {
   id: string
