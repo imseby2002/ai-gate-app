@@ -43,7 +43,14 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const isFree = usedThisMonth < features.assistedSetup.freePerMonth
+  // 新會員首次免費：這個民宿（owner）從來沒送過協助設定請求 → 第一次免費（不分方案）
+  const { count: everCount } = await admin
+    .from('cs_setup_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('owner_id', ctx.ownerId)
+  const isFirstEver = (everCount ?? 0) === 0
+
+  const isFree = isFirstEver || usedThisMonth < features.assistedSetup.freePerMonth
   const priceUsd = features.assistedSetup.priceUsd
 
   const { data: row, error } = await supabase
@@ -76,7 +83,7 @@ export async function POST(req: NextRequest) {
           `產業：${industry}`,
           `聯絡方式：${contact || '（未留）'}`,
           `留言：${note || '（無）'}`,
-          `計費：${isFree ? '免費額度內' : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
+          `計費：${isFree ? (isFirstEver ? '新會員首次免費' : '免費額度內') : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
         ].join('\n'),
       })
     } catch {
