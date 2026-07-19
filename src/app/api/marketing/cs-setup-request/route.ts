@@ -24,7 +24,13 @@ export async function POST(req: NextRequest) {
   // 用 admin client 查方案與計數：RLS 只讓使用者看到自己送出的請求，
   // 但額度要以民宿（owner_id）為單位，涵蓋所有協作者送出的請求。
   const admin = createAdminClient()
-  const { features } = await getCsEntitlements(admin, ctx.ownerId)
+  const { plan, features } = await getCsEntitlements(admin, ctx.ownerId)
+  // 首次免費的年繳判斷需要 billing_cycle（entitlements 只回方案等級，這裡另外取）
+  const { data: sub } = await admin
+    .from('cs_subscriptions')
+    .select('billing_cycle')
+    .eq('user_id', ctx.ownerId)
+    .maybeSingle()
 
   const nowTaipei = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }))
   const monthStart = `${nowTaipei.getFullYear()}-${String(nowTaipei.getMonth() + 1).padStart(2, '0')}-01T00:00:00+08:00`
@@ -43,14 +49,18 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 新會員首次免費：這個民宿（owner）從來沒送過協助設定請求 → 第一次免費（不分方案）
+  // 首次免費只給「CORE 年繳」新會員：這個民宿（owner）從來沒送過協助設定請求，
+  // 且方案為 CORE、年繳 → 第一次免費（當作選年繳的誘因）。
+  // 免費版不給免費協助（純人工成本、零收入），付費 $25/次照舊；
+  // PRO 以上本來每月就有免費次數，不需要再送首次免費。
   const { count: everCount } = await admin
     .from('cs_setup_requests')
     .select('id', { count: 'exact', head: true })
     .eq('owner_id', ctx.ownerId)
   const isFirstEver = (everCount ?? 0) === 0
+  const welcomeFree = isFirstEver && plan === 'core' && sub?.billing_cycle === 'yearly'
 
-  const isFree = isFirstEver || usedThisMonth < features.assistedSetup.freePerMonth
+  const isFree = welcomeFree || usedThisMonth < features.assistedSetup.freePerMonth
   const priceUsd = features.assistedSetup.priceUsd
 
   const { data: row, error } = await supabase
@@ -83,7 +93,7 @@ export async function POST(req: NextRequest) {
           `產業：${industry}`,
           `聯絡方式：${contact || '（未留）'}`,
           `留言：${note || '（無）'}`,
-          `計費：${isFree ? (isFirstEver ? '新會員首次免費' : '免費額度內') : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
+          `計費：${isFree ? (welcomeFree ? 'CORE 年繳新會員首次免費' : '免費額度內') : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
         ].join('\n'),
       })
     } catch {
