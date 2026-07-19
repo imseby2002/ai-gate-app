@@ -22,19 +22,19 @@ export default async function CsPage({
   // ?select=1 → 強制顯示行業選擇頁（已設定用戶換行業）
   if (sp.select) return <CsLanding />
 
-  // 檢查是否已設定：cs_data_sources 只有 PRO+ 手動加資料來源才會有記錄，免費／
-  // 一般用戶就算已經綁好頻道、正常在用，也永遠不會有這張表的資料——用它當
-  // 「是否已設定」的判斷依據，會讓已經在用的用戶每次都被導回行銷宣傳頁。
-  // 改用「是否已綁定任一平台」（social_platform_credentials）判斷，才是所有
-  // 方案都適用的活化訊號。
-  const { count: platformCount } = await supabase
-    .from('social_platform_credentials')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', ownerId)
-    .eq('is_connected', true)
+  // 「行業選擇宣傳頁」(CsLanding) 只應在「完全沒碰過 CS」的全新用戶第一次進來時出現。
+  // 只要用戶留下任何 CS 足跡——建立過平台憑證（連線與否都算）、有資料來源、或收過訊息——
+  // 就直接顯示工作台（CsDashboard），避免已經在用 CS 的人每次按「返回主選單」都被
+  // 丟回行業列表。(先前只看「已連線平台數」，導致還沒接通平台但已在設定的人被誤判)
+  const [{ count: credCount }, { count: dsCount }, { count: msgCount }] = await Promise.all([
+    supabase.from('social_platform_credentials').select('*', { count: 'exact', head: true }).eq('user_id', ownerId),
+    supabase.from('cs_data_sources').select('*', { count: 'exact', head: true }).eq('user_id', ownerId),
+    supabase.from('cs_messages').select('*', { count: 'exact', head: true }).eq('user_id', ownerId),
+  ])
+  const hasFootprint = (credCount ?? 0) > 0 || (dsCount ?? 0) > 0 || (msgCount ?? 0) > 0
 
-  // 尚未設定 → 顯示行業選擇 landing
-  if ((platformCount ?? 0) === 0) return <CsLanding />
+  // 完全沒有 CS 足跡的全新用戶 → 顯示行業選擇 landing
+  if (!hasFootprint) return <CsLanding />
 
   // 已設定 → 取行業、統計資料，顯示工作台
   const [

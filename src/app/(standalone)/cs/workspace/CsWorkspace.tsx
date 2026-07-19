@@ -384,19 +384,21 @@ function Unit12CustomerService({
   savedData,
   unit2Data,
   industry,
+  initialTab,
   onDone,
 }: {
   campaignId: string | null
   savedData?: Unit12Data
   unit2Data?: Unit2Data
   industry?: string
+  initialTab?: Cs12Tab
   onDone: (data: Unit12Data) => void
 }) {
   const t = useTranslations('MA')
   const locale = useLocale()
   const stepLabel = (s: BookingStep) => t(`u12.step.${s}`)
   const industryLabel = (id: string) => t.has(`u12.industry.${id}`) ? t(`u12.industry.${id}`) : (CS_INDUSTRY_TEMPLATES[id]?.label ?? id)
-  const [tab, setTab] = useState<Cs12Tab>('platforms')
+  const [tab, setTab] = useState<Cs12Tab>(initialTab ?? 'platforms')
 
   // CS 方案權限（決定哪些分頁要鎖定顯示升級提示）
   const [csFeatures, setCsFeatures] = useState<CsPlanFeatures | null>(null)
@@ -1309,6 +1311,15 @@ function Unit12CustomerService({
       setInboxLoading(false)
     }
   }
+
+  // 若由 /cs/plan 等頁的側欄連結帶著 ?tab=tickets/inbox/data-sources 進來，
+  // 對應分頁的資料原本只在「點擊 tab」時載入，這裡在初次掛載時補一次。
+  useEffect(() => {
+    if (initialTab === 'tickets') loadTickets()
+    else if (initialTab === 'inbox') loadInbox()
+    else if (initialTab === 'data-sources') loadFaq(industry ?? 'homestay')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 儲存測試對話到收件匣
   async function saveTestMessageToInbox(userMsg: string, reply: string, intent: string, risk: string, latencyMs: number) {
@@ -3632,7 +3643,7 @@ function Unit12CustomerService({
 // ─── CS workspace wrapper：取代原本 marketing-auto?module=cs 的 csMode 分支 ────
 // 只保留 CS 需要的 campaign 讀寫邏輯（每個產業各自獨立一筆 campaign）。
 
-export function CsWorkspace({ industry }: { industry?: string }) {
+export function CsWorkspace({ industry, initialTab }: { industry?: string; initialTab?: Cs12Tab }) {
   const t = useTranslations('MA')
   const [campaignId, setCampaignId] = useState<string | null>(null)
   const [unit12Data, setUnit12Data] = useState<Unit12Data | undefined>(undefined)
@@ -3711,6 +3722,7 @@ export function CsWorkspace({ industry }: { industry?: string }) {
         savedData={unit12Data}
         unit2Data={companyData}
         industry={industry}
+        initialTab={initialTab}
         onDone={handleDone}
       />
     </div>
