@@ -8,6 +8,10 @@ export function getEcpayConfig() {
     paymentUrl: isSandbox
       ? 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5'
       : 'https://payment.ecpay.com.tw/Cashier/AioCheckOut/V5',
+    // 信用卡定期定額訂單作業（取消／查詢），見 developers.ecpay.com.tw「信用卡定期定額訂單作業」
+    periodActionUrl: isSandbox
+      ? 'https://ecpayment-stage.ecpay.com.tw/1.0.0/Cashier/CreditCardPeriodAction'
+      : 'https://ecpayment.ecpay.com.tw/1.0.0/Cashier/CreditCardPeriodAction',
     isSandbox,
   }
 }
@@ -100,32 +104,123 @@ export function generateTradeNo(userId: string): string {
   return `AG${uid}${now}`.slice(0, 20)
 }
 
-// 儲值方案（TWD → USD 以 1:32 換算，給用戶 5% 優惠）
+// 儲值方案 — 美金計價（不再用台幣定價）。usdPrice：實際支付金額；usdCredit：入帳點數（含優惠）。
+// 送給綠界的 TotalAmount 於結帳當下用 lib/fx.ts 即時匯率把 usdPrice 換算成整數台幣。
 export const CREDIT_PACKAGES = [
   {
-    id: 'pkg_300',
-    twdAmount: 300,
+    id: 'pkg_10',
+    usdPrice: 10,
     usdCredit: 10.0,
-    label: 'NT$300',
+    label: '$10',
     desc: '獲得 $10 美元 AI 點數',
     badge: '',
   },
   {
-    id: 'pkg_1000',
-    twdAmount: 1000,
+    id: 'pkg_30',
+    usdPrice: 30,
     usdCredit: 35.0,
-    label: 'NT$1,000',
+    label: '$30',
     desc: '獲得 $35 美元 AI 點數',
     badge: '推薦',
   },
   {
-    id: 'pkg_3000',
-    twdAmount: 3000,
+    id: 'pkg_95',
+    usdPrice: 95,
     usdCredit: 110.0,
-    label: 'NT$3,000',
+    label: '$95',
     desc: '獲得 $110 美元 AI 點數',
     badge: '最超值',
   },
 ] as const
 
 export type PackageId = typeof CREDIT_PACKAGES[number]['id']
+
+// ── 信用卡定期定額（固定金額、固定週期自動續扣；用於「勾選自動於下一期扣款」）──
+// 綠界規定：TotalAmount 必須等於 PeriodAmount；PeriodType='M' 時 Frequency 上限 12、ExecTimes 上限 99。
+// 這裡固定「每月扣一次」，ExecTimes 設 99（近 8 年）視同不限期，使用者可隨時在頁面取消。
+export interface PeriodicFields {
+  PeriodAmount: string
+  PeriodType: string
+  Frequency: string
+  ExecTimes: string
+  PeriodReturnURL: string
+}
+
+export function buildPeriodicFields(periodAmountTwd: number, periodReturnUrl: string): PeriodicFields {
+  return {
+    PeriodAmount: String(periodAmountTwd),
+    PeriodType: 'M',
+    Frequency: '1',
+    ExecTimes: '99',
+    PeriodReturnURL: periodReturnUrl,
+  }
+}
+
+// 取消／終止定期定額訂單。Action='E' 為取消（來源：綠界「信用卡定期定額訂單作業」C=關帳／R=退刷／E=取消／N=放棄）。
+export async function buildCancelPeriodicRequest(params: {
+  merchantTradeNo: string
+  tradeNo: string
+  totalAmountTwd: number
+}): Promise<{ url: string; params: Record<string, string> }> {
+  const config = getEcpayConfig()
+  const body: Record<string, string> = {
+    MerchantID: config.merchantId,
+    MerchantTradeNo: params.merchantTradeNo,
+    TradeNo: params.tradeNo,
+    Action: 'E',
+    TotalAmount: String(params.totalAmountTwd),
+  }
+  body.CheckMacValue = await generateCheckMac(body, config.hashKey, config.hashIV)
+  return { url: config.periodActionUrl, params: body }
+}
+
+// ── 信用卡綁定服務（記憶卡號）— 用於「低於門檻自動儲值」的背景扣款 ──────────────
+// 首次以 AioCheckOut V5 + BindingCard=1 + MerchantMemberID 綁卡並完成首筆扣款；
+// 之後的背景扣款走「幕後交易授權」API（見下方 chargeBoundCardBackground 的重要說明）。
+export function buildMerchantMemberId(merchantId: string, userId: string): string {
+  return `${merchantId}${userId.replace(/-/g, '')}`.slice(0, 30)
+}
+
+export function buildBindingCardFields(merchantMemberId: string): Record<string, string> {
+  return {
+    BindingCard: '1',
+    MerchantMemberID: merchantMemberId,
+  }
+}
+
+/**
+ * 使用已綁定卡片做背景扣款（低於門檻自動儲值觸發）。
+ *
+ * ⚠️ 重要：綠界「幕後交易授權」(developers.ecpay.com.tw/45958/) 的確切端點與參數，
+ * 在建置當下因文件站對自動化請求回傳 403 而無法逐欄位核對，此處實作為根據綠界
+ * AioCheckOut／CheckMacValue 慣例的最佳猜測，**上線前必須先在綠界測試環境跑過一次
+ * 真實請求並核對回傳格式**，否則請維持 ECPAY_BACKGROUND_CHARGE_ENABLED=false（預設關閉，
+ * 此時系統會改用「餘額過低通知」讓客人手動儲值，不會嘗試背景扣款）。
+ */
+export async function chargeBoundCardBackground(params: {
+  merchantMemberId: string
+  totalAmountTwd: number
+  merchantTradeNo: string
+  itemName: string
+}): Promise<{ url: string; params: Record<string, string> }> {
+  const config = getEcpayConfig()
+  const tradeDate = formatEcpayTradeDate()
+
+  const body: Record<string, string> = {
+    MerchantID: config.merchantId,
+    MerchantMemberID: params.merchantMemberId,
+    MerchantTradeNo: params.merchantTradeNo,
+    MerchantTradeDate: tradeDate,
+    TotalAmount: String(params.totalAmountTwd),
+    TradeDesc: encodeURIComponent(params.itemName),
+    ItemName: params.itemName,
+  }
+  body.CheckMacValue = await generateCheckMac(body, config.hashKey, config.hashIV)
+
+  // 幕後交易授權端點（同上方註記，上線前需核對）
+  const url = config.isSandbox
+    ? 'https://ecpayment-stage.ecpay.com.tw/CreditDetail/CardBinding'
+    : 'https://ecpayment.ecpay.com.tw/CreditDetail/CardBinding'
+
+  return { url, params: body }
+}

@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     return new NextResponse('0|CheckMacValue Error', { status: 200 })
   }
 
-  const { RtnCode, MerchantTradeNo } = params
+  const { RtnCode, MerchantTradeNo, TradeNo, MerchantMemberID, card4no, card6no } = params
 
   // 只處理付款成功（RtnCode === '1'）
   if (RtnCode !== '1') {
@@ -33,6 +33,40 @@ export async function POST(req: NextRequest) {
 
   // ECPay 回調沒有使用者 session，一律用 service role（anon client 在 RLS 下讀不到任何人的待處理訂單）
   const supabase = await createAdminClient()
+
+  // 定期定額訂單（自動於下一期扣款）的首筆扣款也會走這支 ReturnURL；找到對應 pending 記錄
+  // 就啟用它，之後第 2 期起改由 ecpay-period-return 通知。下方既有的一次性入帳邏輯
+  // （credit_transactions / cs_plan_purchases / booking_plan_purchases）不受影響，
+  // 因為建立定期定額訂單時，同一個 MerchantTradeNo 也會照舊建立一筆一次性訂單記錄。
+  const { data: periodicOrder } = await supabase
+    .from('ecpay_periodic_orders')
+    .select('id')
+    .eq('merchant_trade_no', MerchantTradeNo)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (periodicOrder) {
+    const nextMonth = new Date()
+    nextMonth.setMonth(nextMonth.getMonth() + 1)
+    await supabase.from('ecpay_periodic_orders').update({
+      status: 'active',
+      ecpay_trade_no: TradeNo,
+      total_success_times: 1,
+      next_expected_at: nextMonth.toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', periodicOrder.id)
+  }
+
+  // 信用卡綁定（低於門檻自動儲值）首筆交易同時完成綁卡
+  if (MerchantMemberID) {
+    await supabase.from('ecpay_card_bindings').update({
+      status: 'active',
+      card_last4: card4no ?? null,
+      card6no: card6no ?? null,
+      bound_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('merchant_member_id', MerchantMemberID).eq('status', 'pending')
+  }
 
   // 找到對應的 PENDING 記錄（description 格式: PENDING:{tradeNo}:{pkgId}:{usdCredit}）
   const { data: pending } = await supabase

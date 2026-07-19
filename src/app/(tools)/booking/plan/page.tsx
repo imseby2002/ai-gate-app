@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { Check, X, Sparkles, Loader2 } from 'lucide-react'
+import { Check, X, Sparkles, Loader2, RefreshCw } from 'lucide-react'
 
 type BookingPlan = 'free' | 'core' | 'pro' | 'enterprise'
 type Cycle = 'monthly' | 'yearly'
@@ -221,6 +221,9 @@ export default function BookingPlanPage() {
   const [referredCount, setReferredCount] = useState(0)
   const [referralCopied, setReferralCopied] = useState(false)
   const [referralInput, setReferralInput] = useState('')
+  const [autoRenewPkg, setAutoRenewPkg] = useState<Record<string, boolean>>({})
+  const [recurringOrders, setRecurringOrders] = useState<Array<{ id: string; reference_id: string; usd_value: number; status: string; total_success_times: number }>>([])
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -237,7 +240,34 @@ export default function BookingPlanPage() {
     } catch { /* 推薦碼載入失敗不影響主流程 */ }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const loadRecurringOrders = useCallback(async () => {
+    try {
+      const res = await fetch('/api/billing/cancel-recurring')
+      const data = await res.json()
+      if (res.ok) setRecurringOrders((data.orders ?? []).filter((o: { kind: string }) => o.kind === 'booking_plan'))
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { load(); loadRecurringOrders() }, [load, loadRecurringOrders])
+
+  const handleCancelRecurring = async (orderId: string) => {
+    if (!confirm('確定要取消自動續訂嗎？取消後不會再自動扣款。')) return
+    setCancellingId(orderId)
+    try {
+      const res = await fetch('/api/billing/cancel-recurring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await loadRecurringOrders()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '取消失敗，請稍後再試')
+    } finally {
+      setCancellingId(null)
+    }
+  }
 
   const copyReferralCode = () => {
     if (!myReferralCode) return
@@ -253,7 +283,7 @@ export default function BookingPlanPage() {
       const res = await fetch('/api/billing/create-booking-plan-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId, referralCode: referralInput.trim() || undefined }),
+        body: JSON.stringify({ packageId, referralCode: referralInput.trim() || undefined, autoRenew: !!autoRenewPkg[packageId] }),
       })
       const data = await res.json()
       if (!res.ok) { alert(data.error ?? copy.checkoutFailed); return }
@@ -272,6 +302,7 @@ export default function BookingPlanPage() {
       document.body.appendChild(form)
       form.submit()
       document.body.removeChild(form)
+      if (autoRenewPkg[packageId]) setTimeout(loadRecurringOrders, 3000)
     } catch {
       alert(copy.networkError)
     } finally {
@@ -355,19 +386,57 @@ export default function BookingPlanPage() {
               </ul>
 
               {!isFree && (
-                <button
-                  onClick={() => upgrade(packageId!)}
-                  disabled={isCurrent || checkingOut === packageId}
-                  className="w-full mt-1 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                >
-                  {checkingOut === packageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                  {isCurrent ? copy.currentPlanBtn : copy.upgrade}
-                </button>
+                <>
+                  <label className="flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!autoRenewPkg[packageId ?? '']}
+                      onChange={e => setAutoRenewPkg(prev => ({ ...prev, [packageId ?? '']: e.target.checked }))}
+                      className="rounded"
+                    />
+                    每月自動於下一期扣款
+                  </label>
+                  <button
+                    onClick={() => upgrade(packageId!)}
+                    disabled={isCurrent || checkingOut === packageId}
+                    className="w-full mt-1 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  >
+                    {checkingOut === packageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    {isCurrent ? copy.currentPlanBtn : copy.upgrade}
+                  </button>
+                </>
               )}
             </div>
           )
         })}
       </div>
+
+      {recurringOrders.length > 0 && (
+        <div className="rounded-xl border bg-white p-4 space-y-2">
+          <div className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+            <RefreshCw className="h-3.5 w-3.5" /> 自動續訂中
+          </div>
+          {recurringOrders.map(o => (
+            <div key={o.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
+              <div>
+                <div className="font-medium text-gray-800">
+                  {o.reference_id}<span className="ml-2 text-gray-500">${o.usd_value}/月</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {o.status === 'pending' ? '等待首筆扣款確認中' : `已成功扣款 ${o.total_success_times} 次`}
+                </div>
+              </div>
+              <button
+                onClick={() => handleCancelRecurring(o.id)}
+                disabled={cancellingId === o.id}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {cancellingId === o.id ? '取消中…' : '取消自動續訂'}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <p className="text-[11px] text-gray-400">{copy.footnote1}</p>
 
