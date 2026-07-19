@@ -6,7 +6,9 @@ import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
+  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
 
@@ -1371,9 +1373,6 @@ function Unit12CustomerService({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <a href="/credits" className="text-xs text-primary font-medium hover:underline whitespace-nowrap">
-            儲值點數 →
-          </a>
           <a href="/cs/plan"
             className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
             style={{ background: 'var(--primary)' }}>
@@ -1383,7 +1382,7 @@ function Unit12CustomerService({
         </div>
       </div>
       <div className="flex flex-col sm:flex-row gap-5 items-start">
-        <nav className="flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap sm:w-44 sm:shrink-0">
+        <nav className="flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap sm:w-48 sm:shrink-0">
           {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
             const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
             const labels: Record<Cs12Tab, string> = {
@@ -1392,6 +1391,12 @@ function Unit12CustomerService({
               tickets: `${t('u12.tabTickets')}${openCount > 0 ? ` (${openCount})` : ''}`,
               inbox: t('u12.tabInbox'),
             }
+            const icons: Record<Cs12Tab, LucideIcon> = {
+              platforms: MessageSquare, 'ai-settings': Sparkles, 'dialogue-files': BookOpen,
+              'data-sources': Database, pricing: Calculator, test: FlaskConical, logs: ClipboardList,
+              tickets: Ticket, inbox: Inbox,
+            }
+            const Icon = icons[tb]
             const isNew = (tb === 'tickets' || tb === 'inbox') && tab !== tb
             const gatedFlag: Partial<Record<Cs12Tab, boolean>> = {
               'data-sources': csFeatures?.dataSources,
@@ -1400,6 +1405,7 @@ function Unit12CustomerService({
               inbox: csFeatures?.inbox,
             }
             const isLocked = csFeatures != null && gatedFlag[tb] === false
+            const active = tab === tb
             return (
               <button key={tb}
                 onClick={() => {
@@ -1408,14 +1414,14 @@ function Unit12CustomerService({
                   if (tb === 'inbox') loadInbox()
                   if (tb === 'data-sources') loadFaq(industry ?? 'homestay')
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all relative flex items-center gap-1.5 sm:w-full sm:justify-start ${
-                  tab === tb ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-                style={tab === tb ? { background: 'var(--primary)' } : {}}>
-                {isLocked && <Lock className="h-3 w-3" />}
-                {labels[tb]}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors relative flex items-center gap-2 sm:w-full sm:justify-start ${
+                  active ? 'bg-primary/10 text-primary font-semibold' : 'text-gray-600 hover:bg-gray-100'
+                }`}>
+                <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : 'text-gray-400'}`} />
+                <span className="flex-1 text-left">{labels[tb]}</span>
+                {isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
                 {isNew && tb === 'inbox' && inboxMessages.length === 0 && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 )}
               </button>
             )
