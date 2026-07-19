@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 
 // Fields that are NOT sensitive and can be returned as plain text
@@ -19,13 +20,14 @@ const NON_SECRET_FIELDS = new Set([
 
 export async function GET() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // 憑證屬於「民宿擁有者」：協作者與總管理員代操時都以 ownerId 為準
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data } = await supabase
     .from('social_platform_credentials')
     .select('platform, is_connected, credentials')
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
 
   const result: Record<string, {
     is_connected: boolean
@@ -57,8 +59,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ownerId = ctx.ownerId
 
   const { platform, credentials } = await req.json()
   if (!platform || !credentials) return NextResponse.json({ error: 'platform and credentials required' }, { status: 400 })
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await supabase
     .from('social_platform_credentials')
     .select('credentials, is_connected')
-    .eq('user_id', user.id)
+    .eq('user_id', ownerId)
     .eq('platform', platform)
     .single()
 
@@ -85,7 +88,7 @@ export async function POST(req: NextRequest) {
 
   // 方案的平台數上限：只在「新增一個尚未連線的平台」時檢查，已連線平台可以繼續編輯憑證
   if (is_connected && !alreadyConnected) {
-    const { features } = await getCsEntitlements(supabase, user.id)
+    const { features } = await getCsEntitlements(supabase, ownerId)
     // WhatsApp 個人版僅 PRO 以上可用（wa-bridge 已擋，這裡是憑證儲存層的防呆）
     if (platform === 'whatsapp_personal' && !features.whatsappPersonal) {
       return NextResponse.json(
@@ -97,7 +100,7 @@ export async function POST(req: NextRequest) {
       const { count } = await supabase
         .from('social_platform_credentials')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
+        .eq('user_id', ownerId)
         .eq('is_connected', true)
       if ((count ?? 0) >= features.platformLimit) {
         return NextResponse.json(
@@ -110,14 +113,14 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabase
     .from('social_platform_credentials')
-    .upsert({ user_id: user.id, platform, credentials: merged, is_connected }, { onConflict: 'user_id,platform' })
+    .upsert({ user_id: ownerId, platform, credentials: merged, is_connected }, { onConflict: 'user_id,platform' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Auto-register Telegram webhook when bot token is saved
+  // Auto-register Telegram webhook when bot token is saved（webhook 綁 ownerId）
   if (platform === 'telegram' && merged.telegram_bot_token) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-    const webhookUrl = `${appUrl}/api/marketing/cs-webhook/telegram/${user.id}`
+    const webhookUrl = `${appUrl}/api/marketing/cs-webhook/telegram/${ownerId}`
     try {
       await fetch(`https://api.telegram.org/bot${merged.telegram_bot_token}/setWebhook`, {
         method: 'POST',
@@ -132,8 +135,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const platform = new URL(req.url).searchParams.get('platform')
   if (!platform) return NextResponse.json({ error: 'platform required' }, { status: 400 })
@@ -141,7 +144,7 @@ export async function DELETE(req: NextRequest) {
   await supabase
     .from('social_platform_credentials')
     .update({ credentials: {}, is_connected: false })
-    .eq('user_id', user.id)
+    .eq('user_id', ctx.ownerId)
     .eq('platform', platform)
 
   return NextResponse.json({ ok: true })

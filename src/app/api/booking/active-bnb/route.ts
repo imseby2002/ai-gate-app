@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ownerId: user.id, role: 'owner' })
   }
 
+  // 總管理員代操：admin 可切換到任何 owner（不需 membership），用於協助設定代操
+  const { data: me } = await supabase.from('profiles').select('user_type').eq('id', user.id).maybeSingle()
+  if (me?.user_type === 'admin') {
+    cookieStore.set(ACTIVE_BNB_COOKIE, ownerId, opts)
+    return NextResponse.json({ ownerId, role: 'admin' })
+  }
+
   // 驗證對該 owner 有 active membership（任一模組即可切換；可能有 booking/cs 多列）
   const { data: members } = await supabase
     .from('bnb_members')
