@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Check, X, Sparkles, Loader2, Lock } from 'lucide-react'
-import { CS_FEATURE_REQUEST_PRICING } from '@/lib/cs/entitlements'
+import { CS_FEATURE_REQUEST_PRICING, type CsPlanFeatures } from '@/lib/cs/entitlements'
+import { CsSideNav } from '../CsSideNav'
 
 type CsPlan = 'free' | 'pro' | 'team' | 'enterprise'
 type Cycle = 'monthly' | 'yearly'
@@ -38,6 +39,7 @@ const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, s
 
 export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
   const [plan, setPlan] = useState<CsPlan | null>(null)
+  const [features, setFeatures] = useState<CsPlanFeatures | null>(null)
   const [cycle, setCycle] = useState<Cycle>('yearly')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
 
@@ -46,6 +48,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       const res = await fetch('/api/marketing/cs-plan')
       const data = await res.json()
       setPlan(data.plan ?? 'free')
+      setFeatures(data.features ?? null)
     } catch { setPlan('free') }
   }, [])
 
@@ -87,7 +90,9 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-slate-50 to-white dark:from-background dark:to-background">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-8 pb-16 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 pb-16 flex flex-col sm:flex-row gap-5 items-start">
+        <CsSideNav active="plan" features={features} />
+        <div className="flex-1 min-w-0 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-xl font-bold text-foreground">訂閱方案</h1>
@@ -219,6 +224,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
             協助設定範圍：站內所有設定（資料來源、報價計算機等）與各平台串接設定皆包含在內；
             但不包含知識庫內容建立，以及各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
           </p>
+        </div>
         </div>
       </div>
     </div>
