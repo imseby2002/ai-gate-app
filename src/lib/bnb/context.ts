@@ -73,6 +73,13 @@ export async function getBnbContext(
     return selfCtx()
   }
 
+  // 總管理員代操：admin 可切換到任何 owner（不需 membership），用於「協助設定」
+  // 代客戶設定 CS。以 owner 等級權限操作（可寫、可改設定）。
+  const { data: me } = await sb.from('profiles').select('user_type').eq('id', user.id).maybeSingle()
+  if (me?.user_type === 'admin') {
+    return { user, ownerId: requested, role: 'admin', isOwner: false, canWrite: true, canSettings: true }
+  }
+
   // requested 指向他人 → 依模組（scope）驗證協作授權：booking 助理未必有 cs 權限，反之亦然
   const { data: member } = await sb
     .from('bnb_members')

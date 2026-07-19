@@ -1,6 +1,6 @@
 ﻿import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin', label: '總覽', icon: BarChart3 },
     { href: '/admin/users', label: '用戶管理', icon: Users },
     { href: '/admin/cs-plans', label: 'CS 方案管理', icon: Headphones },
+    { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },
     { href: '/admin/models', label: '模型設定', icon: Settings },
     { href: '/admin/usage', label: '使用統計', icon: BarChart3 },
     { href: '/admin/cover-letter-templates', label: '求職信模板', icon: FileText },

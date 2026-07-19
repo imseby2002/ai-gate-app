@@ -17,11 +17,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 
-// WhatsApp 個人版為 PRO 以上方案功能：連線前先確認方案是否開放
-async function ensureWhatsappPersonalAllowed(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const ctx = await getBnbContext(supabase, 'cs')
-  if (!ctx) return { ok: false as const, status: 401, error: 'Unauthorized' }
-  const { features } = await getCsEntitlements(createAdminClient(), ctx.ownerId)
+// WhatsApp 個人版為 PRO 以上方案功能：連線前先確認方案是否開放（以 ownerId 判斷）
+async function ensureWhatsappPersonalAllowed(ownerId: string) {
+  const { features } = await getCsEntitlements(createAdminClient(), ownerId)
   if (!features.whatsappPersonal) {
     return { ok: false as const, status: 403, error: 'WhatsApp 個人版為 PRO 以上方案功能，請升級方案後使用。' }
   }
@@ -47,17 +45,18 @@ async function bridgeFetch(path: string, init?: RequestInit) {
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // WhatsApp 個人版 session 綁在「民宿擁有者」：協作者與總管理員代操時都以 ownerId 為準
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const action = searchParams.get('action')
-  const userId = user.id  // always use authenticated user's ID
+  const userId = ctx.ownerId
 
   try {
     if (action === 'qr' || action === 'status') {
       if (action === 'qr') {
-        const gate = await ensureWhatsappPersonalAllowed(supabase)
+        const gate = await ensureWhatsappPersonalAllowed(ctx.ownerId)
         if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
       }
       const r = await bridgeFetch(`/${action}?userId=${userId}`)
@@ -73,16 +72,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
   const { action } = body
-  const userId = user.id
+  const userId = ctx.ownerId
 
   try {
     if (action === 'start') {
-      const gate = await ensureWhatsappPersonalAllowed(supabase)
+      const gate = await ensureWhatsappPersonalAllowed(ctx.ownerId)
       if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
       const r = await bridgeFetch('/start', {
         method: 'POST',
