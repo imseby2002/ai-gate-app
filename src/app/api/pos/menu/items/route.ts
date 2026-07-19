@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   const ctx = await getPosOwner()
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { category_id, name, price_cents, store_id, barcode, modifiers, description } = await req.json()
+  const { category_id, name, price_cents, store_id, barcode, modifiers, description, image_url } = await req.json()
   if (!category_id || !name?.trim()) return NextResponse.json({ error: 'category_id, name 必填' }, { status: 400 })
 
   const { data, error } = await ctx.supabase
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
       price_cents: price_cents ?? 0,
       store_id: store_id || null,
       barcode: barcode?.trim() || null,
+      image_url: image_url || null,
       modifiers: modifiers ?? DEFAULT_MODIFIER_GROUPS,
     })
     .select()
