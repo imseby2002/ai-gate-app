@@ -276,7 +276,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                 {(['free', 'core', 'pro', 'max'] as CsPlan[]).map(id => (
                   <th key={id} className="text-center font-medium py-2.5 px-3 text-muted-foreground">{PLAN_NAME[id]}</th>
                 ))}
-                <th className="text-center font-medium py-2.5 px-3 text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/30 whitespace-nowrap">市場常見模式</th>
+                <th className="text-center font-semibold py-2.5 px-3 text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 whitespace-nowrap">市場常見模式</th>
               </tr>
             </thead>
             <tbody>
@@ -288,7 +288,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                       {v === '✓' ? <Check className="h-3.5 w-3.5 mx-auto text-primary" /> : v === '—' ? <X className="h-3.5 w-3.5 mx-auto text-muted-foreground/40" /> : v}
                     </td>
                   ))}
-                  <td className="text-center py-2.5 px-3 text-[11px] text-amber-700/90 dark:text-amber-500/80 bg-amber-50/60 dark:bg-amber-950/20">
+                  <td className="text-center py-2.5 px-3 text-xs text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/25">
                     {row.market}
                   </td>
                 </tr>
