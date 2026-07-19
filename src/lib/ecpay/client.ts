@@ -136,8 +136,13 @@ export const CREDIT_PACKAGES = [
 export type PackageId = typeof CREDIT_PACKAGES[number]['id']
 
 // ── 信用卡定期定額（固定金額、固定週期自動續扣；用於「勾選自動於下一期扣款」）──
-// 綠界規定：TotalAmount 必須等於 PeriodAmount；PeriodType='M' 時 Frequency 上限 12、ExecTimes 上限 99。
-// 這裡固定「每月扣一次」，ExecTimes 設 99（近 8 年）視同不限期，使用者可隨時在頁面取消。
+// 綠界規定：TotalAmount 必須等於 PeriodAmount。扣款週期必須跟方案的計費週期一致，
+// 否則年繳方案會被用「年繳金額」每月扣一次（嚴重超收）：
+//   月繳 → PeriodType='M', Frequency=1, ExecTimes≤99（設 99≈8 年，視同不限期）
+//   年繳 → PeriodType='Y', Frequency=1（Y 固定為 1）, ExecTimes≤9（設 9 年）
+// 使用者可隨時在方案頁取消。
+export type BillingCycle = 'monthly' | 'yearly'
+
 export interface PeriodicFields {
   PeriodAmount: string
   PeriodType: string
@@ -146,12 +151,19 @@ export interface PeriodicFields {
   PeriodReturnURL: string
 }
 
-export function buildPeriodicFields(periodAmountTwd: number, periodReturnUrl: string): PeriodicFields {
+export function periodicSpec(cycle: BillingCycle): { periodType: 'M' | 'Y'; frequency: number; execTimes: number } {
+  return cycle === 'yearly'
+    ? { periodType: 'Y', frequency: 1, execTimes: 9 }
+    : { periodType: 'M', frequency: 1, execTimes: 99 }
+}
+
+export function buildPeriodicFields(periodAmountTwd: number, periodReturnUrl: string, cycle: BillingCycle = 'monthly'): PeriodicFields {
+  const spec = periodicSpec(cycle)
   return {
     PeriodAmount: String(periodAmountTwd),
-    PeriodType: 'M',
-    Frequency: '1',
-    ExecTimes: '99',
+    PeriodType: spec.periodType,
+    Frequency: String(spec.frequency),
+    ExecTimes: String(spec.execTimes),
     PeriodReturnURL: periodReturnUrl,
   }
 }

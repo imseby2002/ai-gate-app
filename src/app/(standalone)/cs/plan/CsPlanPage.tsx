@@ -211,7 +211,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                         onChange={e => setAutoRenewPkg(prev => ({ ...prev, [packageId ?? '']: e.target.checked }))}
                         className="rounded"
                       />
-                      每月自動於下一期扣款
+                      每{cycle === 'yearly' ? '年' : '月'}自動於下一期扣款
                     </label>
                     <button
                       onClick={() => upgrade(packageId!)}

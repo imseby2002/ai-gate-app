@@ -7,6 +7,7 @@ import {
   generateTradeNo,
   formatEcpayTradeDate,
   buildPeriodicFields,
+  periodicSpec,
 } from '@/lib/ecpay/client'
 import { usdToTwdInteger } from '@/lib/fx'
 import { BOOKING_PLAN_PACKAGES, type BookingPlanPackageId } from '@/lib/ecpay/booking-plans'
@@ -86,7 +87,9 @@ export async function POST(req: NextRequest) {
   // 自動續扣的後續期數不重複核銷，故定期定額與推薦碼可以並存。
   if (autoRenew) {
     params.ChoosePayment = 'Credit'
-    Object.assign(params, buildPeriodicFields(totalAmountTwd, `${appUrl}/api/billing/ecpay-period-return`))
+    // 扣款週期必須跟方案計費週期一致（年繳走 PeriodType='Y'，否則會用年費每月扣一次）
+    Object.assign(params, buildPeriodicFields(totalAmountTwd, `${appUrl}/api/billing/ecpay-period-return`, pkg.cycle))
+    const spec = periodicSpec(pkg.cycle)
 
     const admin = createAdminClient()
     await admin.from('ecpay_periodic_orders').insert({
@@ -94,9 +97,9 @@ export async function POST(req: NextRequest) {
       kind: 'booking_plan',
       reference_id: pkg.id,
       merchant_trade_no: tradeNo,
-      period_type: 'M',
-      frequency: 1,
-      exec_times: 99,
+      period_type: spec.periodType,
+      frequency: spec.frequency,
+      exec_times: spec.execTimes,
       period_amount_twd: totalAmountTwd,
       usd_value: pkg.usdPrice,
       fx_rate: rate,
