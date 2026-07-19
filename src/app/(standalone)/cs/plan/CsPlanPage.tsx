@@ -308,7 +308,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
             協助設定範圍：站內所有設定（資料來源、報價計算機等）與各平台串接設定皆包含在內；
             但不包含知識庫內容建立，以及各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
           </p>
-          <p className="text-primary font-medium">🎁 選擇 CORE 年繳，新會員享首次協助設定免費（每個帳號一次）。</p>
+          <p className="text-primary font-medium">🎁 升級 CORE，新會員享首次協助設定免費（每個帳號一次，不分月繳／年繳）。</p>
         </div>
         </div>
       </div>
