@@ -3,7 +3,8 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = any
 
-export type CsPlan = 'free' | 'pro' | 'team' | 'enterprise'
+// 方案等級（名稱在所有語言都固定用 FREE / CORE / PRO / MAX）
+export type CsPlan = 'free' | 'core' | 'pro' | 'max'
 
 export interface CsPlanFeatures {
   platformLimit: number
@@ -34,7 +35,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     whatsappPersonal: false,
     assistedSetup: { freePerMonth: 0, priceUsd: 25 },
   },
-  pro: {
+  core: {
     platformLimit: 3,
     collaboratorLimit: 1,
     aiSettingsScope: 'full',
@@ -47,7 +48,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     whatsappPersonal: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 15 },
   },
-  team: {
+  pro: {
     platformLimit: 3,
     collaboratorLimit: Infinity,
     aiSettingsScope: 'full',
@@ -60,7 +61,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     whatsappPersonal: true,
     assistedSetup: { freePerMonth: 1, priceUsd: 15 },
   },
-  enterprise: {
+  max: {
     platformLimit: Infinity,
     collaboratorLimit: Infinity,
     aiSettingsScope: 'full',
