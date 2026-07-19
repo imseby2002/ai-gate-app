@@ -72,6 +72,17 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
     <div className="min-h-full bg-slate-50/50 dark:bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
 
+        {/* ── 主標語：不限則數 ── */}
+        <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white">
+          <div className="flex items-center gap-2 text-lg sm:text-xl font-extrabold">
+            <Sparkles className="h-5 w-5 shrink-0" />
+            不限則數，不怕用量爆表加價
+          </div>
+          <p className="text-white/85 text-xs sm:text-sm mt-1">
+            對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
+          </p>
+        </div>
+
         {/* ── Hero Card ── */}
         <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} p-8 text-white shadow-lg`}>
           <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />

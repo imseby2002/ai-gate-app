@@ -83,8 +83,21 @@ export function CsLanding() {
   return (
     <div className="min-h-full bg-gradient-to-b from-slate-50 to-white">
 
+      {/* ── 主標語：不限則數 ── */}
+      <div className="px-6 pt-6 max-w-5xl mx-auto">
+        <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white text-center">
+          <div className="inline-flex items-center gap-2 text-lg sm:text-2xl font-extrabold">
+            <Sparkles className="h-5 w-5 shrink-0" />
+            不限則數，不怕用量爆表加價
+          </div>
+          <p className="text-white/85 text-xs sm:text-sm mt-1">
+            對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
+          </p>
+        </div>
+      </div>
+
       {/* ── Hero ── */}
-      <div className="px-6 pt-10 pb-8 max-w-5xl mx-auto text-center">
+      <div className="px-6 pt-8 pb-8 max-w-5xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold mb-5">
           <Sparkles className="h-3.5 w-3.5" />
           {t('badge')}

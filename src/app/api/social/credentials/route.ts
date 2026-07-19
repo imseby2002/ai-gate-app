@@ -86,6 +86,13 @@ export async function POST(req: NextRequest) {
   // 方案的平台數上限：只在「新增一個尚未連線的平台」時檢查，已連線平台可以繼續編輯憑證
   if (is_connected && !alreadyConnected) {
     const { features } = await getCsEntitlements(supabase, user.id)
+    // WhatsApp 個人版僅 PRO 以上可用（wa-bridge 已擋，這裡是憑證儲存層的防呆）
+    if (platform === 'whatsapp_personal' && !features.whatsappPersonal) {
+      return NextResponse.json(
+        { error: 'WhatsApp 個人版為 PRO 以上方案功能，請升級方案後使用。' },
+        { status: 403 },
+      )
+    }
     if (Number.isFinite(features.platformLimit)) {
       const { count } = await supabase
         .from('social_platform_credentials')

@@ -15,12 +15,14 @@ export interface CsPlanFeatures {
   inbox: boolean
   autoLearning: boolean
   pricingCalculator: boolean
+  /** WhatsApp 個人版（Baileys QR 掃碼）僅 PRO 以上可用 */
+  whatsappPersonal: boolean
   assistedSetup: { freePerMonth: number; priceUsd: number }
 }
 
 export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
   free: {
-    platformLimit: 1,
+    platformLimit: 3,
     collaboratorLimit: 0,
     aiSettingsScope: 'basic',
     claudeEscalation: 'off',
@@ -29,6 +31,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     inbox: false,
     autoLearning: false,
     pricingCalculator: false,
+    whatsappPersonal: false,
     assistedSetup: { freePerMonth: 0, priceUsd: 25 },
   },
   pro: {
@@ -41,6 +44,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     inbox: true,
     autoLearning: true,
     pricingCalculator: false,
+    whatsappPersonal: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 15 },
   },
   team: {
@@ -53,6 +57,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     inbox: true,
     autoLearning: true,
     pricingCalculator: false,
+    whatsappPersonal: true,
     assistedSetup: { freePerMonth: 1, priceUsd: 15 },
   },
   enterprise: {
@@ -65,6 +70,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     inbox: true,
     autoLearning: true,
     pricingCalculator: true,
+    whatsappPersonal: true,
     assistedSetup: { freePerMonth: 2, priceUsd: 15 },
   },
 }

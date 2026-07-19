@@ -1606,7 +1606,14 @@ function Unit12CustomerService({
                 )}
 
                 {/* WhatsApp Personal — QR scan UI */}
-                {p.id === 'whatsapp_personal' && (
+                {p.id === 'whatsapp_personal' && csFeatures && !csFeatures.whatsappPersonal && (
+                  <div className="rounded-xl border border-dashed px-3 py-2.5 text-xs text-gray-500 bg-gray-50 flex items-center gap-2">
+                    <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                    <span className="flex-1">WhatsApp 個人版為 PRO 以上方案功能</span>
+                    <a href="/cs/plan" className="text-primary font-medium hover:underline shrink-0">升級 →</a>
+                  </div>
+                )}
+                {p.id === 'whatsapp_personal' && !(csFeatures && !csFeatures.whatsappPersonal) && (
                   <div className="space-y-3">
                     {/* Status bar */}
                     <div className={`rounded-xl px-3 py-2 text-xs flex items-center justify-between gap-2 ${

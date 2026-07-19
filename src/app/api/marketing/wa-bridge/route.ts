@@ -13,6 +13,20 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getBnbContext } from '@/lib/bnb/context'
+import { getCsEntitlements } from '@/lib/cs/entitlements'
+
+// WhatsApp 個人版為 PRO 以上方案功能：連線前先確認方案是否開放
+async function ensureWhatsappPersonalAllowed(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const ctx = await getBnbContext(supabase, 'cs')
+  if (!ctx) return { ok: false as const, status: 401, error: 'Unauthorized' }
+  const { features } = await getCsEntitlements(createAdminClient(), ctx.ownerId)
+  if (!features.whatsappPersonal) {
+    return { ok: false as const, status: 403, error: 'WhatsApp 個人版為 PRO 以上方案功能，請升級方案後使用。' }
+  }
+  return { ok: true as const }
+}
 
 function getBridgeUrl() {
   return process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '') ?? ''
@@ -42,6 +56,10 @@ export async function GET(req: NextRequest) {
 
   try {
     if (action === 'qr' || action === 'status') {
+      if (action === 'qr') {
+        const gate = await ensureWhatsappPersonalAllowed(supabase)
+        if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
+      }
       const r = await bridgeFetch(`/${action}?userId=${userId}`)
       const data = await r.json()
       return NextResponse.json(data)
@@ -64,6 +82,8 @@ export async function POST(req: NextRequest) {
 
   try {
     if (action === 'start') {
+      const gate = await ensureWhatsappPersonalAllowed(supabase)
+      if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status })
       const r = await bridgeFetch('/start', {
         method: 'POST',
         body: JSON.stringify({ userId }),

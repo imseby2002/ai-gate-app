@@ -12,29 +12,30 @@ const PLAN_NAME: Record<CsPlan, string> = { free: '免費', pro: 'PRO', team: 'T
 
 const PLAN_META = [
   { id: 'free' as CsPlan, monthlyUsd: 0, yearlyUsd: 0, highlight: false, monthlyId: undefined as string | undefined, yearlyId: undefined as string | undefined,
-    features: ['1 個平台串接', '基本 AI 設定'] },
+    features: ['3 個平台串接', '不限訊息則數', '基本 AI 設定'] },
   { id: 'pro' as CsPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly',
-    features: ['Claude 風險升級', '3 個平台串接', 'AI 設定全開', '資料來源／工單／收件匣'] },
+    features: ['Claude 風險升級', 'WhatsApp 個人版', 'AI 設定全開', '資料來源／工單／收件匣'] },
   { id: 'team' as CsPlan, monthlyUsd: 29, yearlyUsd: 278, highlight: false, monthlyId: 'team_monthly', yearlyId: 'team_yearly',
     features: ['包含 PRO 全部功能', '無限協作人員', '每月 1 次免費協助設定'] },
   { id: 'enterprise' as CsPlan, monthlyUsd: 41, yearlyUsd: 399, highlight: false, monthlyId: 'enterprise_monthly', yearlyId: 'enterprise_yearly',
     features: ['包含 TEAM 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'] },
 ]
 
-// 功能比較表：每一列對應一個功能，四欄分別是免費／PRO／TEAM／企業的值
-const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, string] }> = [
-  { label: '平台串接數', values: ['1 個', '3 個', '3 個', '不限'] },
-  { label: '客服訊息則數', values: ['不限', '不限', '不限', '不限'] },
-  { label: '知識庫', values: ['✓', '✓', '✓', '✓'] },
-  { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'] },
-  { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'] },
-  { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'] },
-  { label: '資料來源管理', values: ['—', '✓', '✓', '✓'] },
-  { label: '工單系統', values: ['—', '✓', '✓', '✓'] },
-  { label: '統一收件匣', values: ['—', '✓', '✓', '✓'] },
-  { label: '自動學習', values: ['—', '✓', '✓', '✓'] },
-  { label: '報價計算機', values: ['—', '—', '—', '✓'] },
-  { label: '協助設定（免費額度／月）', values: ['0（$25/次）', '0（$15/次）', '1 次', '2 次'] },
+// 功能比較表：四欄方案值（免費／PRO／TEAM／企業）＋ market（市場常見模式，用來對比痛點）
+const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, string]; market: string }> = [
+  { label: '客服訊息則數', values: ['不限', '不限', '不限', '不限'], market: '每月 50–100 則上限，超過加價' },
+  { label: '平台串接數', values: ['3 個', '3 個', '3 個', '不限'], market: '依方案 1–2 個' },
+  { label: 'WhatsApp 個人版', values: ['—', '✓', '✓', '✓'], market: '多數不支援' },
+  { label: '知識庫', values: ['✓', '✓', '✓', '✓'], market: '常需加購' },
+  { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'], market: '按席位另計' },
+  { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'], market: '基礎版本' },
+  { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: '資料來源管理', values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: '工單系統', values: ['—', '✓', '✓', '✓'], market: '常需加購' },
+  { label: '統一收件匣', values: ['—', '✓', '✓', '✓'], market: '常需加購' },
+  { label: '自動學習', values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: '報價計算機', values: ['—', '—', '—', '✓'], market: '—' },
+  { label: '協助設定（免費額度／月）', values: ['0（$25/次）', '0（$15/次）', '1 次', '2 次'], market: '通常另計顧問費' },
 ]
 
 export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
@@ -124,6 +125,15 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 pb-16 flex flex-col sm:flex-row gap-5 items-start">
         <CsSideNav active="plan" features={features} />
         <div className="flex-1 min-w-0 space-y-6">
+        <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white">
+          <div className="flex items-center gap-2 text-lg sm:text-xl font-extrabold">
+            <Sparkles className="h-5 w-5 shrink-0" />
+            不限則數，不怕用量爆表加價
+          </div>
+          <p className="text-white/85 text-xs sm:text-sm mt-1">
+            對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
+          </p>
+        </div>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-xl font-bold text-foreground">訂閱方案</h1>
@@ -265,6 +275,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                 {(['free', 'pro', 'team', 'enterprise'] as CsPlan[]).map(id => (
                   <th key={id} className="text-center font-medium py-2.5 px-3 text-muted-foreground">{PLAN_NAME[id]}</th>
                 ))}
+                <th className="text-center font-medium py-2.5 px-3 text-amber-700 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/30 whitespace-nowrap">市場常見模式</th>
               </tr>
             </thead>
             <tbody>
@@ -276,6 +287,9 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                       {v === '✓' ? <Check className="h-3.5 w-3.5 mx-auto text-primary" /> : v === '—' ? <X className="h-3.5 w-3.5 mx-auto text-muted-foreground/40" /> : v}
                     </td>
                   ))}
+                  <td className="text-center py-2.5 px-3 text-[11px] text-amber-700/90 dark:text-amber-500/80 bg-amber-50/60 dark:bg-amber-950/20">
+                    {row.market}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -293,6 +307,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
             協助設定範圍：站內所有設定（資料來源、報價計算機等）與各平台串接設定皆包含在內；
             但不包含知識庫內容建立，以及各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
           </p>
+          <p className="text-primary font-medium">🎁 新會員首次協助設定免費（不分方案，每個帳號一次）。</p>
         </div>
         </div>
       </div>
