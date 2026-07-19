@@ -8,6 +8,7 @@ import {
   formatEcpayTradeDate,
   resolvePayReturn,
   buildPeriodicFields,
+  periodicSpec,
 } from '@/lib/ecpay/client'
 import { usdToTwdInteger } from '@/lib/fx'
 import { CS_PLAN_PACKAGES, type CsPlanPackageId } from '@/lib/ecpay/cs-plans'
@@ -80,7 +81,9 @@ export async function POST(req: NextRequest) {
   // 勾選「自動於下一期扣款」→ 走綠界定期定額（僅信用卡）
   if (autoRenew) {
     params.ChoosePayment = 'Credit'
-    Object.assign(params, buildPeriodicFields(totalAmountTwd, `${appUrl}/api/billing/ecpay-period-return`))
+    // 扣款週期必須跟方案計費週期一致（年繳走 PeriodType='Y'，否則會用年費每月扣一次）
+    Object.assign(params, buildPeriodicFields(totalAmountTwd, `${appUrl}/api/billing/ecpay-period-return`, pkg.cycle))
+    const spec = periodicSpec(pkg.cycle)
 
     const admin = createAdminClient()
     await admin.from('ecpay_periodic_orders').insert({
@@ -88,9 +91,9 @@ export async function POST(req: NextRequest) {
       kind: 'cs_plan',
       reference_id: pkg.id,
       merchant_trade_no: tradeNo,
-      period_type: 'M',
-      frequency: 1,
-      exec_times: 99,
+      period_type: spec.periodType,
+      frequency: spec.frequency,
+      exec_times: spec.execTimes,
       period_amount_twd: totalAmountTwd,
       usd_value: pkg.usdPrice,
       fx_rate: rate,
