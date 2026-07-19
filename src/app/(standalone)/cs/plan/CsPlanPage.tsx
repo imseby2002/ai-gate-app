@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, X, Sparkles, Loader2, Lock } from 'lucide-react'
+import { Check, X, Sparkles, Loader2, Lock, RefreshCw } from 'lucide-react'
 import { CS_FEATURE_REQUEST_PRICING, type CsPlanFeatures } from '@/lib/cs/entitlements'
 import { CsSideNav } from '../CsSideNav'
 
@@ -42,6 +42,9 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
   const [features, setFeatures] = useState<CsPlanFeatures | null>(null)
   const [cycle, setCycle] = useState<Cycle>('yearly')
   const [checkingOut, setCheckingOut] = useState<string | null>(null)
+  const [autoRenewPkg, setAutoRenewPkg] = useState<Record<string, boolean>>({})
+  const [recurringOrders, setRecurringOrders] = useState<Array<{ id: string; reference_id: string; usd_value: number; status: string; total_success_times: number }>>([])
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -52,7 +55,34 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
     } catch { setPlan('free') }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const loadRecurringOrders = useCallback(async () => {
+    try {
+      const res = await fetch('/api/billing/cancel-recurring')
+      const data = await res.json()
+      if (res.ok) setRecurringOrders((data.orders ?? []).filter((o: { kind: string }) => o.kind === 'cs_plan'))
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { load(); loadRecurringOrders() }, [load, loadRecurringOrders])
+
+  const handleCancelRecurring = async (orderId: string) => {
+    if (!confirm('確定要取消自動續訂嗎？取消後不會再自動扣款。')) return
+    setCancellingId(orderId)
+    try {
+      const res = await fetch('/api/billing/cancel-recurring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await loadRecurringOrders()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '取消失敗，請稍後再試')
+    } finally {
+      setCancellingId(null)
+    }
+  }
 
   const upgrade = async (packageId: string) => {
     setCheckingOut(packageId)
@@ -60,7 +90,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       const res = await fetch('/api/billing/create-cs-plan-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ packageId, returnUrl: window.location.href }),
+        body: JSON.stringify({ packageId, returnUrl: window.location.href, autoRenew: !!autoRenewPkg[packageId] }),
       })
       const data = await res.json()
       if (!res.ok) { alert(data.error ?? '建立訂單失敗'); return }
@@ -79,6 +109,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       document.body.appendChild(form)
       form.submit()
       document.body.removeChild(form)
+      if (autoRenewPkg[packageId]) setTimeout(loadRecurringOrders, 3000)
     } catch {
       alert('網路錯誤，請稍後再試')
     } finally {
@@ -172,21 +203,59 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                 </ul>
 
                 {!isFree && (
-                  <button
-                    onClick={() => upgrade(packageId!)}
-                    disabled={!isOwner || isCurrent || checkingOut === packageId}
-                    className="w-full mt-1 py-2 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                  >
-                    {checkingOut === packageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                    {isCurrent ? '目前方案' : '升級'}
-                  </button>
+                  <>
+                    <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={!!autoRenewPkg[packageId ?? '']}
+                        onChange={e => setAutoRenewPkg(prev => ({ ...prev, [packageId ?? '']: e.target.checked }))}
+                        className="rounded"
+                      />
+                      每月自動於下一期扣款
+                    </label>
+                    <button
+                      onClick={() => upgrade(packageId!)}
+                      disabled={!isOwner || isCurrent || checkingOut === packageId}
+                      className="w-full mt-1 py-2 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                    >
+                      {checkingOut === packageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                      {isCurrent ? '目前方案' : '升級'}
+                    </button>
+                  </>
                 )}
               </div>
             )
           })}
         </div>
 
-        <p className="text-[11px] text-muted-foreground">付款後方案立即生效，到期前不會自動續訂，需自行再次購買延續。</p>
+        {recurringOrders.length > 0 && (
+          <div className="rounded-xl border bg-card p-4 space-y-2">
+            <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <RefreshCw className="h-3.5 w-3.5" /> 自動續訂中
+            </div>
+            {recurringOrders.map(o => (
+              <div key={o.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
+                <div>
+                  <div className="font-medium text-foreground">
+                    {o.reference_id}<span className="ml-2 text-muted-foreground">${o.usd_value}/月</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {o.status === 'pending' ? '等待首筆扣款確認中' : `已成功扣款 ${o.total_success_times} 次`}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleCancelRecurring(o.id)}
+                  disabled={cancellingId === o.id}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-accent disabled:opacity-50"
+                >
+                  {cancellingId === o.id ? '取消中…' : '取消自動續訂'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-[11px] text-muted-foreground">付款後方案立即生效；未勾選自動扣款時，到期前不會自動續訂，需自行再次購買延續。</p>
 
         <div className="overflow-x-auto rounded-xl border bg-card">
           <table className="w-full text-xs border-collapse min-w-[640px]">
