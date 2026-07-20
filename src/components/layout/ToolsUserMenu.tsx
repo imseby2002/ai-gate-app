@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, ChevronDown, Settings, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export function ToolsUserMenu({ displayName }: { displayName: string }) {
   const router = useRouter()
+  const pathname = usePathname()
+  // 儲值頁返回時要回到「進來的那個模組」，帶上目前路徑
+  const creditsHref = `/credits?from=${encodeURIComponent(pathname || '/apps')}`
   const [open, setOpen] = useState(false)
 
   const handleSignOut = async () => {
@@ -38,7 +41,7 @@ export function ToolsUserMenu({ displayName }: { displayName: string }) {
               帳號設定
             </a>
             <a
-              href="/credits"
+              href={creditsHref}
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Wallet className="h-3.5 w-3.5 text-gray-400" />

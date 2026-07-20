@@ -139,7 +139,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
       </div>
 
       {/* Credit Balance → 點數錢包 */}
-      <a href="/credits" className="block bg-card rounded-2xl border p-6 shadow-sm hover:border-primary/40 transition-colors">
+      <a href="/credits?from=/settings" className="block bg-card rounded-2xl border p-6 shadow-sm hover:border-primary/40 transition-colors">
         <div className="flex items-center gap-2 mb-4">
           <Wallet className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold">{t('credits')}</h2>

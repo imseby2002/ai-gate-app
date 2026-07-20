@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -34,8 +34,10 @@ function avatarGradient(email: string) {
 
 export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const t = useTranslations('Header')
   const [menuOpen, setMenuOpen] = useState(false)
+  const creditsHref = `/credits?from=${encodeURIComponent(pathname || '/apps')}`
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -69,7 +71,7 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
         {/* Credit balance → 點數錢包（可點擊儲值） */}
         {profile.user_type === 'external' && creditBalance !== undefined && (
           <a
-            href="/credits"
+            href={creditsHref}
             title="點數錢包 · 儲值"
             className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
           >
