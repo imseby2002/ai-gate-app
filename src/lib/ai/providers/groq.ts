@@ -7,6 +7,8 @@ const MODEL_MAP: Record<string, string> = {
   'groq-llama-3.3-70b': 'llama-3.3-70b-versatile',   // 通用主力，極快
   'groq-qwen3-32b':     'qwen/qwen3-32b',             // 推理/分析，支援繁體中文
   'groq-qwq-32b':       'qwen-qwq-32b',               // 數學/邏輯推理
+  'groq-llama-3.1-8b':  'llama-3.1-8b-instant',       // 最省成本，客服免費層候選
+  'groq-gpt-oss-20b':   'openai/gpt-oss-20b',         // 低成本、品質高一階
 }
 
 // 若模型 ID 為 "groq-auto"，自動選最佳通用模型
