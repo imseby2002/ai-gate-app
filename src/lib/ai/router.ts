@@ -137,6 +137,8 @@ export function calculateCost(
     'groq-qwen3-32b':          { in: 0,        out: 0        },
     'groq-deepseek-r1':        { in: 0,        out: 0        },
     'groq-qwq-32b':            { in: 0,        out: 0        },
+    'groq-llama-3.1-8b':       { in: 0,        out: 0        },
+    'groq-gpt-oss-20b':        { in: 0,        out: 0        },
   }
 
   const c = costs[modelId]
