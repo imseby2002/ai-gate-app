@@ -14,6 +14,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
+import { generateCsReplyL2 } from '@/lib/cs/csReply'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -888,7 +889,7 @@ async function getAIReply(
       if (!storedName.trim() || !conv.trim()) return false
       try {
         const { text } = await generateText({
-          model: google('gemini-2.5-flash'),
+          model: google('gemini-3.1-flash-lite'),
           messages: [{
             role: 'user',
             content: `訂單登記的姓名是：「${storedName}」\n客人在對話中提供的內容：「${conv.slice(-600)}」\n\n請判斷：客人是否說出了與登記姓名屬於「同一個人」的姓名？\n比對規則（皆視為相符）：中文與英文拼音互換、發音相近即可（拼法不需完全一致，如 Chen=Chern、Lee=Li）、姓氏可在前或在後、大小寫與空格差異。\n只有當你有把握是同一人時回 YES；客人未提供姓名或無法確認時回 NO。只回一個詞：YES 或 NO。`,
@@ -944,14 +945,14 @@ async function getAIReply(
       // 價格來源偏好：pricing_calculator 時跳過訂單系統算價，改用定價計算機
       const bq = priceFromCalculator
         ? null
-        : await buildBookingModuleQuote(getServiceClient(), userId, google('gemini-2.5-flash'), convUserText, todayIso)
+        : await buildBookingModuleQuote(getServiceClient(), userId, google('gemini-3.1-flash-lite'), convUserText, todayIso)
       if (bq) {
         deterministicQuote = bq
       } else if (knowledge.pricingConfigs.length) {
         const lc = convUserText.toLowerCase()
         const cfg = knowledge.pricingConfigs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase())))
           ?? knowledge.pricingConfigs[0]
-        deterministicQuote = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+        deterministicQuote = await buildDeterministicQuote(google('gemini-3.1-flash-lite'), cfg, convUserText, todayIso)
       }
     }
 
@@ -995,21 +996,18 @@ async function getAIReply(
         try {
           const anthropic = createAnthropic({ apiKey: anthropicKey })
           const { text } = await generateText({
-            model: anthropic('claude-sonnet-4-5'),
+            model: anthropic('claude-sonnet-4-6'),
             system: systemPrompt,
             messages,
           })
           return cleanReply(text) || FALLBACK
-        } catch { /* fall through to Gemini */ }
+        } catch { /* fall through to L2 chain */ }
       }
     }
 
-    const { text } = await generateText({
-      model: google('gemini-2.5-flash'),
-      system: systemPrompt,
-      messages,
-    })
-    return cleanReply(text) || FALLBACK
+    // L2：Groq Qwen3 32B 為主力 → CLIProxy → FreeLLM → 直連 Gemini 保底
+    const result = await generateCsReplyL2(systemPrompt, messages)
+    return (result ? cleanReply(result.reply) : '') || FALLBACK
   } catch {
     return FALLBACK
   }

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     try {
       const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
       const { text } = await generateText({
-        model: google('gemini-2.5-flash'),
+        model: google('gemini-3.1-flash-lite'),
         messages: [{
           role: 'user',
           content: `以下是一段客戶問題與客服標準答案的對話紀錄。
