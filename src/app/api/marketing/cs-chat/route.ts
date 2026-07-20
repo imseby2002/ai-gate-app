@@ -8,6 +8,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
+import { classifyIntentL1, generateCsReplyL2 } from '@/lib/cs/csReply'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -640,7 +641,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     if (!storedName.trim() || !conv.trim()) return false
     try {
       const { text } = await generateText({
-        model: google('gemini-2.5-flash'),
+        model: google('gemini-3.1-flash-lite'),
         messages: [{
           role: 'user',
           content: `訂單登記的姓名是：「${storedName}」\n客人在對話中提供的內容：「${conv.slice(-600)}」\n\n請判斷：客人是否說出了與登記姓名屬於「同一個人」的姓名？\n比對規則（皆視為相符）：中文與英文拼音互換、發音相近即可（拼法不需完全一致，如 Chen=Chern、Lee=Li）、姓氏可在前或在後、大小寫與空格差異。\n只有當你有把握是同一人時回 YES；客人未提供姓名或無法確認時回 NO。只回一個詞：YES 或 NO。`,
@@ -763,7 +764,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     // 價格來源切到「定價計算機」時跳過訂單系統算價，直接 fallback 用 json_pricing 設定。
     const bq = priceFromCalculator
       ? null
-      : await buildBookingModuleQuote(supabase, user.id, google('gemini-2.5-flash'), convUserText, todayIso)
+      : await buildBookingModuleQuote(supabase, user.id, google('gemini-3.1-flash-lite'), convUserText, todayIso)
     if (bq) {
       deterministicQuoteSection = `\n\n${bq}`
     } else if (sources?.length) {
@@ -771,7 +772,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
       if (pricingCfgs.length) {
         const lc = convUserText.toLowerCase()
         const cfg = pricingCfgs.find(c => (c.triggerKeywords ?? []).some(kw => kw && lc.includes(kw.toLowerCase()))) ?? pricingCfgs[0]
-        const q = await buildDeterministicQuote(google('gemini-2.5-flash'), cfg, convUserText, todayIso)
+        const q = await buildDeterministicQuote(google('gemini-3.1-flash-lite'), cfg, convUserText, todayIso)
         if (q) deterministicQuoteSection = `\n\n${q}`
       }
     }
@@ -899,38 +900,16 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     }
   } catch { /* 不中斷主流程 */ }
 
-  // ── Intent classification ─────────────────────────────────────────────────
+  // ── Intent classification (L1：Groq 8B 分流，免費通道與直連 Gemini 依序備援) ──
   const knowledgeSection = knowledgeBase
     ? `\n\n【知識庫】\n${knowledgeBase.slice(0, 3000)}`
     : ''
 
-  const classifyPrompt = `你是一個客服意圖分類器。請分析以下客戶訊息，回傳 JSON（只回傳 JSON，不要有其他文字）：
-
-意圖類別（從中選一）：${INTENT_CATEGORIES.join('、')}
-風險等級：low（一般諮詢）/ medium（需要人工協助）/ high（投訴、退款、法律）${knowledgeSection}
-
-客戶訊息：「${message}」
-
-回傳格式：{"intent":"...","risk":"low|medium|high","summary":"一句話摘要客戶需求"}`
-
-  let intent = '其他'
-  let risk: string = 'low'
-  let summary = message
-
-  try {
-    const { text: classifyText } = await generateText({
-      model: google('gemini-2.5-flash'),
-      providerOptions: { google: { thinkingConfig: { thinkingBudget: 512 } } },
-      messages: [{ role: 'user', content: classifyPrompt }],
-    })
-    const parsed = JSON.parse(classifyText.replace(/```json\n?|```/g, '').trim())
-    intent = parsed.intent ?? intent
-    risk = parsed.risk ?? risk
-    summary = parsed.summary ?? summary
-    if (HIGH_RISK_INTENTS.includes(intent)) risk = 'high'
-  } catch (_) {
-    // keep defaults
-  }
+  const classified = await classifyIntentL1(message, INTENT_CATEGORIES, knowledgeSection)
+  const intent = classified.intent
+  const summary = classified.summary
+  let risk: string = classified.risk
+  if (HIGH_RISK_INTENTS.includes(intent)) risk = 'high'
 
   // ── Customer recognition & price-ask tracking ─────────────────────────────
   // 偵測「第幾次問價」用於業務話術；認得回頭客；累計追蹤資料。
@@ -1084,47 +1063,14 @@ const systemPrompt = `${baseInstructions}
     }
   }
 
-  // Normal CS: FreeLLMAPI auto → CLI Proxy → Direct Gemini
+  // Normal CS (L2)：Groq Qwen3 32B 為主力 → CLIProxy → FreeLLM → 直連 Gemini 保底
   if (!reply) {
-    const csChain = [
-      // FreeLLMAPI first — high volume, 12 free platforms
-      ...(process.env.FREE_LLM_API_KEY && (process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL)
-        ? [{ url: (process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL)!, key: process.env.FREE_LLM_API_KEY, model: 'auto', label: 'FreeLLM' }]
-        : []),
-      // CLI Proxy Gemini — free Copilot tier
-      ...(process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
-        ? [{ url: (process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL)!, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: 'gemini-3-flash', label: 'CLIProxy' }]
-        : []),
-    ]
-
-    for (const entry of csChain) {
-      try {
-        const { createOpenAI } = await import('@ai-sdk/openai')
-        const openaiCompat = createOpenAI({ apiKey: entry.key, baseURL: entry.url })
-        const { text } = await generateText({
-          model: openaiCompat.chat(entry.model),
-          system: systemPrompt,
-          messages: msgHistory,
-          maxOutputTokens: 2048,
-          abortSignal: AbortSignal.timeout(20000),
-        })
-        if (text) { reply = text; provider = entry.label; break }
-      } catch { /* try next */ }
-    }
-
-    // Final fallback: Direct Gemini
-    if (!reply) {
-      try {
-        const { text } = await generateText({
-          model: google('gemini-2.5-flash'),
-          system: systemPrompt,
-          messages: msgHistory,
-        })
-        reply = text
-        provider = 'Gemini'
-      } catch (e) {
-        return NextResponse.json({ error: `所有模型失敗：${String(e).slice(0, 200)}` }, { status: 500 })
-      }
+    const result = await generateCsReplyL2(systemPrompt, msgHistory)
+    if (result) {
+      reply = result.reply
+      provider = result.provider
+    } else {
+      return NextResponse.json({ error: '所有模型失敗，請稍後再試' }, { status: 500 })
     }
   }
 
