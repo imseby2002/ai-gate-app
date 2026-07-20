@@ -26,7 +26,7 @@ export function AppShell({ children, userType, enabledModules, scope, conversati
     <div className="flex h-[100dvh] overflow-hidden">
       {/* Desktop sidebar */}
       <div className="hidden md:flex flex-col shrink-0">
-        <Sidebar userType={userType} enabledModules={enabledModules} conversations={conversations} />
+        <Sidebar userType={userType} enabledModules={enabledModules} scope={scope} conversations={conversations} />
       </div>
 
       {/* Mobile sidebar drawer */}
