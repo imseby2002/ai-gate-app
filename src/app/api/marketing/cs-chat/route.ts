@@ -8,7 +8,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
-import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
+import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -933,6 +933,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   const classified = await classifyIntentL1(message, INTENT_CATEGORIES, knowledgeSection)
   const intent = classified.intent
   const summary = classified.summary
+  const needsSearch = classified.needsSearch
   let risk: string = classified.risk
   if (HIGH_RISK_INTENTS.includes(intent)) risk = 'high'
 
@@ -1123,12 +1124,15 @@ const systemPrompt = `${baseInstructions}
     }
   }
 
-  // Normal CS：advancedSupport 方案的圖片／中等複雜問題改走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3 32B 為主力）
+  // Normal CS：advancedSupport 方案的搜尋需求走搜尋分支、圖片／中等複雜問題走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3.6 27B 為主力）
   if (!reply) {
-    const useL3 = planFeatures.advancedSupport && (customerSentImage || risk === 'medium')
-    const result = useL3
-      ? await generateCsReplyL3(systemPrompt, msgHistory)
-      : await generateCsReplyL2(systemPrompt, msgHistory)
+    const useSearch = planFeatures.advancedSupport && needsSearch
+    const useL3 = !useSearch && planFeatures.advancedSupport && (customerSentImage || risk === 'medium')
+    const result = useSearch
+      ? await generateCsReplySearch(systemPrompt, msgHistory)
+      : useL3
+        ? await generateCsReplyL3(systemPrompt, msgHistory)
+        : await generateCsReplyL2(systemPrompt, msgHistory)
     if (result) {
       reply = result.reply
       provider = result.provider

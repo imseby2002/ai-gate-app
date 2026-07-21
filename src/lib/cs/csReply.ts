@@ -60,6 +60,8 @@ export interface ClassifyResult {
   intent: string
   risk: 'low' | 'medium' | 'high'
   summary: string
+  /** 需要即時網路資訊（天氣、附近景點、當下狀態等知識庫不會有的問題）僅 CORE+ 觸發搜尋分支 */
+  needsSearch: boolean
 }
 
 export async function classifyIntentL1(
@@ -70,13 +72,14 @@ export async function classifyIntentL1(
   const prompt = `你是一個客服意圖分類器。請分析以下客戶訊息，回傳 JSON（只回傳 JSON，不要有其他文字）：
 
 意圖類別（從中選一）：${intentCategories.join('、')}
-風險等級：low（一般諮詢）/ medium（需要人工協助）/ high（投訴、退款、法律）${knowledgeSection}
+風險等級：low（一般諮詢）/ medium（需要人工協助）/ high（投訴、退款、法律）
+needsSearch：客戶問題是否需要「即時網路資訊」才能回答（例如天氣、附近景點/店家、當下交通狀況等知識庫不會有的即時資料）→ true；一般諮詢、房型/價格/訂單等知識庫內資訊 → false${knowledgeSection}
 
 客戶訊息：「${message}」
 
-回傳格式：{"intent":"...","risk":"low|medium|high","summary":"一句話摘要客戶需求"}`
+回傳格式：{"intent":"...","risk":"low|medium|high","summary":"一句話摘要客戶需求","needsSearch":true|false}`
 
-  const fallbackResult: ClassifyResult = { intent: '其他', risk: 'low', summary: message }
+  const fallbackResult: ClassifyResult = { intent: '其他', risk: 'low', summary: message, needsSearch: false }
 
   const parse = (text: string): ClassifyResult | null => {
     try {
@@ -86,6 +89,7 @@ export async function classifyIntentL1(
         intent: parsed.intent,
         risk: (['low', 'medium', 'high'].includes(parsed.risk) ? parsed.risk : 'low') as ClassifyResult['risk'],
         summary: parsed.summary ?? message,
+        needsSearch: parsed.needsSearch === true,
       }
     } catch {
       return null
@@ -187,6 +191,55 @@ export async function generateCsReplyL3(
       const model = createGoogleGenerativeAI({ apiKey: geminiKey })('gemini-3-flash')
       const { text } = await generateText({ model, system, messages })
       if (text) return { reply: text, provider: 'Gemini-3-Flash' }
+    } catch { /* fall through */ }
+  }
+
+  return null
+}
+
+// ── 搜尋分支：客人問題需要即時網路資訊時使用（僅 CORE 以上，由 L1 的 needsSearch 觸發）──
+// 免費資源優先：FreeLLM 的 Compound Mini（額度遠高於 Groq 官方免費層的 250 次/日）
+// → CLIProxy 的 gemini-3-flash-agent（代理模式，內建 Google Search grounding）
+// → Perplexity Sonar 付費保底（purpose-built 搜尋，非全租戶都會設定 PERPLEXITY_API_KEY）
+export async function generateCsReplySearch(
+  system: string,
+  messages: ChatMsg[],
+): Promise<{ reply: string; provider: string } | null> {
+  // 1) FreeLLM：Compound Mini (Groq)。實際 model id 依 FreeLLM 服務後台為準，
+  // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免猜錯字串導致這個免費入口永遠打不中。
+  const freeLlmUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+  if (process.env.FREE_LLM_API_KEY && freeLlmUrl) {
+    const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'compound-mini'
+    const text = await tryOpenAiCompat(
+      { url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
+      system, messages,
+    )
+    if (text) return { reply: text, provider: 'FreeLLM-CompoundMini' }
+  }
+
+  // 2) CLIProxy：gemini-3-flash-agent
+  const cliProxyUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
+  if (cliProxyUrl) {
+    const text = await tryOpenAiCompat(
+      { url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: 'gemini-3-flash-agent', label: 'CLIProxy-Agent' },
+      system, messages,
+    )
+    if (text) return { reply: text, provider: 'CLIProxy-Agent' }
+  }
+
+  // 3) Perplexity Sonar 保底（付費，只有設定 PERPLEXITY_API_KEY 才會用到）
+  const perplexityKey = process.env.PERPLEXITY_API_KEY
+  if (perplexityKey) {
+    try {
+      const { createOpenAI } = await import('@ai-sdk/openai')
+      const perplexity = createOpenAI({ apiKey: perplexityKey, baseURL: 'https://api.perplexity.ai' })
+      const { text } = await generateText({
+        model: perplexity.chat('sonar'),
+        system,
+        messages,
+        abortSignal: AbortSignal.timeout(20000),
+      })
+      if (text) return { reply: text, provider: 'Perplexity-Sonar' }
     } catch { /* fall through */ }
   }
 
