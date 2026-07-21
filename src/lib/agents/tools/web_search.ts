@@ -8,7 +8,7 @@ interface WebSearchInput {
   query: string
 }
 
-export const webSearchTool: AgentToolDef<WebSearchInput> = {
+export const webSearchTool: AgentToolDef = {
   id: 'web_search',
   description: '搜尋網路上具時效性的資訊（新聞、公開資料、法規、市場動態等），回傳摘要文字。',
   inputSchema: {
@@ -18,7 +18,8 @@ export const webSearchTool: AgentToolDef<WebSearchInput> = {
     },
     required: ['query'],
   },
-  async execute(input) {
+  async execute(rawInput) {
+    const input = rawInput as unknown as WebSearchInput
     if (!process.env.PERPLEXITY_API_KEY) return { error: 'PERPLEXITY_API_KEY 未設定' }
     const perplexity = createOpenAI({
       apiKey: process.env.PERPLEXITY_API_KEY,

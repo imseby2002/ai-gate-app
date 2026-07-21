@@ -11,7 +11,7 @@ interface ListDormantInput {
   stages?: string[]
 }
 
-export const listDormantCustomersTool: AgentToolDef<ListDormantInput> = {
+export const listDormantCustomersTool: AgentToolDef = {
   id: 'list_dormant_customers',
   description:
     '列出許久沒互動、或多次問價但尚未成交的客戶名單（來自既有客服系統的客戶追蹤資料），' +
@@ -28,7 +28,8 @@ export const listDormantCustomersTool: AgentToolDef<ListDormantInput> = {
     },
     required: [],
   },
-  async execute(input, ctx) {
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as ListDormantInput
     const admin = createAdminClient()
     const minDays = input.minDaysSinceLastMessage ?? 14
     const stages = input.stages?.length ? input.stages : ['quoted', 'negotiating']
@@ -55,7 +56,7 @@ interface SendCustomerMessageInput {
   text: string
 }
 
-export const sendCustomerMessageTool: AgentToolDef<SendCustomerMessageInput> = {
+export const sendCustomerMessageTool: AgentToolDef = {
   id: 'send_customer_message',
   description:
     '主動發送一則訊息給指定客戶（透過既有客服系統綁定的 LINE/WhatsApp/Telegram/Zalo 帳號）。' +
@@ -69,7 +70,8 @@ export const sendCustomerMessageTool: AgentToolDef<SendCustomerMessageInput> = {
     },
     required: ['platform', 'to', 'text'],
   },
-  async execute(input, ctx) {
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as SendCustomerMessageInput
     return sendToCustomer(ctx.userId, input.platform, input.to, input.text)
   },
 }

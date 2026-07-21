@@ -7,7 +7,7 @@ interface BrainstormInput {
   rounds?: number
 }
 
-export const brainstormWithModelsTool: AgentToolDef<BrainstormInput> = {
+export const brainstormWithModelsTool: AgentToolDef = {
   id: 'brainstorm_with_models',
   description:
     '讓多個 AI 模型各自扮演不同角色/立場，針對同一主題輪流討論（例如：保守財務觀點 vs 積極行銷觀點），' +
@@ -32,7 +32,8 @@ export const brainstormWithModelsTool: AgentToolDef<BrainstormInput> = {
     },
     required: ['topic', 'participants'],
   },
-  async execute(input) {
+  async execute(rawInput) {
+    const input = rawInput as unknown as BrainstormInput
     return runMultiModelDiscussion(input.topic, input.participants, input.rounds ?? 2)
   },
 }

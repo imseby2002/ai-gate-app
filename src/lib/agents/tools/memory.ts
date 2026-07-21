@@ -1,6 +1,6 @@
 import type { AgentToolDef } from '../types'
 
-export const readRoleMemoryTool: AgentToolDef<Record<string, never>> = {
+export const readRoleMemoryTool: AgentToolDef = {
   id: 'read_role_memory',
   description: '讀取此角色過去累積的長期記憶/自我檢討筆記（例如哪些做法有效、哪些活動成效不佳），規劃前建議先讀取避免重蹈覆轍。',
   inputSchema: { type: 'object', properties: {} },
@@ -17,7 +17,7 @@ interface WriteMemoryInput {
   importance?: number
 }
 
-export const writeMemoryTool: AgentToolDef<WriteMemoryInput> = {
+export const writeMemoryTool: AgentToolDef = {
   id: 'write_memory',
   description: '寫入一筆長期記憶（例如自我檢討的心得、發現的偏好、值得記住的教訓），供未來執行時參考。',
   inputSchema: {
@@ -30,8 +30,8 @@ export const writeMemoryTool: AgentToolDef<WriteMemoryInput> = {
     },
     required: ['type', 'content'],
   },
-  async execute(input, ctx) {
-    await ctx.writeMemory(input)
+  async execute(rawInput, ctx) {
+    await ctx.writeMemory(rawInput as unknown as WriteMemoryInput)
     return { ok: true }
   },
 }

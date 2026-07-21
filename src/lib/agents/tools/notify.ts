@@ -6,7 +6,7 @@ interface NotifyHumanInput {
   severity?: 'info' | 'warning' | 'critical'
 }
 
-export const notifyHumanTool: AgentToolDef<NotifyHumanInput> = {
+export const notifyHumanTool: AgentToolDef = {
   id: 'notify_human',
   description: '主動通知真人（不需要等待回覆），例如回報進度、提醒需要注意的事項。走使用者偏好的管道（Telegram/Email/...）。',
   inputSchema: {
@@ -18,8 +18,8 @@ export const notifyHumanTool: AgentToolDef<NotifyHumanInput> = {
     },
     required: ['title', 'body'],
   },
-  async execute(input, ctx) {
-    return ctx.notifyHuman(input)
+  async execute(rawInput, ctx) {
+    return ctx.notifyHuman(rawInput as unknown as NotifyHumanInput)
   },
 }
 
@@ -30,7 +30,7 @@ interface RequestApprovalInput {
   riskLevel?: 'low' | 'medium' | 'high'
 }
 
-export const requestApprovalTool: AgentToolDef<RequestApprovalInput> = {
+export const requestApprovalTool: AgentToolDef = {
   id: 'request_human_approval',
   description:
     '請求真人核准後才能繼續的高風險動作（花錢、簽約、對外發送訊息、撥打電話等）。' +
@@ -46,8 +46,8 @@ export const requestApprovalTool: AgentToolDef<RequestApprovalInput> = {
     required: ['actionType', 'summary'],
   },
   suspending: true,
-  async execute(input, ctx) {
-    return ctx.requestApproval(input)
+  async execute(rawInput, ctx) {
+    return ctx.requestApproval(rawInput as unknown as RequestApprovalInput)
   },
 }
 
@@ -55,7 +55,7 @@ interface FinishRunInput {
   summary: string
 }
 
-export const finishRunTool: AgentToolDef<FinishRunInput> = {
+export const finishRunTool: AgentToolDef = {
   id: 'finish_run',
   description: '確認此次任務已完成（或已無法再推進），結束本次執行並附上總結報告。',
   inputSchema: {
@@ -66,7 +66,8 @@ export const finishRunTool: AgentToolDef<FinishRunInput> = {
     required: ['summary'],
   },
   suspending: true,
-  async execute(input, ctx) {
+  async execute(rawInput, ctx) {
+    const input = rawInput as unknown as FinishRunInput
     await ctx.notifyHuman({
       title: `✅ 任務完成回報`,
       body: input.summary,
