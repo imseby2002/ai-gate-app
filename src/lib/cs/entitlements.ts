@@ -58,7 +58,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
   },
   pro: {
     platformLimit: 3,
-    collaboratorLimit: Infinity,
+    collaboratorLimit: 5,
     aiSettingsScope: 'full',
     claudeEscalation: 'high',
     dataSources: true,
@@ -94,12 +94,14 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
 // - 複雜客製：需新增資料表／獨立模組／第三方串接，一次性建置費另議 + 每月維護費
 //   （因為往後系統升級都要顧到這個客戶專屬的表/模組，是持續性成本，不能只收一次性費用了事）。
 // 防堵漏洞：CORE+ 優惠價綁定「維持訂閱」，避免訂 1 個月拿優惠價做完客製、隔月就降回免費層繼續白嫖。
+// 天數訂 90 天（3 個月）而非 30 天：CORE 月費 $19、優惠差額只有 $24，30 天內湊 1 個月訂閱費仍然划算
+// （$19 換到省 $24 + 一整月完整功能），要拉到 3 個月（$57）才會讓純粹套利明顯不划算。
 export const CS_FEATURE_REQUEST_PRICING = {
   basicPriceUsdByPlan: { free: 39, core: 15, pro: 15, max: 15 } as Record<CsPlan, number>,
   basicNote: '需審核',
   complexNote: '需新增資料庫／獨立模組／第三方串接，採「一次性建置費＋每月維護費」，審核後報價',
-  clawbackDays: 30,
-  clawbackNote: 'CORE 以上優惠價僅適用於交付完成後持續維持該方案；若在完成後 30 天內降級為免費方案，將依免費層價格補收差額',
+  clawbackDays: 90,
+  clawbackNote: '基礎客製功能 CORE 以上優惠價僅適用於交付完成後持續維持該方案；若在完成後 3 個月內降級為免費方案，將依免費層價格補收差額',
 }
 
 /**
