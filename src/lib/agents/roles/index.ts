@@ -1,7 +1,8 @@
 // 各角色的專屬工具集（核心工具見 src/lib/agents/tools/index.ts 的 CORE_AGENT_TOOLS）。
 // Phase 1 試點角色：lead-gen（B2B 潛在名單開發）、marketing-officer（網路行銷專員）。
-// 其餘角色之後陸續加入。
+// Phase 2：cs-care（客戶服務關懷專員）。其餘角色之後陸續加入。
 import { createInternalApiTool } from '../tools'
+import { listDormantCustomersTool, sendCustomerMessageTool } from '../tools/cs_customers'
 import type { AgentToolDef } from '../types'
 
 const collectTool = createInternalApiTool(
@@ -111,6 +112,10 @@ export const ROLE_TOOL_SETS: Record<string, Record<string, AgentToolDef>> = {
     [copyTool.id]: copyTool,
     [imageScriptTool.id]: imageScriptTool,
     [videoScriptTool.id]: videoScriptTool,
+  },
+  'cs-care': {
+    [listDormantCustomersTool.id]: listDormantCustomersTool,
+    [sendCustomerMessageTool.id]: sendCustomerMessageTool,
   },
 }
 
