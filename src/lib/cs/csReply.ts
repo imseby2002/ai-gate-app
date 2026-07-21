@@ -165,3 +165,74 @@ export async function generateCsReplyL2(
 
   return null
 }
+
+// ── L3：進階處理（客人傳照片 / 複雜問題，僅 CORE 以上）─────────────────────
+// 用 gemini-3-flash 本尊（非 lite）：多模態辨識與複雜推理品質優先於成本。
+// Groq 的文字模型不支援看圖，L3 一律不經過 Groq。
+export async function generateCsReplyL3(
+  system: string,
+  messages: ChatMsg[],
+): Promise<{ reply: string; provider: string } | null> {
+  // 1) 免費通道：CLIProxy → FreeLLM（皆走 gemini-3-flash）
+  for (const entry of freeChain('gemini-3-flash')) {
+    const text = await tryOpenAiCompat(entry, system, messages)
+    if (text) return { reply: text, provider: entry.label }
+  }
+
+  // 2) 直連 gemini-3-flash 保底
+  const geminiKey = process.env.GOOGLE_AI_API_KEY
+  if (geminiKey) {
+    try {
+      const model = createGoogleGenerativeAI({ apiKey: geminiKey })('gemini-3-flash')
+      const { text } = await generateText({ model, system, messages })
+      if (text) return { reply: text, provider: 'Gemini-3-Flash' }
+    } catch { /* fall through */ }
+  }
+
+  return null
+}
+
+// 免費層收到客人照片時的降級回覆：不呼叫任何 AI（省成本），請客人改文字描述。
+export const IMAGE_DOWNGRADE_REPLY = '收到您傳的照片了，目前這個方案暫時無法直接辨識圖片內容，麻煩您用文字簡單描述一下狀況，我馬上為您處理，謝謝！'
+
+// ── 免費層老闆升級提示：站內橫幅（寫入 cs_upgrade_nudges）+ Telegram 雙管道 ──
+export type UpgradeNudgeReason = 'image' | 'complaint'
+
+export async function notifyOwnerUpgradeNudge(
+  ownerId: string,
+  reason: UpgradeNudgeReason,
+  customerMessage: string,
+): Promise<void> {
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const admin = createAdminClient()
+
+    // 站內橫幅：寫入一筆紀錄，CS 工作台會顯示最近的提示
+    void admin.from('cs_upgrade_nudges').insert({
+      user_id: ownerId,
+      reason,
+      customer_message: customerMessage.slice(0, 200),
+    })
+
+    // Telegram：讀取老闆在「帳號設定」綁定的 Bot（與行銷審核通知共用同一組設定）
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('telegram_bot_token, telegram_chat_id')
+      .eq('id', ownerId)
+      .maybeSingle()
+    const token = profile?.telegram_bot_token?.trim()
+    const chatId = profile?.telegram_chat_id?.trim()
+    if (!token || !chatId) return
+
+    const reasonText = reason === 'image'
+      ? '客人傳送了照片，但目前方案未開放 AI 圖片辨識'
+      : '客人提出客訴/抱怨，目前方案未開放 AI 客訴進階處理'
+    const text = `🔔 AI GATE 升級提示\n${reasonText}\n客人訊息：${customerMessage.slice(0, 80)}\n升級 CORE 即可讓 AI 直接處理，詳情請至 CS 工作台查看。`
+
+    void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    })
+  } catch { /* 不中斷主流程 */ }
+}

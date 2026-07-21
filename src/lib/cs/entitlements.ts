@@ -18,6 +18,8 @@ export interface CsPlanFeatures {
   pricingCalculator: boolean
   /** WhatsApp 個人版（Baileys QR 掃碼）僅 PRO 以上可用 */
   whatsappPersonal: boolean
+  /** L3 進階處理（客人傳照片辨識、複雜問題轉更強模型）僅 CORE 以上可用；免費層封頂在 L2 常規回覆 */
+  advancedSupport: boolean
   assistedSetup: { freePerMonth: number; priceUsd: number }
 }
 
@@ -33,6 +35,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     autoLearning: false,
     pricingCalculator: false,
     whatsappPersonal: false,
+    advancedSupport: false,
     assistedSetup: { freePerMonth: 0, priceUsd: 25 },
   },
   core: {
@@ -46,6 +49,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     autoLearning: true,
     pricingCalculator: false,
     whatsappPersonal: true,
+    advancedSupport: true,
     assistedSetup: { freePerMonth: 0, priceUsd: 15 },
   },
   pro: {
@@ -59,6 +63,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     autoLearning: true,
     pricingCalculator: false,
     whatsappPersonal: true,
+    advancedSupport: true,
     assistedSetup: { freePerMonth: 1, priceUsd: 15 },
   },
   max: {
@@ -72,6 +77,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     autoLearning: true,
     pricingCalculator: true,
     whatsappPersonal: true,
+    advancedSupport: true,
     assistedSetup: { freePerMonth: 2, priceUsd: 15 },
   },
 }

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Ticket, Wifi, WifiOff, Settings, FlaskConical,
   Inbox, Database, ArrowRight, RefreshCw, CheckCircle2, Zap,
-  BarChart3, ChevronRight, Users, UserPlus, Sparkles, Circle,
+  BarChart3, ChevronRight, Users, UserPlus, Sparkles, Circle, Lock,
 } from 'lucide-react'
 
 const INDUSTRY_IDS = ['homestay', 'ecommerce', 'restaurant', 'clinic', 'beauty', 'education'] as const
@@ -30,15 +30,26 @@ const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
   test:      { name: 'Test', emoji: '🧪' },
 }
 
+interface UpgradeNudge {
+  reason: 'image' | 'complaint'
+  customer_message: string | null
+}
+
 interface Props {
   industry: string
   todayMessages: number
   openTickets: number
   connectedPlatforms: string[]
   hasMessages: boolean
+  upgradeNudge?: UpgradeNudge | null
 }
 
-export function CsDashboard({ industry, todayMessages, openTickets, connectedPlatforms, hasMessages }: Props) {
+const NUDGE_TEXT: Record<UpgradeNudge['reason'], string> = {
+  image: '客人傳送了照片，目前方案未開放 AI 圖片辨識。',
+  complaint: '客人提出了客訴，目前方案未開放 AI 客訴進階處理。',
+}
+
+export function CsDashboard({ industry, todayMessages, openTickets, connectedPlatforms, hasMessages, upgradeNudge }: Props) {
   const t = useTranslations('CsDashboard')
   const id = (INDUSTRY_IDS.includes(industry as IndustryId) ? industry : 'homestay') as IndustryId
   const style = INDUSTRY_STYLES[id]
@@ -82,6 +93,19 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
             對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
           </p>
         </div>
+
+        {/* ── 免費層升級提示：客人傳照片/客訴但目前方案未解鎖 ── */}
+        {upgradeNudge && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-5 py-4">
+            <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <p className="flex-1 text-sm text-amber-900 dark:text-amber-200">
+              {NUDGE_TEXT[upgradeNudge.reason]}升級 CORE 即可讓 AI 直接處理。
+            </p>
+            <Link href="/cs/plan" className="shrink-0 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors text-center">
+              查看方案
+            </Link>
+          </div>
+        )}
 
         {/* ── Hero Card ── */}
         <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} p-8 text-white shadow-lg`}>

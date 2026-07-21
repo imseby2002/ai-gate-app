@@ -14,7 +14,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
-import { generateCsReplyL2 } from '@/lib/cs/csReply'
+import { generateCsReplyL2, generateCsReplyL3, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -140,6 +140,10 @@ async function checkRateLimit(bucket: string, limit: number, windowSec: number):
 
 // Customer asking to talk to a real person
 const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務|專人/
+// 退換貨/退款：沒有任何方案支援 AI 自動執行，一律轉人工（L3 決策）
+const REFUND_RE = /退款|退費|退貨|取消訂單|refund|cancel.*order/i
+// 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
+const COMPLAINT_RE = /投訴|抱怨|complaint/i
 
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
@@ -280,6 +284,35 @@ async function replyToCustomer(
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
     return reply
   }
+
+  // ── 退換貨/退款：一律轉人工（沒有任何方案支援 AI 自動執行退款）──────────
+  if (REFUND_RE.test(text)) {
+    try {
+      await getServiceClient().from('cs_tickets').insert({
+        user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
+        subject: text.slice(0, 80), description: '客人提出退換貨/退款需求',
+        priority: 'high', intent: '人工客服請求',
+      })
+    } catch { /* ignore */ }
+    const reply = '好的，退換貨/退款需要專人為您處理，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+    return reply
+  }
+
+  // ── L3 圖片辨識門檻：免費層不解鎖，文字降級 + 通知老闆升級（省成本，不呼叫 AI）──
+  const { features: planFeatures } = await getCsEntitlements(getServiceClient(), userId)
+  if (imageBuffer && imageMimeType && !planFeatures.advancedSupport) {
+    void notifyOwnerUpgradeNudge(userId, 'image', text || '（客人傳送圖片）')
+    const reply = IMAGE_DOWNGRADE_REPLY
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+    return reply
+  }
+
+  // 免費層客訴：AI 照常回覆（走 L2），但同步提醒老闆升級可解鎖更完整的客訴處理
+  if (!planFeatures.advancedSupport && COMPLAINT_RE.test(text)) {
+    void notifyOwnerUpgradeNudge(userId, 'complaint', text)
+  }
+
   // 認識客戶 + 問價次數 → 業務指引；回覆後更新追蹤資料
   const convoPriceAsks = [...history.filter(m => m.role === 'user').map(m => m.content), text].filter(t => PRICE_RE.test(t)).length
   const isPriceAskNow = PRICE_RE.test(text)
@@ -1005,8 +1038,12 @@ async function getAIReply(
       }
     }
 
-    // L2：Groq Qwen3 32B 為主力 → CLIProxy → FreeLLM → 直連 Gemini 保底
-    const result = await generateCsReplyL2(systemPrompt, messages)
+    // advancedSupport 方案的圖片／客訴 fallback 改走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3 32B 為主力）
+    const hasImage = !!(imageBuffer && imageMimeType)
+    const useL3 = planFeatures.advancedSupport && (hasImage || isHighRisk)
+    const result = useL3
+      ? await generateCsReplyL3(systemPrompt, messages)
+      : await generateCsReplyL2(systemPrompt, messages)
     return (result ? cleanReply(result.reply) : '') || FALLBACK
   } catch {
     return FALLBACK
