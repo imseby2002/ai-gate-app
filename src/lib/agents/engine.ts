@@ -1,7 +1,7 @@
 // 可續跑的 Agent tick 引擎。
 // Vercel serverless 沒有長駐 process，因此一次「思考」被拆成有步數上限的一個 tick，
 // 由 cron（/api/cron/agent-tick）或核准回覆（resumeRunAfterApproval）觸發續跑。
-import { generateText, tool, jsonSchema, stepCountIs } from 'ai'
+import { generateText, tool, jsonSchema } from 'ai'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createAgentContext } from './runtime'
