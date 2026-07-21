@@ -166,6 +166,13 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
           </div>
         )}
 
+        <div className="flex items-center gap-2.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:border-amber-700 dark:from-amber-950/40 dark:to-orange-950/40 px-4 py-3">
+          <span className="text-xl shrink-0">🎁</span>
+          <p className="text-sm text-amber-900 dark:text-amber-200 font-medium">
+            升級 CORE，新會員享首次協助設定免費（每個帳號一次，不分月繳／年繳）
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PLAN_META.map(c => {
             const isCurrent = plan === c.id
@@ -278,7 +285,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                 {(['free', 'core', 'pro', 'max'] as CsPlan[]).map(id => (
                   <th key={id} className="text-center font-medium py-2.5 px-3 text-muted-foreground">{PLAN_NAME[id]}</th>
                 ))}
-                <th className="text-center font-semibold py-2.5 px-3 text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 whitespace-nowrap">市場常見模式</th>
+                <th className="text-center font-semibold py-2.5 px-3 text-white bg-amber-800 whitespace-nowrap">市場常見模式</th>
               </tr>
             </thead>
             <tbody>
@@ -290,7 +297,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                       {v === '✓' ? <Check className="h-3.5 w-3.5 mx-auto text-primary" /> : v === '—' ? <X className="h-3.5 w-3.5 mx-auto text-muted-foreground/40" /> : v}
                     </td>
                   ))}
-                  <td className="text-center py-2.5 px-3 text-xs text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/25">
+                  <td className="text-center py-2.5 px-3 text-xs text-white bg-amber-700/90">
                     {row.market}
                   </td>
                 </tr>
@@ -303,14 +310,14 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
           <p>
             「協助設定」與「客製功能」不同：協助設定僅協助頻道串接與參數設定，依方案有免費額度；
             客製功能是提供方案本身沒有的功能或需要改寫程式，能在 /cs/workspace 自行調整的設定（知識庫、定價表、觸發關鍵字等）不算客製——
-            基礎客製（調整既有邏輯，不動資料庫結構）固定 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan[plan]}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}）；
+            基礎客製（調整既有邏輯，不動資料庫結構）：免費層 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan.free}/次，CORE 以上 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan.core}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}）；
             複雜客製（{CS_FEATURE_REQUEST_PRICING.complexNote}）。
           </p>
+          <p>{CS_FEATURE_REQUEST_PRICING.clawbackNote}。</p>
           <p>
             協助設定範圍：站內所有設定（資料來源、報價計算機等）與各平台串接設定皆包含在內；
             但不包含知識庫內容建立，以及各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
           </p>
-          <p className="text-primary font-medium">🎁 升級 CORE，新會員享首次協助設定免費（每個帳號一次，不分月繳／年繳）。</p>
         </div>
         </div>
       </div>

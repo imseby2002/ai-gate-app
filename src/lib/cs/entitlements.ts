@@ -93,10 +93,13 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
 // - 基礎客製：調整既有邏輯但不動資料庫結構（例：客製一次性 regex/規則），固定價，依方案分級（免費層較貴，反映其低承諾的維護風險）。
 // - 複雜客製：需新增資料表／獨立模組／第三方串接，一次性建置費另議 + 每月維護費
 //   （因為往後系統升級都要顧到這個客戶專屬的表/模組，是持續性成本，不能只收一次性費用了事）。
+// 防堵漏洞：CORE+ 優惠價綁定「維持訂閱」，避免訂 1 個月拿優惠價做完客製、隔月就降回免費層繼續白嫖。
 export const CS_FEATURE_REQUEST_PRICING = {
   basicPriceUsdByPlan: { free: 39, core: 15, pro: 15, max: 15 } as Record<CsPlan, number>,
   basicNote: '需審核',
   complexNote: '需新增資料庫／獨立模組／第三方串接，採「一次性建置費＋每月維護費」，審核後報價',
+  clawbackDays: 30,
+  clawbackNote: 'CORE 以上優惠價僅適用於交付完成後持續維持該方案；若在完成後 30 天內降級為免費方案，將依免費層價格補收差額',
 }
 
 /**
