@@ -124,7 +124,11 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
     // 本輪呼叫到的、被核准關卡擋下的工具（同一 tick 內最多會被擋一次，因為擋下後即中斷）
     let gatedCallThisTick: { toolId: string; input: unknown } | undefined
 
-    const aiTools: Record<string, ReturnType<typeof tool>> = {}
+    // 每個 tool() 呼叫的輸入/輸出型別都不同（來自各自的 JSON Schema），
+    // 這裡刻意用 any 收斂成單一 map 傳給 generateText({ tools }) —
+    // 個別工具的型別安全已由 AgentToolDef.execute 的簽章把關。
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const aiTools: Record<string, any> = {}
     const gatedToolIds = new Set<string>()
     for (const [id, def] of Object.entries(roleTools)) {
       const needsApproval = !SELF_SUSPENDING_TOOL_IDS.has(id) && (approvalRequirements.get(id) ?? false)
