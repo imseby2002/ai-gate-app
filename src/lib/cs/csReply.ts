@@ -128,23 +128,24 @@ export async function classifyIntentL1(
   return fallbackResult
 }
 
-// ── L2：常規回覆生成（Groq Qwen3 32B 為主力）───────────────────────────────
+// ── L2：常規回覆生成（Groq Qwen3.6 27B 為主力）─────────────────────────────
+// qwen/qwen3-32b 已於 2026/6/17 被 Groq 棄用，官方建議改用 qwen/qwen3.6-27b。
 export async function generateCsReplyL2(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) Groq Qwen3 32B — 繁中品質穩定、成本極低
+  // 1) Groq Qwen3.6 27B — 繁中品質穩定、成本極低
   if (process.env.GROQ_API_KEY) {
     try {
       const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
       const { text } = await generateText({
-        model: groq('qwen/qwen3-32b'),
+        model: groq('qwen/qwen3.6-27b'),
         system,
         messages,
         maxOutputTokens: 2048,
         abortSignal: AbortSignal.timeout(20000),
       })
-      if (text) return { reply: text, provider: 'Groq-Qwen3-32B' }
+      if (text) return { reply: text, provider: 'Groq-Qwen3.6-27B' }
     } catch { /* try next */ }
   }
 
