@@ -17,7 +17,7 @@ const PLAN_META = [
   { id: 'core' as CsPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'core_monthly', yearlyId: 'core_yearly',
     features: ['Claude 風險升級', '複雜客服／圖片辨識', 'WhatsApp 個人版', '資料來源／工單／收件匣'] },
   { id: 'pro' as CsPlan, monthlyUsd: 29, yearlyUsd: 278, highlight: false, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly',
-    features: ['包含 CORE 全部功能', '即時網路搜尋', '無限協作人員', '每月 1 次免費協助設定'] },
+    features: ['包含 CORE 全部功能', '即時網路搜尋', '最多 5 位協作人員', '每月 1 次免費協助設定'] },
   { id: 'max' as CsPlan, monthlyUsd: 41, yearlyUsd: 399, highlight: false, monthlyId: 'max_monthly', yearlyId: 'max_yearly',
     features: ['包含 PRO 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'] },
 ]
@@ -28,7 +28,7 @@ const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, s
   { label: '平台串接數', values: ['3 個', '3 個', '3 個', '不限'], market: '依方案 1–2 個' },
   { label: 'WhatsApp 個人版', values: ['—', '✓', '✓', '✓'], market: '多數不支援' },
   { label: '知識庫', values: ['✓', '✓', '✓', '✓'], market: '常需加購' },
-  { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'], market: '按席位另計' },
+  { label: '協作人員', values: ['不可邀請', '1 位', '5 位', '無限'], market: '按席位另計' },
   { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'], market: '基礎版本' },
   { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'], market: '—' },
   { label: '複雜客服／圖片辨識', values: ['—', '✓', '✓', '✓'], market: '多數不支援' },
