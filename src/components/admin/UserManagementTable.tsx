@@ -15,6 +15,7 @@ const ALL_MODULES = [
   { id: 'work',      label: '工作管理' },
   { id: 'hr',        label: '人事管理' },
   { id: 'finance',   label: '出納總務' },
+  { id: 'agent',     label: 'AI Agent' },
 ] as const
 
 type ModuleId = typeof ALL_MODULES[number]['id']

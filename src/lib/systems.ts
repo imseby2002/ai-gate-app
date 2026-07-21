@@ -1,7 +1,7 @@
 // 各獨立系統的定義：每個系統有自己的登入/註冊入口，登入後 session 被限定在該系統。
 // 切換系統需從另一系統的登入頁進入（會更新 scope cookie）。
 
-export type SystemKey = 'chat' | 'booking' | 'cs' | 'marketing' | 'leads' | 'resume'
+export type SystemKey = 'chat' | 'booking' | 'cs' | 'marketing' | 'leads' | 'resume' | 'agent'
 
 export interface SystemDef {
   key: SystemKey
@@ -18,6 +18,7 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
   marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call'] },
   leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
   resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume', '/hr', '/finance', '/work', '/pos'] },
+  agent:     { key: 'agent',     label: 'AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
 }
 
 export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)
@@ -30,6 +31,7 @@ export const SUBDOMAIN_SYSTEM: Record<string, SystemKey> = {
   marketing: 'marketing',
   chat:      'chat',
   work:      'resume',
+  agent:     'agent',
 }
 
 // 系統 → 子域名（OAuth callback 後讓功能頁落回對應子域，避免停在 www）
@@ -39,6 +41,7 @@ export const SYSTEM_SUBDOMAIN: Partial<Record<SystemKey, string>> = {
   marketing: 'marketing',
   chat:      'chat',
   resume:    'work',
+  agent:     'agent',
 }
 
 // scope 儲存在 sessionStorage（per-tab），不再用 cookie
