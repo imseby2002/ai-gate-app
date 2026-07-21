@@ -102,7 +102,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
         if (approval?.status === 'approved' && gatedDef) {
           let output: unknown
           try {
-            output = await gatedDef.execute(pendingToolCall.input, ctx)
+            output = await gatedDef.execute(pendingToolCall.input as Record<string, unknown>, ctx)
           } catch (e) {
             output = { error: e instanceof Error ? e.message : String(e) }
           }
