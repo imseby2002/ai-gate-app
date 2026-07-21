@@ -1,8 +1,10 @@
-// 各角色的專屬工具集（核心工具見 src/lib/agents/tools/index.ts 的 CORE_AGENT_TOOLS）。
-// Phase 1 試點角色：lead-gen（B2B 潛在名單開發）、marketing-officer（網路行銷專員）。
-// Phase 2：cs-care（客戶服務關懷專員）。其餘角色之後陸續加入。
+// 各角色的專屬工具集（核心工具見 src/lib/agents/tools/index.ts 的 CORE_AGENT_TOOLS，
+// 每個角色都會自動拿到；這裡只需列出「額外」的角色專屬工具）。
+// 純核心工具即可運作的角色（researcher、accountant 等）不需要在此登記任何項目。
 import { createInternalApiTool } from '../tools'
 import { listDormantCustomersTool, sendCustomerMessageTool } from '../tools/cs_customers'
+import { listCandidatesTool, updateCandidateStageTool, sendCandidateEmailTool } from '../tools/hr_candidates'
+import { listUncategorizedCashflowTool, updateCashflowCategoryTool } from '../tools/finance_cashflow'
 import type { AgentToolDef } from '../types'
 
 const collectTool = createInternalApiTool(
@@ -117,6 +119,33 @@ export const ROLE_TOOL_SETS: Record<string, Record<string, AgentToolDef>> = {
     [listDormantCustomersTool.id]: listDormantCustomersTool,
     [sendCustomerMessageTool.id]: sendCustomerMessageTool,
   },
+  'rnd': {
+    [collectTool.id]: collectTool,
+  },
+  'pr': {
+    [copyTool.id]: copyTool,
+  },
+  'project-marketing': {
+    [copyTool.id]: copyTool,
+  },
+  'sales-intake': {
+    [copyTool.id]: copyTool,
+    [sendCustomerMessageTool.id]: sendCustomerMessageTool,
+  },
+  'product-visual': {
+    [imageScriptTool.id]: imageScriptTool,
+    [videoScriptTool.id]: videoScriptTool,
+  },
+  'hr-recruiter': {
+    [listCandidatesTool.id]: listCandidatesTool,
+    [updateCandidateStageTool.id]: updateCandidateStageTool,
+    [sendCandidateEmailTool.id]: sendCandidateEmailTool,
+  },
+  'finance-invoice': {
+    [listUncategorizedCashflowTool.id]: listUncategorizedCashflowTool,
+    [updateCashflowCategoryTool.id]: updateCashflowCategoryTool,
+  },
+  // researcher、accountant、procurement 純核心工具即可運作，不需額外登記
 }
 
 export function getToolsForRole(roleId: string): Record<string, AgentToolDef> {
