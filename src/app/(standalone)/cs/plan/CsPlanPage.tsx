@@ -15,9 +15,9 @@ const PLAN_META = [
   { id: 'free' as CsPlan, monthlyUsd: 0, yearlyUsd: 0, highlight: false, monthlyId: undefined as string | undefined, yearlyId: undefined as string | undefined,
     features: ['3 個平台串接', '不限訊息則數', '基本 AI 設定'] },
   { id: 'core' as CsPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'core_monthly', yearlyId: 'core_yearly',
-    features: ['Claude 風險升級', 'WhatsApp 個人版', 'AI 設定全開', '資料來源／工單／收件匣'] },
+    features: ['Claude 風險升級', '複雜客服／圖片辨識', 'WhatsApp 個人版', '資料來源／工單／收件匣'] },
   { id: 'pro' as CsPlan, monthlyUsd: 29, yearlyUsd: 278, highlight: false, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly',
-    features: ['包含 CORE 全部功能', '無限協作人員', '每月 1 次免費協助設定'] },
+    features: ['包含 CORE 全部功能', '即時網路搜尋', '無限協作人員', '每月 1 次免費協助設定'] },
   { id: 'max' as CsPlan, monthlyUsd: 41, yearlyUsd: 399, highlight: false, monthlyId: 'max_monthly', yearlyId: 'max_yearly',
     features: ['包含 PRO 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'] },
 ]
@@ -31,10 +31,12 @@ const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, s
   { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'], market: '按席位另計' },
   { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'], market: '基礎版本' },
   { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: '複雜客服／圖片辨識', values: ['—', '✓', '✓', '✓'], market: '多數不支援' },
   { label: '資料來源管理', values: ['—', '✓', '✓', '✓'], market: '—' },
   { label: '工單系統', values: ['—', '✓', '✓', '✓'], market: '常需加購' },
   { label: '統一收件匣', values: ['—', '✓', '✓', '✓'], market: '常需加購' },
   { label: '自動學習', values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: '即時網路搜尋', values: ['—', '—', '✓', '✓'], market: '多數不支援' },
   { label: '報價計算機', values: ['—', '—', '—', '✓'], market: '—' },
   { label: '協助設定（免費額度／月）', values: ['0（$25/次）', '0（$15/次）', '1 次', '2 次'], market: '通常另計顧問費' },
 ]
@@ -300,9 +302,9 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
         <div className="text-[11px] text-muted-foreground space-y-2">
           <p>
             「協助設定」與「客製功能」不同：協助設定僅協助頻道串接與參數設定，依方案有免費額度；
-            客製功能是提供方案本身沒有的功能或需要改寫程式——
-            基礎客製固定 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsd}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}），
-            進階或複雜功能{CS_FEATURE_REQUEST_PRICING.advancedNote}。
+            客製功能是提供方案本身沒有的功能或需要改寫程式，能在 /cs/workspace 自行調整的設定（知識庫、定價表、觸發關鍵字等）不算客製——
+            基礎客製（調整既有邏輯，不動資料庫結構）固定 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan[plan]}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}）；
+            複雜客製（{CS_FEATURE_REQUEST_PRICING.complexNote}）。
           </p>
           <p>
             協助設定範圍：站內所有設定（資料來源、報價計算機等）與各平台串接設定皆包含在內；
