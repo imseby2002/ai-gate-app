@@ -72,7 +72,8 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
     if (item.alwaysShow) return true
     if (item.adminOnly) return isAdmin
     if (isAdmin) return true
-    if (scope) return (item.module ?? 'chat') === scope
+    // module 為 null 代表不綁定任何系統的共用連結（選單、意見回饋），恆顯示
+    if (scope) return item.module === null || item.module === scope
     return !item.module || mods.includes(item.module)
   }
 
