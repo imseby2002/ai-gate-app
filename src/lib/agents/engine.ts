@@ -151,7 +151,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
           }
           let output: unknown
           try {
-            output = await def.execute(input, ctx)
+            output = await def.execute(input as Record<string, unknown>, ctx)
           } catch (e) {
             output = { error: e instanceof Error ? e.message : String(e) }
           }
