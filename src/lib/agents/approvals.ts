@@ -20,14 +20,24 @@ export function parseApprovalCallback(callbackData: string): { approvalId: strin
   return { approvalId: m[1], outcome }
 }
 
-/** 純文字回覆管道（SMS 等）的退回策略：找該使用者在此管道最新一筆待處理核准 */
-export async function findLatestPendingApproval(userId: string, channel: string) {
+/**
+ * 純文字回覆管道（SMS、LINE/WhatsApp/Zalo 等客服 webhook 共用）的退回策略：
+ * 找該使用者在此管道最新一筆待處理核准。
+ *
+ * channelThreadId 必填且務必傳入「發話者在該平台的 id」：像 LINE/WhatsApp 這類
+ * webhook 是所有客戶共用同一支端點，核准請求是老闆用自己的帳號回覆，
+ * 若不比對 channel_thread_id 是否等於老闆本人的 id，一般客戶隨口說「好」「OK」
+ * 就會被誤判成核准回覆、吃掉本該給客服的訊息。
+ */
+export async function findLatestPendingApproval(userId: string, channel: string, channelThreadId: string) {
+  if (!channelThreadId) return undefined
   const admin = createAdminClient()
   const { data } = await admin
     .from('agent_approvals')
     .select('id')
     .eq('user_id', userId)
     .eq('channel', channel)
+    .eq('channel_thread_id', channelThreadId)
     .in('status', ['pending', 'awaiting_feedback'])
     .order('requested_at', { ascending: false })
     .limit(1)
