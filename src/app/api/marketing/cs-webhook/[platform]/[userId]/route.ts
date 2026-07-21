@@ -14,7 +14,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
-import { generateCsReplyL2, generateCsReplyL3, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
+import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -144,6 +144,8 @@ const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要�
 const REFUND_RE = /退款|退費|退貨|取消訂單|refund|cancel.*order/i
 // 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
 const COMPLAINT_RE = /投訴|抱怨|complaint/i
+// 需要即時網路資訊（天氣、附近景點、路況等知識庫不會有的即時資料）僅 CORE+ 觸發搜尋分支
+const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|weather|nearby|traffic/i
 
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
@@ -1038,12 +1040,15 @@ async function getAIReply(
       }
     }
 
-    // advancedSupport 方案的圖片／客訴 fallback 改走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3 32B 為主力）
+    // advancedSupport 方案的搜尋需求走搜尋分支、圖片／客訴 fallback 走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3.6 27B 為主力）
     const hasImage = !!(imageBuffer && imageMimeType)
-    const useL3 = planFeatures.advancedSupport && (hasImage || isHighRisk)
-    const result = useL3
-      ? await generateCsReplyL3(systemPrompt, messages)
-      : await generateCsReplyL2(systemPrompt, messages)
+    const useSearch = planFeatures.advancedSupport && SEARCH_RE.test(message)
+    const useL3 = !useSearch && planFeatures.advancedSupport && (hasImage || isHighRisk)
+    const result = useSearch
+      ? await generateCsReplySearch(systemPrompt, messages)
+      : useL3
+        ? await generateCsReplyL3(systemPrompt, messages)
+        : await generateCsReplyL2(systemPrompt, messages)
     return (result ? cleanReply(result.reply) : '') || FALLBACK
   } catch {
     return FALLBACK
