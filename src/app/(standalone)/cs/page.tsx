@@ -43,6 +43,7 @@ export default async function CsPage({
     { count: openTickets },
     { data: channels },
     { count: everMessages },
+    { data: nudges },
   ] = await Promise.all([
     supabase
       .from('cs_data_sources')
@@ -70,6 +71,14 @@ export default async function CsPage({
       .from('cs_messages')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', ownerId),
+    // 免費層升級提示：客人傳照片/客訴但目前方案未解鎖，7 天內最近一筆
+    supabase
+      .from('cs_upgrade_nudges')
+      .select('reason, customer_message, created_at')
+      .eq('user_id', ownerId)
+      .gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1),
   ])
 
   const industry = sources?.[0]?.industry ?? 'homestay'
@@ -81,6 +90,7 @@ export default async function CsPage({
       openTickets={openTickets ?? 0}
       connectedPlatforms={(channels ?? []).map((c: { platform: string }) => c.platform)}
       hasMessages={(everMessages ?? 0) > 0}
+      upgradeNudge={nudges?.[0] as { reason: 'image' | 'complaint'; customer_message: string | null } | undefined ?? null}
     />
   )
 }

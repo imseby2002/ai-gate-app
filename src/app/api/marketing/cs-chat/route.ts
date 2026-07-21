@@ -8,7 +8,7 @@ import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
-import { classifyIntentL1, generateCsReplyL2 } from '@/lib/cs/csReply'
+import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -415,6 +415,72 @@ quote（報價）：自行從定價表計算，告知總金額，客人確認才
 語氣親切自然，計算總價時逐步列式，嚴格使用定價表數字。`
 }
 
+type NotifyWebhook = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
+
+// 建立人工轉接工單並發送通知（人工客服請求、退換貨/退款皆走這條）。
+// Fire-and-forget 通知（不 await，不擋回覆）。
+async function dispatchHandoffTicket(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  opts: {
+    userId: string
+    message: string
+    history: { role: string; content: string }[]
+    campaignId?: string | null
+    notifyWebhooks: NotifyWebhook[]
+    description: string
+  },
+): Promise<{ ticket: unknown; ticketNum: string }> {
+  const allMsgs = [...opts.history, { role: 'user', content: opts.message }]
+  const { data: ticket } = await supabase
+    .from('cs_tickets')
+    .insert({
+      user_id: opts.userId,
+      industry: 'homestay',
+      platform: 'chat',
+      subject: opts.message.slice(0, 80),
+      description: opts.description,
+      priority: 'high',
+      intent: '人工客服請求',
+      messages: allMsgs,
+      campaign_id: opts.campaignId ?? null,
+    })
+    .select()
+    .single()
+
+  const ticketNum = ticket?.id?.slice(0, 8).toUpperCase() ?? '—'
+  const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+  const notifyMsg = `\n[AI GATE 工單]\n客人要求：${opts.message.slice(0, 80)}\n工單編號：${ticketNum}\n時間：${taiwanNow}`
+
+  if (opts.notifyWebhooks.length > 0) {
+    void Promise.allSettled(opts.notifyWebhooks.filter(wh => wh.value?.trim()).map(wh => {
+      if (wh.type === 'line_messaging') {
+        if (!wh.target?.trim()) return Promise.resolve()
+        return fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
+        })
+      } else if (wh.type === 'telegram') {
+        if (!wh.target?.trim()) return Promise.resolve()
+        return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
+        })
+      } else {
+        if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
+        return fetch(wh.value.trim(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: notifyMsg, ticket, ticketNum, customerMessage: opts.message }),
+        })
+      }
+    }))
+  }
+
+  return { ticket, ticketNum }
+}
+
 export async function POST(req: NextRequest) {
   try {
     return await handlePost(req)
@@ -561,55 +627,14 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   // If the customer explicitly asks for a human agent, create a ticket and return immediately.
   const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務/
   if (HUMAN_ESCALATION_RE.test(message)) {
-    const allMsgs = [...(history as { role: string; content: string }[]), { role: 'user', content: message }]
-    const { data: ticket } = await supabase
-      .from('cs_tickets')
-      .insert({
-        user_id: user.id,
-        industry: 'homestay',
-        platform: 'chat',
-        subject: message.slice(0, 80),
-        description: '客人要求人工客服',
-        priority: 'high',
-        intent: '人工客服請求',
-        messages: allMsgs,
-        campaign_id: campaignId ?? null,
-      })
-      .select()
-      .single()
-
-    const ticketNum = ticket?.id?.slice(0, 8).toUpperCase() ?? '—'
-    const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
-    const notifyMsg = `\n[AI GATE 工單]\n客人要求：${message.slice(0, 80)}\n工單編號：${ticketNum}\n時間：${taiwanNow}`
-
-    // Fire-and-forget notifications (do not await — don't block the response)
-    if (notifyWebhooks.length > 0) {
-      type NW = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
-      void Promise.allSettled((notifyWebhooks as NW[]).filter(wh => wh.value?.trim()).map(wh => {
-        if (wh.type === 'line_messaging') {
-          if (!wh.target?.trim()) return Promise.resolve()
-          return fetch('https://api.line.me/v2/bot/message/push', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
-          })
-        } else if (wh.type === 'telegram') {
-          if (!wh.target?.trim()) return Promise.resolve()
-          return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
-          })
-        } else {
-          if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
-          return fetch(wh.value.trim(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: notifyMsg, ticket, ticketNum, customerMessage: message }),
-          })
-        }
-      }))
-    }
+    const { ticket, ticketNum } = await dispatchHandoffTicket(supabase, {
+      userId: user.id,
+      message,
+      history: history as { role: string; content: string }[],
+      campaignId,
+      notifyWebhooks: notifyWebhooks as NotifyWebhook[],
+      description: '客人要求人工客服',
+    })
 
     return NextResponse.json({
       reply: `好的，已為您建立服務工單（編號：${ticketNum}），客服專員將盡快與您聯繫，請稍候。`,
@@ -911,6 +936,42 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   let risk: string = classified.risk
   if (HIGH_RISK_INTENTS.includes(intent)) risk = 'high'
 
+  const { features: planFeatures } = await getCsEntitlements(supabase, user.id)
+
+  // ── 退換貨/退款：一律轉人工（沒有任何方案支援 AI 自動執行退款）────────────
+  if (intent === '退換貨/退款') {
+    const { ticket, ticketNum } = await dispatchHandoffTicket(supabase, {
+      userId: user.id,
+      message,
+      history: history as { role: string; content: string }[],
+      campaignId,
+      notifyWebhooks: notifyWebhooks as NotifyWebhook[],
+      description: '客人提出退換貨/退款需求',
+    })
+
+    return NextResponse.json({
+      reply: `好的，退換貨/退款需要專人為您處理，已為您建立服務工單（編號：${ticketNum}），客服專員將盡快與您聯繫，請稍候。`,
+      intent, risk: 'high', provider: 'system', latencyMs: Date.now() - t0,
+      summary, images: [], ticketCreated: true, ticket,
+    })
+  }
+
+  // ── L3 圖片辨識門檻：免費層不解鎖，文字降級 + 通知老闆升級（省成本，不呼叫 AI）──
+  const customerSentImage = !!(imageBase64 && imageMimeType)
+  if (customerSentImage && !planFeatures.advancedSupport) {
+    void notifyOwnerUpgradeNudge(user.id, 'image', message || '（客人傳送圖片）')
+    return NextResponse.json({
+      reply: IMAGE_DOWNGRADE_REPLY,
+      intent, risk, provider: 'system', latencyMs: Date.now() - t0,
+      summary, images: [],
+    })
+  }
+
+  // 免費層客訴：AI 照常回覆（走 L2），但同步提醒老闆升級可解鎖更完整的客訴處理
+  if (risk === 'high' && intent === '投訴/抱怨' && !planFeatures.advancedSupport) {
+    void notifyOwnerUpgradeNudge(user.id, 'complaint', message)
+  }
+
   // ── Customer recognition & price-ask tracking ─────────────────────────────
   // 偵測「第幾次問價」用於業務話術；認得回頭客；累計追蹤資料。
   const PRICE_RE = /價格|價錢|價位|多少錢|費用|報價|怎麼算|多少|預算|划算|便宜|折扣|優惠|price|cost|how much|rate|quote|budget|discount/i
@@ -952,8 +1013,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   const customerSection = sellLines.join('\n')
 
   // ── Build system prompt ───────────────────────────────────────────────────
-  // 免費方案不解鎖 Claude 升級，測試分頁的行為要跟正式客服一致
-  const { features: planFeatures } = await getCsEntitlements(supabase, user.id)
+  // 免費方案不解鎖 Claude 升級，測試分頁的行為要跟正式客服一致（planFeatures 已於 L1 分流後取得）
   const claudeAllowed = planFeatures.claudeEscalation !== 'off'
   const shouldEscalate =
     claudeAllowed &&
@@ -1063,9 +1123,12 @@ const systemPrompt = `${baseInstructions}
     }
   }
 
-  // Normal CS (L2)：Groq Qwen3 32B 為主力 → CLIProxy → FreeLLM → 直連 Gemini 保底
+  // Normal CS：advancedSupport 方案的圖片／中等複雜問題改走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3 32B 為主力）
   if (!reply) {
-    const result = await generateCsReplyL2(systemPrompt, msgHistory)
+    const useL3 = planFeatures.advancedSupport && (customerSentImage || risk === 'medium')
+    const result = useL3
+      ? await generateCsReplyL3(systemPrompt, msgHistory)
+      : await generateCsReplyL2(systemPrompt, msgHistory)
     if (result) {
       reply = result.reply
       provider = result.provider
