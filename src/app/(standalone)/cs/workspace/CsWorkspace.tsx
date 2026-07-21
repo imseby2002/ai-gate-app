@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
+import { CsSupportPanel } from './CsSupportPanel'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
 
 // ─── 與 marketing-auto 共用的小型型別／helper（原本定義在 marketing-auto/page.tsx，
@@ -1777,25 +1778,38 @@ function Unit12CustomerService({
           )}
 
           {/* Routing info */}
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 space-y-2.5">
             <div className="font-medium text-sm text-indigo-800 flex items-center gap-2">
               <Sparkles className="h-4 w-4" />{t('u12.routingTitle')}
             </div>
-            <div className="flex items-center gap-3 text-xs text-indigo-700">
-              <div className="flex flex-col items-center gap-1">
-                <div className="px-3 py-1.5 rounded-lg bg-blue-100 border border-blue-300 font-medium">Gemini 2.0 Flash</div>
-                <div className="text-[10px] text-gray-500">{t('u12.routingFlash')}</div>
+            <div className="space-y-1.5 text-xs text-indigo-700">
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-indigo-100 border border-indigo-300 font-mono text-[10px]">L1</span>
+                <span>{t('u12.routingL1')}</span>
               </div>
-              <div className="text-gray-400 text-lg">→</div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="px-3 py-1.5 rounded-lg bg-orange-100 border border-orange-300 font-medium">Claude Sonnet</div>
-                <div className="text-[10px] text-gray-500">{t('u12.routingClaude')}</div>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-blue-100 border border-blue-300 font-mono text-[10px]">L2</span>
+                <span>{t('u12.routingL2')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-violet-100 border border-violet-300 font-mono text-[10px]">L3</span>
+                <span>{t('u12.routingL3')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-teal-100 border border-teal-300 font-mono text-[10px]">🔍</span>
+                <span>{t('u12.routingSearch')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-orange-100 border border-orange-300 font-mono text-[10px]">L4</span>
+                <span>{t('u12.routingClaude')}</span>
               </div>
             </div>
-            <div className="text-xs text-indigo-600">
-              {t.rich('u12.routingNote', { b: (c) => <span className="font-medium">{c}</span> })}
+            <div className="text-xs text-indigo-600 pt-1 border-t border-indigo-200/60">
+              {t('u12.routingRefundNote')}
             </div>
           </div>
+
+          <CsSupportPanel />
 
           {/* 進階 AI 設定（免費方案僅開放系統提示詞，以下全部鎖定） */}
           <div className={csFeatures && csFeatures.aiSettingsScope === 'basic' ? 'relative' : ''}>
