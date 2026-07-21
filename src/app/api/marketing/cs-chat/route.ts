@@ -1126,7 +1126,7 @@ const systemPrompt = `${baseInstructions}
 
   // Normal CS：advancedSupport 方案的搜尋需求走搜尋分支、圖片／中等複雜問題走 L3（gemini-3-flash），其餘走 L2（Groq Qwen3.6 27B 為主力）
   if (!reply) {
-    const useSearch = planFeatures.advancedSupport && needsSearch
+    const useSearch = planFeatures.webSearch && needsSearch
     const useL3 = !useSearch && planFeatures.advancedSupport && (customerSentImage || risk === 'medium')
     const result = useSearch
       ? await generateCsReplySearch(systemPrompt, msgHistory)

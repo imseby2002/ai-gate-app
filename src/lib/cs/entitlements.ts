@@ -20,6 +20,8 @@ export interface CsPlanFeatures {
   whatsappPersonal: boolean
   /** L3 進階處理（客人傳照片辨識、複雜問題轉更強模型）僅 CORE 以上可用；免費層封頂在 L2 常規回覆 */
   advancedSupport: boolean
+  /** 即時網路搜尋（天氣、附近景點等知識庫沒有的即時資訊）僅 PRO 以上可用 */
+  webSearch: boolean
   assistedSetup: { freePerMonth: number; priceUsd: number }
 }
 
@@ -36,6 +38,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     pricingCalculator: false,
     whatsappPersonal: false,
     advancedSupport: false,
+    webSearch: false,
     assistedSetup: { freePerMonth: 0, priceUsd: 25 },
   },
   core: {
@@ -50,6 +53,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     pricingCalculator: false,
     whatsappPersonal: true,
     advancedSupport: true,
+    webSearch: false,
     assistedSetup: { freePerMonth: 0, priceUsd: 15 },
   },
   pro: {
@@ -64,6 +68,7 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     pricingCalculator: false,
     whatsappPersonal: true,
     advancedSupport: true,
+    webSearch: true,
     assistedSetup: { freePerMonth: 1, priceUsd: 15 },
   },
   max: {
@@ -78,17 +83,20 @@ export const CS_PLAN_FEATURES: Record<CsPlan, CsPlanFeatures> = {
     pricingCalculator: true,
     whatsappPersonal: true,
     advancedSupport: true,
+    webSearch: true,
     assistedSetup: { freePerMonth: 2, priceUsd: 15 },
   },
 }
 
-// 客製功能（新增功能／需改寫程式）：與「協助設定」（僅頻道串接與設定）不同，
-// 一律付費、沒有免費額度，所有方案適用同一套定價。
-// 基礎客製：固定 $15/次，需審核是否可行；進階／複雜功能：無固定價，個別報價。
+// 客製功能（新增功能／需改寫程式）：與「協助設定」（僅頻道串接與設定）不同，一律付費、沒有免費額度。
+// 判斷標準看技術特徵，不是主觀感受：
+// - 基礎客製：調整既有邏輯但不動資料庫結構（例：客製一次性 regex/規則），固定價，依方案分級（免費層較貴，反映其低承諾的維護風險）。
+// - 複雜客製：需新增資料表／獨立模組／第三方串接，一次性建置費另議 + 每月維護費
+//   （因為往後系統升級都要顧到這個客戶專屬的表/模組，是持續性成本，不能只收一次性費用了事）。
 export const CS_FEATURE_REQUEST_PRICING = {
-  basicPriceUsd: 15,
+  basicPriceUsdByPlan: { free: 39, core: 15, pro: 15, max: 15 } as Record<CsPlan, number>,
   basicNote: '需審核',
-  advancedNote: '另外報價',
+  complexNote: '需新增資料庫／獨立模組／第三方串接，採「一次性建置費＋每月維護費」，審核後報價',
 }
 
 /**

@@ -60,7 +60,7 @@ export interface ClassifyResult {
   intent: string
   risk: 'low' | 'medium' | 'high'
   summary: string
-  /** 需要即時網路資訊（天氣、附近景點、當下狀態等知識庫不會有的問題）僅 CORE+ 觸發搜尋分支 */
+  /** 需要即時網路資訊（天氣、附近景點、當下狀態等知識庫不會有的問題）僅 PRO+ 觸發搜尋分支 */
   needsSearch: boolean
 }
 
@@ -197,7 +197,7 @@ export async function generateCsReplyL3(
   return null
 }
 
-// ── 搜尋分支：客人問題需要即時網路資訊時使用（僅 CORE 以上，由 L1 的 needsSearch 觸發）──
+// ── 搜尋分支：客人問題需要即時網路資訊時使用（僅 PRO 以上，由 L1 的 needsSearch 觸發）──
 // 免費資源優先：FreeLLM 的 Compound Mini（額度遠高於 Groq 官方免費層的 250 次/日）
 // → CLIProxy 的 gemini-3-flash-agent（代理模式，內建 Google Search grounding）
 // → Perplexity Sonar 付費保底（purpose-built 搜尋，非全租戶都會設定 PERPLEXITY_API_KEY）
