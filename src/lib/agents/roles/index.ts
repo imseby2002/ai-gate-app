@@ -5,6 +5,9 @@ import { createInternalApiTool } from '../tools'
 import { listDormantCustomersTool, sendCustomerMessageTool } from '../tools/cs_customers'
 import { listCandidatesTool, updateCandidateStageTool, sendCandidateEmailTool } from '../tools/hr_candidates'
 import { listUncategorizedCashflowTool, updateCashflowCategoryTool } from '../tools/finance_cashflow'
+import { listCalendarEventsTool, createCalendarEventTool, summarizeInboxTool } from '../tools/secretary'
+import { readRepoFileTool, proposeCodeChangeTool } from '../tools/code_agent'
+import { listRecentUploadsTool, analyzeComplianceImageTool } from '../tools/compliance'
 import type { AgentToolDef } from '../types'
 
 const collectTool = createInternalApiTool(
@@ -144,6 +147,19 @@ export const ROLE_TOOL_SETS: Record<string, Record<string, AgentToolDef>> = {
   'finance-invoice': {
     [listUncategorizedCashflowTool.id]: listUncategorizedCashflowTool,
     [updateCashflowCategoryTool.id]: updateCashflowCategoryTool,
+  },
+  'secretary': {
+    [listCalendarEventsTool.id]: listCalendarEventsTool,
+    [createCalendarEventTool.id]: createCalendarEventTool,
+    [summarizeInboxTool.id]: summarizeInboxTool,
+  },
+  'code-agent': {
+    [readRepoFileTool.id]: readRepoFileTool,
+    [proposeCodeChangeTool.id]: proposeCodeChangeTool,
+  },
+  'edge-ai-audit': {
+    [listRecentUploadsTool.id]: listRecentUploadsTool,
+    [analyzeComplianceImageTool.id]: analyzeComplianceImageTool,
   },
   // researcher、accountant、procurement 純核心工具即可運作，不需額外登記
 }

@@ -165,6 +165,13 @@ export default function AgentPage() {
                     {busy === role.id ? <Loader2 className="h-4 w-4 animate-spin" /> : enabled ? '停用' : '啟用'}
                   </Button>
                 </CardHeader>
+                {enabled && role.id === 'secretary' && (
+                  <CardContent className="pb-0">
+                    <a href="/api/integrations/google-calendar/auth" className="text-xs text-primary underline">
+                      連結 Google 日曆／信箱（秘書角色需要，未連結則無法讀取行程與信件）
+                    </a>
+                  </CardContent>
+                )}
                 {enabled && (
                   <CardContent className="flex gap-2 items-start">
                     <Textarea
