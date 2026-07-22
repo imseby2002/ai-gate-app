@@ -73,8 +73,11 @@ export const analyzeComplianceImageTool: AgentToolDef = {
 
     const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
     const checklist = input.checklist?.trim() || '員工是否穿戴規定服裝/帽子、環境是否整潔、是否有明顯違規行為'
+    // messages 型別在 image part 上與這個 ai SDK 版本的 ImagePart 定義對不太起來
+    // （同樣的作法在 src/lib/ai/providers/gemini.ts 也是用 as any 繞過），故比照處理。
     const res = await generateText({
       model: google('gemini-2.5-flash'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: [
         {
           role: 'user',
@@ -83,7 +86,7 @@ export const analyzeComplianceImageTool: AgentToolDef = {
             { type: 'image', image: base64, mimeType },
           ],
         },
-      ],
+      ] as any,
       maxOutputTokens: 800,
     })
 
