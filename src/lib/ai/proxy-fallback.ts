@@ -7,6 +7,7 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { createGroq } from '@ai-sdk/groq'
 import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { ChatParams } from './providers/cli-proxy'
@@ -16,20 +17,19 @@ import type { ChatParams } from './providers/cli-proxy'
 type Attempt =
   | { via: 'cli-proxy'; model: string }
   | { via: 'free-llm';  model: string }
-  | { via: 'direct';    provider: 'deepseek' | 'google' | 'anthropic'; model: string }
+  | { via: 'direct';    provider: 'deepseek' | 'google' | 'anthropic' | 'groq'; model: string }
 
 // ── Chain definitions (ordered: cheapest/free first) ──────────────────────────
 
 export const FALLBACK_CHAINS = {
   /** General chat — fast, daily questions */
   daily: [
-    { via: 'cli-proxy', model: 'gpt-5.4-mini'     },  // Copilot free
-    { via: 'cli-proxy', model: 'gemini-3-flash'    },  // Copilot free
-    { via: 'cli-proxy', model: 'kimi-k2'           },  // Kiro free
-    { via: 'cli-proxy', model: 'grok-3-mini-fast'  },  // Grok free
-    { via: 'free-llm',  model: 'auto'              },  // 12-platform auto
-    { via: 'direct',    provider: 'deepseek', model: 'deepseek-chat' },
-    { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
+    { via: 'direct',    provider: 'groq',     model: 'groq-llama-3.3-70b' },
+    { via: 'free-llm',  model: 'llama-3.3-70b'     },
+    { via: 'free-llm',  model: 'glm-4.7-flash'     },
+    { via: 'free-llm',  model: 'qwen3-32b'         },
+    { via: 'cli-proxy', model: 'gemini-3-flash'    },
+    { via: 'cli-proxy', model: 'gpt-5.4-mini'      },
   ],
 
   /** Creative writing, marketing copy */
@@ -38,7 +38,7 @@ export const FALLBACK_CHAINS = {
     { via: 'cli-proxy', model: 'kimi-k2'           },
     { via: 'cli-proxy', model: 'gpt-5.4-mini'      },
     { via: 'free-llm',  model: 'auto'              },
-    { via: 'direct',    provider: 'google',   model: 'gemini-2.5-flash' },
+    { via: 'direct',    provider: 'google',   model: 'gemini-3.0-flash' },
   ],
 
   /** Financial calculations, math, reasoning */
@@ -126,6 +126,13 @@ function buildModel(attempt: Attempt) {
         const key = process.env.ANTHROPIC_API_KEY
         if (!key) throw new Error('ANTHROPIC_API_KEY not set')
         return createAnthropic({ apiKey: key })(attempt.model)
+      }
+      if (attempt.provider === 'groq') {
+        const key = process.env.GROQ_API_KEY
+        if (!key) throw new Error('GROQ_API_KEY not set')
+        // Extract base model name without "groq-" prefix if present
+        const realModel = attempt.model.replace(/^groq-/, '')
+        return createGroq({ apiKey: key })(realModel)
       }
       throw new Error(`Unknown direct provider: ${(attempt as { provider: string }).provider}`)
     }

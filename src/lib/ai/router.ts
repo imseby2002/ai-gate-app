@@ -9,9 +9,9 @@ export type RoutingIntent =
   | 'video-gen'
 
 export const MODEL_ROUTING: Record<RoutingIntent, string> = {
-  daily:       'gemini-2.0-flash',        // fallback direct model (used when chain disabled)
+  daily:       'gemini-3.0-flash',        // fallback direct model (used when chain disabled)
   finance:     'deepseek-chat',
-  creative:    'gemini-2.0-flash',
+  creative:    'gemini-3.0-flash',
   analysis:    'deepseek-chat',
   legal:       'perplexity-sonar-pro',    // Perplexity - 法條/網路查證（直接，需 web）
   vision:      'gemini-2.5-flash',        // 視覺直接用 Gemini（原生 multimodal）
@@ -120,7 +120,8 @@ export function calculateCost(
   const costs: Record<string, { in: number; out: number }> = {
     'deepseek-chat':           { in: 0.00014,  out: 0.00028  },
     'deepseek-reasoner':       { in: 0.00055,  out: 0.00219  },
-    'gemini-2.0-flash':        { in: 0.000075, out: 0.0003   },
+    'gemini-3.0-flash':        { in: 0.000075, out: 0.0003   },
+    'gemini-3.0-flash-thinking': { in: 0.000075, out: 0.0003 },
     'gemini-2.0-flash-thinking': { in: 0.000075, out: 0.0003 },
     'gemini-2.0-flash-vision': { in: 0.00125,  out: 0.00375  },
     'gemini-2.5-flash':        { in: 0.0003,   out: 0.0025   },
