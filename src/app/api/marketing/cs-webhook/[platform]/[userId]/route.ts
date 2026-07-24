@@ -15,6 +15,19 @@ import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
+import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
+
+// Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
+// 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
+const AGENT_APPROVE_KEYWORDS = ['核准', '通過', '同意', 'ok', 'OK', 'approve', 'yes', '好', '可以', '👍', '✅']
+const AGENT_REJECT_KEYWORDS = ['拒絕', '不行', '不同意', 'no', 'reject', '❌']
+
+function detectAgentApprovalOutcome(text: string): 'approved' | 'rejected' | 'feedback' {
+  const lower = text.trim().toLowerCase()
+  if (AGENT_APPROVE_KEYWORDS.some(kw => lower === kw.toLowerCase() || lower.startsWith(kw.toLowerCase()))) return 'approved'
+  if (AGENT_REJECT_KEYWORDS.some(kw => lower === kw.toLowerCase() || lower.startsWith(kw.toLowerCase()))) return 'rejected'
+  return 'feedback'
+}
 
 // ── Supabase service role client ───────────────────────────────────────────────
 function getServiceClient() {
@@ -1214,6 +1227,25 @@ export async function POST(
       const history = await loadHistory(userId, customerId)
 
       let text = msgType === 'text' ? (event.message.text as string) : ''
+
+      // Agent 核准回覆：老闆用自己的 LINE 帳號回覆待核准的 Agent 動作，優先於一般客服邏輯處理
+      if (msgType === 'text' && text.trim()) {
+        const pendingApprovalId = await findLatestPendingApproval(userId, 'line', customerId)
+        if (pendingApprovalId) {
+          const outcome = detectAgentApprovalOutcome(text)
+          const result = await resumeRunAfterApproval(pendingApprovalId, outcome, outcome === 'feedback' ? text : undefined)
+          if (token && replyToken) {
+            await replyLine(
+              replyToken,
+              result.ok
+                ? (outcome === 'approved' ? '✅ 已核准，Agent 將繼續執行。' : outcome === 'rejected' ? '❌ 已拒絕，Agent 將停止此動作。' : `🔄 已收到您的意見，Agent 將依此調整。`)
+                : `⚠️ ${result.error ?? '處理失敗'}`,
+              token,
+            )
+          }
+          continue
+        }
+      }
 
       // 專員綁定：個人 LINE 加 OA 後輸入指令即登記 / 解除訂單通知
       if (msgType === 'text') {

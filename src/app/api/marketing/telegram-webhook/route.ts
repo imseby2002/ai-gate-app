@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { parseApprovalCallback, resumeRunAfterApproval } from '@/lib/agents/approvals'
 
 function getServiceClient() {
   return createClient(
@@ -68,6 +69,31 @@ export async function POST(req: NextRequest) {
     const cqData      = cq.data as string
     const cqMsgId     = cq.message?.message_id as number | undefined
     const fromUser    = cq.from?.username ?? cq.from?.first_name ?? 'unknown'
+
+    // ── Agent 框架的核准按鈕（callback_data = 'agent_approval:<uuid>:action'）──
+    // 與下方行銷 pipeline 的 telegram_approvals 是不同表，優先判斷、獨立處理完就 return。
+    const agentCb = parseApprovalCallback(cqData)
+    if (agentCb) {
+      if (agentCb.outcome === 'feedback') {
+        // 'modify' 按鈕：先轉 awaiting_feedback，等下一則文字訊息才真正 resume
+        await supabase.from('agent_approvals')
+          .update({ status: 'awaiting_feedback' })
+          .eq('id', agentCb.approvalId)
+          .in('status', ['pending', 'awaiting_feedback'])
+        await answerCallback(cqId, '請輸入修改意見')
+        await sendTelegramReply(chatId, '📝 請輸入您給 Agent 的修改意見：')
+      } else {
+        const result = await resumeRunAfterApproval(agentCb.approvalId, agentCb.outcome)
+        await answerCallback(cqId, agentCb.outcome === 'approved' ? '✅ 已核准！' : '❌ 已拒絕')
+        await sendTelegramReply(
+          chatId,
+          result.ok
+            ? (agentCb.outcome === 'approved' ? '✅ 已核准，Agent 將繼續執行。' : '❌ 已拒絕，Agent 將停止此動作。')
+            : `⚠️ ${result.error ?? '處理失敗'}`,
+        )
+      }
+      return NextResponse.json({ ok: true })
+    }
 
     // Find matching telegram_approval (pipeline interactive flow)
     const approvalQuery = supabase
@@ -198,7 +224,26 @@ export async function POST(req: NextRequest) {
     .order('updated_at', { ascending: false })
     .limit(1)
 
-  if (!campaigns || campaigns.length === 0) return NextResponse.json({ ok: true })
+  if (!campaigns || campaigns.length === 0) {
+    // 沒有等待中的行銷 campaign：檢查是否有 Agent 框架的核准請求在等這則文字回覆
+    const { data: awaitingAgentApproval } = await supabase
+      .from('agent_approvals')
+      .select('id')
+      .eq('channel', 'telegram')
+      .eq('channel_thread_id', chatId)
+      .in('status', ['pending', 'awaiting_feedback'])
+      .order('requested_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (awaitingAgentApproval) {
+      const result = await resumeRunAfterApproval(awaitingAgentApproval.id, 'feedback', text)
+      await sendTelegramReply(
+        chatId,
+        result.ok ? `🔄 已收到您的意見：「${text}」\n\nAgent 將依此繼續執行。` : `⚠️ ${result.error ?? '處理失敗'}`,
+      )
+    }
+    return NextResponse.json({ ok: true })
+  }
 
   const campaign = campaigns[0]
   const telegramSteps = [5, 7, 9, 11, 13]

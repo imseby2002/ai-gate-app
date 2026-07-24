@@ -52,6 +52,15 @@ export const MODULES = [
     color: 'from-cyan-500 to-sky-600',
     standalone: true,
   },
+  {
+    id: 'agent',
+    label: 'AI Agent',
+    desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准',
+    href: '/agent',
+    emoji: '🤖',
+    color: 'from-slate-600 to-zinc-800',
+    standalone: true,
+  },
 ] as const
 
 export type ModuleId = typeof MODULES[number]['id']

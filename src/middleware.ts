@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
       marketing: '/marketing',     // 行銷中心（多工具入口，非單一自動化行銷頁）
       chat:      '/apps',          // 對話系統（功能選單）
       work:      '/resume',        // 工作系統
+      agent:     '/agent',         // AI Agent 系統
       www:       '/dashboard',     // owner 主控台
     }
     const subHome = SUBDOMAIN_HOME[sub]
@@ -150,7 +151,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/work') ||
       pathname.startsWith('/pos') ||
       pathname.startsWith('/hr') ||
-      pathname.startsWith('/finance')
+      pathname.startsWith('/finance') ||
+      pathname.startsWith('/agent')
     )
 
     if (needsProfileCheck) {
@@ -187,6 +189,7 @@ export async function middleware(request: NextRequest) {
           '/pos':            ['work'],
           '/hr':             ['hr'],
           '/finance':        ['finance'],
+          '/agent':          ['agent'],
         }
         for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
           if (pathname.startsWith(route)) {
