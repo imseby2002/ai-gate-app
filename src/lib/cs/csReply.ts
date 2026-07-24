@@ -18,15 +18,20 @@ interface FreeChainEntry {
 }
 
 // 免費通道優先序：CLIProxy → FreeLLM（依使用者指定順序）
-function freeChain(model: string): FreeChainEntry[] {
+// FreeLLM 收錄的模型從 8B 小模型到 GPT-4o/Mistral Large 等旗艦模型都有，
+// 用 'auto' 完全不可控——可能在 L2/L3/L4 這種品質敏感的層級隨機選到能力很弱的模型。
+// 因此 FreeLLM 這條也要依呼叫層級指定模型，不能像 CLIProxy 那樣共用同一個 model 參數。
+// freeLlmModel 字串是依 FreeLLM 後台顯示名稱推測，實際 API 要傳的 id 可能不同，
+// 故用對應的環境變數保留覆寫空間，避免猜錯字串導致這條免費入口永遠打不中。
+function freeChain(cliProxyModel: string, freeLlmModel: string): FreeChainEntry[] {
   const cliProxyUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
   const freeLlmUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
   return [
     ...(cliProxyUrl
-      ? [{ url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model, label: 'CLIProxy' }]
+      ? [{ url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: cliProxyModel, label: 'CLIProxy' }]
       : []),
     ...(process.env.FREE_LLM_API_KEY && freeLlmUrl
-      ? [{ url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: 'auto', label: 'FreeLLM' }]
+      ? [{ url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: freeLlmModel, label: 'FreeLLM' }]
       : []),
   ]
 }
@@ -111,7 +116,10 @@ needsSearch：客戶問題是否需要「即時網路資訊」才能回答（例
   }
 
   // 2) 免費通道備援：CLIProxy → FreeLLM
-  for (const entry of freeChain('gemini-3-flash')) {
+  // FreeLLM 這條指定小模型（Llama 3.1 8B Instant 同等級）：分類任務用不到大模型，
+  // 避免 'auto' 在這種高頻小任務上浪費掉配額大的旗艦模型。
+  const l1FreeLlmModel = process.env.FREE_LLM_L1_MODEL ?? 'llama-3.1-8b-instant'
+  for (const entry of freeChain('gemini-3-flash', l1FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, undefined, [{ role: 'user', content: prompt }])
     if (text) {
       const result = parse(text)
@@ -154,7 +162,10 @@ export async function generateCsReplyL2(
   }
 
   // 2) 免費通道備援：CLIProxy → FreeLLM
-  for (const entry of freeChain('gemini-3-flash')) {
+  // FreeLLM 指定 GLM-4.5 Flash：中文語感通常比 Llama/Mistral 系穩定，額度也寬裕，
+  // 適合當客服常規回覆的備援，避免 'auto' 選到清單裡能力偏弱的小模型。
+  const l2FreeLlmModel = process.env.FREE_LLM_L2_MODEL ?? 'glm-4.5-flash'
+  for (const entry of freeChain('gemini-3-flash', l2FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
   }
@@ -178,8 +189,11 @@ export async function generateCsReplyL3(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) 免費通道：CLIProxy → FreeLLM（皆走 gemini-3-flash）
-  for (const entry of freeChain('gemini-3-flash')) {
+  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 GPT-4o——
+  // L3 處理照片辨識，FreeLLM 清單裡多數是純文字模型，選到不支援看圖的模型會讓圖片被默默忽略，
+  // GPT-4o 是清單裡明確具備視覺能力的少數選項之一。
+  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'gpt-4o'
+  for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
   }
