@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { normalizeFreeLlmBaseUrl } from '@/lib/ai/providers/free-llm'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,13 +9,14 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const baseUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+  const rawUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
   const apiKey  = process.env.FREE_LLM_API_KEY
 
-  if (!baseUrl) return NextResponse.json({ ok: false, error: 'FREE_LLM_URL 未設定' })
+  if (!rawUrl) return NextResponse.json({ ok: false, error: 'FREE_LLM_URL 未設定' })
+  const baseUrl = normalizeFreeLlmBaseUrl(rawUrl)
 
   try {
-    const r = await fetch(`${baseUrl}/v1/models`, {
+    const r = await fetch(`${baseUrl}/models`, {
       headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
       signal: AbortSignal.timeout(5000),
     })

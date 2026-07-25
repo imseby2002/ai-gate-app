@@ -7,6 +7,7 @@
 import { generateText, type ModelMessage } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { normalizeFreeLlmBaseUrl } from '@/lib/ai/providers/free-llm'
 
 export type ChatMsg = ModelMessage
 
@@ -18,15 +19,20 @@ interface FreeChainEntry {
 }
 
 // 免費通道優先序：CLIProxy → FreeLLM（依使用者指定順序）
-function freeChain(model: string): FreeChainEntry[] {
+// FreeLLM 收錄的模型從 8B 小模型到 GPT-4o/Mistral Large 等旗艦模型都有，
+// 用 'auto' 完全不可控——可能在 L2/L3/L4 這種品質敏感的層級隨機選到能力很弱的模型。
+// 因此 FreeLLM 這條也要依呼叫層級指定模型，不能像 CLIProxy 那樣共用同一個 model 參數。
+// freeLlmModel 字串是依 FreeLLM 後台顯示名稱推測，實際 API 要傳的 id 可能不同，
+// 故用對應的環境變數保留覆寫空間，避免猜錯字串導致這條免費入口永遠打不中。
+function freeChain(cliProxyModel: string, freeLlmModel: string): FreeChainEntry[] {
   const cliProxyUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
-  const freeLlmUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+  const freeLlmUrlRaw = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
   return [
     ...(cliProxyUrl
-      ? [{ url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model, label: 'CLIProxy' }]
+      ? [{ url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: cliProxyModel, label: 'CLIProxy' }]
       : []),
-    ...(process.env.FREE_LLM_API_KEY && freeLlmUrl
-      ? [{ url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: 'auto', label: 'FreeLLM' }]
+    ...(process.env.FREE_LLM_API_KEY && freeLlmUrlRaw
+      ? [{ url: normalizeFreeLlmBaseUrl(freeLlmUrlRaw), key: process.env.FREE_LLM_API_KEY, model: freeLlmModel, label: 'FreeLLM' }]
       : []),
   ]
 }
@@ -111,7 +117,10 @@ needsSearch：客戶問題是否需要「即時網路資訊」才能回答（例
   }
 
   // 2) 免費通道備援：CLIProxy → FreeLLM
-  for (const entry of freeChain('gemini-3-flash')) {
+  // FreeLLM 這條指定小模型（Llama 3.1 8B Instant 同等級）：分類任務用不到大模型，
+  // 避免 'auto' 在這種高頻小任務上浪費掉配額大的旗艦模型。
+  const l1FreeLlmModel = process.env.FREE_LLM_L1_MODEL ?? 'llama-3.1-8b-instant'
+  for (const entry of freeChain('gemini-3-flash', l1FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, undefined, [{ role: 'user', content: prompt }])
     if (text) {
       const result = parse(text)
@@ -154,7 +163,10 @@ export async function generateCsReplyL2(
   }
 
   // 2) 免費通道備援：CLIProxy → FreeLLM
-  for (const entry of freeChain('gemini-3-flash')) {
+  // FreeLLM 指定 GLM-4.7 Flash：實測 /v1/models 確認 id 存在於目錄中（Playground 下拉選單
+  // 顯示名稱跟實際目錄對不太上，別以選單為準）。中文語感通常比 Llama/Mistral 系穩定。
+  const l2FreeLlmModel = process.env.FREE_LLM_L2_MODEL ?? 'glm-4.7-flash'
+  for (const entry of freeChain('gemini-3-flash', l2FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
   }
@@ -178,8 +190,12 @@ export async function generateCsReplyL3(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) 免費通道：CLIProxy → FreeLLM（皆走 gemini-3-flash）
-  for (const entry of freeChain('gemini-3-flash')) {
+  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 Llama 4 Scout（實測 /v1/models
+  // 確認正確 id 格式）——GPT-4o 在這個路由服務裡唯一路線是 github，但 github 這條供應商
+  // 連線目前故障中（非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生
+  // 支援看圖的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
+  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct'
+  for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
   }
@@ -205,13 +221,13 @@ export async function generateCsReplySearch(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) FreeLLM：Compound Mini (Groq)。實際 model id 依 FreeLLM 服務後台為準，
-  // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免猜錯字串導致這個免費入口永遠打不中。
-  const freeLlmUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
-  if (process.env.FREE_LLM_API_KEY && freeLlmUrl) {
-    const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'compound-mini'
+  // 1) FreeLLM：Compound Mini (Groq)。實測 /v1/models 確認正確 id 需帶 groq/ 前綴。
+  // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免以後又猜錯字串導致這個免費入口打不中。
+  const freeLlmUrlRaw = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+  if (process.env.FREE_LLM_API_KEY && freeLlmUrlRaw) {
+    const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'groq/compound-mini'
     const text = await tryOpenAiCompat(
-      { url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
+      { url: normalizeFreeLlmBaseUrl(freeLlmUrlRaw), key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
       system, messages,
     )
     if (text) return { reply: text, provider: 'FreeLLM-CompoundMini' }
