@@ -7,6 +7,7 @@
 import { generateText, type ModelMessage } from 'ai'
 import { createGroq } from '@ai-sdk/groq'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { normalizeFreeLlmBaseUrl } from '@/lib/ai/providers/free-llm'
 
 export type ChatMsg = ModelMessage
 
@@ -25,13 +26,13 @@ interface FreeChainEntry {
 // 故用對應的環境變數保留覆寫空間，避免猜錯字串導致這條免費入口永遠打不中。
 function freeChain(cliProxyModel: string, freeLlmModel: string): FreeChainEntry[] {
   const cliProxyUrl = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
-  const freeLlmUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+  const freeLlmUrlRaw = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
   return [
     ...(cliProxyUrl
       ? [{ url: cliProxyUrl, key: process.env.CLI_PROXY_API_KEY ?? 'no-key', model: cliProxyModel, label: 'CLIProxy' }]
       : []),
-    ...(process.env.FREE_LLM_API_KEY && freeLlmUrl
-      ? [{ url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: freeLlmModel, label: 'FreeLLM' }]
+    ...(process.env.FREE_LLM_API_KEY && freeLlmUrlRaw
+      ? [{ url: normalizeFreeLlmBaseUrl(freeLlmUrlRaw), key: process.env.FREE_LLM_API_KEY, model: freeLlmModel, label: 'FreeLLM' }]
       : []),
   ]
 }
@@ -221,11 +222,11 @@ export async function generateCsReplySearch(
 ): Promise<{ reply: string; provider: string } | null> {
   // 1) FreeLLM：Compound Mini (Groq)。實際 model id 依 FreeLLM 服務後台為準，
   // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免猜錯字串導致這個免費入口永遠打不中。
-  const freeLlmUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
-  if (process.env.FREE_LLM_API_KEY && freeLlmUrl) {
+  const freeLlmUrlRaw = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+  if (process.env.FREE_LLM_API_KEY && freeLlmUrlRaw) {
     const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'compound-mini'
     const text = await tryOpenAiCompat(
-      { url: freeLlmUrl, key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
+      { url: normalizeFreeLlmBaseUrl(freeLlmUrlRaw), key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
       system, messages,
     )
     if (text) return { reply: text, provider: 'FreeLLM-CompoundMini' }

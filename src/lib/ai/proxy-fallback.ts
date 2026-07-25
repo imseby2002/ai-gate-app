@@ -11,6 +11,7 @@ import { createGroq } from '@ai-sdk/groq'
 import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { ChatParams } from './providers/cli-proxy'
+import { normalizeFreeLlmBaseUrl } from './providers/free-llm'
 
 // ── Attempt descriptor ────────────────────────────────────────────────────────
 
@@ -105,9 +106,10 @@ function buildModel(attempt: Attempt) {
       return createOpenAI({ apiKey, baseURL }).chat(attempt.model)
     }
     case 'free-llm': {
-      const baseURL = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+      const rawUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
       const apiKey  = process.env.FREE_LLM_API_KEY ?? 'no-key'
-      if (!baseURL || !apiKey) throw new Error('FREE_LLM not configured')
+      if (!rawUrl || !apiKey) throw new Error('FREE_LLM not configured')
+      const baseURL = normalizeFreeLlmBaseUrl(rawUrl)
       return createOpenAI({ apiKey, baseURL }).chat(attempt.model)
     }
     case 'direct': {
