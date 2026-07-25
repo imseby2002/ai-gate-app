@@ -152,7 +152,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/pos') ||
       pathname.startsWith('/hr') ||
       pathname.startsWith('/finance') ||
-      pathname.startsWith('/agent')
+      pathname.startsWith('/agent') ||
+      pathname.startsWith('/booking')
     )
 
     if (needsProfileCheck) {
@@ -190,6 +191,7 @@ export async function middleware(request: NextRequest) {
           '/hr':             ['hr'],
           '/finance':        ['finance'],
           '/agent':          ['agent'],
+          '/booking':        ['booking'],
         }
         for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
           if (pathname.startsWith(route)) {

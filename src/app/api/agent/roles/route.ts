@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { hasModuleAccess } from '@/lib/module-access'
 
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await hasModuleAccess(supabase, user.id, 'agent')) {
+    return NextResponse.json({ error: '尚未開通 Agent 模組' }, { status: 403 })
+  }
 
   const [{ data: roles }, { data: userRoles }] = await Promise.all([
     supabase.from('agent_roles').select('*').eq('status', 'active').order('sort'),
@@ -24,6 +28,9 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await hasModuleAccess(supabase, user.id, 'agent')) {
+    return NextResponse.json({ error: '尚未開通 Agent 模組' }, { status: 403 })
+  }
 
   const { roleId, enabled, config, creditBudgetMonthly } = await req.json()
   if (!roleId) return NextResponse.json({ error: 'roleId required' }, { status: 400 })

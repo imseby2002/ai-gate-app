@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { hasModuleAccess } from '@/lib/module-access'
 
 // 手動上傳門市影像（真人先用這支測試，之後現場裝置也走同一支 API 銜接，不需重做）。
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await hasModuleAccess(supabase, user.id, 'agent')) {
+    return NextResponse.json({ error: '尚未開通 Agent 模組' }, { status: 403 })
+  }
 
   const { imageBase64, mimeType, storeName } = await req.json()
   if (!imageBase64) return NextResponse.json({ error: 'imageBase64 required' }, { status: 400 })
@@ -41,6 +45,9 @@ export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await hasModuleAccess(supabase, user.id, 'agent')) {
+    return NextResponse.json({ error: '尚未開通 Agent 模組' }, { status: 403 })
+  }
 
   const { data, error } = await supabase
     .from('agent_compliance_uploads')
