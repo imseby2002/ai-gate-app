@@ -163,9 +163,9 @@ export async function generateCsReplyL2(
   }
 
   // 2) 免費通道備援：CLIProxy → FreeLLM
-  // FreeLLM 指定 GLM-4.5 Flash：中文語感通常比 Llama/Mistral 系穩定，額度也寬裕，
-  // 適合當客服常規回覆的備援，避免 'auto' 選到清單裡能力偏弱的小模型。
-  const l2FreeLlmModel = process.env.FREE_LLM_L2_MODEL ?? 'glm-4.5-flash'
+  // FreeLLM 指定 GLM-4.7 Flash（zhipu 原生供應商）：GLM-4.5 Flash 在後台清單裡已不存在，
+  // 只剩 Air/4.6/4.7，改用較新一代且額度寬裕的 4.7 Flash，中文語感穩定。
+  const l2FreeLlmModel = process.env.FREE_LLM_L2_MODEL ?? 'glm-4.7-flash'
   for (const entry of freeChain('gemini-3-flash', l2FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
@@ -190,10 +190,11 @@ export async function generateCsReplyL3(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 GPT-4o——
-  // L3 處理照片辨識，FreeLLM 清單裡多數是純文字模型，選到不支援看圖的模型會讓圖片被默默忽略，
-  // GPT-4o 是清單裡明確具備視覺能力的少數選項之一。
-  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'gpt-4o'
+  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 Llama 4 Scout（groq 供應商）——
+  // GPT-4o 在這個路由服務裡唯一路線是 github，但 github 這條供應商連線目前故障中
+  // （非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生支援看圖、
+  // 走 groq（穩定）的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
+  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'llama-4-scout'
   for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
