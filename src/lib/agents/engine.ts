@@ -13,6 +13,10 @@ import type { AgentToolDef } from './types'
 
 const MAX_STEPS_PER_TICK = 4
 const MAX_ATTEMPTS = 3
+// 連續錯誤有 MAX_ATTEMPTS 擋著，但一個不出錯、只是一直不呼叫 finish_run／不觸發
+// 核准的 run 不會被那個機制擋下，會被 cron 每分鐘一直撿起來無限期執行，唯一煞車
+// 是點數歸零。這裡加一個總 tick 次數上限，不論成功或失敗都算，超過就暫停通知真人。
+const MAX_TOTAL_TICKS = 50
 const TICK_MODEL_ID = 'claude-sonnet-4-6'
 // 這兩個工具本身就是「請求核准/結束」的機制，不需要再被硬性核准關卡包一層
 const SELF_SUSPENDING_TOOL_IDS = new Set(['request_human_approval', 'finish_run'])
@@ -23,8 +27,9 @@ export interface AgentRunRow {
   role_id: string
   goal: string
   input: Record<string, unknown>
-  state: { log?: string[]; pendingToolCall?: { toolId: string; input: unknown } }
+  state: { log?: string[]; pendingToolCalls?: { toolId: string; input: unknown; approvalId: string }[] }
   attempt_count: number
+  tick_count: number
   trigger_type: string
 }
 
@@ -62,6 +67,20 @@ async function loadApprovalRequirements(
 export async function tickRun(run: AgentRunRow): Promise<void> {
   const admin = createAdminClient()
 
+  // 總 tick 次數上限：在花任何 LLM 成本之前就先擋，避免一直不收斂的 run 無限期跑下去
+  const tickCount = (run.tick_count ?? 0) + 1
+  if (tickCount > MAX_TOTAL_TICKS) {
+    const ctx = createAgentContext(run.user_id, run.role_id, run.id)
+    await ctx.notifyHuman({
+      title: '⚠️ Agent 執行已達上限',
+      body: `角色「${run.role_id}」已執行 ${MAX_TOTAL_TICKS} 輪仍未完成，為避免無限消耗點數已自動暫停，請至 agent.im-tourist.com 檢查執行紀錄後手動繼續或結束。`,
+      severity: 'warning',
+    })
+    await unlock(admin, run.id, { status: 'paused', last_error: 'MAX_TICKS_EXCEEDED', tick_count: tickCount })
+    return
+  }
+  await admin.from('agent_runs').update({ tick_count: tickCount }).eq('id', run.id)
+
   // 餘額預檢：不足直接暫停，避免執行到一半才發現扣不了款
   const balance = await getBalance(run.user_id)
   if (balance <= 0) {
@@ -81,48 +100,74 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
   const approvalRequirements = await loadApprovalRequirements(admin, run.role_id, Object.keys(roleTools))
 
   let log = run.state?.log ?? []
-  let pendingToolCall = run.state?.pendingToolCall
+  let pendingToolCalls = run.state?.pendingToolCalls ?? []
 
   try {
     // ── 若上一輪是等待核准，本輪先把真人的回覆結果寫進紀錄，再繼續規劃 ──
     // 涵蓋兩種情況：(1) 模型自己呼叫 request_human_approval 純徵詢意見、
     // (2) 某個受硬性核准關卡管制的工具被擋下，核准後這裡才真正執行它。
+    // 同一輪若有多個工具同時被擋下，各自用 approvalId 精準比對自己的核准結果，
+    // 而不是抓「最新一筆已回覆」——否則先核准的那筆會被後核准的蓋掉、永遠不會真的執行。
     if (run.trigger_type === 'followup_approval') {
-      const { data: approval } = await admin
-        .from('agent_approvals')
-        .select('status, feedback')
-        .eq('run_id', run.id)
-        .not('responded_at', 'is', null)
-        .order('responded_at', { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle()
+      if (pendingToolCalls.length) {
+        const { data: approvals } = await admin
+          .from('agent_approvals')
+          .select('id, status, feedback')
+          .in('id', pendingToolCalls.map(p => p.approvalId))
+        const approvalById = new Map((approvals ?? []).map(a => [a.id, a]))
 
-      if (pendingToolCall) {
-        const gatedDef = roleTools[pendingToolCall.toolId]
-        if (approval?.status === 'approved' && gatedDef) {
-          let output: unknown
-          try {
-            output = await gatedDef.execute(pendingToolCall.input as Record<string, unknown>, ctx)
-          } catch (e) {
-            output = { error: e instanceof Error ? e.message : String(e) }
+        const stillPending: typeof pendingToolCalls = []
+        for (const call of pendingToolCalls) {
+          const approval = approvalById.get(call.approvalId)
+          if (!approval || approval.status === 'pending' || approval.status === 'awaiting_feedback') {
+            stillPending.push(call) // 這筆還沒回覆，留到下一輪繼續等
+            continue
           }
-          await ctx.logStep({ phase: 'tool_result', toolId: pendingToolCall.toolId, toolInput: pendingToolCall.input, toolOutput: output })
-          log = [...log, `✅ 真人已核准並執行：${pendingToolCall.toolId}（輸入：${JSON.stringify(pendingToolCall.input)}）\n結果：${JSON.stringify(output)}`]
-        } else if (approval?.status === 'rejected') {
-          log = [...log, `❌ 真人拒絕執行：${pendingToolCall.toolId}${approval.feedback ? `（意見：${approval.feedback}）` : ''}`]
-        } else {
-          log = [...log, `✏️ 真人回覆意見：${approval?.feedback ?? '（無文字意見）'}，請依此調整後續做法（原欲執行：${pendingToolCall.toolId}）`]
+          const gatedDef = roleTools[call.toolId]
+          if (approval.status === 'approved' && gatedDef) {
+            let output: unknown
+            try {
+              output = await gatedDef.execute(call.input as Record<string, unknown>, ctx)
+            } catch (e) {
+              output = { error: e instanceof Error ? e.message : String(e) }
+            }
+            await ctx.logStep({ phase: 'tool_result', toolId: call.toolId, toolInput: call.input, toolOutput: output })
+            log = [...log, `✅ 真人已核准並執行：${call.toolId}（輸入：${JSON.stringify(call.input)}）\n結果：${JSON.stringify(output)}`]
+          } else if (approval.status === 'rejected') {
+            log = [...log, `❌ 真人拒絕執行：${call.toolId}${approval.feedback ? `（意見：${approval.feedback}）` : ''}`]
+          } else {
+            log = [...log, `✏️ 真人回覆意見：${approval.feedback ?? '（無文字意見）'}，請依此調整後續做法（原欲執行：${call.toolId}）`]
+          }
         }
-      } else if (approval) {
+
+        // 還有工具的核准尚未回覆：先把已處理的部分寫回紀錄，繼續等，不急著花錢規劃下一步
+        if (stillPending.length) {
+          await unlock(admin, run.id, {
+            status: 'waiting_approval',
+            state: { log, pendingToolCalls: stillPending },
+          })
+          return
+        }
+        pendingToolCalls = []
+      } else {
         // 模型自己呼叫 request_human_approval 徵詢意見的情況：把結果原樣寫進紀錄供模型參考
-        const outcomeLabel = approval.status === 'approved' ? '✅ 已核准' : approval.status === 'rejected' ? '❌ 已拒絕' : '✏️ 已回覆意見'
-        log = [...log, `真人回覆：${outcomeLabel}${approval.feedback ? `：${approval.feedback}` : ''}`]
+        const { data: approval } = await admin
+          .from('agent_approvals')
+          .select('status, feedback')
+          .eq('run_id', run.id)
+          .not('responded_at', 'is', null)
+          .order('responded_at', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle()
+        if (approval) {
+          const outcomeLabel = approval.status === 'approved' ? '✅ 已核准' : approval.status === 'rejected' ? '❌ 已拒絕' : '✏️ 已回覆意見'
+          log = [...log, `真人回覆：${outcomeLabel}${approval.feedback ? `：${approval.feedback}` : ''}`]
+        }
       }
-      pendingToolCall = undefined
     }
 
-    // 本輪呼叫到的、被核准關卡擋下的工具（同一 tick 內最多會被擋一次，因為擋下後即中斷）
-    let gatedCallThisTick: { toolId: string; input: unknown } | undefined
+    // 本輪呼叫到的、被核准關卡擋下的工具（可能不只一個：模型可能在同一輪同時呼叫多個受管制工具）
+    const gatedCallsThisTick: { toolId: string; input: unknown; approvalId: string }[] = []
 
     // 每個 tool() 呼叫的輸入/輸出型別都不同（來自各自的 JSON Schema），
     // 這裡刻意用 any 收斂成單一 map 傳給 generateText({ tools }) —
@@ -145,7 +190,7 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
               details: input as Record<string, unknown>,
               riskLevel: 'high',
             })
-            gatedCallThisTick = { toolId: id, input }
+            gatedCallsThisTick.push({ toolId: id, input, approvalId })
             await ctx.logStep({ phase: 'approval_requested', toolId: id, toolInput: input, toolOutput: { approvalId } })
             return { status: 'awaiting_human_approval', approvalId }
           }
@@ -226,18 +271,18 @@ export async function tickRun(run: AgentRunRow): Promise<void> {
       return
     }
 
-    if (calledExplicitApproval || gatedCallThisTick) {
-      await admin.from('agent_runs').update({
-        state: { log: finalLog, pendingToolCall: gatedCallThisTick ?? null },
-      }).eq('id', run.id)
-      await unlock(admin, run.id, { status: 'waiting_approval' })
+    if (calledExplicitApproval || gatedCallsThisTick.length) {
+      await unlock(admin, run.id, {
+        status: 'waiting_approval',
+        state: { log: finalLog, pendingToolCalls: gatedCallsThisTick },
+      })
       return
     }
 
     // 未結束也未暫停：立即排下一輪（同一分鐘內由 cron 或後續呼叫接手）
     await unlock(admin, run.id, {
       status: 'running',
-      state: { log: finalLog, pendingToolCall: null },
+      state: { log: finalLog, pendingToolCalls: [] },
       attempt_count: 0,
       next_tick_at: new Date().toISOString(),
     })
