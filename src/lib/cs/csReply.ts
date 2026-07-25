@@ -163,8 +163,8 @@ export async function generateCsReplyL2(
   }
 
   // 2) 免費通道備援：CLIProxy → FreeLLM
-  // FreeLLM 指定 GLM-4.7 Flash（zhipu 原生供應商）：GLM-4.5 Flash 在後台清單裡已不存在，
-  // 只剩 Air/4.6/4.7，改用較新一代且額度寬裕的 4.7 Flash，中文語感穩定。
+  // FreeLLM 指定 GLM-4.7 Flash：實測 /v1/models 確認 id 存在於目錄中（Playground 下拉選單
+  // 顯示名稱跟實際目錄對不太上，別以選單為準）。中文語感通常比 Llama/Mistral 系穩定。
   const l2FreeLlmModel = process.env.FREE_LLM_L2_MODEL ?? 'glm-4.7-flash'
   for (const entry of freeChain('gemini-3-flash', l2FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
@@ -190,11 +190,11 @@ export async function generateCsReplyL3(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 Llama 4 Scout（groq 供應商）——
-  // GPT-4o 在這個路由服務裡唯一路線是 github，但 github 這條供應商連線目前故障中
-  // （非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生支援看圖、
-  // 走 groq（穩定）的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
-  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'llama-4-scout'
+  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 Llama 4 Scout（實測 /v1/models
+  // 確認正確 id 格式）——GPT-4o 在這個路由服務裡唯一路線是 github，但 github 這條供應商
+  // 連線目前故障中（非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生
+  // 支援看圖的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
+  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct'
   for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
     const text = await tryOpenAiCompat(entry, system, messages)
     if (text) return { reply: text, provider: entry.label }
@@ -221,11 +221,11 @@ export async function generateCsReplySearch(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) FreeLLM：Compound Mini (Groq)。實際 model id 依 FreeLLM 服務後台為準，
-  // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免猜錯字串導致這個免費入口永遠打不中。
+  // 1) FreeLLM：Compound Mini (Groq)。實測 /v1/models 確認正確 id 需帶 groq/ 前綴。
+  // 可用 FREE_LLM_SEARCH_MODEL 覆寫，避免以後又猜錯字串導致這個免費入口打不中。
   const freeLlmUrlRaw = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
   if (process.env.FREE_LLM_API_KEY && freeLlmUrlRaw) {
-    const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'compound-mini'
+    const searchModel = process.env.FREE_LLM_SEARCH_MODEL ?? 'groq/compound-mini'
     const text = await tryOpenAiCompat(
       { url: normalizeFreeLlmBaseUrl(freeLlmUrlRaw), key: process.env.FREE_LLM_API_KEY, model: searchModel, label: 'FreeLLM-CompoundMini' },
       system, messages,
