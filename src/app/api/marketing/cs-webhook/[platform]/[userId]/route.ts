@@ -19,13 +19,24 @@ import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
 // 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
-const AGENT_APPROVE_KEYWORDS = ['核准', '通過', '同意', 'ok', 'OK', 'approve', 'yes', '好', '可以', '👍', '✅']
-const AGENT_REJECT_KEYWORDS = ['拒絕', '不行', '不同意', 'no', 'reject', '❌']
+//
+// 注意：只做「完整訊息＝關鍵字」的精確比對，不做 startsWith 前綴比對。
+// 「好」「可以」「OK」這類極常見的中文口頭禪常常只是句子開頭（例如「好，我再想想」
+// 「可以先不要嗎」），若用前綴比對會被誤判成核准/拒絕，直接執行掉真的會送出的動作
+// （發客戶訊息、開 PR、改帳務）。老闆若有待核准項目卻傳來不是完整關鍵字的訊息，
+// 一律歸類為 feedback（原樣記錄供 Agent 參考），不會自動核准或拒絕。
+const AGENT_APPROVE_KEYWORDS = ['核准', '通過', '同意', 'ok', 'okay', 'approve', 'approved', 'yes', '好', '好的', '可以', '👍', '✅']
+const AGENT_REJECT_KEYWORDS = ['拒絕', '不行', '不同意', 'no', 'reject', 'rejected', '不可以', '❌']
+
+// 去除常見句尾標點（。！.!～~）後再比對，讓「同意。」「OK!」也算精確符合
+function normalizeApprovalText(text: string): string {
+  return text.trim().toLowerCase().replace(/[。！!.～~\s]+$/g, '')
+}
 
 function detectAgentApprovalOutcome(text: string): 'approved' | 'rejected' | 'feedback' {
-  const lower = text.trim().toLowerCase()
-  if (AGENT_APPROVE_KEYWORDS.some(kw => lower === kw.toLowerCase() || lower.startsWith(kw.toLowerCase()))) return 'approved'
-  if (AGENT_REJECT_KEYWORDS.some(kw => lower === kw.toLowerCase() || lower.startsWith(kw.toLowerCase()))) return 'rejected'
+  const normalized = normalizeApprovalText(text)
+  if (AGENT_APPROVE_KEYWORDS.some(kw => normalized === kw.toLowerCase())) return 'approved'
+  if (AGENT_REJECT_KEYWORDS.some(kw => normalized === kw.toLowerCase())) return 'rejected'
   return 'feedback'
 }
 
