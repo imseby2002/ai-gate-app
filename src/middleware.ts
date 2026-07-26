@@ -180,7 +180,7 @@ export async function middleware(request: NextRequest) {
 
       // Module guard — 檢查 enabled_modules，admin 跳過
       if (profile && !isAdmin) {
-        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
+        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing-auto': ['marketing', 'cs'],
           '/cs':             ['cs'],

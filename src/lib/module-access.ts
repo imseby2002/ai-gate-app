@@ -23,6 +23,6 @@ export async function hasModuleAccess(
     .single()
   if (!profile) return false
   if (profile.user_type === 'admin') return true
-  const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
+  const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
   return enabled.includes(moduleId)
 }
