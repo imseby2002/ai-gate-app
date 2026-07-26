@@ -152,7 +152,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/pos') ||
       pathname.startsWith('/hr') ||
       pathname.startsWith('/finance') ||
-      pathname.startsWith('/agent')
+      pathname.startsWith('/agent') ||
+      pathname.startsWith('/booking')
     )
 
     if (needsProfileCheck) {
@@ -179,7 +180,7 @@ export async function middleware(request: NextRequest) {
 
       // Module guard — 檢查 enabled_modules，admin 跳過
       if (profile && !isAdmin) {
-        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
+        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing-auto': ['marketing', 'cs'],
           '/cs':             ['cs'],
@@ -190,6 +191,7 @@ export async function middleware(request: NextRequest) {
           '/hr':             ['hr'],
           '/finance':        ['finance'],
           '/agent':          ['agent'],
+          '/booking':        ['booking'],
         }
         for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
           if (pathname.startsWith(route)) {
