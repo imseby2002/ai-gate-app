@@ -2552,7 +2552,15 @@
       "title": "Bước 6 — Cài đặt người gửi",
       "fromName": "Tên người gửi",
       "fromEmail": "Email người gửi (tên miền đã xác minh Resend)",
-      "envNote": "Cần cài biến môi trường: "
+      "envNote": "Cần cài biến môi trường: ",
+      "testTitle": "Kiểm tra cấu hình gửi",
+      "testSend": "Gửi thử",
+      "testSending": "Đang gửi…",
+      "testNeedFrom": "Nhập email người gửi trước khi kiểm tra",
+      "testSubject": "[Kiểm tra] Email thử cấu hình gửi",
+      "testBody": "Đây là email thử từ Marketing khách tiềm năng. Nếu bạn nhận được, cấu hình miền Resend và người gửi đang hoạt động bình thường.",
+      "testOk": "Đã gửi email thử đến {email}. Vui lòng kiểm tra hộp thư (và thư rác).",
+      "testFail": "Gửi thất bại — kiểm tra xem miền người gửi đã được xác minh trong Resend chưa."
     },
     "run": {
       "running": "Đang chạy…",

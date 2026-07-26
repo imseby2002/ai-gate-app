@@ -2657,7 +2657,15 @@
       "title": "Step 6 — Sender Settings",
       "fromName": "Sender Name",
       "fromEmail": "Sender Email (Resend verified domain)",
-      "envNote": "Requires env variable: "
+      "envNote": "Requires env variable: ",
+      "testTitle": "Test sender settings",
+      "testSend": "Send test",
+      "testSending": "Sending…",
+      "testNeedFrom": "Enter a sender email before testing",
+      "testSubject": "[Test] Sender settings test email",
+      "testBody": "This is a test email from Prospect Marketing. If you received it, your Resend domain and sender settings are working.",
+      "testOk": "Test email sent to {email}. Check your inbox (and spam).",
+      "testFail": "Send failed — check that the sender domain is verified in Resend."
     },
     "run": {
       "running": "Running…",
