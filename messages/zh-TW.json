@@ -2657,7 +2657,15 @@
       "title": "Step 6 — 寄件設定",
       "fromName": "寄件人名稱",
       "fromEmail": "寄件人 Email（Resend 已驗證網域）",
-      "envNote": "需設定環境變數："
+      "envNote": "需設定環境變數：",
+      "testTitle": "測試寄件設定",
+      "testSend": "寄測試信",
+      "testSending": "寄送中…",
+      "testNeedFrom": "請先填寫寄件人 Email 再測試",
+      "testSubject": "【測試】寄件設定測試信",
+      "testBody": "這是一封來自潛在客戶行銷的測試信，若你收到，代表 Resend 網域與寄件設定正常。",
+      "testOk": "測試信已寄出至 {email}，請至收件匣（含垃圾郵件）確認",
+      "testFail": "寄送失敗，請檢查寄件網域是否為 Resend 已驗證網域"
     },
     "run": {
       "running": "執行中…",

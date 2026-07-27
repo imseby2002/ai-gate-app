@@ -472,6 +472,44 @@ export default function ProspectCallPage() {
   const [sendingEmail, setSendingEmail] = useState<string | null>(null)  // templateId being sent
   const [emailResults, setEmailResults] = useState<Record<string, { ok: number; fail: number }>>({})
 
+  // 寄件設定測試：直接寄一封測試信到指定信箱，驗證 Resend 網域／金鑰是否正常
+  const [testEmail, setTestEmail] = useState('')
+  const [testingSend, setTestingSend] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const sendTestEmail = async () => {
+    const to = testEmail.trim()
+    if (!to) return
+    setTestingSend(true)
+    setTestResult(null)
+    try {
+      const res = await fetch('/api/marketing/email-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: [{ email: to, group: 'default', name: '測試' }],
+          groups: {},
+          defaultSubject: t('s6e.testSubject'),
+          defaultBody: t('s6e.testBody'),
+          fromName: config.fromName,
+          fromEmail: config.fromEmail,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setTestResult({ ok: false, msg: data.error ?? t('s6e.testFail') }); return }
+      const firstErr = Array.isArray(data.results) ? data.results.find((r: { ok: boolean }) => !r.ok) : null
+      if (data.success > 0) {
+        setTestResult({ ok: true, msg: t('s6e.testOk', { email: to }) })
+      } else {
+        setTestResult({ ok: false, msg: firstErr?.error ?? t('s6e.testFail') })
+      }
+    } catch (e) {
+      setTestResult({ ok: false, msg: String(e) })
+    } finally {
+      setTestingSend(false)
+    }
+  }
+
   const setC = <K extends keyof Config>(key: K, val: Config[K]) =>
     setConfig(prev => ({ ...prev, [key]: val }))
 
@@ -1548,6 +1586,28 @@ export default function ProspectCallPage() {
                 </div>
                 <div className="text-[10px] text-gray-400 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
                   {t('s6e.envNote')}<code className="font-mono">RESEND_API_KEY</code>
+                </div>
+
+                {/* 寄件設定測試：不需先蒐集組織，直接寄一封到指定信箱 */}
+                <div className="pt-3 border-t space-y-2">
+                  <label className="block text-xs font-medium">{t('s6e.testTitle')}</label>
+                  <div className="flex gap-2">
+                    <input value={testEmail} onChange={e => setTestEmail(e.target.value)} type="email"
+                      placeholder="you@example.com"
+                      className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                    <button onClick={sendTestEmail} disabled={testingSend || !testEmail.trim() || !config.fromEmail.trim()}
+                      className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 whitespace-nowrap">
+                      {testingSend ? t('s6e.testSending') : t('s6e.testSend')}
+                    </button>
+                  </div>
+                  {!config.fromEmail.trim() && (
+                    <p className="text-[10px] text-amber-600">{t('s6e.testNeedFrom')}</p>
+                  )}
+                  {testResult && (
+                    <p className={`text-[11px] ${testResult.ok ? 'text-green-600' : 'text-red-600'}`}>
+                      {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+                    </p>
+                  )}
                 </div>
               </div>
             </Section>
