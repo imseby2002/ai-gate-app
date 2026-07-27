@@ -3535,8 +3535,9 @@ function Unit10ProspectMarketing({
   const [emailInput, setEmailInput] = useState(savedData?.emailInput ?? '')
   const [emailRecipients, setEmailRecipients] = useState<{ email: string; group: string }[]>(savedData?.emailRecipients ?? [])
   const [classifying, setClassifying] = useState(false)
-  const [fromName, setFromName] = useState(savedData?.fromName ?? t('u10.defMarketingTeam'))
-  const [fromEmail, setFromEmail] = useState(savedData?.fromEmail ?? '')
+  // 寄件人統一由系統設定，前端不再提供欄位；保留值供持久化相容
+  const fromName = savedData?.fromName ?? t('u10.defMarketingTeam')
+  const fromEmail = savedData?.fromEmail ?? ''
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>(
     savedData?.emailTemplates ?? [
       { id: 'etpl-1', name: t('u10.defScript'), subject: '', body: '' },
@@ -3759,20 +3760,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             ✉️ {t('u10.sendService')}
           </div>
 
-          {/* From settings */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">{t('u10.fromName')}</label>
-              <input value={fromName} onChange={e => setFromName(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-                placeholder={t('u10.defMarketingTeam')} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">{t('u10.fromEmail')}</label>
-              <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-                placeholder="marketing@yourdomain.com" />
-            </div>
+          {/* 寄件人統一由系統設定，客戶無需填寫 */}
+          <div className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5 leading-relaxed">
+            {t('u10.systemManaged')}
           </div>
 
           {/* ── Step 1: Email 模板 ── */}

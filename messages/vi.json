@@ -2560,7 +2560,8 @@
       "testSubject": "[Kiểm tra] Email thử cấu hình gửi",
       "testBody": "Đây là email thử từ Marketing khách tiềm năng. Nếu bạn nhận được, cấu hình miền Resend và người gửi đang hoạt động bình thường.",
       "testOk": "Đã gửi email thử đến {email}. Vui lòng kiểm tra hộp thư (và thư rác).",
-      "testFail": "Gửi thất bại — kiểm tra xem miền người gửi đã được xác minh trong Resend chưa."
+      "testFail": "Gửi thất bại — kiểm tra xem miền người gửi đã được xác minh trong Resend chưa.",
+      "systemManaged": "Người gửi do hệ thống thiết lập — không cần cấu hình. Mọi email marketing được gửi từ tên miền đã xác minh của hệ thống."
     },
     "run": {
       "running": "Đang chạy…",
@@ -3195,6 +3196,7 @@
       "sendService": "Dịch vụ gửi: Resend",
       "fromName": "Tên người gửi",
       "fromEmail": "Email người gửi (cần xác minh ở Resend)",
+      "systemManaged": "Người gửi do hệ thống thiết lập — không cần cấu hình. Mọi email marketing được gửi từ tên miền đã xác minh của hệ thống.",
       "step1Title": "Bước 1 — Mẫu Email (Kịch bản)",
       "step1Hint": "Định nghĩa các mẫu nội dung Email để dùng trong quy tắc gửi",
       "applyUnit4All": "Áp dụng Unit 4 cho mọi mẫu",

@@ -2,13 +2,14 @@
  * POST /api/marketing/email-send
  * 批次寄送行銷 Email（Resend）
  *
+ * 寄件人一律使用系統環境變數（RESEND_FROM_EMAIL / RESEND_FROM_NAME），
+ * 不接受前端指定，避免客戶填錯網域被 Resend 退信。
+ *
  * Body: {
  *   recipients: { email: string; group?: string; name?: string }[]
  *   groups: { [group: string]: { subject: string; body: string } }
  *   defaultSubject: string
  *   defaultBody: string
- *   fromName?: string
- *   fromEmail?: string   // 需已在 Resend 驗證的網域
  * }
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -25,9 +26,11 @@ export async function POST(req: NextRequest) {
     groups = {},
     defaultSubject = '行銷訊息',
     defaultBody = '',
-    fromName = 'AI Gate 行銷',
-    fromEmail = process.env.RESEND_FROM_EMAIL ?? 'marketing@aigate.app',
   } = body
+
+  // 寄件人統一由系統環境變數決定，忽略前端傳入的值
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'marketing@aigate.app'
+  const fromName = process.env.RESEND_FROM_NAME ?? 'AI Gate 行銷'
 
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json({ error: '請設定環境變數 RESEND_API_KEY' }, { status: 500 })

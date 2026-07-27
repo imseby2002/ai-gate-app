@@ -2665,7 +2665,8 @@
       "testSubject": "[Test] Sender settings test email",
       "testBody": "This is a test email from Prospect Marketing. If you received it, your Resend domain and sender settings are working.",
       "testOk": "Test email sent to {email}. Check your inbox (and spam).",
-      "testFail": "Send failed — check that the sender domain is verified in Resend."
+      "testFail": "Send failed — check that the sender domain is verified in Resend.",
+      "systemManaged": "The sender is managed by the system — no setup needed. All marketing emails are sent from the system's verified domain."
     },
     "run": {
       "running": "Running…",
@@ -3300,6 +3301,7 @@
       "sendService": "Sending service: Resend",
       "fromName": "Sender Name",
       "fromEmail": "Sender Email (must be verified in Resend)",
+      "systemManaged": "The sender is managed by the system — no setup needed. All marketing emails are sent from the system's verified domain.",
       "step1Title": "Step 1 — Email Templates (Scripts)",
       "step1Hint": "Define different email content templates to use later in sending rules",
       "applyUnit4All": "Apply Unit 4 to all templates",
