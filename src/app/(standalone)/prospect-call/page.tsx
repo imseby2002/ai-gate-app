@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
+import { createClient } from '@/lib/supabase/client'
 import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
@@ -472,10 +473,21 @@ export default function ProspectCallPage() {
   const [sendingEmail, setSendingEmail] = useState<string | null>(null)  // templateId being sent
   const [emailResults, setEmailResults] = useState<Record<string, { ok: number; fail: number }>>({})
 
-  // 寄件設定測試：直接寄一封測試信到指定信箱，驗證 Resend 網域／金鑰是否正常
+  // 寄件設定測試：直接寄一封測試信到指定信箱，驗證 Resend 網域／金鑰是否正常（僅管理員可用）
+  const [isAdmin, setIsAdmin] = useState(false)
   const [testEmail, setTestEmail] = useState('')
   const [testingSend, setTestingSend] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles').select('user_type').eq('id', user.id).single()
+      setIsAdmin(profile?.user_type === 'admin')
+    })
+  }, [])
 
   const sendTestEmail = async () => {
     const to = testEmail.trim()
@@ -491,8 +503,6 @@ export default function ProspectCallPage() {
           groups: {},
           defaultSubject: t('s6e.testSubject'),
           defaultBody: t('s6e.testBody'),
-          fromName: config.fromName,
-          fromEmail: config.fromEmail,
         }),
       })
       const data = await res.json()
@@ -1573,42 +1583,31 @@ export default function ProspectCallPage() {
             <Section title={t('s6e.title')} icon={Mail}
               open={openSections.emailSettings} onToggle={() => toggleSection('emailSettings')}>
               <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">{t('s6e.fromName')}</label>
-                  <input value={config.fromName} onChange={e => setC('fromName', e.target.value)}
-                    placeholder={t('def.marketingTeam')} className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">{t('s6e.fromEmail')}</label>
-                  <input value={config.fromEmail} onChange={e => setC('fromEmail', e.target.value)}
-                    placeholder="marketing@yourdomain.com"
-                    className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-                </div>
-                <div className="text-[10px] text-gray-400 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-                  {t('s6e.envNote')}<code className="font-mono">RESEND_API_KEY</code>
+                {/* 寄件人統一由系統設定，客戶無需填寫 */}
+                <div className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5 leading-relaxed">
+                  {t('s6e.systemManaged')}
                 </div>
 
-                {/* 寄件設定測試：不需先蒐集組織，直接寄一封到指定信箱 */}
-                <div className="pt-3 border-t space-y-2">
-                  <label className="block text-xs font-medium">{t('s6e.testTitle')}</label>
-                  <div className="flex gap-2">
-                    <input value={testEmail} onChange={e => setTestEmail(e.target.value)} type="email"
-                      placeholder="you@example.com"
-                      className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
-                    <button onClick={sendTestEmail} disabled={testingSend || !testEmail.trim() || !config.fromEmail.trim()}
-                      className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 whitespace-nowrap">
-                      {testingSend ? t('s6e.testSending') : t('s6e.testSend')}
-                    </button>
+                {/* 寄件設定測試：僅管理員可用，直接寄一封到指定信箱驗證 Resend 設定 */}
+                {isAdmin && (
+                  <div className="pt-3 border-t space-y-2">
+                    <label className="block text-xs font-medium">{t('s6e.testTitle')}</label>
+                    <div className="flex gap-2">
+                      <input value={testEmail} onChange={e => setTestEmail(e.target.value)} type="email"
+                        placeholder="you@example.com"
+                        className="flex-1 h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
+                      <button onClick={sendTestEmail} disabled={testingSend || !testEmail.trim()}
+                        className="h-9 px-3 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 whitespace-nowrap">
+                        {testingSend ? t('s6e.testSending') : t('s6e.testSend')}
+                      </button>
+                    </div>
+                    {testResult && (
+                      <p className={`text-[11px] ${testResult.ok ? 'text-green-600' : 'text-red-600'}`}>
+                        {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+                      </p>
+                    )}
                   </div>
-                  {!config.fromEmail.trim() && (
-                    <p className="text-[10px] text-amber-600">{t('s6e.testNeedFrom')}</p>
-                  )}
-                  {testResult && (
-                    <p className={`text-[11px] ${testResult.ok ? 'text-green-600' : 'text-red-600'}`}>
-                      {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </Section>
 

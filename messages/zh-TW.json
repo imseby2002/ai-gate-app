@@ -2665,7 +2665,8 @@
       "testSubject": "【測試】寄件設定測試信",
       "testBody": "這是一封來自潛在客戶行銷的測試信，若你收到，代表 Resend 網域與寄件設定正常。",
       "testOk": "測試信已寄出至 {email}，請至收件匣（含垃圾郵件）確認",
-      "testFail": "寄送失敗，請檢查寄件網域是否為 Resend 已驗證網域"
+      "testFail": "寄送失敗，請檢查寄件網域是否為 Resend 已驗證網域",
+      "systemManaged": "寄件人由系統統一設定，無需填寫。所有行銷信件會透過系統已驗證的網域寄出。"
     },
     "run": {
       "running": "執行中…",
@@ -3300,6 +3301,7 @@
       "sendService": "寄送服務：Resend",
       "fromName": "寄件人名稱",
       "fromEmail": "寄件人 Email（需在 Resend 驗證）",
+      "systemManaged": "寄件人由系統統一設定，無需填寫。所有行銷信件會透過系統已驗證的網域寄出。",
       "step1Title": "Step 1 — Email 模板（腳本）",
       "step1Hint": "定義不同的 Email 內容模板，稍後在發送規則中選用",
       "applyUnit4All": "套用 Unit 4 至所有模板",
