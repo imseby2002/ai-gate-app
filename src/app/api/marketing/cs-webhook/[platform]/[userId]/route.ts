@@ -1205,6 +1205,23 @@ async function replyTelegram(chatId: string | number, text: string, botToken: st
   })
 }
 
+// ── FB Messenger / Instagram Direct（同一套 Meta Send API，需在 24h 客服窗口內）──
+async function replyMessenger(recipientId: string, text: string, pageToken: string) {
+  await fetch('https://graph.facebook.com/v19.0/me/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pageToken}` },
+    body: JSON.stringify({ recipient: { id: recipientId }, messaging_type: 'RESPONSE', message: { text } }),
+  })
+}
+
+async function replyInstagram(recipientId: string, text: string, igToken: string) {
+  await fetch('https://graph.facebook.com/v19.0/me/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${igToken}` },
+    body: JSON.stringify({ recipient: { id: recipientId }, message: { text } }),
+  })
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ platform: string; userId: string }> }
@@ -1330,6 +1347,48 @@ export async function POST(
       const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, imgBuf, imgMime)
       if (reply && token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
       await saveHistory(userId, to, withTurn(history, text || '【圖片】', reply))
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── FB Messenger / Instagram Direct（Meta Send API，24h 客服窗口） ──────────
+  // Messenger(object=page) 與 Instagram(object=instagram) 的 webhook 皆為 entry[].messaging[]
+  if (platform === 'messenger' || platform === 'instagram') {
+    const isIG      = platform === 'instagram'
+    const creds     = await loadCredentials(userId, platform)
+    const token     = (isIG ? creds.ig_access_token : creds.fb_page_access_token) ?? ''
+    const appSecret = (isIG ? creds.ig_app_secret : creds.fb_app_secret) ?? ''
+    const rawBody   = await req.text()
+
+    // 有設定 App Secret 才驗簽（與 WhatsApp 共用 Meta X-Hub-Signature-256）
+    if (appSecret) {
+      const sigHeader = req.headers.get('x-hub-signature-256') ?? ''
+      if (!sigHeader || !(await verifyMetaSignature(rawBody, sigHeader, appSecret))) {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
+
+    const body = JSON.parse(rawBody)
+    for (const entry of (body?.entry ?? [])) {
+      for (const evt of (entry?.messaging ?? [])) {
+        const msg = evt?.message
+        if (!msg || msg.is_echo) continue          // 略過 echo（粉專自己送出的）與非訊息事件
+        const customerId: string = evt.sender?.id ?? ''
+        if (!customerId) continue
+        const history = await loadHistory(userId, customerId)
+
+        // 目前僅處理文字；純附件（圖片/貼圖）先以佔位讓 AI 得體回應
+        const text: string = (msg.text as string)
+          || (Array.isArray(msg.attachments) && msg.attachments.length ? '（客人傳送了一則附件／圖片）' : '')
+        if (!text) continue
+
+        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text)
+        if (reply && token) {
+          if (isIG) await replyInstagram(customerId, reply, token)
+          else await replyMessenger(customerId, reply, token)
+        }
+        await saveHistory(userId, customerId, withTurn(history, text, reply))
+      }
     }
     return NextResponse.json({ ok: true })
   }
@@ -1584,6 +1643,19 @@ export async function GET(
     const challenge   = searchParams.get('hub.challenge')
     const verifyToken = creds.whatsapp_verify_token ?? ''
     if (mode === 'subscribe' && token === verifyToken) {
+      return new NextResponse(challenge ?? '', { status: 200 })
+    }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // FB Messenger / Instagram verification（Meta hub challenge）
+  if (platform === 'messenger' || platform === 'instagram') {
+    const creds       = await loadCredentials(userId, platform)
+    const mode        = searchParams.get('hub.mode')
+    const token       = searchParams.get('hub.verify_token')
+    const challenge   = searchParams.get('hub.challenge')
+    const verifyToken = (platform === 'instagram' ? creds.ig_verify_token : creds.fb_verify_token) ?? ''
+    if (mode === 'subscribe' && verifyToken && token === verifyToken) {
       return new NextResponse(challenge ?? '', { status: 200 })
     }
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

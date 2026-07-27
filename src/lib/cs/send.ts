@@ -97,6 +97,30 @@ export async function sendToCustomer(
       return { ok: true }
     }
 
+    // ── FB Messenger / Instagram Direct（Meta Send API，須在 24 小時客服窗口內） ──
+    if (platform === 'messenger' || platform === 'instagram') {
+      const isIG = platform === 'instagram'
+      const label = isIG ? 'Instagram' : 'Messenger'
+      const token = (isIG
+        ? (await loadCredentials(userId, platform)).ig_access_token
+        : (await loadCredentials(userId, platform)).fb_page_access_token) ?? ''
+      if (!token) return { ok: false, error: `尚未設定 ${label} 憑證` }
+      const payload = isIG
+        ? { recipient: { id: to }, message: { text } }
+        : { recipient: { id: to }, messaging_type: 'RESPONSE', message: { text } }
+      const res = await fetch('https://graph.facebook.com/v19.0/me/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        const msg = j?.error?.message
+        return { ok: false, error: msg ? `${label}：${msg}` : `${label} 送訊失敗（${res.status}）` }
+      }
+      return { ok: true }
+    }
+
     // ── Telegram ──────────────────────────────────────────────────────────
     if (platform === 'telegram') {
       const botToken = (await loadCredentials(userId, 'telegram')).telegram_bot_token ?? ''
