@@ -91,7 +91,9 @@ function normalizePhone(raw: string | undefined): string | undefined {
 // ─── AI parse + filter + classify ─────────────────────────────────────────────
 
 // 單批次 AI 解析（每批最多 CHUNK_SIZE 字元）
-const CHUNK_SIZE = 10000
+// 抽取／分類屬機械任務，改用 Haiku 4.5（約 Sonnet 的 1/3 成本）
+const EXTRACT_MODEL = 'claude-haiku-4-5'
+const CHUNK_SIZE = 15000
 
 async function aiParseChunk(
   anthropic: ReturnType<typeof createAnthropic>,
@@ -126,10 +128,10 @@ ${chunk}
 萃取所有組織，回傳 JSON 陣列。`
 
   const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
+    model: anthropic(EXTRACT_MODEL),
     system: systemPrompt,
     prompt: userPrompt,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 16000,
   })
 
   // 嘗試提取 JSON 陣列（支援 markdown code block）
