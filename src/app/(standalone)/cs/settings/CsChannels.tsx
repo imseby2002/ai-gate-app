@@ -41,6 +41,26 @@ const PLATFORMS: Platform[] = [
     ],
   },
   {
+    id: 'messenger', name: 'FB Messenger', color: '#0084FF', showWebhook: true,
+    note: 'Meta Developer → App → Messenger → Webhooks → 填入下方 Webhook URL 與 Verify Token，並訂閱粉專的 messages 事件。需通過 App Review 的 pages_messaging 才能對非測試者回覆。',
+    docUrl: 'https://developers.facebook.com/docs/messenger-platform/getting-started',
+    fields: [
+      { key: 'fb_page_access_token', label: 'Page Access Token', placeholder: 'EAA...', secret: true },
+      { key: 'fb_verify_token', label: 'Verify Token（自訂任意字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
+      { key: 'fb_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
+    ],
+  },
+  {
+    id: 'instagram', name: 'Instagram Direct', color: '#E1306C', showWebhook: true,
+    note: 'IG 需為商業/創作者帳號並綁定 FB 粉專。Meta Developer → App → Instagram → Webhooks → 填入下方 Webhook URL 與 Verify Token。需通過 App Review 的 instagram_manage_messages。',
+    docUrl: 'https://developers.facebook.com/docs/messenger-platform/instagram',
+    fields: [
+      { key: 'ig_access_token', label: 'Access Token（同綁定粉專的 Page Access Token）', placeholder: 'EAA...', secret: true },
+      { key: 'ig_verify_token', label: 'Verify Token（自訂任意字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
+      { key: 'ig_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
+    ],
+  },
+  {
     id: 'telegram', name: 'Telegram', color: '#2AABEE', showWebhook: false,
     note: '向 @BotFather 建立 Bot 取得 Token；儲存後系統會自動註冊 webhook，免手動設定。',
     docUrl: 'https://core.telegram.org/bots/tutorial',

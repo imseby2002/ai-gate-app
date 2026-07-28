@@ -12,6 +12,8 @@ import { getCsEntitlements } from '@/lib/cs/entitlements'
 const NON_SECRET_FIELDS = new Set([
   'whatsapp_phone_number_id',
   'whatsapp_verify_token',
+  'fb_verify_token',
+  'ig_verify_token',
   'telegram_admin_chat_id',
   'wechat_app_id',
   'zalo_oa_id',

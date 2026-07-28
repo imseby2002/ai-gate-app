@@ -223,6 +223,24 @@ const CS_PLATFORMS = [
     showWebhook: true,
   },
   {
+    id: 'messenger',
+    name: 'FB Messenger',
+    color: '#0084FF',
+    envVars: ['FB_PAGE_ACCESS_TOKEN', 'FB_VERIFY_TOKEN', 'FB_APP_SECRET'],
+    note: 'Meta Developer → App → Messenger → Webhooks → 填入下方 Webhook URL 與 Verify Token，訂閱粉專 messages 事件（需過 App Review 的 pages_messaging 才能對非測試者回覆）',
+    docUrl: 'https://developers.facebook.com/docs/messenger-platform/getting-started',
+    showWebhook: true,
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram Direct',
+    color: '#E1306C',
+    envVars: ['IG_ACCESS_TOKEN', 'IG_VERIFY_TOKEN', 'IG_APP_SECRET'],
+    note: 'IG 需為商業/創作者帳號並綁定 FB 粉專。Meta Developer → App → Instagram → Webhooks → 填入下方 Webhook URL 與 Verify Token（需過 App Review 的 instagram_manage_messages）',
+    docUrl: 'https://developers.facebook.com/docs/messenger-platform/instagram',
+    showWebhook: true,
+  },
+  {
     id: 'whatsapp_personal',
     name: 'WhatsApp 個人版',
     color: '#128C7E',
@@ -1054,6 +1072,16 @@ function Unit12CustomerService({
         { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
         { key: 'whatsapp_verify_token', label: t('u12.cred.waVerify'), placeholder: 'my_verify_token', secret: false },
         { key: 'whatsapp_app_secret', label: t('u12.cred.waSecret'), placeholder: t('u12.cred.metaKey'), secret: true },
+      ],
+      messenger: [
+        { key: 'fb_page_access_token', label: 'Page Access Token', placeholder: 'EAA...', secret: true },
+        { key: 'fb_verify_token', label: 'Verify Token（自訂字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
+        { key: 'fb_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
+      ],
+      instagram: [
+        { key: 'ig_access_token', label: 'Access Token（同綁定粉專的 Page Token）', placeholder: 'EAA...', secret: true },
+        { key: 'ig_verify_token', label: 'Verify Token（自訂字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
+        { key: 'ig_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
       ],
       whatsapp_personal: [],  // QR-based auth, no manual fields needed
       telegram: [
