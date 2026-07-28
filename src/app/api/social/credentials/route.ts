@@ -18,6 +18,13 @@ const NON_SECRET_FIELDS = new Set([
   'wechat_app_id',
   'zalo_oa_id',
   'whatsapp_personal_bridge_url',
+  // marketing-auto 發文平台的 ID 類欄位（非機密，方便編輯時直接顯示既有值）
+  'page_id',
+  'ig_user_id',
+  'threads_user_id',
+  'author_urn',
+  'oa_id',
+  'client_id',
 ])
 
 export async function GET() {

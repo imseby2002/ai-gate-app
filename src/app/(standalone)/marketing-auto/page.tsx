@@ -3255,7 +3255,7 @@ function Unit9Upload({
             {s.label} {s.ok ? t('u9.ready') : t('u9.notGenerated')}
           </div>
         ))}
-        <a href="/settings" target="_blank"
+        <a href="/marketing-auto/platforms" target="_blank"
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors">
           <Settings className="h-3.5 w-3.5" /> {t('u9.platformSettings')}
         </a>
@@ -4974,7 +4974,7 @@ export default function MarketingAutoPage() {
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-blue-600 hover:bg-blue-50">
             <Building2 className="h-3.5 w-3.5" /> {t('mp.companySettings')}
           </a>
-          <a href="/settings"
+          <a href="/marketing-auto/platforms"
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700">
             <Settings className="h-3.5 w-3.5" /> {t('u12.platformSettings')}
           </a>
