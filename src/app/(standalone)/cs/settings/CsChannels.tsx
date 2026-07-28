@@ -100,8 +100,33 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
   const [helpSent, setHelpSent] = useState(false)
   const [helpError, setHelpError] = useState<string | null>(null)
   const [helpPriceUsd, setHelpPriceUsd] = useState<number | null>(null)
+  const [followupOn, setFollowupOn] = useState(false)
+  const [followupSaving, setFollowupSaving] = useState(false)
 
   useEffect(() => { setOrigin(window.location.origin) }, [])
+
+  useEffect(() => {
+    fetch('/api/marketing/cs-followup-config')
+      .then(r => r.json())
+      .then(d => setFollowupOn(!!d.enabled))
+      .catch(() => {})
+  }, [])
+
+  const toggleFollowup = async () => {
+    if (!isOwner || followupSaving) return
+    const next = !followupOn
+    setFollowupSaving(true)
+    setFollowupOn(next)  // 樂觀更新
+    try {
+      const res = await fetch('/api/marketing/cs-followup-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next }),
+      })
+      if (!res.ok) setFollowupOn(!next)  // 失敗回復
+    } catch { setFollowupOn(!next) }
+    finally { setFollowupSaving(false) }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -253,6 +278,29 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
               {helpError && <p className="text-xs text-red-500">{helpError}</p>}
             </div>
           )}
+        </div>
+
+        {/* 自動跟進開關 */}
+        <div className="mb-5 rounded-xl border bg-card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="text-sm font-semibold">自動跟進私訊</div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                客人在 Messenger / Instagram / WhatsApp 私訊詢問後就沒下文時，24 小時內自動送一則貼心跟進（每人只送一次；已下單或轉真人則不打擾）。LINE 不納入以免消耗推播則數。
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={followupOn}
+              disabled={!isOwner || followupSaving}
+              onClick={toggleFollowup}
+              className={`relative shrink-0 h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${followupOn ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${followupOn ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+          {!isOwner && <p className="text-[11px] text-amber-600 mt-2">需擁有者本人開啟。</p>}
         </div>
 
         {loading ? (
