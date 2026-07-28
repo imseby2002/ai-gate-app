@@ -2,6 +2,7 @@
 // 不論回覆從哪個管道進來（Telegram callback、LINE/WhatsApp webhook、SMS 收件…），
 // 都呼叫這裡的 resumeRunAfterApproval，取代舊 telegram-webhook 對 marketing_campaigns 的專用寫法。
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyHuman } from './notify'
 import type { ApprovalStatus } from './types'
 
 export type ApprovalOutcome = 'approved' | 'rejected' | 'feedback'
@@ -89,4 +90,41 @@ export async function resumeRunAfterApproval(
   }
 
   return { ok: true, runId: approval.run_id }
+}
+
+const REMINDER_INTERVAL_HOURS = 24
+
+/**
+ * 待核准事項若真人一直沒回應（最常見的情境：Agent 用 request_human_approval
+ * 請真人手動完成一件只有真人能做的事，例如「開一個 Facebook 粉專」——這類
+ * 動作平台本身要求真人身分驗證，Agent 無法代勞），定期重新提醒一次。
+ * 由 /api/cron/agent-tick 每次呼叫時順便執行，不佔用 run 的 tick 名額。
+ */
+export async function sendPendingApprovalReminders(): Promise<{ reminded: number }> {
+  const admin = createAdminClient()
+  const cutoff = new Date(Date.now() - REMINDER_INTERVAL_HOURS * 3600_000).toISOString()
+
+  const { data: stale } = await admin
+    .from('agent_approvals')
+    .select('id, user_id, role_id, action_type, summary, requested_at, last_reminded_at')
+    .in('status', ['pending', 'awaiting_feedback'])
+    .lt('requested_at', cutoff)
+    .or(`last_reminded_at.is.null,last_reminded_at.lt.${cutoff}`)
+    .limit(50)
+
+  let reminded = 0
+  for (const approval of stale ?? []) {
+    const days = Math.floor((Date.now() - new Date(approval.requested_at).getTime()) / 86_400_000)
+    const result = await notifyHuman({
+      userId: approval.user_id,
+      title: '⏰ 提醒：您有一項待處理事項',
+      body: `角色：${approval.role_id}\n${approval.summary}\n\n已等待 ${days} 天，請至 agent.im-tourist.com/agent 的「待核准」頁面處理，或直接回覆原訊息。`,
+      severity: 'warning',
+    })
+    if (result.ok) {
+      await admin.from('agent_approvals').update({ last_reminded_at: new Date().toISOString() }).eq('id', approval.id)
+      reminded++
+    }
+  }
+  return { reminded }
 }

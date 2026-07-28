@@ -33,13 +33,15 @@ interface RequestApprovalInput {
 export const requestApprovalTool: AgentToolDef = {
   id: 'request_human_approval',
   description:
-    '請求真人核准後才能繼續的高風險動作（花錢、簽約、對外發送訊息、撥打電話等）。' +
-    '呼叫此工具後本輪執行會暫停，等真人回覆核准/拒絕/意見後才會繼續。',
+    '請求真人核准後才能繼續的高風險動作（花錢、簽約、對外發送訊息、撥打電話等），' +
+    '也用於「只有真人能做的事」（例如開設 Facebook 粉專/LINE 官方帳號等需要真人身分驗證的平台操作）——' +
+    '這種情況把 summary 寫成給真人照做的編號步驟清單。' +
+    '呼叫此工具後本輪執行會暫停，等真人回覆核准/拒絕/意見（或實際完成步驟後回來核准）才會繼續。',
   inputSchema: {
     type: 'object',
     properties: {
-      actionType: { type: 'string', description: "動作類型，如 'spend_money' | 'sign_contract' | 'send_external_comms' | 'make_call'" },
-      summary: { type: 'string', description: '給真人看的簡短說明：要做什麼、為什麼' },
+      actionType: { type: 'string', description: "動作類型，如 'spend_money' | 'sign_contract' | 'send_external_comms' | 'make_call' | 'human_action_required'" },
+      summary: { type: 'string', description: '給真人看的說明：要做什麼、為什麼；若是請真人手動操作，寫成編號步驟清單' },
       details: { type: 'object', description: '完整細節（金額、對象、內容草稿等）' },
       riskLevel: { type: 'string', enum: ['low', 'medium', 'high'] },
     },
