@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/types/database'
 import { SocialPlatformSettings } from './SocialPlatformSettings'
+import { PasswordSettings } from './PasswordSettings'
 
 interface SettingsFormProps {
   profile: Profile | null
@@ -137,6 +138,9 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
           </div>
         </form>
       </div>
+
+      {/* Password / dual login */}
+      <PasswordSettings />
 
       {/* Credit Balance → 點數錢包 */}
       <a href="/credits?from=/settings" className="block bg-card rounded-2xl border p-6 shadow-sm hover:border-primary/40 transition-colors">
