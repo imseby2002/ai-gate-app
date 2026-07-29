@@ -664,10 +664,25 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
 
   if (!sources?.length) return ''
   const results: string[] = []
+
+  // ── FAQ 知識庫注入 ──
+  const faqSource = sources.find(s => s.type === 'faq')
+  if (faqSource?.config) {
+    const items = (faqSource.config as { items?: { q: string; a: string; keywords: string[] }[] }).items ?? []
+    const msgLower = message.toLowerCase()
+    const matched = items.filter(item =>
+      item.keywords?.some(kw => kw.trim() && msgLower.includes(kw.trim().toLowerCase()))
+    )
+    if (matched.length > 0) {
+      results.push(`【FAQ 知識庫（以下是經過人工確認的標準答案，遇到類似問題時直接引用）】\n` +
+        matched.map(item => `Q: ${item.q}\nA: ${item.a}`).join('\n\n'))
+    }
+  }
+
   await Promise.all(sources.map(async (src) => {
     let result: string | null = null
-    if (src.type === 'source_prefs') {
-      return // 只是偏好設定，非查詢資料來源
+    if (src.type === 'source_prefs' || src.type === 'faq' || src.type === 'breakfast_webhook') {
+      return // 只是偏好設定/由別處處理，非一般表格查詢資料來源
     } else if (src.type === 'json_pricing') {
       // 預訂流程開啟時直接注入所有定價模組，不依賴訊息關鍵字觸發
       result = bookingFlowEnabled
