@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       output: result.output,
       data: result.data ?? null,
       creditsSpent: cost,
-      balance: deduct.balance,
+      balance: deduct.ok ? deduct.balance : await getBalance(user.id),
     })
   }
 
