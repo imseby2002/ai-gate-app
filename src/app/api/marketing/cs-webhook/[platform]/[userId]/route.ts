@@ -1228,6 +1228,21 @@ export async function POST(
 ) {
   const { platform, userId } = await params
 
+  // ── Early exit for LINE webhook verification to prevent timeout ──
+  if (platform === 'line' || platform === 'line-oa') {
+    try {
+      const body = await req.clone().json()
+      const events = body?.events ?? []
+      if (events.length === 0 || events.every((e: any) => 
+        e.replyToken === '00000000000000000000000000000000' || 
+        e.replyToken === 'ffffffffffffffffffffffffffffffff' ||
+        e.replyToken === '11111111111111111111111111111111'
+      )) {
+        return NextResponse.json({ ok: true })
+      }
+    } catch { /* ignore */ }
+  }
+
   // Load CS knowledge base once for all platforms
   const knowledge = await loadCsKnowledge(userId)
 
