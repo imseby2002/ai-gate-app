@@ -18,35 +18,45 @@ function json(body: unknown, status: number): Response {
 }
 
 // 認證後的模組權限 + 餘額檢查。
-// 通過回傳 null；未通過回傳可直接 return 的 Response（401/403/402）。
+// error 為 null 代表通過，可直接 return 呼叫端的 Response（401/403/402）。
+// billable：只有 external（付費客戶）才會被扣點與受餘額限制；admin/employee
+// 為內部帳號，比照 chat/roundtable 的既有慣例（見 api/chat/route.ts「Check
+// credits for external users」），一律不計費，呼叫端應依此跳過 deductCredits。
+export interface ResumeAccessResult {
+  error: Response | null
+  billable: boolean
+}
+
 export async function guardResumeAccess(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: SupabaseClient<any, any, any>,
   userId: string,
   cost: number,
-): Promise<Response | null> {
+): Promise<ResumeAccessResult> {
   const { data: profile } = await supabase
     .from('profiles')
     .select('user_type, is_active, enabled_modules')
     .eq('id', userId)
     .single()
 
-  if (!profile) return json({ error: 'Unauthorized' }, 401)
-  if (profile.is_active === false) return json({ error: '帳號已停用' }, 403)
+  if (!profile) return { error: json({ error: 'Unauthorized' }, 401), billable: false }
+  if (profile.is_active === false) return { error: json({ error: '帳號已停用' }, 403), billable: false }
 
   // 模組權限：admin 全開，其他看 enabled_modules（比照 skills/run 的預設）
   if (profile.user_type !== 'admin') {
-    const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume']
+    const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
     if (!enabled.includes('resume')) {
-      return json({ error: '未開通模組：resume' }, 403)
+      return { error: json({ error: '未開通模組：resume' }, 403), billable: false }
     }
   }
 
-  // 執行前餘額檢查
-  const balance = await getBalance(userId)
-  if (balance < cost) {
-    return json({ error: '點數不足', balance, required: cost }, 402)
+  const billable = profile.user_type === 'external'
+  if (billable) {
+    const balance = await getBalance(userId)
+    if (balance < cost) {
+      return { error: json({ error: '點數不足', balance, required: cost }, 402), billable }
+    }
   }
 
-  return null
+  return { error: null, billable }
 }

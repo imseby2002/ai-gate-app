@@ -148,13 +148,16 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: '未知工具' }), { status: 400 })
   }
 
-  // ── 模組權限 + 執行前餘額檢查 + 扣點（未知工具已於上方 400，不扣款）──
+  // ── 模組權限 + 執行前餘額檢查 + 扣點（未知工具已於上方 400，不扣款；
+  // 僅 external 計費）──────────────────────────────────────────
   const cost = RESUME_COSTS['worker-tools']
-  const denied = await guardResumeAccess(supabase, user.id, cost)
-  if (denied) return denied
-  const deduct = await deductCredits(user.id, cost, `[resume] worker-tools:${toolId}`)
-  if (!deduct.ok && deduct.reason === 'insufficient') {
-    return new Response(JSON.stringify({ error: '點數不足' }), { status: 402 })
+  const guard = await guardResumeAccess(supabase, user.id, cost)
+  if (guard.error) return guard.error
+  if (guard.billable) {
+    const deduct = await deductCredits(user.id, cost, `[resume] worker-tools:${toolId}`)
+    if (!deduct.ok && deduct.reason === 'insufficient') {
+      return new Response(JSON.stringify({ error: '點數不足' }), { status: 402 })
+    }
   }
 
   const systemPrompt = buildPrompt(inputs)

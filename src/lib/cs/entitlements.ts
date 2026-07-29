@@ -121,6 +121,17 @@ export async function getCsEntitlements(
   void supabase
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = createAdminClient()
+
+  // 總管理員帳號不受方案／額度限制，一律視同 max 方案，不查訂閱表。
+  const { data: ownerProfile } = await admin
+    .from('profiles')
+    .select('user_type')
+    .eq('id', ownerId)
+    .maybeSingle()
+  if (ownerProfile?.user_type === 'admin') {
+    return { plan: 'max', features: CS_PLAN_FEATURES.max }
+  }
+
   const { data } = await admin
     .from('cs_subscriptions')
     .select('plan, status, feature_overrides, current_period_end')

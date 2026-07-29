@@ -36,13 +36,15 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: '請提供職缺 JD 或過往經歷' }), { status: 400 })
   }
 
-  // ── 模組權限 + 執行前餘額檢查 + 扣點 ──────────────────────────
+  // ── 模組權限 + 執行前餘額檢查 + 扣點（僅 external 計費）──────────
   const cost = RESUME_COSTS['cover-letter']
-  const denied = await guardResumeAccess(supabase, user.id, cost)
-  if (denied) return denied
-  const deduct = await deductCredits(user.id, cost, '[resume] cover-letter')
-  if (!deduct.ok && deduct.reason === 'insufficient') {
-    return new Response(JSON.stringify({ error: '點數不足' }), { status: 402 })
+  const guard = await guardResumeAccess(supabase, user.id, cost)
+  if (guard.error) return guard.error
+  if (guard.billable) {
+    const deduct = await deductCredits(user.id, cost, '[resume] cover-letter')
+    if (!deduct.ok && deduct.reason === 'insufficient') {
+      return new Response(JSON.stringify({ error: '點數不足' }), { status: 402 })
+    }
   }
 
   // Fetch template from DB if provided

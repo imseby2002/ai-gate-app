@@ -87,6 +87,18 @@ export async function getBookingEntitlements(
   void supabase
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = createAdminClient()
+
+  // 總管理員帳號不受方案／額度限制，一律視同無上限，不查訂閱表。
+  const { data: ownerProfile } = await admin
+    .from('profiles')
+    .select('user_type')
+    .eq('id', ownerId)
+    .maybeSingle()
+  if (ownerProfile?.user_type === 'admin') {
+    const features: BookingPlanFeatures = { ...BOOKING_PLAN_FEATURES.enterprise, propertyBaseLimit: Infinity, extraPropertyPriceUsd: 0 }
+    return { plan: 'enterprise', features, extraProperties: 0, propertyLimit: Infinity }
+  }
+
   const { data } = await admin
     .from('booking_subscriptions')
     .select('plan, status, extra_properties, feature_overrides, current_period_end')

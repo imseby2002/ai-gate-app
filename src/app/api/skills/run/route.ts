@@ -34,14 +34,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 計費：僅 external（付費客戶）受點數限制，比照 chat/roundtable 的既有慣例
+  // （api/chat/route.ts「Check credits for external users」）；admin/employee 不計費。
+  const billable = profile.user_type === 'external'
+
   // 執行前餘額檢查（用預估上限）
-  const estimate = skill.estimateCost ? skill.estimateCost(input) : skill.priceCredits
-  const balance = await getBalance(user.id)
-  if (balance < estimate) {
-    return NextResponse.json(
-      { error: '點數不足', balance, required: estimate },
-      { status: 402 },
-    )
+  if (billable) {
+    const estimate = skill.estimateCost ? skill.estimateCost(input) : skill.priceCredits
+    const balance = await getBalance(user.id)
+    if (balance < estimate) {
+      return NextResponse.json(
+        { error: '點數不足', balance, required: estimate },
+        { status: 402 },
+      )
+    }
   }
 
   // 執行
@@ -57,30 +63,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `執行失敗：${String(err)}` }, { status: 500 })
   }
 
-  // 實際扣點 = 基礎 + 動態加扣
+  // 實際扣點 = 基礎 + 動態加扣；admin/employee 不計費，略過扣點
   const cost = skill.priceCredits + (result.extraCredits ?? 0)
-  const deduct = await deductCredits(user.id, cost, `[skill] ${skill.id}`)
-  if (!deduct.ok && deduct.reason === 'insufficient') {
-    // 極少數並發情況：餘額在執行間被扣光，仍回傳結果但標記未扣款
+  if (billable) {
+    const deduct = await deductCredits(user.id, cost, `[skill] ${skill.id}`)
+    if (!deduct.ok && deduct.reason === 'insufficient') {
+      // 極少數並發情況：餘額在執行間被扣光，仍回傳結果但標記未扣款
+      await logSkillRun({
+        userId: user.id, skillId: skill.id, input,
+        output: result.output, creditsSpent: 0, status: 'success',
+      })
+      return NextResponse.json(
+        { error: '點數不足，本次結果未扣款', balance: await getBalance(user.id) },
+        { status: 402 },
+      )
+    }
     await logSkillRun({
       userId: user.id, skillId: skill.id, input,
-      output: result.output, creditsSpent: 0, status: 'success',
+      output: result.output, creditsSpent: cost, status: 'success',
     })
-    return NextResponse.json(
-      { error: '點數不足，本次結果未扣款', balance: await getBalance(user.id) },
-      { status: 402 },
-    )
+    return NextResponse.json({
+      output: result.output,
+      data: result.data ?? null,
+      creditsSpent: cost,
+      balance: deduct.balance,
+    })
   }
 
   await logSkillRun({
     userId: user.id, skillId: skill.id, input,
-    output: result.output, creditsSpent: cost, status: 'success',
+    output: result.output, creditsSpent: 0, status: 'success',
   })
 
   return NextResponse.json({
     output: result.output,
     data: result.data ?? null,
-    creditsSpent: cost,
-    balance: deduct.ok ? deduct.balance : await getBalance(user.id),
+    creditsSpent: 0,
+    balance: null,
   })
 }
