@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('marketing_campaigns')
-    .select('id, title, topic, company_name, status, active_step, created_at, updated_at')
+    .select('id, title, topic, industry, company_name, status, active_step, created_at, updated_at, unit_data')
     .eq('user_id', user.id)
     .neq('status', 'archived')
     .order('updated_at', { ascending: false })

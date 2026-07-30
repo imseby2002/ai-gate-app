@@ -14,7 +14,9 @@ import { createClient } from '@/lib/supabase/server'
 
 async function extractDocx(arrayBuffer: ArrayBuffer): Promise<string> {
   const mammoth = await import('mammoth')
-  const result = await mammoth.extractRawText({ arrayBuffer })
+  // mammoth.openZip 只認得 { path } / { buffer } / { file }，不支援 { arrayBuffer }，
+  // 傳 arrayBuffer 會直接 reject("Could not find file in options")，導致所有 .docx 解析靜默失敗。
+  const result = await mammoth.extractRawText({ buffer: Buffer.from(arrayBuffer) })
   return result.value ?? ''
 }
 
