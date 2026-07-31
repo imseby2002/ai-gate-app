@@ -121,7 +121,6 @@ export async function getCsEntitlements(
   void supabase
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = createAdminClient()
-
   // 總管理員帳號不受方案／額度限制，一律視同 max 方案，不查訂閱表。
   const { data: ownerProfile } = await admin
     .from('profiles')
@@ -132,11 +131,18 @@ export async function getCsEntitlements(
     return { plan: 'max', features: CS_PLAN_FEATURES.max }
   }
 
-  const { data } = await admin
-    .from('cs_subscriptions')
-    .select('plan, status, feature_overrides, current_period_end')
-    .eq('user_id', ownerId)
-    .maybeSingle()
+  let data: { plan?: string; status?: string; feature_overrides?: Partial<CsPlanFeatures>; current_period_end?: string | null } | null = null
+  try {
+    const res = await admin
+      .from('cs_subscriptions')
+      .select('plan, status, feature_overrides, current_period_end')
+      .eq('user_id', ownerId)
+      .maybeSingle()
+    data = res.data
+  } catch (err) {
+    // 查詢失敗就當作 free（安全預設，不多給付費功能），並記錄以便排查
+    console.error('[cs entitlements] lookup failed, defaulting to free:', err)
+  }
 
   // 到期即失效：沒有自動續訂與定時降級 cron，一律在讀取時檢查
   // current_period_end，過期就視同免費方案。current_period_end 為 null

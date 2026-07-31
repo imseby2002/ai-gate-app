@@ -118,15 +118,30 @@ async function loadCredentials(userId: string, platform: string): Promise<Record
 // ── Conversation history ───────────────────────────────────────────────────────
 type HistoryMsg = { role: 'user' | 'assistant'; content: string }
 
-async function loadHistory(userId: string, customerId: string): Promise<HistoryMsg[]> {
+// gapNote 提示 AI 這通訊息與上一則客人訊息間隔多久：間隔久（新的一輪對話）可以正常
+// 重新問候；間隔短（同一輪對話進行中）則要接續上一則問題，不能重新問候或重新列選單。
+// 沒有這個提示時，AI 只能靠訊息內容自行判斷，容易誤判成需要重新開始。
+const CONVERSATION_GAP_HOURS = 3
+
+async function loadHistory(userId: string, customerId: string): Promise<{ history: HistoryMsg[]; gapNote: string }> {
   const supabase = getServiceClient()
   const { data } = await supabase
     .from('cs_conversations')
-    .select('history')
+    .select('history, updated_at')
     .eq('user_id', userId)
     .eq('customer_id', customerId)
     .single()
-  return (data?.history as HistoryMsg[]) ?? []
+  const history = (data?.history as HistoryMsg[]) ?? []
+
+  let gapNote = ''
+  if (history.length && data?.updated_at) {
+    const hoursSince = (Date.now() - new Date(data.updated_at).getTime()) / 3_600_000
+    gapNote = hoursSince >= CONVERSATION_GAP_HOURS
+      ? `距離客人上一則訊息已經過了約 ${Math.round(hoursSince)} 小時，可視為新的一輪對話：請簡短重新問候並確認需求，不必假設客人還記得先前的流程進度。`
+      : '這是同一輪對話的延續：客人剛剛的回覆通常是在回答你上一則問的問題，請直接接續判斷並回答下一步，不要重新問候或重新列出主選單。'
+  }
+
+  return { history, gapNote }
 }
 
 async function saveHistory(userId: string, customerId: string, history: HistoryMsg[]) {
@@ -285,7 +300,7 @@ function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMs
 // Returns '' when the bot should stay silent (a human has taken over).
 async function replyToCustomer(
   userId: string, platform: string, customerId: string,
-  knowledge: CsKnowledge, history: HistoryMsg[], text: string,
+  knowledge: CsKnowledge, history: HistoryMsg[], text: string, gapNote: string,
   imageBuffer?: Buffer, imageMimeType?: string,
 ): Promise<string> {
   // Rate limit (per-customer + per-tenant) before any LLM call — caps spam / API-cost abuse
@@ -352,7 +367,7 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), imageBuffer, imageMimeType)
+  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
@@ -656,11 +671,19 @@ function queryJsonPricing(name: string, config: PricingConfig, message: string):
 
 async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}): Promise<string> {
   const supabase = getServiceClient()
-  const { data: sources } = await supabase
-    .from('cs_data_sources')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('enabled', true)
+  let sources: Array<{ type: string; name: string; config: unknown }> | null = null
+  try {
+    const { data } = await supabase
+      .from('cs_data_sources')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('enabled', true)
+    sources = data
+  } catch (err) {
+    // 資料來源查詢失敗不該讓整個客服回覆失敗，跳過外部資料、照常用知識庫回覆
+    console.error('[cs-webhook] queryDataSources failed:', err)
+    return ''
+  }
 
   if (!sources?.length) return ''
   const results: string[] = []
@@ -934,6 +957,7 @@ async function getAIReply(
   history: HistoryMsg[] = [],
   userId = '',
   sellSection = '',
+  gapNote = '',
   imageBuffer?: Buffer,
   imageMimeType?: string,
 ): Promise<string> {
@@ -1041,7 +1065,7 @@ async function getAIReply(
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
-- 目前台灣時間：${taiwanTime}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
+- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
@@ -1083,13 +1107,16 @@ async function getAIReply(
     const hasImage = !!(imageBuffer && imageMimeType)
     const useSearch = planFeatures.webSearch && SEARCH_RE.test(message)
     const useL3 = !useSearch && planFeatures.advancedSupport && (hasImage || isHighRisk)
+    // 搜尋分支（FreeLLM/CLIProxy/Perplexity）三個來源都失敗時，退回 L2 常規回覆
+    // 而不是直接放棄——L2 一樣讀得到 systemPrompt 裡的知識庫內容，好過丟出制式罐頭回覆。
     const result = useSearch
-      ? await generateCsReplySearch(systemPrompt, messages)
+      ? (await generateCsReplySearch(systemPrompt, messages)) ?? (await generateCsReplyL2(systemPrompt, messages))
       : useL3
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     return (result ? cleanReply(result.reply) : '') || FALLBACK
-  } catch {
+  } catch (err) {
+    console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
   }
 }
@@ -1282,7 +1309,7 @@ export async function POST(
 
       const replyToken: string = event.replyToken
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
-      const history = await loadHistory(userId, customerId)
+      const { history, gapNote } = await loadHistory(userId, customerId)
 
       let text = msgType === 'text' ? (event.message.text as string) : ''
 
@@ -1331,7 +1358,7 @@ export async function POST(
         else text = '（客人傳送了一張圖片，但無法讀取）'
       }
 
-      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, imgBuf, imgMime)
+      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, imgBuf, imgMime)
       if (reply && token && replyToken) await replyLine(replyToken, reply, token)
       // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
       void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
@@ -1364,7 +1391,7 @@ export async function POST(
     for (const msg of msgs) {
       if (msg.type !== 'text' && msg.type !== 'image') continue
       const to: string = msg.from
-      const history = await loadHistory(userId, to)
+      const { history, gapNote } = await loadHistory(userId, to)
 
       let text = msg.type === 'text' ? (msg.text?.body ?? '') : ''
       let imgBuf: Buffer | undefined; let imgMime: string | undefined
@@ -1374,7 +1401,7 @@ export async function POST(
         else text = '（客人傳送了一張圖片，但無法讀取）'
       }
 
-      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, imgBuf, imgMime)
+      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, gapNote, imgBuf, imgMime)
       if (reply && token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
       await saveHistory(userId, to, withTurn(history, text || '【圖片】', reply))
     }
@@ -1405,14 +1432,14 @@ export async function POST(
         if (!msg || msg.is_echo) continue          // 略過 echo（粉專自己送出的）與非訊息事件
         const customerId: string = evt.sender?.id ?? ''
         if (!customerId) continue
-        const history = await loadHistory(userId, customerId)
+        const { history, gapNote } = await loadHistory(userId, customerId)
 
         // 目前僅處理文字；純附件（圖片/貼圖）先以佔位讓 AI 得體回應
         const text: string = (msg.text as string)
           || (Array.isArray(msg.attachments) && msg.attachments.length ? '（客人傳送了一則附件／圖片）' : '')
         if (!text) continue
 
-        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text)
+        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote)
         if (reply && token) {
           if (isIG) await replyInstagram(customerId, reply, token)
           else await replyMessenger(customerId, reply, token)
@@ -1521,7 +1548,7 @@ export async function POST(
       const hasPhoto = Array.isArray(message?.photo) && message.photo.length > 0
       if (chatId && (text || hasPhoto) && !text.startsWith('/') && !isAdmin) {
         const customerId = String(chatId)
-        const history = await loadHistory(userId, customerId)
+        const { history, gapNote } = await loadHistory(userId, customerId)
 
         let imgBuf: Buffer | undefined; let imgMime: string | undefined
         if (hasPhoto && botToken) {
@@ -1532,7 +1559,7 @@ export async function POST(
         }
 
         // 1. AI auto-reply to customer
-        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, imgBuf, imgMime)
+        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, gapNote, imgBuf, imgMime)
         if (reply) await replyTelegram(chatId, reply, botToken)
         await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
 
@@ -1564,8 +1591,8 @@ export async function POST(
       const text: string     = body?.message?.text ?? ''
       const senderId: string = body?.sender?.id ?? ''
       if (text && senderId) {
-        const history = await loadHistory(userId, senderId)
-        const reply = await replyToCustomer(userId, platform, senderId, knowledge, history, text)
+        const { history, gapNote } = await loadHistory(userId, senderId)
+        const reply = await replyToCustomer(userId, platform, senderId, knowledge, history, text, gapNote)
         if (reply && oaToken) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
@@ -1602,8 +1629,8 @@ export async function POST(
     const to   = toMatch?.[1] ?? ''
 
     if (text && from && to) {
-      const history = await loadHistory(userId, from)
-      const reply = await replyToCustomer(userId, 'wechat', from, knowledge, history, text)
+      const { history, gapNote } = await loadHistory(userId, from)
+      const reply = await replyToCustomer(userId, 'wechat', from, knowledge, history, text, gapNote)
       await saveHistory(userId, from, withTurn(history, text, reply))
       if (!reply) return new NextResponse('success')  // human handling → no passive reply
       const safeReply = reply.replace(/]]>/g, ']]&gt;')  // prevent CDATA breakout
@@ -1631,8 +1658,8 @@ export async function POST(
     const fromJid: string = body?.fromJid ?? (body?.from ? `${body.from}@s.whatsapp.net` : '')
 
     if (text && fromJid) {
-      const history = await loadHistory(userId, fromJid)
-      const reply = await replyToCustomer(userId, platform, fromJid, knowledge, history, text)
+      const { history, gapNote } = await loadHistory(userId, fromJid)
+      const reply = await replyToCustomer(userId, platform, fromJid, knowledge, history, text, gapNote)
 
       // Reply via Bridge
       const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
