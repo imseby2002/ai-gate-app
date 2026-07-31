@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
-  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox,
+  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -548,6 +548,10 @@ function Unit12CustomerService({
   const [inboxMessages, setInboxMessages] = useState<CsInboxMessage[]>([])
   const [inboxLoading, setInboxLoading] = useState(false)
   const [inboxPlatformFilter, setInboxPlatformFilter] = useState<string>('all')
+  const [inboxThreadKey, setInboxThreadKey] = useState<string | null>(null)
+  const [inboxReplyText, setInboxReplyText] = useState('')
+  const [inboxSending, setInboxSending] = useState(false)
+  const [inboxSendError, setInboxSendError] = useState('')
 
   // Logs
   const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
@@ -1338,6 +1342,54 @@ function Unit12CustomerService({
       if (d.messages) setInboxMessages(d.messages)
     } finally {
       setInboxLoading(false)
+    }
+  }
+
+  // 依「平台＋客戶」把訊息分組成一則則對話串，最新一則有動靜的排最前面
+  const inboxThreads = useMemo(() => {
+    const map = new Map<string, { key: string; platform: string; fromId: string; fromName?: string; messages: CsInboxMessage[] }>()
+    for (const m of inboxMessages) {
+      if (inboxPlatformFilter !== 'all' && m.platform !== inboxPlatformFilter) continue
+      const key = `${m.platform}:${m.from_id}`
+      const existing = map.get(key)
+      if (existing) {
+        existing.messages.push(m)
+        if (m.from_name && !existing.fromName) existing.fromName = m.from_name
+      } else {
+        map.set(key, { key, platform: m.platform, fromId: m.from_id, fromName: m.from_name, messages: [m] })
+      }
+    }
+    return Array.from(map.values())
+      .map(t => ({ ...t, messages: [...t.messages].sort((a, b) => a.created_at.localeCompare(b.created_at)) }))
+      .sort((a, b) => b.messages[b.messages.length - 1].created_at.localeCompare(a.messages[a.messages.length - 1].created_at))
+  }, [inboxMessages, inboxPlatformFilter])
+
+  const activeInboxThread = inboxThreads.find(t => t.key === inboxThreadKey) ?? inboxThreads[0] ?? null
+
+  async function sendInboxReply() {
+    if (!activeInboxThread || !inboxReplyText.trim() || inboxSending) return
+    setInboxSending(true)
+    setInboxSendError('')
+    try {
+      const res = await fetch('/api/marketing/cs-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: activeInboxThread.platform, to: activeInboxThread.fromId,
+          text: inboxReplyText, industry: ind, fromName: activeInboxThread.fromName,
+        }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setInboxReplyText('')
+        await loadInbox()
+      } else {
+        setInboxSendError(d.error ?? t('u12.unknownError'))
+      }
+    } catch (e) {
+      setInboxSendError(String(e))
+    } finally {
+      setInboxSending(false)
     }
   }
 
@@ -3471,47 +3523,94 @@ function Unit12CustomerService({
 
           {inboxLoading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
-          ) : inboxMessages.length === 0 ? (
+          ) : inboxThreads.length === 0 ? (
             <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">
               <div className="mb-2">{t('u12.noInbox')}</div>
               <div className="text-[11px]">{t('u12.noInboxHint')}</div>
             </div>
           ) : (
-            <div className="space-y-2">
-              {inboxMessages
-                .filter(m => inboxPlatformFilter === 'all' || m.platform === inboxPlatformFilter)
-                .map(msg => (
-                  <div key={msg.id} className="border rounded-xl p-3 bg-white space-y-1.5 hover:shadow-sm transition-shadow">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium text-gray-700">
-                        {platformEmoji(msg.platform)} {msg.from_name ?? msg.from_id}
-                      </span>
-                      {msg.risk && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${riskColor(msg.risk)}`}>
-                          {msg.risk === 'high' ? t('u12.riskHigh') : msg.risk === 'medium' ? t('u12.riskMedium') : t('u12.riskLow')}
+            <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden" style={{ height: '560px' }}>
+              {/* 左側：客戶列表（依平台＋客戶分組） */}
+              <div className="md:w-64 shrink-0 max-h-48 md:max-h-none border-b md:border-b-0 md:border-r overflow-y-auto bg-gray-50">
+                {inboxThreads.map(thread => {
+                  const last = thread.messages[thread.messages.length - 1]
+                  const preview = last.reply || last.message
+                  const active = activeInboxThread?.key === thread.key
+                  return (
+                    <button key={thread.key} onClick={() => setInboxThreadKey(thread.key)}
+                      className={`w-full text-left px-3 py-2.5 border-b hover:bg-white transition-colors border-l-2 ${active ? 'bg-white' : 'border-l-transparent'}`}
+                      style={active ? { borderLeftColor: 'var(--primary)' } : {}}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-gray-800 truncate">
+                          {platformEmoji(thread.platform)} {thread.fromName ?? thread.fromId}
                         </span>
-                      )}
-                      {msg.intent && <span className="text-[10px] text-gray-400">{msg.intent}</span>}
-                      {msg.latency_ms && <span className="text-[10px] text-gray-300">{msg.latency_ms}ms</span>}
-                      <span className="text-[10px] text-gray-400 ml-auto">{new Date(msg.created_at).toLocaleString(locale)}</span>
-                    </div>
-                    <div className="text-xs text-gray-700">
-                      <span className="font-medium text-gray-500">{t('u12.customerLabel')}</span>{msg.message}
-                    </div>
-                    {msg.reply && (
-                      <div className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
-                        <span className="font-medium text-indigo-500">{t('u12.aiLabel')}</span>{msg.reply.slice(0, 120)}{msg.reply.length > 120 ? '…' : ''}
+                        <span className="text-[9px] text-gray-400 ml-auto shrink-0">
+                          {new Date(last.created_at).toLocaleString(locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                    )}
-                    {msg.reply && (
-                      <button
-                        onClick={() => setFaqDialog({ open: true, q: msg.message, a: msg.reply ?? '', keywords: '', saving: false })}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1">
-                        📚 {t('u12.addToKb')}
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      <div className="text-[11px] text-gray-500 truncate mt-0.5">{preview}</div>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* 右側：對話串 + 回覆框 */}
+              <div className="flex-1 flex flex-col min-w-0">
+                {!activeInboxThread ? (
+                  <div className="flex-1 flex items-center justify-center text-sm text-gray-400">{t('u12.inboxSelectHint')}</div>
+                ) : (
+                  <>
+                    <div className="px-3 py-2 border-b bg-gray-50 shrink-0">
+                      <span className="text-sm font-medium text-gray-800">
+                        {platformEmoji(activeInboxThread.platform)} {activeInboxThread.fromName ?? activeInboxThread.fromId}
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                      {activeInboxThread.messages.map(msg => (
+                        <div key={msg.id} className="space-y-1.5">
+                          {msg.message && (
+                            <div className="flex justify-start">
+                              <div className="max-w-[85%] bg-gray-100 rounded-xl rounded-tl-sm px-3 py-2 text-xs text-gray-800">
+                                {msg.message}
+                                <div className="text-[9px] text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString(locale)}</div>
+                              </div>
+                            </div>
+                          )}
+                          {msg.reply && (
+                            <div className="flex justify-end">
+                              <div className="max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-xs text-white" style={{ background: 'var(--primary)' }}>
+                                <div className="text-[9px] opacity-70 mb-0.5">{msg.intent === 'agent' ? t('u12.agentLabel') : t('u12.aiLabel')}</div>
+                                {msg.reply}
+                                <button
+                                  onClick={() => setFaqDialog({ open: true, q: msg.message, a: msg.reply ?? '', keywords: '', saving: false })}
+                                  className="block mt-1 text-[10px] underline opacity-80 hover:opacity-100">
+                                  📚 {t('u12.addToKb')}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t p-2 space-y-1 shrink-0">
+                      {inboxSendError && <div className="text-[10px] text-red-500 px-1">{t('u12.inboxSendFailed', { error: inboxSendError })}</div>}
+                      <div className="flex items-end gap-2">
+                        <textarea rows={2} value={inboxReplyText}
+                          onChange={e => setInboxReplyText(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendInboxReply() } }}
+                          placeholder={t('u12.inboxReplyPlaceholder')}
+                          className="flex-1 text-xs border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                        <button onClick={sendInboxReply} disabled={!inboxReplyText.trim() || inboxSending}
+                          className="px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50 flex items-center gap-1 shrink-0"
+                          style={{ background: 'var(--primary)' }}>
+                          {inboxSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                          {t('u12.inboxSend')}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
