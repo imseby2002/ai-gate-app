@@ -1432,14 +1432,14 @@ export async function POST(
         if (!msg || msg.is_echo) continue          // 略過 echo（粉專自己送出的）與非訊息事件
         const customerId: string = evt.sender?.id ?? ''
         if (!customerId) continue
-        const history = await loadHistory(userId, customerId)
+        const { history, gapNote } = await loadHistory(userId, customerId)
 
         // 目前僅處理文字；純附件（圖片/貼圖）先以佔位讓 AI 得體回應
         const text: string = (msg.text as string)
           || (Array.isArray(msg.attachments) && msg.attachments.length ? '（客人傳送了一則附件／圖片）' : '')
         if (!text) continue
 
-        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text)
+        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote)
         if (reply && token) {
           if (isIG) await replyInstagram(customerId, reply, token)
           else await replyMessenger(customerId, reply, token)
