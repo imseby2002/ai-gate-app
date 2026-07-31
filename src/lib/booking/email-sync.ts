@@ -32,6 +32,7 @@ interface EmailSyncResult {
     no_source: number
     skipped_no_checkin: number
     skipped_not_booking: number
+    skipped_by_prefilter: number
     skipped_duplicate: number
     ai_null: number
     since_date: string
@@ -180,7 +181,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   const supabase = createAdminClient()
   const result: EmailSyncResult = {
     processed: 0, added: 0, errors: [],
-    debug: { found_uids: 0, no_source: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_duplicate: 0, ai_null: 0, since_date: '', log: [] },
+    debug: { found_uids: 0, no_source: 0, skipped_no_checkin: 0, skipped_not_booking: 0, skipped_by_prefilter: 0, skipped_duplicate: 0, ai_null: 0, since_date: '', log: [] },
   }
   function addLog(entry: string) {
     if (result.debug.log.length < 60) result.debug.log.push(entry)
@@ -442,6 +443,20 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
 
       const subj80 = subject.slice(0, 80)
       if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
+
+      // Stage 1：便宜分類先篩掉明顯非訂單信（標籤模式整個資料夾都抓，不靠關鍵字篩，
+      // 大部分信件其實是取消政策說明、客服往來、轉寄信等雜訊），避免每一封都花
+      // Stage 2 完整擷取（含房型清單／平台提示／少樣本範例）的成本。
+      // 來自「取消」資料夾的信已經確定是訂單，跳過分類直接進 Stage 2。
+      if (!forceCancel) {
+        const looksLikeBooking = await classifyIsBooking(subject, body)
+        if (!looksLikeBooking) {
+          result.debug.skipped_by_prefilter++
+          addLog(`[非訂房-預篩] ${platform} | ${subj80}`)
+          continue
+        }
+      }
+
       const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
       if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
       // 來自「取消」資料夾的信一律視為取消（不靠 AI 判斷取消意圖）。
@@ -559,17 +574,20 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         }
       }
 
-      // Duplicate check 3: same platform + check_in + property (looser, last resort)
-      if (checkIn && !existingId) {
-        let dupQ = supabase
+      // Duplicate check 3: same platform + check_in + property (looser, last resort).
+      // 必須有明確配對到的房型才跑：resolvedPropertyId 為 null 時（房型模糊比對失敗，
+      // 很常見）若不篩房型，會變成「同平台＋同入住日」就判定重複，把不同房源、不同
+      // 旅客的訂單誤判成同一筆而整個吞掉，訂單就再也不會出現在每日入住表。
+      if (checkIn && !existingId && resolvedPropertyId) {
+        const { data: dup } = await supabase
           .from('bookings')
           .select('id, status')
           .eq('user_id', setting.user_id)
           .eq('platform', platform)
           .eq('check_in', checkIn)
           .eq('source', 'email')
-        if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
-        const { data: dup } = await dupQ.maybeSingle()
+          .eq('property_id', resolvedPropertyId)
+          .maybeSingle()
         if (dup) {
           if (extracted.is_cancellation && dup.status !== 'cancelled') {
             await supabase.from('bookings').update({
@@ -731,7 +749,41 @@ function regexPreExtract(subject: string, body: string, platform: string): {
   return { confirmation_id, dates: [...new Set(dates)].sort() }
 }
 
-// ── AI Extraction ─────────────────────────────────────────────
+// ── Stage 1: cheap pre-filter ─────────────────────────────────
+// 標籤模式整個資料夾都抓、不靠關鍵字篩（怕漏掉措辭不一的取消信），實際大部分
+// 信件是取消政策說明、客服往來、轉寄信等雜訊。這裡用極小的 prompt（不含房型
+// 清單／平台提示／少樣本範例）先做便宜的二元分類，只有判斷像訂單的信才送進
+// Stage 2 完整擷取，大幅降低平均每封信的成本。
+async function classifyIsBooking(subject: string, body: string): Promise<boolean> {
+  const truncated = body.slice(0, 1500)
+  const prompt = `判斷以下郵件是否為訂房平台的「訂房確認」或「訂房取消」通知信（不是訂房須知、行銷信、一般客服往來、或其他無關信件）。
+
+郵件主旨：${subject}
+郵件內容片段：
+${truncated}
+
+只回傳 JSON，不要其他說明：{"is_booking": true 或 false}`
+
+  const providers: Array<'deepseek' | 'claude'> = []
+  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
+  if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  if (providers.length === 0) return true // 無可用模型時不篩選，安全預設全部送進 Stage 2
+
+  for (const provider of providers) {
+    try {
+      const responseText = await callModel(provider, prompt, 50)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) continue
+      const parsed = JSON.parse(jsonMatch[0]) as { is_booking?: boolean }
+      if (typeof parsed.is_booking === 'boolean') return parsed.is_booking
+    } catch {
+      // try next provider
+    }
+  }
+  return true // 分類失敗時安全預設為可能是訂單，交給 Stage 2 完整擷取判斷，避免漏單
+}
+
+// ── Stage 2: AI Extraction ────────────────────────────────────
 
 async function extractBookingWithAI(
   subject: string,
@@ -791,12 +843,13 @@ ${roomListStr}${hint}${preLine}${fewShot}
 
 只回傳 JSON，不要其他說明。`
 
-  // Build the provider attempt order: primary (whichever key exists) then the
-  // other as a fallback, so a transient failure or bad JSON on one model can be
-  // recovered by the other instead of silently dropping the order.
+  // Build the provider attempt order: Claude Haiku first（結構化多欄位擷取穩定度
+  // 明顯優於 DeepSeek，Stage 1 已經把大部分雜訊信篩掉，這裡數量少很多，值得用
+  // 較準的模型），DeepSeek 作為備援；一個失敗或回傳壞 JSON 時換另一個，而不是
+  // 直接放棄整封信。
   const providers: Array<'deepseek' | 'claude'> = []
-  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
   if (process.env.ANTHROPIC_API_KEY) providers.push('claude')
+  if (process.env.DEEPSEEK_API_KEY) providers.push('deepseek')
   if (providers.length === 0) return null
 
   for (const provider of providers) {
@@ -818,7 +871,7 @@ ${roomListStr}${hint}${preLine}${fewShot}
   return null
 }
 
-async function callModel(provider: 'deepseek' | 'claude', prompt: string): Promise<string> {
+async function callModel(provider: 'deepseek' | 'claude', prompt: string, maxTokens = 1000): Promise<string> {
   if (provider === 'deepseek') {
     const res = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -827,7 +880,7 @@ async function callModel(provider: 'deepseek' | 'claude', prompt: string): Promi
         model: 'deepseek-chat',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0,
-        max_tokens: 1000,
+        max_tokens: maxTokens,
         response_format: { type: 'json_object' },
       }),
       signal: AbortSignal.timeout(20000),
@@ -844,7 +897,7 @@ async function callModel(provider: 'deepseek' | 'claude', prompt: string): Promi
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
+      max_tokens: maxTokens,
       temperature: 0,
       messages: [{ role: 'user', content: prompt }],
     }),
