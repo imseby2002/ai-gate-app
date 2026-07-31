@@ -40,6 +40,18 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     return result
   }
 
+  // 已接通即時同步（Channex 等第三方）的民宿由第三方負責房況與訂單，
+  // iCal 同步停用，避免三個資料來源互相打架。
+  const { data: rtSub } = await supabase
+    .from('booking_subscriptions')
+    .select('realtime_sync_active')
+    .eq('user_id', setting.user_id)
+    .maybeSingle()
+  if (rtSub?.realtime_sync_active) {
+    result.errors.push('已啟用即時同步，iCal 同步已停用')
+    return result
+  }
+
   let rawIcal: string
   try {
     const res = await fetch(setting.ical_url, {

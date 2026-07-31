@@ -198,6 +198,18 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     return result
   }
 
+  // 已接通即時同步（Channex 等第三方）的民宿由第三方負責房況與訂單，
+  // Email 擷取停用，避免三個資料來源互相打架。
+  const { data: rtSub } = await supabase
+    .from('booking_subscriptions')
+    .select('realtime_sync_active')
+    .eq('user_id', setting.user_id)
+    .maybeSingle()
+  if (rtSub?.realtime_sync_active) {
+    result.errors.push('已啟用即時同步，Email 擷取已停用')
+    return result
+  }
+
   // 自癒遷移：金鑰就緒時，把舊明文密碼加密回存（之後便不再有明文）
   if (setting.imap_password && !isEncrypted(setting.imap_password)) {
     const enc = encryptSecret(setting.imap_password)
@@ -488,6 +500,45 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
 
       const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
+
+      // ── iCal 為主要來源，Email 只負責補齊資料 ──────────────────
+      // 有設定 iCal 同步時，訂房阻擋已經靠 iCal 完成；若這封信對應到一筆已存在的
+      // iCal 訂單（同平台＋同房型＋同入住退房日），把姓名／金額／人數等 iCal
+      // 沒有的細節補進去（或標記取消），不要另外新增一筆重複訂單。
+      if (validCheckOut) {
+        let icalQ = supabase
+          .from('bookings')
+          .select('id, status, guest_name, total_price, num_guests, notes')
+          .eq('user_id', setting.user_id)
+          .eq('platform', platform)
+          .eq('check_in', checkIn)
+          .eq('check_out', validCheckOut)
+          .eq('source', 'ical')
+        if (resolvedPropertyId) icalQ = icalQ.eq('property_id', resolvedPropertyId)
+        const { data: icalBooking } = await icalQ.maybeSingle()
+        if (icalBooking) {
+          const patch: Record<string, unknown> = {}
+          if (extracted.is_cancellation) {
+            if (icalBooking.status !== 'cancelled') patch.status = 'cancelled'
+          } else {
+            if (extracted.guest_name && (!icalBooking.guest_name || icalBooking.guest_name === '(iCal 訂單)'))
+              patch.guest_name = extracted.guest_name
+            if (extracted.total_price != null && icalBooking.total_price == null)
+              patch.total_price = extracted.total_price
+            if (extracted.num_guests && (icalBooking.num_guests == null || icalBooking.num_guests <= 1))
+              patch.num_guests = extracted.num_guests
+          }
+          if (Object.keys(patch).length > 0) {
+            if (DEBUG_FETCH_NOTE) patch.notes = appendFetchNote(icalBooking.notes)
+            await supabase.from('bookings').update(patch).eq('id', icalBooking.id)
+            addLog(`[補齊iCal✓] ${confId} | ${subj80}`)
+            result.added++
+          } else {
+            result.debug.skipped_duplicate++
+          }
+          result.processed++; continue
+        }
+      }
 
       // Duplicate check 1: exact confirmation_id match
       const { data: dupById } = await supabase
