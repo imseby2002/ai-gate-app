@@ -559,17 +559,20 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         }
       }
 
-      // Duplicate check 3: same platform + check_in + property (looser, last resort)
-      if (checkIn && !existingId) {
-        let dupQ = supabase
+      // Duplicate check 3: same platform + check_in + property (looser, last resort).
+      // 必須有明確配對到的房型才跑：resolvedPropertyId 為 null 時（房型模糊比對失敗，
+      // 很常見）若不篩房型，會變成「同平台＋同入住日」就判定重複，把不同房源、不同
+      // 旅客的訂單誤判成同一筆而整個吞掉，訂單就再也不會出現在每日入住表。
+      if (checkIn && !existingId && resolvedPropertyId) {
+        const { data: dup } = await supabase
           .from('bookings')
           .select('id, status')
           .eq('user_id', setting.user_id)
           .eq('platform', platform)
           .eq('check_in', checkIn)
           .eq('source', 'email')
-        if (resolvedPropertyId) dupQ = dupQ.eq('property_id', resolvedPropertyId)
-        const { data: dup } = await dupQ.maybeSingle()
+          .eq('property_id', resolvedPropertyId)
+          .maybeSingle()
         if (dup) {
           if (extracted.is_cancellation && dup.status !== 'cancelled') {
             await supabase.from('bookings').update({
