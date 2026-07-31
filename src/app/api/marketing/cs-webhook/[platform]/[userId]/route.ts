@@ -155,12 +155,35 @@ async function saveHistory(userId: string, customerId: string, history: HistoryM
 }
 
 // ── Persist a customer turn to cs_messages (powers the dashboard metrics) ─────
-async function logCsMessage(userId: string, platform: string, customerId: string, industry: string, message: string, reply: string) {
+async function logCsMessage(userId: string, platform: string, customerId: string, industry: string, message: string, reply: string, fromName?: string) {
   try {
     await getServiceClient().from('cs_messages').insert({
-      user_id: userId, industry, platform, from_id: customerId, message, reply,
+      user_id: userId, industry, platform, from_id: customerId, from_name: fromName ?? null, message, reply,
     })
   } catch { /* metrics logging must never break the reply flow */ }
+}
+
+// LINE 的 userId（U + 32 hex）在畫面上完全看不出是誰，call 一次 Profile API 換顯示名稱。
+// 先查 cs_messages 有沒有存過這個客人的名字，省下重複呼叫 LINE API。
+async function resolveLineDisplayName(userId: string, customerId: string, token: string): Promise<string | undefined> {
+  try {
+    const { data } = await getServiceClient()
+      .from('cs_messages').select('from_name')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .not('from_name', 'is', null)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (data?.from_name) return data.from_name as string
+  } catch { /* 表可能尚未建立，往下改用 API 查詢 */ }
+
+  try {
+    const res = await fetch(`https://api.line.me/v2/bot/profile/${customerId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return undefined
+    const d = await res.json()
+    return d.displayName ?? undefined
+  } catch { return undefined }
 }
 
 // Atomic fixed-window rate check via the DB. Fails open so an un-applied migration
@@ -301,7 +324,7 @@ function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMs
 async function replyToCustomer(
   userId: string, platform: string, customerId: string,
   knowledge: CsKnowledge, history: HistoryMsg[], text: string, gapNote: string,
-  imageBuffer?: Buffer, imageMimeType?: string,
+  fromName?: string, imageBuffer?: Buffer, imageMimeType?: string,
 ): Promise<string> {
   // Rate limit (per-customer + per-tenant) before any LLM call — caps spam / API-cost abuse
   const withinLimit = await checkRateLimit(`${userId}:${customerId}`, 30, 60)
@@ -310,7 +333,7 @@ async function replyToCustomer(
 
   // A human is already handling this customer → stay silent until the ticket is resolved
   if (await hasOpenHandoff(userId, customerId)) {
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, '')
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, '', fromName)
     return ''
   }
   if (HUMAN_ESCALATION_RE.test(text)) {
@@ -322,7 +345,7 @@ async function replyToCustomer(
       })
     } catch { /* ignore */ }
     const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
   }
 
@@ -336,7 +359,7 @@ async function replyToCustomer(
       })
     } catch { /* ignore */ }
     const reply = '好的，退換貨/退款需要專人為您處理，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
   }
 
@@ -345,7 +368,7 @@ async function replyToCustomer(
   if (imageBuffer && imageMimeType && !planFeatures.advancedSupport) {
     void notifyOwnerUpgradeNudge(userId, 'image', text || '（客人傳送圖片）')
     const reply = IMAGE_DOWNGRADE_REPLY
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
   }
 
@@ -368,7 +391,7 @@ async function replyToCustomer(
   } catch { /* 表可能尚未建立 */ }
 
   const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType)
-  void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply)
+  void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
   if (knowledge.bookingFlowEnabled) {
@@ -1358,7 +1381,8 @@ export async function POST(
         else text = '（客人傳送了一張圖片，但無法讀取）'
       }
 
-      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, imgBuf, imgMime)
+      const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
+      const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
       if (reply && token && replyToken) await replyLine(replyToken, reply, token)
       // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
       void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
@@ -1388,10 +1412,13 @@ export async function POST(
     const changes = entry?.changes?.[0]?.value
     const msgs    = changes?.messages ?? []
 
+    const contacts: Array<{ wa_id?: string; profile?: { name?: string } }> = changes?.contacts ?? []
+
     for (const msg of msgs) {
       if (msg.type !== 'text' && msg.type !== 'image') continue
       const to: string = msg.from
       const { history, gapNote } = await loadHistory(userId, to)
+      const fromName = contacts.find(c => c.wa_id === to)?.profile?.name
 
       let text = msg.type === 'text' ? (msg.text?.body ?? '') : ''
       let imgBuf: Buffer | undefined; let imgMime: string | undefined
@@ -1401,7 +1428,7 @@ export async function POST(
         else text = '（客人傳送了一張圖片，但無法讀取）'
       }
 
-      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, gapNote, imgBuf, imgMime)
+      const reply = await replyToCustomer(userId, platform, to, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
       if (reply && token && phoneId && to) await replyWhatsApp(to, reply, phoneId, token)
       await saveHistory(userId, to, withTurn(history, text || '【圖片】', reply))
     }
@@ -1439,7 +1466,7 @@ export async function POST(
           || (Array.isArray(msg.attachments) && msg.attachments.length ? '（客人傳送了一則附件／圖片）' : '')
         if (!text) continue
 
-        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote)
+        const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, undefined)
         if (reply && token) {
           if (isIG) await replyInstagram(customerId, reply, token)
           else await replyMessenger(customerId, reply, token)
@@ -1549,6 +1576,7 @@ export async function POST(
       if (chatId && (text || hasPhoto) && !text.startsWith('/') && !isAdmin) {
         const customerId = String(chatId)
         const { history, gapNote } = await loadHistory(userId, customerId)
+        const fromName = [message.from?.first_name, message.from?.last_name].filter(Boolean).join(' ') || undefined
 
         let imgBuf: Buffer | undefined; let imgMime: string | undefined
         if (hasPhoto && botToken) {
@@ -1559,7 +1587,7 @@ export async function POST(
         }
 
         // 1. AI auto-reply to customer
-        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, gapNote, imgBuf, imgMime)
+        const reply = await replyToCustomer(userId, 'telegram', customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
         if (reply) await replyTelegram(chatId, reply, botToken)
         await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))
 
@@ -1592,7 +1620,7 @@ export async function POST(
       const senderId: string = body?.sender?.id ?? ''
       if (text && senderId) {
         const { history, gapNote } = await loadHistory(userId, senderId)
-        const reply = await replyToCustomer(userId, platform, senderId, knowledge, history, text, gapNote)
+        const reply = await replyToCustomer(userId, platform, senderId, knowledge, history, text, gapNote, undefined)
         if (reply && oaToken) {
           await fetch('https://openapi.zalo.me/v2.0/oa/message', {
             method: 'POST',
@@ -1630,7 +1658,7 @@ export async function POST(
 
     if (text && from && to) {
       const { history, gapNote } = await loadHistory(userId, from)
-      const reply = await replyToCustomer(userId, 'wechat', from, knowledge, history, text, gapNote)
+      const reply = await replyToCustomer(userId, 'wechat', from, knowledge, history, text, gapNote, undefined)
       await saveHistory(userId, from, withTurn(history, text, reply))
       if (!reply) return new NextResponse('success')  // human handling → no passive reply
       const safeReply = reply.replace(/]]>/g, ']]&gt;')  // prevent CDATA breakout
@@ -1659,7 +1687,7 @@ export async function POST(
 
     if (text && fromJid) {
       const { history, gapNote } = await loadHistory(userId, fromJid)
-      const reply = await replyToCustomer(userId, platform, fromJid, knowledge, history, text, gapNote)
+      const reply = await replyToCustomer(userId, platform, fromJid, knowledge, history, text, gapNote, body?.pushName || undefined)
 
       // Reply via Bridge
       const bridgeUrl = process.env.WHATSAPP_BRIDGE_URL?.replace(/\/$/, '')
