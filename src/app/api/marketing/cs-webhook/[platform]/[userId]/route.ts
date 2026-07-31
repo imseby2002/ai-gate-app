@@ -656,11 +656,19 @@ function queryJsonPricing(name: string, config: PricingConfig, message: string):
 
 async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}): Promise<string> {
   const supabase = getServiceClient()
-  const { data: sources } = await supabase
-    .from('cs_data_sources')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('enabled', true)
+  let sources: Array<{ type: string; name: string; config: unknown }> | null = null
+  try {
+    const { data } = await supabase
+      .from('cs_data_sources')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('enabled', true)
+    sources = data
+  } catch (err) {
+    // 資料來源查詢失敗不該讓整個客服回覆失敗，跳過外部資料、照常用知識庫回覆
+    console.error('[cs-webhook] queryDataSources failed:', err)
+    return ''
+  }
 
   if (!sources?.length) return ''
   const results: string[] = []
@@ -1083,13 +1091,16 @@ async function getAIReply(
     const hasImage = !!(imageBuffer && imageMimeType)
     const useSearch = planFeatures.webSearch && SEARCH_RE.test(message)
     const useL3 = !useSearch && planFeatures.advancedSupport && (hasImage || isHighRisk)
+    // 搜尋分支（FreeLLM/CLIProxy/Perplexity）三個來源都失敗時，退回 L2 常規回覆
+    // 而不是直接放棄——L2 一樣讀得到 systemPrompt 裡的知識庫內容，好過丟出制式罐頭回覆。
     const result = useSearch
-      ? await generateCsReplySearch(systemPrompt, messages)
+      ? (await generateCsReplySearch(systemPrompt, messages)) ?? (await generateCsReplyL2(systemPrompt, messages))
       : useL3
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     return (result ? cleanReply(result.reply) : '') || FALLBACK
-  } catch {
+  } catch (err) {
+    console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
   }
 }
