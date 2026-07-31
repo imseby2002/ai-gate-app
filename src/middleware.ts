@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { systemForPath, SUBDOMAIN_SYSTEM, SYSTEM_SUBDOMAIN, isPathAllowedForScope } from '@/lib/systems'
 
 
 export async function middleware(request: NextRequest) {
@@ -45,6 +45,23 @@ export async function middleware(request: NextRequest) {
     const needSubRewrite = !!subHome && rawPath === '/'
     // 後續 auth / guard 一律用「映射後」的路徑判斷
     const pathname = needSubRewrite ? subHome! : rawPath
+
+    // ── 子網域與路徑系統一致性 ──────────────────────────
+    // 功能子網域下打開「別的系統」的頁面（如 cs.im-tourist.com/booking/daily）
+    // 時，redirect 到該系統的正確子網域，讓網址列永遠跟介面一致。
+    // 非 admin 有 client 端 scope 鎖擋著；admin 不受 scope 鎖，特別容易撞到。
+    // 共用路徑（/settings、/team、/api、/login 等）與查不出所屬系統的路徑不動。
+    const subSys = cookieDomain ? SUBDOMAIN_SYSTEM[sub] : undefined
+    if (subSys && !isPathAllowedForScope(subSys, pathname)) {
+      const targetSys = systemForPath(pathname)
+      const targetSub = targetSys && targetSys !== subSys ? SYSTEM_SUBDOMAIN[targetSys] : undefined
+      if (targetSub) {
+        const url = request.nextUrl.clone()
+        url.hostname = `${targetSub}.im-tourist.com`
+        url.port = ''
+        return NextResponse.redirect(url)
+      }
+    }
 
     // Public routes
     const isPublic =
