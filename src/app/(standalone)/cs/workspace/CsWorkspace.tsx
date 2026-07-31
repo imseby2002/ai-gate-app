@@ -3337,7 +3337,12 @@ function Unit12CustomerService({
                       {log.provider}
                     </span>
                     <span className="text-[10px] text-gray-400">{log.latencyMs}ms</span>
-                    <span className="text-[10px] text-gray-400 ml-auto">{new Date(log.ts).toLocaleString(locale)}</span>
+                    <span className="text-[10px] text-gray-400">{new Date(log.ts).toLocaleString(locale)}</span>
+                    <button
+                      onClick={() => setFaqDialog({ open: true, q: log.message, a: log.reply, keywords: '', saving: false })}
+                      className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1">
+                      📚 {t('u12.addToKb')}
+                    </button>
                   </div>
                   <div className="text-xs text-gray-700">
                     <span className="font-medium text-gray-500">{t('u12.customerLabel')}</span>{log.message}
@@ -3497,6 +3502,13 @@ function Unit12CustomerService({
                       <div className="text-xs text-gray-600 border-l-2 border-indigo-200 pl-2">
                         <span className="font-medium text-indigo-500">{t('u12.aiLabel')}</span>{msg.reply.slice(0, 120)}{msg.reply.length > 120 ? '…' : ''}
                       </div>
+                    )}
+                    {msg.reply && (
+                      <button
+                        onClick={() => setFaqDialog({ open: true, q: msg.message, a: msg.reply ?? '', keywords: '', saving: false })}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1">
+                        📚 {t('u12.addToKb')}
+                      </button>
                     )}
                   </div>
                 ))}
