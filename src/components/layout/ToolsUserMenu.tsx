@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, ChevronDown, Settings, Wallet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
 
 export function ToolsUserMenu({ displayName }: { displayName: string }) {
   const router = useRouter()
@@ -15,7 +16,10 @@ export function ToolsUserMenu({ displayName }: { displayName: string }) {
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    // 登出後導回「當下所屬系統」的登入頁，而非通用的全系統選擇頁（比照 Header.tsx）
+    const sub = window.location.hostname.split('.')[0]
+    const sys = SUBDOMAIN_SYSTEM[sub] ?? systemForPath(pathname ?? '')
+    router.push(sys ? `/login/${sys}` : '/login')
   }
 
   return (

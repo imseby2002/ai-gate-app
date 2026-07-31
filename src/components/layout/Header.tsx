@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
 import type { Profile } from '@/types/database'
 
 interface HeaderProps {
@@ -42,7 +43,12 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    // 登出後導回「當下所屬系統」的登入頁（比照 middleware 未登入時的判斷：
+    // 子域名優先、其次依路徑反查），而非一律丟到列出全部系統的通用選擇頁——
+    // 那個頁面比較像管理者用的總覽，一般客戶登出後不該看到。
+    const sub = window.location.hostname.split('.')[0]
+    const sys = SUBDOMAIN_SYSTEM[sub] ?? systemForPath(pathname ?? '')
+    router.push(sys ? `/login/${sys}` : '/login')
   }
 
   const displayName = profile.full_name ?? profile.email ?? ''
