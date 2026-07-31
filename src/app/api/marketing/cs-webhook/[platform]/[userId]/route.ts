@@ -965,8 +965,8 @@ async function getAIReply(
 
   try {
     const langInstruction = knowledge.replyLanguage === 'auto'
-      ? '請使用與客戶相同的語言回覆。'
-      : `請使用 ${knowledge.replyLanguage} 回覆。`
+      ? '無論你自己的規則、知識庫、對話紀錄是用什麼語言寫的，都一律用「客人這一則訊息使用的語言」回覆，逐則判斷、跟著客人切換，絕對不要因為系統規則或知識庫是中文就用中文回覆說英文（或其他語言）的客人。'
+      : `無論你自己的規則、知識庫是用什麼語言寫的，一律用 ${knowledge.replyLanguage} 回覆客人。`
 
     const baseInstructions = knowledge.systemPrompt?.trim()
       ? knowledge.systemPrompt.trim()
@@ -1061,8 +1061,8 @@ async function getAIReply(
     const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
+- 【最優先】${langInstruction}
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
-- ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
