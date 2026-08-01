@@ -1040,7 +1040,8 @@
         "promoDiscount": "{name} 折扣 NT$ {discount}",
         "notes": "備註",
         "cancel": "取消",
-        "saving": "儲存中…"
+        "saving": "儲存中…",
+        "queueRemaining": "還有 {count} 筆待填"
       },
       "csv": {
         "guest": "旅客",

@@ -157,14 +157,24 @@ export default function RoomGridPage() {
   const selectionHasBlocked = selected.some(s => cellState(s.propId, s.date) === 'blocked')
   const selectionHasAvailable = selected.some(s => cellState(s.propId, s.date) === 'available')
 
-  const selectedProps = [...new Set(selected.map(s => s.propId))]
-  const bookingQueryStr = (() => {
-    if (selectedProps.length !== 1) return ''
-    const ds = selected.map(s => s.date).sort()
-    const checkIn = ds[0]
-    const checkOut = addDays(ds[ds.length - 1], 1)  // 退房為最後一晚的隔天
-    return `?property_id=${selectedProps[0]}&check_in=${checkIn}&check_out=${checkOut}`
+  // 依房型分組（同一房型選多天 = 一筆訂單的入住～退房區間；不同房型各自成一筆）。
+  // 只取可訂狀態的格子，已被占用/關閉的選取不會拿去建訂單。
+  const selectedGroups = (() => {
+    const byProp: Record<string, string[]> = {}
+    for (const s of selected) {
+      if (cellState(s.propId, s.date) !== 'available') continue
+      if (!byProp[s.propId]) byProp[s.propId] = []
+      byProp[s.propId].push(s.date)
+    }
+    return Object.entries(byProp).map(([propId, dts]) => {
+      const ds = [...dts].sort()
+      return { property_id: propId, check_in: ds[0], check_out: addDays(ds[ds.length - 1], 1) }
+    })
   })()
+  const bookingQueryStr = selectedGroups.length === 0 ? ''
+    : selectedGroups.length === 1
+      ? `?property_id=${selectedGroups[0].property_id}&check_in=${selectedGroups[0].check_in}&check_out=${selectedGroups[0].check_out}`
+      : `?prefill=${encodeURIComponent(JSON.stringify(selectedGroups))}`
 
   const today = toDateStr(new Date())
   const dayLabels = [0,1,2,3,4,5,6].map(i => t(`roomgrid.day.${i}`))
@@ -290,7 +300,7 @@ export default function RoomGridPage() {
           </span>
 
           <div className="flex gap-2 ml-auto">
-            {selectedProps.length === 1 && selectionHasAvailable && (
+            {selectedGroups.length > 0 && (
               <Link href={`/booking/bookings${bookingQueryStr}`}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
                 <Plus className="h-4 w-4" /> {t('roomgrid.fillBooking')}
