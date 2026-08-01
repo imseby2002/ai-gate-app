@@ -1267,45 +1267,87 @@ async function verifyWeChatSignature(token: string, signature: string, timestamp
 }
 
 // ── Send reply helpers ────────────────────────────────────────────────────────
+
+// AI 回覆裡的圖片網址（例如入住說明圖）原本是純文字連結，客人要點開才看得到。
+// 把網址從文字裡抽出來，各平台改用原生圖片訊息直接顯示縮圖。
+const IMAGE_URL_RE = /(?:\[圖片\]\s*)?(https?:\/\/\S+\.(?:jpg|jpeg|png|gif|webp))/gi
+
+function extractImageUrls(text: string): { cleanText: string; imageUrls: string[] } {
+  const imageUrls: string[] = []
+  const cleanText = text
+    .replace(IMAGE_URL_RE, (_m, url: string) => { imageUrls.push(url); return '' })
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  return { cleanText, imageUrls }
+}
+
 async function replyLine(replyToken: string, text: string, token: string) {
+  const { cleanText, imageUrls } = extractImageUrls(text)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const messages: any[] = []
+  if (cleanText) messages.push({ type: 'text', text: cleanText })
+  for (const url of imageUrls) {
+    if (messages.length >= 5) break  // LINE 一次最多 5 則訊息
+    messages.push({ type: 'image', originalContentUrl: url, previewImageUrl: url })
+  }
+  if (!messages.length) return
   await fetch('https://api.line.me/v2/bot/message/reply', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ replyToken, messages: [{ type: 'text', text }] }),
+    body: JSON.stringify({ replyToken, messages }),
   })
 }
 
 async function replyWhatsApp(to: string, text: string, phoneId: string, token: string) {
-  await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+  const { cleanText, imageUrls } = extractImageUrls(text)
+  const send = (body: Record<string, unknown>) => fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }),
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, ...body }),
   })
+  if (cleanText) await send({ type: 'text', text: { body: cleanText } })
+  for (const url of imageUrls) await send({ type: 'image', image: { link: url } })
 }
 
 async function replyTelegram(chatId: string | number, text: string, botToken: string) {
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  })
+  const { cleanText, imageUrls } = extractImageUrls(text)
+  if (cleanText) {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: cleanText }),
+    })
+  }
+  for (const url of imageUrls) {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, photo: url }),
+    })
+  }
 }
 
 // ── FB Messenger / Instagram Direct（同一套 Meta Send API，需在 24h 客服窗口內）──
 async function replyMessenger(recipientId: string, text: string, pageToken: string) {
-  await fetch('https://graph.facebook.com/v19.0/me/messages', {
+  const { cleanText, imageUrls } = extractImageUrls(text)
+  const send = (message: Record<string, unknown>) => fetch('https://graph.facebook.com/v19.0/me/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pageToken}` },
-    body: JSON.stringify({ recipient: { id: recipientId }, messaging_type: 'RESPONSE', message: { text } }),
+    body: JSON.stringify({ recipient: { id: recipientId }, messaging_type: 'RESPONSE', message }),
   })
+  if (cleanText) await send({ text: cleanText })
+  for (const url of imageUrls) await send({ attachment: { type: 'image', payload: { url, is_reusable: true } } })
 }
 
 async function replyInstagram(recipientId: string, text: string, igToken: string) {
-  await fetch('https://graph.facebook.com/v19.0/me/messages', {
+  const { cleanText, imageUrls } = extractImageUrls(text)
+  const send = (message: Record<string, unknown>) => fetch('https://graph.facebook.com/v19.0/me/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${igToken}` },
-    body: JSON.stringify({ recipient: { id: recipientId }, message: { text } }),
+    body: JSON.stringify({ recipient: { id: recipientId }, message }),
   })
+  if (cleanText) await send({ text: cleanText })
+  for (const url of imageUrls) await send({ attachment: { type: 'image', payload: { url, is_reusable: true } } })
 }
 
 export async function POST(
