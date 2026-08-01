@@ -23,6 +23,14 @@ function addDays(iso: string, n: number) {
   return d.toLocaleDateString('sv-SE')
 }
 
+const EMPTY_FORM = {
+  property_id: '', guest_name: '', guest_email: '', guest_phone: '',
+  check_in: '', check_out: '', num_guests: 1,
+  total_price: '', currency: 'TWD', status: 'confirmed',
+  platform: 'direct', notes: '', special_requests: '',
+  extras: { breakfast: false, services: [] as string[] },
+}
+
 const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-700',
   pending:   'bg-amber-100 text-amber-700',
@@ -62,13 +70,9 @@ export default function BookingsPage() {
   const [adding, setAdding]           = useState(false)
   const [sortKey, setSortKey]         = useState<'check_in' | 'created_at'>('check_in')
   const [sortDesc, setSortDesc]       = useState(true)
-  const [form, setForm] = useState({
-    property_id: '', guest_name: '', guest_email: '', guest_phone: '',
-    check_in: '', check_out: '', num_guests: 1,
-    total_price: '', currency: 'TWD', status: 'confirmed',
-    platform: 'direct', notes: '', special_requests: '',
-    extras: { breakfast: false, services: [] as string[] },
-  })
+  const [form, setForm] = useState(EMPTY_FORM)
+  // 空房表一次選多個房源時，逐筆排隊預填新增視窗：存完一筆自動帶出下一筆的房型／日期
+  const [prefillQueue, setPrefillQueue] = useState<Array<{ property_id: string; check_in: string; check_out: string }>>([])
   const [saving, setSaving] = useState(false)
   const [sendingNotif, setSendingNotif] = useState<string | null>(null)
   const [promoInput, setPromoInput]   = useState('')
@@ -101,11 +105,25 @@ export default function BookingsPage() {
 
   // 從空房表/日曆/每日入住帶入的預填參數 → 自動開啟新增視窗並填好房型與日期。
   // room_name（每日入住只知道房型名稱，不是 id）需等 properties 載入後才能解析成 property_id；
+  // prefill 是空房表一次選多個房源時帶來的 JSON 陣列，逐筆排隊預填（見 prefillQueue）。
   // 用 ref 確保只消費一次，並把參數從網址清掉，避免之後 properties 陣列因篩選重新整理
   // （新的陣列參照）而重新觸發、把使用者已經關掉的新增視窗又跳出來。
   useEffect(() => {
     if (prefillConsumed.current) return
     const sp = new URLSearchParams(window.location.search)
+    const prefillParam = sp.get('prefill')
+    if (prefillParam) {
+      let items: Array<{ property_id: string; check_in: string; check_out: string }> = []
+      try { items = JSON.parse(prefillParam) } catch { items = [] }
+      if (items.length === 0) return
+      prefillConsumed.current = true
+      const [first, ...rest] = items
+      setForm(f => ({ ...f, property_id: first.property_id, check_in: first.check_in, check_out: first.check_out }))
+      setPrefillQueue(rest)
+      setAdding(true)
+      router.replace(window.location.pathname)
+      return
+    }
     const pid = sp.get('property_id')
     const roomName = sp.get('room_name')
     const dateParam = sp.get('date')
@@ -217,6 +235,25 @@ export default function BookingsPage() {
     setPromoChecking(false)
   }
 
+  // 存完一筆後：排隊裡還有下一個房源就直接帶出來繼續填（視窗不關），沒有就整個關掉。
+  function advanceQueueOrClose() {
+    setPromoInput(''); setPromoResult(null)
+    if (prefillQueue.length > 0) {
+      const [next, ...rest] = prefillQueue
+      setPrefillQueue(rest)
+      setForm({ ...EMPTY_FORM, property_id: next.property_id, check_in: next.check_in, check_out: next.check_out })
+    } else {
+      setAdding(false)
+      setForm(EMPTY_FORM)
+    }
+  }
+
+  // 使用者主動取消（點背景／取消鍵）：整個排隊都放棄，不繼續帶出下一筆。
+  function cancelAdding() {
+    setPrefillQueue([])
+    setAdding(false)
+  }
+
   async function save() {
     setSaving(true)
     try {
@@ -229,10 +266,8 @@ export default function BookingsPage() {
       const d = await res.json()
       if (d.booking) {
         setBookings(prev => [d.booking, ...prev])
-        setAdding(false)
-        setPromoInput(''); setPromoResult(null)
-        setForm({ property_id: '', guest_name: '', guest_email: '', guest_phone: '', check_in: '', check_out: '', num_guests: 1, total_price: '', currency: 'TWD', status: 'confirmed', platform: 'direct', notes: '', special_requests: '', extras: { breakfast: false, services: [] } })
         notify(true, t('bookings.toast.added'))
+        advanceQueueOrClose()
       } else notify(false, d.error ?? t('bookings.toast.addFailed'))
     } finally { setSaving(false) }
   }
@@ -449,9 +484,16 @@ export default function BookingsPage() {
       {/* Add Modal */}
       {adding && createPortal(
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
-          onClick={e => { if (e.target === e.currentTarget) setAdding(false) }}>
+          onClick={e => { if (e.target === e.currentTarget) cancelAdding() }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto p-5 space-y-3">
-            <h3 className="font-bold text-gray-900">{t('bookings.addModalTitle')}</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-bold text-gray-900">{t('bookings.addModalTitle')}</h3>
+              {prefillQueue.length > 0 && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium shrink-0">
+                  {t('bookings.form.queueRemaining', { count: prefillQueue.length })}
+                </span>
+              )}
+            </div>
             {[
               { label: t('bookings.form.guestName'), key: 'guest_name', placeholder: t('bookings.form.guestNamePlaceholder') },
               { label: t('bookings.form.phone'),     key: 'guest_phone', placeholder: '0912-345-678' },
@@ -577,7 +619,7 @@ export default function BookingsPage() {
                 rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setAdding(false)} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
+              <button onClick={cancelAdding} className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
               <button onClick={save} disabled={!form.guest_name || !form.check_in || !form.check_out || saving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
                 {saving ? t('bookings.form.saving') : t('bookings.add')}

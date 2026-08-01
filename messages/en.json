@@ -1040,7 +1040,8 @@
         "promoDiscount": "{name} discount NT$ {discount}",
         "notes": "Notes",
         "cancel": "Cancel",
-        "saving": "Saving…"
+        "saving": "Saving…",
+        "queueRemaining": "{count} more to fill in"
       },
       "csv": {
         "guest": "Guest",

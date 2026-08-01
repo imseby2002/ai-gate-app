@@ -1040,7 +1040,8 @@
         "promoDiscount": "{name} giảm NT$ {discount}",
         "notes": "Ghi chú",
         "cancel": "Hủy",
-        "saving": "Đang lưu…"
+        "saving": "Đang lưu…",
+        "queueRemaining": "Còn {count} mục cần điền"
       },
       "csv": {
         "guest": "Khách",
