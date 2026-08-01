@@ -60,11 +60,11 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
     const lines = [
       `【入住資訊查詢結果】`,
       `找到訂單「${orderNum}」的今日入住資訊：`,
-      rec.guest_name ? `旅客姓名：${rec.guest_name}` : null,
-      rec.room_name  ? `房間：${rec.room_name}` : null,
-      rec.room_password ? `房門密碼：${rec.room_password}` : `房門密碼：（尚未設定，請聯繫工作人員）`,
-      rec.gate_password ? `大門密碼：${rec.gate_password}` : `大門密碼：（尚未設定，請聯繫工作人員）`,
-      `（以上為系統即時資料，請直接引用，禁止修改或捏造）`,
+      rec.guest_name ? `・旅客姓名：${rec.guest_name}` : null,
+      `・房間：${rec.room_name || '（尚未設定，請聯繫工作人員）'}`,
+      `・房門密碼：${rec.room_password || '（尚未設定，請聯繫工作人員）'}`,
+      `・大門密碼：${rec.gate_password || '（尚未設定，請聯繫工作人員）'}`,
+      `（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`,
     ].filter(Boolean).join('\n')
     return lines
   }
@@ -87,14 +87,14 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
   const lines: string[] = [
     `【入住資訊查詢結果】`,
     `找到訂單「${orderNum}」：`,
-    booking.guest_name ? `旅客姓名：${booking.guest_name}` : null,
-    `入住：${booking.check_in}　退房：${booking.check_out}`,
+    booking.guest_name ? `・旅客姓名：${booking.guest_name}` : null,
+    `・入住：${booking.check_in}　退房：${booking.check_out}`,
   ].filter(Boolean) as string[]
 
   if (booking.property_id) {
     const { data: prop } = await supabase.from('properties').select('name').eq('id', booking.property_id).maybeSingle()
     if (prop?.name) {
-      lines.push(`房間：${prop.name}`)
+      lines.push(`・房間：${prop.name}`)
       const { data: daily } = await supabase
         .from('bnb_daily_records')
         .select('room_password, gate_password')
@@ -102,13 +102,15 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
         .eq('date', todayDate)
         .eq('room_name', prop.name)
         .maybeSingle()
-      lines.push(daily?.room_password ? `房門密碼：${daily.room_password}` : `房門密碼：（尚未設定，請聯繫工作人員）`)
-      lines.push(daily?.gate_password ? `大門密碼：${daily.gate_password}` : `大門密碼：（尚未設定，請聯繫工作人員）`)
+      lines.push(`・房門密碼：${daily?.room_password || '（尚未設定，請聯繫工作人員）'}`)
+      lines.push(`・大門密碼：${daily?.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+    } else {
+      lines.push(`・房間密碼：（尚未設定，請聯繫工作人員確認）`)
     }
   } else {
-    lines.push(`（房間密碼請聯繫工作人員確認，訂單尚未對應房型）`)
+    lines.push(`・房間密碼：（訂單尚未對應房型，請聯繫工作人員確認）`)
   }
 
-  lines.push(`（以上為系統即時資料，請直接引用，禁止修改或捏造）`)
+  lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
   return lines.join('\n')
 }
