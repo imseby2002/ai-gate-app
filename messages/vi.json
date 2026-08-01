@@ -1161,6 +1161,7 @@
       "orderTag": "Đơn",
       "gateShared": "Dùng chung toàn nhà; áp dụng cho mọi phòng hôm nay và các ngày sau",
       "openOrder": "Xem chi tiết đơn",
+      "createOrder": "Tạo đơn",
       "install": "Cài lên điện thoại",
       "installHint": "iPhone: chạm nút Chia sẻ trên trình duyệt rồi chọn \"Thêm vào MH chính\" để mở như một ứng dụng.",
       "hint": "Nhấn vào ô bất kỳ để sửa · Mật khẩu cổng áp dụng cho tất cả phòng trong ngày và về sau · Mật khẩu phòng áp dụng cho phòng đó về sau · (sửa một ngày sẽ cập nhật từ ngày đó) · \"Đơn\" màu xanh = nhập từ hệ thống đặt phòng · Mật khẩu ẩn theo mặc định",

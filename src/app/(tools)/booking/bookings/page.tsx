@@ -1,5 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { createPortal } from 'react-dom'
 import { Plus, Search, Filter, Download, ChevronDown, ChevronUp, Send, Trash2 } from 'lucide-react'
@@ -16,6 +17,12 @@ interface Property { id: string; name: string }
 interface AddonService { id: string; name: string; enabled: boolean; price: number; unit: string; note: string }
 interface ProfileExtras { breakfast: { type: string; price_per_person: number }; addon_services: AddonService[] }
 
+function addDays(iso: string, n: number) {
+  const d = new Date(iso)
+  d.setDate(d.getDate() + n)
+  return d.toLocaleDateString('sv-SE')
+}
+
 const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-700',
   pending:   'bg-amber-100 text-amber-700',
@@ -27,6 +34,8 @@ const STATUS_COLORS: Record<string, string> = {
 export default function BookingsPage() {
   const t = useTranslations('Booking')
   const locale = useLocale()
+  const router = useRouter()
+  const prefillConsumed = useRef(false)
   const STATUS_MAP: Record<string, { label: string; color: string }> = {
     confirmed: { label: t('status.confirmed'), color: STATUS_COLORS.confirmed },
     pending:   { label: t('status.pending'),   color: STATUS_COLORS.pending },
@@ -90,15 +99,31 @@ export default function BookingsPage() {
     }).finally(() => setLoading(false))
   }, [filterStatus, filterProp, filterFrom, filterTo])
 
-  // 從空房表/日曆帶入的預填參數 → 自動開啟新增視窗並填好房型與日期
+  // 從空房表/日曆/每日入住帶入的預填參數 → 自動開啟新增視窗並填好房型與日期。
+  // room_name（每日入住只知道房型名稱，不是 id）需等 properties 載入後才能解析成 property_id；
+  // 用 ref 確保只消費一次，並把參數從網址清掉，避免之後 properties 陣列因篩選重新整理
+  // （新的陣列參照）而重新觸發、把使用者已經關掉的新增視窗又跳出來。
   useEffect(() => {
+    if (prefillConsumed.current) return
     const sp = new URLSearchParams(window.location.search)
     const pid = sp.get('property_id')
-    if (pid) {
-      setForm(f => ({ ...f, property_id: pid, check_in: sp.get('check_in') ?? '', check_out: sp.get('check_out') ?? '' }))
-      setAdding(true)
-    }
-  }, [])
+    const roomName = sp.get('room_name')
+    const dateParam = sp.get('date')
+    const guestName = sp.get('guest_name')
+    if (!pid && !roomName) return
+    if (roomName && properties.length === 0) return // 等 properties 載入
+    prefillConsumed.current = true
+    const resolvedPid = pid || (roomName ? properties.find(p => p.name === roomName)?.id ?? '' : '')
+    setForm(f => ({
+      ...f,
+      property_id: resolvedPid,
+      check_in: sp.get('check_in') ?? dateParam ?? '',
+      check_out: sp.get('check_out') ?? (dateParam ? addDays(dateParam, 1) : ''),
+      guest_name: guestName ?? f.guest_name,
+    }))
+    setAdding(true)
+    router.replace(window.location.pathname)
+  }, [properties, router])
 
   const filtered = bookings.filter(b => {
     if (filterPlatform && b.platform !== filterPlatform) return false

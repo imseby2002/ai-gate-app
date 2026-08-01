@@ -177,9 +177,13 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
       {row.source === 'traiwan' && col.key === 'order_number' && raw && !platformLabel(row.platform) && (
         <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
       )}
-      {col.key === 'order_number' && row.booking_id && (
-        <Link href={`/booking/bookings/${row.booking_id}`} onClick={e => e.stopPropagation()}
-          title={t('daily.openOrder')}
+      {col.key === 'order_number' && (
+        <Link
+          href={row.booking_id
+            ? `/booking/bookings/${row.booking_id}`
+            : `/booking/bookings?room_name=${encodeURIComponent(row.room_name)}&date=${row.date}${row.guest_name ? `&guest_name=${encodeURIComponent(row.guest_name)}` : ''}`}
+          onClick={e => e.stopPropagation()}
+          title={row.booking_id ? t('daily.openOrder') : t('daily.createOrder')}
           className="ml-1 text-gray-400 hover:text-indigo-600 shrink-0">
           <ExternalLink className="h-3.5 w-3.5" />
         </Link>
