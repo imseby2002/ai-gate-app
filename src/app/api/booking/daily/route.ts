@@ -228,6 +228,70 @@ export async function PATCH(req: NextRequest) {
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 訂單相關欄位（旅客／房價／平台）在每日入住手動修正時，同步寫回對應的 bookings，
+  // 讓「訂單管理」與「日曆」畫面顯示一致。
+  const BOOKING_FIELDS = ['guest_name', 'price_total', 'platform'] as const
+  const changedKeys = BOOKING_FIELDS.filter(f => f in updates)
+  if (changedKeys.length > 0 && data) {
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (changedKeys.includes('guest_name')) patch.guest_name = data.guest_name ?? null
+    if (changedKeys.includes('price_total')) patch.total_price = data.price_total ?? null
+    if (changedKeys.includes('platform')) patch.platform = data.platform ?? 'manual'
+
+    if (data.order_number) {
+      // 有單號：唯一可靠對應，直接更新該筆訂單
+      const { data: matched } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('user_id', ctx.ownerId)
+        .eq('platform_booking_id', data.order_number)
+        .maybeSingle()
+      if (matched) {
+        await supabase.from('bookings').update(patch).eq('id', matched.id).eq('user_id', ctx.ownerId)
+      }
+    } else {
+      // 無單號：只有「房型+日期」剛好唯一對應一筆訂單時才連動，
+      // 避免房型下有多間房、同天多筆訂單時誤改到別人的資料
+      const { data: prop } = await supabase
+        .from('properties')
+        .select('id')
+        .eq('user_id', ctx.ownerId)
+        .eq('name', data.room_name)
+        .maybeSingle()
+
+      if (prop) {
+        const { data: candidates } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('user_id', ctx.ownerId)
+          .eq('property_id', prop.id)
+          .eq('check_in', data.date)
+          .limit(2)
+
+        if (candidates && candidates.length === 1) {
+          await supabase.from('bookings').update(patch).eq('id', candidates[0].id).eq('user_id', ctx.ownerId)
+        } else if (!candidates?.length && (data.guest_name || data.price_total != null)) {
+          const checkOut = new Date(data.date)
+          checkOut.setDate(checkOut.getDate() + 1)
+          await supabase.from('bookings').insert({
+            user_id: ctx.ownerId,
+            property_id: prop.id,
+            platform: data.platform ?? 'manual',
+            guest_name: data.guest_name ?? null,
+            check_in: data.date,
+            check_out: checkOut.toLocaleDateString('sv-SE'),
+            num_guests: 1,
+            total_price: data.price_total ?? null,
+            currency: 'TWD',
+            status: 'confirmed',
+            source: 'manual',
+          })
+        }
+      }
+    }
+  }
+
   return NextResponse.json(data)
 }
 
