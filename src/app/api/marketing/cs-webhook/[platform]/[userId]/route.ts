@@ -1059,9 +1059,12 @@ async function getAIReply(
       if (orderNum) {
         try {
           if (!passwordFromDatasource) {
-            // 訂單系統路徑：查 bnb_daily_records/bookings（lib 內已做入住時間 gating）
+            // 訂單系統路徑：查 bnb_daily_records/bookings（lib 內已做入住時間 gating）。
+            // 無論查無資料的原因是什麼（沒開訂房整合方案／訂單真的不存在），一律要明講
+            // 「查無資料、禁止捏造」，絕對不能讓 AI 在沒有任何資料時自己編一組密碼給客人。
             const bnb = await queryBnbCheckin(getServiceClient(), userId, orderNum)
-            if (bnb) externalDataSection = `\n\n${bnb}${externalDataSection}`
+              ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n（嚴禁提供、推測或捏造任何密碼、房號；請詢問旅客訂房姓名與訂房平台，轉交真人客服協助查詢）`
+            externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
             // 資料來源密碼表路徑：未到入住時間加最高優先禁止指令
             const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
@@ -1105,6 +1108,7 @@ async function getAIReply(
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
+- 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料並轉真人客服
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
 
     // Build user message — multimodal if image present

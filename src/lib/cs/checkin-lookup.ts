@@ -77,7 +77,11 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
     .eq('platform_booking_id', orderNum)
     .maybeSingle()
 
-  if (!booking) return null
+  // 系統確實有串接訂房功能、也真的查過了，但查無此訂單——一定要明講「查無資料」，
+  // 絕對不能讓呼叫端什麼都不回，逼 AI 自己編一組密碼出來給客人。
+  if (!booking) {
+    return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單。\n（嚴禁提供、推測或捏造任何密碼、房號；請詢問旅客訂房姓名與訂房平台，轉交真人客服協助查詢）`
+  }
   if (beforeCheckin) return notYetMsg('')
 
   const lines: string[] = [
