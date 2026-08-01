@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       { user_id: ctx.ownerId, customer_id: to, history: history.slice(-20), updated_at: now },
       { onConflict: 'user_id,customer_id' }
     )
-  } catch { /* 對話表可能尚未建立，不中斷 */ }
+  } catch (err) { console.error('[cs-send] cs_conversations 更新失敗:', err) }
 
   // 4. 自動接管：確保有 open 的人工客服工單（webhook 會據此讓 AI 靜音）
   try {

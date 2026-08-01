@@ -125,12 +125,15 @@ const CONVERSATION_GAP_HOURS = 3
 
 async function loadHistory(userId: string, customerId: string): Promise<{ history: HistoryMsg[]; gapNote: string }> {
   const supabase = getServiceClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('cs_conversations')
     .select('history, updated_at')
     .eq('user_id', userId)
     .eq('customer_id', customerId)
     .single()
+  // PGRST116 = no row found，正常情況（新客人）；其他錯誤代表對話記憶讀取失敗，
+  // 若靜默吞掉，AI 會誤以為每次都是全新對話、完全沒有上下文，務必記錄。
+  if (error && error.code !== 'PGRST116') console.error('[cs-webhook] loadHistory failed:', error)
   const history = (data?.history as HistoryMsg[]) ?? []
 
   let gapNote = ''
@@ -146,12 +149,26 @@ async function loadHistory(userId: string, customerId: string): Promise<{ histor
 
 async function saveHistory(userId: string, customerId: string, history: HistoryMsg[]) {
   const supabase = getServiceClient()
-  await supabase
+  const { error } = await supabase
     .from('cs_conversations')
     .upsert(
       { user_id: userId, customer_id: customerId, history: history.slice(-20), updated_at: new Date().toISOString() },
       { onConflict: 'user_id,customer_id' }
     )
+  if (error) console.error('[cs-webhook] saveHistory failed:', error)
+}
+
+// 平台 webhook（尤其 LINE）在我們回應太慢或網路重試時會重送同一個事件；沒有防重會
+// 讓同一句客人訊息被回覆兩次（甚至兩次答案還不一樣，因為 LLM 生成本身非決定性）。
+// 用 (platform, event_id) 當唯一鍵搶插入：搶到的人繼續處理，搶不到（重複）就跳過。
+async function isDuplicateEvent(platform: string, eventId: string): Promise<boolean> {
+  if (!eventId) return false
+  const { error } = await getServiceClient().from('cs_processed_events').insert({ platform, event_id: eventId })
+  if (!error) return false
+  if (error.code === '23505') return true  // 違反唯一鍵 → 確定是重複事件
+  // 其他錯誤（網路、表格問題）一律當作沒重複，寧可偶爾重覆回覆，也不能因此漏回客人的訊息
+  console.error('[cs-webhook] isDuplicateEvent insert failed:', error)
+  return false
 }
 
 // ── Persist a customer turn to cs_messages (powers the dashboard metrics) ─────
@@ -1329,6 +1346,9 @@ export async function POST(
       if (event.type !== 'message') continue
       const msgType: string = event.message?.type
       if (msgType !== 'text' && msgType !== 'image') continue
+
+      // LINE 逾時或網路重試會重送同一個事件，沒有防重會讓客人收到兩則答案（甚至不一樣）
+      if (await isDuplicateEvent('line', event.message?.id)) continue
 
       const replyToken: string = event.replyToken
       const customerId: string = event.source?.userId ?? event.source?.groupId ?? 'unknown'
