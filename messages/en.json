@@ -1161,6 +1161,7 @@
       "orderTag": "Booking",
       "gateShared": "Shared for the whole building; applies to all rooms today and carries forward",
       "openOrder": "View booking details",
+      "createOrder": "Create booking",
       "install": "Install on phone",
       "installHint": "iPhone: tap the browser Share button, then \"Add to Home Screen\" to open Daily Check-in like an app.",
       "hint": "Click any cell to edit · Gate password applies to all rooms that day and forward · Room password applies to that room forward · (editing a day updates from that day) · Blue \"Booking\" = imported from booking system · Passwords hidden by default",
