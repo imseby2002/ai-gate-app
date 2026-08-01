@@ -1160,6 +1160,9 @@
       "clickToFill": "Click to fill",
       "autoTag": "Auto",
       "orderTag": "Booking",
+      "editPlatform": "Click to change platform",
+      "setPlatform": "Set platform",
+      "platformNone": "None",
       "gateShared": "Shared for the whole building; applies to all rooms today and carries forward",
       "openOrder": "View booking details",
       "createOrder": "Create booking",
@@ -1183,6 +1186,7 @@
     "properties": {
       "title": "Room Types",
       "subtitle": "Set up rooms and platform aliases for automatic matching during email sync",
+      "dragToReorder": "Drag to reorder",
       "add": "Add Room Type",
       "empty": "No room types created yet",
       "active": "Active",

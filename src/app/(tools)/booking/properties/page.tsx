@@ -2,13 +2,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { createPortal } from 'react-dom'
-import { Plus, Edit2, Trash2, BedDouble, X, ImagePlus, Loader2 } from 'lucide-react'
+import { Plus, Edit2, Trash2, BedDouble, X, ImagePlus, Loader2, GripVertical } from 'lucide-react'
 
 interface Property {
   id: string; name: string; description: string
   room_count: number; max_guests: number; base_price: number | null; extra_guest_fee: number | null
   currency: string; status: string; name_aliases: string[]
-  amenities: string[]; images: string[]
+  amenities: string[]; images: string[]; sort_order: number
 }
 
 const EMPTY_FORM = {
@@ -46,6 +46,7 @@ export default function PropertiesPage() {
   const [modalTab, setModalTab] = useState<ModalTab>('basic')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [dragId, setDragId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/booking/properties').then(r => r.json())
@@ -150,6 +151,31 @@ export default function PropertiesPage() {
     } finally { setSaving(false) }
   }
 
+  async function persistOrder(list: Property[]) {
+    await Promise.all(list.map((p, i) =>
+      p.sort_order === i ? null : fetch('/api/booking/properties', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, sort_order: i }),
+      })
+    ))
+  }
+
+  function handleDrop(targetId: string) {
+    const fromId = dragId
+    setDragId(null)
+    if (!fromId || fromId === targetId) return
+    setProperties(prev => {
+      const list = [...prev]
+      const fromIdx = list.findIndex(p => p.id === fromId)
+      const toIdx = list.findIndex(p => p.id === targetId)
+      if (fromIdx === -1 || toIdx === -1) return prev
+      const [moved] = list.splice(fromIdx, 1)
+      list.splice(toIdx, 0, moved)
+      persistOrder(list)
+      return list.map((p, i) => ({ ...p, sort_order: i }))
+    })
+  }
+
   async function del(id: string) {
     if (!confirm(t('properties.deleteConfirm'))) return
     await fetch('/api/booking/properties', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
@@ -186,7 +212,16 @@ export default function PropertiesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {properties.map(p => (
-            <div key={p.id} className="bg-white border rounded-xl p-4 flex items-start gap-4">
+            <div key={p.id}
+              draggable
+              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragId(p.id) }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); handleDrop(p.id) }}
+              onDragEnd={() => setDragId(null)}
+              className={`bg-white border rounded-xl p-4 flex items-start gap-4 transition-opacity ${dragId === p.id ? 'opacity-40' : ''}`}>
+              <div className="pt-1 -ml-1 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0" title={t('properties.dragToReorder')}>
+                <GripVertical className="h-4 w-4" />
+              </div>
               {(p.images ?? []).length > 0 ? (
                 <img src={p.images[0]} alt={p.name}
                   className="w-16 h-16 rounded-xl object-cover shrink-0" />
