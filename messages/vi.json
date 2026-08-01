@@ -1160,6 +1160,9 @@
       "clickToFill": "Nhấn để nhập",
       "autoTag": "Tự động",
       "orderTag": "Đơn",
+      "editPlatform": "Nhấn để đổi nền tảng",
+      "setPlatform": "Đặt nền tảng",
+      "platformNone": "Không",
       "gateShared": "Dùng chung toàn nhà; áp dụng cho mọi phòng hôm nay và các ngày sau",
       "openOrder": "Xem chi tiết đơn",
       "createOrder": "Tạo đơn",
@@ -1183,6 +1186,7 @@
     "properties": {
       "title": "Quản lý loại phòng",
       "subtitle": "Thiết lập phòng và bí danh nền tảng để tự động khớp khi đồng bộ email",
+      "dragToReorder": "Kéo để sắp xếp",
       "add": "Thêm loại phòng",
       "empty": "Chưa tạo loại phòng nào",
       "active": "Đang mở",

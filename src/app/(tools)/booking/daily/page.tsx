@@ -58,7 +58,7 @@ const COLS: { key: string; labelKey: string; kind: ColKind; sensitive?: boolean 
   { key: 'paid',          labelKey: 'daily.cols.paid',          kind: 'paid' },
 ]
 
-const GRID_COLS = 'minmax(70px,1fr) minmax(88px,1fr) minmax(120px,1.4fr) minmax(80px,1fr) minmax(78px,0.9fr) minmax(70px,0.9fr) minmax(70px,0.9fr) minmax(52px,0.6fr) 2rem'
+const GRID_COLS = 'minmax(70px,1fr) minmax(88px,1fr) minmax(150px,1.7fr) minmax(80px,1fr) minmax(78px,0.9fr) minmax(70px,0.9fr) minmax(70px,0.9fr) minmax(52px,0.6fr) 2rem'
 
 const COL: Record<string, typeof COLS[number]> = Object.fromEntries(COLS.map(c => [c.key, c]))
 
@@ -107,9 +107,13 @@ interface CellProps {
   onCancelEdit: () => void
   onEditValChange: (v: string) => void
   onTogglePaid: (row: DailyRecord) => void
+  editingPlatform: string | null
+  onStartEditPlatform: (id: string) => void
+  onCommitPlatform: (id: string, val: string) => void
+  onCancelEditPlatform: () => void
 }
 
-function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange, onTogglePaid }: CellProps) {
+function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange, onTogglePaid, editingPlatform, onStartEditPlatform, onCommitPlatform, onCancelEditPlatform }: CellProps) {
   const t = useTranslations('Booking')
 
   // 尾款 = 訂房價格 - 訂金（即時計算，不可編輯）
@@ -162,20 +166,47 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
 
   const display = col.kind === 'num' ? fmtMoney(toNum(raw)) : (raw as string | null)
 
+  const isEditingPlatform = col.key === 'order_number' && editingPlatform === row.id
+
   return (
     <div
       onClick={() => onStartEdit(row.id, field, raw as string | number | null)}
       className={`min-h-[32px] px-2 py-1 rounded cursor-pointer text-sm transition-colors
-        hover:bg-indigo-50 group flex items-center gap-1
+        hover:bg-indigo-50 group flex items-center gap-1 overflow-hidden
         ${!display ? 'text-gray-300' : 'text-gray-800'}
         ${saving === row.id ? 'opacity-60' : ''}`}
     >
-      {masked ? '••••••' : (display || t('daily.clickToFill'))}
-      {col.key === 'order_number' && raw && platformLabel(row.platform) && (
-        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1">{platformLabel(row.platform)}</span>
-      )}
-      {row.source === 'traiwan' && col.key === 'order_number' && raw && !platformLabel(row.platform) && (
-        <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1">{t('daily.autoTag')}</span>
+      <span className="min-w-0 truncate">{masked ? '••••••' : (display || t('daily.clickToFill'))}</span>
+      {col.key === 'order_number' && raw && (
+        isEditingPlatform ? (
+          <select
+            autoFocus
+            value={row.platform ?? ''}
+            onClick={e => e.stopPropagation()}
+            onChange={e => onCommitPlatform(row.id, e.target.value)}
+            onBlur={onCancelEditPlatform}
+            className="text-[10px] border border-indigo-300 rounded px-0.5 py-0 ml-1 shrink-0 max-w-[68px] focus:outline-none"
+          >
+            <option value="">{t('daily.platformNone')}</option>
+            {Object.entries(PLATFORM_LABEL).map(([k, label]) => (
+              <option key={k} value={k}>{label}</option>
+            ))}
+          </select>
+        ) : (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onStartEditPlatform(row.id) }}
+            title={t('daily.editPlatform')}
+            className="shrink-0">
+            {platformLabel(row.platform) ? (
+              <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded ml-1 hover:bg-blue-200">{platformLabel(row.platform)}</span>
+            ) : row.source === 'traiwan' ? (
+              <span className="text-[10px] bg-green-100 text-green-600 px-1 rounded ml-1 hover:bg-green-200">{t('daily.autoTag')}</span>
+            ) : (
+              <span className="text-[10px] bg-gray-100 text-gray-400 px-1 rounded ml-1 hover:bg-gray-200">{t('daily.setPlatform')}</span>
+            )}
+          </button>
+        )
       )}
       {col.key === 'order_number' && (
         <Link
@@ -202,6 +233,7 @@ export default function DailyPage() {
   const [showPasswords, setShowPasswords] = useState(false)
   const [editing, setEditing] = useState<{ id: string; field: EditableField } | null>(null)
   const [editVal, setEditVal] = useState('')
+  const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
   const [gatePw, setGatePw] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -294,6 +326,24 @@ export default function DailyPage() {
     }
   }
 
+  async function commitPlatform(id: string, val: string) {
+    setEditingPlatform(null)
+    const newVal = val || null
+    const original = rows.find(r => r.id === id)
+    if (!original || original.platform === newVal) return
+    setRows(prev => prev.map(r => r.id === id ? { ...r, platform: newVal } : r))
+    setSaving(id)
+    try {
+      await fetch('/api/booking/daily', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, platform: newVal }),
+      })
+    } finally {
+      setSaving(null)
+    }
+  }
+
   async function togglePaid(row: DailyRecord) {
     const newVal = !row.paid
     setRows(prev => prev.map(r => r.id === row.id ? { ...r, paid: newVal } : r))
@@ -313,7 +363,9 @@ export default function DailyPage() {
     <Cell row={row} col={COL[key]} editing={editing} editVal={editVal}
       showPasswords={showPasswords} saving={saving} inputRef={inputRef}
       onStartEdit={startEdit} onCommitEdit={commitEdit}
-      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid} />
+      onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid}
+      editingPlatform={editingPlatform} onStartEditPlatform={setEditingPlatform}
+      onCommitPlatform={commitPlatform} onCancelEditPlatform={() => setEditingPlatform(null)} />
   )
 
   async function deleteRow(id: string) {
@@ -491,6 +543,10 @@ export default function DailyPage() {
                     onCancelEdit={() => setEditing(null)}
                     onEditValChange={setEditVal}
                     onTogglePaid={togglePaid}
+                    editingPlatform={editingPlatform}
+                    onStartEditPlatform={setEditingPlatform}
+                    onCommitPlatform={commitPlatform}
+                    onCancelEditPlatform={() => setEditingPlatform(null)}
                   />
                 </div>
               ))}

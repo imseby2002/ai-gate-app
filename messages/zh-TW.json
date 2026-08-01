@@ -1160,6 +1160,9 @@
       "clickToFill": "點擊填入",
       "autoTag": "自動",
       "orderTag": "訂單",
+      "editPlatform": "點擊修改平台",
+      "setPlatform": "設定平台",
+      "platformNone": "無",
       "gateShared": "全棟共用，套用當日所有房間並延續之後日期",
       "openOrder": "查看訂單詳情",
       "createOrder": "建立訂單",
@@ -1183,6 +1186,7 @@
     "properties": {
       "title": "房型管理",
       "subtitle": "設定各房間及平台別名，Email 同步時自動比對",
+      "dragToReorder": "拖曳調整順序",
       "add": "新增房型",
       "empty": "尚未建立任何房型",
       "active": "上架",
