@@ -791,9 +791,21 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
         lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}/晚${feeNote}${dynNote}`)
         const pB = (bookings ?? []).filter(b => b.property_id === p.id)
         if (!pB.length) lines.push('  近90天無訂單，全部可訂')
-        else { lines.push('  已預訂日期：'); pB.forEach(b => lines.push(`    ${b.check_in} ~ ${b.check_out}（${b.guest_name}，${b.num_guests}人，${b.status}）`)) }
+        else {
+          // 展開成「已佔用的每一晚」清單，而不是丟原始 check_in~check_out 區間讓 AI 自己判斷
+          // 重疊——退房當天算不算佔用是常見的邊界誤判，曾經導致 AI 把當天退房的空房誤判成
+          // 已訂滿、把真正入住中的房間誤判成空房，直接讓客人跑掉。
+          lines.push('  已佔用的夜晚（退房當天不算佔用，當天仍可入住新客）：')
+          pB.forEach(b => {
+            const nights: string[] = []
+            const d = new Date(`${b.check_in}T00:00:00`)
+            const end = new Date(`${b.check_out}T00:00:00`)
+            while (d < end) { nights.push(d.toISOString().slice(0, 10)); d.setDate(d.getDate() + 1) }
+            lines.push(`    ${nights.join('、')}（${b.guest_name}，${b.num_guests}人，${b.status}）`)
+          })
+        }
       }
-      lines.push('\n判斷是否可訂：若客人詢問的日期與上方已預訂區間重疊，則無法接受；否則可接受。')
+      lines.push('\n判斷是否可訂：只要客人詢問的每一晚住宿日期，都沒有出現在該房型上方的「已佔用的夜晚」清單裡，就可以接受；只要有任一晚出現在清單裡，該房型當次就不可訂。不要自己判斷日期區間是否重疊，直接比對日期是否在清單中即可。')
       lines.push('若所詢問日期可訂，主動說「目前還有空房，假日訂單通常很快就滿，需要的話可以先幫您確認」以製造溫和緊迫感。')
       sections.push(lines.join('\n'))
     }
@@ -803,7 +815,7 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
   const giftList = (discountGifts ?? '').split('\n').map(g => g.trim()).filter(Boolean)
   if (discountMaxPct > 0 || giftList.length) {
     const lines = ['【促成工具箱——客人猶豫或嫌貴時才使用，每次只說一項，不一次全列】']
-    lines.push('使用時機：客人說「有點貴」「我再想想」「考慮看看」等猶豫訊號時主動提出')
+    lines.push('使用時機：客人第一次表現出價格猶豫或不滿就要主動提出，不要等客人講第二次才給——包括但不限於「有點貴」「我再想想」「考慮看看」「太貴了」「能不能便宜一點」「以前/之前訂比較便宜」「怎麼差那麼多」「別家比較便宜」等任何對價格表達疑慮或比較的說法，只要客人在問完價格後表達了「不滿意/意外/猶豫」的情緒，就算沒有用到上面例句的字眼，也要主動提出優惠，不要只顧著解釋定價邏輯而不提供優惠')
     if (discountMaxPct > 0) lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額告知客人，客人確認則生效）`)
     if (giftList.length) { lines.push('\n可贈送項目（從以下選一項，問客人偏好）：'); giftList.forEach(g => lines.push(`• ${g}`)) }
     lines.push('\n優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
