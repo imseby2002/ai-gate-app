@@ -574,7 +574,7 @@ function Unit12CustomerService({
   // FAQ 知識庫
   interface FaqItem { id: string; q: string; a: string; keywords: string[]; created_at: string }
   const [faqItems, setFaqItems] = useState<FaqItem[]>([])
-  const [faqDialog, setFaqDialog] = useState<{ open: boolean; q: string; a: string; keywords: string; saving: boolean }>({
+  const [faqDialog, setFaqDialog] = useState<{ open: boolean; id?: string; q: string; a: string; keywords: string; saving: boolean }>({
     open: false, q: '', a: '', keywords: '', saving: false,
   })
   const loadFaq = (ind: string) => {
@@ -3206,12 +3206,20 @@ function Unit12CustomerService({
                 <div key={item.id} className="border rounded-xl p-3 bg-emerald-50/40 space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="text-xs font-medium text-gray-800">Q: {item.q}</div>
-                    <button
-                      onClick={async () => {
-                        await fetch(`/api/marketing/cs-faq?industry=${industry}&itemId=${item.id}`, { method: 'DELETE' })
-                        setFaqItems(prev => prev.filter(f => f.id !== item.id))
-                      }}
-                      className="text-[10px] text-red-400 hover:text-red-600 shrink-0">{t('u12.delete')}</button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setFaqDialog({
+                          open: true, id: item.id, q: item.q, a: item.a,
+                          keywords: item.keywords?.join(', ') ?? '', saving: false,
+                        })}
+                        className="text-[10px] text-gray-400 hover:text-gray-700">{t('u12.editFaq')}</button>
+                      <button
+                        onClick={async () => {
+                          await fetch(`/api/marketing/cs-faq?industry=${industry}&itemId=${item.id}`, { method: 'DELETE' })
+                          setFaqItems(prev => prev.filter(f => f.id !== item.id))
+                        }}
+                        className="text-[10px] text-red-400 hover:text-red-600">{t('u12.delete')}</button>
+                    </div>
                   </div>
                   <div className="text-xs text-gray-600 border-l-2 border-emerald-300 pl-2">A: {item.a.slice(0, 120)}{item.a.length > 120 ? '…' : ''}</div>
                   <div className="flex flex-wrap gap-1">
@@ -3737,7 +3745,7 @@ function Unit12CustomerService({
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-center justify-center p-4"
           onClick={e => { if (e.target === e.currentTarget) setFaqDialog(p => ({ ...p, open: false })) }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4">
-            <div className="font-bold text-gray-900">📚 {t('u12.addToKb')}</div>
+            <div className="font-bold text-gray-900">📚 {faqDialog.id ? t('u12.editFaq') : t('u12.addToKb')}</div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">{t('u12.faqQ')}</label>
               <textarea rows={2} value={faqDialog.q}
@@ -3769,6 +3777,21 @@ function Unit12CustomerService({
                   const keywords = faqDialog.keywords.trim()
                     ? faqDialog.keywords.split(',').map(k => k.trim()).filter(Boolean)
                     : []
+                  if (faqDialog.id) {
+                    // 編輯既有項目：照使用者輸入原樣儲存，不跑 AI 自動改寫
+                    const res = await fetch('/api/marketing/cs-faq', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ industry, itemId: faqDialog.id, q: faqDialog.q, a: faqDialog.a, keywords }),
+                    })
+                    if (res.ok) {
+                      setFaqItems(prev => prev.map(f => f.id === faqDialog.id ? { ...f, q: faqDialog.q, a: faqDialog.a, keywords } : f))
+                      setFaqDialog({ open: false, q: '', a: '', keywords: '', saving: false })
+                    } else {
+                      setFaqDialog(p => ({ ...p, saving: false }))
+                    }
+                    return
+                  }
                   const res = await fetch('/api/marketing/cs-faq', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3787,7 +3810,9 @@ function Unit12CustomerService({
                   }
                 }}
                 className="flex-1 py-2 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                {faqDialog.saving ? <><Loader2 className="h-4 w-4 animate-spin" />{t('u12.aiAnalyzing')}</> : t('u12.saveToKb')}
+                {faqDialog.saving
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />{faqDialog.id ? t('u12.saving') : t('u12.aiAnalyzing')}</>
+                  : (faqDialog.id ? t('u12.saveChanges') : t('u12.saveToKb'))}
               </button>
             </div>
           </div>

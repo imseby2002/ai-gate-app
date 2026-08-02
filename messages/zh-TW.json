@@ -3813,6 +3813,9 @@
       "faqKwPh": "例：入住,幾點,check in",
       "aiAnalyzing": "AI 分析中…",
       "saveToKb": "儲存至知識庫",
+      "editFaq": "編輯",
+      "saveChanges": "儲存修改",
+      "saving": "儲存中…",
       "platformSettings": "平台連結設定"
     },
     "comingSoon": "建設中，敬請期待",
