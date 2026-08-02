@@ -1008,7 +1008,7 @@ async function extractOrderClueFromImage(
         role: 'user',
         content: [
           { type: 'text' as const, text: '這張圖片可能是訂房平台的訂單畫面截圖。請找出圖中的「訂單號碼/確認碼」與「入住旅客姓名」，只回傳 JSON：{"order_number": "字串或null", "guest_name": "字串或null"}。看不出來的欄位填 null，不要猜測。只回傳 JSON，不要其他說明。' },
-          { type: 'image' as const, image: new Uint8Array(imageBuffer), mimeType: imageMimeType },
+          { type: 'image' as const, image: new Uint8Array(imageBuffer), mediaType: imageMimeType },
         ],
       }],
     })
