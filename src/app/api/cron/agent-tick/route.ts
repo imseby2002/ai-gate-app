@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { tickRun, type AgentRunRow } from '@/lib/agents/engine'
+import { sendPendingApprovalReminders } from '@/lib/agents/approvals'
 
 export const maxDuration = 60
 
@@ -26,6 +27,11 @@ export async function GET(req: NextRequest) {
   const workerId = `tick-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const startedAt = Date.now()
   const budgetMs = 50_000
+
+  // 待核准提醒查詢頻率不需要跟 tick 一樣每分鐘跑，整點才跑一次即可
+  if (new Date().getMinutes() === 0) {
+    await sendPendingApprovalReminders().catch(() => { /* 提醒失敗不影響本次 tick */ })
+  }
 
   let totalTicked = 0
 
