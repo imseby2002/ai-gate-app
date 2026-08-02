@@ -18,6 +18,17 @@ interface EmailSetting {
   property_id: string | null; properties?: { name: string }
 }
 interface Property { id: string; name: string }
+interface SyncSkip {
+  id: string; platform: string | null; subject: string | null; from_address: string | null
+  reason: string; detail: string | null; created_at: string
+}
+
+const SKIP_REASON_KEYS: Record<string, string> = {
+  prefilter_not_booking: 'email.skipReason.prefilter',
+  ai_extraction_failed: 'email.skipReason.aiFailed',
+  ai_says_not_booking: 'email.skipReason.notBooking',
+  no_valid_checkin: 'email.skipReason.noCheckin',
+}
 
 export default function EmailPage() {
   const t = useTranslations('Booking')
@@ -25,6 +36,7 @@ export default function EmailPage() {
   const presetLabel = (name: string) => name === 'custom' ? t('email.presetCustom') : name
   const [settings, setSettings]     = useState<EmailSetting[]>([])
   const [properties, setProperties] = useState<Property[]>([])
+  const [skips, setSkips]           = useState<SyncSkip[]>([])
   const [loading, setLoading]       = useState(true)
   const [syncing, setSyncing]       = useState<string | null>(null)
   const [adding, setAdding]         = useState(false)
@@ -39,6 +51,10 @@ export default function EmailPage() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
   const [folderEdit, setFolderEdit] = useState<{ id: string; label: string; cancel: string } | null>(null)
 
+  function loadSkips() {
+    fetch('/api/booking/email/skips').then(r => r.json()).then(d => setSkips(d.skips ?? []))
+  }
+
   useEffect(() => {
     Promise.all([
       fetch('/api/booking/email').then(r => r.json()),
@@ -47,6 +63,7 @@ export default function EmailPage() {
       setSettings(em.settings ?? [])
       setProperties(pr.properties ?? [])
     }).finally(() => setLoading(false))
+    loadSkips()
   }, [])
 
   function applyPreset(name: string) {
@@ -90,6 +107,7 @@ export default function EmailPage() {
       setSyncMsg(lines.join('\n'))
       const em = await fetch('/api/booking/email').then(r => r.json())
       setSettings(em.settings ?? [])
+      loadSkips()
     } finally { setSyncing(null) }
   }
 
@@ -297,6 +315,26 @@ export default function EmailPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {skips.length > 0 && (
+        <div className="mt-2">
+          <h2 className="text-sm font-semibold text-gray-600 mb-2">{t('email.skipsTitle', { count: skips.length })}</h2>
+          <div className="border rounded-xl overflow-hidden bg-white shadow-sm divide-y">
+            {skips.map(s => (
+              <div key={s.id} className="px-3 py-2.5 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {s.platform && <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[10px]">{s.platform}</span>}
+                  <span className="text-amber-600 font-medium">{t.has(SKIP_REASON_KEYS[s.reason]) ? t(SKIP_REASON_KEYS[s.reason]) : s.reason}</span>
+                  <span className="text-gray-400 text-[10px] ml-auto">{new Date(s.created_at).toLocaleString(locale)}</span>
+                </div>
+                {s.subject && <div className="text-gray-700 mt-1 truncate">{s.subject}</div>}
+                {s.detail && <div className="text-gray-400 mt-0.5">{s.detail}</div>}
+              </div>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-gray-400">{t('email.skipsHint')}</p>
         </div>
       )}
 

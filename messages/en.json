@@ -849,6 +849,14 @@
       "gmailNoticeBody": "Use an \"App Password\", not your account password. Go to Google Account → Security → 2-Step Verification → App Passwords to generate a 16-digit password.",
       "multiTitle": "Multi-room mailbox needs no property assignment",
       "multiBody": "One mailbox may receive bookings for different room types; the system auto-detects the room type from each email's content. Leave the property field blank — no manual assignment needed.",
+      "skipsTitle": "Recently skipped/failed emails ({count})",
+      "skipsHint": "If one of these should have been a real booking, add it manually in Bookings and report the email subject so we can investigate.",
+      "skipReason": {
+        "prefilter": "AI pre-filter judged it not a booking email",
+        "aiFailed": "AI extraction failed (still unparseable after retries)",
+        "notBooking": "AI judged it not a booking confirmation/cancellation",
+        "noCheckin": "Could not extract a valid check-in date"
+      },
       "empty": "No mailbox set up yet",
       "assignProperty": "Assign property:",
       "autoDetect": "Auto-detect (by email content)",

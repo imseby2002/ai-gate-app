@@ -849,6 +849,14 @@
       "gmailNoticeBody": "Cần dùng \"Mật khẩu ứng dụng\" thay vì mật khẩu tài khoản. Vào Tài khoản Google → Bảo mật → Xác minh 2 bước → Mật khẩu ứng dụng để tạo mật khẩu 16 ký tự.",
       "multiTitle": "Hộp thư nhiều loại phòng không cần chỉ định phòng",
       "multiBody": "Một hộp thư có thể nhận đơn của nhiều loại phòng; hệ thống tự nhận diện loại phòng theo nội dung từng email. Để trống ô phòng, không cần chỉ định thủ công.",
+      "skipsTitle": "Email bị bỏ qua/trích xuất thất bại gần đây ({count})",
+      "skipsHint": "Nếu có đơn nào đáng lẽ tồn tại, hãy thêm thủ công trong Quản lý đơn và báo lại tiêu đề email để kiểm tra.",
+      "skipReason": {
+        "prefilter": "AI lọc sơ bộ cho rằng đây không phải email đặt phòng",
+        "aiFailed": "AI trích xuất thất bại (vẫn không phân tích được sau khi thử lại)",
+        "notBooking": "AI cho rằng không phải email xác nhận/hủy đặt phòng",
+        "noCheckin": "Không trích xuất được ngày nhận phòng hợp lệ"
+      },
       "empty": "Chưa thiết lập hộp thư nào",
       "assignProperty": "Chỉ định phòng:",
       "autoDetect": "Tự nhận diện (theo nội dung email)",
