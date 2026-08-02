@@ -4,7 +4,9 @@ import type { ChatParams } from './deepseek'
 
 // Groq model ID → actual Groq model name
 // qwen/qwen3-32b 已於 2026/6/17 被 Groq 棄用，改用官方建議的 qwen/qwen3.6-27b（id 沿用避免動到既有對話紀錄的 model_id 外鍵）
-const MODEL_MAP: Record<string, string> = {
+// 導出給 proxy-fallback.ts 共用，避免各自維護一份對照表而失同步（曾發生過 direct groq
+// attempt 用 naive prefix-strip 得到不存在的 model 名稱，導致該 attempt 100% 必定失敗）
+export const GROQ_MODEL_MAP: Record<string, string> = {
   'groq-llama-3.3-70b': 'llama-3.3-70b-versatile',   // 通用主力，極快
   'groq-qwen3-32b':     'qwen/qwen3.6-27b',           // 推理/分析，支援繁體中文
   'groq-qwq-32b':       'qwen-qwq-32b',               // 數學/邏輯推理
@@ -13,7 +15,7 @@ const MODEL_MAP: Record<string, string> = {
 }
 
 // 若模型 ID 為 "groq-auto"，自動選最佳通用模型
-const GROQ_AUTO_MODEL = 'llama-3.3-70b-versatile'
+export const GROQ_AUTO_MODEL = 'llama-3.3-70b-versatile'
 
 export async function streamGroq(params: ChatParams) {
   const groq = createGroq({
@@ -22,7 +24,7 @@ export async function streamGroq(params: ChatParams) {
 
   const modelName = params.modelId === 'groq-auto'
     ? GROQ_AUTO_MODEL
-    : (MODEL_MAP[params.modelId] ?? GROQ_AUTO_MODEL)
+    : (GROQ_MODEL_MAP[params.modelId] ?? GROQ_AUTO_MODEL)
 
   const messages = params.systemPrompt
     ? [{ role: 'system' as const, content: params.systemPrompt }, ...params.messages]
