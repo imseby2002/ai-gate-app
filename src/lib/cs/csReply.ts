@@ -183,6 +183,12 @@ export async function generateCsReplyL2(
   return null
 }
 
+// 判斷這輪對話是否夾帶圖片（客人傳照片時，cs-webhook 會把最後一則 user 訊息組成
+// content 陣列，其中一個 part.type === 'image'）。
+function messagesHaveImage(messages: ChatMsg[]): boolean {
+  return messages.some(m => Array.isArray(m.content) && m.content.some(part => part.type === 'image'))
+}
+
 // ── L3：進階處理（客人傳照片 / 複雜問題，僅 CORE 以上）─────────────────────
 // 用 gemini-3-flash 本尊（非 lite）：多模態辨識與複雜推理品質優先於成本。
 // Groq 的文字模型不支援看圖，L3 一律不經過 Groq。
@@ -190,17 +196,23 @@ export async function generateCsReplyL3(
   system: string,
   messages: ChatMsg[],
 ): Promise<{ reply: string; provider: string } | null> {
-  // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 Llama 4 Scout（實測 /v1/models
-  // 確認正確 id 格式）——GPT-4o 在這個路由服務裡唯一路線是 github，但 github 這條供應商
-  // 連線目前故障中（非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生
-  // 支援看圖的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
-  const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct'
-  for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
-    const text = await tryOpenAiCompat(entry, system, messages)
-    if (text) return { reply: text, provider: entry.label }
+  // 客人傳圖片時，免費/代理管道（FreeLLM、CLIProxy）常常沒有真的把圖片轉發給底層模型，
+  // 卻仍回傳一段看起來正常、但其實跟圖片內容無關的文字——不會報錯，我們就誤判成功，
+  // 不會繼續 fallback 到真正可靠的原生 Gemini。圖片訊息一律跳過這條不穩定的管道，
+  // 正確性優先於省成本。
+  if (!messagesHaveImage(messages)) {
+    // 1) 免費通道：CLIProxy 走 gemini-3-flash；FreeLLM 指定 Llama 4 Scout（實測 /v1/models
+    // 確認正確 id 格式）——GPT-4o 在這個路由服務裡唯一路線是 github，但 github 這條供應商
+    // 連線目前故障中（非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生
+    // 支援看圖的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
+    const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct'
+    for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
+      const text = await tryOpenAiCompat(entry, system, messages)
+      if (text) return { reply: text, provider: entry.label }
+    }
   }
 
-  // 2) 直連 gemini-3-flash 保底
+  // 2) 直連 gemini-3-flash：一般文字的保底，圖片訊息的唯一路徑（原生多模態，最可靠）
   const geminiKey = process.env.GOOGLE_AI_API_KEY
   if (geminiKey) {
     try {
