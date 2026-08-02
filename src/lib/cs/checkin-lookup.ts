@@ -1,3 +1,4 @@
+import { generateText, type LanguageModel } from 'ai'
 import { getBookingEntitlements } from '@/lib/booking/entitlements'
 
 // 入住時間判斷（民宿資料 check_in_time 可設，預設 15:00）。
@@ -112,5 +113,76 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
   }
 
   lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
+  return lines.join('\n')
+}
+
+// 客人只報「訂房大名」、沒有訂單號碼時，依姓名查近期訂單（前 3 天～未來 180 天）。
+// 找不到就是找不到，一律回「查無資料」；絕對不能讓 AI 在沒有比對到任何一筆訂單時，
+// 自己說「已核對」「訂單已完成處理」等話術給客人。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function queryBookingByGuestName(supabase: any, userId: string, candidateName: string, model: LanguageModel): Promise<string | null> {
+  const { features } = await getBookingEntitlements(supabase, userId)
+  if (!features.csIntegration) return null
+
+  const name = candidateName.trim()
+  if (!name) return null
+
+  const notFoundMsg = `【訂單查詢結果】\n查無旅客「${name}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁自行推測或回覆「已找到」「已核對」「訂單已完成處理」等話術；請如實告知客人查無資料，並詢問訂房平台與入住日期，轉真人客服協助查詢）`
+
+  const past = new Date(); past.setDate(past.getDate() - 3)
+  const future = new Date(); future.setDate(future.getDate() + 180)
+
+  const { data: candidates } = await supabase
+    .from('bookings')
+    .select('id, property_id, guest_name, check_in, check_out, status')
+    .eq('user_id', userId)
+    .not('guest_name', 'is', null)
+    .gte('check_in', past.toLocaleDateString('sv-SE'))
+    .lte('check_in', future.toLocaleDateString('sv-SE'))
+    .order('check_in', { ascending: true })
+    .limit(200)
+
+  if (!candidates?.length) return notFoundMsg
+
+  const norm = (s: string) => s.toLowerCase().replace(/[\s./-]/g, '')
+  const n = norm(name)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let matched = candidates.filter((c: any) => {
+    const g = norm(c.guest_name ?? '')
+    return !!g && (g.includes(n) || n.includes(g))
+  })
+
+  // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
+  if (!matched.length) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const list = candidates.map((c: any, i: number) => `${i}: ${c.guest_name}`).join('\n')
+      const { text } = await generateText({
+        model,
+        messages: [{
+          role: 'user',
+          content: `客人說他的訂房姓名是：「${name}」\n系統中的訂單旅客姓名列表：\n${list}\n\n請判斷列表中「是否有」與客人所說屬於同一個人的姓名（中文與英文拼音互換、發音相近、姓氏在前或在後皆視為相符）。\n若有，只回傳該筆的編號數字；若都沒有相符的，只回 NONE。不要有其他文字。`,
+        }],
+      })
+      const m = text.trim().match(/^\d+/)
+      if (m) {
+        const idx = parseInt(m[0], 10)
+        if (candidates[idx]) matched = [candidates[idx]]
+      }
+    } catch { /* 比對失敗就當查無資料，不阻斷主流程 */ }
+  }
+
+  if (!matched.length) return notFoundMsg
+
+  const lines: string[] = [`【訂單查詢結果】`, `找到 ${matched.length} 筆與「${name}」相符的訂單：`]
+  for (const b of matched.slice(0, 5)) {
+    let roomName = ''
+    if (b.property_id) {
+      const { data: prop } = await supabase.from('properties').select('name').eq('id', b.property_id).maybeSingle()
+      roomName = prop?.name ?? ''
+    }
+    lines.push(`・${b.guest_name}｜${roomName || '（未指定房型）'}｜入住 ${b.check_in} 退房 ${b.check_out}｜狀態：${b.status}`)
+  }
+  lines.push(`（以上為系統即時查詢結果，請直接引用；若客人提供的資訊與上方不符，請如實告知差異，不可硬說已核對成功）`)
   return lines.join('\n')
 }
