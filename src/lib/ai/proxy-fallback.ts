@@ -231,7 +231,10 @@ export async function streamWithFallback(
       }
 
       return {
-        stream: { ...stream, fullStream: rebuiltFullStream() } as typeof stream,
+        // fullStream 實際型別是包著 ReadableStream 介面的 AsyncIterableStream，
+        // 這裡重組出來的是純 AsyncGenerator——結構不完全相容，但呼叫端
+        // （route.ts）只用 for-await 消費它，執行期相容即可，故經 unknown 轉型。
+        stream: { ...stream, fullStream: rebuiltFullStream() } as unknown as typeof stream,
         usedModel: attempt.via === 'direct' ? attempt.model : `${attempt.via}:${attempt.model}`,
         usedVia: attempt.via,
         attemptsCount: i + 1,
