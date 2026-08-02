@@ -504,7 +504,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, discountMaxPct, discountGifts })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts })
       }
     } finally {
       setUploadingDialogue(false)
@@ -514,7 +514,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, discountMaxPct, discountGifts })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts })
   }
 
   // Test chat
@@ -3908,11 +3908,22 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
     return null
   }, [campaignId, industry, t])
 
-  const handleDone = useCallback(async (data: Unit12Data) => {
-    const cid = await ensureCampaign()
-    if (!cid) return
+  // handleDone 每次都送出整個 unit_data[12]（非局部 patch），若連續觸發（例如快速刪除
+  // 兩個檔案）沒有排隊、直接平行送出，網路回應順序不保證跟送出順序一致，後到的回應會
+  // 覆蓋掉先到的，导致其中一個刪除操作被悄悄復原。用 promise chain 強制排隊，保證後一次
+  // 儲存一定等前一次真的寫進資料庫後才送出，不會互相蓋掉。
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+
+  const handleDone = useCallback((data: Unit12Data) => {
     setUnit12Data(data)
-    await patchCampaign(cid, { unit_data: { 12: data } })
+    const run = async () => {
+      const cid = await ensureCampaign()
+      if (!cid) return
+      await patchCampaign(cid, { unit_data: { 12: data } })
+    }
+    const next = saveQueueRef.current.catch(() => {}).then(run)
+    saveQueueRef.current = next
+    return next
   }, [ensureCampaign])
 
   if (!loaded) return <div className="h-[calc(100vh-53px)] bg-white" />
