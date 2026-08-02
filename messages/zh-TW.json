@@ -849,6 +849,14 @@
       "gmailNoticeBody": "需使用「應用程式密碼」而非帳號密碼。至 Google 帳戶 → 安全性 → 兩步驟驗證 → 應用程式密碼 產生 16 碼密碼。",
       "multiTitle": "多房型信箱免指定房源",
       "multiBody": "同一信箱會收到不同房型的訂單，系統會依每封郵件內容自動判斷房型。房源欄位留空即可，毋需手動指定。",
+      "skipsTitle": "最近略過/擷取失敗的信件（{count}）",
+      "skipsHint": "若這裡有本該成立的訂單，請直接到「訂單管理」手動新增，並回報信件主旨方便排查。",
+      "skipReason": {
+        "prefilter": "AI 預篩判斷非訂單信",
+        "aiFailed": "AI 擷取失敗（重試後仍無法解析）",
+        "notBooking": "AI 判斷非訂房確認/取消信",
+        "noCheckin": "未能擷取到有效入住日期"
+      },
       "empty": "尚未設定任何信箱",
       "assignProperty": "指定房源：",
       "autoDetect": "自動判斷（依郵件內容）",

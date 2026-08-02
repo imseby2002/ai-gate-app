@@ -186,6 +186,22 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   function addLog(entry: string) {
     if (result.debug.log.length < 60) result.debug.log.push(entry)
   }
+  // 略過/失敗的信持久化記錄一筆，讓 cron 背景執行也能事後追查（debug.log 只存在單次呼叫記憶體中）。
+  // 失敗不可中斷主流程；呼叫時機都在 setting 確定存在之後。
+  async function logSkip(reason: string, ctx: { platform?: string; subject?: string; from?: string; body?: string; detail?: string }) {
+    try {
+      await supabase.from('email_sync_skips').insert({
+        user_id: setting!.user_id,
+        email_setting_id: settingId,
+        platform: ctx.platform ?? null,
+        subject: (ctx.subject ?? '').slice(0, 200),
+        from_address: (ctx.from ?? '').slice(0, 200),
+        reason,
+        detail: ctx.detail ?? null,
+        body_snippet: ctx.body ? ctx.body.slice(0, 800) : null,
+      })
+    } catch { /* 記錄失敗不影響主流程 */ }
+  }
 
   const { data: setting, error: se } = await supabase
     .from('email_settings')
@@ -465,15 +481,24 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         if (!looksLikeBooking) {
           result.debug.skipped_by_prefilter++
           addLog(`[非訂房-預篩] ${platform} | ${subj80}`)
+          await logSkip('prefilter_not_booking', { platform, subject, from, body })
           continue
         }
       }
 
       const extracted = await extractBookingWithAI(subject, body, platform, properties, bnbName)
-      if (!extracted) { result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`); continue }
+      if (!extracted) {
+        result.debug.ai_null++; addLog(`[AI失敗] ${platform} | ${subj80}`)
+        await logSkip('ai_extraction_failed', { platform, subject, from, body })
+        continue
+      }
       // 來自「取消」資料夾的信一律視為取消（不靠 AI 判斷取消意圖）。
       if (forceCancel) { extracted.is_cancellation = true; extracted.is_booking = true }
-      if (!extracted.is_booking) { result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`); continue }
+      if (!extracted.is_booking) {
+        result.debug.skipped_not_booking++; addLog(`[非訂房] ${platform} | ${subj80}`)
+        await logSkip('ai_says_not_booking', { platform, subject, from, body })
+        continue
+      }
 
       const validMatchedId =
         extracted.matched_property_id && properties.some(p => p.id === extracted.matched_property_id)
@@ -494,7 +519,11 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().slice(0, 10)
         : null)
 
-      if (!checkIn) { result.debug.skipped_no_checkin++; addLog(`[無入住日] ${platform} | ci=${extracted.check_in} | ${subj80}`); result.processed++; continue }
+      if (!checkIn) {
+        result.debug.skipped_no_checkin++; addLog(`[無入住日] ${platform} | ci=${extracted.check_in} | ${subj80}`)
+        await logSkip('no_valid_checkin', { platform, subject, from, body, detail: `AI 回傳的 check_in="${extracted.check_in}"` })
+        result.processed++; continue
+      }
 
       const isPartial = !validCheckOut || !extracted.guest_name
       const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
