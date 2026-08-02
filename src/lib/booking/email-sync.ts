@@ -3,6 +3,13 @@ import { simpleParser } from 'mailparser'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
 
+interface AdditionalRoom {
+  property_name: string | null
+  matched_property_id: string | null
+  total_price: number | null
+  num_guests: number | null
+}
+
 interface BookingExtracted {
   platform: string
   guest_name: string
@@ -15,6 +22,9 @@ interface BookingExtracted {
   matched_property_id: string | null
   is_cancellation: boolean
   is_booking: boolean
+  // 同一張訂單同時訂了其他房型時（第一個房型仍照上面欄位填），其餘房型各自列在這裡；
+  // 全部房型共用同一位旅客與同一組入住/退房日、訂單號。
+  additional_rooms?: AdditionalRoom[] | null
 }
 
 interface UserProperty {
@@ -528,189 +538,223 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       const isPartial = !validCheckOut || !extracted.guest_name
       const bookingStatus = extracted.is_cancellation ? 'cancelled' : (isPartial ? 'pending' : 'confirmed')
 
-      const confId = extracted.confirmation_id || `email_${settingId}_${seq}`
+      // 一張訂單可能同時訂了多個不同房型（見 extractBookingWithAI 的 additional_rooms）。
+      // 全部房型共用同一位旅客、同一組入住/退房日、同一個訂單號；用 property_id 拆成多筆
+      // bookings（unique 限制已在 migration 090 放寬成含 property_id）。
+      const baseConfId = extracted.confirmation_id || null
+      const roomEntries: Array<{ propertyId: string | null; totalPrice: number | null; numGuests: number | null; confId: string }> = [
+        { propertyId: resolvedPropertyId, totalPrice: extracted.total_price, numGuests: extracted.num_guests, confId: baseConfId || `email_${settingId}_${seq}` },
+      ]
+      const extraRooms = Array.isArray(extracted.additional_rooms) ? extracted.additional_rooms : []
+      extraRooms.forEach((r, i) => {
+        const validId = r.matched_property_id && properties.some(p => p.id === r.matched_property_id) ? r.matched_property_id : null
+        roomEntries.push({
+          propertyId: validId ?? matchPropertyByName(r.property_name, properties),
+          totalPrice: r.total_price ?? null,
+          numGuests: r.num_guests ?? null,
+          confId: baseConfId || `email_${settingId}_${seq}-r${i + 1}`,
+        })
+      })
+      const multiRoom = roomEntries.length > 1
 
-      // ── iCal 為主要來源，Email 只負責補齊資料 ──────────────────
-      // 有設定 iCal 同步時，訂房阻擋已經靠 iCal 完成；若這封信對應到一筆已存在的
-      // iCal 訂單（同平台＋同房型＋同入住退房日），把姓名／金額／人數等 iCal
-      // 沒有的細節補進去（或標記取消），不要另外新增一筆重複訂單。
-      if (validCheckOut) {
-        let icalQ = supabase
-          .from('bookings')
-          .select('id, status, guest_name, total_price, num_guests, notes')
-          .eq('user_id', setting.user_id)
-          .eq('platform', platform)
-          .eq('check_in', checkIn)
-          .eq('check_out', validCheckOut)
-          .eq('source', 'ical')
-        if (resolvedPropertyId) icalQ = icalQ.eq('property_id', resolvedPropertyId)
-        const { data: icalBooking } = await icalQ.maybeSingle()
-        if (icalBooking) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function filterByProperty(q: any, propertyId: string | null) {
+        return propertyId ? q.eq('property_id', propertyId) : q.is('property_id', null)
+      }
+
+      for (const room of roomEntries) {
+        const { propertyId: resolvedPropertyId, confId } = room
+        const roomTotalPrice = room.totalPrice ?? (multiRoom ? null : extracted.total_price)
+        const roomNumGuests = room.numGuests ?? (multiRoom ? null : extracted.num_guests)
+
+        // ── iCal 為主要來源，Email 只負責補齊資料 ──────────────────
+        // 有設定 iCal 同步時，訂房阻擋已經靠 iCal 完成；若這封信對應到一筆已存在的
+        // iCal 訂單（同平台＋同房型＋同入住退房日），把姓名／金額／人數等 iCal
+        // 沒有的細節補進去（或標記取消），不要另外新增一筆重複訂單。
+        if (validCheckOut) {
+          let icalQ = supabase
+            .from('bookings')
+            .select('id, status, guest_name, total_price, num_guests, notes')
+            .eq('user_id', setting.user_id)
+            .eq('platform', platform)
+            .eq('check_in', checkIn)
+            .eq('check_out', validCheckOut)
+            .eq('source', 'ical')
+          if (resolvedPropertyId) icalQ = icalQ.eq('property_id', resolvedPropertyId)
+          const { data: icalBooking } = await icalQ.maybeSingle()
+          if (icalBooking) {
+            const patch: Record<string, unknown> = {}
+            if (extracted.is_cancellation) {
+              if (icalBooking.status !== 'cancelled') patch.status = 'cancelled'
+            } else {
+              if (extracted.guest_name && (!icalBooking.guest_name || icalBooking.guest_name === '(iCal 訂單)'))
+                patch.guest_name = extracted.guest_name
+              if (roomTotalPrice != null && icalBooking.total_price == null)
+                patch.total_price = roomTotalPrice
+              if (roomNumGuests && (icalBooking.num_guests == null || icalBooking.num_guests <= 1))
+                patch.num_guests = roomNumGuests
+            }
+            if (Object.keys(patch).length > 0) {
+              if (DEBUG_FETCH_NOTE) patch.notes = appendFetchNote(icalBooking.notes)
+              await supabase.from('bookings').update(patch).eq('id', icalBooking.id)
+              addLog(`[補齊iCal✓] ${confId} | ${subj80}`)
+              result.added++
+            } else {
+              result.debug.skipped_duplicate++
+            }
+            continue
+          }
+        }
+
+        // Duplicate check 1: exact confirmation_id + property match
+        // （同一單號現在可能對應多筆房型，一定要搭配 property 篩選才能鎖到「這個房型」的那一筆）
+        const { data: dupById } = await filterByProperty(
+          supabase
+            .from('bookings')
+            .select('id, status, guest_name, check_out, total_price, num_guests, property_id, notes')
+            .eq('user_id', setting.user_id)
+            .eq('platform_booking_id', confId),
+          resolvedPropertyId,
+        ).maybeSingle()
+        if (dupById) {
+          if (extracted.is_cancellation && dupById.status !== 'cancelled') {
+            await supabase.from('bookings').update({
+              status: 'cancelled',
+              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(dupById.notes) } : {}),
+            }).eq('id', dupById.id)
+            addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
+            result.added++
+            continue
+          }
+          if (extracted.is_cancellation && dupById.status === 'cancelled') {
+            addLog(`[已取消skip] ${confId} | ${subj80}`)
+          }
           const patch: Record<string, unknown> = {}
-          if (extracted.is_cancellation) {
-            if (icalBooking.status !== 'cancelled') patch.status = 'cancelled'
-          } else {
-            if (extracted.guest_name && (!icalBooking.guest_name || icalBooking.guest_name === '(iCal 訂單)'))
-              patch.guest_name = extracted.guest_name
-            if (extracted.total_price != null && icalBooking.total_price == null)
-              patch.total_price = extracted.total_price
-            if (extracted.num_guests && (icalBooking.num_guests == null || icalBooking.num_guests <= 1))
-              patch.num_guests = extracted.num_guests
+          if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
+            patch.guest_name = extracted.guest_name
+          if (validCheckOut && validCheckOut !== dupById.check_out)
+            patch.check_out = validCheckOut
+          if (roomTotalPrice != null && dupById.total_price == null)
+            patch.total_price = roomTotalPrice
+          if (roomNumGuests && (dupById.num_guests == null || dupById.num_guests <= 1))
+            patch.num_guests = roomNumGuests
+          if (resolvedPropertyId && !dupById.property_id)
+            patch.property_id = resolvedPropertyId
+          const hadPatch = Object.keys(patch).length > 0
+          if (hadPatch && !extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
+            patch.status = 'confirmed'
+            patch.notes = null
+          }
+          if (DEBUG_FETCH_NOTE) {
+            patch.notes = appendFetchNote('notes' in patch ? (patch.notes as string | null) : dupById.notes)
           }
           if (Object.keys(patch).length > 0) {
-            if (DEBUG_FETCH_NOTE) patch.notes = appendFetchNote(icalBooking.notes)
-            await supabase.from('bookings').update(patch).eq('id', icalBooking.id)
-            addLog(`[補齊iCal✓] ${confId} | ${subj80}`)
-            result.added++
+            await supabase.from('bookings').update(patch).eq('id', dupById.id)
+            if (hadPatch) result.added++; else result.debug.skipped_duplicate++
           } else {
             result.debug.skipped_duplicate++
           }
-          result.processed++; continue
+          continue
         }
-      }
 
-      // Duplicate check 1: exact confirmation_id match
-      const { data: dupById } = await supabase
-        .from('bookings')
-        .select('id, status, guest_name, check_out, total_price, num_guests, property_id, notes')
-        .eq('user_id', setting.user_id)
-        .eq('platform_booking_id', confId)
-        .maybeSingle()
-      if (dupById) {
-        if (extracted.is_cancellation && dupById.status !== 'cancelled') {
-          await supabase.from('bookings').update({
-            status: 'cancelled',
-            ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(dupById.notes) } : {}),
-          }).eq('id', dupById.id)
-          addLog(`[取消✓ dup1] ${confId} | ${subj80}`)
-          result.added++
-          result.processed++; continue
+        // Duplicate check 2: same platform + check_in + check_out + guest_name + property
+        // （多房型訂單共用同一位旅客/同一組日期，一定要加 property 篩選，否則會把不同房型的兩筆訂單互相誤判成重複）
+        let existingId: string | null = null
+        if (checkIn && extracted.guest_name && checkOut) {
+          const { data: dupByGuest } = await filterByProperty(
+            supabase
+              .from('bookings')
+              .select('id, total_price, platform_booking_id')
+              .eq('user_id', setting.user_id)
+              .eq('platform', platform)
+              .eq('check_in', checkIn)
+              .eq('check_out', checkOut)
+              .eq('source', 'email')
+              .ilike('guest_name', `%${extracted.guest_name.split(/[\s/]/)[0]}%`),
+            resolvedPropertyId,
+          ).maybeSingle()
+          if (dupByGuest) {
+            existingId = dupByGuest.id
+            if (extracted.is_cancellation) {
+              await supabase.from('bookings').update({
+                status: 'cancelled',
+                ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(null) } : {}),
+              }).eq('id', existingId)
+              addLog(`[取消✓ dup2] ${confId} | ${subj80}`)
+              result.added++; continue
+            }
+            if (extracted.confirmation_id && dupByGuest.platform_booking_id?.startsWith('email_')) {
+              await supabase.from('bookings').update({
+                platform_booking_id: extracted.confirmation_id,
+                total_price: roomTotalPrice ?? dupByGuest.total_price,
+                status: 'confirmed',
+                notes: DEBUG_FETCH_NOTE ? appendFetchNote(null) : null,
+              }).eq('id', existingId)
+            } else if (DEBUG_FETCH_NOTE) {
+              await supabase.from('bookings').update({ notes: appendFetchNote(null) }).eq('id', existingId)
+            }
+            result.debug.skipped_duplicate++; continue
+          }
         }
-        if (extracted.is_cancellation && dupById.status === 'cancelled') {
-          addLog(`[已取消skip] ${confId} | ${subj80}`)
+
+        // Duplicate check 3: same platform + check_in + property (looser, last resort).
+        // 必須有明確配對到的房型才跑：resolvedPropertyId 為 null 時（房型模糊比對失敗，
+        // 很常見）若不篩房型，會變成「同平台＋同入住日」就判定重複，把不同房源、不同
+        // 旅客的訂單誤判成同一筆而整個吞掉，訂單就再也不會出現在每日入住表。
+        if (checkIn && !existingId && resolvedPropertyId) {
+          const { data: dup } = await supabase
+            .from('bookings')
+            .select('id, status')
+            .eq('user_id', setting.user_id)
+            .eq('platform', platform)
+            .eq('check_in', checkIn)
+            .eq('source', 'email')
+            .eq('property_id', resolvedPropertyId)
+            .maybeSingle()
+          if (dup) {
+            if (extracted.is_cancellation && dup.status !== 'cancelled') {
+              await supabase.from('bookings').update({
+                status: 'cancelled',
+                ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(null) } : {}),
+              }).eq('id', dup.id)
+              addLog(`[取消✓ dup3] ${confId} | ${subj80}`)
+              result.added++
+            } else {
+              addLog(`[重複skip] ${confId} canc=${extracted.is_cancellation} dupStatus=${dup.status} | ${subj80}`)
+              result.debug.skipped_duplicate++
+            }
+            continue
+          }
         }
-        const patch: Record<string, unknown> = {}
-        if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
-          patch.guest_name = extracted.guest_name
-        if (validCheckOut && validCheckOut !== dupById.check_out)
-          patch.check_out = validCheckOut
-        if (extracted.total_price != null && dupById.total_price == null)
-          patch.total_price = extracted.total_price
-        if (extracted.num_guests && (dupById.num_guests == null || dupById.num_guests <= 1))
-          patch.num_guests = extracted.num_guests
-        if (resolvedPropertyId && !dupById.property_id)
-          patch.property_id = resolvedPropertyId
-        const hadPatch = Object.keys(patch).length > 0
-        if (hadPatch && !extracted.is_cancellation && dupById.status === 'pending' && !isPartial) {
-          patch.status = 'confirmed'
-          patch.notes = null
-        }
-        if (DEBUG_FETCH_NOTE) {
-          patch.notes = appendFetchNote('notes' in patch ? (patch.notes as string | null) : dupById.notes)
-        }
-        if (Object.keys(patch).length > 0) {
-          await supabase.from('bookings').update(patch).eq('id', dupById.id)
-          if (hadPatch) result.added++; else result.debug.skipped_duplicate++
+
+        const { error: bkErr } = await supabase
+          .from('bookings')
+          .upsert({
+            user_id:             setting.user_id,
+            property_id:         resolvedPropertyId,
+            platform,
+            platform_booking_id: confId,
+            guest_name:          extracted.guest_name || '(待補充)',
+            check_in:            checkIn,
+            check_out:           checkOut,
+            num_guests:          roomNumGuests || 1,
+            total_price:         roomTotalPrice,
+            status:              bookingStatus,
+            source:              'email',
+            notes:               (() => {
+              const base = isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null
+              return DEBUG_FETCH_NOTE ? appendFetchNote(base) : base
+            })(),
+            raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
+          }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
+
+        if (bkErr) {
+          result.errors.push(`訂單 upsert 失敗: ${bkErr.message}`)
+          addLog(`[新增失敗] ${confId} ${bkErr.message.slice(0,40)}`)
         } else {
-          result.debug.skipped_duplicate++
+          addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
+          result.added++
         }
-        result.processed++; continue
-      }
-
-      // Duplicate check 2: same platform + check_in + check_out + guest_name
-      let existingId: string | null = null
-      if (checkIn && extracted.guest_name && checkOut) {
-        const { data: dupByGuest } = await supabase
-          .from('bookings')
-          .select('id, total_price, platform_booking_id')
-          .eq('user_id', setting.user_id)
-          .eq('platform', platform)
-          .eq('check_in', checkIn)
-          .eq('check_out', checkOut)
-          .eq('source', 'email')
-          .ilike('guest_name', `%${extracted.guest_name.split(/[\s/]/)[0]}%`)
-          .maybeSingle()
-        if (dupByGuest) {
-          existingId = dupByGuest.id
-          if (extracted.is_cancellation) {
-            await supabase.from('bookings').update({
-              status: 'cancelled',
-              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(null) } : {}),
-            }).eq('id', existingId)
-            addLog(`[取消✓ dup2] ${confId} | ${subj80}`)
-            result.added++; result.processed++; continue
-          }
-          if (extracted.confirmation_id && dupByGuest.platform_booking_id?.startsWith('email_')) {
-            await supabase.from('bookings').update({
-              platform_booking_id: extracted.confirmation_id,
-              total_price: extracted.total_price ?? dupByGuest.total_price,
-              status: 'confirmed',
-              notes: DEBUG_FETCH_NOTE ? appendFetchNote(null) : null,
-            }).eq('id', existingId)
-          } else if (DEBUG_FETCH_NOTE) {
-            await supabase.from('bookings').update({ notes: appendFetchNote(null) }).eq('id', existingId)
-          }
-          result.debug.skipped_duplicate++; result.processed++; continue
-        }
-      }
-
-      // Duplicate check 3: same platform + check_in + property (looser, last resort).
-      // 必須有明確配對到的房型才跑：resolvedPropertyId 為 null 時（房型模糊比對失敗，
-      // 很常見）若不篩房型，會變成「同平台＋同入住日」就判定重複，把不同房源、不同
-      // 旅客的訂單誤判成同一筆而整個吞掉，訂單就再也不會出現在每日入住表。
-      if (checkIn && !existingId && resolvedPropertyId) {
-        const { data: dup } = await supabase
-          .from('bookings')
-          .select('id, status')
-          .eq('user_id', setting.user_id)
-          .eq('platform', platform)
-          .eq('check_in', checkIn)
-          .eq('source', 'email')
-          .eq('property_id', resolvedPropertyId)
-          .maybeSingle()
-        if (dup) {
-          if (extracted.is_cancellation && dup.status !== 'cancelled') {
-            await supabase.from('bookings').update({
-              status: 'cancelled',
-              ...(DEBUG_FETCH_NOTE ? { notes: appendFetchNote(null) } : {}),
-            }).eq('id', dup.id)
-            addLog(`[取消✓ dup3] ${confId} | ${subj80}`)
-            result.added++
-          } else {
-            addLog(`[重複skip] ${confId} canc=${extracted.is_cancellation} dupStatus=${dup.status} | ${subj80}`)
-            result.debug.skipped_duplicate++
-          }
-          result.processed++; continue
-        }
-      }
-
-      const { error: bkErr } = await supabase
-        .from('bookings')
-        .upsert({
-          user_id:             setting.user_id,
-          property_id:         resolvedPropertyId,
-          platform,
-          platform_booking_id: confId,
-          guest_name:          extracted.guest_name || '(待補充)',
-          check_in:            checkIn,
-          check_out:           checkOut,
-          num_guests:          extracted.num_guests || 1,
-          total_price:         extracted.total_price,
-          status:              bookingStatus,
-          source:              'email',
-          notes:               (() => {
-            const base = isPartial ? '由 Email 部分擷取，請至平台後台確認完整資料' : null
-            return DEBUG_FETCH_NOTE ? appendFetchNote(base) : base
-          })(),
-          raw_data:            { subject, from, confirmation_id: extracted.confirmation_id, property_name: extracted.property_name },
-        }, { onConflict: 'user_id,platform,platform_booking_id' })
-
-      if (bkErr) {
-        result.errors.push(`訂單 upsert 失敗: ${bkErr.message}`)
-        addLog(`[新增失敗] ${confId} ${bkErr.message.slice(0,40)}`)
-      } else {
-        addLog(`[新增✓] ${confId} ${checkIn}→${checkOut} canc=${extracted.is_cancellation} | ${subj80}`)
-        result.added++
       }
       result.processed++
     } catch (e) {
@@ -752,7 +796,8 @@ const PLATFORM_HINTS: Record<string, string> = {
   booking_com: `Booking.com：
 - 訂單號為純數字 9-10 位，出現在主旨「(數字, 日期)」、內文「Booking information — 數字」「確認訂房編號為 數字」或網址「res_id=數字」。
 - 兩段式郵件：入住日前的通知常只有入住/退房日期與訂單號，沒有姓名/房型/金額（正常，is_booking 仍為 true）；入住當天才會有完整房客資訊。
-- 日期格式如「2026年6月5日」。`,
+- 日期格式如「2026年6月5日」。
+- 一張訂單可能同時訂了不同房型（內文會分段列出多個房型各自的房型名稱與金額，姓名與訂單號只出現一次、適用全部房型）；此時把第一個房型填在主要欄位，其餘房型依序放進 additional_rooms。`,
   agoda: `Agoda：
 - 訂單號為純數字（約 10 位），出現在主旨「Agoda 訂單 數字」或「Agoda Booking ID 數字」、內文「訂房編號」下一行。
 - 欄位標籤：訂房編號 / 入住 / 退房 / 房型 / 入住人數 / 房客姓名 / 總金額。
@@ -774,10 +819,14 @@ const PLATFORM_HINTS: Record<string, string> = {
 // the model the trickiest per-platform shapes: Booking.com's order-number-only
 // pre-stay email, the 姓/名 guest format, and cancellation wording.
 const FEW_SHOT_EXAMPLES: Record<string, string> = {
-  booking_com: `輸入主旨：「Booking.com - 新的預訂！ (5155978344, 2026年6月5日星期五)」
+  booking_com: `範例1（單一房型，入住日前通知）：輸入主旨：「Booking.com - 新的預訂！ (5155978344, 2026年6月5日星期五)」
 輸入內文片段：「Booking information — 5155978344 … res_id=5155978344」
 正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":null,"check_in":"2026-06-05","check_out":null,"confirmation_id":"5155978344","total_price":null,"num_guests":null,"property_name":null,"matched_property_id":null,"platform":"booking_com"}
-（說明：入住日前通知常只有訂單號與入住日，其餘填 null，不要猜測。）`,
+（說明：入住日前通知常只有訂單號與入住日，其餘填 null，不要猜測。）
+
+範例2（一張訂單同時訂兩個不同房型）：內文「Booking information — 6203344521 … Rong Tenghao … 入住 2026-08-28 退房 2026-08-29 … 房型 1：蘭博大床房，TWD 1800 … 房型 2：山景大床房，TWD 1800」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"Rong Tenghao","check_in":"2026-08-28","check_out":"2026-08-29","confirmation_id":"6203344521","total_price":1800,"num_guests":null,"property_name":"蘭博大床房","matched_property_id":null,"platform":"booking_com","additional_rooms":[{"property_name":"山景大床房","matched_property_id":null,"total_price":1800,"num_guests":null}]}
+（說明：兩個房型共用同一訂單號與旅客姓名，第一個房型填主要欄位，第二個房型放進 additional_rooms。）`,
   agoda: `範例1（確認，1晚）：內文「訂單編號 1732718574 … Check-in 入住 11-Jul-2026 … Check-out 退房 12-Jul-2026 … 顧客名 RueiJie 姓 Chen … Mountain View Double Room … 2 Adults … TWD 1,911.00」
 正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"RueiJie Chen","check_in":"2026-07-11","check_out":"2026-07-12","confirmation_id":"1732718574","total_price":1911,"num_guests":2,"property_name":"Mountain View Double Room","matched_property_id":null,"platform":"agoda"}
 
@@ -904,6 +953,7 @@ ${roomListStr}${hint}${preLine}${fewShot}
 - 連住多晚時，check_out 必須填最後退房日（不是入住日+1天）。若郵件標明「退房 7/13」check_out=2026-07-13；若只有「住 N 晚」，check_out = check_in + N 天。
 - 取消類郵件 is_cancellation 設 true，但 is_booking 仍為 true；盡量從郵件擷取 confirmation_id、入住/退房日。
 - 重要：「取消政策」「取消條款」「免費取消」「cancellation policy」「free cancellation」屬於訂房須知/條款用語，不代表此訂單已被取消。is_cancellation 只有在郵件明確表示本訂單「已取消／被取消／cancelled／canceled／cancellation request accepted」時才設為 true；若只是預定確認信中提到取消政策，is_cancellation 必須為 false。
+- 重要：同一張訂單有時會同時訂「不同房型」（例如一次訂了兩間不同的房，共用同一個訂單號、同一位旅客、同一組入住/退房日，只是房型和金額分開列）。這種情況下，把「第一個房型」照 property_name/matched_property_id/total_price/num_guests 正常填；其餘每個房型各自的房型名稱/id/金額/人數，依序放進 additional_rooms 陣列（一個房型一個物件）。只有真的同一張訂單訂了多個不同房型才需要 additional_rooms；只訂一個房型（就算訂了好幾晚）不要填這個欄位，也不要把「連住多晚」誤判成多房型。
 - 無法確定的欄位填 null，不要猜測。
 
 請回傳以下 JSON（無法確定的欄位填 null，不要猜測）：
@@ -914,11 +964,12 @@ ${roomListStr}${hint}${preLine}${fewShot}
   "check_in": "YYYY-MM-DD，入住日期",
   "check_out": "YYYY-MM-DD，退房日期，無法取得填 null",
   "confirmation_id": "訂單確認號/預約編號",
-  "total_price": 數字或null,
+  "total_price": 數字或null（第一個房型的金額；若整張訂單只有一個總金額、無法拆分各房型，填整張訂單總額並讓 additional_rooms 的 total_price 都填 null）,
   "num_guests": 數字或null,
   "property_name": "郵件中出現的房型名稱（如：標準雙人房、Standard Double Room），無房型資訊填 null",
   "matched_property_id": "從已知房型清單中最符合的 id，若無法確定則為 null",
-  "platform": "${platform}"
+  "platform": "${platform}",
+  "additional_rooms": [{"property_name": "...", "matched_property_id": "...或null", "total_price": 數字或null, "num_guests": 數字或null}]（只有同一訂單訂了多個不同房型才需要，否則整個欄位省略或填 null）
 }
 
 只回傳 JSON，不要其他說明。`
