@@ -3813,6 +3813,9 @@
       "faqKwPh": "E.g. check-in,what time,check in",
       "aiAnalyzing": "AI analyzing…",
       "saveToKb": "Save to Knowledge Base",
+      "editFaq": "Edit",
+      "saveChanges": "Save changes",
+      "saving": "Saving…",
       "platformSettings": "Platform Connection Settings"
     },
     "comingSoon": "Under construction, stay tuned",
