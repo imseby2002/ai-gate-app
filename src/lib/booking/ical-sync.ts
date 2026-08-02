@@ -101,7 +101,7 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
         status:              'confirmed',
         source:              'ical',
         raw_data:            { summary: ev.summary, uid, description: ev.description },
-      }, { onConflict: 'user_id,platform,platform_booking_id' })
+      }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
       .select('id')
       .single()
 

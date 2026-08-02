@@ -139,15 +139,27 @@ export async function GET(req: NextRequest) {
     (nameOrder[a.room_name] ?? 999) - (nameOrder[b.room_name] ?? 999)
   )
 
-  // 單號 → booking id 對照，讓每日入住可直接點進該筆訂單詳情
+  // 單號 → booking id 對照，讓每日入住可直接點進該筆訂單詳情。
+  // 一張訂單可能訂了多個房型（見 migration 090），同一單號會對應多筆 bookings，
+  // 所以除了單號本身，也要用「單號+房型」精準比對，避免連到別間房的訂單。
+  const propIdByName: Record<string, string> = {}
+  propList.forEach(p => { propIdByName[p.name] = p.id })
+
   const idByOrder: Record<string, string> = {}
+  const idByOrderAndProp: Record<string, string> = {}
   for (const b of bookingList) {
-    if (b.platform_booking_id) idByOrder[b.platform_booking_id] = b.id
+    if (!b.platform_booking_id) continue
+    idByOrder[b.platform_booking_id] = b.id
+    if (b.property_id) idByOrderAndProp[`${b.platform_booking_id}::${b.property_id}`] = b.id
   }
-  const allWithId = all.map((r: { order_number: string | null }) => ({
-    ...r,
-    booking_id: r.order_number ? (idByOrder[r.order_number] ?? null) : null,
-  }))
+  const allWithId = all.map((r: { order_number: string | null; room_name: string }) => {
+    const propId = propIdByName[r.room_name]
+    const preciseId = r.order_number && propId ? idByOrderAndProp[`${r.order_number}::${propId}`] : null
+    return {
+      ...r,
+      booking_id: preciseId ?? (r.order_number ? (idByOrder[r.order_number] ?? null) : null),
+    }
+  })
 
   // 找出有訂單但 property_id 為 null 或不在現有房型的訂單
   const matchedOrderNums = new Set(all.map((r: { order_number: string | null }) => r.order_number).filter(Boolean))
@@ -239,27 +251,29 @@ export async function PATCH(req: NextRequest) {
     if (changedKeys.includes('price_total')) patch.total_price = data.price_total ?? null
     if (changedKeys.includes('platform')) patch.platform = data.platform ?? 'manual'
 
-    if (data.order_number) {
-      // 有單號：唯一可靠對應，直接更新該筆訂單
+    // 一張訂單可能訂了多個房型（見 migration 090），同一單號可能對應多筆 bookings，
+    // 所以有單號時也要搭配房型一起比對，才能唯一鎖定「這個房間」的那一筆訂單。
+    const { data: prop } = await supabase
+      .from('properties')
+      .select('id')
+      .eq('user_id', ctx.ownerId)
+      .eq('name', data.room_name)
+      .maybeSingle()
+
+    if (data.order_number && prop) {
       const { data: matched } = await supabase
         .from('bookings')
         .select('id')
         .eq('user_id', ctx.ownerId)
         .eq('platform_booking_id', data.order_number)
+        .eq('property_id', prop.id)
         .maybeSingle()
       if (matched) {
         await supabase.from('bookings').update(patch).eq('id', matched.id).eq('user_id', ctx.ownerId)
       }
-    } else {
+    } else if (!data.order_number) {
       // 無單號：只有「房型+日期」剛好唯一對應一筆訂單時才連動，
       // 避免房型下有多間房、同天多筆訂單時誤改到別人的資料
-      const { data: prop } = await supabase
-        .from('properties')
-        .select('id')
-        .eq('user_id', ctx.ownerId)
-        .eq('name', data.room_name)
-        .maybeSingle()
-
       if (prop) {
         const { data: candidates } = await supabase
           .from('bookings')

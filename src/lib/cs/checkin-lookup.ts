@@ -70,46 +70,52 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
     return lines
   }
 
-  // 備用：從 bookings 查訂單，再交叉查 daily_records
-  const { data: booking } = await supabase
+  // 備用：從 bookings 查訂單，再交叉查 daily_records。
+  // 一張訂單可能訂了多個房型（同一訂單號對應多筆 bookings，見 migration 090），
+  // 所以這裡查全部相符的訂單，逐一列出房間與密碼，不能只取第一筆。
+  const { data: bookingRows } = await supabase
     .from('bookings')
     .select('property_id, guest_name, check_in, check_out')
     .eq('user_id', userId)
     .eq('platform_booking_id', orderNum)
-    .maybeSingle()
 
   // 系統確實有串接訂房功能、也真的查過了，但查無此訂單——一定要明講「查無資料」，
   // 絕對不能讓呼叫端什麼都不回，逼 AI 自己編一組密碼出來給客人。
-  if (!booking) {
+  if (!bookingRows?.length) {
     return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單。\n（嚴禁提供、推測或捏造任何密碼、房號；請詢問旅客訂房姓名與訂房平台，轉交真人客服協助查詢）`
   }
   if (beforeCheckin) return notYetMsg('')
 
+  const first = bookingRows[0]
   const lines: string[] = [
     `【入住資訊查詢結果】`,
     `找到訂單「${orderNum}」：`,
-    booking.guest_name ? `・旅客姓名：${booking.guest_name}` : null,
-    `・入住：${booking.check_in}　退房：${booking.check_out}`,
+    first.guest_name ? `・旅客姓名：${first.guest_name}` : null,
+    `・入住：${first.check_in}　退房：${first.check_out}`,
   ].filter(Boolean) as string[]
 
-  if (booking.property_id) {
-    const { data: prop } = await supabase.from('properties').select('name').eq('id', booking.property_id).maybeSingle()
-    if (prop?.name) {
-      lines.push(`・房間：${prop.name}`)
-      const { data: daily } = await supabase
-        .from('bnb_daily_records')
-        .select('room_password, gate_password')
-        .eq('user_id', userId)
-        .eq('date', todayDate)
-        .eq('room_name', prop.name)
-        .maybeSingle()
-      lines.push(`・房門密碼：${daily?.room_password || '（尚未設定，請聯繫工作人員）'}`)
-      lines.push(`・大門密碼：${daily?.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+  if (bookingRows.length > 1) lines.push(`・此訂單共訂了 ${bookingRows.length} 個房型，以下逐一列出：`)
+
+  for (const booking of bookingRows) {
+    if (booking.property_id) {
+      const { data: prop } = await supabase.from('properties').select('name').eq('id', booking.property_id).maybeSingle()
+      if (prop?.name) {
+        lines.push(`・房間：${prop.name}`)
+        const { data: daily } = await supabase
+          .from('bnb_daily_records')
+          .select('room_password, gate_password')
+          .eq('user_id', userId)
+          .eq('date', todayDate)
+          .eq('room_name', prop.name)
+          .maybeSingle()
+        lines.push(`　房門密碼：${daily?.room_password || '（尚未設定，請聯繫工作人員）'}`)
+        lines.push(`　大門密碼：${daily?.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+      } else {
+        lines.push(`・房間密碼：（尚未設定，請聯繫工作人員確認）`)
+      }
     } else {
-      lines.push(`・房間密碼：（尚未設定，請聯繫工作人員確認）`)
+      lines.push(`・房間密碼：（訂單尚未對應房型，請聯繫工作人員確認）`)
     }
-  } else {
-    lines.push(`・房間密碼：（訂單尚未對應房型，請聯繫工作人員確認）`)
   }
 
   lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
