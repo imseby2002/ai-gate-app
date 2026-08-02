@@ -145,7 +145,7 @@ function buildModel(attempt: Attempt) {
 
 function isRetryable(err: unknown): boolean {
   const msg = String(err).toLowerCase()
-  // 429 rate limit, 503 unavailable, network errors, model not found
+  // 429 rate limit, 503 unavailable, network errors, model not found/no access
   return (
     msg.includes('429') ||
     msg.includes('503') ||
@@ -153,6 +153,12 @@ function isRetryable(err: unknown): boolean {
     msg.includes('quota') ||
     msg.includes('overloaded') ||
     msg.includes('model_not_found') ||
+    // OpenAI 相容端點常見格式："The model X does not exist or you do not have access to it."
+    msg.includes('does not exist') ||
+    msg.includes('do not have access') ||
+    msg.includes('not found') ||
+    msg.includes('invalid model') ||
+    msg.includes('unknown model') ||
     msg.includes('fetch failed') ||
     msg.includes('econnrefused') ||
     msg.includes('timeout')
@@ -203,8 +209,32 @@ export async function streamWithFallback(
         maxOutputTokens: params.maxTokens ?? 4096,
         abortSignal: AbortSignal.timeout(30000), // 30s per attempt
       })
+
+      // streamText() 不等網路請求完成就回傳（它是懶串流）。像「model does not
+      // exist」這種 provider 錯誤只會在消費 fullStream 時才冒出來，那時已經
+      // 離開這個 try/catch，chain 就沒機會換下一個模型了。因此先偷看第一個
+      // part：若是 error，視為這次 attempt 失敗並照 isRetryable 規則換下一個；
+      // 若不是，把它塞回去，讓呼叫端仍能拿到完整、順序正確的串流。
+      const iterator = stream.fullStream[Symbol.asyncIterator]()
+      const first = await iterator.next()
+      if (!first.done && first.value.type === 'error') {
+        throw first.value.error
+      }
+
+      async function* rebuiltFullStream() {
+        if (!first.done) yield first.value
+        while (true) {
+          const next = await iterator.next()
+          if (next.done) return
+          yield next.value
+        }
+      }
+
       return {
-        stream,
+        // fullStream 實際型別是包著 ReadableStream 介面的 AsyncIterableStream，
+        // 這裡重組出來的是純 AsyncGenerator——結構不完全相容，但呼叫端
+        // （route.ts）只用 for-await 消費它，執行期相容即可，故經 unknown 轉型。
+        stream: { ...stream, fullStream: rebuiltFullStream() } as unknown as typeof stream,
         usedModel: attempt.via === 'direct' ? attempt.model : `${attempt.via}:${attempt.model}`,
         usedVia: attempt.via,
         attemptsCount: i + 1,
@@ -212,7 +242,7 @@ export async function streamWithFallback(
     } catch (err) {
       lastError = err
       if (!isRetryable(err)) throw err  // Non-retryable → stop immediately
-      // Retryable (429, 503) → try next
+      // Retryable (429, 503, model 不存在/無權限等) → 試下一個
     }
   }
 

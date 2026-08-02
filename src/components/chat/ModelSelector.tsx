@@ -26,7 +26,11 @@ const ROUTING_HINT: Record<string, string> = {
 }
 
 export function ModelSelector({ models, value, onChange }: ModelSelectorProps) {
-  const textModels = models.filter(m => m.modality === 'text' || m.modality === 'multimodal')
+  // Groq 系列在對話選單裡只保留 Auto，其餘型號（llama-3.3-70b、qwen3-32b…）
+  // 仍留在 ai_models 供 fallback chain 內部使用，只是不列進使用者可選清單
+  const textModels = models
+    .filter(m => m.modality === 'text' || m.modality === 'multimodal')
+    .filter(m => m.id === 'groq-auto' || !m.id.startsWith('groq-'))
 
   return (
     <Select value={value ?? 'auto'} onValueChange={(v: string) => onChange(v === 'auto' ? null : v)}>
