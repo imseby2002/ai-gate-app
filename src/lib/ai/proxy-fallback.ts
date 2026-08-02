@@ -12,6 +12,7 @@ import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
 import type { ChatParams } from './providers/cli-proxy'
 import { normalizeFreeLlmBaseUrl } from './providers/free-llm'
+import { GROQ_MODEL_MAP, GROQ_AUTO_MODEL } from './providers/groq'
 
 // ── Attempt descriptor ────────────────────────────────────────────────────────
 
@@ -132,8 +133,12 @@ function buildModel(attempt: Attempt) {
       if (attempt.provider === 'groq') {
         const key = process.env.GROQ_API_KEY
         if (!key) throw new Error('GROQ_API_KEY not set')
-        // Extract base model name without "groq-" prefix if present
-        const realModel = attempt.model.replace(/^groq-/, '')
+        // 對照 groq.ts 的 GROQ_MODEL_MAP，不能自己剝 "groq-" 前綴——Groq 的實際
+        // model 名稱跟我們的 id 常常不是簡單去掉前綴的關係（如 llama-3.3-70b
+        // 實際要打 llama-3.3-70b-versatile，naive strip 會打到不存在的 model）
+        const realModel = attempt.model === 'groq-auto'
+          ? GROQ_AUTO_MODEL
+          : (GROQ_MODEL_MAP[attempt.model] ?? GROQ_AUTO_MODEL)
         return createGroq({ apiKey: key })(realModel)
       }
       throw new Error(`Unknown direct provider: ${(attempt as { provider: string }).provider}`)
@@ -212,17 +217,36 @@ export async function streamWithFallback(
 
       // streamText() 不等網路請求完成就回傳（它是懶串流）。像「model does not
       // exist」這種 provider 錯誤只會在消費 fullStream 時才冒出來，那時已經
-      // 離開這個 try/catch，chain 就沒機會換下一個模型了。因此先偷看第一個
-      // part：若是 error，視為這次 attempt 失敗並照 isRetryable 規則換下一個；
-      // 若不是，把它塞回去，讓呼叫端仍能拿到完整、順序正確的串流。
+      // 離開這個 try/catch，chain 就沒機會換下一個模型了。因此先偷看幾個
+      // part：只偷看「第一個」曾經不夠——很多 provider 會先送 start/
+      // start-step 之類的前導事件，真正的 error 是第二個 part 才出現，
+      // 偷看一個會誤判成功、把還沒真正失敗的 attempt 提早回傳給呼叫端。
+      // 因此持續偷看，直到遇到 error（此 attempt 失敗，換下一個），或遇到
+      // 任何代表「模型真的開始輸出內容」的 part（視為成功，停止偷看），
+      // 或串流自然結束（成功但空內容）。偷看到的 part 全部緩存，之後
+      // 塞回重組出的串流最前面，保持順序與內容完整。
+      const CONTENT_PART_TYPES = new Set([
+        'text-delta', 'reasoning-delta', 'tool-call', 'tool-input-delta', 'source', 'file',
+      ])
       const iterator = stream.fullStream[Symbol.asyncIterator]()
-      const first = await iterator.next()
-      if (!first.done && first.value.type === 'error') {
-        throw first.value.error
+      const buffered: Array<Awaited<ReturnType<typeof iterator.next>>['value']> = []
+      let peekError: unknown
+      let exhausted = false
+      // 安全上限：避免病態情況（一直送前導事件、不給內容也不給 error）無限等下去
+      for (let p = 0; p < 50; p++) {
+        const next = await iterator.next()
+        if (next.done) { exhausted = true; break }
+        buffered.push(next.value)
+        if (next.value.type === 'error') { peekError = next.value.error; break }
+        if (CONTENT_PART_TYPES.has(next.value.type)) break
+      }
+      if (peekError !== undefined) {
+        throw peekError
       }
 
       async function* rebuiltFullStream() {
-        if (!first.done) yield first.value
+        for (const part of buffered) yield part
+        if (exhausted) return
         while (true) {
           const next = await iterator.next()
           if (next.done) return
