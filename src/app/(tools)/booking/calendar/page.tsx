@@ -36,9 +36,11 @@ function addDays(ds: string, n: number) {
   const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return toDateStr(d)
 }
 
+interface RoomLine { property_id: string; property_name: string; total_price: string; num_guests: number }
 interface QuickForm {
-  property_id: string; guest_name: string; guest_phone: string; guest_email: string
-  check_in: string; check_out: string; num_guests: number; total_price: string; platform: string
+  guest_name: string; guest_phone: string; guest_email: string
+  check_in: string; check_out: string; platform: string
+  rooms: RoomLine[]
 }
 
 export default function CalendarPage() {
@@ -64,10 +66,10 @@ export default function CalendarPage() {
   const [filterProp, setFilterProp] = useState('')
   const [loading, setLoading]       = useState(true)
   const [selected, setSelected]     = useState<string>(toDateStr(now))
-  const [quickProp, setQuickProp]   = useState<Property | null>(null)
+  const [quickOpen, setQuickOpen]   = useState(false)
   const [quickForm, setQuickForm]   = useState<QuickForm>({
-    property_id: '', guest_name: '', guest_phone: '', guest_email: '',
-    check_in: '', check_out: '', num_guests: 1, total_price: '', platform: 'direct',
+    guest_name: '', guest_phone: '', guest_email: '',
+    check_in: '', check_out: '', platform: 'direct', rooms: [],
   })
   const [saving, setSaving] = useState(false)
   // Mobile: toggle between calendar view and detail view
@@ -139,29 +141,54 @@ export default function CalendarPage() {
   }
 
   function openQuick(p: Property, ds: string) {
-    setQuickProp(p)
+    setQuickOpen(true)
     setQuickForm({
-      property_id: p.id, guest_name: '', guest_phone: '', guest_email: '',
-      check_in: ds, check_out: addDays(ds, 1),
-      num_guests: 1, total_price: p.base_price ? String(p.base_price) : '',
-      platform: 'direct',
+      guest_name: '', guest_phone: '', guest_email: '',
+      check_in: ds, check_out: addDays(ds, 1), platform: 'direct',
+      rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1 }],
     })
+  }
+
+  // 同一位旅客一次訂多間房型時，不用分開跑一次流程——加進同一筆表單，
+  // 送出時每個房型各自建一筆訂單，共用旅客姓名/電話/日期/通路。
+  function addRoomLine(propertyId: string) {
+    if (!propertyId) return
+    const p = properties.find(x => x.id === propertyId)
+    if (!p || quickForm.rooms.some(r => r.property_id === propertyId)) return
+    setQuickForm(f => ({
+      ...f,
+      rooms: [...f.rooms, { property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1 }],
+    }))
+  }
+  function removeRoomLine(propertyId: string) {
+    setQuickForm(f => f.rooms.length <= 1 ? f : { ...f, rooms: f.rooms.filter(r => r.property_id !== propertyId) })
+  }
+  function updateRoomLine(propertyId: string, patch: Partial<RoomLine>) {
+    setQuickForm(f => ({ ...f, rooms: f.rooms.map(r => r.property_id === propertyId ? { ...r, ...patch } : r) }))
   }
 
   async function saveQuick() {
     setSaving(true)
     try {
-      const res = await fetch('/api/booking/bookings', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...quickForm,
-          total_price: quickForm.total_price ? parseFloat(quickForm.total_price) : null,
-          source: 'manual',
-        }),
-      })
-      const d = await res.json()
-      if (d.booking) { setQuickProp(null); fetchData() }
-      else alert(d.error)
+      const results = await Promise.all(quickForm.rooms.map(async r => {
+        const res = await fetch('/api/booking/bookings', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            property_id: r.property_id,
+            guest_name: quickForm.guest_name, guest_phone: quickForm.guest_phone, guest_email: quickForm.guest_email,
+            check_in: quickForm.check_in, check_out: quickForm.check_out,
+            num_guests: r.num_guests,
+            total_price: r.total_price ? parseFloat(r.total_price) : null,
+            platform: quickForm.platform,
+            source: 'manual',
+          }),
+        })
+        const d = await res.json()
+        return { ok: res.ok && !!d.booking, error: d.error as string | undefined, room: r.property_name }
+      }))
+      const failed = results.filter(r => !r.ok)
+      if (failed.length > 0) alert(failed.map(f => `${f.room}：${f.error ?? '儲存失敗'}`).join('\n'))
+      if (failed.length < results.length) { setQuickOpen(false); fetchData() }
     } finally { setSaving(false) }
   }
 
@@ -423,19 +450,55 @@ export default function CalendarPage() {
       </div>
 
       {/* Quick booking modal */}
-      {quickProp && createPortal(
+      {quickOpen && createPortal(
         <div className="fixed inset-0 bg-black/40 z-[9999] flex items-end sm:items-center justify-center sm:p-4"
-          onClick={e => { if (e.target === e.currentTarget) setQuickProp(null) }}>
+          onClick={e => { if (e.target === e.currentTarget) setQuickOpen(false) }}>
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-5 space-y-4 max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-gray-900">{t('calendar.quickTitle')}</h3>
-                <div className="text-xs text-gray-400 mt-0.5">{quickProp.name}　{quickForm.check_in}</div>
+                <div className="text-xs text-gray-400 mt-0.5">{t('calendar.roomsSelectedTitle', { count: quickForm.rooms.length })}　{quickForm.check_in}</div>
               </div>
-              <button onClick={() => setQuickProp(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
+              <button onClick={() => setQuickOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
                 <X className="h-4 w-4 text-gray-500" />
               </button>
             </div>
+
+            {/* 已選房型（可加多間，共用下方旅客資訊一次送出） */}
+            <div className="space-y-2">
+              {quickForm.rooms.map(r => (
+                <div key={r.property_id} className="flex items-center gap-2 bg-gray-50 border rounded-lg p-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-800 truncate">{r.property_name}</div>
+                    <div className="flex gap-2 mt-1">
+                      <input type="number" min={1} value={r.num_guests}
+                        onChange={e => updateRoomLine(r.property_id, { num_guests: parseInt(e.target.value) || 1 })}
+                        title={t('bookings.form.guests')}
+                        className="w-16 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                      <input type="number" value={r.total_price}
+                        onChange={e => updateRoomLine(r.property_id, { total_price: e.target.value })}
+                        placeholder={t('bookings.form.amount')}
+                        className="flex-1 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                    </div>
+                  </div>
+                  {quickForm.rooms.length > 1 && (
+                    <button onClick={() => removeRoomLine(r.property_id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {properties.some(p => !quickForm.rooms.some(r => r.property_id === p.id)) && (
+              <select value="" onChange={e => addRoomLine(e.target.value)}
+                className="w-full text-xs border rounded-lg px-3 py-2 text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                <option value="">{t('calendar.addAnotherRoom')}</option>
+                {properties.filter(p => !quickForm.rooms.some(r => r.property_id === p.id)).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">{t('bookings.form.guestName')}</label>
@@ -462,20 +525,6 @@ export default function CalendarPage() {
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">{t('bookings.form.guests')}</label>
-                <input type="number" min={1} value={quickForm.num_guests}
-                  onChange={e => setQuickForm(f => ({ ...f, num_guests: parseInt(e.target.value) }))}
-                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">{t('bookings.form.amount')}</label>
-                <input type="number" value={quickForm.total_price}
-                  onChange={e => setQuickForm(f => ({ ...f, total_price: e.target.value }))}
-                  className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
-              </div>
-            </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-600">{t('bookings.form.platform')}</label>
               <select value={quickForm.platform} onChange={e => setQuickForm(f => ({ ...f, platform: e.target.value }))}
@@ -484,9 +533,9 @@ export default function CalendarPage() {
               </select>
             </div>
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setQuickProp(null)}
+              <button onClick={() => setQuickOpen(false)}
                 className="flex-1 py-2.5 rounded-xl text-sm border text-gray-600 hover:bg-gray-50">{t('bookings.form.cancel')}</button>
-              <button onClick={saveQuick} disabled={!quickForm.guest_name || saving}
+              <button onClick={saveQuick} disabled={!quickForm.guest_name || quickForm.rooms.length === 0 || saving}
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-sky-500 hover:bg-sky-600 disabled:opacity-50">
                 {saving ? t('bookings.form.saving') : t('calendar.confirmAdd')}
               </button>
