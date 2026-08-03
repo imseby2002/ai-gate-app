@@ -18,6 +18,21 @@ export function formatFormSubmission(
   return `📋 ${formName} 新提交\n${roomRef ? `房號/訂單：${roomRef}\n` : ''}${lines.join('\n')}`
 }
 
+export function formatFormSubmissionBatch(
+  formName: string,
+  fields: CsFormField[],
+  submissions: Array<{ answers: Record<string, string>; room_ref: string | null; created_at: string }>,
+): string {
+  const items = submissions.map((s, i) => {
+    const time = new Date(s.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
+    const lines = fields
+      .map(f => (s.answers[f.id] ? `${f.label}：${s.answers[f.id]}` : null))
+      .filter((l): l is string => !!l)
+    return `${i + 1}. ${time}${s.room_ref ? `（房號/訂單：${s.room_ref}）` : ''}\n${lines.join('\n')}`
+  })
+  return `📋 ${formName} 今日彙整（共 ${submissions.length} 筆）\n\n${items.join('\n\n')}`.slice(0, 4500)
+}
+
 export async function notifyFormSubmission(
   userId: string,
   notifyTarget: CsFormNotifyTarget | null | undefined,
