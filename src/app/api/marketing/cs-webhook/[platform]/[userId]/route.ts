@@ -624,6 +624,10 @@ const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 // （中英文姓名、無問句、無多餘內容），搭配對話中出現訂單/訂房相關字眼才觸發查詢
 const NAME_ONLY_RE = /^[A-Za-z一-鿿][A-Za-z一-鿿\s.'-]{1,39}$/
 const BOOKING_INTENT_RE = /訂單|訂房|預訂|預定|入住|訂位|reservation|booking|大名|姓名/i
+// 常見的簡短應答／確認詞——雖然符合 NAME_ONLY_RE（純文字、無數字），但客人回覆這些字時
+// 絕對不是在報訂房姓名（常見情境：客服剛傳完付款帳號，客人回「OK」確認收到，卻被誤判成
+// 姓名去查訂單，查無資料後 AI 講出「查無訂單編號為『OK』的資料」這種文不對題的回覆）
+const NON_NAME_ACK_RE = /^(ok+|okay|k|kk|好|好的|好喔|好啊|嗯|嗯嗯|收到|了解|明白|知道了|謝謝|謝了|感謝|thanks?|thank\s*you|yes|yep|yeah|no|不用|不是|是的|是|對|對的|沒問題|可以|沒事|辛苦了)$/i
 
 // Columns gated behind identity verification (prevents IDOR on door codes / room numbers)
 const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
@@ -1211,7 +1215,7 @@ async function getAIReply(
         // 沒有訂單號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
         // →極可能是客人在回覆客服「請問您的訂房大名？」，用姓名查訂單，找不到就老實說查無資料
         const recentText = [...history.slice(-4).map(m => m.content), message].join('\n')
-        if (NAME_ONLY_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText)) {
+        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText)) {
           orderLookupDone = true
           try {
             const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
