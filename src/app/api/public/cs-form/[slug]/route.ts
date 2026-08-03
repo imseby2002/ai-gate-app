@@ -7,7 +7,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { CsFormField } from '@/app/api/marketing/cs-forms/route'
+import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
+import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 
 type Params = { params: Promise<{ slug: string }> }
 
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const { data: form } = await supabase
     .from('cs_forms')
-    .select('id, user_id, industry, fields, enabled')
+    .select('id, user_id, industry, name, fields, notify_target, enabled')
     .eq('slug', slug)
     .single()
 
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const roomRef = typeof body?.roomRef === 'string' ? body.roomRef.trim().slice(0, 100) : null
+  const notifyTarget = form.notify_target as CsFormNotifyTarget | null
 
   const { error } = await supabase
     .from('cs_form_submissions')
@@ -59,8 +61,14 @@ export async function POST(req: NextRequest, { params }: Params) {
       answers,
       room_ref: roomRef,
       source: 'public_form',
+      ...(notifyTarget?.batchMode === 'immediate' ? { notified_at: new Date().toISOString() } : {}),
     })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (notifyTarget?.batchMode === 'immediate') {
+    void notifyFormSubmission(form.user_id, notifyTarget, form.name, formatFormSubmission(form.name, fields, answers, roomRef))
+  }
+
   return NextResponse.json({ ok: true })
 }
