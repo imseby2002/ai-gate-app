@@ -403,6 +403,8 @@
       "add": "Thêm",
       "quickTitle": "Thêm đơn",
       "confirmAdd": "Xác nhận thêm",
+      "roomsSelectedTitle": "Đã chọn {count} phòng",
+      "addAnotherRoom": "+ Thêm phòng khác (cùng khách)",
       "col": {
         "room": "Loại phòng",
         "price": "Giá phòng",

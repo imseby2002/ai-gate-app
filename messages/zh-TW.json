@@ -403,6 +403,8 @@
       "add": "加入",
       "quickTitle": "加入訂單",
       "confirmAdd": "確認加入",
+      "roomsSelectedTitle": "已選 {count} 個房型",
+      "addAnotherRoom": "+ 加另一間房（同一位旅客）",
       "col": {
         "room": "房型",
         "price": "房價",

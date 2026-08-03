@@ -403,6 +403,8 @@
       "add": "Add",
       "quickTitle": "Add Booking",
       "confirmAdd": "Confirm",
+      "roomsSelectedTitle": "{count} room(s) selected",
+      "addAnotherRoom": "+ Add another room (same guest)",
       "col": {
         "room": "Room Type",
         "price": "Rate",
