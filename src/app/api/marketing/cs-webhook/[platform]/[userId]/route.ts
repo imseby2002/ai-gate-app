@@ -1066,7 +1066,11 @@ async function saveFormSubmissionFromChat(
       ...(isImmediate ? { notified_at: new Date().toISOString() } : {}),
     })
     if (isImmediate) {
-      void notifyFormSubmission(userId, notifyTarget, form.name, formatFormSubmission(form.name, form.fields, submit.answers, null))
+      void notifyFormSubmission(
+        userId, notifyTarget, form.name,
+        formatFormSubmission(form.name, form.fields, submit.answers, null),
+        { fields: form.fields, answers: submit.answers, roomRef: null },
+      )
     }
   } catch { /* 不中斷主流程 */ }
 }

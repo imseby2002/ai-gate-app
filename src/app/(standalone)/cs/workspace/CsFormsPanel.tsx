@@ -221,10 +221,11 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                 <option value="">不通知</option>
                 <option value="line">LINE（個人或群組）</option>
                 <option value="email">Email</option>
+                <option value="webhook">Webhook（例如既有的 Google Apps Script）</option>
               </select>
               {notifyTarget.platform && (
                 <input value={notifyTarget.to} onChange={e => setNotifyTarget(prev => ({ ...prev, to: e.target.value }))}
-                  placeholder={notifyTarget.platform === 'line' ? 'LINE 使用者或群組 ID' : 'Email 地址'}
+                  placeholder={notifyTarget.platform === 'line' ? 'LINE 使用者或群組 ID' : notifyTarget.platform === 'email' ? 'Email 地址' : 'https://...'}
                   className="flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
               )}
             </div>

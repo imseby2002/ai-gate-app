@@ -67,7 +67,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   if (notifyTarget?.batchMode === 'immediate') {
-    void notifyFormSubmission(form.user_id, notifyTarget, form.name, formatFormSubmission(form.name, fields, answers, roomRef))
+    void notifyFormSubmission(
+      form.user_id, notifyTarget, form.name,
+      formatFormSubmission(form.name, fields, answers, roomRef),
+      { fields, answers, roomRef },
+    )
   }
 
   return NextResponse.json({ ok: true })

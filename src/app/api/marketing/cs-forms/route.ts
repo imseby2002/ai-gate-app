@@ -15,8 +15,8 @@ export interface CsFormField {
 }
 
 export interface CsFormNotifyTarget {
-  platform: 'line' | 'email' | ''
-  to: string            // LINE：使用者或群組 id；email：收件地址
+  platform: 'line' | 'email' | 'webhook' | ''
+  to: string            // LINE：使用者或群組 id；email：收件地址；webhook：目標網址（例如既有的 Google Apps Script）
   batchMode: 'daily' | 'immediate'
   batchTime: string      // HH:MM，batchMode=daily 時使用
 }
