@@ -584,15 +584,10 @@ function Unit12CustomerService({
     }).catch(() => {})
   }
 
-  // Breakfast webhook configs (多筆)
+  // Breakfast webhook configs（已停用，改用自建表單，僅保留刪除舊設定用）
   const [breakfastSources, setBreakfastSources] = useState<CsDataSource[]>([])
   const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string; checkinTime: string }>({ priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '' })
   const [savingPrefs, setSavingPrefs] = useState(false)
-  const [editingBreakfast, setEditingBreakfast] = useState<CsDataSource | null | { id: '' }>(null)
-  const [editingBreakfastForm, setEditingBreakfastForm] = useState({
-    name: '', webhookUrl: '', cutoffTime: '22:00', deliveryTime: '07:50', rooms: '', menu: '',
-  })
-  const [savingBreakfast, setSavingBreakfast] = useState(false)
 
   const PRICING_TEMPLATES: Record<string, object> = {
     tour: {
@@ -797,69 +792,9 @@ function Unit12CustomerService({
     setDsLoading(false)
   }
 
-  function openAddBreakfast() {
-    setEditingBreakfast({ id: '' })
-    setEditingBreakfastForm({ name: '', webhookUrl: '', cutoffTime: '22:00', deliveryTime: '07:50', rooms: '', menu: '' })
-  }
-
-  function openEditBreakfast(src: CsDataSource) {
-    setEditingBreakfast(src)
-    setEditingBreakfastForm({
-      name:         src.name,
-      webhookUrl:   src.config.webhookUrl   ?? '',
-      cutoffTime:   src.config.cutoffTime   ?? '22:00',
-      deliveryTime: src.config.deliveryTime ?? '07:50',
-      rooms: (src.config.rooms ?? []).join('\n'),
-      menu:  (src.config.menu  ?? []).join('\n'),
-    })
-  }
-
-  async function saveBreakfast() {
-    setSavingBreakfast(true)
-    try {
-      const config = {
-        webhookUrl:   editingBreakfastForm.webhookUrl.trim(),
-        cutoffTime:   editingBreakfastForm.cutoffTime.trim(),
-        deliveryTime: editingBreakfastForm.deliveryTime.trim(),
-        rooms: editingBreakfastForm.rooms.split('\n').map(s => s.trim()).filter(Boolean),
-        menu:  editingBreakfastForm.menu.split('\n').map(s => s.trim()).filter(Boolean),
-      }
-      const bkId = (editingBreakfast as CsDataSource)?.id
-      if (bkId) {
-        const r = await fetch(`/api/marketing/cs-datasource/${bkId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingBreakfastForm.name || t('u12.shoppingConfig'), config, enabled: true }),
-        })
-        const d = await r.json()
-        if (d.source) setBreakfastSources(prev => prev.map(s => s.id === bkId ? d.source : s))
-      } else {
-        const r = await fetch('/api/marketing/cs-datasource', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingBreakfastForm.name || t('u12.shoppingConfig'), type: 'breakfast_webhook', config, industry: ind }),
-        })
-        const d = await r.json()
-        if (d.source) setBreakfastSources(prev => [...prev, d.source])
-      }
-      setEditingBreakfast(null)
-    } catch {}
-    setSavingBreakfast(false)
-  }
-
   async function deleteBreakfast(id: string) {
     await fetch(`/api/marketing/cs-datasource/${id}`, { method: 'DELETE' })
     setBreakfastSources(prev => prev.filter(s => s.id !== id))
-  }
-
-  async function toggleBreakfast(src: CsDataSource) {
-    const r = await fetch(`/api/marketing/cs-datasource/${src.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: src.name, config: src.config, enabled: !src.enabled }),
-    })
-    const d = await r.json()
-    if (d.source) setBreakfastSources(prev => prev.map(s => s.id === src.id ? d.source : s))
   }
 
   async function toggleDs(src: CsDataSource) {
@@ -2623,151 +2558,24 @@ function Unit12CustomerService({
             <div>• {t('u12.usage4')}</div>
           </div>
 
-          {/* ── 民宿購物設定 ── */}
-          <div className="border-t pt-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium text-gray-700">🍱 {t('u12.shopTitle')}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{t('u12.shopHint')}</div>
-              </div>
-              {editingBreakfast === null && (
-                <button onClick={openAddBreakfast}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1 flex-shrink-0"
-                  style={{ background: 'var(--primary)' }}>
-                  <Plus className="h-3.5 w-3.5" />{t('u12.add')}
-                </button>
+          {/* ── 民宿購物設定（已停用，改用「自建表單」分頁） ── */}
+          <div className="border-t pt-5">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 space-y-1.5">
+              <div className="font-medium text-sm">🍱 {t('u12.shopTitle')}已改用「自建表單」分頁</div>
+              <div>這裡舊的早餐設定（透過 Google Apps Script 推送）已停用——實際測試發現它從未在正式 LINE 對話中真正觸發過。</div>
+              <div>已幫你把原本的早餐設定搬到「自建表單」分頁，通知方式沿用同一個 Google Apps Script 網址，請到該分頁測試確認有正常收到通知。</div>
+              {breakfastSources.length > 0 && (
+                <div className="pt-1">
+                  {breakfastSources.map(src => (
+                    <div key={src.id} className="flex items-center gap-2">
+                      <span className="truncate">{src.name}（已停用）</span>
+                      <button onClick={() => deleteBreakfast(src.id)}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 hover:bg-red-100 text-red-500 shrink-0">{t('u12.delete')}</button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-
-            {breakfastSources.length === 0 && editingBreakfast === null && (
-              <div className="border-2 border-dashed rounded-xl p-5 text-center text-xs text-gray-400">
-                {t('u12.noShopConfig')}
-              </div>
-            )}
-
-            {breakfastSources.length > 0 && editingBreakfast === null && (
-              <div className="space-y-2">
-                {breakfastSources.map(src => (
-                  <div key={src.id} className="border rounded-xl p-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-800 truncate">{src.name}</div>
-                      <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                        {t('u12.shopMeta', { cutoff: src.config.cutoffTime ?? '--', delivery: src.config.deliveryTime ?? '--', count: (src.config.menu ?? []).length })}
-                      </div>
-                    </div>
-                    <button onClick={() => toggleBreakfast(src)}
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${src.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {src.enabled ? t('u12.enable') : t('u12.disable')}
-                    </button>
-                    <button onClick={() => openEditBreakfast(src)}
-                      className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
-                    <button onClick={() => deleteBreakfast(src.id)}
-                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {editingBreakfast !== null && (
-              <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
-                <div className="font-medium text-sm text-gray-700">
-                  {(editingBreakfast as CsDataSource).id ? t('u12.editShopConfig') : t('u12.addShopConfig')}
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.shopName')} <span className="text-red-400">*</span></label>
-                  <input
-                    type="text"
-                    placeholder={t('u12.shopNamePh')}
-                    value={editingBreakfastForm.name}
-                    onChange={e => setEditingBreakfastForm(p => ({ ...p, name: e.target.value }))}
-                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.appsScriptUrl')} <span className="text-red-400">*</span></label>
-                  <input
-                    type="text"
-                    placeholder="https://script.google.com/macros/s/XXXXX/exec"
-                    value={editingBreakfastForm.webhookUrl}
-                    onChange={e => setEditingBreakfastForm(p => ({ ...p, webhookUrl: e.target.value }))}
-                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                  <div className="text-[10px] text-gray-400 mt-0.5">{t('u12.appsScriptHint')}</div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">{t('u12.cutoffTime')}</label>
-                    <input
-                      type="text"
-                      placeholder="22:00"
-                      value={editingBreakfastForm.cutoffTime}
-                      onChange={e => setEditingBreakfastForm(p => ({ ...p, cutoffTime: e.target.value }))}
-                      className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">{t('u12.deliveryTime')}</label>
-                    <input
-                      type="text"
-                      placeholder="07:50"
-                      value={editingBreakfastForm.deliveryTime}
-                      onChange={e => setEditingBreakfastForm(p => ({ ...p, deliveryTime: e.target.value }))}
-                      className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.roomList')}</label>
-                  <textarea
-                    rows={5}
-                    placeholder={'201 龜山加大床房\n202 蘭博雙人房\n301 海景加大床房\n302 山景雙人房\n401 露臺雙人房'}
-                    value={editingBreakfastForm.rooms}
-                    onChange={e => setEditingBreakfastForm(p => ({ ...p, rooms: e.target.value }))}
-                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.itemMenu')}</label>
-                  <textarea
-                    rows={6}
-                    placeholder={'SET A 薯餅起司堡\nSET B (全素)綜合蔬食總匯\nSET C 厚切牛肉起司堡\nSET D (奶蛋素)松露薯泥堡\nSET E 中華拼盤'}
-                    value={editingBreakfastForm.menu}
-                    onChange={e => setEditingBreakfastForm(p => ({ ...p, menu: e.target.value }))}
-                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono leading-relaxed"
-                  />
-                  <div className="text-[10px] text-gray-400 mt-0.5">{t('u12.itemMenuHint')}</div>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
-                  <div className="font-medium">{t('u12.orderFlowTitle')}</div>
-                  <div>{t('u12.orderFlow1')}</div>
-                  <div>{t('u12.orderFlow2')}</div>
-                  <div>{t('u12.orderFlow3')}</div>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={saveBreakfast}
-                    disabled={savingBreakfast || !editingBreakfastForm.webhookUrl.trim()}
-                    className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50 flex items-center gap-1.5"
-                    style={{ background: 'var(--primary)' }}
-                  >
-                    {savingBreakfast
-                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('u12.saving')}</>
-                      : <><CheckCircle2 className="h-3.5 w-3.5" />{t('u12.save')}</>}
-                  </button>
-                  <button onClick={() => setEditingBreakfast(null)}
-                    className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
-                    {t('u12.cancel')}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       ))}
