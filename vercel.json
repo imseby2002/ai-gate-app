@@ -44,6 +44,10 @@
     {
       "path": "/api/cron/cs-followup",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/cs-form-batch",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

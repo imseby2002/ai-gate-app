@@ -12,10 +12,12 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
+import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
+import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
 // 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
@@ -407,7 +409,9 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const reply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType)
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType)
+  const { visibleReply: reply, submit: formSubmit } = extractFormSubmit(rawReply)
+  if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
@@ -435,6 +439,15 @@ async function replyToCustomer(
   return reply
 }
 
+// 自建表單（cs_forms）中設有觸發關鍵字的表單 → CS 對話中主動詢問並收集
+interface CsChatForm {
+  id: string
+  name: string
+  fields: CsFormField[]
+  trigger_keywords: string
+  notify_target: CsFormNotifyTarget
+}
+
 // ── Load CS knowledge base (unit_data[12]) + company data ────────────────────
 interface CsKnowledge {
   systemPrompt: string
@@ -448,6 +461,7 @@ interface CsKnowledge {
   discountMaxPct: number
   discountGifts: string
   pricingConfigs: PricingConfig[]
+  csForms: CsChatForm[]
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -521,6 +535,15 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     if (pricingLines.length) knowledgeParts.push(pricingLines.join('\n\n'))
   }
 
+  // 自建表單：只載入有設定觸發關鍵字、且啟用中的表單（沒有關鍵字的表單只能靠公開連結填寫）
+  const { data: formRows } = await supabase
+    .from('cs_forms')
+    .select('id, name, fields, trigger_keywords, notify_target')
+    .eq('user_id', userId)
+    .eq('enabled', true)
+    .neq('trigger_keywords', '')
+  const csForms = (formRows ?? []) as CsChatForm[]
+
   // Industry (for ticket/message records) — taken from the most recent data source
   const { data: industryRow } = await supabase
     .from('cs_data_sources')
@@ -565,6 +588,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     discountMaxPct,
     discountGifts,
     pricingConfigs,
+    csForms,
   }
 }
 
@@ -595,11 +619,18 @@ interface PricingConfig {
 }
 
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
+// 手機號碼（09 開頭，可能有 +886/886 國碼、可能有 -／空白分隔），跟 NUMERIC_ORDER_RE
+// 不會撞在一起（訂單號規則要求開頭 1-9 且無 0），可以放心並存判斷。
+const PHONE_RE = /(?<!\d)(?:\+?886[-\s]?9\d{2}|09\d{2})[-\s]?\d{3}[-\s]?\d{3}(?!\d)/
 
 // 客人只報「訂房大名」、沒給訂單號碼時，用來判斷「這則訊息本身像不像一個姓名」
 // （中英文姓名、無問句、無多餘內容），搭配對話中出現訂單/訂房相關字眼才觸發查詢
 const NAME_ONLY_RE = /^[A-Za-z一-鿿][A-Za-z一-鿿\s.'-]{1,39}$/
 const BOOKING_INTENT_RE = /訂單|訂房|預訂|預定|入住|訂位|reservation|booking|大名|姓名/i
+// 常見的簡短應答／確認詞——雖然符合 NAME_ONLY_RE（純文字、無數字），但客人回覆這些字時
+// 絕對不是在報訂房姓名（常見情境：客服剛傳完付款帳號，客人回「OK」確認收到，卻被誤判成
+// 姓名去查訂單，查無資料後 AI 講出「查無訂單編號為『OK』的資料」這種文不對題的回覆）
+const NON_NAME_ACK_RE = /^(ok+|okay|k|kk|好|好的|好喔|好啊|嗯|嗯嗯|收到|了解|明白|知道了|謝謝|謝了|感謝|thanks?|thank\s*you|yes|yep|yeah|no|不用|不是|是的|是|對|對的|沒問題|可以|沒事|辛苦了)$/i
 
 // Columns gated behind identity verification (prevents IDOR on door codes / room numbers)
 const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
@@ -984,6 +1015,73 @@ function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[],
   return ''
 }
 
+// ── 自建表單（cs_forms）CS 對話內問答 ─────────────────────────────────────────
+// 表單欄位是商家自訂、無固定語意（不像 bookingFlows 的 product/date/headcount 等
+// 固定欄位可以用正則抽取），所以改用「AI 自己在回覆最後標記已收集完成」的方式，
+// 而不是 detectBookingCompletion 那種伺服器端正則偵測。標記客人看不到，送出前會被移除。
+const FORM_SUBMIT_RE = /\n*<<<FORM_SUBMIT:(\{[\s\S]*?\})>>>\n*/
+
+function buildFormsSection(forms: CsChatForm[]): string {
+  if (!forms.length) return ''
+  const list = forms.map(f => {
+    const kws = f.trigger_keywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
+    const fieldLines = f.fields.map(field => {
+      const opt = field.options?.length ? `，選項：${field.options.join('、')}` : ''
+      return `  - id="${field.id}" ${field.label}${field.required ? '（必填）' : '（選填）'}${opt}`
+    }).join('\n')
+    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時，主動依序詢問以下欄位，一次只問一個，已回答的不要重複問：\n${fieldLines}`
+  }).join('\n\n')
+
+  return `\n\n【自建表單問答——比照下方規則執行】
+${list}
+
+當上面某個表單的所有「必填」欄位都已在對話中得到客人明確回答後：
+1. 先用一句自然的話回覆客人（例如「已收到，謝謝您！」），不要提到「表單」「系統」「標記」等字眼
+2. 接著另起一行，原樣輸出（客人看不到這行，系統會自動移除，格式不可更動）：
+<<<FORM_SUBMIT:{"formId":"對應的 formId","answers":{"欄位id":"客人的回答"}}>>>
+必填欄位尚未問完前，絕對不可輸出這行；不同表單一次只處理一個。`
+}
+
+interface ParsedFormSubmit { formId: string; answers: Record<string, string> }
+
+function extractFormSubmit(reply: string): { visibleReply: string; submit: ParsedFormSubmit | null } {
+  const m = reply.match(FORM_SUBMIT_RE)
+  if (!m) return { visibleReply: reply, submit: null }
+  const visibleReply = reply.replace(FORM_SUBMIT_RE, '').trim()
+  try {
+    const parsed = JSON.parse(m[1]) as ParsedFormSubmit
+    if (!parsed.formId || typeof parsed.answers !== 'object') return { visibleReply, submit: null }
+    return { visibleReply, submit: parsed }
+  } catch {
+    return { visibleReply, submit: null }
+  }
+}
+
+// 命中標記 → 寫入 cs_form_submissions（來源標記為 cs_chat），並依 notifyTarget 立即通知（daily 批次由 cron 處理）
+async function saveFormSubmissionFromChat(
+  userId: string, platform: string, customerId: string, industry: string,
+  forms: CsChatForm[], submit: ParsedFormSubmit,
+): Promise<void> {
+  const form = forms.find(f => f.id === submit.formId)
+  if (!form) return
+  try {
+    const notifyTarget = form.notify_target
+    const isImmediate = notifyTarget?.batchMode === 'immediate'
+    await getServiceClient().from('cs_form_submissions').insert({
+      form_id: form.id, user_id: userId, industry,
+      answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
+      ...(isImmediate ? { notified_at: new Date().toISOString() } : {}),
+    })
+    if (isImmediate) {
+      void notifyFormSubmission(
+        userId, notifyTarget, form.name,
+        formatFormSubmission(form.name, form.fields, submit.answers, null),
+        { fields: form.fields, answers: submit.answers, roomRef: null },
+      )
+    }
+  } catch { /* 不中斷主流程 */ }
+}
+
 // ── Strip leaked reasoning / Markdown the model emits despite instructions ────
 function cleanReply(raw: string): string {
   let reply = raw
@@ -1116,11 +1214,19 @@ async function getAIReply(
             if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
+      } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
+        // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查
+        orderLookupDone = true
+        try {
+          const phone = message.match(PHONE_RE)?.[0] ?? ''
+          const byPhone = await queryBookingByPhone(getServiceClient(), userId, phone)
+          if (byPhone) externalDataSection = `\n\n${byPhone}${externalDataSection}`
+        } catch { /* 不中斷主流程 */ }
       } else {
-        // 沒有訂單號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
+        // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
         // →極可能是客人在回覆客服「請問您的訂房大名？」，用姓名查訂單，找不到就老實說查無資料
         const recentText = [...history.slice(-4).map(m => m.content), message].join('\n')
-        if (NAME_ONLY_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText)) {
+        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText) && !passwordFromDatasource) {
           orderLookupDone = true
           try {
             const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
@@ -1184,7 +1290,7 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料並轉真人客服
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單、請提供訂房平台與截圖，並轉真人客服，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
-- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}`
+- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>

@@ -81,22 +81,37 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
 
   // 系統確實有串接訂房功能、也真的查過了，但查無此訂單——一定要明講「查無資料」，
   // 絕對不能讓呼叫端什麼都不回，逼 AI 自己編一組密碼出來給客人。
+  // 訂房平台顯示給客人的訂單號，跟平台同步給民宿系統的訂單號常常不是同一組
+  // （尤其 Agoda/Booking.com），查無資料時要引導客人改用姓名或電話查詢，而不是叫他再試一次同一組號碼。
   if (!bookingRows?.length) {
-    return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單。\n（嚴禁提供、推測或捏造任何密碼、房號；請詢問旅客訂房姓名與訂房平台，轉交真人客服協助查詢）`
+    return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或手機號碼再查一次，仍查無資料才轉真人客服）`
   }
   if (beforeCheckin) return notYetMsg('')
 
-  const first = bookingRows[0]
-  const lines: string[] = [
+  const lines = [
     `【入住資訊查詢結果】`,
     `找到訂單「${orderNum}」：`,
-    first.guest_name ? `・旅客姓名：${first.guest_name}` : null,
-    `・入住：${first.check_in}　退房：${first.check_out}`,
-  ].filter(Boolean) as string[]
+    ...await formatBookingsWithPassword(supabase, userId, bookingRows, todayDate),
+  ]
+  return lines.join('\n')
+}
 
-  if (bookingRows.length > 1) lines.push(`・此訂單共訂了 ${bookingRows.length} 個房型，以下逐一列出：`)
+interface MatchedBookingRow { property_id: string | null; guest_name?: string | null; guest_phone?: string | null; check_in: string; check_out: string; status?: string }
 
-  for (const booking of bookingRows) {
+// 把已核對身份的訂單列出房型、入住/退房日期與門鎖密碼（今日的 daily_records）。
+// 呼叫端必須先確認「這是唯一一筆、身份已核對相符的訂單」才能呼叫這個函式——
+// 匹配到多筆（姓名/電話撞號）時不能呼叫這個函式，只能列出摘要讓客人自己指認，不可洩漏密碼。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function formatBookingsWithPassword(supabase: any, userId: string, rows: MatchedBookingRow[], todayDate: string): Promise<string[]> {
+  const lines: string[] = []
+  // Airbnb 的日曆同步（iCal）基於隱私政策不會提供真實姓名，guest_name 會是固定字串
+  // 「(Not available)」——不能把這個佔位字串當成真實姓名唸給客人聽
+  const realName = rows[0].guest_name && rows[0].guest_name !== '(Not available)' ? rows[0].guest_name : ''
+  lines.push(realName ? `・旅客姓名：${realName}` : '')
+  lines.push(`・入住：${rows[0].check_in}　退房：${rows[0].check_out}`)
+  if (rows.length > 1) lines.push(`・共訂了 ${rows.length} 個房型，以下逐一列出：`)
+
+  for (const booking of rows) {
     if (booking.property_id) {
       const { data: prop } = await supabase.from('properties').select('name').eq('id', booking.property_id).maybeSingle()
       if (prop?.name) {
@@ -117,8 +132,55 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
       lines.push(`・房間密碼：（訂單尚未對應房型，請聯繫工作人員確認）`)
     }
   }
-
   lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
+  return lines.filter(Boolean)
+}
+
+// 依手機號碼查訂單（比對末 9 碼，容忍 +886 / 0 開頭等格式差異）。
+// 手機號碼視為與訂單號碼同等強度的身份憑證——比對到「唯一一筆」訂單即可直接給密碼；
+// 比對到多筆（例如同一支手機訂了好幾間房、或號碼太短導致撞號）時，一律只列清單不給密碼，
+// 讓客人自己指認是哪一筆，避免把別人的房號密碼給錯人。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function queryBookingByPhone(supabase: any, userId: string, rawPhone: string): Promise<string | null> {
+  const { features } = await getBookingEntitlements(supabase, userId)
+  if (!features.csIntegration) return null
+
+  const digits = rawPhone.replace(/\D/g, '')
+  if (digits.length < 8) return null
+  const suffix = digits.slice(-9)
+
+  const notFoundMsg = `【入住資訊查詢結果】\n查無電話「${rawPhone}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或訂單號碼再查一次，仍查無資料才轉真人客服）`
+
+  const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+  const past = new Date(); past.setDate(past.getDate() - 3)
+  const future = new Date(); future.setDate(future.getDate() + 180)
+
+  const { data: candidates } = await supabase
+    .from('bookings')
+    .select('property_id, guest_name, guest_phone, check_in, check_out, status')
+    .eq('user_id', userId)
+    .not('guest_phone', 'is', null)
+    .gte('check_in', past.toLocaleDateString('sv-SE'))
+    .lte('check_in', future.toLocaleDateString('sv-SE'))
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const matched = (candidates ?? []).filter((c: any) => (c.guest_phone ?? '').replace(/\D/g, '').endsWith(suffix))
+  if (!matched.length) return notFoundMsg
+
+  const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
+  if (before) {
+    return `【入住資訊查詢結果】\n找到電話「${rawPhone}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+  }
+
+  if (matched.length > 1) {
+    const lines = [`【入住資訊查詢結果】`, `找到 ${matched.length} 筆與電話「${rawPhone}」相符的訂單，請客人提供訂房姓名或訂單號碼以確認是哪一筆：`]
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const b of matched.slice(0, 5)) lines.push(`・${b.guest_name ?? '（無姓名）'}｜入住 ${b.check_in} 退房 ${b.check_out}｜狀態：${b.status}`)
+    lines.push(`（比對到多筆前，嚴禁提供任何一筆的密碼或房號；務必先讓客人自己指認）`)
+    return lines.join('\n')
+  }
+
+  const lines = [`【入住資訊查詢結果】`, `找到電話「${rawPhone}」的訂單：`, ...await formatBookingsWithPassword(supabase, userId, matched, todayDate)]
   return lines.join('\n')
 }
 
@@ -137,32 +199,14 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
 
   const past = new Date(); past.setDate(past.getDate() - 3)
   const future = new Date(); future.setDate(future.getDate() + 180)
-
-  const { data: candidates } = await supabase
-    .from('bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status')
-    .eq('user_id', userId)
-    .not('guest_name', 'is', null)
-    .gte('check_in', past.toLocaleDateString('sv-SE'))
-    .lte('check_in', future.toLocaleDateString('sv-SE'))
-    .order('check_in', { ascending: true })
-    .limit(200)
-
-  if (!candidates?.length) return notFoundMsg
-
+  const pastStr = past.toLocaleDateString('sv-SE')
+  const futureStr = future.toLocaleDateString('sv-SE')
   const norm = (s: string) => s.toLowerCase().replace(/[\s./-]/g, '')
   const n = norm(name)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let matched = candidates.filter((c: any) => {
-    const g = norm(c.guest_name ?? '')
-    return !!g && (g.includes(n) || n.includes(g))
-  })
 
-  // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
-  if (!matched.length) {
+  const fuzzyMatchOne = async <T extends { guest_name: string | null }>(candidates: T[]): Promise<T | null> => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const list = candidates.map((c: any, i: number) => `${i}: ${c.guest_name}`).join('\n')
+      const list = candidates.map((c, i) => `${i}: ${c.guest_name}`).join('\n')
       const { text } = await generateText({
         model,
         messages: [{
@@ -173,14 +217,113 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
       const m = text.trim().match(/^\d+/)
       if (m) {
         const idx = parseInt(m[0], 10)
-        if (candidates[idx]) matched = [candidates[idx]]
+        if (candidates[idx]) return candidates[idx]
       }
     } catch { /* 比對失敗就當查無資料，不阻斷主流程 */ }
+    return null
+  }
+
+  // 1. 優先查「每日入住」（bnb_daily_records）——這是民宿自己維護、資料最準確即時的來源，
+  // 房號與密碼直接就在同一列，不像 bookings 需要另外查 properties/daily_records 兩層。
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: dailyCandidates } = await supabase
+    .from('bnb_daily_records')
+    .select('room_name, guest_name, date, order_number, room_password, gate_password')
+    .eq('user_id', userId)
+    .not('guest_name', 'is', null)
+    .gte('date', pastStr)
+    .lte('date', futureStr)
+
+  if (dailyCandidates?.length) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dailyMatched = dailyCandidates.filter((c: any) => {
+      const g = norm(c.guest_name ?? '')
+      return !!g && (g.includes(n) || n.includes(g))
+    })
+    if (!dailyMatched.length) {
+      const one = await fuzzyMatchOne(dailyCandidates)
+      if (one) dailyMatched = [one]
+    }
+
+    if (dailyMatched.length) {
+      // 同一人、同一組訂單號可能橫跨多間房（同一 LINE 帳號一次訂好幾間房）——
+      // 這種情況要視為「同一筆」，全部列出，不算撞號。
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const distinctPeople = new Set(dailyMatched.map((c: any) => `${norm(c.guest_name)}|${c.order_number ?? c.date}`))
+      if (distinctPeople.size === 1) {
+        const orderNum = dailyMatched[0].order_number
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
+
+        const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
+        if (before) {
+          return `【訂單查詢結果】\n找到旅客「${name}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+        }
+        const lines = [`【訂單查詢結果】`, `找到旅客「${name}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
+        if (group.length > 1) lines.push(`・共訂了 ${group.length} 個房型，以下逐一列出：`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const r of group as any[]) {
+          lines.push(`・房間：${r.room_name || '（尚未設定，請聯繫工作人員）'}`)
+          lines.push(`　房門密碼：${r.room_password || '（尚未設定，請聯繫工作人員）'}`)
+          lines.push(`　大門密碼：${r.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+        }
+        lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
+        return lines.join('\n')
+      }
+
+      // 每日入住撞到不同人（同名不同訂單/日期）——不可洩漏，列摘要讓客人自己指認
+      const lines: string[] = [`【訂單查詢結果】`, `找到 ${dailyMatched.length} 筆與「${name}」相符的入住紀錄，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const r of dailyMatched.slice(0, 5) as any[]) lines.push(`・${r.guest_name}｜${r.room_name || '（未指定房型）'}｜日期 ${r.date}`)
+      lines.push(`（比對到多筆前，嚴禁提供任何一筆的密碼或房號；務必先讓客人自己指認）`)
+      return lines.join('\n')
+    }
+  }
+
+  // 2. 每日入住查無資料 → 退回查「訂單」（bookings，訂房模組同步進來的）。
+  // Airbnb 的日曆同步基於隱私政策不會給真實姓名（固定回填「(Not available)」），
+  // 排除掉，不然這種佔位字串會混進候選名單、也永遠比對不到客人講的真實姓名。
+  const { data: candidates } = await supabase
+    .from('bookings')
+    .select('id, property_id, guest_name, check_in, check_out, status')
+    .eq('user_id', userId)
+    .not('guest_name', 'is', null)
+    .neq('guest_name', '(Not available)')
+    .gte('check_in', pastStr)
+    .lte('check_in', futureStr)
+    .order('check_in', { ascending: true })
+    .limit(200)
+
+  if (!candidates?.length) return notFoundMsg
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let matched = candidates.filter((c: any) => {
+    const g = norm(c.guest_name ?? '')
+    return !!g && (g.includes(n) || n.includes(g))
+  })
+
+  // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
+  if (!matched.length) {
+    const one = await fuzzyMatchOne(candidates)
+    if (one) matched = [one]
   }
 
   if (!matched.length) return notFoundMsg
 
-  const lines: string[] = [`【訂單查詢結果】`, `找到 ${matched.length} 筆與「${name}」相符的訂單：`]
+  // 姓名比對到「唯一一筆」——不論是子字串比對還是拼音模糊比對，都視為身份已核對
+  // （與資料來源表格的 verifyName 身分核對邏輯一致），可以直接給密碼；
+  // 比對到多筆（同名撞號）則不可洩漏，只列摘要讓客人自己指認。
+  if (matched.length === 1) {
+    const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
+    if (before) {
+      return `【訂單查詢結果】\n找到旅客「${name}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+    }
+    const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+    const lines = [`【訂單查詢結果】`, `找到旅客「${name}」的訂單：`, ...await formatBookingsWithPassword(supabase, userId, matched, todayDate)]
+    return lines.join('\n')
+  }
+
+  const lines: string[] = [`【訂單查詢結果】`, `找到 ${matched.length} 筆與「${name}」相符的訂單，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
   for (const b of matched.slice(0, 5)) {
     let roomName = ''
     if (b.property_id) {
@@ -189,6 +332,6 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
     }
     lines.push(`・${b.guest_name}｜${roomName || '（未指定房型）'}｜入住 ${b.check_in} 退房 ${b.check_out}｜狀態：${b.status}`)
   }
-  lines.push(`（以上為系統即時查詢結果，請直接引用；若客人提供的資訊與上方不符，請如實告知差異，不可硬說已核對成功）`)
+  lines.push(`（比對到多筆前，嚴禁提供任何一筆的密碼或房號；務必先讓客人自己指認）`)
   return lines.join('\n')
 }

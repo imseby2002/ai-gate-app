@@ -3488,6 +3488,7 @@
       "tabLogs": "記錄",
       "tabTickets": "工單",
       "tabInbox": "收件匣",
+      "tabForms": "自建表單",
       "platformsIntro": "設定各平台的 API Key，再將 Webhook URL 複製到對應平台後台。",
       "connected": "已連線",
       "notSet": "未設定",
