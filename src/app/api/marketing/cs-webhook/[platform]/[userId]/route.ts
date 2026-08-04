@@ -12,7 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
@@ -619,6 +619,9 @@ interface PricingConfig {
 }
 
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
+// 手機號碼（09 開頭，可能有 +886/886 國碼、可能有 -／空白分隔），跟 NUMERIC_ORDER_RE
+// 不會撞在一起（訂單號規則要求開頭 1-9 且無 0），可以放心並存判斷。
+const PHONE_RE = /(?<!\d)(?:\+?886[-\s]?9\d{2}|09\d{2})[-\s]?\d{3}[-\s]?\d{3}(?!\d)/
 
 // 客人只報「訂房大名」、沒給訂單號碼時，用來判斷「這則訊息本身像不像一個姓名」
 // （中英文姓名、無問句、無多餘內容），搭配對話中出現訂單/訂房相關字眼才觸發查詢
@@ -1211,11 +1214,19 @@ async function getAIReply(
             if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
+      } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
+        // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查
+        orderLookupDone = true
+        try {
+          const phone = message.match(PHONE_RE)?.[0] ?? ''
+          const byPhone = await queryBookingByPhone(getServiceClient(), userId, phone)
+          if (byPhone) externalDataSection = `\n\n${byPhone}${externalDataSection}`
+        } catch { /* 不中斷主流程 */ }
       } else {
-        // 沒有訂單號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
+        // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
         // →極可能是客人在回覆客服「請問您的訂房大名？」，用姓名查訂單，找不到就老實說查無資料
         const recentText = [...history.slice(-4).map(m => m.content), message].join('\n')
-        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText)) {
+        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText) && !passwordFromDatasource) {
           orderLookupDone = true
           try {
             const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
