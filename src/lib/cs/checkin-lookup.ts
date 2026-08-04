@@ -104,7 +104,10 @@ interface MatchedBookingRow { property_id: string | null; guest_name?: string | 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function formatBookingsWithPassword(supabase: any, userId: string, rows: MatchedBookingRow[], todayDate: string): Promise<string[]> {
   const lines: string[] = []
-  lines.push(rows[0].guest_name ? `・旅客姓名：${rows[0].guest_name}` : '')
+  // Airbnb 的日曆同步（iCal）基於隱私政策不會提供真實姓名，guest_name 會是固定字串
+  // 「(Not available)」——不能把這個佔位字串當成真實姓名唸給客人聽
+  const realName = rows[0].guest_name && rows[0].guest_name !== '(Not available)' ? rows[0].guest_name : ''
+  lines.push(realName ? `・旅客姓名：${realName}` : '')
   lines.push(`・入住：${rows[0].check_in}　退房：${rows[0].check_out}`)
   if (rows.length > 1) lines.push(`・共訂了 ${rows.length} 個房型，以下逐一列出：`)
 
@@ -196,32 +199,14 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
 
   const past = new Date(); past.setDate(past.getDate() - 3)
   const future = new Date(); future.setDate(future.getDate() + 180)
-
-  const { data: candidates } = await supabase
-    .from('bookings')
-    .select('id, property_id, guest_name, check_in, check_out, status')
-    .eq('user_id', userId)
-    .not('guest_name', 'is', null)
-    .gte('check_in', past.toLocaleDateString('sv-SE'))
-    .lte('check_in', future.toLocaleDateString('sv-SE'))
-    .order('check_in', { ascending: true })
-    .limit(200)
-
-  if (!candidates?.length) return notFoundMsg
-
+  const pastStr = past.toLocaleDateString('sv-SE')
+  const futureStr = future.toLocaleDateString('sv-SE')
   const norm = (s: string) => s.toLowerCase().replace(/[\s./-]/g, '')
   const n = norm(name)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let matched = candidates.filter((c: any) => {
-    const g = norm(c.guest_name ?? '')
-    return !!g && (g.includes(n) || n.includes(g))
-  })
 
-  // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
-  if (!matched.length) {
+  const fuzzyMatchOne = async <T extends { guest_name: string | null }>(candidates: T[]): Promise<T | null> => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const list = candidates.map((c: any, i: number) => `${i}: ${c.guest_name}`).join('\n')
+      const list = candidates.map((c, i) => `${i}: ${c.guest_name}`).join('\n')
       const { text } = await generateText({
         model,
         messages: [{
@@ -232,9 +217,95 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
       const m = text.trim().match(/^\d+/)
       if (m) {
         const idx = parseInt(m[0], 10)
-        if (candidates[idx]) matched = [candidates[idx]]
+        if (candidates[idx]) return candidates[idx]
       }
     } catch { /* 比對失敗就當查無資料，不阻斷主流程 */ }
+    return null
+  }
+
+  // 1. 優先查「每日入住」（bnb_daily_records）——這是民宿自己維護、資料最準確即時的來源，
+  // 房號與密碼直接就在同一列，不像 bookings 需要另外查 properties/daily_records 兩層。
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: dailyCandidates } = await supabase
+    .from('bnb_daily_records')
+    .select('room_name, guest_name, date, order_number, room_password, gate_password')
+    .eq('user_id', userId)
+    .not('guest_name', 'is', null)
+    .gte('date', pastStr)
+    .lte('date', futureStr)
+
+  if (dailyCandidates?.length) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dailyMatched = dailyCandidates.filter((c: any) => {
+      const g = norm(c.guest_name ?? '')
+      return !!g && (g.includes(n) || n.includes(g))
+    })
+    if (!dailyMatched.length) {
+      const one = await fuzzyMatchOne(dailyCandidates)
+      if (one) dailyMatched = [one]
+    }
+
+    if (dailyMatched.length) {
+      // 同一人、同一組訂單號可能橫跨多間房（同一 LINE 帳號一次訂好幾間房）——
+      // 這種情況要視為「同一筆」，全部列出，不算撞號。
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const distinctPeople = new Set(dailyMatched.map((c: any) => `${norm(c.guest_name)}|${c.order_number ?? c.date}`))
+      if (distinctPeople.size === 1) {
+        const orderNum = dailyMatched[0].order_number
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
+
+        const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
+        if (before) {
+          return `【訂單查詢結果】\n找到旅客「${name}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+        }
+        const lines = [`【訂單查詢結果】`, `找到旅客「${name}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
+        if (group.length > 1) lines.push(`・共訂了 ${group.length} 個房型，以下逐一列出：`)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const r of group as any[]) {
+          lines.push(`・房間：${r.room_name || '（尚未設定，請聯繫工作人員）'}`)
+          lines.push(`　房門密碼：${r.room_password || '（尚未設定，請聯繫工作人員）'}`)
+          lines.push(`　大門密碼：${r.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+        }
+        lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
+        return lines.join('\n')
+      }
+
+      // 每日入住撞到不同人（同名不同訂單/日期）——不可洩漏，列摘要讓客人自己指認
+      const lines: string[] = [`【訂單查詢結果】`, `找到 ${dailyMatched.length} 筆與「${name}」相符的入住紀錄，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const r of dailyMatched.slice(0, 5) as any[]) lines.push(`・${r.guest_name}｜${r.room_name || '（未指定房型）'}｜日期 ${r.date}`)
+      lines.push(`（比對到多筆前，嚴禁提供任何一筆的密碼或房號；務必先讓客人自己指認）`)
+      return lines.join('\n')
+    }
+  }
+
+  // 2. 每日入住查無資料 → 退回查「訂單」（bookings，訂房模組同步進來的）。
+  // Airbnb 的日曆同步基於隱私政策不會給真實姓名（固定回填「(Not available)」），
+  // 排除掉，不然這種佔位字串會混進候選名單、也永遠比對不到客人講的真實姓名。
+  const { data: candidates } = await supabase
+    .from('bookings')
+    .select('id, property_id, guest_name, check_in, check_out, status')
+    .eq('user_id', userId)
+    .not('guest_name', 'is', null)
+    .neq('guest_name', '(Not available)')
+    .gte('check_in', pastStr)
+    .lte('check_in', futureStr)
+    .order('check_in', { ascending: true })
+    .limit(200)
+
+  if (!candidates?.length) return notFoundMsg
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let matched = candidates.filter((c: any) => {
+    const g = norm(c.guest_name ?? '')
+    return !!g && (g.includes(n) || n.includes(g))
+  })
+
+  // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
+  if (!matched.length) {
+    const one = await fuzzyMatchOne(candidates)
+    if (one) matched = [one]
   }
 
   if (!matched.length) return notFoundMsg
