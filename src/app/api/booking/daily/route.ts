@@ -79,18 +79,30 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // 訂單已取消時，同房型/同單號的每日入住舊資料也要跟著清掉，不能繼續顯示旅客早已取消的入住資訊。
-  // 清掉後若同房型當天還有其他有效訂單，下方「補填」步驟會用新的 bookingByPropId 自動帶回正確資料。
-  const cancelledOrderNumsByProp: Record<string, Set<string>> = {}
+  // 每日入住的訂單欄位（單號/姓名/房價/平台）只該反映「目前仍有效」的訂單。
+  // 舊邏輯只在能「證明某張訂單剛好被取消」時才清（單號需完全對上），訂單被刪除、
+  // 單號本來就沒填、或訂單其實是被 Email/iCal 同步在別的路徑直接改狀態等情況都清不到，
+  // 導致每日入住卡著過期資料、跟日曆（直接讀 bookings）對不起來。改成白名單：
+  // 只要 source 是 booking，卻對不到「當天同房型」任何一筆目前有效訂單，一律清掉；
+  // 若清掉後同房型當天還有其他有效訂單，下方「補填」步驟會自動帶回正確資料。
+  const validOrderNumsByProp: Record<string, Set<string>> = {}
+  const validPropIds = new Set<string>()
   for (const b of bookingList) {
-    if (b.status !== 'cancelled' || !b.platform_booking_id) continue
-    if (!cancelledOrderNumsByProp[b.property_id]) cancelledOrderNumsByProp[b.property_id] = new Set()
-    cancelledOrderNumsByProp[b.property_id].add(b.platform_booking_id)
+    if (b.status === 'cancelled') continue
+    validPropIds.add(b.property_id)
+    if (b.platform_booking_id) {
+      if (!validOrderNumsByProp[b.property_id]) validOrderNumsByProp[b.property_id] = new Set()
+      validOrderNumsByProp[b.property_id].add(b.platform_booking_id)
+    }
   }
   for (const rec of cleanList) {
+    if (rec.source !== 'booking') continue
     const prop = propList.find(p => p.name === rec.room_name)
-    if (!prop || !rec.order_number) continue
-    if (!cancelledOrderNumsByProp[prop.id]?.has(rec.order_number)) continue
+    if (!prop) continue
+    const stillValid = rec.order_number
+      ? validOrderNumsByProp[prop.id]?.has(rec.order_number)
+      : validPropIds.has(prop.id)
+    if (stillValid) continue
     await supabase.from('bnb_daily_records').update({
       order_number: null, guest_name: null, price_total: null, platform: null,
       source: 'manual', updated_at: new Date().toISOString(),
