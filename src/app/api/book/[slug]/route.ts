@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { computeStayPrice } from '@/lib/booking/pricing'
+import { confirmPublicBooking } from '@/lib/booking/public-booking-confirm'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: '請求過於頻繁，請稍後再試' }, { status: 429 })
   }
 
-  const { data: profile } = await admin.from('bnb_profiles').select('user_id').eq('slug', slug).single()
+  const { data: profile } = await admin.from('bnb_profiles').select('user_id, auto_confirm_bookings').eq('slug', slug).single()
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
@@ -120,6 +121,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       return NextResponse.json({ error: '日期區間不正確' }, { status: 400 })
     }
     return NextResponse.json({ error: '訂房失敗，請稍後再試' }, { status: 500 })
+  }
+
+  // 民宿主開啟「自動確認」時，旅客送出後立即轉正式訂單，不用等人工按確認
+  if (profile.auto_confirm_bookings) {
+    const result = await confirmPublicBooking(admin, profile.user_id, booking.id)
+    if (result.ok) return NextResponse.json({ booking: { ...booking, status: 'confirmed', converted_booking_id: result.booking_id } })
+    // 自動確認失敗（例如寄信服務異常）仍保留這筆 pending 申請，讓民宿主可以手動確認，不讓旅客的申請憑空消失
   }
 
   return NextResponse.json({ booking })
