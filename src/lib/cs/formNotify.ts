@@ -40,6 +40,19 @@ function buildAnswersByLabel(fields: CsFormField[], answers: Record<string, stri
   return out
 }
 
+// 用表單自己指定的 OA 憑證直接 push（跳過平台分頁那組共用憑證）——
+// 讓不同表單可以各自綁定不同的 LINE 官方帳號（例如早餐店自己的 OA），
+// 前提跟平台分頁那組憑證一樣：這個 OA 帳號本身要先被加入目標群組。
+async function pushLineWithToken(token: string, to: string, text: string): Promise<boolean> {
+  const res = await fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
+    signal: AbortSignal.timeout(8000),
+  })
+  return res.ok
+}
+
 export async function notifyFormSubmission(
   userId: string,
   notifyTarget: CsFormNotifyTarget | null | undefined,
@@ -50,7 +63,11 @@ export async function notifyFormSubmission(
   if (!notifyTarget?.platform || !notifyTarget.to) return
   try {
     if (notifyTarget.platform === 'line') {
-      await sendToCustomer(userId, 'line', notifyTarget.to, text)
+      if (notifyTarget.lineToken?.trim()) {
+        await pushLineWithToken(notifyTarget.lineToken.trim(), notifyTarget.to, text)
+      } else {
+        await sendToCustomer(userId, 'line', notifyTarget.to, text)
+      }
     } else if (notifyTarget.platform === 'email' && process.env.RESEND_API_KEY) {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)

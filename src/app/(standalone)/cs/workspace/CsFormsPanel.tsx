@@ -229,6 +229,14 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                   className="flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
               )}
             </div>
+            {notifyTarget.platform === 'line' && (
+              <div>
+                <input value={notifyTarget.lineToken ?? ''} onChange={e => setNotifyTarget(prev => ({ ...prev, lineToken: e.target.value }))}
+                  placeholder="這個表單專用的 LINE Channel Access Token（選填）"
+                  className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
+                <div className="text-[10px] text-gray-400 mt-0.5">留空則用「平台」分頁設定的預設 OA 帳號；要用不同的 OA 帳號通知這個表單（例如早餐店自己的群組），才需要填這裡，且該 OA 帳號必須已加入上面填的群組</div>
+              </div>
+            )}
             {notifyTarget.platform && (
               <div className="flex items-center gap-3 text-xs text-gray-500">
                 <label className="flex items-center gap-1">
