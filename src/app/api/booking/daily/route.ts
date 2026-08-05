@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data: todayBookings } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, platform_booking_id, check_in, total_price, platform')
+    .select('id, property_id, guest_name, platform_booking_id, check_in, total_price, platform, status')
     .eq('user_id', ctx.ownerId)
     .eq('check_in', date)
     .order('created_at')
@@ -70,12 +70,32 @@ export async function GET(req: NextRequest) {
     prevByRoom[r.room_name] = { room_password: r.room_password, gate_password: r.gate_password }
   }
 
-  // 今日訂單依 property_id 分組
+  // 今日訂單依 property_id 分組（排除已取消，取消的訂單不該再被拿來自動帶入每日入住）
   const bookingByPropId: Record<string, { guest_name: string; platform_booking_id: string; total_price: number | null; platform: string | null }> = {}
   for (const b of bookingList) {
+    if (b.status === 'cancelled') continue
     if (!bookingByPropId[b.property_id]) {
       bookingByPropId[b.property_id] = { guest_name: b.guest_name, platform_booking_id: b.platform_booking_id, total_price: b.total_price ?? null, platform: b.platform ?? null }
     }
+  }
+
+  // 訂單已取消時，同房型/同單號的每日入住舊資料也要跟著清掉，不能繼續顯示旅客早已取消的入住資訊。
+  // 清掉後若同房型當天還有其他有效訂單，下方「補填」步驟會用新的 bookingByPropId 自動帶回正確資料。
+  const cancelledOrderNumsByProp: Record<string, Set<string>> = {}
+  for (const b of bookingList) {
+    if (b.status !== 'cancelled' || !b.platform_booking_id) continue
+    if (!cancelledOrderNumsByProp[b.property_id]) cancelledOrderNumsByProp[b.property_id] = new Set()
+    cancelledOrderNumsByProp[b.property_id].add(b.platform_booking_id)
+  }
+  for (const rec of cleanList) {
+    const prop = propList.find(p => p.name === rec.room_name)
+    if (!prop || !rec.order_number) continue
+    if (!cancelledOrderNumsByProp[prop.id]?.has(rec.order_number)) continue
+    await supabase.from('bnb_daily_records').update({
+      order_number: null, guest_name: null, price_total: null, platform: null,
+      source: 'manual', updated_at: new Date().toISOString(),
+    }).eq('id', rec.id)
+    rec.order_number = null; rec.guest_name = null; rec.price_total = null; rec.platform = null; rec.source = 'manual'
   }
 
   // 新增缺少的房型記錄
