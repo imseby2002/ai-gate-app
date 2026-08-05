@@ -622,6 +622,14 @@ const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 // 手機號碼（09 開頭，可能有 +886/886 國碼、可能有 -／空白分隔），跟 NUMERIC_ORDER_RE
 // 不會撞在一起（訂單號規則要求開頭 1-9 且無 0），可以放心並存判斷。
 const PHONE_RE = /(?<!\d)(?:\+?886[-\s]?9\d{2}|09\d{2})[-\s]?\d{3}[-\s]?\d{3}(?!\d)/
+// 訂房平台給客人看的訂單碼常常有英文字母前綴（例如易遊網「ORD0031572074」），既不是
+// NUMERIC_ORDER_RE（純數字）也不是 NAME_ONLY_RE（純文字）——這種訊息以前完全沒有觸發
+// 任何查詢，externalDataSection 維持空白，AI 在沒有任何系統資料的情況下自己編了一組
+// 房號密碼給客人（真實案例：客人給「ORD0031572074」，AI 回「房號301,密碼2937#」，
+// 兩者都是憑空捏造，真實資料完全不同）。加這條規則確保只要訊息長得像一組訂單代碼，
+// 就算查不到系統裡的號碼，也會強制查一次、注入「查無資料」的誠實訊息，而不是放著讓
+// AI 自由發揮。
+const ALPHANUMERIC_ORDER_RE = /\b[A-Za-z]{2,8}[-\s]?\d{5,}\b/
 
 // 客人只報「訂房大名」、沒給訂單號碼時，用來判斷「這則訊息本身像不像一個姓名」
 // （中英文姓名、無問句、無多餘內容），搭配對話中出現訂單/訂房相關字眼才觸發查詢
@@ -1214,6 +1222,23 @@ async function getAIReply(
             if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
+      } else if (ALPHANUMERIC_ORDER_RE.test(message)) {
+        // 訂房平台顯示給客人的訂單碼常有英文字母前綴（如易遊網「ORD0031572074」），
+        // 系統存的是平台同步給民宿的另一組純數字碼，兩者對不上——但這仍然是客人在
+        // 嘗試提供訂單碼，不能放著不查，否則 AI 會在完全沒有系統資料的情況下自己編一組
+        // 房號密碼給客人（真實案例）。查一次，查無資料也要老實說查無資料。
+        orderLookupDone = true
+        try {
+          const altOrderNum = message.match(ALPHANUMERIC_ORDER_RE)?.[0] ?? ''
+          if (!passwordFromDatasource) {
+            const bnb = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
+              ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或手機號碼再查一次，仍查無資料才轉真人客服）`
+            externalDataSection = `\n\n${bnb}${externalDataSection}`
+          } else {
+            const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
+            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
+          }
+        } catch { /* 不中斷主流程 */ }
       } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
         // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查
         orderLookupDone = true
@@ -1288,6 +1313,7 @@ async function getAIReply(
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
 - 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料並轉真人客服
+- 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單、請提供訂房平台與截圖，並轉真人客服，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
