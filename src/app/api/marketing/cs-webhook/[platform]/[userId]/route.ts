@@ -1113,6 +1113,27 @@ function cleanReply(raw: string): string {
     .trim()
 }
 
+// ── 密碼/房號輸出的最後一道防線：不靠指令，靠事實 ──────────────────────────
+// 前面加了再多「禁止捏造」的系統提示，本質上都只是「拜託模型別亂講」，模型仍然可能
+// 不遵守（真實案例：客人給的訂單碼格式沒觸發任何查詢，模型還是自己編了一組房號密碼）。
+// 這裡不再靠「猜有哪些輸入格式該觸發查詢」來補洞，而是直接在輸出端做事實查核：
+// 回覆裡如果出現「密碼/房號」後面接著一串英數字，但這組值從來沒有出現在系統真正查到
+// 的資料（externalDataSection）或這通對話先前已經給過的內容裡，一律視為捏造，攔截换成
+// 制式的「請提供識別資訊」，不讓這種回覆真的送到客人手上。
+const SENSITIVE_REVEAL_RE = /(?:密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,10})/g
+const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
+
+function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[]): string {
+  const matches = [...reply.matchAll(SENSITIVE_REVEAL_RE)].map(m => m[1])
+  if (!matches.length) return reply
+  // 這組值只要出現在「這次真的查到的系統資料」或「這通對話先前已經說過的內容」裡，
+  // 就有憑有據（先前會出現，代表當初也是通過同一套查詢流程才給的，不是平白冒出來）。
+  const priorAssistantText = history.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
+  const backedElsewhere = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v)
+  const hasUnbackedValue = matches.some(v => !backedElsewhere(v))
+  return hasUnbackedValue ? NO_FABRICATION_FALLBACK : reply
+}
+
 // 客人傳訂單/房卡截圖詢問密碼時，圖片內容不能直接被回覆模型當成「已核對」的系統資料採信
 // （模型看得懂圖片文字，但那只是客人單方面提供的畫面，不代表系統真的查得到這筆訂單）。
 // 用一次便宜的圖片辨識抽出訂單號/姓名候選，交給呼叫端走真正的資料庫查詢；查無資料一樣要老實說查無資料。
@@ -1349,7 +1370,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return cleanReply(text) || FALLBACK
+          return enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -1365,7 +1386,8 @@ async function getAIReply(
       : useL3
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
-    return (result ? cleanReply(result.reply) : '') || FALLBACK
+    const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
+    return enforceNoFabricatedReveal(finalReply, externalDataSection, history)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
