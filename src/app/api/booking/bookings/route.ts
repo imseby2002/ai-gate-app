@@ -76,7 +76,7 @@ export async function PUT(req: NextRequest) {
   // 修改前先取舊資料——若房型或入住日被改掉，才知道要清哪一筆舊的每日入住記錄
   const { data: before } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, status')
+    .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, status, deposit_amount, is_paid')
     .eq('id', id).eq('user_id', ctx.ownerId).maybeSingle()
 
   const { data, error } = await supabase
@@ -100,7 +100,7 @@ export async function DELETE(req: NextRequest) {
 
   const { data: booking } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, status')
+    .select('id, property_id, guest_name, platform_booking_id, total_price, platform, check_in, status, deposit_amount, is_paid')
     .eq('id', id).eq('user_id', ctx.ownerId).maybeSingle()
 
   const { error } = await supabase.from('bookings').delete().eq('id', id).eq('user_id', ctx.ownerId)

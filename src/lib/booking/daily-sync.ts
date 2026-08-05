@@ -18,6 +18,8 @@ interface BookingLike {
   platform: string | null
   check_in: string
   status: string
+  deposit_amount?: number | null
+  is_paid?: boolean | null
 }
 
 interface DailyRecordRow { id: string; order_number: string | null; guest_name: string | null }
@@ -53,6 +55,7 @@ async function findLinkedRecord(supabase: any, userId: string, booking: BookingL
 async function clearRecord(supabase: any, recordId: string) {
   await supabase.from('bnb_daily_records').update({
     order_number: null, guest_name: null, price_total: null, platform: null,
+    deposit: null, paid: false,
     source: 'manual', updated_at: new Date().toISOString(),
   }).eq('id', recordId)
 }
@@ -82,6 +85,8 @@ export async function syncDailyRecordForBooking(
       guest_name: booking.guest_name ?? null,
       price_total: booking.total_price ?? null,
       platform: booking.platform ?? null,
+      deposit: booking.deposit_amount ?? null,
+      paid: booking.is_paid ?? false,
       source: 'booking',
       updated_at: new Date().toISOString(),
     }).eq('id', rec.id)

@@ -11,6 +11,7 @@ interface Booking {
   check_in: string; check_out: string; num_guests: number
   total_price: number | null; currency: string; status: string
   payment_type: string; arrival_time: string
+  deposit_amount: number | null; is_paid: boolean
   special_requests: string; notes: string; source: string
   created_at: string; updated_at: string
   properties: { id: string; name: string } | null
@@ -208,6 +209,36 @@ export default function BookingDetailPage() {
             ) : (
               <div className="text-sm text-gray-900">{PAYMENT_LABELS[bk.payment_type] ?? t('payment.channel')}</div>
             )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-0.5">
+              <div className="text-xs text-gray-400">{t('detail.deposit')}</div>
+              {editing ? (
+                <input type="number" value={form.deposit_amount ?? ''}
+                  onChange={e => setForm(p => ({ ...p, deposit_amount: e.target.value === '' ? null : parseFloat(e.target.value) }))}
+                  className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              ) : (
+                <div className="text-sm text-gray-900">
+                  {bk.deposit_amount != null ? `${bk.currency} ${Number(bk.deposit_amount).toLocaleString()}` : '—'}
+                </div>
+              )}
+            </div>
+            <div className="space-y-0.5">
+              <div className="text-xs text-gray-400">{t('detail.isPaid')}</div>
+              {editing ? (
+                <label className="flex items-center gap-2 text-sm text-gray-700 h-[34px]">
+                  <input type="checkbox" checked={!!form.is_paid}
+                    onChange={e => setForm(p => ({ ...p, is_paid: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-300" />
+                  {t('detail.isPaid')}
+                </label>
+              ) : (
+                <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium ${bk.is_paid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {bk.is_paid ? t('detail.paidYes') : t('detail.paidNo')}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="space-y-0.5">
