@@ -4,7 +4,7 @@ import { use } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Users, Tag, CheckCircle, BedDouble, ChevronLeft, Loader2 } from 'lucide-react'
-import { getTemplate } from '@/lib/booking/templates'
+import { resolveDesign, headingCss } from '@/lib/booking/templates'
 
 interface BnbProfile {
   name: string; theme_color?: string | null; template_id?: string | null
@@ -154,11 +154,12 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   const dateBlocked  = datesInvalid || dateConflict
   const overCapacity = !!(selectedProp?.max_guests && form.num_guests > selectedProp.max_guests && !selectedProp.extra_guest_fee)
 
-  const tpl    = getTemplate(profile?.template_id)
-  const accent = profile?.theme_color || tpl.defaultAccent
+  const design = resolveDesign(profile ?? {})
+  const accent = design.accent
   const aStyle = { backgroundColor: accent }
   const aText  = { color: accent }
   const aBg    = { backgroundColor: `${accent}12`, border: `1px solid ${accent}30` }
+  const btnStyle = { borderRadius: design.btnRadius }
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-[50vh] text-gray-400">
@@ -176,12 +177,11 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
       {/* Header */}
       <div>
-        <h1 className={`text-2xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-xl' : ''}`}
-          style={{ color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }}>
+        <h1 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingCss(design)}>
           線上訂房
         </h1>
         {profile?.booking_instructions && (
-          <p className="mt-2 text-sm leading-relaxed" style={{ color: tpl.muted }}>{profile.booking_instructions}</p>
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: design.muted }}>{profile.booking_instructions}</p>
         )}
       </div>
 
@@ -214,8 +214,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
             業者確認後會寄確認信至 <strong>{form.guest_email}</strong>
           </p>
           <button onClick={() => { setStep('select'); setForm({ ...EMPTY_FORM }); setSelectedProp(null); setPromoValid(null) }}
-            className={`px-6 py-2 text-white text-sm font-medium hover:opacity-90 ${tpl.btnRadius}`}
-            style={aStyle}>再訂一間</button>
+            className="px-6 py-2 text-white text-sm font-medium hover:opacity-90"
+            style={{ ...aStyle, ...btnStyle }}>再訂一間</button>
         </div>
       )}
 
@@ -316,8 +316,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
 
           <button onClick={submit}
             disabled={submitting || dateBlocked || overCapacity || !form.guest_name || !form.guest_email || !form.check_in || !form.check_out}
-            className={`w-full py-3.5 font-bold text-white text-sm disabled:opacity-50 hover:opacity-90 transition-opacity ${tpl.btnRadius}`}
-            style={aStyle}>
+            className="w-full py-3.5 font-bold text-white text-sm disabled:opacity-50 hover:opacity-90 transition-opacity"
+            style={{ ...aStyle, ...btnStyle }}>
             {submitting ? '送出中…' : '確認訂房申請'}
           </button>
           <p className="text-center text-xs text-gray-400">送出後業者將與您確認，費用採現場付款</p>
@@ -361,8 +361,8 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
                         </div>
                       </div>
                       <button onClick={() => { setSelectedProp(prop); setStep('form') }}
-                        className={`shrink-0 px-4 py-2 text-white text-sm font-medium hover:opacity-90 transition-opacity ${tpl.btnRadius}`}
-                        style={aStyle}>
+                        className="shrink-0 px-4 py-2 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                        style={{ ...aStyle, ...btnStyle }}>
                         選擇
                       </button>
                     </div>

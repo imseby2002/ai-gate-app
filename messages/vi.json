@@ -530,6 +530,7 @@
       "refreshPreview": "Làm mới xem trước",
       "siteUrl": "URL website",
       "visualStyle": "Phong cách hình ảnh",
+      "customDesignActive": "Đang dùng thiết kế riêng do AI tạo, không phải 1 trong 4 mẫu trên. Có thể nhờ trợ lý thiết kế AI điều chỉnh hoặc đổi lại về mẫu có sẵn.",
       "themeColor": "Màu chủ đề",
       "reset": "Đặt lại",
       "tagline": "Khẩu hiệu phụ",
@@ -582,9 +583,11 @@
         "applyBtn": "Áp dụng vào website",
         "writing": "AI đang viết…",
         "inputPlaceholder": "Mô tả nhu cầu của bạn, VD: viết câu chuyện nhà nghỉ phù hợp gia đình…",
+        "customDesignGenerated": "Đã tạo thiết kế riêng",
         "fields": {
           "template_id": "🎨 Mẫu",
           "theme_color": "🎨 Màu chủ đề",
+          "custom_design": "🎨 Thiết kế riêng",
           "tagline": "Khẩu hiệu phụ",
           "about": "Câu chuyện nhà nghỉ",
           "owner_intro": "Giới thiệu chủ nhà",
@@ -600,7 +603,8 @@
           "natural": "Núi rừng tự nhiên",
           "coastal": "Nghỉ dưỡng ven biển",
           "boutique": "Boutique thời thượng",
-          "zen": "Thiền Nhật Bản"
+          "zen": "Thiền Nhật Bản",
+          "custom": "Thiết kế riêng bởi AI"
         },
         "prompts": {
           "0": "Thiết kế toàn bộ website cho tôi, gồm mẫu, màu sắc và toàn bộ nội dung",
@@ -608,7 +612,8 @@
           "2": "Viết hoàn chỉnh nội dung cho tất cả các trang",
           "3": "Viết một câu chuyện nhà nghỉ hấp dẫn",
           "4": "Gợi ý 5 câu hỏi thường gặp FAQ",
-          "5": "Tối ưu tiêu đề SEO và tóm tắt tìm kiếm"
+          "5": "Tối ưu tiêu đề SEO và tóm tắt tìm kiếm",
+          "6": "Không dùng mẫu có sẵn, hãy tự thiết kế một phong cách riêng biệt cho website"
         }
       }
     },
