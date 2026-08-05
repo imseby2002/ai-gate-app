@@ -530,6 +530,7 @@
       "refreshPreview": "重新整理預覽",
       "siteUrl": "官網網址",
       "visualStyle": "視覺風格",
+      "customDesignActive": "目前使用 AI 自由生成的專屬設計，非以上四種模板。可在 AI 設計助手中請它調整或改回預設模板。",
       "themeColor": "主題色",
       "reset": "重設",
       "tagline": "副標語",
@@ -582,9 +583,11 @@
         "applyBtn": "套用到官網",
         "writing": "AI 撰寫中…",
         "inputPlaceholder": "描述你的需求，例：幫我寫一個適合親子的民宿故事…",
+        "customDesignGenerated": "已生成專屬視覺設計",
         "fields": {
           "template_id": "🎨 視覺模板",
           "theme_color": "🎨 主題色",
+          "custom_design": "🎨 自訂設計",
           "tagline": "副標語",
           "about": "民宿故事",
           "owner_intro": "主人介紹",
@@ -600,7 +603,8 @@
           "natural": "自然山居",
           "coastal": "海濱度假",
           "boutique": "精品時尚",
-          "zen": "日式禪意"
+          "zen": "日式禪意",
+          "custom": "AI 自訂設計"
         },
         "prompts": {
           "0": "幫我設計整個官網，包含模板、顏色和所有文案",
@@ -608,7 +612,8 @@
           "2": "幫我完整寫好所有頁面文案",
           "3": "寫一個吸引旅客的民宿故事",
           "4": "幫我想 5 個常見問題 FAQ",
-          "5": "優化 SEO 標題和搜尋摘要"
+          "5": "優化 SEO 標題和搜尋摘要",
+          "6": "不要用模板，幫我自由設計一個獨一無二的官網風格"
         }
       }
     },

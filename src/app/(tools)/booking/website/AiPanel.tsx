@@ -5,6 +5,7 @@ import { Send, Loader2, X, Sparkles, ChevronDown, ChevronUp, Check } from 'lucid
 
 interface WebForm {
   slug: string; name?: string; template_id: string; theme_color: string
+  custom_design?: Record<string, unknown> | null
   tagline: string; hero_cta_text: string
   about: string; owner_intro: string; faq: { q: string; a: string }[]
   booking_instructions: string; cancellation_policy: string
@@ -33,6 +34,7 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
   const FIELD_LABELS: Record<string, string> = {
     template_id: t('website.ai.fields.template_id'),
     theme_color: t('website.ai.fields.theme_color'),
+    custom_design: t('website.ai.fields.custom_design'),
     tagline: t('website.ai.fields.tagline'),
     about: t('website.ai.fields.about'),
     owner_intro: t('website.ai.fields.owner_intro'),
@@ -47,8 +49,9 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
   const TEMPLATE_NAMES: Record<string, string> = {
     natural: t('website.ai.templates.natural'), coastal: t('website.ai.templates.coastal'),
     boutique: t('website.ai.templates.boutique'), zen: t('website.ai.templates.zen'),
+    custom: t('website.ai.templates.custom'),
   }
-  const QUICK_PROMPTS = [0,1,2,3,4,5].map(i => t(`website.ai.prompts.${i}`))
+  const QUICK_PROMPTS = [0,1,2,3,4,5,6].map(i => t(`website.ai.prompts.${i}`))
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -87,6 +90,7 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
             name: form.name ?? '',
             template_id: form.template_id,
             theme_color: form.theme_color,
+            custom_design: form.custom_design ?? null,
             tagline: form.tagline,
             about: form.about,
             seo_title: form.seo_title,
@@ -174,9 +178,17 @@ export default function AiPanel({ form, onApply, onClose }: Props) {
                               ? <span className="font-medium">{TEMPLATE_NAMES[String(val)] ?? String(val)}</span>
                               : key === 'theme_color'
                                 ? <><span className="inline-block w-4 h-4 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: String(val) }} /><span className="font-mono">{String(val)}</span></>
-                                : key === 'faq'
-                                  ? t('website.ai.questionsCount', { count: (val as { q: string }[]).length })
-                                  : String(val).slice(0, 120) + (String(val).length > 120 ? '…' : '')}
+                                : key === 'custom_design'
+                                  ? <span className="flex items-center gap-1">
+                                      {['accent', 'ink', 'sectionBg'].map(c => (
+                                        <span key={c} className="inline-block w-3.5 h-3.5 rounded-full border border-gray-200 shrink-0"
+                                          style={{ backgroundColor: String((val as Record<string, unknown>)[c] ?? '#fff') }} />
+                                      ))}
+                                      <span>{t('website.ai.customDesignGenerated')}</span>
+                                    </span>
+                                  : key === 'faq'
+                                    ? t('website.ai.questionsCount', { count: (val as { q: string }[]).length })
+                                    : String(val).slice(0, 120) + (String(val).length > 120 ? '…' : '')}
                           </div>
                         </div>
                       ))}

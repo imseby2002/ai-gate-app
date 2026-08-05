@@ -12,6 +12,7 @@ interface FaqItem { q: string; a: string }
 interface WebForm {
   slug: string
   template_id: string; theme_color: string
+  custom_design: Record<string, unknown> | null
   tagline: string; hero_cta_text: string
   about: string; owner_intro: string; faq: FaqItem[]
   booking_instructions: string; cancellation_policy: string
@@ -21,7 +22,7 @@ interface WebForm {
 }
 
 const DEFAULT: WebForm = {
-  slug: '', template_id: 'natural', theme_color: '#2d6a4f',
+  slug: '', template_id: 'natural', theme_color: '#2d6a4f', custom_design: null,
   tagline: '', hero_cta_text: '',
   about: '', owner_intro: '', faq: [],
   booking_instructions: '', cancellation_policy: '',
@@ -61,6 +62,7 @@ export default function WebsiteEditorPage() {
           slug:                  p.slug ?? '',
           template_id:           p.template_id ?? 'natural',
           theme_color:           p.theme_color ?? '#2d6a4f',
+          custom_design:         p.custom_design ?? null,
           tagline:               p.tagline ?? '',
           hero_cta_text:         p.hero_cta_text ?? '',
           about:                 p.about ?? '',
@@ -230,10 +232,16 @@ export default function WebsiteEditorPage() {
 
               <div>
                 <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide block mb-2">{t('website.visualStyle')}</label>
+                {form.template_id === 'custom' && (
+                  <div className="mb-2 flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-700">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t('website.customDesignActive')}</span>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {TEMPLATES.map(tpl => (
                     <button key={tpl.id} type="button"
-                      onClick={() => { set('template_id', tpl.id); if (!form.theme_color || form.theme_color === '#4f46e5') set('theme_color', tpl.defaultAccent) }}
+                      onClick={() => { set('template_id', tpl.id); if (!form.theme_color || form.theme_color === '#4f46e5') set('theme_color', tpl.accent) }}
                       className={`relative rounded-xl overflow-hidden border-2 transition-all text-left
                         ${form.template_id === tpl.id ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-gray-200 hover:border-gray-300'}`}>
                       <div className={`h-14 bg-gradient-to-br ${tpl.previewBg}`} />
@@ -253,7 +261,7 @@ export default function WebsiteEditorPage() {
                     className="w-9 h-9 rounded-lg border cursor-pointer p-0.5 shrink-0" />
                   <span className="text-sm font-mono text-gray-600 flex-1">{form.theme_color}</span>
                   <button type="button"
-                    onClick={() => { const tpl = TEMPLATES.find(x => x.id === form.template_id); if (tpl) set('theme_color', tpl.defaultAccent) }}
+                    onClick={() => { const tpl = TEMPLATES.find(x => x.id === form.template_id); if (tpl) set('theme_color', tpl.accent) }}
                     className="text-[11px] text-indigo-500 hover:underline shrink-0">{t('website.reset')}</button>
                 </div>
               </div>

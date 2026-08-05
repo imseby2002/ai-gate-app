@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { MapPin, Clock, Coffee, Users, ChevronRight, BedDouble, Phone, Mail, MessageCircle } from 'lucide-react'
-import { getTemplate } from '@/lib/booking/templates'
+import { resolveDesign, headingCss } from '@/lib/booking/templates'
 
 interface BnbProfile {
   name: string; tagline?: string | null; description?: string | null; about?: string | null
@@ -9,6 +9,7 @@ interface BnbProfile {
   line_id?: string | null; check_in_time?: string | null; check_out_time?: string | null
   min_nights?: number | null; breakfast?: { type: string } | null
   images?: string[] | null; theme_color?: string | null; template_id?: string | null
+  custom_design?: unknown
   hero_cta_text?: string | null
 }
 interface Property {
@@ -30,13 +31,14 @@ export default function PublicHomePage({
 }: {
   profile: BnbProfile; properties: Property[]; slug: string
 }) {
-  const tpl    = getTemplate(profile.template_id)
-  const accent = profile.theme_color || tpl.defaultAccent
+  const design = resolveDesign(profile)
+  const accent = design.accent
   const aStyle = { backgroundColor: accent }
   const aText  = { color: accent }
   const aBorder = { borderColor: accent }
-  const headingStyle = { color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }
-  const mutedStyle   = { color: tpl.muted }
+  const headingStyle = headingCss(design)
+  const mutedStyle   = { color: design.muted }
+  const btnStyle     = { borderRadius: design.btnRadius }
   const base   = `/book/${slug}`
   const images = (profile.images as string[] | null) ?? []
   const heroImg = images[0]
@@ -44,10 +46,9 @@ export default function PublicHomePage({
 
   const heroContent = (
     <div className={`relative z-10 max-w-5xl mx-auto px-4 py-16 sm:py-24 w-full
-      ${tpl.heroLayout === 'centered' ? 'flex flex-col items-center text-center' : 'flex flex-col items-start text-left'}`}>
-      <h1 className={`text-4xl sm:text-5xl leading-tight ${tpl.headingClass}
-        ${profile.template_id === 'boutique' ? 'text-3xl sm:text-4xl' : ''}`}
-        style={{ color: '#fff', fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }}>
+      ${design.heroLayout === 'centered' ? 'flex flex-col items-center text-center' : 'flex flex-col items-start text-left'}`}>
+      <h1 className={`leading-tight ${design.headingUppercase ? 'text-3xl sm:text-4xl' : 'text-4xl sm:text-5xl'}`}
+        style={headingCss(design, '#fff')}>
         {profile.name}
       </h1>
       {profile.tagline && (
@@ -61,13 +62,14 @@ export default function PublicHomePage({
       )}
       <div className="flex flex-wrap gap-3 mt-6">
         <Link href={`${base}/booking`}
-          className={`px-6 py-3 text-sm font-bold text-white hover:opacity-90 transition-opacity ${tpl.btnRadius}`}
-          style={aStyle}>
+          className="px-6 py-3 text-sm font-bold text-white hover:opacity-90 transition-opacity"
+          style={{ ...aStyle, ...btnStyle }}>
           {ctaText}
         </Link>
         {properties.length > 0 && (
           <Link href={`${base}/rooms`}
-            className={`px-6 py-3 text-sm font-semibold border-2 text-white hover:bg-white/10 transition-colors ${tpl.btnRadius}`}>
+            className="px-6 py-3 text-sm font-semibold border-2 text-white hover:bg-white/10 transition-colors"
+            style={btnStyle}>
             查看房型
           </Link>
         )}
@@ -79,16 +81,16 @@ export default function PublicHomePage({
     <div>
       {/* ── Hero ── */}
       <section className="relative w-full overflow-hidden"
-        style={heroImg ? { minHeight: tpl.heroLayout === 'minimal' ? '50vh' : '70vh' } : undefined}>
+        style={heroImg ? { minHeight: design.heroLayout === 'minimal' ? '50vh' : '70vh' } : undefined}>
         {heroImg ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={heroImg} alt={profile.name}
               className="absolute inset-0 w-full h-full object-cover" />
             <div className={`absolute inset-0
-              ${tpl.heroLayout === 'overlay-left'
+              ${design.heroLayout === 'overlay-left'
                 ? 'bg-gradient-to-r from-black/70 via-black/40 to-transparent'
-                : tpl.heroLayout === 'minimal'
+                : design.heroLayout === 'minimal'
                   ? 'bg-black/20'
                   : 'bg-black/50'}`} />
           </>
@@ -96,22 +98,22 @@ export default function PublicHomePage({
           <div className="absolute inset-0" style={aStyle} />
         )}
 
-        {tpl.heroLayout === 'minimal' ? (
+        {design.heroLayout === 'minimal' ? (
           <div className="relative z-10 flex flex-col h-full" style={{ minHeight: '50vh' }}>
             <div className="flex-1" />
             <div className="bg-white/90 backdrop-blur max-w-5xl mx-auto w-full px-4 py-6 sm:py-8">
-              <h1 className={`text-3xl sm:text-4xl ${tpl.headingClass}`} style={headingStyle}>{profile.name}</h1>
+              <h1 className="text-3xl sm:text-4xl" style={headingStyle}>{profile.name}</h1>
               {profile.tagline && <p className="mt-1" style={mutedStyle}>{profile.tagline}</p>}
               <div className="flex flex-wrap gap-3 mt-4">
                 <Link href={`${base}/booking`}
-                  className={`px-6 py-2.5 text-sm font-bold text-white hover:opacity-90 ${tpl.btnRadius}`}
-                  style={aStyle}>
+                  className="px-6 py-2.5 text-sm font-bold text-white hover:opacity-90"
+                  style={{ ...aStyle, ...btnStyle }}>
                   {ctaText}
                 </Link>
                 {properties.length > 0 && (
                   <Link href={`${base}/rooms`}
-                    className={`px-6 py-2.5 text-sm font-semibold border-2 hover:bg-gray-50 ${tpl.btnRadius}`}
-                    style={aBorder}>
+                    className="px-6 py-2.5 text-sm font-semibold border-2 hover:bg-gray-50"
+                    style={{ ...aBorder, ...btnStyle }}>
                     查看房型
                   </Link>
                 )}
@@ -149,10 +151,10 @@ export default function PublicHomePage({
 
       {/* ── 精選房型 ── */}
       {properties.length > 0 && (
-        <section className={tpl.sectionPadding} style={{ backgroundColor: tpl.sectionBg }}>
+        <section style={{ backgroundColor: design.sectionBg, paddingTop: design.sectionPaddingY, paddingBottom: design.sectionPaddingY }}>
           <div className="max-w-5xl mx-auto px-4">
             <div className="flex items-end justify-between mb-6">
-              <h2 className={`text-2xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-xl' : ''}`} style={headingStyle}>
+              <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
                 精選房型
               </h2>
               <Link href={`${base}/rooms`} className="text-sm hover:underline flex items-center gap-1" style={aText}>
@@ -163,8 +165,8 @@ export default function PublicHomePage({
               {properties.slice(0, 3).map(prop => {
                 const img = (prop.images as string[] | null)?.[0]
                 return (
-                  <div key={prop.id} className={`overflow-hidden ${tpl.cardClass} ${tpl.shadow}`}
-                    style={{ backgroundColor: tpl.cardBg, borderColor: tpl.cardBorder }}>
+                  <div key={prop.id} className="overflow-hidden border"
+                    style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                     <div className="aspect-[4/3] overflow-hidden bg-gray-100">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -177,7 +179,7 @@ export default function PublicHomePage({
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex justify-between items-start gap-2">
-                        <h3 className="font-semibold" style={{ color: tpl.ink, fontFamily: tpl.headingFontFamily }}>{prop.name}</h3>
+                        <h3 className="font-semibold" style={{ color: design.ink, fontFamily: design.headingFontFamily }}>{prop.name}</h3>
                         {prop.base_price && (
                           <div className="text-right shrink-0">
                             <div className="font-bold text-sm" style={aText}>NT$ {fmt(prop.base_price)}</div>
@@ -192,8 +194,8 @@ export default function PublicHomePage({
                         <Users className="h-3.5 w-3.5" />最多 {prop.max_guests ?? 2} 人
                       </div>
                       <Link href={`${base}/booking?room=${prop.id}`}
-                        className={`block w-full text-center py-2 text-white text-sm font-semibold hover:opacity-90 transition-opacity ${tpl.btnRadius}`}
-                        style={aStyle}>
+                        className="block w-full text-center py-2 text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                        style={{ ...aStyle, ...btnStyle }}>
                         選擇此房型
                       </Link>
                     </div>
@@ -207,11 +209,11 @@ export default function PublicHomePage({
 
       {/* ── 關於 teaser ── */}
       {(profile.about || profile.description) && (
-        <section className={tpl.sectionPadding}>
+        <section style={{ paddingTop: design.sectionPaddingY, paddingBottom: design.sectionPaddingY }}>
           <div className="max-w-5xl mx-auto px-4">
             <div className="grid sm:grid-cols-2 gap-8 items-center">
               <div className="space-y-4">
-                <h2 className={`text-2xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-xl' : ''}`} style={headingStyle}>
+                <h2 className={design.headingUppercase ? 'text-xl' : 'text-2xl'} style={headingStyle}>
                   關於我們
                 </h2>
                 <p className="leading-relaxed line-clamp-5" style={mutedStyle}>
@@ -237,10 +239,10 @@ export default function PublicHomePage({
       )}
 
       {/* ── 聯絡 strip ── */}
-      <section className="py-8 border-t" style={{ backgroundColor: tpl.sectionBg }}>
+      <section className="py-8 border-t" style={{ backgroundColor: design.sectionBg }}>
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex flex-wrap gap-4 items-center justify-between">
-            <h3 className="font-semibold" style={{ color: tpl.ink, fontFamily: tpl.headingFontFamily }}>聯絡我們</h3>
+            <h3 className="font-semibold" style={{ color: design.ink, fontFamily: design.headingFontFamily }}>聯絡我們</h3>
             <div className="flex flex-wrap gap-3">
               {profile.phone && (
                 <a href={`tel:${profile.phone}`}

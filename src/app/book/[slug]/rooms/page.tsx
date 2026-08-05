@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { BedDouble, Users, ChevronRight } from 'lucide-react'
-import { getTemplate } from '@/lib/booking/templates'
+import { resolveDesign, headingCss } from '@/lib/booking/templates'
 
 function fmt(n: number) { return n.toLocaleString('zh-TW') }
 
@@ -12,7 +12,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
 
   const { data: profile } = await admin
     .from('bnb_profiles')
-    .select('name, theme_color, template_id, user_id')
+    .select('name, theme_color, template_id, custom_design, user_id')
     .eq('slug', slug)
     .single()
   if (!profile) notFound()
@@ -24,19 +24,21 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
     .eq('status', 'active')
     .order('created_at', { ascending: true })
 
-  const tpl    = getTemplate(profile.template_id)
-  const accent = profile.theme_color || tpl.defaultAccent
+  const design = resolveDesign(profile)
+  const accent = design.accent
   const aStyle = { backgroundColor: accent }
   const aText  = { color: accent }
-  const headingStyle = { color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }
-  const mutedStyle   = { color: tpl.muted }
+  const headingStyle = headingCss(design)
+  const mutedStyle   = { color: design.muted }
+  const btnStyle     = { borderRadius: design.btnRadius }
   const base   = `/book/${slug}`
+  const h1Size = design.headingUppercase ? 'text-2xl' : 'text-3xl'
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
       <div className="mb-8">
-        <h1 className={`text-3xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-2xl' : ''}`} style={headingStyle}>
+        <h1 className={h1Size} style={headingStyle}>
           房型介紹
         </h1>
         <p className="text-sm mt-1" style={mutedStyle}>選擇最適合您的房型，直接線上預訂</p>
@@ -48,8 +50,8 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
             const imgs = (prop.images as string[] | null) ?? []
             const amenities = (prop.amenities as string[] | null) ?? []
             return (
-              <div key={prop.id} className={`overflow-hidden border ${tpl.cardClass} ${tpl.shadow}`}
-                style={{ backgroundColor: tpl.cardBg, borderColor: tpl.cardBorder }}>
+              <div key={prop.id} className="overflow-hidden border"
+                style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                 {/* Image */}
                 <div className="aspect-[16/7] overflow-hidden bg-gray-100">
                   {imgs[0] ? (
@@ -78,7 +80,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
                   {/* Name + Price */}
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className={tpl.headingClass} style={{ ...headingStyle, fontSize: '1.25rem' }}>{prop.name}</h2>
+                      <h2 style={{ ...headingStyle, fontSize: '1.25rem' }}>{prop.name}</h2>
                       {prop.description && (
                         <p className="text-sm mt-1 leading-relaxed" style={mutedStyle}>{prop.description}</p>
                       )}
@@ -118,8 +120,8 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
 
                   {/* CTA */}
                   <Link href={`${base}/booking?room=${prop.id}`}
-                    className={`inline-flex items-center gap-1.5 px-6 py-2.5 text-white text-sm font-bold hover:opacity-90 transition-opacity ${tpl.btnRadius}`}
-                    style={aStyle}>
+                    className="inline-flex items-center gap-1.5 px-6 py-2.5 text-white text-sm font-bold hover:opacity-90 transition-opacity"
+                    style={{ ...aStyle, ...btnStyle }}>
                     立即訂房 <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>

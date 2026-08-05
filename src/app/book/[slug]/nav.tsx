@@ -3,12 +3,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
-import { getTemplate } from '@/lib/booking/templates'
+import { resolveDesign, headingCss } from '@/lib/booking/templates'
 
 interface NavProfile {
   name: string
   theme_color?: string | null
   template_id?: string | null
+  custom_design?: unknown
   slug: string
 }
 
@@ -21,8 +22,8 @@ const NAV_ITEMS = [
 
 export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
   const pathname  = usePathname()
-  const tpl       = getTemplate(profile.template_id)
-  const accent    = profile.theme_color || tpl.defaultAccent
+  const design    = resolveDesign(profile)
+  const accent    = design.accent
   const base      = `/book/${profile.slug}`
   const [open, setOpen] = useState(false)
 
@@ -36,7 +37,7 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b shadow-sm">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         <Link href={base} className="font-bold text-sm truncate max-w-[140px] sm:max-w-xs"
-          style={{ color: tpl.ink, fontFamily: tpl.headingFontFamily }}>
+          style={headingCss(design)}>
           {profile.name}
         </Link>
 
@@ -56,8 +57,8 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
 
         <div className="flex items-center gap-2">
           <Link href={`${base}/booking`}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: accent }}>
+            className="px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: accent, borderRadius: design.btnRadius }}>
             立即訂房
           </Link>
           <button onClick={() => setOpen(v => !v)}

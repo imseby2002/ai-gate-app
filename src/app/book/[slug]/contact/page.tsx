@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { Phone, Mail, MessageCircle, Globe, MapPin } from 'lucide-react'
-import { getTemplate } from '@/lib/booking/templates'
+import { resolveDesign, headingCss } from '@/lib/booking/templates'
 
 export default async function ContactPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -9,16 +9,17 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
   const { data: profile } = await admin
     .from('bnb_profiles')
-    .select('name, theme_color, template_id, phone, email, line_id, website, address, city, social_links, contact_map_embed, contact_note, check_in_time, check_out_time')
+    .select('name, theme_color, template_id, custom_design, phone, email, line_id, website, address, city, social_links, contact_map_embed, contact_note, check_in_time, check_out_time')
     .eq('slug', slug)
     .single()
   if (!profile) notFound()
 
-  const tpl        = getTemplate(profile.template_id)
-  const accent     = profile.theme_color || tpl.defaultAccent
+  const design     = resolveDesign(profile)
+  const accent     = design.accent
   const aText      = { color: accent }
-  const headingStyle = { color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }
-  const mutedStyle   = { color: tpl.muted }
+  const headingStyle = headingCss(design)
+  const mutedStyle   = { color: design.muted }
+  const h1Size     = design.headingUppercase ? 'text-2xl' : 'text-3xl'
   const social     = (profile.social_links as Record<string, string> | null) ?? {}
   const contactNote = profile.contact_note as string | null
   const mapEmbed   = profile.contact_map_embed as string | null
@@ -34,7 +35,7 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-10">
       <div>
-        <h1 className={`text-3xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-2xl' : ''}`} style={headingStyle}>
+        <h1 className={h1Size} style={headingStyle}>
           聯絡我們
         </h1>
         {contactNote && (
@@ -49,14 +50,14 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
             const Icon = item.icon
             return (
               <a key={i} href={item.href} target="_blank" rel="noopener noreferrer"
-                className={`flex items-center gap-3 p-4 transition-shadow group ${tpl.cardClass} ${tpl.shadow}`}
-                style={{ backgroundColor: tpl.cardBg, borderColor: tpl.cardBorder }}>
+                className="flex items-center gap-3 p-4 border transition-shadow group"
+                style={{ backgroundColor: design.cardBg, borderColor: design.cardBorder, borderRadius: design.cardRadius, boxShadow: design.shadow || undefined }}>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}18` }}>
                   <Icon className="h-4 w-4" style={aText} />
                 </div>
                 <div>
                   <div className="text-[11px]" style={mutedStyle}>{item.label}</div>
-                  <div className="text-sm font-medium" style={{ color: tpl.ink }}>{item.value}</div>
+                  <div className="text-sm font-medium" style={{ color: design.ink }}>{item.value}</div>
                 </div>
               </a>
             )
@@ -66,19 +67,19 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
       {/* Business hours */}
       {(profile.check_in_time || profile.check_out_time) && (
-        <section className="rounded-xl p-4 space-y-2" style={{ backgroundColor: tpl.sectionBg }}>
-          <h2 className="text-sm font-semibold" style={{ color: tpl.ink }}>入住時間</h2>
+        <section className="rounded-xl p-4 space-y-2" style={{ backgroundColor: design.sectionBg }}>
+          <h2 className="text-sm font-semibold" style={{ color: design.ink }}>入住時間</h2>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {profile.check_in_time && (
               <div>
                 <span className="text-xs" style={mutedStyle}>入住（Check-in）</span>
-                <div className="font-semibold" style={{ color: tpl.ink }}>{profile.check_in_time} 後</div>
+                <div className="font-semibold" style={{ color: design.ink }}>{profile.check_in_time} 後</div>
               </div>
             )}
             {profile.check_out_time && (
               <div>
                 <span className="text-xs" style={mutedStyle}>退房（Check-out）</span>
-                <div className="font-semibold" style={{ color: tpl.ink }}>{profile.check_out_time} 前</div>
+                <div className="font-semibold" style={{ color: design.ink }}>{profile.check_out_time} 前</div>
               </div>
             )}
           </div>

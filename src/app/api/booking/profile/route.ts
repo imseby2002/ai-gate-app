@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest) {
     'website','line_id','check_in_time','check_out_time',
     'min_nights','amenities','images','house_rules','breakfast','addon_services','slug',
     'tagline','about','social_links','faq','theme_color','seo_title','seo_description',
-    'template_id','hero_cta_text','booking_instructions','cancellation_policy',
+    'template_id','custom_design','hero_cta_text','booking_instructions','cancellation_policy',
     'contact_map_embed','contact_note','owner_intro',
     'competitor_watchlist',
     'latitude','longitude','country','google_feed_enabled','auto_confirm_bookings',

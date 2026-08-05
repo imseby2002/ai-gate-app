@@ -530,6 +530,7 @@
       "refreshPreview": "Refresh preview",
       "siteUrl": "Website URL",
       "visualStyle": "Visual Style",
+      "customDesignActive": "Currently using an AI-generated custom design, not one of the templates above. Ask the AI design assistant to adjust it or switch back to a preset template.",
       "themeColor": "Theme Color",
       "reset": "Reset",
       "tagline": "Tagline",
@@ -582,9 +583,11 @@
         "applyBtn": "Apply to Website",
         "writing": "AI writing…",
         "inputPlaceholder": "Describe your needs, e.g. write a family-friendly property story…",
+        "customDesignGenerated": "Custom design generated",
         "fields": {
           "template_id": "🎨 Template",
           "theme_color": "🎨 Theme Color",
+          "custom_design": "🎨 Custom Design",
           "tagline": "Tagline",
           "about": "Property Story",
           "owner_intro": "Host Introduction",
@@ -600,7 +603,8 @@
           "natural": "Natural Mountain",
           "coastal": "Coastal Resort",
           "boutique": "Boutique Chic",
-          "zen": "Japanese Zen"
+          "zen": "Japanese Zen",
+          "custom": "AI Custom Design"
         },
         "prompts": {
           "0": "Design my whole website, including template, colors, and all copy",
@@ -608,7 +612,8 @@
           "2": "Write complete copy for all pages",
           "3": "Write an engaging property story",
           "4": "Suggest 5 FAQ questions",
-          "5": "Optimize the SEO title and search summary"
+          "5": "Optimize the SEO title and search summary",
+          "6": "Skip the templates, design a one-of-a-kind look for my website"
         }
       }
     },
