@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { Resend } from 'resend'
-import { sendBookingNotification } from '@/lib/booking/notify'
+import { confirmPublicBooking } from '@/lib/booking/public-booking-confirm'
 
 export async function GET() {
   const supabase = await createClient()
@@ -57,46 +57,9 @@ export async function POST(req: NextRequest) {
   }
 
   // action === 'confirm'
-  // 已轉過 → 冪等，不重複建立
-  if (pb.converted_booking_id) {
-    return NextResponse.json({ ok: true, status: 'confirmed', booking_id: pb.converted_booking_id, alreadyConverted: true })
-  }
-
-  // 1) 轉成正式訂單
-  const { data: newBooking, error: insErr } = await supabase.from('bookings').insert({
-    user_id: ctx.ownerId,
-    property_id: pb.property_id ?? null,
-    platform: 'direct',
-    guest_name: pb.guest_name,
-    guest_email: pb.guest_email,
-    guest_phone: pb.guest_phone ?? null,
-    check_in: pb.check_in,
-    check_out: pb.check_out,
-    num_guests: pb.num_guests ?? 1,
-    total_price: pb.total_price ?? null,
-    status: 'confirmed',
-    source: 'form',
-    notes: pb.notes ?? null,
-  }).select('id').single()
-
-  if (insErr || !newBooking) {
-    return NextResponse.json({ error: insErr?.message ?? '建立正式訂單失敗' }, { status: 500 })
-  }
-
-  // 2) 標記 public_booking 已確認並連結
-  await supabase.from('public_bookings')
-    .update({ status: 'confirmed', converted_booking_id: newBooking.id })
-    .eq('id', id).eq('host_user_id', ctx.ownerId)
-
-  // 3) 優惠碼計次（僅在此確認時計一次）
-  if (pb.promo_code) {
-    await supabase.rpc('increment_promo_use', { p_user_id: ctx.ownerId, p_code: pb.promo_code })
-  }
-
-  // 4) 寄確認信給旅客
-  const mail = await sendBookingNotification(supabase, ctx.ownerId, newBooking.id, 'confirmation')
-
-  return NextResponse.json({ ok: true, status: 'confirmed', booking_id: newBooking.id, emailed: mail.ok })
+  const result = await confirmPublicBooking(supabase, ctx.ownerId, id)
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 })
+  return NextResponse.json({ ok: true, status: 'confirmed', booking_id: result.booking_id, emailed: result.emailed })
 }
 
 export async function PUT(req: NextRequest) {

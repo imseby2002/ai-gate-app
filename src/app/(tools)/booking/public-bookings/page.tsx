@@ -38,6 +38,8 @@ export default function PublicBookingsPage() {
   const [filter, setFilter]     = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all')
   const [busy, setBusy]         = useState<string | null>(null)
   const [flash, setFlash]       = useState<{ ok: boolean; text: string } | null>(null)
+  const [autoConfirm, setAutoConfirm]         = useState(false)
+  const [autoConfirmSaving, setAutoConfirmSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/booking/public-bookings')
@@ -45,7 +47,27 @@ export default function PublicBookingsPage() {
       .then(d => setBookings(d.bookings ?? []))
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
+    fetch('/api/booking/profile')
+      .then(r => r.json())
+      .then(d => setAutoConfirm(!!d.profile?.auto_confirm_bookings))
+      .catch(() => {})
   }, [])
+
+  async function toggleAutoConfirm() {
+    const next = !autoConfirm
+    setAutoConfirm(next)
+    setAutoConfirmSaving(true)
+    try {
+      const res = await fetch('/api/booking/profile', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auto_confirm_bookings: next }),
+      })
+      if (!res.ok) { setAutoConfirm(!next); notify(false, t('public.actionFailed')) }
+    } catch {
+      setAutoConfirm(!next)
+      notify(false, t('bookings.toast.networkError'))
+    } finally { setAutoConfirmSaving(false) }
+  }
 
   function notify(ok: boolean, text: string) {
     setFlash({ ok, text })
@@ -118,6 +140,23 @@ export default function PublicBookingsPage() {
         <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
           {t('public.pendingCount', { count: bookings.filter(b => b.status === 'pending').length })}
         </span>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 bg-white border rounded-xl px-4 py-3">
+        <div>
+          <div className="text-sm font-medium text-gray-800">{t('public.autoConfirmLabel')}</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {autoConfirm ? t('public.autoConfirmOnHint') : t('public.autoConfirmOffHint')}
+          </div>
+        </div>
+        <button
+          onClick={toggleAutoConfirm}
+          disabled={autoConfirmSaving}
+          role="switch"
+          aria-checked={autoConfirm}
+          className={`relative shrink-0 w-11 h-6 rounded-full transition-colors disabled:opacity-50 ${autoConfirm ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${autoConfirm ? 'translate-x-5' : ''}`} />
+        </button>
       </div>
 
       {flash && (
