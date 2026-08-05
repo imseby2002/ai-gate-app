@@ -221,8 +221,15 @@ async function checkRateLimit(bucket: string, limit: number, windowSec: number):
 
 // Customer asking to talk to a real person
 const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務|專人/
-// 退換貨/退款：沒有任何方案支援 AI 自動執行，一律轉人工（L3 決策）
+// 退換貨/退款：沒有任何方案支援 AI 自動執行，一律轉人工（L3 決策）。
+// 但「退款」這個字本身也會出現在單純問政策的問句裡（例如「取消政策是要多久前
+// 取消才能退款」），這種客人只是想知道規則、不是要立刻辦退款，卻被當成退款請求
+// 直接轉真人，AI 完全沒回答到問題——要求真的採取行動（我要退/幫我退/申請退款）
+// 才轉人工，單純問政策/規則/流程的問句讓 AI 照常回答（知識庫有寫就照答，沒寫就
+// 誠實說不確定並建議聯繫客服，不會答錯，只是不會被錯誤攔截成一句罐頭回覆）。
 const REFUND_RE = /退款|退費|退貨|取消訂單|refund|cancel.*order/i
+const REFUND_ACTION_RE = /我要(退|取消)|幫我(退|取消)|申請退款|要求退款|請(幫我)?退款|退我|退錢給我|要取消(我的)?訂單|想取消(我的)?訂單|麻煩取消/i
+const REFUND_POLICY_RE = /政策|規定|規則|辦法|退款(方式|流程|條件)|取消(方式|流程|條件)|多久.{0,4}(前|之前)|幾天前|如何.{0,6}(取消|退)|怎麼.{0,6}(取消|退)/i
 // 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
 const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 需要即時網路資訊（天氣、附近景點、路況等知識庫不會有的即時資料）僅 PRO+ 觸發搜尋分支
@@ -369,7 +376,9 @@ async function replyToCustomer(
   }
 
   // ── 退換貨/退款：一律轉人工（沒有任何方案支援 AI 自動執行退款）──────────
-  if (REFUND_RE.test(text)) {
+  // 單純問取消/退款政策（沒有要求真的採取行動）不轉人工，讓 AI 照常回答問題。
+  const isRefundPolicyQuestion = REFUND_POLICY_RE.test(text) && !REFUND_ACTION_RE.test(text)
+  if (REFUND_RE.test(text) && !isRefundPolicyQuestion) {
     try {
       await getServiceClient().from('cs_tickets').insert({
         user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
