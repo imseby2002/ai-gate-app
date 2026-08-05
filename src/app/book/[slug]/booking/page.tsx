@@ -176,11 +176,12 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     <div className="max-w-2xl mx-auto px-4 py-10 space-y-6">
       {/* Header */}
       <div>
-        <h1 className={`text-2xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-xl' : ''}`}>
+        <h1 className={`text-2xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-xl' : ''}`}
+          style={{ color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }}>
           線上訂房
         </h1>
         {profile?.booking_instructions && (
-          <p className="mt-2 text-sm text-gray-600 leading-relaxed">{profile.booking_instructions}</p>
+          <p className="mt-2 text-sm leading-relaxed" style={{ color: tpl.muted }}>{profile.booking_instructions}</p>
         )}
       </div>
 
