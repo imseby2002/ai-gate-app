@@ -221,8 +221,15 @@ async function checkRateLimit(bucket: string, limit: number, windowSec: number):
 
 // Customer asking to talk to a real person
 const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要真人|找真人|真人幫|人工幫|真人接|人工接|找客服|要客服|人工服務|真人服務|專人/
-// 退換貨/退款：沒有任何方案支援 AI 自動執行，一律轉人工（L3 決策）
+// 退換貨/退款：沒有任何方案支援 AI 自動執行，一律轉人工（L3 決策）。
+// 但「退款」這個字本身也會出現在單純問政策的問句裡（例如「取消政策是要多久前
+// 取消才能退款」），這種客人只是想知道規則、不是要立刻辦退款，卻被當成退款請求
+// 直接轉真人，AI 完全沒回答到問題——要求真的採取行動（我要退/幫我退/申請退款）
+// 才轉人工，單純問政策/規則/流程的問句讓 AI 照常回答（知識庫有寫就照答，沒寫就
+// 誠實說不確定並建議聯繫客服，不會答錯，只是不會被錯誤攔截成一句罐頭回覆）。
 const REFUND_RE = /退款|退費|退貨|取消訂單|refund|cancel.*order/i
+const REFUND_ACTION_RE = /我要(退|取消)|幫我(退|取消)|申請退款|要求退款|請(幫我)?退款|退我|退錢給我|要取消(我的)?訂單|想取消(我的)?訂單|麻煩取消/i
+const REFUND_POLICY_RE = /政策|規定|規則|辦法|退款(方式|流程|條件)|取消(方式|流程|條件)|多久.{0,4}(前|之前)|幾天前|如何.{0,6}(取消|退)|怎麼.{0,6}(取消|退)/i
 // 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
 const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 需要即時網路資訊（天氣、附近景點、路況等知識庫不會有的即時資料）僅 PRO+ 觸發搜尋分支
@@ -369,7 +376,9 @@ async function replyToCustomer(
   }
 
   // ── 退換貨/退款：一律轉人工（沒有任何方案支援 AI 自動執行退款）──────────
-  if (REFUND_RE.test(text)) {
+  // 單純問取消/退款政策（沒有要求真的採取行動）不轉人工，讓 AI 照常回答問題。
+  const isRefundPolicyQuestion = REFUND_POLICY_RE.test(text) && !REFUND_ACTION_RE.test(text)
+  if (REFUND_RE.test(text) && !isRefundPolicyQuestion) {
     try {
       await getServiceClient().from('cs_tickets').insert({
         user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
@@ -622,6 +631,14 @@ const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 // 手機號碼（09 開頭，可能有 +886/886 國碼、可能有 -／空白分隔），跟 NUMERIC_ORDER_RE
 // 不會撞在一起（訂單號規則要求開頭 1-9 且無 0），可以放心並存判斷。
 const PHONE_RE = /(?<!\d)(?:\+?886[-\s]?9\d{2}|09\d{2})[-\s]?\d{3}[-\s]?\d{3}(?!\d)/
+// 訂房平台給客人看的訂單碼常常有英文字母前綴（例如易遊網「ORD0031572074」），既不是
+// NUMERIC_ORDER_RE（純數字）也不是 NAME_ONLY_RE（純文字）——這種訊息以前完全沒有觸發
+// 任何查詢，externalDataSection 維持空白，AI 在沒有任何系統資料的情況下自己編了一組
+// 房號密碼給客人（真實案例：客人給「ORD0031572074」，AI 回「房號301,密碼2937#」，
+// 兩者都是憑空捏造，真實資料完全不同）。加這條規則確保只要訊息長得像一組訂單代碼，
+// 就算查不到系統裡的號碼，也會強制查一次、注入「查無資料」的誠實訊息，而不是放著讓
+// AI 自由發揮。
+const ALPHANUMERIC_ORDER_RE = /\b[A-Za-z]{2,8}[-\s]?\d{5,}\b/
 
 // 客人只報「訂房大名」、沒給訂單號碼時，用來判斷「這則訊息本身像不像一個姓名」
 // （中英文姓名、無問句、無多餘內容），搭配對話中出現訂單/訂房相關字眼才觸發查詢
@@ -1105,6 +1122,27 @@ function cleanReply(raw: string): string {
     .trim()
 }
 
+// ── 密碼/房號輸出的最後一道防線：不靠指令，靠事實 ──────────────────────────
+// 前面加了再多「禁止捏造」的系統提示，本質上都只是「拜託模型別亂講」，模型仍然可能
+// 不遵守（真實案例：客人給的訂單碼格式沒觸發任何查詢，模型還是自己編了一組房號密碼）。
+// 這裡不再靠「猜有哪些輸入格式該觸發查詢」來補洞，而是直接在輸出端做事實查核：
+// 回覆裡如果出現「密碼/房號」後面接著一串英數字，但這組值從來沒有出現在系統真正查到
+// 的資料（externalDataSection）或這通對話先前已經給過的內容裡，一律視為捏造，攔截换成
+// 制式的「請提供識別資訊」，不讓這種回覆真的送到客人手上。
+const SENSITIVE_REVEAL_RE = /(?:密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,10})/g
+const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
+
+function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[]): string {
+  const matches = [...reply.matchAll(SENSITIVE_REVEAL_RE)].map(m => m[1])
+  if (!matches.length) return reply
+  // 這組值只要出現在「這次真的查到的系統資料」或「這通對話先前已經說過的內容」裡，
+  // 就有憑有據（先前會出現，代表當初也是通過同一套查詢流程才給的，不是平白冒出來）。
+  const priorAssistantText = history.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
+  const backedElsewhere = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v)
+  const hasUnbackedValue = matches.some(v => !backedElsewhere(v))
+  return hasUnbackedValue ? NO_FABRICATION_FALLBACK : reply
+}
+
 // 客人傳訂單/房卡截圖詢問密碼時，圖片內容不能直接被回覆模型當成「已核對」的系統資料採信
 // （模型看得懂圖片文字，但那只是客人單方面提供的畫面，不代表系統真的查得到這筆訂單）。
 // 用一次便宜的圖片辨識抽出訂單號/姓名候選，交給呼叫端走真正的資料庫查詢；查無資料一樣要老實說查無資料。
@@ -1214,6 +1252,23 @@ async function getAIReply(
             if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
+      } else if (ALPHANUMERIC_ORDER_RE.test(message)) {
+        // 訂房平台顯示給客人的訂單碼常有英文字母前綴（如易遊網「ORD0031572074」），
+        // 系統存的是平台同步給民宿的另一組純數字碼，兩者對不上——但這仍然是客人在
+        // 嘗試提供訂單碼，不能放著不查，否則 AI 會在完全沒有系統資料的情況下自己編一組
+        // 房號密碼給客人（真實案例）。查一次，查無資料也要老實說查無資料。
+        orderLookupDone = true
+        try {
+          const altOrderNum = message.match(ALPHANUMERIC_ORDER_RE)?.[0] ?? ''
+          if (!passwordFromDatasource) {
+            const bnb = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
+              ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或手機號碼再查一次，仍查無資料才轉真人客服）`
+            externalDataSection = `\n\n${bnb}${externalDataSection}`
+          } else {
+            const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
+            if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
+          }
+        } catch { /* 不中斷主流程 */ }
       } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
         // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查
         orderLookupDone = true
@@ -1288,6 +1343,7 @@ async function getAIReply(
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
 - 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料並轉真人客服
+- 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單、請提供訂房平台與截圖，並轉真人客服，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
@@ -1323,7 +1379,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return cleanReply(text) || FALLBACK
+          return enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -1339,7 +1395,8 @@ async function getAIReply(
       : useL3
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
-    return (result ? cleanReply(result.reply) : '') || FALLBACK
+    const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
+    return enforceNoFabricatedReveal(finalReply, externalDataSection, history)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
