@@ -28,16 +28,18 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
   const accent = profile.theme_color || tpl.defaultAccent
   const aStyle = { backgroundColor: accent }
   const aText  = { color: accent }
+  const headingStyle = { color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }
+  const mutedStyle   = { color: tpl.muted }
   const base   = `/book/${slug}`
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       {/* Header */}
       <div className="mb-8">
-        <h1 className={`text-3xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
+        <h1 className={`text-3xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-2xl' : ''}`} style={headingStyle}>
           房型介紹
         </h1>
-        <p className="text-sm text-gray-500 mt-1">選擇最適合您的房型，直接線上預訂</p>
+        <p className="text-sm mt-1" style={mutedStyle}>選擇最適合您的房型，直接線上預訂</p>
       </div>
 
       {properties && properties.length > 0 ? (
@@ -46,7 +48,8 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
             const imgs = (prop.images as string[] | null) ?? []
             const amenities = (prop.amenities as string[] | null) ?? []
             return (
-              <div key={prop.id} className={`bg-white overflow-hidden border ${tpl.cardClass}`}>
+              <div key={prop.id} className={`overflow-hidden border ${tpl.cardClass} ${tpl.shadow}`}
+                style={{ backgroundColor: tpl.cardBg, borderColor: tpl.cardBorder }}>
                 {/* Image */}
                 <div className="aspect-[16/7] overflow-hidden bg-gray-100">
                   {imgs[0] ? (
@@ -75,30 +78,30 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
                   {/* Name + Price */}
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">{prop.name}</h2>
+                      <h2 className={tpl.headingClass} style={{ ...headingStyle, fontSize: '1.25rem' }}>{prop.name}</h2>
                       {prop.description && (
-                        <p className="text-sm text-gray-600 mt-1 leading-relaxed">{prop.description}</p>
+                        <p className="text-sm mt-1 leading-relaxed" style={mutedStyle}>{prop.description}</p>
                       )}
                     </div>
                     {prop.base_price && (
                       <div className="text-right shrink-0">
                         <div className="text-2xl font-bold" style={aText}>NT$ {fmt(prop.base_price)}</div>
-                        <div className="text-xs text-gray-400">/ 晚</div>
+                        <div className="text-xs" style={mutedStyle}>/ 晚</div>
                         {prop.extra_guest_fee && prop.extra_guest_fee > 0 && (
-                          <div className="text-[11px] text-gray-400 mt-0.5">超額 +NT$ {fmt(prop.extra_guest_fee)}/人晚</div>
+                          <div className="text-[11px] mt-0.5" style={mutedStyle}>超額 +NT$ {fmt(prop.extra_guest_fee)}/人晚</div>
                         )}
                       </div>
                     )}
                   </div>
 
                   {/* Capacity */}
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-4 text-sm" style={mutedStyle}>
                     <span className="flex items-center gap-1.5">
                       <Users className="h-4 w-4" style={aText} />
                       最多 {prop.max_guests ?? 2} 人
                     </span>
                     {prop.room_count > 1 && (
-                      <span className="text-gray-400">{prop.room_count} 間</span>
+                      <span>{prop.room_count} 間</span>
                     )}
                   </div>
 
@@ -106,7 +109,7 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
                   {amenities.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {amenities.map(a => (
-                        <span key={a} className="text-xs px-2.5 py-1 rounded-full border text-gray-600">
+                        <span key={a} className="text-xs px-2.5 py-1 rounded-full border" style={mutedStyle}>
                           {a}
                         </span>
                       ))}

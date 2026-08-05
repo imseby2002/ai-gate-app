@@ -3,10 +3,12 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
+import { getTemplate } from '@/lib/booking/templates'
 
 interface NavProfile {
   name: string
   theme_color?: string | null
+  template_id?: string | null
   slug: string
 }
 
@@ -19,7 +21,8 @@ const NAV_ITEMS = [
 
 export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
   const pathname  = usePathname()
-  const accent    = profile.theme_color || '#4f46e5'
+  const tpl       = getTemplate(profile.template_id)
+  const accent    = profile.theme_color || tpl.defaultAccent
   const base      = `/book/${profile.slug}`
   const [open, setOpen] = useState(false)
 
@@ -32,7 +35,8 @@ export default function BnbPublicNav({ profile }: { profile: NavProfile }) {
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b shadow-sm">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <Link href={base} className="font-bold text-gray-900 text-sm truncate max-w-[140px] sm:max-w-xs">
+        <Link href={base} className="font-bold text-sm truncate max-w-[140px] sm:max-w-xs"
+          style={{ color: tpl.ink, fontFamily: tpl.headingFontFamily }}>
           {profile.name}
         </Link>
 

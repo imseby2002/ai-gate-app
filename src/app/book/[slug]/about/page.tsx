@@ -26,6 +26,8 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
   const accent    = profile.theme_color || tpl.defaultAccent
   const aStyle    = { backgroundColor: accent }
   const aText     = { color: accent }
+  const headingStyle = { color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }
+  const bodyStyle = { color: tpl.ink }
   const images    = (profile.images as string[] | null) ?? []
   const amenities = (profile.amenities as string[] | null) ?? []
   const faq       = (profile.faq as { q: string; a: string }[] | null) ?? []
@@ -48,7 +50,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
       <div className="max-w-5xl mx-auto px-4 py-10 space-y-12">
         {!images[0] && (
-          <h1 className={`text-3xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
+          <h1 className={`text-3xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-2xl' : ''}`} style={headingStyle}>
             關於我們
           </h1>
         )}
@@ -56,10 +58,10 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         {/* ── 故事 ── */}
         {(profile.about || profile.description) && (
           <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 border-b pb-2" style={{ borderColor: accent }}>
+            <h2 className={`text-xl border-b pb-2 ${tpl.headingClass}`} style={{ ...headingStyle, borderColor: accent }}>
               民宿故事
             </h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
+            <p className="leading-relaxed whitespace-pre-wrap text-[15px]" style={bodyStyle}>
               {profile.about || profile.description}
             </p>
           </section>
@@ -67,16 +69,16 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
 
         {/* ── 主人介紹 ── */}
         {profile.owner_intro && (
-          <section className={`rounded-2xl p-6 space-y-3 ${tpl.sectionAlt}`}>
-            <h2 className="text-xl font-bold text-gray-900">主人介紹</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">{profile.owner_intro}</p>
+          <section className="rounded-2xl p-6 space-y-3" style={{ backgroundColor: tpl.sectionBg }}>
+            <h2 className={tpl.headingClass} style={headingStyle}>主人介紹</h2>
+            <p className="leading-relaxed whitespace-pre-wrap text-[15px]" style={bodyStyle}>{profile.owner_intro}</p>
           </section>
         )}
 
         {/* ── 相片 ── */}
         {images.length > 1 && (
           <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 border-b pb-2" style={{ borderColor: accent }}>
+            <h2 className={`text-xl border-b pb-2 ${tpl.headingClass}`} style={{ ...headingStyle, borderColor: accent }}>
               民宿相片
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -93,13 +95,14 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         {/* ── 設施 ── */}
         {amenities.length > 0 && (
           <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 border-b pb-2" style={{ borderColor: accent }}>
+            <h2 className={`text-xl border-b pb-2 ${tpl.headingClass}`} style={{ ...headingStyle, borderColor: accent }}>
               設施與服務
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
               {amenities.map(a => (
                 <div key={a}
-                  className="flex items-center gap-2.5 bg-white border rounded-xl px-4 py-3 text-sm text-gray-700">
+                  className={`flex items-center gap-2.5 px-4 py-3 text-sm ${tpl.cardClass}`}
+                  style={{ backgroundColor: tpl.cardBg, borderColor: tpl.cardBorder, color: tpl.ink }}>
                   <span className="text-lg">{AMENITY_EMOJI[a] ?? '✓'}</span>
                   <span>{a}</span>
                 </div>
@@ -111,10 +114,11 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         {/* ── 住宿規則 ── */}
         {profile.house_rules && (
           <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 border-b pb-2" style={{ borderColor: accent }}>
+            <h2 className={`text-xl border-b pb-2 ${tpl.headingClass}`} style={{ ...headingStyle, borderColor: accent }}>
               住宿規則
             </h2>
-            <div className={`rounded-xl p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap ${tpl.sectionAlt}`}>
+            <div className="rounded-xl p-4 text-sm leading-relaxed whitespace-pre-wrap"
+              style={{ backgroundColor: tpl.sectionBg, color: tpl.ink }}>
               {profile.house_rules}
             </div>
           </section>
@@ -123,7 +127,7 @@ export default async function AboutPage({ params }: { params: Promise<{ slug: st
         {/* ── FAQ ── */}
         {faq.length > 0 && (
           <section className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 border-b pb-2" style={{ borderColor: accent }}>
+            <h2 className={`text-xl border-b pb-2 ${tpl.headingClass}`} style={{ ...headingStyle, borderColor: accent }}>
               常見問題
             </h2>
             <AboutFaq items={faq} accent={accent} />

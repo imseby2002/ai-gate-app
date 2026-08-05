@@ -17,6 +17,8 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
   const tpl        = getTemplate(profile.template_id)
   const accent     = profile.theme_color || tpl.defaultAccent
   const aText      = { color: accent }
+  const headingStyle = { color: tpl.ink, fontFamily: tpl.headingFontFamily, fontWeight: tpl.headingWeight }
+  const mutedStyle   = { color: tpl.muted }
   const social     = (profile.social_links as Record<string, string> | null) ?? {}
   const contactNote = profile.contact_note as string | null
   const mapEmbed   = profile.contact_map_embed as string | null
@@ -32,11 +34,11 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10 space-y-10">
       <div>
-        <h1 className={`text-3xl font-bold text-gray-900 ${profile.template_id === 'boutique' ? 'uppercase tracking-widest text-2xl' : ''}`}>
+        <h1 className={`text-3xl ${tpl.headingClass} ${profile.template_id === 'boutique' ? 'text-2xl' : ''}`} style={headingStyle}>
           聯絡我們
         </h1>
         {contactNote && (
-          <p className="mt-3 text-gray-600 text-sm leading-relaxed">{contactNote}</p>
+          <p className="mt-3 text-sm leading-relaxed" style={mutedStyle}>{contactNote}</p>
         )}
       </div>
 
@@ -47,13 +49,14 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
             const Icon = item.icon
             return (
               <a key={i} href={item.href} target="_blank" rel="noopener noreferrer"
-                className={`flex items-center gap-3 bg-white border p-4 hover:shadow-sm transition-shadow group ${tpl.cardClass}`}>
+                className={`flex items-center gap-3 p-4 transition-shadow group ${tpl.cardClass} ${tpl.shadow}`}
+                style={{ backgroundColor: tpl.cardBg, borderColor: tpl.cardBorder }}>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}18` }}>
                   <Icon className="h-4 w-4" style={aText} />
                 </div>
                 <div>
-                  <div className="text-[11px] text-gray-400">{item.label}</div>
-                  <div className="text-sm text-gray-800 font-medium">{item.value}</div>
+                  <div className="text-[11px]" style={mutedStyle}>{item.label}</div>
+                  <div className="text-sm font-medium" style={{ color: tpl.ink }}>{item.value}</div>
                 </div>
               </a>
             )
@@ -63,19 +66,19 @@ export default async function ContactPage({ params }: { params: Promise<{ slug: 
 
       {/* Business hours */}
       {(profile.check_in_time || profile.check_out_time) && (
-        <section className={`rounded-xl p-4 space-y-2 ${tpl.sectionAlt}`}>
-          <h2 className="text-sm font-semibold text-gray-700">入住時間</h2>
+        <section className="rounded-xl p-4 space-y-2" style={{ backgroundColor: tpl.sectionBg }}>
+          <h2 className="text-sm font-semibold" style={{ color: tpl.ink }}>入住時間</h2>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {profile.check_in_time && (
               <div>
-                <span className="text-gray-500 text-xs">入住（Check-in）</span>
-                <div className="font-semibold text-gray-900">{profile.check_in_time} 後</div>
+                <span className="text-xs" style={mutedStyle}>入住（Check-in）</span>
+                <div className="font-semibold" style={{ color: tpl.ink }}>{profile.check_in_time} 後</div>
               </div>
             )}
             {profile.check_out_time && (
               <div>
-                <span className="text-gray-500 text-xs">退房（Check-out）</span>
-                <div className="font-semibold text-gray-900">{profile.check_out_time} 前</div>
+                <span className="text-xs" style={mutedStyle}>退房（Check-out）</span>
+                <div className="font-semibold" style={{ color: tpl.ink }}>{profile.check_out_time} 前</div>
               </div>
             )}
           </div>
