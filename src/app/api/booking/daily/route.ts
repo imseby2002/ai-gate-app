@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data: todayBookings } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, platform_booking_id, check_in, total_price, platform, status')
+    .select('id, property_id, guest_name, platform_booking_id, check_in, total_price, platform, status, deposit_amount, is_paid')
     .eq('user_id', ctx.ownerId)
     .eq('check_in', date)
     .order('created_at')
@@ -71,31 +71,49 @@ export async function GET(req: NextRequest) {
   }
 
   // 今日訂單依 property_id 分組（排除已取消，取消的訂單不該再被拿來自動帶入每日入住）
-  const bookingByPropId: Record<string, { guest_name: string; platform_booking_id: string; total_price: number | null; platform: string | null }> = {}
+  const bookingByPropId: Record<string, { guest_name: string; platform_booking_id: string; total_price: number | null; platform: string | null; deposit_amount: number | null; is_paid: boolean }> = {}
   for (const b of bookingList) {
     if (b.status === 'cancelled') continue
     if (!bookingByPropId[b.property_id]) {
-      bookingByPropId[b.property_id] = { guest_name: b.guest_name, platform_booking_id: b.platform_booking_id, total_price: b.total_price ?? null, platform: b.platform ?? null }
+      bookingByPropId[b.property_id] = {
+        guest_name: b.guest_name, platform_booking_id: b.platform_booking_id,
+        total_price: b.total_price ?? null, platform: b.platform ?? null,
+        deposit_amount: b.deposit_amount ?? null, is_paid: b.is_paid ?? false,
+      }
     }
   }
 
-  // 訂單已取消時，同房型/同單號的每日入住舊資料也要跟著清掉，不能繼續顯示旅客早已取消的入住資訊。
-  // 清掉後若同房型當天還有其他有效訂單，下方「補填」步驟會用新的 bookingByPropId 自動帶回正確資料。
-  const cancelledOrderNumsByProp: Record<string, Set<string>> = {}
+  // 每日入住的訂單欄位（單號/姓名/房價/平台）只該反映「目前仍有效」的訂單。
+  // 舊邏輯只在能「證明某張訂單剛好被取消」時才清（單號需完全對上），訂單被刪除、
+  // 單號本來就沒填、或訂單其實是被 Email/iCal 同步在別的路徑直接改狀態等情況都清不到，
+  // 導致每日入住卡著過期資料、跟日曆（直接讀 bookings）對不起來。改成白名單：
+  // 只要 source 是 booking，卻對不到「當天同房型」任何一筆目前有效訂單，一律清掉；
+  // 若清掉後同房型當天還有其他有效訂單，下方「補填」步驟會自動帶回正確資料。
+  const validOrderNumsByProp: Record<string, Set<string>> = {}
+  const validPropIds = new Set<string>()
   for (const b of bookingList) {
-    if (b.status !== 'cancelled' || !b.platform_booking_id) continue
-    if (!cancelledOrderNumsByProp[b.property_id]) cancelledOrderNumsByProp[b.property_id] = new Set()
-    cancelledOrderNumsByProp[b.property_id].add(b.platform_booking_id)
+    if (b.status === 'cancelled') continue
+    validPropIds.add(b.property_id)
+    if (b.platform_booking_id) {
+      if (!validOrderNumsByProp[b.property_id]) validOrderNumsByProp[b.property_id] = new Set()
+      validOrderNumsByProp[b.property_id].add(b.platform_booking_id)
+    }
   }
   for (const rec of cleanList) {
+    if (rec.source !== 'booking') continue
     const prop = propList.find(p => p.name === rec.room_name)
-    if (!prop || !rec.order_number) continue
-    if (!cancelledOrderNumsByProp[prop.id]?.has(rec.order_number)) continue
+    if (!prop) continue
+    const stillValid = rec.order_number
+      ? validOrderNumsByProp[prop.id]?.has(rec.order_number)
+      : validPropIds.has(prop.id)
+    if (stillValid) continue
     await supabase.from('bnb_daily_records').update({
       order_number: null, guest_name: null, price_total: null, platform: null,
+      deposit: null, paid: false,
       source: 'manual', updated_at: new Date().toISOString(),
     }).eq('id', rec.id)
-    rec.order_number = null; rec.guest_name = null; rec.price_total = null; rec.platform = null; rec.source = 'manual'
+    rec.order_number = null; rec.guest_name = null; rec.price_total = null; rec.platform = null
+    rec.deposit = null; rec.paid = false; rec.source = 'manual'
   }
 
   // 新增缺少的房型記錄
@@ -114,6 +132,8 @@ export async function GET(req: NextRequest) {
         guest_name: booking?.guest_name ?? null,
         price_total: booking?.total_price ?? null,
         platform: booking?.platform ?? null,
+        deposit: booking?.deposit_amount ?? null,
+        paid: booking?.is_paid ?? false,
         source: booking ? 'booking' : 'manual',
         sort_order: cleanList.length + i,
         updated_at: new Date().toISOString(),
@@ -140,6 +160,8 @@ export async function GET(req: NextRequest) {
         guest_name: booking.guest_name ?? null,
         price_total: rec.price_total ?? booking.total_price ?? null,
         platform: rec.platform ?? booking.platform ?? null,
+        deposit: rec.deposit ?? booking.deposit_amount ?? null,
+        paid: rec.paid || booking.is_paid,
         source: 'booking',
         updated_at: new Date().toISOString(),
       }).eq('id', rec.id)
@@ -147,6 +169,8 @@ export async function GET(req: NextRequest) {
       rec.guest_name = booking.guest_name ?? null
       if (rec.price_total == null) rec.price_total = booking.total_price ?? null
       if (rec.platform == null) rec.platform = booking.platform ?? null
+      if (rec.deposit == null) rec.deposit = booking.deposit_amount ?? null
+      rec.paid = rec.paid || booking.is_paid
     }
   }
 
@@ -253,6 +277,14 @@ export async function PATCH(req: NextRequest) {
   const { id, ...updates } = body
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
+  // 找對應訂單一律要用「更新前」的單號比對——若這次改的正是單號本身，
+  // 用更新後的新單號去找舊訂單一定找不到。
+  const { data: before } = await supabase
+    .from('bnb_daily_records')
+    .select('order_number, room_name, date')
+    .eq('id', id).eq('user_id', ctx.ownerId)
+    .maybeSingle()
+
   const { data, error } = await supabase
     .from('bnb_daily_records')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -261,14 +293,17 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 訂單相關欄位（旅客／房價／平台）在每日入住手動修正時，同步寫回對應的 bookings，
-  // 讓「訂單管理」與「日曆」畫面顯示一致。
-  const BOOKING_FIELDS = ['guest_name', 'price_total', 'platform'] as const
+  // 訂單相關欄位（單號／旅客／房價／訂金／付款／平台）在每日入住手動修正時，
+  // 同步寫回對應的 bookings，讓「訂單管理」「日曆」「訂單詳情」都跟每日入住一致。
+  const BOOKING_FIELDS = ['order_number', 'guest_name', 'price_total', 'deposit', 'paid', 'platform'] as const
   const changedKeys = BOOKING_FIELDS.filter(f => f in updates)
-  if (changedKeys.length > 0 && data) {
+  if (changedKeys.length > 0 && data && before) {
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (changedKeys.includes('order_number')) patch.platform_booking_id = data.order_number ?? null
     if (changedKeys.includes('guest_name')) patch.guest_name = data.guest_name ?? null
     if (changedKeys.includes('price_total')) patch.total_price = data.price_total ?? null
+    if (changedKeys.includes('deposit')) patch.deposit_amount = data.deposit ?? null
+    if (changedKeys.includes('paid')) patch.is_paid = !!data.paid
     if (changedKeys.includes('platform')) patch.platform = data.platform ?? 'manual'
 
     // 一張訂單可能訂了多個房型（見 migration 090），同一單號可能對應多筆 bookings，
@@ -280,18 +315,20 @@ export async function PATCH(req: NextRequest) {
       .eq('name', data.room_name)
       .maybeSingle()
 
-    if (data.order_number && prop) {
+    const matchOrderNumber = before.order_number
+
+    if (matchOrderNumber && prop) {
       const { data: matched } = await supabase
         .from('bookings')
         .select('id')
         .eq('user_id', ctx.ownerId)
-        .eq('platform_booking_id', data.order_number)
+        .eq('platform_booking_id', matchOrderNumber)
         .eq('property_id', prop.id)
         .maybeSingle()
       if (matched) {
         await supabase.from('bookings').update(patch).eq('id', matched.id).eq('user_id', ctx.ownerId)
       }
-    } else if (!data.order_number) {
+    } else if (!matchOrderNumber) {
       // 無單號：只有「房型+日期」剛好唯一對應一筆訂單時才連動，
       // 避免房型下有多間房、同天多筆訂單時誤改到別人的資料
       if (prop) {
@@ -305,18 +342,21 @@ export async function PATCH(req: NextRequest) {
 
         if (candidates && candidates.length === 1) {
           await supabase.from('bookings').update(patch).eq('id', candidates[0].id).eq('user_id', ctx.ownerId)
-        } else if (!candidates?.length && (data.guest_name || data.price_total != null)) {
+        } else if (!candidates?.length && (data.guest_name || data.price_total != null || data.order_number)) {
           const checkOut = new Date(data.date)
           checkOut.setDate(checkOut.getDate() + 1)
           await supabase.from('bookings').insert({
             user_id: ctx.ownerId,
             property_id: prop.id,
             platform: data.platform ?? 'manual',
+            platform_booking_id: data.order_number ?? null,
             guest_name: data.guest_name ?? null,
             check_in: data.date,
             check_out: checkOut.toLocaleDateString('sv-SE'),
             num_guests: 1,
             total_price: data.price_total ?? null,
+            deposit_amount: data.deposit ?? null,
+            is_paid: !!data.paid,
             currency: 'TWD',
             status: 'confirmed',
             source: 'manual',
