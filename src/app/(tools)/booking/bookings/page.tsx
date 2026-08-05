@@ -64,12 +64,16 @@ export default function BookingsPage() {
   const [filterStatus, setFilterStatus]     = useState('')
   const [filterProp, setFilterProp]         = useState('')
   const [filterPlatform, setFilterPlatform] = useState('')
-  const [filterFrom, setFilterFrom]   = useState('')
+  // 預設從今天開始（依退房日篩選，還沒退房/未來的訂單都算），避免一進頁面就被
+  // 遠期的重複性訂單（例如 iCal 同步的整年份不可訂區間）洗版，擋住近期真正要處理的訂單。
+  // 使用者手動清除篩選或自己選日期後，才會看到今天以前的資料。
+  const todayStr = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+  const [filterFrom, setFilterFrom]   = useState(todayStr)
   const [filterTo, setFilterTo]       = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [adding, setAdding]           = useState(false)
   const [sortKey, setSortKey]         = useState<'check_in' | 'created_at'>('check_in')
-  const [sortDesc, setSortDesc]       = useState(true)
+  const [sortDesc, setSortDesc]       = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   // 空房表一次選多個房源時，逐筆排隊預填新增視窗：存完一筆自動帶出下一筆的房型／日期
   const [prefillQueue, setPrefillQueue] = useState<Array<{ property_id: string; check_in: string; check_out: string }>>([])
