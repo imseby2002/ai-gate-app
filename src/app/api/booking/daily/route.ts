@@ -214,10 +214,10 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  // 找出有訂單但 property_id 為 null 或不在現有房型的訂單
+  // 找出有訂單但 property_id 為 null 或不在現有房型的訂單（已取消的訂單不算未對應，不該再顯示）
   const matchedOrderNums = new Set(all.map((r: { order_number: string | null }) => r.order_number).filter(Boolean))
   const unmatched = bookingList.filter(b =>
-    !matchedOrderNums.has(b.platform_booking_id) && (b.guest_name || b.platform_booking_id)
+    b.status !== 'cancelled' && !matchedOrderNums.has(b.platform_booking_id) && (b.guest_name || b.platform_booking_id)
   ).map(b => ({
     guest_name: b.guest_name ?? '',
     order_number: b.platform_booking_id ?? '',
