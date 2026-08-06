@@ -1195,6 +1195,9 @@
       "hint": "Nhấn vào ô bất kỳ để sửa · Mật khẩu cổng áp dụng cho tất cả phòng trong ngày và về sau · Mật khẩu phòng áp dụng cho phòng đó về sau · (sửa một ngày sẽ cập nhật từ ngày đó) · \"Đơn\" màu xanh = nhập từ hệ thống đặt phòng · Mật khẩu ẩn theo mặc định",
       "unmatchedTitle": "Đơn hôm nay (chưa khớp phòng, tổng {count})",
       "unmatchedHint": "⚠ Các đơn này chưa có loại phòng tương ứng, vui lòng chỉ định loại phòng tại trang \"Đơn đặt\" để tự động nhập",
+      "unmatchedPlatform": "Nền tảng",
+      "unmatchedStay": "Ngày lưu trú",
+      "unmatchedAssign": "Xem đơn và chỉ định loại phòng",
       "cols": {
         "room_name": "Phòng",
         "room_password": "Mật khẩu phòng",

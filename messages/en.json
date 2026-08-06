@@ -1195,6 +1195,9 @@
       "hint": "Click any cell to edit · Gate password applies to all rooms that day and forward · Room password applies to that room forward · (editing a day updates from that day) · Blue \"Booking\" = imported from booking system · Passwords hidden by default",
       "unmatchedTitle": "Today's bookings (unmatched rooms, {count} total)",
       "unmatchedHint": "⚠ These bookings have no assigned room type. Assign a room type on the \"Bookings\" page to auto-import.",
+      "unmatchedPlatform": "Platform",
+      "unmatchedStay": "Stay dates",
+      "unmatchedAssign": "View booking and assign room type",
       "cols": {
         "room_name": "Room",
         "room_password": "Room Password",

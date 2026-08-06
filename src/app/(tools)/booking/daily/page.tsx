@@ -92,6 +92,10 @@ function addDays(iso: string, n: number) {
 interface UnmatchedBooking {
   guest_name: string
   order_number: string
+  booking_id: string | null
+  platform: string | null
+  check_in: string | null
+  check_out: string | null
 }
 
 interface CellProps {
@@ -610,15 +614,31 @@ export default function DailyPage() {
           </h2>
           <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
             <div className="grid bg-amber-50 border-b text-xs font-semibold text-amber-700 uppercase tracking-wide"
-              style={{ gridTemplateColumns: '1fr 1fr' }}>
+              style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr auto' }}>
               <div className="px-3 py-2.5">{t('daily.cols.guest_name')}</div>
               <div className="px-3 py-2.5">{t('daily.cols.order_number')}</div>
+              <div className="px-3 py-2.5">{t('daily.unmatchedPlatform')}</div>
+              <div className="px-3 py-2.5">{t('daily.unmatchedStay')}</div>
+              <div className="px-3 py-2.5" />
             </div>
             {unmatched.map((b, i) => (
-              <div key={i} className="grid border-b last:border-0 text-sm"
-                style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <div key={i} className="grid border-b last:border-0 text-sm items-center"
+                style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr auto' }}>
                 <div className="px-3 py-2.5 text-gray-800">{b.guest_name || '—'}</div>
                 <div className="px-3 py-2.5 text-gray-500 font-mono text-xs">{b.order_number || '—'}</div>
+                <div className="px-3 py-2.5 text-gray-500">{platformLabel(b.platform) || '—'}</div>
+                <div className="px-3 py-2.5 text-gray-500 text-xs">
+                  {b.check_in && b.check_out ? `${b.check_in} → ${b.check_out}` : '—'}
+                </div>
+                <div className="px-3 py-2.5">
+                  {b.booking_id && (
+                    <Link href={`/booking/bookings/${b.booking_id}`}
+                      title={t('daily.unmatchedAssign')}
+                      className="text-gray-400 hover:text-indigo-600">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -56,6 +56,21 @@ export async function PUT(req: Request) {
   // 密碼有填才更新並加密；留空＝沿用原密碼
   if (updates.imap_password) updates.imap_password = encryptSecret(updates.imap_password)
   else delete updates.imap_password
+
+  // 換了資料夾/標籤等於換了另一個 UID 空間，沿用舊的 last_synced_uid 會誤判新信箱裡
+  // UID 較小的信「已經處理過」而漏抓；換資料夾時一併重置，讓它從頭掃描新資料夾。
+  if ('imap_folder' in updates) {
+    const { data: before } = await supabase
+      .from('email_settings')
+      .select('imap_folder')
+      .eq('id', id).eq('user_id', ctx.ownerId)
+      .maybeSingle()
+    if (before && before.imap_folder !== updates.imap_folder) {
+      updates.last_synced_at = null
+      updates.last_synced_uid = null
+    }
+  }
+
   const { data: setting, error } = await supabase
     .from('email_settings')
     .update(updates)

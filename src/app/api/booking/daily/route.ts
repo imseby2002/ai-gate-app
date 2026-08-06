@@ -222,6 +222,9 @@ export async function GET(req: NextRequest) {
     guest_name: b.guest_name ?? '',
     order_number: b.platform_booking_id ?? '',
     booking_id: b.id ?? null,
+    platform: b.platform ?? null,
+    check_in: b.check_in ?? null,
+    check_out: b.check_out ?? null,
   }))
 
   return NextResponse.json({ rooms: allWithId, unmatched })

@@ -267,6 +267,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
   // 每次最多處理幾封（避免 Vercel 300 秒逾時）。超過的部分靠 last_synced_at 推進下次續傳。
   const MAX_PER_RUN = 25
   let hasMore = false
+  const lastSyncedUid: number = (setting as { last_synced_uid?: number | null }).last_synced_uid ?? 0
 
   // 標籤模式：imap_folder 指定了非 INBOX 的自訂標籤（如「訂房」）即啟用。
   // 直接抓該標籤全部信，不靠寄件者/主旨關鍵字搜尋；預定與取消信都放在同一個
@@ -365,48 +366,53 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         return { or: [head, buildOr(tail)] }
       }
 
-      let seqs: number[] = []
+      // 用 UID（而非連線臨時的 sequence number）搜尋/抓取，讓 last_synced_uid 可以
+      // 跨次執行可靠地記錄「抓到哪裡了」。IMAP SINCE 只到日期粒度，同一天內重跑
+      // 排序後永遠是同一批最舊的信排最前面；沒有 UID 下限，忙碌的一天信件數一旦
+      // 超過 MAX_PER_RUN，就會卡在同一批舊信、永遠碰不到當天較晚寄達的新信/取消信。
+      let uids: number[] = []
 
       if (labelMode) {
         // 標籤模式：直接抓「預定」資料夾全部信，不靠關鍵字搜尋。
         try {
-          const found = await client.search({ since: labelSince })
-          if (Array.isArray(found)) seqs = found
+          const found = await client.search({ since: labelSince }, { uid: true })
+          if (Array.isArray(found)) uids = found
         } catch { /* ignore */ }
       } else {
         // Strategy 1: one combined search across all known sender domains
         try {
           const domainCriteria = Object.values(PLATFORM_SENDERS).map(d => ({ from: `@${d}` }))
-          const found = await client.search({ ...buildOr(domainCriteria), since: incrementalSince })
-          if (Array.isArray(found)) seqs = [...seqs, ...found]
+          const found = await client.search({ ...buildOr(domainCriteria), since: incrementalSince }, { uid: true })
+          if (Array.isArray(found)) uids = [...uids, ...found]
         } catch { /* ignore */ }
 
         // Strategy 2: one combined search across key booking subject keywords
         try {
           const kwCriteria = BOOKING_SUBJECT_KEYWORDS.map(kw => ({ subject: kw }))
-          const found = await client.search({ ...buildOr(kwCriteria), since: incrementalSince })
-          if (Array.isArray(found)) seqs = [...seqs, ...found]
+          const found = await client.search({ ...buildOr(kwCriteria), since: incrementalSince }, { uid: true })
+          if (Array.isArray(found)) uids = [...uids, ...found]
         } catch { /* ignore */ }
       }
 
       // Phase 1: 一次批次串流抓取所有 raw source（取代逐封 fetchOne，速度差數十倍）。
       async function fetchBatch(list: number[], forceCancel = false) {
         if (list.length === 0) return
-        for await (const msg of client.fetch(list.join(','), { source: true, internalDate: true })) {
+        for await (const msg of client.fetch(list.join(','), { source: true, internalDate: true }, { uid: true })) {
           if (msg.source) {
             const idate = msg.internalDate ? new Date(msg.internalDate) : undefined
-            rawSources.push({ seq: msg.seq, source: msg.source as Buffer, internalDate: idate, forceCancel })
+            rawSources.push({ seq: msg.uid, source: msg.source as Buffer, internalDate: idate, forceCancel })
           } else {
             result.debug.no_source++
           }
         }
       }
 
-      // 最舊優先排序，只取前 MAX_PER_RUN 封；其餘留待下次（last_synced_at 推進後）續傳。
-      const sortedSeqs = [...new Set(seqs)].sort((a, b) => a - b)
-      result.debug.found_uids = sortedSeqs.length
-      const batchSeqs = sortedSeqs.slice(0, MAX_PER_RUN)
-      hasMore = sortedSeqs.length > batchSeqs.length
+      // 排除已經處理過的 UID（last_synced_uid 以前的），確保同一天內每次都能往前推進，
+      // 不會卡在同一批舊信；剩下的取最舊優先的前 MAX_PER_RUN 封，其餘留待下次續傳。
+      const newUids = [...new Set(uids)].filter(u => u > lastSyncedUid).sort((a, b) => a - b)
+      result.debug.found_uids = newUids.length
+      const batchSeqs = newUids.slice(0, MAX_PER_RUN)
+      hasMore = newUids.length > batchSeqs.length
 
       try {
         await fetchBatch(batchSeqs)
@@ -632,7 +638,11 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const patch: Record<string, unknown> = {}
           if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
             patch.guest_name = extracted.guest_name
-          if (validCheckOut && validCheckOut !== dupById.check_out)
+          // 只在缺資料（沒有 check_out）或信件延後退房日時才更新，絕不往回改：
+          // 每日入住的「續住」會直接延後訂單的 check_out，若這裡照信件內容無條件覆寫，
+          // 同一張訂單的信只要被重新處理到，就會把手動續住延長的天數改回去，
+          // 連帶讓那天的每日入住資料被清空（GET 找不到涵蓋當天的有效訂單）。
+          if (validCheckOut && (!dupById.check_out || validCheckOut > dupById.check_out))
             patch.check_out = validCheckOut
           if (roomTotalPrice != null && dupById.total_price == null)
             patch.total_price = roomTotalPrice
@@ -772,8 +782,16 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
     if (times.length) nextSyncedAt = new Date(Math.max(...times)).toISOString()
   }
 
+  // 本批實際抓到的最大 UID（非取消資料夾，因為那是另一個信箱、UID 不共通），
+  // 讓下次執行能跳過已處理過的信，避免忙碌天數卡在同一批舊信、碰不到當天較晚的新信。
+  const bookingFolderUids = rawSources.filter(r => !r.forceCancel).map(r => r.seq)
+  const nextSyncedUid = bookingFolderUids.length > 0
+    ? Math.max(lastSyncedUid, ...bookingFolderUids)
+    : lastSyncedUid
+
   await supabase.from('email_settings').update({
     last_synced_at:  nextSyncedAt,
+    last_synced_uid: nextSyncedUid || null,
     last_sync_count: result.added,
     last_sync_error: result.errors.length > 0 ? result.errors[0] : null,
   }).eq('id', settingId)
