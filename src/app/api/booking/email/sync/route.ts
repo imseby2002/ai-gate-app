@@ -24,9 +24,9 @@ export async function POST(req: Request) {
   // reset=true: clear last_synced_at + delete null-property email bookings for this setting
   if (reset) {
     if (setting_id) {
-      await admin.from('email_settings').update({ last_synced_at: null }).eq('id', setting_id).eq('user_id', ctx.ownerId)
+      await admin.from('email_settings').update({ last_synced_at: null, last_synced_uid: null }).eq('id', setting_id).eq('user_id', ctx.ownerId)
     } else {
-      await admin.from('email_settings').update({ last_synced_at: null }).eq('user_id', ctx.ownerId)
+      await admin.from('email_settings').update({ last_synced_at: null, last_synced_uid: null }).eq('user_id', ctx.ownerId)
     }
     // Delete null-property email bookings so they get re-imported with correct property
     await admin.from('bookings').delete()
