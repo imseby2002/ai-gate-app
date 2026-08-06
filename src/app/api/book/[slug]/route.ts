@@ -53,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const body = await req.json()
   const { check_in, check_out, property_id, guest_name, guest_email, guest_phone,
-          num_guests, promo_code, notes } = body
+          num_guests, extra_beds, promo_code, notes } = body
 
   if (!check_in || !check_out || !guest_name || !guest_email) {
     return NextResponse.json({ error: '請填寫必填欄位' }, { status: 400 })
@@ -63,17 +63,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   const guests = Number(num_guests) > 0 ? Number(num_guests) : 1
+  const beds = Math.max(0, Number(extra_beds) || 0)
   const nights = Math.max(1, Math.round(
     (new Date(check_out).getTime() - new Date(check_in).getTime()) / 86400000
   ))
 
-  // Pricing — authoritative server-side engine (每日價 + 規則 + 加人費)
+  // Pricing — authoritative server-side engine (每日價 + 規則 + 加人費 + 加床費)
   let totalPrice: number | null = null
   let promoDiscount: number | null = null
   if (property_id) {
-    const quote = await computeStayPrice(admin, profile.user_id, property_id, check_in, check_out, guests)
+    const quote = await computeStayPrice(admin, profile.user_id, property_id, check_in, check_out, guests, beds)
     if (quote) totalPrice = quote.total
   }
+
+  // 加床沒有獨立欄位（避免異動公開訂房的資料庫函式），先併進備註讓民宿主看得到
+  const notesWithBeds = beds > 0 ? `${notes ? `${notes}\n` : ''}加床 x${beds}` : notes
 
   // Validate promo (server-side). used_count is incremented only when the host
   // CONFIRMS the booking (see public-bookings PUT), so spamming pending bookings
@@ -110,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     p_total_price: totalPrice,
     p_promo_code: promo_code?.toUpperCase() || null,
     p_promo_discount: promoDiscount,
-    p_notes: notes || null,
+    p_notes: notesWithBeds || null,
   })
 
   if (error) {

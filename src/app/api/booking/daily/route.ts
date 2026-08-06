@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 
+function addDaysStr(dateStr: string, n: number): string {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + n)
+  return d.toLocaleDateString('sv-SE')
+}
+
 // GET /api/booking/daily?date=2026-05-30
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -30,11 +36,14 @@ export async function GET(req: NextRequest) {
     .eq('user_id', ctx.ownerId)
     .order('created_at')
 
+  // 涵蓋當晚的訂單，不是只找「今天入住」的——續住多晚的旅客，第二晚起也要能自動帶入，
+  // 不必每天手動重填（退房當天不算佔用，所以用 check_out > date）。
   const { data: todayBookings } = await supabase
     .from('bookings')
-    .select('id, property_id, guest_name, platform_booking_id, check_in, total_price, platform, status, deposit_amount, is_paid')
+    .select('id, property_id, guest_name, platform_booking_id, check_in, check_out, total_price, platform, status, deposit_amount, is_paid')
     .eq('user_id', ctx.ownerId)
-    .eq('check_in', date)
+    .lte('check_in', date)
+    .gt('check_out', date)
     .order('created_at')
 
   const { data: prevRecords } = await supabase
@@ -272,6 +281,80 @@ export async function PATCH(req: NextRequest) {
     const { error } = await q
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
+  }
+
+  // 續住：把前一天同房間的訂單資料（單號/旅客/房價/訂金/已付款/平台）帶入今天，
+  // 若前一天有連動到訂單，同時把該訂單的退房日往後延一晚，讓這筆訂單本身就涵蓋今天，
+  // 之後每一晚也會自動帶入，不用每天手動按續住。
+  if (body.action === 'continue' && body.id) {
+    const { data: today } = await supabase
+      .from('bnb_daily_records')
+      .select('*')
+      .eq('id', body.id).eq('user_id', ctx.ownerId)
+      .maybeSingle()
+    if (!today) return NextResponse.json({ error: '找不到此記錄' }, { status: 404 })
+
+    const yDate = addDaysStr(today.date, -1)
+    const { data: yesterday } = await supabase
+      .from('bnb_daily_records')
+      .select('*')
+      .eq('user_id', ctx.ownerId).eq('date', yDate).eq('room_name', today.room_name)
+      .maybeSingle()
+
+    if (!yesterday || (!yesterday.order_number && !yesterday.guest_name)) {
+      return NextResponse.json({ error: '前一天沒有可帶入的入住資料' }, { status: 400 })
+    }
+
+    const { data: prop } = await supabase
+      .from('properties')
+      .select('id')
+      .eq('user_id', ctx.ownerId)
+      .eq('name', today.room_name)
+      .maybeSingle()
+
+    let linkedBooking = false
+    if (prop) {
+      const newCheckout = addDaysStr(today.date, 1)
+      if (yesterday.order_number) {
+        const { data: b } = await supabase
+          .from('bookings').select('id, check_out')
+          .eq('user_id', ctx.ownerId).eq('property_id', prop.id)
+          .eq('platform_booking_id', yesterday.order_number)
+          .neq('status', 'cancelled')
+          .maybeSingle()
+        if (b) {
+          linkedBooking = true
+          if (b.check_out <= today.date) {
+            await supabase.from('bookings').update({ check_out: newCheckout, updated_at: new Date().toISOString() }).eq('id', b.id)
+          }
+        }
+      } else {
+        const { data: b } = await supabase
+          .from('bookings').select('id, check_out')
+          .eq('user_id', ctx.ownerId).eq('property_id', prop.id)
+          .is('platform_booking_id', null).eq('check_out', today.date)
+          .neq('status', 'cancelled')
+          .maybeSingle()
+        if (b) {
+          linkedBooking = true
+          await supabase.from('bookings').update({ check_out: newCheckout, updated_at: new Date().toISOString() }).eq('id', b.id)
+        }
+      }
+    }
+
+    const { data: updated, error } = await supabase
+      .from('bnb_daily_records')
+      .update({
+        order_number: yesterday.order_number, guest_name: yesterday.guest_name,
+        price_total: yesterday.price_total, deposit: yesterday.deposit, paid: yesterday.paid,
+        platform: yesterday.platform, source: linkedBooking ? 'booking' : yesterday.source,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', body.id).eq('user_id', ctx.ownerId)
+      .select().single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(updated)
   }
 
   const { id, ...updates } = body

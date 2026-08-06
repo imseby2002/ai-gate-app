@@ -1180,6 +1180,8 @@
       "addRoom": "Thêm phòng",
       "roomN": "Phòng {n}",
       "clickToFill": "Nhấn để nhập",
+      "continueStay": "Ở tiếp",
+      "continueStayHint": "Lấy dữ liệu khách của ngày hôm trước cho phòng này",
       "autoTag": "Tự động",
       "orderTag": "Đơn",
       "editPlatform": "Nhấn để đổi nền tảng",
@@ -1238,7 +1240,9 @@
         "roomCount": "Số phòng",
         "maxGuests": "Số khách tối đa",
         "basePrice": "Giá gốc/đêm",
-        "extraFee": "Phụ thu/khách/đêm"
+        "extraFee": "Phụ thu/khách/đêm",
+        "maxExtraBeds": "Số giường phụ tối đa",
+        "extraBedFee": "Phí giường phụ/giường/đêm"
       }
     },
     "amenityGroups": {

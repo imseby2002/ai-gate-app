@@ -15,12 +15,13 @@ interface BnbProfile {
 interface Property {
   id: string; name: string; description?: string | null
   base_price?: number | null; extra_guest_fee?: number | null; max_guests?: number | null
+  max_extra_beds?: number | null; extra_bed_fee?: number | null
   images?: string[] | null
 }
 
 const EMPTY_FORM = {
   guest_name: '', guest_email: '', guest_phone: '',
-  num_guests: 1, check_in: '', check_out: '', notes: '', promo_code: '',
+  num_guests: 1, extra_beds: 0, check_in: '', check_out: '', notes: '', promo_code: '',
 }
 
 function nights(ci: string, co: string) {
@@ -51,7 +52,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   const [unavailable, setUnavailable]   = useState<Set<string>>(new Set())
   const [serverQuote, setServerQuote]   = useState<{ total: number } | null>(null)
   const [confirmation, setConfirmation] = useState<{
-    code: string; total: number | null; roomName: string; checkIn: string; checkOut: string; guests: number
+    code: string; total: number | null; roomName: string; checkIn: string; checkOut: string; guests: number; beds: number
   } | null>(null)
 
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -84,12 +85,12 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
     const ci = form.check_in, co = form.check_out
     if (!selectedProp || !ci || !co || new Date(co) <= new Date(ci)) { setServerQuote(null); return }
     let cancelled = false
-    fetch(`/api/book/${slug}/quote?property_id=${selectedProp.id}&check_in=${ci}&check_out=${co}&num_guests=${form.num_guests}`)
+    fetch(`/api/book/${slug}/quote?property_id=${selectedProp.id}&check_in=${ci}&check_out=${co}&num_guests=${form.num_guests}&extra_beds=${form.extra_beds}`)
       .then(r => r.json())
       .then(d => { if (!cancelled) setServerQuote(d.quote ?? null) })
       .catch(() => { if (!cancelled) setServerQuote(null) })
     return () => { cancelled = true }
-  }, [selectedProp, form.check_in, form.check_out, form.num_guests, slug])
+  }, [selectedProp, form.check_in, form.check_out, form.num_guests, form.extra_beds, slug])
 
   function rangeConflict(ci: string, co: string) {
     if (!ci || !co) return false
@@ -135,7 +136,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
       setConfirmation({
         code: d.booking.confirmation_code, total: d.booking.total_price,
         roomName: selectedProp?.name ?? '不指定房型',
-        checkIn: form.check_in, checkOut: form.check_out, guests: form.num_guests,
+        checkIn: form.check_in, checkOut: form.check_out, guests: form.num_guests, beds,
       })
       setStep('done')
     } catch { setSubmitError('網路錯誤，請稍後再試') }
@@ -143,16 +144,20 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
   }
 
   const n = nights(form.check_in, form.check_out)
+  const beds = Math.max(0, Math.min(form.extra_beds, selectedProp?.max_extra_beds ?? 0))
+  const effectiveMaxGuests = (selectedProp?.max_guests ?? 2) + beds
   const basePrice = serverQuote?.total ?? (
     selectedProp?.base_price
-      ? selectedProp.base_price * n + Math.max(0, form.num_guests - (selectedProp.max_guests ?? 2)) * (selectedProp.extra_guest_fee ?? 0) * n
+      ? selectedProp.base_price * n
+        + Math.max(0, form.num_guests - effectiveMaxGuests) * (selectedProp.extra_guest_fee ?? 0) * n
+        + beds * (selectedProp.extra_bed_fee ?? 0) * n
       : null
   )
   const finalPrice   = basePrice !== null ? Math.max(0, basePrice - (promoValid?.discount ?? 0)) : null
   const datesInvalid = !!(form.check_in && form.check_out && new Date(form.check_out) <= new Date(form.check_in))
   const dateConflict = rangeConflict(form.check_in, form.check_out)
   const dateBlocked  = datesInvalid || dateConflict
-  const overCapacity = !!(selectedProp?.max_guests && form.num_guests > selectedProp.max_guests && !selectedProp.extra_guest_fee)
+  const overCapacity = !!(selectedProp?.max_guests && form.num_guests > effectiveMaxGuests && !selectedProp.extra_guest_fee)
 
   const design = resolveDesign(profile ?? {})
   const accent = design.accent
@@ -197,6 +202,7 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               ['入住', confirmation.checkIn],
               ['退房', confirmation.checkOut],
               ['人數', `${confirmation.guests} 人`],
+              ...(confirmation.beds > 0 ? [['加床', `${confirmation.beds} 床`]] as [string, string][] : []),
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between">
                 <span className="text-gray-500">{k}</span>
@@ -275,6 +281,23 @@ export default function BookingPage({ params }: { params: Promise<{ slug: string
               </div>
               {overCapacity && <p className="text-xs text-rose-500">人數超過此房型上限</p>}
             </div>
+
+            {!!selectedProp?.max_extra_beds && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">加床</label>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setForm(f => ({ ...f, extra_beds: Math.max(0, f.extra_beds - 1) }))}
+                    className="w-8 h-8 rounded-lg border flex items-center justify-center text-gray-600 hover:bg-gray-50">−</button>
+                  <span className="w-8 text-center font-medium">{form.extra_beds}</span>
+                  <button onClick={() => setForm(f => ({ ...f, extra_beds: Math.min(selectedProp.max_extra_beds ?? 0, f.extra_beds + 1) }))}
+                    className="w-8 h-8 rounded-lg border flex items-center justify-center text-gray-600 hover:bg-gray-50">+</button>
+                  <span className="text-xs text-gray-400 ml-1">
+                    最多 {selectedProp.max_extra_beds} 床
+                    {selectedProp.extra_bed_fee ? `，NT$ ${fmt(selectedProp.extra_bed_fee)}/床/晚` : ''}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border p-5 space-y-4">
