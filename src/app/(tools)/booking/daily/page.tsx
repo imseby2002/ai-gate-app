@@ -178,7 +178,7 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
         ${saving === row.id ? 'opacity-60' : ''}`}
     >
       <span className="min-w-0 truncate">{masked ? '••••••' : (display || t('daily.clickToFill'))}</span>
-      {col.key === 'guest_name' && !raw && (
+      {(col.key === 'guest_name' || col.key === 'order_number') && !raw && (
         <button
           type="button"
           onClick={e => { e.stopPropagation(); onContinueStay(row.id) }}
@@ -318,7 +318,8 @@ export default function DailyPage() {
     if (!original) return
 
     // 輸入「續住」直接觸發帶入前一天資料，不當成一般文字存進去
-    if (field === 'guest_name' && (editVal.trim() === '續住' || editVal.trim() === '续住')) {
+    // （旅客、單號欄位都可能是使用者習慣輸入的地方，兩個欄位都要接住）
+    if ((field === 'guest_name' || field === 'order_number') && (editVal.trim() === '續住' || editVal.trim() === '续住')) {
       continueStay(id)
       return
     }
