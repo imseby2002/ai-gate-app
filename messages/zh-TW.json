@@ -1195,6 +1195,9 @@
       "hint": "點擊任意格子即可編輯 · 大門密碼填一次套用到當日所有房間並延續之後日期 · 房門密碼套用到該房間之後所有日期 ·（改某天則該天起更新）· 藍色「訂單」= 訂房系統帶入 · 密碼預設隱藏",
       "unmatchedTitle": "今日訂單（未對應房間，共 {count} 筆）",
       "unmatchedHint": "⚠ 這些訂單的房型尚未對應，請至「訂單」頁面手動指定房型後即可自動帶入",
+      "unmatchedPlatform": "平台",
+      "unmatchedStay": "入住區間",
+      "unmatchedAssign": "查看訂單並指定房型",
       "cols": {
         "room_name": "房號",
         "room_password": "房門密碼",
