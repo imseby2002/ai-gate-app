@@ -617,7 +617,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
         const { data: dupById } = await filterByProperty(
           supabase
             .from('bookings')
-            .select('id, status, guest_name, check_out, total_price, num_guests, property_id, notes')
+            .select('id, status, guest_name, check_in, check_out, total_price, num_guests, property_id, notes')
             .eq('user_id', setting.user_id)
             .eq('platform_booking_id', confId),
           resolvedPropertyId,
@@ -638,6 +638,10 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const patch: Record<string, unknown> = {}
           if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
             patch.guest_name = extracted.guest_name
+          // check_in 只在訂單還沒確認（status 仍是 pending，代表當初是 AI 沒解析完整才建立的
+          // 佔位資料）時才允許校正；已經是 confirmed 的訂單絕不動 check_in，避免誤蓋掉真實資料。
+          if (checkIn && checkIn !== dupById.check_in && dupById.status === 'pending')
+            patch.check_in = checkIn
           // 只在缺資料（沒有 check_out）或信件延後退房日時才更新，絕不往回改：
           // 每日入住的「續住」會直接延後訂單的 check_out，若這裡照信件內容無條件覆寫，
           // 同一張訂單的信只要被重新處理到，就會把手動續住延長的天數改回去，
@@ -823,8 +827,10 @@ const PLATFORM_HINTS: Record<string, string> = {
 - 連住多晚：郵件會同時顯示入住日（Check-in/入住）與退房日（Check-out/退房），兩個日期都要擷取，不可只取入住日。
 - 金額如「TWD 3,600」；房客姓名格式「姓, 名」。`,
   trip_com: `Trip.com：
-- 訂單號為純數字（約 16 位），出現在主旨「Booking no.數字」、內文「訂單編號」下一行。
-- 欄位標籤：訂單編號 / 入住 / 退房 / 房型 / 住客姓名 / 房間數 / 入住人數 / 總價。
+- 訂單號為純數字（約 16 位），出現在主旨「Booking no.數字」、內文「訂單編號」或「預約編號」/「飯店確認編號」下一行；同一封信主旨常把訂單號重複 2-3 次（如「已確認訂單編號 #X#//Booking no. #X# accepted#X#」），是同一個號碼，不要誤判成多筆訂單。
+- 兩種常見版式，欄位標籤不同，兩種都要認得：
+  1) 取消/一般通知信：訂單編號 / 入住 / 退房 / 房型 / 住客姓名 / 房間數 / 入住人數 / 總價。
+  2) 「已確認訂單」／「您已接受旅客的預訂」（房東接單通知）：預約編號 / 飯店確認編號 / 旅客姓名 / 房型（後面可能接「-Commission NN%」「保留房」等標籤，只取房型名稱本身）/ 床型 / 住宿日期「YYYY 年 M 月 D 日 - YYYY 年 M 月 D 日｜N 晚」（第一個日期入住、第二個退房）/ 抵達時間 / 每日餐點 / 預計到店人數。
 - 主旨「Cancellation request accepted」或內文「訂單已取消」→ is_cancellation true。
 - 房客姓名格式「姓/名」。`,
   asiayo: `AsiaYo：
@@ -853,9 +859,14 @@ const FEW_SHOT_EXAMPLES: Record<string, string> = {
 
 範例3（取消）：主旨「Agoda - CANCELLED (1731646163)」；內文「訂房編號 1731646163 … 入住 28-May-2026 … 退房 29-May-2026 … This booking has been cancelled」
 正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":null,"check_in":"2026-05-28","check_out":"2026-05-29","confirmation_id":"1731646163","total_price":null,"num_guests":null,"property_name":null,"matched_property_id":null,"platform":"agoda"}`,
-  trip_com: `輸入主旨：「【訂單已取消】… Cancellation request accepted (booking no. #1616330516335375#)」
+  trip_com: `範例1（取消通知）：輸入主旨：「【訂單已取消】… Cancellation request accepted (booking no. #1616330516335375#)」
 輸入內文片段：「訂單編號 1616330516335375 … 旅客姓名 HUANG/YA CHI … 訂單金額 TWD 1377 … 住宿日期 2026 年 6 月 16 日 - 2026 年 6 月 17 日」
-正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":"HUANG/YA CHI","check_in":"2026-06-16","check_out":"2026-06-17","confirmation_id":"1616330516335375","total_price":1377,"num_guests":null,"property_name":"Standard Double Room","matched_property_id":null,"platform":"trip_com"}`,
+正確輸出：{"is_booking":true,"is_cancellation":true,"guest_name":"HUANG/YA CHI","check_in":"2026-06-16","check_out":"2026-06-17","confirmation_id":"1616330516335375","total_price":1377,"num_guests":null,"property_name":"Standard Double Room","matched_property_id":null,"platform":"trip_com"}
+
+範例2（房東接單通知，訂單號在主旨重複多次）：輸入主旨：「已確認訂單編號 #1616399988877766#//Booking no. #1616399988877766# accepted#1616399988877766#」
+輸入內文片段：「已確認訂單 您已接受旅客的預訂 預約編號1616399988877766 飯店確認編號 1616399988877766 … 旅客姓名：WANG/XIAO MING 房型：豪華雙人房 breakfast-Commission 15%｜1房 保留房 床型：1張特大床 住宿日期：2026 年 9 月 10 日 - 2026 年 9 月 12 日｜2 晚 抵達時間：9 月 10 日 15:00 - 9 月 12 日 06:00 每日餐點：2 客普通早餐 預計到店人數：2 位成人」
+正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"WANG/XIAO MING","check_in":"2026-09-10","check_out":"2026-09-12","confirmation_id":"1616399988877766","total_price":null,"num_guests":2,"property_name":"豪華雙人房","matched_property_id":null,"platform":"trip_com"}
+（說明：主旨裡同一個訂單號出現 3 次是正常格式，不是 3 筆訂單；房型後面的「-Commission 15%」「保留房」是佣金/狀態標籤，不算房型名稱的一部分；住宿日期用第一個日期當入住、第二個當退房，不要用「N 晚」去反推。）`,
   asiayo: `輸入主旨：「AsiaYo.com 訂房已確認通知 (202605260319)」
 輸入內文片段：「訂單編號 202605260319 … 會員姓名 函霓 林 … 大人：1 位 小孩：0 位 … 海景房: 最多4人入住 … 入住日期 2026/07/10 退房日期 2026/07/12 … 已付金額 4,838」
 正確輸出：{"is_booking":true,"is_cancellation":false,"guest_name":"函霓 林","check_in":"2026-07-10","check_out":"2026-07-12","confirmation_id":"202605260319","total_price":4838,"num_guests":1,"property_name":"海景房: 最多4人入住","matched_property_id":null,"platform":"asiayo"}`,
