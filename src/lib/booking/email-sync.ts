@@ -638,7 +638,11 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           const patch: Record<string, unknown> = {}
           if (extracted.guest_name && (!dupById.guest_name || dupById.guest_name === '(待補充)'))
             patch.guest_name = extracted.guest_name
-          if (validCheckOut && validCheckOut !== dupById.check_out)
+          // 只在缺資料（沒有 check_out）或信件延後退房日時才更新，絕不往回改：
+          // 每日入住的「續住」會直接延後訂單的 check_out，若這裡照信件內容無條件覆寫，
+          // 同一張訂單的信只要被重新處理到，就會把手動續住延長的天數改回去，
+          // 連帶讓那天的每日入住資料被清空（GET 找不到涵蓋當天的有效訂單）。
+          if (validCheckOut && (!dupById.check_out || validCheckOut > dupById.check_out))
             patch.check_out = validCheckOut
           if (roomTotalPrice != null && dupById.total_price == null)
             patch.total_price = roomTotalPrice
