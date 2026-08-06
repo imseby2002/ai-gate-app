@@ -105,6 +105,12 @@ export default async function RoomsPage({ params }: { params: Promise<{ slug: st
                     {prop.room_count > 1 && (
                       <span>{prop.room_count} 間</span>
                     )}
+                    {prop.max_extra_beds > 0 && (
+                      <span>
+                        可加床（最多 {prop.max_extra_beds} 床
+                        {prop.extra_bed_fee ? `，NT$ ${fmt(prop.extra_bed_fee)}/床/晚` : ''}）
+                      </span>
+                    )}
                   </div>
 
                   {/* Amenities */}

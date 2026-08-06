@@ -823,7 +823,7 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
   // Property availability + gentle urgency (homestay; empty for other industries)
   try {
     const { data: properties } = await supabase
-      .from('properties').select('id, name, description, max_guests, base_price, extra_guest_fee, dynamic_pricing_enabled')
+      .from('properties').select('id, name, description, max_guests, base_price, extra_guest_fee, max_extra_beds, extra_bed_fee, dynamic_pricing_enabled')
       .eq('user_id', userId).eq('status', 'active')
     if (properties?.length) {
       const today = new Date().toISOString().slice(0, 10)
@@ -835,8 +835,9 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
       const lines = ['【房源與價目／訂單狀況（系統即時資料，報價一律以此為準）】']
       for (const p of properties) {
         const feeNote = p.extra_guest_fee ? `，超過加收 $${Number(p.extra_guest_fee).toLocaleString()}/人/晚` : ''
+        const bedNote = p.max_extra_beds > 0 ? `，可加床最多 ${p.max_extra_beds} 床${p.extra_bed_fee ? `（$${Number(p.extra_bed_fee).toLocaleString()}/床/晚）` : ''}` : ''
         const dynNote = p.dynamic_pricing_enabled ? '（假日/特定日期價格另計，請客人提供入住日期以精算實際房價）' : ''
-        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}/晚${feeNote}${dynNote}`)
+        lines.push(`\n▸ ${p.name}${p.description ? `（${p.description}）` : ''}，最多 ${p.max_guests ?? '—'} 人，基本價 $${p.base_price ?? '—'}/晚${feeNote}${bedNote}${dynNote}`)
         const pB = (bookings ?? []).filter(b => b.property_id === p.id)
         if (!pB.length) lines.push('  近90天無訂單，全部可訂')
         else {

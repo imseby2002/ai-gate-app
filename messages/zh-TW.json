@@ -1180,6 +1180,8 @@
       "addRoom": "新增房間",
       "roomN": "房間 {n}",
       "clickToFill": "點擊填入",
+      "continueStay": "續住",
+      "continueStayHint": "帶入前一天同房間的入住資料",
       "autoTag": "自動",
       "orderTag": "訂單",
       "editPlatform": "點擊修改平台",
@@ -1238,7 +1240,9 @@
         "roomCount": "間數",
         "maxGuests": "最多人數",
         "basePrice": "底價/晚",
-        "extraFee": "超額/人/晚"
+        "extraFee": "超額/人/晚",
+        "maxExtraBeds": "可加床數量",
+        "extraBedFee": "加床費用/床/晚"
       }
     },
     "amenityGroups": {

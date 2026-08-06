@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, description, room_count = 1, max_guests = 2, base_price, extra_guest_fee, currency = 'TWD', amenities = [], images = [], name_aliases = [] } = body
+  const { name, description, room_count = 1, max_guests = 2, base_price, extra_guest_fee, max_extra_beds = 0, extra_bed_fee, currency = 'TWD', amenities = [], images = [], name_aliases = [] } = body
   if (!name?.trim()) return NextResponse.json({ error: '房源名稱必填' }, { status: 400 })
 
   const [{ count: existingCount }, { propertyLimit }] = await Promise.all([
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('properties')
-    .insert({ user_id: ctx.ownerId, name, description, room_count, max_guests, base_price, extra_guest_fee: extra_guest_fee ?? null, currency, amenities, images, name_aliases, sort_order: existingCount ?? 0 })
+    .insert({ user_id: ctx.ownerId, name, description, room_count, max_guests, base_price, extra_guest_fee: extra_guest_fee ?? null, max_extra_beds, extra_bed_fee: extra_bed_fee ?? null, currency, amenities, images, name_aliases, sort_order: existingCount ?? 0 })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

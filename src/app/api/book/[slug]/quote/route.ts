@@ -10,12 +10,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const checkIn = sp.get('check_in')
   const checkOut = sp.get('check_out')
   const guests = Math.max(1, Number(sp.get('num_guests')) || 1)
+  const extraBeds = Math.max(0, Number(sp.get('extra_beds')) || 0)
   if (!propertyId || !checkIn || !checkOut) return NextResponse.json({ quote: null })
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('bnb_profiles').select('user_id').eq('slug', slug).single()
   if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const quote = await computeStayPrice(admin, profile.user_id, propertyId, checkIn, checkOut, guests)
+  const quote = await computeStayPrice(admin, profile.user_id, propertyId, checkIn, checkOut, guests, extraBeds)
   return NextResponse.json({ quote })
 }

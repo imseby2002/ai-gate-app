@@ -6,6 +6,7 @@ export interface StayQuote {
   currency: string
   perNight: { date: string; amount: number }[]
   extraGuestFee: number
+  extraBedFee: number
   warnings: string[]
 }
 
@@ -45,10 +46,11 @@ export async function computeStayPrice(
   checkIn: string,
   checkOut: string,
   guests: number,
+  extraBeds: number = 0,
 ): Promise<StayQuote | null> {
   const { data: prop } = await supabase
     .from('properties')
-    .select('base_price, max_guests, extra_guest_fee, room_count, currency, dynamic_pricing_enabled')
+    .select('base_price, max_guests, extra_guest_fee, room_count, currency, dynamic_pricing_enabled, max_extra_beds, extra_bed_fee')
     .eq('id', propertyId).eq('user_id', userId).single()
   if (!prop) return null
 
@@ -136,8 +138,17 @@ export async function computeStayPrice(
     total += price
   }
 
+  // 加床：數量不能超過房型設定的上限，且每加一張床視同多容納一位旅客，
+  // 這部分人數不再重複收加人費（床本身的費用已經是加床費）。
+  const beds = Math.max(0, Math.min(Math.round(extraBeds), prop.max_extra_beds ?? 0))
+  let extraBedFee = 0
+  if (beds > 0 && prop.extra_bed_fee) {
+    extraBedFee = Math.round(Number(prop.extra_bed_fee) * beds * nights.length)
+    total += extraBedFee
+  }
+
   let extraGuestFee = 0
-  const maxGuests = prop.max_guests ?? 2
+  const maxGuests = (prop.max_guests ?? 2) + beds
   if (guests > maxGuests && prop.extra_guest_fee) {
     extraGuestFee = Math.round(Number(prop.extra_guest_fee) * (guests - maxGuests) * nights.length)
     total += extraGuestFee
@@ -145,5 +156,5 @@ export async function computeStayPrice(
     warnings.push(`入住人數 ${guests} 超過上限 ${maxGuests} 人，且未設定加人費，請洽民宿`)
   }
 
-  return { nights: nights.length, total, currency, perNight, extraGuestFee, warnings }
+  return { nights: nights.length, total, currency, perNight, extraGuestFee, extraBedFee, warnings }
 }

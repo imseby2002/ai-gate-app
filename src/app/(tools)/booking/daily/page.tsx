@@ -111,9 +111,10 @@ interface CellProps {
   onStartEditPlatform: (id: string) => void
   onCommitPlatform: (id: string, val: string) => void
   onCancelEditPlatform: () => void
+  onContinueStay: (id: string) => void
 }
 
-function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange, onTogglePaid, editingPlatform, onStartEditPlatform, onCommitPlatform, onCancelEditPlatform }: CellProps) {
+function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange, onTogglePaid, editingPlatform, onStartEditPlatform, onCommitPlatform, onCancelEditPlatform, onContinueStay }: CellProps) {
   const t = useTranslations('Booking')
 
   // 尾款 = 訂房價格 - 訂金（即時計算，不可編輯）
@@ -177,6 +178,15 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
         ${saving === row.id ? 'opacity-60' : ''}`}
     >
       <span className="min-w-0 truncate">{masked ? '••••••' : (display || t('daily.clickToFill'))}</span>
+      {col.key === 'guest_name' && !raw && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onContinueStay(row.id) }}
+          title={t('daily.continueStayHint')}
+          className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-1 shrink-0 hover:bg-indigo-100">
+          {t('daily.continueStay')}
+        </button>
+      )}
       {col.key === 'order_number' && raw && (
         isEditingPlatform ? (
           <select
@@ -282,12 +292,36 @@ export default function DailyPage() {
     setEditVal(val == null ? '' : String(val))
   }
 
+  // 續住：帶入前一天同房間的訂單資料（單號/旅客/房價/訂金/已付款/平台），
+  // 若前一天有連動訂單，該訂單的退房日也會延後一晚，涵蓋今天。
+  async function continueStay(id: string) {
+    setSaving(id)
+    try {
+      const res = await fetch('/api/booking/daily', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'continue' }),
+      })
+      const d = await res.json()
+      if (res.ok && d) setRows(prev => prev.map(r => r.id === id ? { ...r, ...d } : r))
+      else if (d?.error) alert(d.error)
+    } finally {
+      setSaving(null)
+    }
+  }
+
   async function commitEdit() {
     if (!editing) return
     const { id, field } = editing
     setEditing(null)
     const original = rows.find(r => r.id === id)
     if (!original) return
+
+    // 輸入「續住」直接觸發帶入前一天資料，不當成一般文字存進去
+    if (field === 'guest_name' && (editVal.trim() === '續住' || editVal.trim() === '续住')) {
+      continueStay(id)
+      return
+    }
 
     const isNum = NUMERIC.has(field)
     const newVal: string | number | null = isNum
@@ -365,7 +399,8 @@ export default function DailyPage() {
       onStartEdit={startEdit} onCommitEdit={commitEdit}
       onCancelEdit={() => setEditing(null)} onEditValChange={setEditVal} onTogglePaid={togglePaid}
       editingPlatform={editingPlatform} onStartEditPlatform={setEditingPlatform}
-      onCommitPlatform={commitPlatform} onCancelEditPlatform={() => setEditingPlatform(null)} />
+      onCommitPlatform={commitPlatform} onCancelEditPlatform={() => setEditingPlatform(null)}
+      onContinueStay={continueStay} />
   )
 
   async function deleteRow(id: string) {
@@ -547,6 +582,7 @@ export default function DailyPage() {
                     onStartEditPlatform={setEditingPlatform}
                     onCommitPlatform={commitPlatform}
                     onCancelEditPlatform={() => setEditingPlatform(null)}
+                    onContinueStay={continueStay}
                   />
                 </div>
               ))}

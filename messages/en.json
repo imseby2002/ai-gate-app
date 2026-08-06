@@ -1180,6 +1180,8 @@
       "addRoom": "Add Room",
       "roomN": "Room {n}",
       "clickToFill": "Click to fill",
+      "continueStay": "Continue stay",
+      "continueStayHint": "Copy yesterday's guest data for this room",
       "autoTag": "Auto",
       "orderTag": "Booking",
       "editPlatform": "Click to change platform",
@@ -1238,7 +1240,9 @@
         "roomCount": "Rooms",
         "maxGuests": "Max Guests",
         "basePrice": "Base/night",
-        "extraFee": "Extra/guest/night"
+        "extraFee": "Extra/guest/night",
+        "maxExtraBeds": "Extra beds allowed",
+        "extraBedFee": "Extra bed fee/bed/night"
       }
     },
     "amenityGroups": {

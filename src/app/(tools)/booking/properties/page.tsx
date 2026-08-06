@@ -7,13 +7,15 @@ import { Plus, Edit2, Trash2, BedDouble, X, ImagePlus, Loader2, GripVertical } f
 interface Property {
   id: string; name: string; description: string
   room_count: number; max_guests: number; base_price: number | null; extra_guest_fee: number | null
+  max_extra_beds: number; extra_bed_fee: number | null
   currency: string; status: string; name_aliases: string[]
   amenities: string[]; images: string[]; sort_order: number
 }
 
 const EMPTY_FORM = {
   name: '', description: '', room_count: 1, max_guests: 2,
-  base_price: '', extra_guest_fee: '', currency: 'TWD', name_aliases: [] as string[],
+  base_price: '', extra_guest_fee: '', max_extra_beds: 0, extra_bed_fee: '',
+  currency: 'TWD', name_aliases: [] as string[],
   amenities: [] as string[], images: [] as string[],
 }
 
@@ -61,6 +63,8 @@ export default function PropertiesPage() {
       room_count: p.room_count, max_guests: p.max_guests,
       base_price: p.base_price?.toString() ?? '',
       extra_guest_fee: p.extra_guest_fee?.toString() ?? '',
+      max_extra_beds: p.max_extra_beds ?? 0,
+      extra_bed_fee: p.extra_bed_fee?.toString() ?? '',
       currency: p.currency,
       name_aliases: p.name_aliases ?? [],
       amenities: p.amenities ?? [],
@@ -129,6 +133,7 @@ export default function PropertiesPage() {
         ...form,
         base_price: form.base_price ? parseFloat(form.base_price) : null,
         extra_guest_fee: form.extra_guest_fee ? parseFloat(form.extra_guest_fee) : null,
+        extra_bed_fee: form.extra_bed_fee ? parseFloat(form.extra_bed_fee) : null,
       }
       if (editing) {
         const res = await fetch('/api/booking/properties', {
@@ -366,6 +371,22 @@ export default function PropertiesPage() {
                     <input type="number" value={form.extra_guest_fee}
                       onChange={e => setForm(p => ({ ...p, extra_guest_fee: e.target.value }))}
                       placeholder="500"
+                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">{t('properties.form.maxExtraBeds')}</label>
+                    <input type="number" min={0} value={form.max_extra_beds}
+                      onChange={e => setForm(p => ({ ...p, max_extra_beds: parseInt(e.target.value) || 0 }))}
+                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600">{t('properties.form.extraBedFee')}</label>
+                    <input type="number" value={form.extra_bed_fee}
+                      onChange={e => setForm(p => ({ ...p, extra_bed_fee: e.target.value }))}
+                      placeholder="800"
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
                 </div>
