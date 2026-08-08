@@ -1,13 +1,15 @@
 // 訂單管理（bookings）新增/修改/取消/刪除時，把結果同步寫回每日入住（bnb_daily_records），
 // 讓兩邊不論從哪一邊輸入都會一致，不用等使用者重新整理每日入住頁面才觸發被動補填。
 //
-// 判斷「這筆 bookings 對應到哪一筆 bnb_daily_records」的規則（跟 daily/route.ts 的
-// PATCH 同步邏輯一致，避免猜錯房間）：
-// 1. 有單號（platform_booking_id）：daily 記錄的 order_number 剛好等於這個單號才算。
-// 2. daily 記錄本身是空白（沒單號也沒姓名）：可以安全帶入。
-// 3. 沒單號、daily 記錄非空白：只有「這個房型當天」剛好只有這一筆有效訂單時才視為同一筆，
-//    避免房型下有多間房、同天多筆訂單時誤連到別人的資料。
-// 三種情況都不符合就完全不動（維持既有資料）。
+// 判斷「這筆 bookings 對應到哪一筆 bnb_daily_records」的規則，依序：
+// 1. booking_id 直接對上（兩邊已經連結過，最準，跟單號/姓名有沒有被手動改過無關）。
+// 2. 沒連結過時的軟比對（跟 daily/route.ts 的 PATCH 同步邏輯一致，避免猜錯房間）：
+//    a. 有單號（platform_booking_id）：daily 記錄的 order_number 剛好等於這個單號才算。
+//    b. daily 記錄本身是空白（沒單號也沒姓名）：可以安全帶入。
+//    c. 沒單號、daily 記錄非空白：只有「這個房型當天」剛好只有這一筆有效訂單時才視為同一筆，
+//       避免房型下有多間房、同天多筆訂單時誤連到別人的資料。
+// 都不符合就完全不動（維持既有資料）；一旦透過軟比對連上，會順便補上 booking_id，
+// 之後同一筆訂單的同步就會走第 1 條路徑，不用再猜。
 
 interface BookingLike {
   id: string
@@ -26,6 +28,14 @@ interface DailyRecordRow { id: string; order_number: string | null; guest_name: 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function findLinkedRecord(supabase: any, userId: string, booking: BookingLike): Promise<DailyRecordRow | null> {
+  // 已經連結過：直接用 booking_id 精準對到當晚那一筆，不必再靠房型/單號猜。
+  const { data: linked } = await supabase
+    .from('bnb_daily_records')
+    .select('id, order_number, guest_name')
+    .eq('user_id', userId).eq('booking_id', booking.id).eq('date', booking.check_in)
+    .maybeSingle()
+  if (linked) return linked
+
   if (!booking.property_id) return null
   const { data: prop } = await supabase.from('properties').select('name').eq('id', booking.property_id).maybeSingle()
   if (!prop?.name) return null
@@ -55,7 +65,7 @@ async function findLinkedRecord(supabase: any, userId: string, booking: BookingL
 async function clearRecord(supabase: any, recordId: string) {
   await supabase.from('bnb_daily_records').update({
     order_number: null, guest_name: null, price_total: null, platform: null,
-    deposit: null, paid: false,
+    deposit: null, paid: false, booking_id: null,
     source: 'manual', updated_at: new Date().toISOString(),
   }).eq('id', recordId)
 }
@@ -87,6 +97,7 @@ export async function syncDailyRecordForBooking(
       platform: booking.platform ?? null,
       deposit: booking.deposit_amount ?? null,
       paid: booking.is_paid ?? false,
+      booking_id: booking.id,
       source: 'booking',
       updated_at: new Date().toISOString(),
     }).eq('id', rec.id)
