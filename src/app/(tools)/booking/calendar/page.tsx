@@ -29,7 +29,11 @@ const STATUS_COLORS: Record<string, string> = {
   no_show:   'bg-orange-100 text-orange-700',
 }
 
-function toDateStr(d: Date) { return d.toISOString().slice(0, 10) }
+// 注意：不可用 d.toISOString()——這裡的 Date 都是用「本地午夜」建構（如 new Date(ds+'T00:00:00')），
+// toISOString() 會轉成 UTC，在 UTC+8（台北）時區下午夜會被轉成前一天，導致訂單全部往前一天顯示。
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 function getDaysInMonth(y: number, m: number) { return new Date(y, m + 1, 0).getDate() }
 function getFirstDayOfWeek(y: number, m: number) { return new Date(y, m, 1).getDay() }
 function addDays(ds: string, n: number) {

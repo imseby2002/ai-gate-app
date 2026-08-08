@@ -18,8 +18,9 @@ interface GridData {
 
 type CellState = 'available' | 'booked' | 'blocked'
 
+// 注意：不可用 d.toISOString()——會轉成 UTC，在 UTC+8（台北）時區下容易把日期轉成前一天。
 function toDateStr(d: Date) {
-  return d.toISOString().slice(0, 10)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 function addDays(dateStr: string, n: number) {
   const d = new Date(dateStr); d.setDate(d.getDate() + n); return toDateStr(d)
