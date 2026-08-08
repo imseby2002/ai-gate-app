@@ -456,6 +456,7 @@ interface CsChatForm {
   fields: CsFormField[]
   trigger_keywords: string
   notify_target: CsFormNotifyTarget
+  confirm_before_fields: boolean
 }
 
 // ── Load CS knowledge base (unit_data[12]) + company data ────────────────────
@@ -551,7 +552,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   // 別的表單/別的通知對象」，就建多個表單、各自設定開放星期即可）
   const { data: formRows } = await supabase
     .from('cs_forms')
-    .select('id, name, fields, trigger_keywords, notify_target, available_weekdays')
+    .select('id, name, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields')
     .eq('user_id', userId)
     .eq('enabled', true)
     .neq('trigger_keywords', '')
@@ -1052,17 +1053,14 @@ function buildFormsSection(forms: CsChatForm[]): string {
       const opt = field.options?.length ? `，選項：${field.options.join('、')}` : ''
       return `  - id="${field.id}" ${field.label}${field.required ? '（必填）' : '（選填）'}${opt}`
     }).join('\n')
-    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單，主動依序詢問以下欄位，一次只問一個，已回答的不要重複問：\n${fieldLines}`
+    const confirmNote = f.confirm_before_fields
+      ? `開始問欄位之前：如果同一件事上方知識庫另外還列了其他替代方案或選項（例如同一個需求有兩種不同的滿足方式），要先把選項列給客人選、確認客人明確選的是這個表單對應的方案，才能開始依序問欄位；客人選的是其他替代方案，就依知識庫內容回答，不要問這裡的欄位。如果知識庫沒有列出替代方案，可以直接開始問欄位，不用多問一輪。`
+      : `這個表單不用先確認替代方案，客人提到觸發字詞就可以直接依序開始問下面的欄位。`
+    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}`
   }).join('\n\n')
 
   return `\n\n【自建表單問答——比照下方規則執行】
 ${list}
-
-【開始問欄位之前，先確認客人真的要用這個表單】
-客人提到觸發字詞時，如果同一件事上方知識庫另外還列了其他替代方案或選項（例如同一個需求有兩種不同的滿足方式），
-要先把選項列給客人選、確認客人明確選的是「這個表單對應的方案」，才能開始依序問欄位；
-如果客人選的是其他替代方案，就依知識庫內容回答，不要問這個表單的欄位、也不要輸出下面的送出標記。
-如果知識庫沒有列出替代方案、這個需求就只有一種處理方式，就可以直接開始問欄位，不用多問一輪。
 
 當上面某個表單的所有「必填」欄位都已在對話中得到客人明確回答後：
 1. 先用一句自然的話回覆客人（例如「已收到，謝謝您！」），不要提到「表單」「系統」「標記」等字眼

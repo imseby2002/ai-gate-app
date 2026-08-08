@@ -14,6 +14,7 @@ interface CsForm {
   enabled: boolean
   created_at: string
   available_weekdays: number[]
+  confirm_before_fields: boolean
 }
 
 // route.ts 那份是伺服器端模組（依賴 next/headers），client component 只能拿型別，
@@ -61,6 +62,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   const [triggerKeywords, setTriggerKeywords] = useState('')
   const [notifyTarget, setNotifyTarget] = useState<CsFormNotifyTarget>(emptyNotifyTarget())
   const [availableWeekdays, setAvailableWeekdays] = useState<number[]>(ALL_WEEKDAYS)
+  const [confirmBeforeFields, setConfirmBeforeFields] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -79,7 +81,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
 
   const resetEditor = () => {
     setName(''); setFields([emptyField()]); setTriggerKeywords(''); setNotifyTarget(emptyNotifyTarget())
-    setAvailableWeekdays(ALL_WEEKDAYS)
+    setAvailableWeekdays(ALL_WEEKDAYS); setConfirmBeforeFields(true)
     setError(''); setEditingId(null); setCreating(false)
   }
 
@@ -90,6 +92,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     setTriggerKeywords(f.trigger_keywords)
     setNotifyTarget(f.notify_target?.platform !== undefined ? f.notify_target : emptyNotifyTarget())
     setAvailableWeekdays(f.available_weekdays?.length ? f.available_weekdays : ALL_WEEKDAYS)
+    setConfirmBeforeFields(f.confirm_before_fields !== false)
     setError(''); setEditingId(f.id); setCreating(false)
   }
 
@@ -104,7 +107,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     if (!availableWeekdays.length) { setError('至少要選一個開放的星期'); return }
     setSaving(true); setError('')
     try {
-      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays }
+      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays, confirmBeforeFields }
       const res = editingId
         ? await fetch(`/api/marketing/cs-forms/${editingId}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -238,6 +241,12 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
               ))}
             </div>
           </div>
+
+          <label className="flex items-start gap-2 text-xs text-gray-600">
+            <input type="checkbox" className="mt-0.5" checked={confirmBeforeFields}
+              onChange={e => setConfirmBeforeFields(e.target.checked)} />
+            <span>詢問欄位前，若知識庫另外列了替代方案，先跟客人確認要選哪一個（取消勾選＝客人一提到關鍵字就直接開始問欄位，不確認）</span>
+          </label>
 
           <div className="border rounded-lg p-2.5 bg-white space-y-2">
             <label className="block text-xs font-medium text-gray-500">送出後通知</label>
