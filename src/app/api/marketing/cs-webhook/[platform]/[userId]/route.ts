@@ -1139,16 +1139,20 @@ function cleanReply(raw: string): string {
 // 回覆裡如果出現「密碼/房號」後面接著一串英數字，但這組值從來沒有出現在系統真正查到
 // 的資料（externalDataSection）或這通對話先前已經給過的內容裡，一律視為捏造，攔截换成
 // 制式的「請提供識別資訊」，不讓這種回覆真的送到客人手上。
-const SENSITIVE_REVEAL_RE = /(?:密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,10})/g
+// 上限從 10 拉到 32：門鎖/WiFi 密碼偶爾比 10 碼長（例如知識庫常見的英數混合密碼），
+// 上限太短會讓超長的捏造值完全落在偵測範圍外、悄悄放行。
+const SENSITIVE_REVEAL_RE = /(?:密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,32})/g
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
 
-function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[]): string {
+function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string): string {
   const matches = [...reply.matchAll(SENSITIVE_REVEAL_RE)].map(m => m[1])
   if (!matches.length) return reply
-  // 這組值只要出現在「這次真的查到的系統資料」或「這通對話先前已經說過的內容」裡，
-  // 就有憑有據（先前會出現，代表當初也是通過同一套查詢流程才給的，不是平白冒出來）。
+  // 這組值只要出現在「這次真的查到的系統資料」「這通對話先前已經說過的內容」，
+  // 或「知識庫本身就白紙黑字寫的」（例如全館通用的 WiFi 密碼、公共門鎖代碼，這種
+  // 不是客人專屬的訂單資料，本來就不需要走查詢流程，直接照知識庫講就是對的），
+  // 就有憑有據，不是平白冒出來。
   const priorAssistantText = history.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
-  const backedElsewhere = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v)
+  const backedElsewhere = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v) || knowledgeBase.includes(v)
   const hasUnbackedValue = matches.some(v => !backedElsewhere(v))
   return hasUnbackedValue ? NO_FABRICATION_FALLBACK : reply
 }
@@ -1389,7 +1393,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history)
+          return enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -1406,7 +1410,7 @@ async function getAIReply(
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceNoFabricatedReveal(finalReply, externalDataSection, history)
+    return enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
