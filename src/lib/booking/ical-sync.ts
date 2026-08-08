@@ -83,38 +83,49 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
   }
 
   for (const ev of vevents) {
-    const uid = ev.uid || `${settingId}_${ev.start}`
     const checkIn  = ev.start
     const checkOut = ev.end
     const guestName = extractGuestName(ev.summary, setting.platform)
 
-    const { data: bk, error: bkErr } = await supabase
-      .from('bookings')
-      .upsert({
-        user_id:             setting.user_id,
-        property_id:         setting.property_id,
-        platform:            setting.platform,
-        platform_booking_id: uid,
-        guest_name:          guestName,
-        check_in:            checkIn,
-        check_out:           checkOut,
-        status:              'confirmed',
-        source:              'ical',
-        raw_data:            { summary: ev.summary, uid, description: ev.description },
-      }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
-      .select('id')
-      .single()
+    // Airbnb 等平台的「不可訂」佔位區塊（SUMMARY 為 "Not available" 之類，代表房主
+    // 自行封鎖的可訂範圍，不是真實訂單）常常沒有穩定的 UID，或 UID 隨著區間每天往前
+    // 滑動而跟著變——這種事件不能當成訂單 upsert（onConflict 對不上舊資料），會導致
+    // 每天同步都插入一筆新的假訂單，長期累積成大量重複、把空房算成已被佔用。
+    // 這種區塊本來就只代表「不可訂」，只需要寫 blocked_dates 阻擋房況，不必也不該
+    // 建立 bookings 資料列。
+    const isUnavailableBlock = /not\s*available/i.test(ev.summary) || /not\s*available/i.test(guestName)
 
-    if (bkErr) {
-      result.errors.push(`訂單 upsert 失敗 ${uid}: ${bkErr.message}`)
-      continue
-    }
+    let bookingId: string | null = null
+    if (!isUnavailableBlock) {
+      const uid = ev.uid || `${settingId}_${ev.start}`
+      const { data: bk, error: bkErr } = await supabase
+        .from('bookings')
+        .upsert({
+          user_id:             setting.user_id,
+          property_id:         setting.property_id,
+          platform:            setting.platform,
+          platform_booking_id: uid,
+          guest_name:          guestName,
+          check_in:            checkIn,
+          check_out:           checkOut,
+          status:              'confirmed',
+          source:              'ical',
+          raw_data:            { summary: ev.summary, uid, description: ev.description },
+        }, { onConflict: 'user_id,platform,platform_booking_id,property_id' })
+        .select('id')
+        .single()
 
-    const bookingId = bk?.id
-    if (bk && !bkErr) {
-      result.added++
-    } else {
-      result.updated++
+      if (bkErr) {
+        result.errors.push(`訂單 upsert 失敗 ${uid}: ${bkErr.message}`)
+        continue
+      }
+
+      bookingId = bk?.id ?? null
+      if (bk && !bkErr) {
+        result.added++
+      } else {
+        result.updated++
+      }
     }
 
     const dates = dateRange(checkIn, checkOut)
