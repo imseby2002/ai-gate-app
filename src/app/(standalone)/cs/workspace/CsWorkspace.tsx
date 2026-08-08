@@ -584,8 +584,6 @@ function Unit12CustomerService({
     }).catch(() => {})
   }
 
-  // Breakfast webhook configs（已停用，改用自建表單，僅保留刪除舊設定用）
-  const [breakfastSources, setBreakfastSources] = useState<CsDataSource[]>([])
   const [sourcePrefs, setSourcePrefs] = useState<{ priceSource: string; passwordSource: string; checkinTime: string }>({ priceSource: 'booking_system', passwordSource: 'booking_system', checkinTime: '' })
   const [savingPrefs, setSavingPrefs] = useState(false)
 
@@ -648,7 +646,6 @@ function Unit12CustomerService({
       if (d.sources) {
         setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.type !== 'source_prefs'))
         setPricingConfigs(d.sources.filter((s: { type: string }) => s.type === 'json_pricing'))
-        setBreakfastSources(d.sources.filter((s: { type: string }) => s.type === 'breakfast_webhook'))
       }
     }).catch(() => {})
   }, [ind])
@@ -790,11 +787,6 @@ function Unit12CustomerService({
       setDataSources(prev => prev.filter(s => s.id !== id))
     } catch {}
     setDsLoading(false)
-  }
-
-  async function deleteBreakfast(id: string) {
-    await fetch(`/api/marketing/cs-datasource/${id}`, { method: 'DELETE' })
-    setBreakfastSources(prev => prev.filter(s => s.id !== id))
   }
 
   async function toggleDs(src: CsDataSource) {
@@ -2558,25 +2550,6 @@ function Unit12CustomerService({
             <div>• {t('u12.usage4')}</div>
           </div>
 
-          {/* ── 民宿購物設定（已停用，改用「自建表單」分頁） ── */}
-          <div className="border-t pt-5">
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 space-y-1.5">
-              <div className="font-medium text-sm">🍱 {t('u12.shopTitle')}已改用「自建表單」分頁</div>
-              <div>這裡舊的早餐設定（透過 Google Apps Script 推送）已停用——實際測試發現它從未在正式 LINE 對話中真正觸發過。</div>
-              <div>已幫你把原本的早餐設定搬到「自建表單」分頁，通知方式沿用同一個 Google Apps Script 網址，請到該分頁測試確認有正常收到通知。</div>
-              {breakfastSources.length > 0 && (
-                <div className="pt-1">
-                  {breakfastSources.map(src => (
-                    <div key={src.id} className="flex items-center gap-2">
-                      <span className="truncate">{src.name}（已停用）</span>
-                      <button onClick={() => deleteBreakfast(src.id)}
-                        className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 hover:bg-red-100 text-red-500 shrink-0">{t('u12.delete')}</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       ))}
 

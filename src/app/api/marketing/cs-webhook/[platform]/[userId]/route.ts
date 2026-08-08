@@ -18,6 +18,7 @@ import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWN
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
+import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
 // 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
@@ -544,14 +545,18 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     if (pricingLines.length) knowledgeParts.push(pricingLines.join('\n\n'))
   }
 
-  // 自建表單：只載入有設定觸發關鍵字、且啟用中的表單（沒有關鍵字的表單只能靠公開連結填寫）
+  // 自建表單：只載入有設定觸發關鍵字、啟用中、且今天有開放的表單
+  // （沒有關鍵字的表單只能靠公開連結填寫；今天不開放的表單直接不讓 AI 知道，
+  // 不會讓 AI 先問完一堆欄位才在最後才發現今天不能送——同一個場景要「某幾天用
+  // 別的表單/別的通知對象」，就建多個表單、各自設定開放星期即可）
   const { data: formRows } = await supabase
     .from('cs_forms')
-    .select('id, name, fields, trigger_keywords, notify_target')
+    .select('id, name, fields, trigger_keywords, notify_target, available_weekdays')
     .eq('user_id', userId)
     .eq('enabled', true)
     .neq('trigger_keywords', '')
-  const csForms = (formRows ?? []) as CsChatForm[]
+  const csForms = ((formRows ?? []) as (CsChatForm & { available_weekdays: number[] })[])
+    .filter(f => isFormAvailableToday(f.available_weekdays))
 
   // Industry (for ticket/message records) — taken from the most recent data source
   const { data: industryRow } = await supabase
@@ -1047,11 +1052,17 @@ function buildFormsSection(forms: CsChatForm[]): string {
       const opt = field.options?.length ? `，選項：${field.options.join('、')}` : ''
       return `  - id="${field.id}" ${field.label}${field.required ? '（必填）' : '（選填）'}${opt}`
     }).join('\n')
-    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時，主動依序詢問以下欄位，一次只問一個，已回答的不要重複問：\n${fieldLines}`
+    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單，主動依序詢問以下欄位，一次只問一個，已回答的不要重複問：\n${fieldLines}`
   }).join('\n\n')
 
   return `\n\n【自建表單問答——比照下方規則執行】
 ${list}
+
+【開始問欄位之前，先確認客人真的要用這個表單】
+客人提到觸發字詞時，如果同一件事上方知識庫另外還列了其他替代方案或選項（例如同一個需求有兩種不同的滿足方式），
+要先把選項列給客人選、確認客人明確選的是「這個表單對應的方案」，才能開始依序問欄位；
+如果客人選的是其他替代方案，就依知識庫內容回答，不要問這個表單的欄位、也不要輸出下面的送出標記。
+如果知識庫沒有列出替代方案、這個需求就只有一種處理方式，就可以直接開始問欄位，不用多問一輪。
 
 當上面某個表單的所有「必填」欄位都已在對話中得到客人明確回答後：
 1. 先用一句自然的話回覆客人（例如「已收到，謝謝您！」），不要提到「表單」「系統」「標記」等字眼
