@@ -22,6 +22,11 @@ export interface CsFormNotifyTarget {
   lineToken?: string     // LINE 專用，選填：這個表單要用哪一個 OA 帳號發送，不同於平台分頁預設的 OA；留空則用平台分頁設定的憑證
 }
 
+// 0=週日...6=週六（JS Date.getDay() 慣例）。需要「某幾天不開放」時，就把那幾天從這裡拿掉；
+// 需要「不同天用不同通知對象」時，建立多個表單、各自設定不同的開放星期＋通知對象即可，
+// 不用在單一表單裡塞日期分流邏輯。
+export const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6]
+
 function randomSlug(): string {
   return Math.random().toString(36).slice(2, 10)
 }
@@ -50,10 +55,11 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, fields, triggerKeywords = '', notifyTarget, industry = 'homestay' } = body
+  const { name, fields, triggerKeywords = '', notifyTarget, industry = 'homestay', availableWeekdays } = body
 
   if (!name?.trim()) return NextResponse.json({ error: '表單名稱不可為空' }, { status: 400 })
   if (!Array.isArray(fields) || !fields.length) return NextResponse.json({ error: '至少需要一個欄位' }, { status: 400 })
+  const weekdays = Array.isArray(availableWeekdays) && availableWeekdays.length ? availableWeekdays : ALL_WEEKDAYS
 
   // slug 撞號機率極低，仍保留重試
   let slug = randomSlug()
@@ -73,6 +79,7 @@ export async function POST(req: NextRequest) {
       fields,
       trigger_keywords: triggerKeywords,
       notify_target: notifyTarget ?? {},
+      available_weekdays: weekdays,
     })
     .select()
     .single()

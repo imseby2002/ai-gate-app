@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Copy, Check, Loader2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
+import { ALL_WEEKDAYS } from '@/app/api/marketing/cs-forms/route'
 
 interface CsForm {
   id: string
@@ -13,7 +14,10 @@ interface CsForm {
   notify_target: CsFormNotifyTarget
   enabled: boolean
   created_at: string
+  available_weekdays: number[]
 }
+
+const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
 interface CsFormSubmission {
   id: string
@@ -54,6 +58,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   const [fields, setFields] = useState<CsFormField[]>([emptyField()])
   const [triggerKeywords, setTriggerKeywords] = useState('')
   const [notifyTarget, setNotifyTarget] = useState<CsFormNotifyTarget>(emptyNotifyTarget())
+  const [availableWeekdays, setAvailableWeekdays] = useState<number[]>(ALL_WEEKDAYS)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -72,6 +77,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
 
   const resetEditor = () => {
     setName(''); setFields([emptyField()]); setTriggerKeywords(''); setNotifyTarget(emptyNotifyTarget())
+    setAvailableWeekdays(ALL_WEEKDAYS)
     setError(''); setEditingId(null); setCreating(false)
   }
 
@@ -81,16 +87,22 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     setName(f.name); setFields(f.fields.length ? f.fields : [emptyField()])
     setTriggerKeywords(f.trigger_keywords)
     setNotifyTarget(f.notify_target?.platform !== undefined ? f.notify_target : emptyNotifyTarget())
+    setAvailableWeekdays(f.available_weekdays?.length ? f.available_weekdays : ALL_WEEKDAYS)
     setError(''); setEditingId(f.id); setCreating(false)
+  }
+
+  const toggleWeekday = (d: number) => {
+    setAvailableWeekdays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort())
   }
 
   const save = async () => {
     if (!name.trim()) { setError('請輸入表單名稱'); return }
     const cleanFields = fields.filter(f => f.label.trim())
     if (!cleanFields.length) { setError('至少需要一個欄位'); return }
+    if (!availableWeekdays.length) { setError('至少要選一個開放的星期'); return }
     setSaving(true); setError('')
     try {
-      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry }
+      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays }
       const res = editingId
         ? await fetch(`/api/marketing/cs-forms/${editingId}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -212,6 +224,19 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
             </button>
           </div>
 
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">開放的星期（例如早餐直送週三四不送，就取消勾選週三、週四）</label>
+            <div className="flex gap-1.5">
+              {WEEKDAY_LABELS.map((label, d) => (
+                <button key={d} type="button" onClick={() => toggleWeekday(d)}
+                  className={`h-8 w-8 rounded-lg text-xs font-medium border ${availableWeekdays.includes(d) ? 'text-white border-transparent' : 'bg-white text-gray-400 border-gray-300'}`}
+                  style={availableWeekdays.includes(d) ? { background: 'var(--primary)' } : undefined}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="border rounded-lg p-2.5 bg-white space-y-2">
             <label className="block text-xs font-medium text-gray-500">送出後通知</label>
             <div className="flex gap-2">
@@ -290,6 +315,11 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-700">{f.name}</span>
                   {!f.enabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 border">已停用</span>}
+                  {f.available_weekdays?.length > 0 && f.available_weekdays.length < 7 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200">
+                      每週{f.available_weekdays.map(d => WEEKDAY_LABELS[d]).join('、')}開放
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => copyLink(f.slug)}

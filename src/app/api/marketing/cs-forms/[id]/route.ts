@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if ('triggerKeywords' in body) patch.trigger_keywords = body.triggerKeywords
   if ('notifyTarget' in body) patch.notify_target = body.notifyTarget
   if ('enabled' in body) patch.enabled = body.enabled
+  if ('availableWeekdays' in body) patch.available_weekdays = body.availableWeekdays
   patch.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase

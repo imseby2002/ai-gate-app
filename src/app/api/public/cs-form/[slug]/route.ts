@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
+import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 
 type Params = { params: Promise<{ slug: string }> }
 
@@ -18,11 +19,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const { data, error } = await supabase
     .from('cs_forms')
-    .select('id, name, fields, enabled')
+    .select('id, name, fields, enabled, available_weekdays')
     .eq('slug', slug)
     .single()
 
   if (error || !data || !data.enabled) return NextResponse.json({ error: '找不到這份表單，或表單已停用' }, { status: 404 })
+  if (!isFormAvailableToday(data.available_weekdays)) {
+    return NextResponse.json({ error: '這份表單今天不開放填寫，請改天再來或聯繫我們。' }, { status: 403 })
+  }
   return NextResponse.json({ form: { id: data.id, name: data.name, fields: data.fields as CsFormField[] } })
 }
 
@@ -32,11 +36,14 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const { data: form } = await supabase
     .from('cs_forms')
-    .select('id, user_id, industry, name, fields, notify_target, enabled')
+    .select('id, user_id, industry, name, fields, notify_target, enabled, available_weekdays')
     .eq('slug', slug)
     .single()
 
   if (!form || !form.enabled) return NextResponse.json({ error: '找不到這份表單，或表單已停用' }, { status: 404 })
+  if (!isFormAvailableToday(form.available_weekdays)) {
+    return NextResponse.json({ error: '這份表單今天不開放填寫，請改天再來或聯繫我們。' }, { status: 403 })
+  }
 
   const body = await req.json()
   const answers = body?.answers
