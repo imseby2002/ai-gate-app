@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2, Copy, Check, Loader2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
-import { ALL_WEEKDAYS } from '@/app/api/marketing/cs-forms/route'
 
 interface CsForm {
   id: string
@@ -17,6 +16,9 @@ interface CsForm {
   available_weekdays: number[]
 }
 
+// route.ts 那份是伺服器端模組（依賴 next/headers），client component 只能拿型別，
+// 不能連值一起 import，不然整個伺服器端模組會被打包進前端 bundle 導致建置失敗。
+const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6]
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
 interface CsFormSubmission {
