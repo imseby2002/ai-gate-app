@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, fields, triggerKeywords = '', notifyTarget, industry = 'homestay', availableWeekdays } = body
+  const { name, fields, triggerKeywords = '', notifyTarget, industry = 'homestay', availableWeekdays, confirmBeforeFields } = body
 
   if (!name?.trim()) return NextResponse.json({ error: '表單名稱不可為空' }, { status: 400 })
   if (!Array.isArray(fields) || !fields.length) return NextResponse.json({ error: '至少需要一個欄位' }, { status: 400 })
@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       trigger_keywords: triggerKeywords,
       notify_target: notifyTarget ?? {},
       available_weekdays: weekdays,
+      confirm_before_fields: confirmBeforeFields !== false,
     })
     .select()
     .single()

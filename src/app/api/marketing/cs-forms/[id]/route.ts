@@ -40,6 +40,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if ('notifyTarget' in body) patch.notify_target = body.notifyTarget
   if ('enabled' in body) patch.enabled = body.enabled
   if ('availableWeekdays' in body) patch.available_weekdays = body.availableWeekdays
+  if ('confirmBeforeFields' in body) patch.confirm_before_fields = body.confirmBeforeFields
   patch.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase
