@@ -13,6 +13,8 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 // Size mapping per provider
 const DALLE_SIZES: Record<string, string> = {
@@ -44,6 +46,16 @@ export async function POST(req: NextRequest) {
   if (!prompt?.trim()) {
     return NextResponse.json({ error: 'Prompt 不可為空' }, { status: 400 })
   }
+
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (!features.imageGen) {
+    return NextResponse.json({ error: '目前方案未開放圖片產出，請升級至 PRO 以上', plan }, { status: 403 })
+  }
+
+  const cost = IMAGE_COSTS[model] ?? 0.05
+  const billable = await isBillableUser(user.id)
+  const check = await checkCredits(user.id, cost, billable)
+  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
 
   let tempUrl = ''
   let revisedPrompt = prompt
@@ -144,7 +156,7 @@ export async function POST(req: NextRequest) {
 
   const { data: { publicUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(fileName)
 
-  const costMap: Record<string, number> = { dalle3: 0.08, flux: 0.05, nano: 0.02 }
+  const deduct = await deductCredits(user.id, cost, `[marketing] 圖片生成 ${model}`, billable)
 
   return NextResponse.json({
     url: publicUrl,
@@ -154,7 +166,8 @@ export async function POST(req: NextRequest) {
     size,
     quality,
     style,
-    cost: costMap[model] ?? 0.05,
+    cost,
+    balance: deduct.ok ? deduct.balance : undefined,
     generatedAt: new Date().toISOString(),
   })
 }

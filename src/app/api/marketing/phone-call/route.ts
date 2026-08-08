@@ -23,6 +23,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getTelephonyProvider } from '@/lib/telephony'
+import { TTS_COST, CALL_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 type KeyMapping = { digit: string; channel: string; target_type?: string; join_url: string; label?: string }
 
@@ -133,6 +135,20 @@ export async function POST(req: NextRequest) {
 
   if (!script.trim()) return NextResponse.json({ error: '腳本不可為空' }, { status: 400 })
 
+  // 電話撥打：行銷自動化（aiCallEmail）或潛在客戶行銷全開（prospectMarketing full）擇一即可
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (!features.aiCallEmail && features.prospectMarketing !== 'full') {
+    return NextResponse.json({ error: '目前方案未開放電話撥打，請升級至 TEAM 以上', plan }, { status: 403 })
+  }
+
+  // 執行前餘額檢查：TTS 一次 + 依撥打通數估算；實際依成功數扣點
+  const billable = await isBillableUser(user.id)
+  const phoneCount = action === 'batch' ? (phones as string[]).filter((p) => p?.trim()).length
+    : action === 'call' ? 1 : 0
+  const estimate = TTS_COST + CALL_COST * phoneCount
+  const check = await checkCredits(user.id, estimate, billable)
+  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+
   const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
   const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
 
@@ -142,6 +158,7 @@ export async function POST(req: NextRequest) {
     // ── TTS only ─────────────────────────────────────────────────────────────
     if (action === 'tts') {
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
+      await deductCredits(user.id, TTS_COST, '[marketing] 電話行銷 TTS 試聽', billable)
       return NextResponse.json({ audioUrl, provider: 'ElevenLabs' })
     }
 
@@ -162,6 +179,7 @@ export async function POST(req: NextRequest) {
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
       const result = await provider.call({ phone, audioUrl, callerId: birdCallerId, collectDtmf })
       await recordCall(phone, result.callId)
+      await deductCredits(user.id, TTS_COST + CALL_COST, '[marketing] 電話行銷撥打 1 通', billable)
       return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: provider.name })
     }
 
@@ -185,11 +203,19 @@ export async function POST(req: NextRequest) {
         await new Promise(r => setTimeout(r, 600))
       }
 
+      const successCount = results.filter(r => r.ok).length
+      await deductCredits(
+        user.id,
+        TTS_COST + CALL_COST * successCount,
+        `[marketing] 電話行銷批次撥打 ${successCount} 通`,
+        billable,
+      )
+
       return NextResponse.json({
         results,
         audioUrl,
         total: list.length,
-        success: results.filter(r => r.ok).length,
+        success: successCount,
         provider: provider.name,
       })
     }

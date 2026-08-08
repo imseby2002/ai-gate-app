@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2 } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2, Crown, Brain } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
@@ -11,7 +11,9 @@ const NAV = [
   { href: '/marketing/ai-studio',        labelKey: 'nav.studio',   icon: Wand2 },
   { href: '/marketing/geo-writer',       labelKey: 'nav.geo',      icon: Search },
   { href: '/marketing/skills',           labelKey: 'nav.expert',   icon: Sparkles },
+  { href: '/marketing/experts',          labelKey: 'nav.experts',  icon: Brain },
   { href: '/prospect-call',              labelKey: 'nav.prospect', icon: Phone },
+  { href: '/marketing/plan',             labelKey: 'nav.plan',     icon: Crown },
 ]
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

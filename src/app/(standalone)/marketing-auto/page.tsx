@@ -11,10 +11,12 @@ import {
   Bell, ShoppingBag, Smartphone, TrendingUp,
   MoreHorizontal, Pencil, Trash2, Check, AlertTriangle, ClipboardList,
   PieChart, Clock as ClockIcon, ThumbsUp, MessageSquare as MessageSquareIcon,
+  Lock,
 } from 'lucide-react'
 import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 import { SimulationPanel } from '@/components/marketing/SimulationPanel'
 import type { SimulationResult } from '@/app/api/marketing/simulate/route'
+import { useMarketingPlan } from '@/components/marketing/PlanGate'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -4585,6 +4587,26 @@ function ComingSoon({ unit }: { unit: UnitDef }) {
   )
 }
 
+// ─── 方案鎖定卡：單元未達方案時取代單元內容 ─────────────────────────────────────
+function UnitPlanLock({ requiredPlan, currentPlan }: { requiredPlan: string | null; currentPlan: string }) {
+  return (
+    <div className="flex items-center justify-center min-h-[280px]">
+      <div className="max-w-sm w-full rounded-2xl border bg-white p-8 text-center space-y-4">
+        <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
+          <Lock className="h-5 w-5 text-gray-400" />
+        </div>
+        <p className="text-sm text-gray-500">
+          此單元需 {requiredPlan} 方案，目前方案：{currentPlan === 'free' ? '免費' : currentPlan.toUpperCase()}
+        </p>
+        <a href="/marketing/plan"
+          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600">
+          查看方案並升級
+        </a>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function MarketingAutoPage() {
@@ -4600,6 +4622,19 @@ export default function MarketingAutoPage() {
   const [renameValue, setRenameValue] = useState('')
 
   const [activeUnit, setActiveUnit] = useState(1)
+
+  // 行銷方案：單元 6/8/9/10/11 依方案鎖定（權威判斷在 API，這裡是體驗層）
+  const planInfo = useMarketingPlan()
+  const mf = planInfo?.features
+  // 尚未載入（planInfo=null）時不鎖，避免閃爍；載入後依權限判斷
+  const unitLockRequires: Record<number, string | null> = {
+    6:  mf && !mf.imageGen ? 'PRO 以上' : null,
+    8:  mf && !mf.videoGen ? 'TEAM 以上' : null,
+    9:  mf && !mf.uploadPlatforms ? 'PRO 以上' : null,
+    10: mf && !mf.aiCallEmail && mf.prospectMarketing === 'collectOnly' ? 'PRO 以上' : null,
+    11: mf && !mf.avatarMarketing ? '企業' : null,
+  }
+
   const [unitStatuses, setUnitStatuses] = useState<Record<number, UnitStatus>>({})
   const [unitData, setUnitData] = useState<Record<number, unknown>>({})
 
@@ -5040,7 +5075,10 @@ export default function MarketingAutoPage() {
               onDone={handleUnit5Done}
             />
           )}
-          {activeUnit === 6 && (
+          {activeUnit === 6 && unitLockRequires[6] && (
+            <UnitPlanLock requiredPlan={unitLockRequires[6]} currentPlan={planInfo?.plan ?? 'free'} />
+          )}
+          {activeUnit === 6 && !unitLockRequires[6] && (
             <Unit6ImageGenerate
               campaignId={campaignId}
               savedData={unitData[6] as Unit6Data | undefined}
@@ -5071,7 +5109,10 @@ export default function MarketingAutoPage() {
               onDone={handleUnit7Done}
             />
           )}
-          {activeUnit === 8 && (
+          {activeUnit === 8 && unitLockRequires[8] && (
+            <UnitPlanLock requiredPlan={unitLockRequires[8]} currentPlan={planInfo?.plan ?? 'free'} />
+          )}
+          {activeUnit === 8 && !unitLockRequires[8] && (
             <Unit8VideoGenerate
               campaignId={campaignId}
               savedData={unitData[8] as Unit8Data | undefined}
@@ -5081,7 +5122,10 @@ export default function MarketingAutoPage() {
               onDone={handleUnit8Done}
             />
           )}
-          {activeUnit === 9 && (
+          {activeUnit === 9 && unitLockRequires[9] && (
+            <UnitPlanLock requiredPlan={unitLockRequires[9]} currentPlan={planInfo?.plan ?? 'free'} />
+          )}
+          {activeUnit === 9 && !unitLockRequires[9] && (
             <Unit9Upload
               campaignId={campaignId}
               savedData={unitData[9] as Unit9Data | undefined}
@@ -5091,7 +5135,10 @@ export default function MarketingAutoPage() {
               onDone={handleUnit9Done}
             />
           )}
-          {activeUnit === 10 && (
+          {activeUnit === 10 && unitLockRequires[10] && (
+            <UnitPlanLock requiredPlan={unitLockRequires[10]} currentPlan={planInfo?.plan ?? 'free'} />
+          )}
+          {activeUnit === 10 && !unitLockRequires[10] && (
             <Unit10ProspectMarketing
               campaignId={campaignId}
               savedData={unitData[10] as Unit10Data | undefined}
@@ -5100,7 +5147,10 @@ export default function MarketingAutoPage() {
               onDone={handleUnit10Done}
             />
           )}
-          {activeUnit === 11 && (
+          {activeUnit === 11 && unitLockRequires[11] && (
+            <UnitPlanLock requiredPlan={unitLockRequires[11]} currentPlan={planInfo?.plan ?? 'free'} />
+          )}
+          {activeUnit === 11 && !unitLockRequires[11] && (
             <Unit11AvatarMarketing
               campaignId={campaignId}
               savedData={unitData[11] as Unit11Data | undefined}

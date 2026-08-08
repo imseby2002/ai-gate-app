@@ -151,7 +151,52 @@ export async function POST(req: NextRequest) {
     return new NextResponse('1|OK', { status: 200 })
   }
 
-  // 找不到 CS 方案訂單 → 檢查是否為訂房方案升級訂單
+  // 找不到 CS 方案訂單 → 檢查是否為行銷方案升級訂單
+  const { data: marketingPurchase } = await supabase
+    .from('marketing_plan_purchases')
+    .select('id, user_id, plan, billing_cycle')
+    .eq('trade_no', MerchantTradeNo)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (marketingPurchase) {
+    const days = marketingPurchase.billing_cycle === 'yearly' ? 365 : 30
+
+    // 同方案續購 → 從原到期日往後延（提前續約不吃掉剩餘天數）；
+    // 不同方案（升級）→ 立即生效，從現在起算。比照 CS 方案續購邏輯。
+    const { data: existingMarketingSub } = await supabase
+      .from('marketing_subscriptions')
+      .select('plan, status, current_period_end')
+      .eq('user_id', marketingPurchase.user_id)
+      .maybeSingle()
+    const nowMs = Date.now()
+    const marketingRemainingValid = existingMarketingSub?.status === 'active'
+      && existingMarketingSub.plan === marketingPurchase.plan
+      && !!existingMarketingSub.current_period_end
+      && new Date(existingMarketingSub.current_period_end).getTime() > nowMs
+    const marketingBaseMs = marketingRemainingValid ? new Date(existingMarketingSub!.current_period_end!).getTime() : nowMs
+    const periodEnd = new Date(marketingBaseMs + days * 86400000).toISOString()
+
+    await supabase
+      .from('marketing_plan_purchases')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', marketingPurchase.id)
+
+    await supabase
+      .from('marketing_subscriptions')
+      .upsert({
+        user_id: marketingPurchase.user_id,
+        plan: marketingPurchase.plan,
+        billing_cycle: marketingPurchase.billing_cycle,
+        status: 'active',
+        current_period_end: periodEnd,
+      }, { onConflict: 'user_id' })
+
+    console.log('[ECPay] 行銷方案升級成功', { userId: marketingPurchase.user_id, plan: marketingPurchase.plan })
+    return new NextResponse('1|OK', { status: 200 })
+  }
+
+  // 找不到行銷方案訂單 → 檢查是否為訂房方案升級訂單
   const { data: bookingPurchase } = await supabase
     .from('booking_plan_purchases')
     .select('id, user_id, plan, billing_cycle, referral_code_used')

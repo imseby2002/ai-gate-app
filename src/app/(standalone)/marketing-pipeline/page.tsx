@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
+import { PlanGate } from '@/components/marketing/PlanGate'
 import {
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
   Film, Video, Upload, Phone, Mic, Headphones,
@@ -99,6 +100,18 @@ function loadResultsFromLS(): Record<string, unknown> {
 }
 
 export default function MarketingPipelinePage() {
+  return (
+    <PlanGate
+      allowed={info => info.features.marketingPipeline === true}
+      featureName="行銷流水線"
+      requiredPlan="TEAM 以上"
+    >
+      <MarketingPipelineContent />
+    </PlanGate>
+  )
+}
+
+function MarketingPipelineContent() {
   const t = useTranslations('Pipeline')
   const locale = useLocale()
   const searchParams = useSearchParams()

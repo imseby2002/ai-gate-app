@@ -20,6 +20,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
 import { enrichJsonLd, type Material } from '@/lib/geo/schema'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 export const maxDuration = 120
 
@@ -50,6 +51,24 @@ export async function POST(req: NextRequest) {
 
   const { projectId, questionIds, clusterId, locale } = await req.json()
   if (!projectId) return NextResponse.json({ error: '缺少 projectId' }, { status: 400 })
+
+  // 方案每月產文篇數限制（free 1 篇/月；RLS 保證只數到自己的文章）
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (Number.isFinite(features.geoWriterMonthlyLimit)) {
+    const monthStart = new Date()
+    monthStart.setUTCDate(1)
+    monthStart.setUTCHours(0, 0, 0, 0)
+    const { count } = await supabase
+      .from('geo_articles')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', monthStart.toISOString())
+    if ((count ?? 0) >= features.geoWriterMonthlyLimit) {
+      return NextResponse.json(
+        { error: `已達本月產文上限（${features.geoWriterMonthlyLimit} 篇），請升級方案`, plan, limit: features.geoWriterMonthlyLimit },
+        { status: 403 },
+      )
+    }
+  }
   const ids: string[] = Array.isArray(questionIds) ? questionIds.filter(Boolean) : []
   if (ids.length === 0) return NextResponse.json({ error: '請至少勾選一個問句' }, { status: 400 })
 

@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 export async function GET() {
   const supabase = await createClient()
@@ -28,6 +29,23 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
+
+  // 方案行銷案數上限（free 1 / pro 10 / team+ 無限）
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (Number.isFinite(features.campaignLimit)) {
+    const { count } = await supabase
+      .from('marketing_campaigns')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .neq('status', 'archived')
+      .neq('title', '__prospect__') // 潛在客戶行銷的內部設定列，不占名額
+    if ((count ?? 0) >= features.campaignLimit) {
+      return NextResponse.json(
+        { error: `已達方案行銷案數上限（${features.campaignLimit} 個），請升級方案或封存舊行銷案`, plan, limit: features.campaignLimit },
+        { status: 403 },
+      )
+    }
+  }
 
   const { data, error } = await supabase
     .from('marketing_campaigns')

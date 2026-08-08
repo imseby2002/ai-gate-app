@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { fal } from '@fal-ai/client'
+import { videoCost, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 const FAL_ENDPOINTS: Record<string, string> = {
   'kling-standard':  'fal-ai/kling-video/v1.6/standard/text-to-video',
@@ -47,6 +49,18 @@ export async function POST(req: NextRequest) {
 
   const provider = getProvider(model)
 
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (!features.videoGen) {
+    return NextResponse.json({ error: '目前方案未開放影片產出，請升級至 TEAM 以上', plan }, { status: 403 })
+  }
+
+  // 影片生成成本高：提交前檢查點數，提交成功即扣點（供應商在提交後就會計費）
+  const cost = videoCost(model, parseInt(duration) || 5)
+  const billable = await isBillableUser(user.id)
+  const check = await checkCredits(user.id, cost, billable)
+  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+  const charge = () => deductCredits(user.id, cost, `[marketing] 影片生成 ${model} ${duration}s`, billable)
+
   try {
     // ── fal.ai (KLING) ────────────────────────────────────────────────────────
     if (provider === 'fal') {
@@ -58,7 +72,8 @@ export async function POST(req: NextRequest) {
       const input: Record<string, unknown> = { prompt: prompt.trim(), duration, aspect_ratio: aspectRatio }
       if (model === 'kling-img2video' && imageUrl) input.image_url = imageUrl
       const { request_id } = await fal.queue.submit(endpoint, { input })
-      return NextResponse.json({ requestId: request_id, model, scriptId, endpoint, submittedAt: new Date().toISOString() })
+      await charge()
+      return NextResponse.json({ requestId: request_id, model, scriptId, endpoint, cost, submittedAt: new Date().toISOString() })
     }
 
     // ── Google VEO3 ───────────────────────────────────────────────────────────
@@ -77,7 +92,8 @@ export async function POST(req: NextRequest) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error?.message ?? 'VEO3 生成失敗')
-      return NextResponse.json({ requestId: data.name, model, scriptId, submittedAt: new Date().toISOString() })
+      await charge()
+      return NextResponse.json({ requestId: data.name, model, scriptId, cost, submittedAt: new Date().toISOString() })
     }
 
     // ── OpenAI SORA ───────────────────────────────────────────────────────────
@@ -99,7 +115,8 @@ export async function POST(req: NextRequest) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error?.message ?? 'SORA 生成失敗')
-      return NextResponse.json({ requestId: data.id, model, scriptId, submittedAt: new Date().toISOString() })
+      await charge()
+      return NextResponse.json({ requestId: data.id, model, scriptId, cost, submittedAt: new Date().toISOString() })
     }
 
     return NextResponse.json({ error: '不支援的模型' }, { status: 400 })

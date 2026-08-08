@@ -16,6 +16,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 interface PlatformResult {
   platform: string
@@ -508,6 +509,11 @@ export async function POST(req: NextRequest) {
 
   const { platforms, imageUrls = [], videoUrl = '', copyText = '' } = await req.json()
   if (!platforms?.length) return NextResponse.json({ error: 'platforms required' }, { status: 400 })
+
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (!features.uploadPlatforms) {
+    return NextResponse.json({ error: '目前方案未開放自動上傳平台，請升級至 PRO 以上', plan }, { status: 403 })
+  }
 
   // Load all credentials for this user
   const { data: credRows } = await supabase

@@ -1451,7 +1451,9 @@
       "studio": "AI Visual Studio",
       "geo": "GEO Content",
       "expert": "Expert Mode",
-      "prospect": "Prospect Marketing"
+      "prospect": "Prospect Marketing",
+      "plan": "Subscription",
+      "experts": "Custom Experts"
     },
     "studio": {
       "title": "AI Visual Studio",
