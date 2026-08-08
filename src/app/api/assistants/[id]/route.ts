@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, description, system_prompt, default_model, avatar_emoji } = body
+  const { name, description, system_prompt, default_model, avatar_emoji, expert_ids } = body
 
   const { data, error } = await supabase
     .from('assistants')
@@ -35,6 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       system_prompt: system_prompt?.trim() ?? '',
       default_model: default_model ?? null,
       avatar_emoji: avatar_emoji ?? '🤖',
+      expert_ids: Array.isArray(expert_ids) ? expert_ids : [],
     })
     .eq('id', id)
     .eq('user_id', user.id)

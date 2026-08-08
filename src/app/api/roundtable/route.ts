@@ -31,14 +31,25 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { instruction, seats, rebuttal } = body as {
+  const { instruction, seats, seatExpertIds, rebuttal } = body as {
     instruction: string
     seats?: Seat[]
+    seatExpertIds?: (string | null)[]
     rebuttal?: boolean
   }
 
   if (!instruction?.trim()) {
     return new Response(JSON.stringify({ error: 'Instruction required' }), { status: 400 })
+  }
+
+  // 沒有自訂 seats 時，把每個席位選的 expertId 合併進 DEFAULT_SEATS
+  let resolvedSeats: Seat[] | undefined = seats
+  if (!resolvedSeats && seatExpertIds?.length) {
+    const { DEFAULT_SEATS } = await import('@/lib/ai/roundtable')
+    resolvedSeats = DEFAULT_SEATS.map((seat, i) => ({
+      ...seat,
+      expertId: seatExpertIds[i] ?? undefined,
+    }))
   }
 
   const encoder = new TextEncoder()
@@ -48,7 +59,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`))
       }
       try {
-        await runRoundtable({ bossInstruction: instruction, seats, rebuttal }, emit)
+        await runRoundtable({ bossInstruction: instruction, seats: resolvedSeats, rebuttal }, emit)
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (err) {
         console.error('[roundtable] error:', err)

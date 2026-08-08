@@ -10,7 +10,8 @@ const ANTI_HALLUCINATION_RULE =
 
 export function buildSystemPrompt(
   assistant: Assistant | null,
-  files: AssistantFile[]
+  files: AssistantFile[],
+  expertContext?: string,
 ): string {
   const parts: string[] = [ANTI_HALLUCINATION_RULE]
 
@@ -32,6 +33,10 @@ export function buildSystemPrompt(
       parts.push(fileContent)
       totalChars += fileContent.length
     }
+  }
+
+  if (expertContext) {
+    parts.push(`\n\n${expertContext}`)
   }
 
   return parts.join('')

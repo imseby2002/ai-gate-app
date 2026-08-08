@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ExpertSelector } from '@/components/experts/ExpertSelector'
 
 interface SeatBlock {
   round: number
@@ -19,13 +21,22 @@ const PHASE_LABEL: Record<number, string> = {
   3: '第三輪 · 彙整報告',
 }
 
+const DEFAULT_SEAT_NAMES = ['員工A', '員工B', '員工C']
+
 export default function RoundtablePage() {
   const [instruction, setInstruction] = useState('')
   const [running, setRunning] = useState(false)
   const [blocks, setBlocks] = useState<SeatBlock[]>([])
   const [report, setReport] = useState('')
   const [phase, setPhase] = useState('')
+  const [showExpertConfig, setShowExpertConfig] = useState(false)
+  // 每個席位選的 expertId（單選）：index → expertId[]
+  const [seatExperts, setSeatExperts] = useState<Record<number, string[]>>({ 0: [], 1: [], 2: [] })
   const abortRef = useRef<AbortController | null>(null)
+
+  function setSeatExpert(idx: number, ids: string[]) {
+    setSeatExperts(prev => ({ ...prev, [idx]: ids }))
+  }
 
   async function start() {
     if (!instruction.trim() || running) return
@@ -37,11 +48,15 @@ export default function RoundtablePage() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
 
+    // 只傳 expertId 陣列，讓 API 合併進 DEFAULT_SEATS
+    const seatExpertIds = DEFAULT_SEAT_NAMES.map((_, i) => seatExperts[i]?.[0] ?? null)
+    const hasExperts = seatExpertIds.some(Boolean)
+
     try {
       const res = await fetch('/api/roundtable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction }),
+        body: JSON.stringify({ instruction, seatExpertIds: hasExperts ? seatExpertIds : undefined }),
         signal: ctrl.signal,
       })
       if (!res.ok || !res.body) {
@@ -118,6 +133,33 @@ export default function RoundtablePage() {
           rows={4}
           disabled={running}
         />
+
+        {/* 席位專家設定（可收合） */}
+        <div className="border rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowExpertConfig(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 text-sm text-muted-foreground hover:bg-muted/30 transition-colors"
+          >
+            <span>引入專家知識（選填）</span>
+            {showExpertConfig ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+          {showExpertConfig && (
+            <div className="border-t divide-y">
+              {DEFAULT_SEAT_NAMES.map((name, i) => (
+                <div key={name} className="p-3 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">{name} 的專家視角</p>
+                  <ExpertSelector
+                    selectedIds={seatExperts[i] ?? []}
+                    onChange={ids => setSeatExpert(i, ids)}
+                    single
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex gap-2">
           <Button onClick={start} disabled={running || !instruction.trim()}>
             {running ? '研議中…' : '開始研議'}

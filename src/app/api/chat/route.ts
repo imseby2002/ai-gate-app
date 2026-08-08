@@ -2,6 +2,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { detectIntent, resolveModel, getProviderFromModel, calculateCost, isImageModel, isVideoModel, INTENT_CHAIN } from '@/lib/ai/router'
 import { buildSystemPrompt, formatMessagesForContext } from '@/lib/ai/context-builder'
+import { loadExpertContext } from '@/lib/experts/loader'
 import { streamDeepSeek } from '@/lib/ai/providers/deepseek'
 import { streamGemini } from '@/lib/ai/providers/gemini'
 import { streamClaude } from '@/lib/ai/providers/claude'
@@ -56,9 +57,10 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Message required' }), { status: 400 })
   }
 
-  // Load assistant + files if provided (must belong to current user)
+  // Load assistant + files + expert knowledge if provided (must belong to current user)
   let assistant = null
   let assistantFiles: Array<{ extracted_text: string | null; file_name: string }> = []
+  let expertContext = ''
 
   if (assistantId) {
     const { data: asst } = await supabase
@@ -78,6 +80,10 @@ export async function POST(req: NextRequest) {
       .eq('assistant_id', assistantId)
       .eq('processing_status', 'done')
     assistantFiles = files ?? []
+
+    if (asst.expert_ids?.length) {
+      expertContext = await loadExpertContext(asst.expert_ids)
+    }
   }
 
   // Detect intent + resolve model
@@ -134,8 +140,8 @@ export async function POST(req: NextRequest) {
     activeConversationId = newConv.id
   }
 
-  // Build system prompt
-  const systemPrompt = buildSystemPrompt(assistant, assistantFiles as Parameters<typeof buildSystemPrompt>[1])
+  // Build system prompt (with optional expert knowledge)
+  const systemPrompt = buildSystemPrompt(assistant, assistantFiles as Parameters<typeof buildSystemPrompt>[1], expertContext || undefined)
   const formattedMessages = formatMessagesForContext([
     ...conversationMessages,
     { role: 'user', content: message }

@@ -64,6 +64,31 @@ export interface Assistant {
   default_model: string | null
   avatar_emoji: string
   is_public: boolean
+  expert_ids: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface Expert {
+  id: string
+  name: string
+  domain: string | null
+  source_url: string | null
+  source_type: 'youtube' | 'tiktok' | 'instagram' | 'blog' | 'search' | 'manual' | 'other'
+  description: string | null
+  avatar_url: string | null
+  is_system: boolean
+  created_by: string | null
+  created_at: string
+}
+
+export interface ExpertKnowledge {
+  id: string
+  expert_id: string
+  raw_content: string | null
+  structured: string | null
+  status: 'pending' | 'processing' | 'ready' | 'failed'
+  error: string | null
   created_at: string
   updated_at: string
 }
