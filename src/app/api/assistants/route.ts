@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, description, system_prompt, default_model, avatar_emoji } = body
+  const { name, description, system_prompt, default_model, avatar_emoji, expert_ids } = body
 
   if (!name?.trim()) {
     return NextResponse.json({ error: 'Name required' }, { status: 400 })
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       system_prompt: system_prompt?.trim() ?? '',
       default_model: default_model ?? null,
       avatar_emoji: avatar_emoji ?? '🤖',
+      expert_ids: Array.isArray(expert_ids) ? expert_ids : [],
     })
     .select()
     .single()

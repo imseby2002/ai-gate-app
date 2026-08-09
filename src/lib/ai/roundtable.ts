@@ -16,6 +16,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createOpenAI } from '@ai-sdk/openai'
 import { streamText } from 'ai'
 import type { LanguageModel } from 'ai'
+import { loadExpertContext } from '@/lib/experts/loader'
 
 // ── 參與者 ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,8 @@ export interface Seat {
   model: string
   /** 該員工的專長定位 (注入 system prompt) */
   role: string
+  /** 綁定的專家 ID（選填），該席位發言時會額外注入這位專家的知識 */
+  expertId?: string
 }
 
 /** 預設員工陣容 — 跨廠商不同視角 */
@@ -91,13 +94,15 @@ async function speak(
   round: number,
   emit: (e: RoundtableEvent) => void,
   maxTokens = 2048,
+  expertContext?: string,
 ): Promise<string> {
   emit({ type: 'seat-start', round, name: seat.name, model: seat.model })
+  const fullSystem = expertContext ? `${systemPrompt}\n\n${expertContext}` : systemPrompt
   let full = ''
   try {
     const result = await streamText({
       model: resolveModel(seat.model) as LanguageModel,
-      system: systemPrompt,
+      system: fullSystem,
       prompt: userPrompt,
       maxOutputTokens: maxTokens,
       abortSignal: AbortSignal.timeout(60000),
@@ -141,14 +146,27 @@ export async function runRoundtable(
   const moderator = config.moderator ?? DEFAULT_MODERATOR
   const boss = config.bossInstruction.trim()
 
+  // 預先載入所有席位綁定的專家知識（同一輪的多個席位平行載入）
+  const expertContextMap = new Map<string, string>()
+  const expertIds = [...new Set(seats.map(s => s.expertId).filter(Boolean) as string[])]
+  if (expertIds.length) {
+    await Promise.all(
+      expertIds.map(async id => {
+        const ctx = await loadExpertContext([id])
+        if (ctx) expertContextMap.set(id, ctx)
+      })
+    )
+  }
+
   // ── Round 1：獨立發言 ───────────────────────────────────────────────────
   emit({ type: 'phase', phase: 'discuss', label: '第一輪 · 獨立研議' })
   const round1: Statement[] = []
   for (const seat of seats) {
+    const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
     const system =
       `你是一場高層會議的與會員工，定位：${seat.role}。\n` +
       `請針對老闆的指令，提出你專業、具體、有依據的觀點。獨立思考，不需客套。`
-    const content = await speak(seat, system, `老闆的指令：\n${boss}`, 1, emit)
+    const content = await speak(seat, system, `老闆的指令：\n${boss}`, 1, emit, 2048, expertCtx)
     round1.push({ name: seat.name, role: seat.role, content })
   }
 
@@ -159,13 +177,14 @@ export async function runRoundtable(
     round2 = []
     const transcript = formatStatements(round1)
     for (const seat of seats) {
+      const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
       const system =
         `你是會議員工，定位：${seat.role}。\n` +
         `以下是全體第一輪的發言。請指出他人論點的問題、補強自己的觀點、` +
         `並針對分歧表態。只談新增與修正，不要重複第一輪。`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n第一輪全體發言：\n${transcript}`
-      const content = await speak(seat, system, userPrompt, 2, emit)
+      const content = await speak(seat, system, userPrompt, 2, emit, 2048, expertCtx)
       round2.push({ name: seat.name, role: seat.role, content })
     }
   }

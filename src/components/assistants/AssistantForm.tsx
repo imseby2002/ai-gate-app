@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { formatFileSize } from '@/lib/utils/format'
+import { ExpertSelector } from '@/components/experts/ExpertSelector'
 import type { AIModel, Assistant, AssistantFile } from '@/types/database'
 
 interface AssistantFormProps {
@@ -24,6 +25,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
   const [systemPrompt, setSystemPrompt] = useState(assistant?.system_prompt ?? '')
   const [defaultModel, setDefaultModel] = useState(assistant?.default_model ?? '')
   const [avatarEmoji, setAvatarEmoji] = useState(assistant?.avatar_emoji ?? '🤖')
+  const [expertIds, setExpertIds] = useState<string[]>(assistant?.expert_ids ?? [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -90,7 +92,7 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
     setSaving(true)
     setError('')
 
-    const payload = { name, description, system_prompt: systemPrompt, default_model: defaultModel || null, avatar_emoji: avatarEmoji }
+    const payload = { name, description, system_prompt: systemPrompt, default_model: defaultModel || null, avatar_emoji: avatarEmoji, expert_ids: expertIds }
 
     const res = await fetch(
       isEdit ? `/api/assistants/${assistant.id}` : '/api/assistants',
@@ -188,6 +190,11 @@ export function AssistantForm({ models, assistant }: AssistantFormProps) {
           className="w-full min-h-32 px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 resize-none bg-background"
           placeholder="設定助理的角色、行為與回答風格...&#10;例如：你是一位專業的財務分析師，專注於分析財務報表並提供投資建議。請使用繁體中文回答，並引用具體數據支持你的分析。"
         />
+      </div>
+
+      {/* Expert Knowledge */}
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
+        <ExpertSelector selectedIds={expertIds} onChange={setExpertIds} />
       </div>
 
       {/* Files */}
