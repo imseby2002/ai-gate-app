@@ -2,11 +2,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { ArrowLeft, Edit2, Printer, Save, X, Trash2 } from 'lucide-react'
 
 interface Booking {
-  id: string; platform: string; platform_booking_id: string
+  id: string; order_id: string | null; platform: string; platform_booking_id: string
   guest_name: string; guest_email: string; guest_phone: string
   guest_gender: string; guest_birthday: string; guest_id_number: string; guest_address: string
   check_in: string; check_out: string; num_guests: number
@@ -18,10 +17,28 @@ interface Booking {
   properties: { id: string; name: string } | null
 }
 
-interface Sibling {
-  id: string; total_price: number | null; status: string
+interface OrderInfo {
+  id: string; platform: string; platform_booking_id: string | null
+  guest_name: string; guest_email: string; guest_phone: string
+  guest_gender: string; guest_birthday: string; guest_id_number: string; guest_address: string
+  payment_type: string; arrival_time: string
+  deposit_amount: number | null; is_paid: boolean
+  special_requests: string; notes: string
+  created_at: string
+}
+
+interface RoomRow {
+  id: string; property_id: string | null
+  check_in: string; check_out: string; num_guests: number
+  total_price: number | null; currency: string; status: string
   properties: { id: string; name: string } | null
 }
+
+const ORDER_EDIT_FIELDS: (keyof OrderInfo)[] = [
+  'guest_name', 'guest_email', 'guest_phone', 'guest_gender', 'guest_birthday',
+  'guest_id_number', 'guest_address', 'payment_type', 'arrival_time',
+  'deposit_amount', 'is_paid', 'special_requests', 'notes',
+]
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-green-100 text-green-700',
@@ -51,80 +68,136 @@ export default function BookingDetailPage() {
   const PAYMENT_LABELS: Record<string, string> = {
     channel: t('payment.channel'), direct: t('payment.direct'), unpaid: t('payment.unpaid'),
   }
-  const [bk, setBk]       = useState<Booking | null>(null)
-  const [siblings, setSiblings] = useState<Sibling[]>([])
+
+  const [bk, setBk]           = useState<Booking | null>(null)
+  const [order, setOrder]     = useState<OrderInfo | null>(null)
+  const [rooms, setRooms]     = useState<RoomRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [form, setForm]   = useState<Partial<Booking>>({})
-  const [saving, setSaving]   = useState(false)
-  const [deleting, setDeleting] = useState(false)
+
+  const [editingOrder, setEditingOrder] = useState(false)
+  const [orderForm, setOrderForm]       = useState<Partial<OrderInfo>>({})
+  const [savingOrder, setSavingOrder]   = useState(false)
+  const [deletingOrder, setDeletingOrder] = useState(false)
+
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null)
+  const [roomForm, setRoomForm]           = useState<Partial<RoomRow>>({})
+  const [roomSaving, setRoomSaving]       = useState(false)
+  const [roomDeletingId, setRoomDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/booking/bookings/${id}`)
       .then(r => r.json())
-      .then(d => { setBk(d.booking); setForm(d.booking ?? {}); setSiblings(d.siblings ?? []) })
+      .then(d => {
+        setBk(d.booking)
+        setOrder(d.order ?? null)
+        setOrderForm(d.order ?? {})
+        // 沒有訂單資料（極少數還沒補齊的舊資料）時，至少把目前這間房顯示出來
+        setRooms(d.order ? (d.rooms ?? []) : (d.booking ? [{
+          id: d.booking.id, property_id: d.booking.properties?.id ?? null,
+          check_in: d.booking.check_in, check_out: d.booking.check_out, num_guests: d.booking.num_guests,
+          total_price: d.booking.total_price, currency: d.booking.currency, status: d.booking.status,
+          properties: d.booking.properties,
+        }] : []))
+      })
       .finally(() => setLoading(false))
   }, [id])
 
-  async function save() {
-    setSaving(true)
+  async function saveOrder() {
+    if (!order) return
+    setSavingOrder(true)
+    try {
+      const patch: Record<string, unknown> = {}
+      for (const key of ORDER_EDIT_FIELDS) patch[key] = (orderForm as Record<string, unknown>)[key] ?? null
+      const res = await fetch(`/api/booking/orders/${order.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const d = await res.json()
+      if (d.order) { setOrder(d.order); setOrderForm(d.order); setEditingOrder(false) }
+    } finally { setSavingOrder(false) }
+  }
+
+  async function removeOrder() {
+    if (!order) return
+    if (!window.confirm(t('detail.deleteOrderConfirm'))) return
+    setDeletingOrder(true)
+    try {
+      const res = await fetch(`/api/booking/orders/${order.id}`, { method: 'DELETE' })
+      if (!res.ok) { setDeletingOrder(false); return }
+      router.back()
+    } catch { setDeletingOrder(false) }
+  }
+
+  function startEditRoom(room: RoomRow) {
+    setEditingRoomId(room.id)
+    setRoomForm(room)
+  }
+
+  async function saveRoom() {
+    if (!editingRoomId) return
+    setRoomSaving(true)
     try {
       const res = await fetch('/api/booking/bookings', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...form }),
+        body: JSON.stringify({
+          id: editingRoomId,
+          check_in: roomForm.check_in, check_out: roomForm.check_out,
+          num_guests: roomForm.num_guests, total_price: roomForm.total_price,
+          status: roomForm.status,
+        }),
       })
       const d = await res.json()
-      if (d.booking) { setBk(d.booking); setForm(d.booking); setEditing(false) }
-    } finally { setSaving(false) }
+      if (d.booking) {
+        setRooms(rs => rs.map(r => r.id === editingRoomId ? { ...r, ...d.booking } : r))
+        if (bk && bk.id === editingRoomId) setBk({ ...bk, ...d.booking })
+        setEditingRoomId(null)
+      }
+    } finally { setRoomSaving(false) }
   }
 
-  async function remove() {
-    if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
-    setDeleting(true)
+  async function removeRoom(roomId: string) {
+    if (!window.confirm(t('detail.roomDeleteConfirm'))) return
+    setRoomDeletingId(roomId)
     try {
       const res = await fetch('/api/booking/bookings', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: roomId }),
       })
-      if (!res.ok) { setDeleting(false); return }
-      // 進來這頁的入口很多（日曆、每日入住、訂單列表），刪除後應該回到原本來的地方，
-      // 而不是一律導去訂單列表——例如在日曆點進來刪除，使用者會希望刪完直接回日曆
-      // 原本選的那個月/那一天，不用重新點一次。
-      router.back()
-    } catch { setDeleting(false) }
+      if (!res.ok) { setRoomDeletingId(null); return }
+      // 刪的剛好是這一頁進來時的那間房，這間已經不在了，回到上一頁
+      if (roomId === id) { router.back(); return }
+      setRooms(rs => rs.filter(r => r.id !== roomId))
+    } finally { setRoomDeletingId(null) }
   }
 
-  function fi(label: string, key: keyof Booking, type: string = 'text') {
-    const val = (form[key] ?? '') as string
+  function ofi(label: string, key: keyof OrderInfo, type: string = 'text') {
+    const val = (orderForm[key] ?? '') as string
     return (
       <div className="space-y-0.5">
         <div className="text-xs text-gray-400">{label}</div>
-        {editing ? (
+        {editingOrder ? (
           <input type={type} value={val}
-            onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+            onChange={e => setOrderForm(p => ({ ...p, [key]: e.target.value }))}
             className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
         ) : (
-          <div className="text-sm text-gray-900">{(bk as unknown as Record<string, unknown>)?.[key] as string || '—'}</div>
+          <div className="text-sm text-gray-900">{(order as unknown as Record<string, unknown>)?.[key] as string || '—'}</div>
         )}
       </div>
     )
   }
 
-  function nights() {
-    if (!bk) return 0
-    const ci = new Date(bk.check_in); const co = new Date(bk.check_out)
+  function nightsOf(room: Pick<RoomRow, 'check_in' | 'check_out'>) {
+    const ci = new Date(room.check_in); const co = new Date(room.check_out)
     return Math.max(1, Math.round((co.getTime() - ci.getTime()) / 86400000))
   }
 
   if (loading) return <div className="p-8 text-center text-gray-400">{t('common.loading')}</div>
   if (!bk) return <div className="p-8 text-center text-gray-400">{t('detail.notFound')}</div>
 
-  const st = STATUS_MAP[bk.status] ?? { label: bk.status, color: 'bg-gray-100 text-gray-600' }
-
   return (
     <div className="p-6 pb-16 max-w-3xl space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button onClick={() => router.back()}
           className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">
           <ArrowLeft className="h-4 w-4" />
@@ -132,57 +205,121 @@ export default function BookingDetailPage() {
         <div className="flex-1">
           <h1 className="text-lg font-bold text-gray-900">{t('detail.title')}</h1>
           <div className="text-xs text-gray-400">
-            {bk.platform_booking_id ? t('detail.confirmCode', { code: bk.platform_booking_id }) : t('detail.idLabel', { id: bk.id.slice(0, 8) })}
+            {(order?.platform_booking_id ?? bk.platform_booking_id)
+              ? t('detail.confirmCode', { code: (order?.platform_booking_id ?? bk.platform_booking_id) })
+              : t('detail.idLabel', { id: bk.id.slice(0, 8) })}
           </div>
         </div>
-        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${st.color}`}>{st.label}</span>
         <button onClick={() => window.print()}
           className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
           <Printer className="h-4 w-4" /> {t('detail.print')}
         </button>
-        <button onClick={remove} disabled={deleting} title={t('bookings.deleteTitle')}
-          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm text-rose-500 hover:bg-rose-50 disabled:opacity-50">
-          <Trash2 className="h-4 w-4" /> {t('bookings.delete')}
-        </button>
-        {editing ? (
+        {order && (
+          <button onClick={removeOrder} disabled={deletingOrder} title={t('detail.deleteOrder')}
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm text-rose-500 hover:bg-rose-50 disabled:opacity-50">
+            <Trash2 className="h-4 w-4" /> {t('detail.deleteOrder')}
+          </button>
+        )}
+        {order && (editingOrder ? (
           <div className="flex gap-1.5">
-            <button onClick={() => setEditing(false)}
+            <button onClick={() => { setEditingOrder(false); setOrderForm(order) }}
               className="flex items-center gap-1 px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
               <X className="h-3.5 w-3.5" /> {t('bookings.form.cancel')}
             </button>
-            <button onClick={save} disabled={saving}
+            <button onClick={saveOrder} disabled={savingOrder}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50">
-              <Save className="h-3.5 w-3.5" /> {saving ? t('bookings.form.saving') : t('detail.save')}
+              <Save className="h-3.5 w-3.5" /> {savingOrder ? t('bookings.form.saving') : t('detail.save')}
             </button>
           </div>
         ) : (
-          <button onClick={() => setEditing(true)}
+          <button onClick={() => setEditingOrder(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
             <Edit2 className="h-4 w-4" /> {t('detail.edit')}
           </button>
-        )}
+        ))}
       </div>
 
-      {/* 同一張訂單訂了多個不同房型時，各房型是獨立的資料列（見 migration 090），
-          單看一筆會看不到訂單其實還包含別間房，這裡把同單號的其他房型列出來。 */}
-      {siblings.length > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-          <div className="text-sm font-medium text-indigo-800 mb-2">{t('detail.sameOrderOtherRooms')}</div>
-          <div className="flex flex-wrap gap-2">
-            {siblings.map(s => {
-              const sst = STATUS_MAP[s.status] ?? { label: s.status, color: 'bg-gray-100 text-gray-600' }
-              return (
-                <Link key={s.id} href={`/booking/bookings/${s.id}`}
-                  className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-sm hover:bg-indigo-100">
-                  <span className="font-medium text-gray-800">{s.properties?.name ?? '—'}</span>
-                  {s.total_price != null && <span className="text-gray-500">NT$ {Number(s.total_price).toLocaleString()}</span>}
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sst.color}`}>{sst.label}</span>
-                </Link>
-              )
-            })}
-          </div>
+      {!order && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
+          {t('detail.noOrderData')}
         </div>
       )}
+
+      {/* 房型明細：同一張訂單底下全部房型，用真正的 order_id 外鍵抓出來（見 migration 096），
+          可以在這裡整單一起看、個別編輯或刪除，不用再猜同單號有沒有別間房。 */}
+      <div className="bg-white rounded-xl border p-5 space-y-3">
+        <h2 className="font-semibold text-gray-800 pb-1 border-b">{t('detail.roomsSection')}</h2>
+        <div className="space-y-2">
+          {rooms.map(room => {
+            const rst = STATUS_MAP[room.status] ?? { label: room.status, color: 'bg-gray-100 text-gray-600' }
+            const isCurrent = room.id === id
+            const isEditingRoom = editingRoomId === room.id
+            return (
+              <div key={room.id}
+                className={`rounded-lg border p-3 ${isCurrent ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-200'}`}>
+                {isEditingRoom ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input type="date" value={roomForm.check_in ?? ''}
+                        onChange={e => setRoomForm(p => ({ ...p, check_in: e.target.value }))}
+                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <input type="date" value={roomForm.check_out ?? ''}
+                        onChange={e => setRoomForm(p => ({ ...p, check_out: e.target.value }))}
+                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="number" min={1} value={roomForm.num_guests ?? 1}
+                        onChange={e => setRoomForm(p => ({ ...p, num_guests: parseInt(e.target.value) }))}
+                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <input type="number" value={roomForm.total_price ?? ''}
+                        onChange={e => setRoomForm(p => ({ ...p, total_price: parseFloat(e.target.value) }))}
+                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <select value={roomForm.status ?? 'confirmed'}
+                        onChange={e => setRoomForm(p => ({ ...p, status: e.target.value }))}
+                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                        {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex justify-end gap-1.5">
+                      <button onClick={() => setEditingRoomId(null)}
+                        className="flex items-center gap-1 px-2.5 py-1 border rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+                        <X className="h-3 w-3" /> {t('bookings.form.cancel')}
+                      </button>
+                      <button onClick={saveRoom} disabled={roomSaving}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs hover:bg-indigo-700 disabled:opacity-50">
+                        <Save className="h-3 w-3" /> {roomSaving ? t('bookings.form.saving') : t('detail.save')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{room.properties?.name ?? '—'}</div>
+                      <div className="text-xs text-gray-500">
+                        {room.check_in} → {room.check_out} ({t('detail.nights', { nights: nightsOf(room) })}) · {t('detail.guestsUnit', { count: room.num_guests })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {room.total_price != null && (
+                        <span className="text-sm text-gray-700">{room.currency} {Number(room.total_price).toLocaleString()}</span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${rst.color}`}>{rst.label}</span>
+                      <button onClick={() => startEditRoom(room)}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => removeRoom(room.id)} disabled={roomDeletingId === room.id}
+                        className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-500 disabled:opacity-50">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Order Info */}
@@ -191,133 +328,67 @@ export default function BookingDetailPage() {
 
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.source')}</div>
-            <div className="text-sm font-medium text-gray-900">{PLATFORM_NAMES[bk.platform] ?? bk.platform}</div>
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="text-xs text-gray-400">{t('detail.room')}</div>
-            <div className="text-sm text-gray-900">{bk.properties?.name ?? '—'}</div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-0.5">
-              <div className="text-xs text-gray-400">{t('detail.checkIn')}</div>
-              {editing ? (
-                <input type="date" value={form.check_in ?? ''}
-                  onChange={e => setForm(p => ({ ...p, check_in: e.target.value }))}
-                  className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              ) : (
-                <div className="text-sm text-gray-900">{bk.check_in}</div>
-              )}
-            </div>
-            <div className="space-y-0.5">
-              <div className="text-xs text-gray-400">{t('detail.checkOut')}</div>
-              {editing ? (
-                <input type="date" value={form.check_out ?? ''}
-                  onChange={e => setForm(p => ({ ...p, check_out: e.target.value }))}
-                  className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              ) : (
-                <div className="text-sm text-gray-900">{bk.check_out} <span className="text-gray-400">({t('detail.nights', { nights: nights() })})</span></div>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-0.5">
-              <div className="text-xs text-gray-400">{t('detail.numGuests')}</div>
-              {editing ? (
-                <input type="number" min={1} value={form.num_guests ?? 1}
-                  onChange={e => setForm(p => ({ ...p, num_guests: parseInt(e.target.value) }))}
-                  className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              ) : (
-                <div className="text-sm text-gray-900">{t('detail.guestsUnit', { count: bk.num_guests })}</div>
-              )}
-            </div>
-            <div className="space-y-0.5">
-              <div className="text-xs text-gray-400">{t('detail.amount')}</div>
-              {editing ? (
-                <input type="number" value={form.total_price ?? ''}
-                  onChange={e => setForm(p => ({ ...p, total_price: parseFloat(e.target.value) }))}
-                  className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              ) : (
-                <div className="text-sm text-gray-900">
-                  {bk.total_price ? `${bk.currency} ${Number(bk.total_price).toLocaleString()}` : '—'}
-                </div>
-              )}
-            </div>
+            <div className="text-sm font-medium text-gray-900">{PLATFORM_NAMES[order?.platform ?? bk.platform] ?? (order?.platform ?? bk.platform)}</div>
           </div>
 
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.paymentMethod')}</div>
-            {editing ? (
-              <select value={form.payment_type ?? 'channel'}
-                onChange={e => setForm(p => ({ ...p, payment_type: e.target.value }))}
+            {editingOrder ? (
+              <select value={orderForm.payment_type ?? 'channel'}
+                onChange={e => setOrderForm(p => ({ ...p, payment_type: e.target.value }))}
                 className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                 {Object.entries(PAYMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             ) : (
-              <div className="text-sm text-gray-900">{PAYMENT_LABELS[bk.payment_type] ?? t('payment.channel')}</div>
+              <div className="text-sm text-gray-900">{PAYMENT_LABELS[order?.payment_type ?? ''] ?? t('payment.channel')}</div>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-0.5">
               <div className="text-xs text-gray-400">{t('detail.deposit')}</div>
-              {editing ? (
-                <input type="number" value={form.deposit_amount ?? ''}
-                  onChange={e => setForm(p => ({ ...p, deposit_amount: e.target.value === '' ? null : parseFloat(e.target.value) }))}
+              {editingOrder ? (
+                <input type="number" value={orderForm.deposit_amount ?? ''}
+                  onChange={e => setOrderForm(p => ({ ...p, deposit_amount: e.target.value === '' ? null : parseFloat(e.target.value) }))}
                   className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               ) : (
                 <div className="text-sm text-gray-900">
-                  {bk.deposit_amount != null ? `${bk.currency} ${Number(bk.deposit_amount).toLocaleString()}` : '—'}
+                  {order?.deposit_amount != null ? `${bk.currency} ${Number(order.deposit_amount).toLocaleString()}` : '—'}
                 </div>
               )}
             </div>
             <div className="space-y-0.5">
               <div className="text-xs text-gray-400">{t('detail.isPaid')}</div>
-              {editing ? (
+              {editingOrder ? (
                 <label className="flex items-center gap-2 text-sm text-gray-700 h-[34px]">
-                  <input type="checkbox" checked={!!form.is_paid}
-                    onChange={e => setForm(p => ({ ...p, is_paid: e.target.checked }))}
+                  <input type="checkbox" checked={!!orderForm.is_paid}
+                    onChange={e => setOrderForm(p => ({ ...p, is_paid: e.target.checked }))}
                     className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-300" />
                   {t('detail.isPaid')}
                 </label>
               ) : (
-                <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium ${bk.is_paid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {bk.is_paid ? t('detail.paidYes') : t('detail.paidNo')}
+                <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium ${order?.is_paid ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {order?.is_paid ? t('detail.paidYes') : t('detail.paidNo')}
                 </span>
               )}
             </div>
           </div>
 
           <div className="space-y-0.5">
-            <div className="text-xs text-gray-400">{t('detail.orderStatus')}</div>
-            {editing ? (
-              <select value={form.status ?? 'confirmed'}
-                onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
-                className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            ) : (
-              <span className={`inline-block text-xs px-2.5 py-1 rounded-full font-medium ${st.color}`}>{st.label}</span>
-            )}
-          </div>
-
-          <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.bookedAt')}</div>
-            <div className="text-sm text-gray-900">{new Date(bk.created_at).toLocaleString(locale)}</div>
+            <div className="text-sm text-gray-900">{new Date((order?.created_at ?? bk.created_at)).toLocaleString(locale)}</div>
           </div>
         </div>
 
         {/* Guest Info */}
         <div className="bg-white rounded-xl border p-5 space-y-4">
           <h2 className="font-semibold text-gray-800 pb-1 border-b">{t('detail.guestInfo')}</h2>
-          {fi(t('detail.name'), 'guest_name')}
+          {ofi(t('detail.name'), 'guest_name')}
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.gender')}</div>
-            {editing ? (
-              <select value={(form.guest_gender ?? '') as string}
-                onChange={e => setForm(p => ({ ...p, guest_gender: e.target.value }))}
+            {editingOrder ? (
+              <select value={(orderForm.guest_gender ?? '') as string}
+                onChange={e => setOrderForm(p => ({ ...p, guest_gender: e.target.value }))}
                 className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                 <option value="">{t('detail.genderNone')}</option>
                 <option value="male">{t('gender.male')}</option>
@@ -326,16 +397,16 @@ export default function BookingDetailPage() {
               </select>
             ) : (
               <div className="text-sm text-gray-900">
-                {{ male: t('gender.male'), female: t('gender.female'), other: t('gender.other') }[bk.guest_gender] ?? '—'}
+                {{ male: t('gender.male'), female: t('gender.female'), other: t('gender.other') }[order?.guest_gender ?? ''] ?? '—'}
               </div>
             )}
           </div>
-          {fi(t('detail.phone'), 'guest_phone', 'tel')}
-          {fi(t('detail.email'), 'guest_email', 'email')}
-          {fi(t('detail.birthday'), 'guest_birthday', 'date')}
-          {fi(t('detail.idNumber'), 'guest_id_number')}
-          {fi(t('detail.address'), 'guest_address')}
-          {fi(t('detail.arrivalTime'), 'arrival_time')}
+          {ofi(t('detail.phone'), 'guest_phone', 'tel')}
+          {ofi(t('detail.email'), 'guest_email', 'email')}
+          {ofi(t('detail.birthday'), 'guest_birthday', 'date')}
+          {ofi(t('detail.idNumber'), 'guest_id_number')}
+          {ofi(t('detail.address'), 'guest_address')}
+          {ofi(t('detail.arrivalTime'), 'arrival_time')}
         </div>
       </div>
 
@@ -345,22 +416,22 @@ export default function BookingDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.specialRequests')}</div>
-            {editing ? (
-              <textarea value={(form.special_requests ?? '') as string} rows={4}
-                onChange={e => setForm(p => ({ ...p, special_requests: e.target.value }))}
+            {editingOrder ? (
+              <textarea value={(orderForm.special_requests ?? '') as string} rows={4}
+                onChange={e => setOrderForm(p => ({ ...p, special_requests: e.target.value }))}
                 className="w-full text-sm border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             ) : (
-              <div className="text-sm text-gray-900 whitespace-pre-wrap">{bk.special_requests || '—'}</div>
+              <div className="text-sm text-gray-900 whitespace-pre-wrap">{order?.special_requests || '—'}</div>
             )}
           </div>
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.internalNotes')}</div>
-            {editing ? (
-              <textarea value={(form.notes ?? '') as string} rows={4}
-                onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+            {editingOrder ? (
+              <textarea value={(orderForm.notes ?? '') as string} rows={4}
+                onChange={e => setOrderForm(p => ({ ...p, notes: e.target.value }))}
                 className="w-full text-sm border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             ) : (
-              <div className="text-sm text-gray-900 whitespace-pre-wrap">{bk.notes || '—'}</div>
+              <div className="text-sm text-gray-900 whitespace-pre-wrap">{order?.notes || '—'}</div>
             )}
           </div>
         </div>

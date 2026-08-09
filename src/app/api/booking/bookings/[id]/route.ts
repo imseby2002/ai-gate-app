@@ -17,20 +17,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 })
 
-  // 一張訂單可能同時訂了多個不同房型（見 migration 090），這種情況下每個房型各自
-  // 是一筆獨立的 bookings 資料列，只靠同一個 platform_booking_id 串起來——訂單詳情
-  // 頁單看一筆會看不到「這張訂單其實還訂了別間房」，補上同單號的其他房型列表，
-  // 讓使用者知道並可以點過去一起處理（例如整張訂單一起取消）。
-  let siblings: unknown[] = []
-  if (data.platform_booking_id) {
-    const { data: sib } = await supabase
-      .from('bookings')
-      .select('id, total_price, status, properties(id, name)')
-      .eq('user_id', ctx.ownerId)
-      .eq('platform_booking_id', data.platform_booking_id)
-      .neq('id', id)
-    siblings = sib ?? []
+  // 訂單資料結構重整第三階段：訂單詳情頁改成真正的「一張訂單、多筆房型明細」，
+  // 用 order_id 這個真正的外鍵去抓同一張訂單（booking_orders）跟底下全部房型
+  // 明細，取代原本只靠 platform_booking_id 文字比對的軟性關聯。
+  let order = null
+  let rooms: unknown[] = []
+  if (data.order_id) {
+    const [{ data: ord }, { data: sib }] = await Promise.all([
+      supabase.from('booking_orders').select('*').eq('id', data.order_id).eq('user_id', ctx.ownerId).maybeSingle(),
+      supabase.from('bookings')
+        .select('id, property_id, check_in, check_out, num_guests, total_price, currency, status, properties(id, name)')
+        .eq('order_id', data.order_id).eq('user_id', ctx.ownerId)
+        .order('check_in', { ascending: true }),
+    ])
+    order = ord
+    rooms = sib ?? []
   }
 
-  return NextResponse.json({ booking: data, siblings })
+  return NextResponse.json({ booking: data, order, rooms })
 }
