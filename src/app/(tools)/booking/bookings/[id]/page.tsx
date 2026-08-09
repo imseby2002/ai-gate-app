@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Edit2, Printer, Save, X } from 'lucide-react'
+import { ArrowLeft, Edit2, Printer, Save, X, Trash2 } from 'lucide-react'
 
 interface Booking {
   id: string; platform: string; platform_booking_id: string
@@ -50,6 +50,7 @@ export default function BookingDetailPage() {
   const [editing, setEditing] = useState(false)
   const [form, setForm]   = useState<Partial<Booking>>({})
   const [saving, setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetch(`/api/booking/bookings/${id}`)
@@ -68,6 +69,19 @@ export default function BookingDetailPage() {
       const d = await res.json()
       if (d.booking) { setBk(d.booking); setForm(d.booking); setEditing(false) }
     } finally { setSaving(false) }
+  }
+
+  async function remove() {
+    if (!window.confirm(t('bookings.toast.deleteConfirm'))) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/booking/bookings', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) { setDeleting(false); return }
+      router.push('/booking/bookings')
+    } catch { setDeleting(false) }
   }
 
   function fi(label: string, key: keyof Booking, type: string = 'text') {
@@ -115,6 +129,10 @@ export default function BookingDetailPage() {
         <button onClick={() => window.print()}
           className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">
           <Printer className="h-4 w-4" /> {t('detail.print')}
+        </button>
+        <button onClick={remove} disabled={deleting} title={t('bookings.deleteTitle')}
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm text-rose-500 hover:bg-rose-50 disabled:opacity-50">
+          <Trash2 className="h-4 w-4" /> {t('bookings.delete')}
         </button>
         {editing ? (
           <div className="flex gap-1.5">
