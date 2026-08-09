@@ -1040,6 +1040,8 @@
         "guestNamePlaceholder": "王小明",
         "orderNumber": "訂單號碼",
         "orderNumberPlaceholder": "選填，平台訂單編號",
+        "orderTotalPlaceholder": "整單折扣後總額，平均分配到各房型",
+        "orderTotalApply": "套用",
         "phone": "電話",
         "checkIn": "入住 *",
         "checkOut": "退房 *",

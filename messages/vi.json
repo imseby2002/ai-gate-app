@@ -1040,6 +1040,8 @@
         "guestNamePlaceholder": "Nguyễn Văn A",
         "orderNumber": "Mã đơn hàng",
         "orderNumberPlaceholder": "Không bắt buộc, mã đơn từ nền tảng",
+        "orderTotalPlaceholder": "Tổng tiền sau giảm giá, chia đều cho các phòng",
+        "orderTotalApply": "Áp dụng",
         "phone": "Điện thoại",
         "checkIn": "Nhận phòng *",
         "checkOut": "Trả phòng *",
