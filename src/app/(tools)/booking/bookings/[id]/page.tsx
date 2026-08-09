@@ -37,7 +37,7 @@ interface RoomRow {
 const ORDER_EDIT_FIELDS: (keyof OrderInfo)[] = [
   'guest_name', 'guest_email', 'guest_phone', 'guest_gender', 'guest_birthday',
   'guest_id_number', 'guest_address', 'payment_type', 'arrival_time',
-  'deposit_amount', 'is_paid', 'special_requests', 'notes', 'platform_booking_id',
+  'deposit_amount', 'is_paid', 'special_requests', 'notes', 'platform_booking_id', 'platform',
 ]
 
 const STATUS_COLORS: Record<string, string> = {
@@ -333,7 +333,15 @@ export default function BookingDetailPage() {
 
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.source')}</div>
-            <div className="text-sm font-medium text-gray-900">{PLATFORM_NAMES[order?.platform ?? bk.platform] ?? (order?.platform ?? bk.platform)}</div>
+            {editingOrder ? (
+              <select value={orderForm.platform ?? 'manual'}
+                onChange={e => setOrderForm(p => ({ ...p, platform: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                {Object.entries(PLATFORM_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            ) : (
+              <div className="text-sm font-medium text-gray-900">{PLATFORM_NAMES[order?.platform ?? bk.platform] ?? (order?.platform ?? bk.platform)}</div>
+            )}
           </div>
 
           {ofi(t('detail.confirmCodeLabel'), 'platform_booking_id')}
