@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ArrowLeft, Edit2, Printer, Save, X, Trash2 } from 'lucide-react'
 
 interface Booking {
@@ -14,6 +15,11 @@ interface Booking {
   deposit_amount: number | null; is_paid: boolean
   special_requests: string; notes: string; source: string
   created_at: string; updated_at: string
+  properties: { id: string; name: string } | null
+}
+
+interface Sibling {
+  id: string; total_price: number | null; status: string
   properties: { id: string; name: string } | null
 }
 
@@ -46,6 +52,7 @@ export default function BookingDetailPage() {
     channel: t('payment.channel'), direct: t('payment.direct'), unpaid: t('payment.unpaid'),
   }
   const [bk, setBk]       = useState<Booking | null>(null)
+  const [siblings, setSiblings] = useState<Sibling[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [form, setForm]   = useState<Partial<Booking>>({})
@@ -55,7 +62,7 @@ export default function BookingDetailPage() {
   useEffect(() => {
     fetch(`/api/booking/bookings/${id}`)
       .then(r => r.json())
-      .then(d => { setBk(d.booking); setForm(d.booking ?? {}) })
+      .then(d => { setBk(d.booking); setForm(d.booking ?? {}); setSiblings(d.siblings ?? []) })
       .finally(() => setLoading(false))
   }, [id])
 
@@ -155,6 +162,27 @@ export default function BookingDetailPage() {
           </button>
         )}
       </div>
+
+      {/* 同一張訂單訂了多個不同房型時，各房型是獨立的資料列（見 migration 090），
+          單看一筆會看不到訂單其實還包含別間房，這裡把同單號的其他房型列出來。 */}
+      {siblings.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+          <div className="text-sm font-medium text-indigo-800 mb-2">{t('detail.sameOrderOtherRooms')}</div>
+          <div className="flex flex-wrap gap-2">
+            {siblings.map(s => {
+              const sst = STATUS_MAP[s.status] ?? { label: s.status, color: 'bg-gray-100 text-gray-600' }
+              return (
+                <Link key={s.id} href={`/booking/bookings/${s.id}`}
+                  className="flex items-center gap-2 bg-white border border-indigo-200 rounded-lg px-3 py-1.5 text-sm hover:bg-indigo-100">
+                  <span className="font-medium text-gray-800">{s.properties?.name ?? '—'}</span>
+                  {s.total_price != null && <span className="text-gray-500">NT$ {Number(s.total_price).toLocaleString()}</span>}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sst.color}`}>{sst.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Order Info */}

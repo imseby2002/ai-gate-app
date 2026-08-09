@@ -1103,6 +1103,7 @@
       "title": "Chi tiết đơn đặt",
       "confirmCode": "Mã xác nhận: {code}",
       "idLabel": "ID: {id}…",
+      "sameOrderOtherRooms": "Đơn này còn đặt thêm các phòng sau",
       "print": "In",
       "save": "Lưu",
       "edit": "Sửa",

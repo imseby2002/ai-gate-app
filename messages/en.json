@@ -1103,6 +1103,7 @@
       "title": "Booking Details",
       "confirmCode": "Confirmation code: {code}",
       "idLabel": "ID: {id}…",
+      "sameOrderOtherRooms": "This order also includes these rooms",
       "print": "Print",
       "save": "Save",
       "edit": "Edit",
