@@ -2,6 +2,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { IMAGE_COSTS, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -10,6 +12,16 @@ export async function POST(req: NextRequest) {
 
   const { copy, companyName, model = 'flux-1-pro', count = 3 } = await req.json()
   if (!copy) return NextResponse.json({ error: 'copy required' }, { status: 400 })
+
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (!features.imageGen) {
+    return NextResponse.json({ error: '目前方案未開放圖片產出，請升級至 PRO 以上', plan }, { status: 403 })
+  }
+
+  const costPerImage = IMAGE_COSTS[model] ?? 0.05
+  const billable = await isBillableUser(user.id)
+  const check = await checkCredits(user.id, costPerImage * count, billable)
+  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
 
   // ── 1. GPT-4o-mini（via OpenRouter）產生圖片提示詞 ────────────────
   const openrouter = createOpenAI({
@@ -104,7 +116,7 @@ Requirements:
   const imageUrls = succeeded.map(s => s.url)
   const prompts = succeeded.map(s => s.prompt)
 
-  const costPerImage = model === 'flux-1-pro' ? 0.05 : 0.02
+  await deductCredits(user.id, succeeded.length * costPerImage, `[marketing] 行銷圖片生成 ${succeeded.length} 張`, billable)
   void supabase.from('messages').insert({
     user_id: user.id,
     role: 'assistant',

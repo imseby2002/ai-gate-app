@@ -5,6 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 import { outputLangInstruction } from '@/lib/ai/output-lang'
@@ -64,6 +65,11 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { plan: userPlan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (features.productDesigner === 'none') {
+    return NextResponse.json({ error: '目前方案未開放 AI 產品行銷設計師，請升級至 PRO 以上', plan: userPlan }, { status: 403 })
+  }
 
   const body = await req.json()
   const { productName, industry, productAnalysis, selectedRoute, marketAnalysis, locale } = body

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
+import { PlanGate } from '@/components/marketing/PlanGate'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,18 @@ const AIDA_COLORS: Record<string, string> = {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function ProductDesignerPage() {
+  return (
+    <PlanGate
+      allowed={info => info.features.productDesigner !== 'none' && info.features.productDesigner != null}
+      featureName="AI 產品行銷設計師"
+      requiredPlan="PRO 以上"
+    >
+      <ProductDesignerContent />
+    </PlanGate>
+  )
+}
+
+function ProductDesignerContent() {
   const t = useTranslations('Marketing')
   const locale = useLocale()
   const [activeStep, setActiveStep] = useState(1)

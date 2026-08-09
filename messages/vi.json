@@ -1455,7 +1455,9 @@
       "designer": "Nhà thiết kế sản phẩm",
       "geo": "Nội dung GEO",
       "expert": "Chế độ chuyên gia",
-      "prospect": "Marketing khách tiềm năng"
+      "prospect": "Marketing khách tiềm năng",
+      "plan": "Gói đăng ký",
+      "experts": "Chuyên gia tùy chỉnh"
     },
     "geo": {
       "title": "Cây bút nội dung GEO",

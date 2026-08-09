@@ -18,6 +18,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import zlib from 'node:zlib'
+import { AI_STUDIO_SUGGEST_COST, AI_STUDIO_MAX_ESTIMATE, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 const FAL_BASE = 'https://fal.run'
 
@@ -155,6 +157,16 @@ export async function POST(req: NextRequest) {
 
   if (!imageUrl?.trim()) return NextResponse.json({ error: '缺少 imageUrl' }, { status: 400 })
 
+  const { plan, features } = await getMarketingEntitlements(supabase, user.id)
+  if (features.aiStudio === 'none') {
+    return NextResponse.json({ error: '目前方案未開放 AI 視覺工坊，請升級至 TEAM 以上', plan }, { status: 403 })
+  }
+
+  // 執行前餘額檢查：suggest 為輕量呼叫，節點執行以上限預估、實際依節點 cost 扣
+  const billable = await isBillableUser(user.id)
+  const check = await checkCredits(user.id, type === 'suggest' ? AI_STUDIO_SUGGEST_COST : AI_STUDIO_MAX_ESTIMATE, billable)
+  if (!check.ok) return NextResponse.json(check.payload, { status: 402 })
+
   // ── AI 建議：使用者沒方向時，讓 Claude 看圖提一個具體可套用的修改建議 ──
   if (type === 'suggest') {
     const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -185,6 +197,7 @@ export async function POST(req: NextRequest) {
       })
       const suggestion = text.trim()
       if (!suggestion) return NextResponse.json({ error: 'AI 無法產生建議，請再試一次' }, { status: 502 })
+      await deductCredits(user.id, AI_STUDIO_SUGGEST_COST, '[marketing] 視覺工坊 AI 建議', billable)
       return NextResponse.json({ suggestion })
     } catch (err) {
       return NextResponse.json({ error: String(err) }, { status: 500 })
@@ -439,5 +452,6 @@ export async function POST(req: NextRequest) {
 
   const { data: { publicUrl } } = supabase.storage.from('marketing-assets').getPublicUrl(fileName)
 
+  await deductCredits(user.id, cost, `[marketing] 視覺工坊節點 ${type}`, billable)
   return NextResponse.json({ url: publicUrl, cost, type, generatedAt: new Date().toISOString() })
 }

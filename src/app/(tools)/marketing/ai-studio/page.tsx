@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
+import { PlanGate } from '@/components/marketing/PlanGate'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -139,6 +140,18 @@ function makeNode(type: NodeType, id: string): PipelineNode {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AiStudioPage() {
+  return (
+    <PlanGate
+      allowed={info => info.features.aiStudio !== 'none' && info.features.aiStudio != null}
+      featureName="AI 視覺工坊"
+      requiredPlan="TEAM 以上"
+    >
+      <AiStudioContent />
+    </PlanGate>
+  )
+}
+
+function AiStudioContent() {
   const t = useTranslations('Marketing')
   const uid = useId()
 
