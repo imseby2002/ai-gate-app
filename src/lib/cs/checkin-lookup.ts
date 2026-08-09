@@ -1,6 +1,15 @@
 import { generateText, type LanguageModel } from 'ai'
 import { getBookingEntitlements } from '@/lib/booking/entitlements'
 
+// 查無資料時附加在訊息尾巴的固定提示——真實案例：客人給的電話查無資料，AI 自己說
+// 「已經請專員儘速人工核對資料，稍後會再與您聯繫」，但這裡根本沒有建立任何工單、
+// 沒有通知任何人，客人會白等一場真人回覆永遠不會出現。查無資料的正確處理是「引導
+// 客人換一種識別方式再查一次」，不是自稱已經轉真人——只有客人自己明確要求真人客服
+// （觸發 HUMAN_ESCALATION_RE）系統才會真的建立工單通知真人。
+export function noDataFoundSuffix(altMethods: string): string {
+  return `（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供${altMethods}再查一次；嚴禁跟客人說「已經為您安排專員」「已通知專員」「稍後會有人跟您聯繫」等話術——這裡沒有建立任何工單，客人明確要求真人客服時系統才會真的轉真人）`
+}
+
 // 入住時間判斷（民宿資料 check_in_time 可設，預設 15:00）。
 // 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到入住時間一律不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +93,7 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
   // 訂房平台顯示給客人的訂單號，跟平台同步給民宿系統的訂單號常常不是同一組
   // （尤其 Agoda/Booking.com），查無資料時要引導客人改用姓名或電話查詢，而不是叫他再試一次同一組號碼。
   if (!bookingRows?.length) {
-    return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或手機號碼再查一次，仍查無資料才轉真人客服）`
+    return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
   }
   if (beforeCheckin) return notYetMsg('')
 
@@ -149,7 +158,7 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
   if (digits.length < 8) return null
   const suffix = digits.slice(-9)
 
-  const notFoundMsg = `【入住資訊查詢結果】\n查無電話「${rawPhone}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或訂單號碼再查一次，仍查無資料才轉真人客服）`
+  const notFoundMsg = `【入住資訊查詢結果】\n查無電話「${rawPhone}」的訂單資料，系統中沒有符合的訂房紀錄。\n${noDataFoundSuffix('訂房姓名或訂單號碼')}`
 
   const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
   const past = new Date(); past.setDate(past.getDate() - 3)
@@ -195,7 +204,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   const name = candidateName.trim()
   if (!name) return null
 
-  const notFoundMsg = `【訂單查詢結果】\n查無旅客「${name}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁自行推測或回覆「已找到」「已核對」「訂單已完成處理」等話術；請如實告知客人查無資料，並詢問訂房平台與入住日期，轉真人客服協助查詢）`
+  const notFoundMsg = `【訂單查詢結果】\n查無旅客「${name}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁自行推測或回覆「已找到」「已核對」「訂單已完成處理」等話術）\n${noDataFoundSuffix('訂單號碼或手機號碼')}`
 
   const past = new Date(); past.setDate(past.getDate() - 3)
   const future = new Date(); future.setDate(future.getDate() + 180)

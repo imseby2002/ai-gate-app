@@ -12,7 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
@@ -419,7 +419,7 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType)
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId)
   const { visibleReply: reply, submit: formSubmit } = extractFormSubmit(rawReply)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
@@ -654,6 +654,60 @@ const BOOKING_INTENT_RE = /訂單|訂房|預訂|預定|入住|訂位|reservation
 // 絕對不是在報訂房姓名（常見情境：客服剛傳完付款帳號，客人回「OK」確認收到，卻被誤判成
 // 姓名去查訂單，查無資料後 AI 講出「查無訂單編號為『OK』的資料」這種文不對題的回覆）
 const NON_NAME_ACK_RE = /^(ok+|okay|k|kk|好|好的|好喔|好啊|嗯|嗯嗯|收到|了解|明白|知道了|謝謝|謝了|感謝|thanks?|thank\s*you|yes|yep|yeah|no|不用|不是|是的|是|對|對的|沒問題|可以|沒事|辛苦了)$/i
+
+// ── 訂單號碼／手機號碼／訂房姓名三種方式都查無資料 → 真的建立工單通知專員 ──
+// 之前的修法只讓 AI 引導客人「換個方式再查一次」，但客人如果三種方式都試過仍然
+// 查無資料，代表這真的需要人工協助（可能是系統資料沒建好），這時才真的建立工單
+// 通知專員，不能讓客人一直被要求換方式、卻永遠等不到真人回覆。
+type LookupKind = 'order' | 'phone' | 'name'
+
+function classifyLookupKind(text: string, recentText: string): LookupKind | null {
+  const t = text.trim()
+  if (NUMERIC_ORDER_RE.test(t) || ALPHANUMERIC_ORDER_RE.test(t)) return 'order'
+  if (PHONE_RE.test(t)) return 'phone'
+  if (NAME_ONLY_RE.test(t) && !NON_NAME_ACK_RE.test(t) && BOOKING_INTENT_RE.test(recentText)) return 'name'
+  return null
+}
+
+// 掃過去對話紀錄，找出客人「試過但查無資料」的識別方式種類（用查詢結果訊息裡
+// 固定會出現的「查無」二字判斷該次查詢是否失敗）
+function priorFailedLookupKinds(history: HistoryMsg[]): Set<LookupKind> {
+  const kinds = new Set<LookupKind>()
+  for (let i = 0; i < history.length; i++) {
+    const m = history[i]
+    if (m.role !== 'user') continue
+    const recentText = history.slice(Math.max(0, i - 4), i).map(x => x.content).join('\n')
+    const kind = classifyLookupKind(m.content, recentText)
+    if (!kind) continue
+    const nextAssistant = history[i + 1]
+    if (nextAssistant?.role === 'assistant' && nextAssistant.content.includes('查無')) {
+      kinds.add(kind)
+    }
+  }
+  return kinds
+}
+
+// 三種方式都查無資料時才會呼叫——真的建立工單，之後才能讓 AI 誠實告知客人已建立工單
+async function createExhaustedLookupTicket(
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+): Promise<void> {
+  try {
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '查無資料人工協助')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    if (existing?.length) return  // 已有未結工單，不重複建立
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId,
+      subject: '客人訂單號碼/手機號碼/訂房姓名皆查無資料',
+      description: `客人依序嘗試訂單號碼、手機號碼、訂房姓名三種方式查詢，系統都查無對應資料，需要專員人工協助核對。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
+      priority: 'high', intent: '查無資料人工協助',
+    })
+  } catch { /* 不中斷主流程 */ }
+}
 
 // Columns gated behind identity verification (prevents IDOR on door codes / room numbers)
 const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
@@ -1193,6 +1247,8 @@ async function getAIReply(
   gapNote = '',
   imageBuffer?: Buffer,
   imageMimeType?: string,
+  platform = '',
+  customerId = '',
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -1248,17 +1304,21 @@ async function getAIReply(
 
     // 偵測訂單號 → 提供入住密碼（兩種來源都受入住時間限制）
     let orderLookupDone = false
+    let currentLookupKind: LookupKind | null = null
+    let currentLookupFailed = false
     if (userId) {
       const orderNum = message.match(NUMERIC_ORDER_RE)?.[0] ?? null
       if (orderNum) {
         orderLookupDone = true
+        currentLookupKind = 'order'
         try {
           if (!passwordFromDatasource) {
             // 訂單系統路徑：查 bnb_daily_records/bookings（lib 內已做入住時間 gating）。
             // 無論查無資料的原因是什麼（沒開訂房整合方案／訂單真的不存在），一律要明講
             // 「查無資料、禁止捏造」，絕對不能讓 AI 在沒有任何資料時自己編一組密碼給客人。
-            const bnb = await queryBnbCheckin(getServiceClient(), userId, orderNum)
-              ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n（嚴禁提供、推測或捏造任何密碼、房號；請詢問旅客訂房姓名與訂房平台，轉交真人客服協助查詢）`
+            const bnbResult = await queryBnbCheckin(getServiceClient(), userId, orderNum)
+            currentLookupFailed = !bnbResult
+            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
             // 資料來源密碼表路徑：未到入住時間加最高優先禁止指令
@@ -1272,11 +1332,13 @@ async function getAIReply(
         // 嘗試提供訂單碼，不能放著不查，否則 AI 會在完全沒有系統資料的情況下自己編一組
         // 房號密碼給客人（真實案例）。查一次，查無資料也要老實說查無資料。
         orderLookupDone = true
+        currentLookupKind = 'order'
         try {
           const altOrderNum = message.match(ALPHANUMERIC_ORDER_RE)?.[0] ?? ''
           if (!passwordFromDatasource) {
-            const bnb = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
-              ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供訂房姓名或手機號碼再查一次，仍查無資料才轉真人客服）`
+            const bnbResult = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
+            currentLookupFailed = !bnbResult
+            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
             const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
@@ -1286,10 +1348,14 @@ async function getAIReply(
       } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
         // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查
         orderLookupDone = true
+        currentLookupKind = 'phone'
         try {
           const phone = message.match(PHONE_RE)?.[0] ?? ''
           const byPhone = await queryBookingByPhone(getServiceClient(), userId, phone)
-          if (byPhone) externalDataSection = `\n\n${byPhone}${externalDataSection}`
+          if (byPhone) {
+            currentLookupFailed = byPhone.includes('查無')
+            externalDataSection = `\n\n${byPhone}${externalDataSection}`
+          }
         } catch { /* 不中斷主流程 */ }
       } else {
         // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
@@ -1297,9 +1363,13 @@ async function getAIReply(
         const recentText = [...history.slice(-4).map(m => m.content), message].join('\n')
         if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText) && !passwordFromDatasource) {
           orderLookupDone = true
+          currentLookupKind = 'name'
           try {
             const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
-            if (byName) externalDataSection = `\n\n${byName}${externalDataSection}`
+            if (byName) {
+              currentLookupFailed = byName.includes('查無')
+              externalDataSection = `\n\n${byName}${externalDataSection}`
+            }
           } catch { /* 不中斷主流程 */ }
         }
       }
@@ -1311,14 +1381,31 @@ async function getAIReply(
         try {
           const clue = await extractOrderClueFromImage(imageBuffer, imageMimeType, google('gemini-3.1-flash-lite'))
           if (clue?.order_number) {
-            const bnb = await queryBnbCheckin(getServiceClient(), userId, clue.order_number)
-              ?? `【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n（嚴禁提供、推測或捏造任何密碼、房號；請詢問旅客訂房姓名與訂房平台，轉交真人客服協助查詢）`
+            currentLookupKind = 'order'
+            const bnbResult = await queryBnbCheckin(getServiceClient(), userId, clue.order_number)
+            currentLookupFailed = !bnbResult
+            const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else if (clue?.guest_name) {
+            currentLookupKind = 'name'
             const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'))
-            if (byName) externalDataSection = `\n\n${byName}${externalDataSection}`
+            if (byName) {
+              currentLookupFailed = byName.includes('查無')
+              externalDataSection = `\n\n${byName}${externalDataSection}`
+            }
           }
         } catch { /* 不中斷主流程 */ }
+      }
+
+      // 訂單號碼／手機號碼／訂房姓名三種方式都查無資料 → 這是真的需要人工協助，
+      // 真的建立工單通知專員，不再只是叫客人換方式查詢卻永遠沒有真人介入。
+      if (currentLookupKind && currentLookupFailed) {
+        const failedKinds = priorFailedLookupKinds(history)
+        failedKinds.add(currentLookupKind)
+        if (failedKinds.has('order') && failedKinds.has('phone') && failedKinds.has('name')) {
+          await createExhaustedLookupTicket(userId, platform, customerId, knowledge.industry, message)
+          externalDataSection += `\n\n【系統提示——最高優先，覆蓋上方「引導客人換方式查詢」的指示】客人已經依序嘗試訂單號碼、手機號碼、訂房姓名三種識別方式，系統查詢都查無資料，這次系統已經真的建立工單通知專員。現在可以且應該告訴客人「已經為您建立工單，專員會盡快協助核對資料並與您聯繫」，不用再要求客人換方式查詢。`
+        }
       }
     }
 
@@ -1354,12 +1441,13 @@ async function getAIReply(
 【重要格式規定】
 - 【最優先】${langInstruction}
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
-- 若需要人工介入，請告知客戶將安排專員跟進
+- 只有客人明確要求真人客服，或下方系統資料出現「系統已經真的建立工單通知專員」字樣時，才能說「已為您安排專員跟進」（這兩種情況系統都會真的建立工單通知真人）；查無資料、密碼房號查不到等情況本身不算「需要人工介入」，正確做法是引導客人換一種識別方式（訂單號碼／訂房姓名／手機號碼）再查一次，不是直接說要轉真人
 - 不確定的資訊請誠實說明，勿猜測
-- 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料並轉真人客服
+- 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料，並引導客人改用其他識別方式再查一次
 - 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
-- 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單、請提供訂房平台與截圖，並轉真人客服，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
+- 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
+- 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
