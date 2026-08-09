@@ -48,15 +48,38 @@ export async function POST(req: NextRequest) {
 
   if (!check_in || !check_out) return NextResponse.json({ error: '入住/退房日期必填' }, { status: 400 })
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .insert({
-      user_id: ctx.ownerId, property_id, platform, platform_booking_id,
-      guest_name, guest_email, guest_phone,
-      check_in, check_out, num_guests, total_price, currency,
-      status, special_requests, notes, source, extras,
-    })
-    .select().single()
+  // 同一 user_id+platform+platform_booking_id+property_id 有唯一限制（見 migration 090），
+  // 取消過的訂單不會被刪除，只是 status 改 cancelled，所以「取消再重新輸入同一張訂單」
+  // 會撞到這個唯一鍵。與其讓使用者看到原始的 DB 錯誤訊息，比對到既有的取消訂單就直接
+  // 重新啟用；比對到「非取消」的既有訂單則視為真的重複，給清楚的錯誤訊息。
+  let existingId: string | null = null
+  if (platform_booking_id && property_id) {
+    const { data: existing } = await supabase
+      .from('bookings')
+      .select('id, status')
+      .eq('user_id', ctx.ownerId)
+      .eq('platform', platform)
+      .eq('platform_booking_id', platform_booking_id)
+      .eq('property_id', property_id)
+      .maybeSingle()
+    if (existing) {
+      if (existing.status !== 'cancelled') {
+        return NextResponse.json({ error: `訂單號碼 ${platform_booking_id} 已存在（此房型），請確認是否重複輸入` }, { status: 409 })
+      }
+      existingId = existing.id
+    }
+  }
+
+  const payload = {
+    user_id: ctx.ownerId, property_id, platform, platform_booking_id,
+    guest_name, guest_email, guest_phone,
+    check_in, check_out, num_guests, total_price, currency,
+    status, special_requests, notes, source, extras,
+  }
+
+  const { data, error } = existingId
+    ? await supabase.from('bookings').update(payload).eq('id', existingId).select().single()
+    : await supabase.from('bookings').insert(payload).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // 新訂單當天的每日入住記錄若已存在且是空白，直接帶入，不用等使用者重新整理每日入住頁面
