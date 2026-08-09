@@ -10,7 +10,7 @@ import { clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
 const ROOM_MIRROR_FIELDS = [
   'guest_name', 'guest_email', 'guest_phone', 'guest_gender', 'guest_birthday',
   'guest_id_number', 'guest_address', 'special_requests', 'notes',
-  'deposit_amount', 'is_paid', 'payment_type', 'arrival_time', 'platform_booking_id',
+  'deposit_amount', 'is_paid', 'payment_type', 'arrival_time', 'platform_booking_id', 'platform',
 ] as const
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,11 +27,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .eq('id', id).eq('user_id', ctx.ownerId)
     .select().single()
   if (error) {
-    // 訂單號碼（platform_booking_id）在同一平台下不能重複（見 migration 096 的
-    // unique index）——比對到已存在別張訂單時，DB 會回撞到唯一鍵的原始錯誤，
-    // 要換成看得懂的訊息，不能讓使用者看到 Postgres 的 constraint 名稱。
+    // 訂單號碼（platform_booking_id）+ 來源（platform）在同一房東下不能重複
+    // （見 migration 096 的 unique index）——比對到已存在別張訂單時，DB 會回撞到
+    // 唯一鍵的原始錯誤，要換成看得懂的訊息，不能讓使用者看到 Postgres 的 constraint 名稱。
     if (error.code === '23505') {
-      return NextResponse.json({ error: `訂單號碼 ${patch.platform_booking_id} 已被其他訂單使用，請確認是否輸入錯誤` }, { status: 409 })
+      return NextResponse.json({ error: '這個訂單號碼／來源組合已被其他訂單使用，請確認是否輸入錯誤' }, { status: 409 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
