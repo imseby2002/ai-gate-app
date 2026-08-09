@@ -2,6 +2,7 @@ import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptSecret, encryptSecret, isEncrypted } from '@/lib/crypto/secret'
+import { findOrCreateOrder } from './orders'
 
 interface AdditionalRoom {
   property_name: string | null
@@ -563,6 +564,15 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       })
       const multiRoom = roomEntries.length > 1
 
+      // 訂單資料結構重整第二階段：整封信（不管訂了幾個房型）算同一張訂單，用
+      // baseConfId（沒有真實訂單號才退回整封信層級的合成 id，不要用各房型各自的
+      // confId，那個是給下面 bookings 去重用的、沒單號時每個房型會不一樣）
+      // 找一筆 booking_orders 出來，所有房型明細都掛在同一個 order_id 下。
+      const orderId = await findOrCreateOrder(supabase, setting.user_id, platform, baseConfId || `email_${settingId}_${seq}`, {
+        guest_name: extracted.guest_name || null,
+        source: 'email',
+      })
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       function filterByProperty(q: any, propertyId: string | null) {
         return propertyId ? q.eq('property_id', propertyId) : q.is('property_id', null)
@@ -745,6 +755,7 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
           .from('bookings')
           .upsert({
             user_id:             setting.user_id,
+            order_id:            orderId,
             property_id:         resolvedPropertyId,
             platform,
             platform_booking_id: confId,

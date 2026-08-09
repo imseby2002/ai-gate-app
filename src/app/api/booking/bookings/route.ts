@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 import { syncDailyRecordForBooking, clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
+import { findOrCreateOrder } from '@/lib/booking/orders'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -70,8 +71,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 訂單資料結構重整第二階段：不管是不是多房型，每一筆房型明細都要掛在一張真正
+  // 的訂單（booking_orders）下面，不能再只靠 platform_booking_id 軟性關聯。
+  const orderId = await findOrCreateOrder(supabase, ctx.ownerId, platform, platform_booking_id || null, {
+    guest_name, guest_email, guest_phone, currency, special_requests, notes, source,
+  })
+
   const payload = {
-    user_id: ctx.ownerId, property_id, platform, platform_booking_id,
+    user_id: ctx.ownerId, order_id: orderId, property_id, platform, platform_booking_id,
     guest_name, guest_email, guest_phone,
     check_in, check_out, num_guests, total_price, currency,
     status, special_requests, notes, source, extras,
