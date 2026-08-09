@@ -250,12 +250,18 @@ export default function DailyPage() {
   const [editingPlatform, setEditingPlatform] = useState<string | null>(null)
   const [gatePw, setGatePw] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  // 快速切換日期（連按上一天/下一天）會同時打出多個請求，較早送出但較晚回應的
+  // 舊日期結果可能在較新日期的結果之後才回來，把畫面蓋回幾乎空白的舊資料——
+  // 用遞增 id 只採用「最新一次」發出的請求結果，避免這種過時回應蓋掉正確資料。
+  const requestIdRef = useRef(0)
 
   const load = useCallback(async () => {
+    const myRequestId = ++requestIdRef.current
     setLoading(true)
     try {
       const res = await fetch(`/api/booking/daily?date=${date}`)
       const data = await res.json()
+      if (myRequestId !== requestIdRef.current) return
       if (data.rooms) {
         setRows(Array.isArray(data.rooms) ? data.rooms : [])
         setUnmatched(Array.isArray(data.unmatched) ? data.unmatched : [])
@@ -264,7 +270,7 @@ export default function DailyPage() {
         setUnmatched([])
       }
     } finally {
-      setLoading(false)
+      if (myRequestId === requestIdRef.current) setLoading(false)
     }
   }, [date])
 
