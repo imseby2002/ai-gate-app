@@ -1103,6 +1103,7 @@
       "title": "訂單詳情",
       "confirmCode": "確認碼：{code}",
       "idLabel": "ID：{id}…",
+      "sameOrderOtherRooms": "同一張訂單還訂了以下房型",
       "print": "列印",
       "save": "儲存",
       "edit": "修改",
