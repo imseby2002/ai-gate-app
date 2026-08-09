@@ -80,7 +80,10 @@ export default function BookingDetailPage() {
         body: JSON.stringify({ id }),
       })
       if (!res.ok) { setDeleting(false); return }
-      router.push('/booking/bookings')
+      // 進來這頁的入口很多（日曆、每日入住、訂單列表），刪除後應該回到原本來的地方，
+      // 而不是一律導去訂單列表——例如在日曆點進來刪除，使用者會希望刪完直接回日曆
+      // 原本選的那個月/那一天，不用重新點一次。
+      router.back()
     } catch { setDeleting(false) }
   }
 
