@@ -447,22 +447,22 @@ export async function PATCH(req: NextRequest) {
       const matchOrderNumber = before.order_number
       let linkedId: string | null = null
 
-      if (matchOrderNumber && prop) {
-        const { data: matched } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('user_id', ctx.ownerId)
-          .eq('platform_booking_id', matchOrderNumber)
-          .eq('property_id', prop.id)
-          .maybeSingle()
-        if (matched) {
-          await supabase.from('bookings').update(patch).eq('id', matched.id).eq('user_id', ctx.ownerId)
-          linkedId = matched.id
-        }
-      } else if (!matchOrderNumber) {
-        // 無單號：只有「房型+日期」剛好唯一對應一筆訂單時才連動，
-        // 避免房型下有多間房、同天多筆訂單時誤改到別人的資料
-        if (prop) {
+      if (prop) {
+        if (matchOrderNumber) {
+          const { data: matched } = await supabase
+            .from('bookings')
+            .select('id')
+            .eq('user_id', ctx.ownerId)
+            .eq('platform_booking_id', matchOrderNumber)
+            .eq('property_id', prop.id)
+            .maybeSingle()
+          if (matched) {
+            await supabase.from('bookings').update(patch).eq('id', matched.id).eq('user_id', ctx.ownerId)
+            linkedId = matched.id
+          }
+        } else {
+          // 無單號：只有「房型+日期」剛好唯一對應一筆訂單時才連動，
+          // 避免房型下有多間房、同天多筆訂單時誤改到別人的資料
           const { data: candidates } = await supabase
             .from('bookings')
             .select('id')
@@ -474,32 +474,38 @@ export async function PATCH(req: NextRequest) {
           if (candidates && candidates.length === 1) {
             await supabase.from('bookings').update(patch).eq('id', candidates[0].id).eq('user_id', ctx.ownerId)
             linkedId = candidates[0].id
-          } else if (!candidates?.length && (data.guest_name || data.price_total != null || data.order_number)) {
-            const checkOut = new Date(data.date)
-            checkOut.setDate(checkOut.getDate() + 1)
-            const orderId = await findOrCreateOrder(supabase, ctx.ownerId, data.platform ?? 'manual', data.order_number ?? null, {
-              guest_name: data.guest_name ?? null, deposit_amount: data.deposit ?? null,
-              is_paid: !!data.paid, source: 'manual',
-            })
-            const { data: created } = await supabase.from('bookings').insert({
-              user_id: ctx.ownerId,
-              order_id: orderId,
-              property_id: prop.id,
-              platform: data.platform ?? 'manual',
-              platform_booking_id: data.order_number ?? null,
-              guest_name: data.guest_name ?? null,
-              check_in: data.date,
-              check_out: checkOut.toLocaleDateString('sv-SE'),
-              num_guests: 1,
-              total_price: data.price_total ?? null,
-              deposit_amount: data.deposit ?? null,
-              is_paid: !!data.paid,
-              currency: 'TWD',
-              status: 'confirmed',
-              source: 'manual',
-            }).select('id').single()
-            linkedId = created?.id ?? null
           }
+        }
+
+        // 不論這格有沒有填單號，只要上面找不到可連結的既有訂單、這格又已經填了
+        // 實質內容，就直接新建一筆——否則使用者在每日入住填好資料（尤其是填了
+        // 單號，但單號在 bookings 裡查無符合，例如單號其實是電話、或跟平台同步
+        // 進來的格式不同）卻靜默地連不到日曆／訂單，看起來像沒有同步。
+        if (!linkedId && (data.guest_name || data.price_total != null || data.order_number)) {
+          const checkOut = new Date(data.date)
+          checkOut.setDate(checkOut.getDate() + 1)
+          const orderId = await findOrCreateOrder(supabase, ctx.ownerId, data.platform ?? 'manual', data.order_number ?? null, {
+            guest_name: data.guest_name ?? null, deposit_amount: data.deposit ?? null,
+            is_paid: !!data.paid, source: 'manual',
+          })
+          const { data: created } = await supabase.from('bookings').insert({
+            user_id: ctx.ownerId,
+            order_id: orderId,
+            property_id: prop.id,
+            platform: data.platform ?? 'manual',
+            platform_booking_id: data.order_number ?? null,
+            guest_name: data.guest_name ?? null,
+            check_in: data.date,
+            check_out: checkOut.toLocaleDateString('sv-SE'),
+            num_guests: 1,
+            total_price: data.price_total ?? null,
+            deposit_amount: data.deposit ?? null,
+            is_paid: !!data.paid,
+            currency: 'TWD',
+            status: 'confirmed',
+            source: 'manual',
+          }).select('id').single()
+          linkedId = created?.id ?? null
         }
       }
 
