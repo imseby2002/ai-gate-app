@@ -1102,6 +1102,7 @@
       "notFound": "Booking not found",
       "title": "Booking Details",
       "confirmCode": "Confirmation code: {code}",
+      "confirmCodeLabel": "Order Number",
       "idLabel": "ID: {id}…",
       "roomsSection": "Room Details",
       "deleteOrder": "Delete Entire Order",

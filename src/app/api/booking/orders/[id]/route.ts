@@ -10,7 +10,7 @@ import { clearDailyRecordForDeletedBooking } from '@/lib/booking/daily-sync'
 const ROOM_MIRROR_FIELDS = [
   'guest_name', 'guest_email', 'guest_phone', 'guest_gender', 'guest_birthday',
   'guest_id_number', 'guest_address', 'special_requests', 'notes',
-  'deposit_amount', 'is_paid', 'payment_type', 'arrival_time',
+  'deposit_amount', 'is_paid', 'payment_type', 'arrival_time', 'platform_booking_id',
 ] as const
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -26,14 +26,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', id).eq('user_id', ctx.ownerId)
     .select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // 訂單號碼（platform_booking_id）在同一平台下不能重複（見 migration 096 的
+    // unique index）——比對到已存在別張訂單時，DB 會回撞到唯一鍵的原始錯誤，
+    // 要換成看得懂的訊息，不能讓使用者看到 Postgres 的 constraint 名稱。
+    if (error.code === '23505') {
+      return NextResponse.json({ error: `訂單號碼 ${patch.platform_booking_id} 已被其他訂單使用，請確認是否輸入錯誤` }, { status: 409 })
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const mirrorPatch: Record<string, unknown> = {}
   for (const key of ROOM_MIRROR_FIELDS) {
     if (key in patch) mirrorPatch[key] = patch[key]
   }
   if (Object.keys(mirrorPatch).length > 0) {
-    await supabase.from('bookings').update(mirrorPatch).eq('order_id', id).eq('user_id', ctx.ownerId)
+    const { error: mirrorErr } = await supabase.from('bookings').update(mirrorPatch).eq('order_id', id).eq('user_id', ctx.ownerId)
+    if (mirrorErr) {
+      // 訂單層級改成功了，但同步到房型明細撞到唯一鍵（同平台+房型下已有別筆訂單
+      // 用了這個號碼）——訂單本身的變更不回滾，只回報同步失敗，使用者才知道要
+      // 手動確認房型明細那邊的單號有沒有跟著改對。
+      return NextResponse.json({ order, warning: `訂單資訊已更新，但同步到房型明細時發生錯誤：${mirrorErr.message}` })
+    }
   }
 
   return NextResponse.json({ order })
