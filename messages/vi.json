@@ -1038,6 +1038,8 @@
       "form": {
         "guestName": "Tên khách *",
         "guestNamePlaceholder": "Nguyễn Văn A",
+        "orderNumber": "Mã đơn hàng",
+        "orderNumberPlaceholder": "Không bắt buộc, mã đơn từ nền tảng",
         "phone": "Điện thoại",
         "checkIn": "Nhận phòng *",
         "checkOut": "Trả phòng *",

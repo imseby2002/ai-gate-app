@@ -1038,6 +1038,8 @@
       "form": {
         "guestName": "旅客姓名 *",
         "guestNamePlaceholder": "王小明",
+        "orderNumber": "訂單號碼",
+        "orderNumberPlaceholder": "選填，平台訂單編號",
         "phone": "電話",
         "checkIn": "入住 *",
         "checkOut": "退房 *",
