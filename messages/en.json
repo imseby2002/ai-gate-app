@@ -1038,6 +1038,8 @@
       "form": {
         "guestName": "Guest Name *",
         "guestNamePlaceholder": "John Doe",
+        "orderNumber": "Order Number",
+        "orderNumberPlaceholder": "Optional, platform order ID",
         "phone": "Phone",
         "checkIn": "Check-in *",
         "checkOut": "Check-out *",

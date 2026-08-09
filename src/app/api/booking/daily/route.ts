@@ -110,7 +110,11 @@ export async function GET(req: NextRequest) {
     }
   }
   for (const rec of cleanList) {
-    if (rec.source !== 'booking') continue
+    // 有 booking_id 就一定要驗證，不能只看 source==='booking'——PATCH 手動編輯
+    // 透過軟比對連結成功時只會補上 booking_id，不會把 source 改成 'booking'，
+    // 若這裡還是只看 source 會漏掉這種「source 是 manual 但掛著 booking_id」
+    // 的資料列，導致訂單被取消/搬到別天後，這裡仍顯示舊資料、跟日曆對不起來。
+    if (!rec.booking_id && rec.source !== 'booking') continue
     let stillValid: boolean
     if (rec.booking_id) {
       stillValid = activeBookingIds.has(rec.booking_id)

@@ -43,6 +43,7 @@ function addDays(ds: string, n: number) {
 interface RoomLine { property_id: string; property_name: string; total_price: string; num_guests: number }
 interface QuickForm {
   guest_name: string; guest_phone: string; guest_email: string
+  platform_booking_id: string
   check_in: string; check_out: string; platform: string
   rooms: RoomLine[]
 }
@@ -73,6 +74,7 @@ export default function CalendarPage() {
   const [quickOpen, setQuickOpen]   = useState(false)
   const [quickForm, setQuickForm]   = useState<QuickForm>({
     guest_name: '', guest_phone: '', guest_email: '',
+    platform_booking_id: '',
     check_in: '', check_out: '', platform: 'direct', rooms: [],
   })
   const [saving, setSaving] = useState(false)
@@ -148,6 +150,7 @@ export default function CalendarPage() {
     setQuickOpen(true)
     setQuickForm({
       guest_name: '', guest_phone: '', guest_email: '',
+      platform_booking_id: '',
       check_in: ds, check_out: addDays(ds, 1), platform: 'direct',
       rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1 }],
     })
@@ -180,6 +183,7 @@ export default function CalendarPage() {
           body: JSON.stringify({
             property_id: r.property_id,
             guest_name: quickForm.guest_name, guest_phone: quickForm.guest_phone, guest_email: quickForm.guest_email,
+            platform_booking_id: quickForm.platform_booking_id || null,
             check_in: quickForm.check_in, check_out: quickForm.check_out,
             num_guests: r.num_guests,
             total_price: r.total_price ? parseFloat(r.total_price) : null,
@@ -516,6 +520,12 @@ export default function CalendarPage() {
                   placeholder="0912-345-678"
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
               </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">{t('bookings.form.orderNumber')}</label>
+              <input value={quickForm.platform_booking_id} onChange={e => setQuickForm(f => ({ ...f, platform_booking_id: e.target.value }))}
+                placeholder={t('bookings.form.orderNumberPlaceholder')}
+                className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
