@@ -1040,6 +1040,8 @@
         "guestNamePlaceholder": "John Doe",
         "orderNumber": "Order Number",
         "orderNumberPlaceholder": "Optional, platform order ID",
+        "orderTotalPlaceholder": "Discounted grand total, split evenly across rooms",
+        "orderTotalApply": "Apply",
         "phone": "Phone",
         "checkIn": "Check-in *",
         "checkOut": "Check-out *",

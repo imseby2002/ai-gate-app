@@ -78,6 +78,7 @@ export default function CalendarPage() {
     check_in: '', check_out: '', platform: 'direct', rooms: [],
   })
   const [saving, setSaving] = useState(false)
+  const [orderTotal, setOrderTotal] = useState('')
   // Mobile: toggle between calendar view and detail view
   const [mobileView, setMobileView] = useState<'calendar' | 'detail'>('calendar')
 
@@ -148,6 +149,7 @@ export default function CalendarPage() {
 
   function openQuick(p: Property, ds: string) {
     setQuickOpen(true)
+    setOrderTotal('')
     setQuickForm({
       guest_name: '', guest_phone: '', guest_email: '',
       platform_booking_id: '',
@@ -172,6 +174,20 @@ export default function CalendarPage() {
   }
   function updateRoomLine(propertyId: string, patch: Partial<RoomLine>) {
     setQuickForm(f => ({ ...f, rooms: f.rooms.map(r => r.property_id === propertyId ? { ...r, ...patch } : r) }))
+  }
+
+  // 多間房型合訂常常整單有折扣，房東自己去算每間該分多少很麻煩——
+  // 直接輸入折扣後的訂單總額，平均分配到目前選的每個房型（除不盡的差額算到最後一間），
+  // 分配完仍可個別微調。
+  function applyOrderTotal() {
+    const total = parseFloat(orderTotal)
+    const n = quickForm.rooms.length
+    if (!total || n === 0) return
+    const base = Math.floor(total / n)
+    setQuickForm(f => ({
+      ...f,
+      rooms: f.rooms.map((r, i) => ({ ...r, total_price: String(i === n - 1 ? total - base * (n - 1) : base) })),
+    }))
   }
 
   async function saveQuick() {
@@ -497,6 +513,17 @@ export default function CalendarPage() {
                 </div>
               ))}
             </div>
+            {quickForm.rooms.length > 1 && (
+              <div className="flex items-center gap-2">
+                <input type="number" value={orderTotal} onChange={e => setOrderTotal(e.target.value)}
+                  placeholder={t('bookings.form.orderTotalPlaceholder')}
+                  className="flex-1 text-xs border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                <button onClick={applyOrderTotal} disabled={!orderTotal}
+                  className="shrink-0 text-xs font-medium px-3 py-2 rounded-lg border text-sky-600 border-sky-300 hover:bg-sky-50 disabled:opacity-40">
+                  {t('bookings.form.orderTotalApply')}
+                </button>
+              </div>
+            )}
             {properties.some(p => !quickForm.rooms.some(r => r.property_id === p.id)) && (
               <select value="" onChange={e => addRoomLine(e.target.value)}
                 className="w-full text-xs border rounded-lg px-3 py-2 text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-300">
