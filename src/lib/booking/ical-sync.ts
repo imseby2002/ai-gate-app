@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { findOrCreateOrder } from './orders'
 
 export const ICAL_PLATFORMS: Record<string, { name: string; color: string }> = {
   booking_com:  { name: 'Booking.com',  color: '#003580' },
@@ -98,10 +99,16 @@ export async function syncICalForSetting(settingId: string): Promise<SyncResult>
     let bookingId: string | null = null
     if (!isUnavailableBlock) {
       const uid = ev.uid || `${settingId}_${ev.start}`
+      // iCal 事件本來就是一個房型一個訂單，1:1 建一筆 booking_orders 即可，不像
+      // email 那樣需要把多個房型併成同一張訂單。
+      const orderId = await findOrCreateOrder(supabase, setting.user_id, setting.platform, uid, {
+        guest_name: guestName, source: 'ical',
+      })
       const { data: bk, error: bkErr } = await supabase
         .from('bookings')
         .upsert({
           user_id:             setting.user_id,
+          order_id:            orderId,
           property_id:         setting.property_id,
           platform:            setting.platform,
           platform_booking_id: uid,

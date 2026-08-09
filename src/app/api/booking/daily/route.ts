@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
+import { findOrCreateOrder } from '@/lib/booking/orders'
 
 function addDaysStr(dateStr: string, n: number): string {
   const d = new Date(dateStr)
@@ -476,8 +477,13 @@ export async function PATCH(req: NextRequest) {
           } else if (!candidates?.length && (data.guest_name || data.price_total != null || data.order_number)) {
             const checkOut = new Date(data.date)
             checkOut.setDate(checkOut.getDate() + 1)
+            const orderId = await findOrCreateOrder(supabase, ctx.ownerId, data.platform ?? 'manual', data.order_number ?? null, {
+              guest_name: data.guest_name ?? null, deposit_amount: data.deposit ?? null,
+              is_paid: !!data.paid, source: 'manual',
+            })
             const { data: created } = await supabase.from('bookings').insert({
               user_id: ctx.ownerId,
+              order_id: orderId,
               property_id: prop.id,
               platform: data.platform ?? 'manual',
               platform_booking_id: data.order_number ?? null,

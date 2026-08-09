@@ -1,4 +1,5 @@
 import { sendBookingNotification } from '@/lib/booking/notify'
+import { findOrCreateOrder } from '@/lib/booking/orders'
 
 // 把一筆待確認的官網訂房申請轉成正式訂單：admin 手動點「確認」與自動確認模式共用同一套邏輯，
 // 確保不論哪個入口觸發，行為（建訂單／連結／優惠碼計次／寄信）完全一致。
@@ -15,8 +16,14 @@ export async function confirmPublicBooking(
     return { ok: true, booking_id: pb.converted_booking_id, emailed: false, alreadyConverted: true }
   }
 
+  const orderId = await findOrCreateOrder(supabase, hostUserId, 'direct', null, {
+    guest_name: pb.guest_name, guest_email: pb.guest_email, guest_phone: pb.guest_phone ?? null,
+    notes: pb.notes ?? null, source: 'form',
+  })
+
   const { data: newBooking, error: insErr } = await supabase.from('bookings').insert({
     user_id: hostUserId,
+    order_id: orderId,
     property_id: pb.property_id ?? null,
     platform: 'direct',
     guest_name: pb.guest_name,

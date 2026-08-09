@@ -193,26 +193,27 @@ export default function CalendarPage() {
   async function saveQuick() {
     setSaving(true)
     try {
-      const results = await Promise.all(quickForm.rooms.map(async r => {
-        const res = await fetch('/api/booking/bookings', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      // 同一次送出的房型（不管有沒有填單號）一律算同一張訂單——改叫
+      // /api/booking/orders 一次建立，不再對每個房型各自呼叫一次 /api/booking/bookings
+      // （那樣建出來的多筆房型只靠使用者自己填的單號軟性關聯，沒填單號就完全連不起來）。
+      const res = await fetch('/api/booking/orders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          guest_name: quickForm.guest_name, guest_phone: quickForm.guest_phone, guest_email: quickForm.guest_email,
+          platform_booking_id: quickForm.platform_booking_id || null,
+          check_in: quickForm.check_in, check_out: quickForm.check_out,
+          platform: quickForm.platform,
+          source: 'manual',
+          rooms: quickForm.rooms.map(r => ({
             property_id: r.property_id,
-            guest_name: quickForm.guest_name, guest_phone: quickForm.guest_phone, guest_email: quickForm.guest_email,
-            platform_booking_id: quickForm.platform_booking_id || null,
-            check_in: quickForm.check_in, check_out: quickForm.check_out,
             num_guests: r.num_guests,
             total_price: r.total_price ? parseFloat(r.total_price) : null,
-            platform: quickForm.platform,
-            source: 'manual',
-          }),
-        })
-        const d = await res.json()
-        return { ok: res.ok && !!d.booking, error: d.error as string | undefined, room: r.property_name }
-      }))
-      const failed = results.filter(r => !r.ok)
-      if (failed.length > 0) alert(failed.map(f => `${f.room}：${f.error ?? '儲存失敗'}`).join('\n'))
-      if (failed.length < results.length) { setQuickOpen(false); fetchData() }
+          })),
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok) { alert(d.error ?? '儲存失敗'); return }
+      setQuickOpen(false); fetchData()
     } finally { setSaving(false) }
   }
 
