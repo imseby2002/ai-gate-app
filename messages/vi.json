@@ -1102,6 +1102,7 @@
       "notFound": "Không tìm thấy đơn",
       "title": "Chi tiết đơn đặt",
       "confirmCode": "Mã xác nhận: {code}",
+      "confirmCodeLabel": "Mã đơn đặt",
       "idLabel": "ID: {id}…",
       "roomsSection": "Chi tiết phòng",
       "deleteOrder": "Xóa toàn bộ đơn",

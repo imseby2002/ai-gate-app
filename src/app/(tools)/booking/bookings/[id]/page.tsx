@@ -18,7 +18,7 @@ interface Booking {
 }
 
 interface OrderInfo {
-  id: string; platform: string; platform_booking_id: string | null
+  id: string; platform: string; platform_booking_id: string
   guest_name: string; guest_email: string; guest_phone: string
   guest_gender: string; guest_birthday: string; guest_id_number: string; guest_address: string
   payment_type: string; arrival_time: string
@@ -37,7 +37,7 @@ interface RoomRow {
 const ORDER_EDIT_FIELDS: (keyof OrderInfo)[] = [
   'guest_name', 'guest_email', 'guest_phone', 'guest_gender', 'guest_birthday',
   'guest_id_number', 'guest_address', 'payment_type', 'arrival_time',
-  'deposit_amount', 'is_paid', 'special_requests', 'notes',
+  'deposit_amount', 'is_paid', 'special_requests', 'notes', 'platform_booking_id',
 ]
 
 const STATUS_COLORS: Record<string, string> = {
@@ -108,12 +108,17 @@ export default function BookingDetailPage() {
     try {
       const patch: Record<string, unknown> = {}
       for (const key of ORDER_EDIT_FIELDS) patch[key] = (orderForm as Record<string, unknown>)[key] ?? null
+      // 訂單號碼是「沒有單號」跟其他訂單共用 null 的唯一鍵（見 migration 096），
+      // 清空欄位要存成 null，不能存空字串，不然兩張都清空的訂單會互相撞到唯一鍵。
+      if (patch.platform_booking_id === '') patch.platform_booking_id = null
       const res = await fetch(`/api/booking/orders/${order.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       })
       const d = await res.json()
+      if (!res.ok) { window.alert(d.error ?? '儲存失敗'); return }
       if (d.order) { setOrder(d.order); setOrderForm(d.order); setEditingOrder(false) }
+      if (d.warning) window.alert(d.warning)
     } finally { setSavingOrder(false) }
   }
 
@@ -330,6 +335,8 @@ export default function BookingDetailPage() {
             <div className="text-xs text-gray-400">{t('detail.source')}</div>
             <div className="text-sm font-medium text-gray-900">{PLATFORM_NAMES[order?.platform ?? bk.platform] ?? (order?.platform ?? bk.platform)}</div>
           </div>
+
+          {ofi(t('detail.confirmCodeLabel'), 'platform_booking_id')}
 
           <div className="space-y-0.5">
             <div className="text-xs text-gray-400">{t('detail.paymentMethod')}</div>

@@ -1102,6 +1102,7 @@
       "notFound": "找不到訂單",
       "title": "訂單詳情",
       "confirmCode": "確認碼：{code}",
+      "confirmCodeLabel": "訂單號碼",
       "idLabel": "ID：{id}…",
       "roomsSection": "房型明細",
       "deleteOrder": "刪除整張訂單",
