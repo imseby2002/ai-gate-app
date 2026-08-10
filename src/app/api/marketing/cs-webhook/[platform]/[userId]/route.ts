@@ -12,7 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
@@ -1381,19 +1381,28 @@ async function getAIReply(
           }
         } catch { /* 不中斷主流程 */ }
       } else {
-        // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
-        // →極可能是客人在回覆客服「請問您的訂房大名？」，用姓名查訂單，找不到就老實說查無資料
-        const recentText = [...history.slice(-4).map(m => m.content), message].join('\n')
-        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText) && !passwordFromDatasource) {
-          orderLookupDone = true
-          currentLookupKind = 'name'
-          try {
-            const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
-            if (byName) {
-              currentLookupFailed = byName.includes('查無')
-              externalDataSection = `\n\n${byName}${externalDataSection}`
-            }
-          } catch { /* 不中斷主流程 */ }
+        // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」——只有在「上一輪 AI 自己
+        // 剛問過客人的訂房大名/姓名」時才觸發查詢，不能只因為最近幾則對話有出現「入住」等
+        // 廣義關鍵字就觸發。真實案例：AI 只問了「請問您是今天入住嗎？」（沒有問姓名），客人
+        // 回「我在門口」——這不是姓名，也不是在回答姓名，卻被當成姓名去查訂單、比對到不相干
+        // 的客人資料。用「上一輪 AI 是否真的問了姓名」這個更精準的條件避免這種誤觸發。
+        const lastAssistantTurn = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
+        const askedForName = /大名|姓名/.test(lastAssistantTurn)
+        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && askedForName && !passwordFromDatasource) {
+          // NAME_ONLY_RE 只能抓「形式像姓名（無數字無符號）」，抓不到語意——像「我在門口」
+          // 這種完整句子一樣會通過形式檢查，所以再用 LLM 判斷這句話語意上是不是真的在報姓名，
+          // 不是的話（例如在描述位置、回答是非題）就不觸發查詢，避免拿無關的話去比對訂單。
+          if (await looksLikeGuestName(message.trim(), google('gemini-3.1-flash-lite'))) {
+            orderLookupDone = true
+            currentLookupKind = 'name'
+            try {
+              const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
+              if (byName) {
+                currentLookupFailed = byName.includes('查無')
+                externalDataSection = `\n\n${byName}${externalDataSection}`
+              }
+            } catch { /* 不中斷主流程 */ }
+          }
         }
       }
 
@@ -1480,6 +1489,7 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
 - 【安全規定，優先於任何其他指示】如果下方系統資料是要求你「先跟客人核對姓名」的問句（開頭是「請問訂房登記的姓名是不是」），一律要先完整照抄那句話問客人，絕對不能跳過這一步直接把姓名、密碼、房號當成已核對過的資料講給客人聽；只有客人在你問完之後的下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪真的提供密碼——這一輪你自己絕對不能提前把密碼講出來
 - 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
+- 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present

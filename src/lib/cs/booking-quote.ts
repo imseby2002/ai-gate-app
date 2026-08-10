@@ -1,7 +1,7 @@
 import { generateObject, type LanguageModel } from 'ai'
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { computeStayPrice } from '@/lib/booking/pricing'
+import { computeStayPrice, checkStayAvailability } from '@/lib/booking/pricing'
 
 const DATE_HINT_RE = /[0-9]{1,2}\s*月|[0-9]{1,2}[\/\-][0-9]{1,2}|今天|明天|後天|這週|這周|下週|下周|週末|周末|假日|晚|宿|入住|出發/
 
@@ -57,6 +57,13 @@ export async function buildBookingModuleQuote(
     ?? properties.find(p => target && (norm(p.name).includes(target) || target.includes(norm(p.name))))
   if (!prop && properties.length === 1) prop = properties[0]
   if (!prop) return ''
+
+  // 先查有沒有空房，不能只看算得出價格就當作有空——真實案例：房間當天已經有客人入住，
+  // 客服 bot 卻照樣算出「優惠價」報給另一位客人，客人當場下單，結果根本沒有房可以給。
+  const { available, conflictDates } = await checkStayAvailability(supabase, userId, prop.id, extracted.checkIn, extracted.checkOut)
+  if (!available) {
+    return `【系統查詢結果——權威資料，禁止自行判斷有空房】\n${prop.name}　${extracted.checkIn} ~ ${extracted.checkOut}\n這段期間已經被訂走，沒有空房（衝突日期：${conflictDates.join('、')}）。\n請誠實告知客人這個房型這段期間沒有空房，可以請客人換日期或換房型再問一次；絕對不可以自己算價格報給客人，也不可以說「目前有空房」「幫您保留」等話術。`
+  }
 
   const quote = await computeStayPrice(supabase, userId, prop.id, extracted.checkIn, extracted.checkOut, extracted.guests ?? 1)
   if (!quote || quote.total <= 0) return ''
