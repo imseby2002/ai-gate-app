@@ -117,13 +117,15 @@ export async function getMarketingEntitlements(
   void supabase
   const { createAdminClient } = await import('@/lib/supabase/admin')
   const admin = createAdminClient()
-  // 總管理員帳號不受方案／額度限制，一律視同企業方案，不查訂閱表。
+  // 內部帳號（admin / employee）不受方案／額度限制，不查訂閱表（見下方判斷）。
   const { data: ownerProfile } = await admin
     .from('profiles')
     .select('user_type')
     .eq('id', ownerId)
     .maybeSingle()
-  if (ownerProfile?.user_type === 'admin') {
+  // 內部帳號（admin / employee）不受方案／額度限制，一律視同企業方案。
+  // 比照全站計費慣例：只有 external（付費客戶）才受方案與額度限制（見 lib/marketing/billing.ts）。
+  if (ownerProfile?.user_type === 'admin' || ownerProfile?.user_type === 'employee') {
     return { plan: 'enterprise', features: MARKETING_PLAN_FEATURES.enterprise }
   }
 
