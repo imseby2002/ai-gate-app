@@ -1458,6 +1458,7 @@
     "nav": {
       "auto": "Tự động hóa Marketing",
       "designer": "Nhà thiết kế sản phẩm",
+      "studio": "Xưởng hình ảnh AI",
       "geo": "Nội dung GEO",
       "expert": "Chế độ chuyên gia",
       "prospect": "Marketing khách tiềm năng",
@@ -1607,6 +1608,17 @@
           "Bộ nội dung",
           "Phân tích thị trường",
           "Chiến lược SEO"
+        ]
+      },
+      "studio": {
+        "title": "Xưởng hình ảnh AI",
+        "desc": "Dây chuyền ảnh + video lấy cảm hứng từ ComfyUI — tải ảnh lên, nối các nút AI (chỉnh sửa, phong cách, nâng nét, xóa nền, tạo video) bằng ngôn ngữ tự nhiên, chạy tất cả chỉ với một cú nhấp",
+        "badge": "Mới",
+        "tags": [
+          "Chỉnh sửa AI",
+          "Chuyển phong cách",
+          "Xóa nền",
+          "Ảnh thành video"
         ]
       },
       "geo": {
