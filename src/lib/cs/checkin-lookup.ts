@@ -313,11 +313,10 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
         // 「Ting Fen Cheng」就直接把密碼給了。
         if (norm(dailyMatched[0].guest_name ?? '') !== n) return buildNameVerifyPrompt(dailyMatched[0].guest_name)
         const orderNum = dailyMatched[0].order_number
+        // 同一組訂單號涵蓋的房型全部列出——客人可能包棟或一次訂多間房，身份已經逐字核對過
+        // （見上面的 exact-match 檢查），不再另外用房間數量設上限卡住合法的多房訂單。
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
-        // 防呆：同一組訂單號被誤填在過多房型上（例如測試/佔位資料誤把同一組單號填滿全部
-        // 房間），這種異常規模的「同單號」不該被當成一筆多房訂單整批洩漏，只給比對到的那間。
-        if (group.length > 3) group = dailyMatched
+        const group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
 
         const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
         if (before) {
