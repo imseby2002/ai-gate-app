@@ -1,6 +1,6 @@
 ﻿import type { Metadata, Viewport } from "next";
-import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
+import { IntlProvider } from '@/components/layout/IntlProvider'
 import { ScopeManager } from '@/components/layout/ScopeManager'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
 import "./globals.css";
@@ -51,11 +51,11 @@ export default async function RootLayout({
   return (
     <html lang={locale} className="h-full antialiased">
       <body className="h-full">
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <IntlProvider locale={locale} messages={messages}>
           <ScopeManager />
           <ServiceWorkerRegister />
           {children}
-        </NextIntlClientProvider>
+        </IntlProvider>
       </body>
     </html>
   );
