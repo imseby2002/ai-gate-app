@@ -843,10 +843,10 @@ function SubItems({
       {subs.map(s => {
         const trd = tr(s.title)
         return (
-          <div key={s.id} className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={s.done} onChange={() => toggle(s)} className="h-3.5 w-3.5 shrink-0" />
-            <span className={`min-w-0 flex-1 truncate ${s.done ? 'text-muted-foreground line-through' : ''}`}>{trd}</span>
-            <button onClick={() => remove(s.id)} className="shrink-0 text-xs text-muted-foreground hover:text-red-500">✕</button>
+          <div key={s.id} className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={s.done} onChange={() => toggle(s)} className="mt-1 h-3.5 w-3.5 shrink-0" />
+            <span className={`min-w-0 flex-1 whitespace-pre-wrap break-words ${s.done ? 'text-muted-foreground line-through' : ''}`}>{trd}</span>
+            <button onClick={() => remove(s.id)} className="mt-0.5 shrink-0 text-xs text-muted-foreground hover:text-red-500">✕</button>
           </div>
         )
       })}
