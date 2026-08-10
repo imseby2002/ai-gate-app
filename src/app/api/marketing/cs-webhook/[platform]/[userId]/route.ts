@@ -12,7 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
@@ -1389,15 +1389,20 @@ async function getAIReply(
         const lastAssistantTurn = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
         const askedForName = /大名|姓名/.test(lastAssistantTurn)
         if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && askedForName && !passwordFromDatasource) {
-          orderLookupDone = true
-          currentLookupKind = 'name'
-          try {
-            const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
-            if (byName) {
-              currentLookupFailed = byName.includes('查無')
-              externalDataSection = `\n\n${byName}${externalDataSection}`
-            }
-          } catch { /* 不中斷主流程 */ }
+          // NAME_ONLY_RE 只能抓「形式像姓名（無數字無符號）」，抓不到語意——像「我在門口」
+          // 這種完整句子一樣會通過形式檢查，所以再用 LLM 判斷這句話語意上是不是真的在報姓名，
+          // 不是的話（例如在描述位置、回答是非題）就不觸發查詢，避免拿無關的話去比對訂單。
+          if (await looksLikeGuestName(message.trim(), google('gemini-3.1-flash-lite'))) {
+            orderLookupDone = true
+            currentLookupKind = 'name'
+            try {
+              const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
+              if (byName) {
+                currentLookupFailed = byName.includes('查無')
+                externalDataSection = `\n\n${byName}${externalDataSection}`
+              }
+            } catch { /* 不中斷主流程 */ }
+          }
         }
       }
 
