@@ -35,6 +35,42 @@ interface RuleRow {
 }
 
 /**
+ * 該房型在指定期間內，逐晚是否「已被訂走」（已有訂單/公開訂房佔用，或被手動封鎖）——
+ * 邏輯跟公開訂房頁 /api/book/[slug]/availability 的判斷方式一致：只要有任何一筆
+ * pending/confirmed 的訂單涵蓋該晚，或該晚被封鎖，就算不可訂，不看房間數量（跟公開頁
+ * 前台日曆的行為一致）。computeStayPrice 只負責算錢，不會告訴呼叫端這個房型其實已經
+ * 被訂走了——沒有這層檢查，客服 bot 只看得到「有算出價格」就以為有空房，實際上可能
+ * 已經有客人入住，造成同一間房被重複報價、重複成交。
+ */
+export async function checkStayAvailability(
+  supabase: SupabaseClient,
+  userId: string,
+  propertyId: string,
+  checkIn: string,
+  checkOut: string,
+): Promise<{ available: boolean; conflictDates: string[] }> {
+  const [{ data: bk }, { data: pub }, { data: blk }] = await Promise.all([
+    supabase.from('bookings').select('check_in, check_out')
+      .eq('user_id', userId).eq('property_id', propertyId).in('status', ['pending', 'confirmed'])
+      .lt('check_in', checkOut).gt('check_out', checkIn),
+    supabase.from('public_bookings').select('check_in, check_out')
+      .eq('host_user_id', userId).eq('property_id', propertyId).in('status', ['pending', 'confirmed'])
+      .lt('check_in', checkOut).gt('check_out', checkIn),
+    supabase.from('blocked_dates').select('date')
+      .eq('user_id', userId).eq('property_id', propertyId).gte('date', checkIn).lt('date', checkOut),
+  ])
+
+  const conflictDates = new Set<string>()
+  for (const b of bk ?? []) for (const d of enumerateNights(b.check_in, b.check_out)) conflictDates.add(d)
+  for (const b of pub ?? []) for (const d of enumerateNights(b.check_in, b.check_out)) conflictDates.add(d)
+  for (const b of blk ?? []) conflictDates.add(b.date)
+
+  const requestedNights = enumerateNights(checkIn, checkOut)
+  const conflicts = requestedNights.filter(d => conflictDates.has(d))
+  return { available: conflicts.length === 0, conflictDates: conflicts }
+}
+
+/**
  * 訂房模組的權威計價（Plan A）：每日價 = room_date_settings 覆蓋價 → 否則 property.base_price，
  * 再依 pricing_rules（週末/假日/季節/住房率/臨時訂/早鳥）逐日調整，最後加上超額人數費。
  * 公開訂房、客服 bot、後台預覽都應呼叫此函式，確保金額一致。
