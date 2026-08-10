@@ -1381,10 +1381,14 @@ async function getAIReply(
           }
         } catch { /* 不中斷主流程 */ }
       } else {
-        // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」，且近期對話有提到訂單/訂房/大名等字眼
-        // →極可能是客人在回覆客服「請問您的訂房大名？」，用姓名查訂單，找不到就老實說查無資料
-        const recentText = [...history.slice(-4).map(m => m.content), message].join('\n')
-        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && BOOKING_INTENT_RE.test(recentText) && !passwordFromDatasource) {
+        // 沒有訂單號碼/手機號碼，但這則訊息看起來只是「一個姓名」——只有在「上一輪 AI 自己
+        // 剛問過客人的訂房大名/姓名」時才觸發查詢，不能只因為最近幾則對話有出現「入住」等
+        // 廣義關鍵字就觸發。真實案例：AI 只問了「請問您是今天入住嗎？」（沒有問姓名），客人
+        // 回「我在門口」——這不是姓名，也不是在回答姓名，卻被當成姓名去查訂單、比對到不相干
+        // 的客人資料。用「上一輪 AI 是否真的問了姓名」這個更精準的條件避免這種誤觸發。
+        const lastAssistantTurn = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
+        const askedForName = /大名|姓名/.test(lastAssistantTurn)
+        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && askedForName && !passwordFromDatasource) {
           orderLookupDone = true
           currentLookupKind = 'name'
           try {
