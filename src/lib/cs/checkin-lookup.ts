@@ -10,6 +10,40 @@ export function noDataFoundSuffix(altMethods: string): string {
   return `（嚴禁提供、推測或捏造任何密碼、房號；請客人改提供${altMethods}再查一次；嚴禁跟客人說「已經為您安排專員」「已通知專員」「稍後會有人跟您聯繫」等話術——這裡沒有建立任何工單，客人明確要求真人客服時系統才會真的轉真人）`
 }
 
+// 姓名核對（模糊比對／圖片辨識）通過前，先跟客人確認候選姓名的固定問句格式——
+// 真實案例：客人打「鄭妃君」，LLM 模糊比對成完全不同發音的「Ting Fen Cheng」就直接把
+// 密碼給了；另一案例：客人只回「我在門口」（根本不是姓名），LLM 硬猜配對成功，還把「同
+// 一組單號」底下全部房型的密碼一次洩漏。姓名比對只要不是「客人自己打的字串」逐字/子字串
+// 對上系統資料，一律不能直接洩漏——先用這句固定問法跟客人核對，客人明確承認了，下一輪
+// 用這個確認過的姓名重查才能真的給密碼。用固定字串（不是 LLM 自由發揮的句子），才能在
+// 下一輪對話用同一個 regex 抓出候選姓名。
+export const NAME_VERIFY_ASK_RE = /請問訂房登記的姓名是不是「([^」]{1,40})」呢/
+
+function buildNameVerifyPrompt(candidateName: string): string {
+  return `【訂單查詢結果】\n系統找到一筆疑似相符的旅客資料，但姓名不是逐字對上，需要先跟客人核對身份，絕對不能直接提供密碼。\n請一字不改照抄以下這句話回覆客人，不要加其他文字：\n請問訂房登記的姓名是不是「${candidateName}」呢？\n只有客人下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪提供密碼；客人否認、不確定、或給了別的名字，一律不可提供任何密碼、房號，並引導客人改用訂單號碼或手機號碼查詢。`
+}
+
+// 圖片辨識出的訂單號碼/姓名終究是 AI 視覺模型的「猜測」，不是客人親自打的資料——即使剛好
+// 比對到系統裡一筆真實存在的訂單，也可能是辨識到別人的訂單截圖或不相關的圖片內容（真實
+// 案例：客人只是在詢問訂房，自己都還沒訂房，卻因為傳了一張圖片，AI 就把「別人」的旅客
+// 姓名與房門密碼整組洩漏出去）。查到資料後一律先跟客人核對是不是本人，不能直接給密碼；
+// 跟客人自己打字輸入的訂單號碼／手機號碼（本人主動提供、不經過視覺辨識這層猜測）不同，
+// 那兩種管道維持原本直接查詢、不受此限制。
+const GUEST_NAME_LINE_RE = /・旅客姓名：([^\n]+)/
+
+export function wrapImageDerivedResultForConfirm(resultText: string): string {
+  // 只攔截「真的會洩漏密碼」的查詢結果——查無資料、尚未到入住時間、比對到多筆讓客人自己
+  // 指認的清單，這些本來就不含密碼，原樣放行即可，不需要也不該被這裡的邏輯覆蓋掉。
+  if (!resultText.includes('房門密碼：')) return resultText
+  const m = resultText.match(GUEST_NAME_LINE_RE)
+  if (!m?.[1]?.trim()) {
+    // 圖片辨識到的訂單沒有登記旅客姓名，沒有東西可以拿來跟客人核對身份，
+    // 安全起見不能直接給密碼，請客人改用文字輸入的方式查詢。
+    return `【入住資訊查詢結果】\n從圖片中比對到系統裡的訂單資料，但這筆訂單沒有登記旅客姓名，圖片本身也無法作為身份證明，無法直接提供密碼。\n${noDataFoundSuffix('訂單號碼或手機號碼')}`
+  }
+  return buildNameVerifyPrompt(m[1].trim())
+}
+
 // 入住時間判斷（民宿資料 check_in_time 可設，預設 15:00）。
 // 訂單系統與訂單密碼表(資料來源)兩條路徑共用，未到入住時間一律不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -196,13 +230,26 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
 // 客人只報「訂房大名」、沒有訂單號碼時，依姓名查近期訂單（前 3 天～未來 180 天）。
 // 找不到就是找不到，一律回「查無資料」；絕對不能讓 AI 在沒有比對到任何一筆訂單時，
 // 自己說「已核對」「訂單已完成處理」等話術給客人。
+//
+// confirmedExactName：客人已經針對某個候選姓名明確回覆「是/對」之後，下一輪重查時傳入，
+// 代表這個姓名已經跟客人核對過、不必再走模糊比對，也不必再問一次——傳入時只接受逐字/
+// 子字串比對（等同精準比對），絕對不會再觸發 LLM 模糊比對。
+//
+// 真實案例：客人打「鄭妃君」，LLM 模糊比對配對到完全不同發音的「Ting Fen Cheng」就直接
+// 給密碼；另一案例：客人只回「我在門口」（根本不是姓名），LLM 硬猜配對成功，還把「同一組
+// 訂單號」底下全部房型（含不相干的其他客人）的密碼一次洩漏——因此模糊比對（LLM 猜測）
+// 一律不能直接洩漏，只能先跟客人核對候選姓名；只有客人「自己打的字串」逐字/子字串比對到
+// 系統資料，或客人已經核對確認過的姓名，才視為身份已驗證可以直接給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function queryBookingByGuestName(supabase: any, userId: string, candidateName: string, model: LanguageModel): Promise<string | null> {
+export async function queryBookingByGuestName(supabase: any, userId: string, candidateName: string, model: LanguageModel, confirmedExactName?: string): Promise<string | null> {
   const { features } = await getBookingEntitlements(supabase, userId)
   if (!features.csIntegration) return null
 
   const name = candidateName.trim()
   if (!name) return null
+  const allowFuzzy = !confirmedExactName
+  const lookupName = (confirmedExactName ?? candidateName).trim()
+  if (!lookupName) return null
 
   const notFoundMsg = `【訂單查詢結果】\n查無旅客「${name}」的訂單資料，系統中沒有符合的訂房紀錄。\n（嚴禁自行推測或回覆「已找到」「已核對」「訂單已完成處理」等話術）\n${noDataFoundSuffix('訂單號碼或手機號碼')}`
 
@@ -211,7 +258,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   const pastStr = past.toLocaleDateString('sv-SE')
   const futureStr = future.toLocaleDateString('sv-SE')
   const norm = (s: string) => s.toLowerCase().replace(/[\s./-]/g, '')
-  const n = norm(name)
+  const n = norm(lookupName)
 
   const fuzzyMatchOne = async <T extends { guest_name: string | null }>(candidates: T[]): Promise<T | null> => {
     try {
@@ -220,7 +267,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
         model,
         messages: [{
           role: 'user',
-          content: `客人說他的訂房姓名是：「${name}」\n系統中的訂單旅客姓名列表：\n${list}\n\n請判斷列表中「是否有」與客人所說屬於同一個人的姓名（中文與英文拼音互換、發音相近、姓氏在前或在後皆視為相符）。\n若有，只回傳該筆的編號數字；若都沒有相符的，只回 NONE。不要有其他文字。`,
+          content: `客人說他的訂房姓名是：「${lookupName}」\n系統中的訂單旅客姓名列表：\n${list}\n\n請嚴格判斷列表中「是否有」與客人所說明確屬於同一個人的姓名（中文與英文拼音互換、發音真的相近、姓氏在前或在後皆可視為相符）。客人說的內容如果根本不像是一個人名（例如是一句話、確認詞、地點描述等），或發音差異明顯，一律回 NONE，寧可漏掉也不要亂猜。\n若有明確相符的，只回傳該筆的編號數字；否則只回 NONE。不要有其他文字。`,
         }],
       })
       const m = text.trim().match(/^\d+/)
@@ -249,7 +296,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
       const g = norm(c.guest_name ?? '')
       return !!g && (g.includes(n) || n.includes(g))
     })
-    if (!dailyMatched.length) {
+    if (!dailyMatched.length && allowFuzzy) {
       const one = await fuzzyMatchOne(dailyCandidates)
       if (one) dailyMatched = [one]
     }
@@ -260,15 +307,23 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const distinctPeople = new Set(dailyMatched.map((c: any) => `${norm(c.guest_name)}|${c.order_number ?? c.date}`))
       if (distinctPeople.size === 1) {
+        // 只有「客人打的字串」逐字對上系統姓名（或這是客人已核對確認過的姓名）才視為身份
+        // 已驗證可以直接洩漏；只要是子字串比對或 LLM 模糊猜測、不是完全一樣，一律先跟客人
+        // 核對候選姓名——真實案例：客人打「鄭妃君」，模糊比對配對到完全不同發音的
+        // 「Ting Fen Cheng」就直接把密碼給了。
+        if (norm(dailyMatched[0].guest_name ?? '') !== n) return buildNameVerifyPrompt(dailyMatched[0].guest_name)
         const orderNum = dailyMatched[0].order_number
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
+        let group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
+        // 防呆：同一組訂單號被誤填在過多房型上（例如測試/佔位資料誤把同一組單號填滿全部
+        // 房間），這種異常規模的「同單號」不該被當成一筆多房訂單整批洩漏，只給比對到的那間。
+        if (group.length > 3) group = dailyMatched
 
         const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
         if (before) {
-          return `【訂單查詢結果】\n找到旅客「${name}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+          return `【訂單查詢結果】\n找到旅客「${lookupName}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
         }
-        const lines = [`【訂單查詢結果】`, `找到旅客「${name}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
+        const lines = [`【訂單查詢結果】`, `找到旅客「${lookupName}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
         if (group.length > 1) lines.push(`・共訂了 ${group.length} 個房型，以下逐一列出：`)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const r of group as any[]) {
@@ -281,7 +336,7 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
       }
 
       // 每日入住撞到不同人（同名不同訂單/日期）——不可洩漏，列摘要讓客人自己指認
-      const lines: string[] = [`【訂單查詢結果】`, `找到 ${dailyMatched.length} 筆與「${name}」相符的入住紀錄，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
+      const lines: string[] = [`【訂單查詢結果】`, `找到 ${dailyMatched.length} 筆與「${lookupName}」相符的入住紀錄，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const r of dailyMatched.slice(0, 5) as any[]) lines.push(`・${r.guest_name}｜${r.room_name || '（未指定房型）'}｜日期 ${r.date}`)
       lines.push(`（比對到多筆前，嚴禁提供任何一筆的密碼或房號；務必先讓客人自己指認）`)
@@ -312,27 +367,28 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   })
 
   // 簡單子字串比對不到，才交給 LLM 做模糊比對（中文姓名/拼音互換、姓氏順序），比對失敗一律當查無資料
-  if (!matched.length) {
+  if (!matched.length && allowFuzzy) {
     const one = await fuzzyMatchOne(candidates)
     if (one) matched = [one]
   }
 
   if (!matched.length) return notFoundMsg
 
-  // 姓名比對到「唯一一筆」——不論是子字串比對還是拼音模糊比對，都視為身份已核對
-  // （與資料來源表格的 verifyName 身分核對邏輯一致），可以直接給密碼；
-  // 比對到多筆（同名撞號）則不可洩漏，只列摘要讓客人自己指認。
+  // 姓名比對到「唯一一筆」——但只有客人打的字串跟系統姓名逐字一樣（或這是客人已核對確認
+  // 過的姓名）才視為身份已核對可以直接給密碼；子字串比對或 LLM 模糊猜測只要不是完全一樣，
+  // 一律先跟客人核對候選姓名。比對到多筆（同名撞號）也不可洩漏，只列摘要讓客人自己指認。
   if (matched.length === 1) {
+    if (norm(matched[0].guest_name ?? '') !== n) return buildNameVerifyPrompt(matched[0].guest_name)
     const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
     if (before) {
-      return `【訂單查詢結果】\n找到旅客「${name}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+      return `【訂單查詢結果】\n找到旅客「${lookupName}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
     }
     const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
-    const lines = [`【訂單查詢結果】`, `找到旅客「${name}」的訂單：`, ...await formatBookingsWithPassword(supabase, userId, matched, todayDate)]
+    const lines = [`【訂單查詢結果】`, `找到旅客「${lookupName}」的訂單：`, ...await formatBookingsWithPassword(supabase, userId, matched, todayDate)]
     return lines.join('\n')
   }
 
-  const lines: string[] = [`【訂單查詢結果】`, `找到 ${matched.length} 筆與「${name}」相符的訂單，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
+  const lines: string[] = [`【訂單查詢結果】`, `找到 ${matched.length} 筆與「${lookupName}」相符的訂單，請客人提供入住日期或訂單號碼以確認是哪一筆：`]
   for (const b of matched.slice(0, 5)) {
     let roomName = ''
     if (b.property_id) {
