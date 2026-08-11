@@ -12,7 +12,6 @@ export default function FormClient({
   name: string
   fields: CsFormField[]
 }) {
-  const [roomRef, setRoomRef] = useState('')
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -30,7 +29,7 @@ export default function FormClient({
       const res = await fetch(`/api/public/cs-form/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers, roomRef: roomRef.trim() || undefined }),
+        body: JSON.stringify({ answers }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -64,19 +63,6 @@ export default function FormClient({
         className="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-sm"
       >
         <h1 className="mb-6 text-lg font-semibold text-gray-900">{name}</h1>
-
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            房號 / 訂單編號（選填）
-          </label>
-          <input
-            type="text"
-            value={roomRef}
-            onChange={(e) => setRoomRef(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-            placeholder="例如：302 或訂單編號"
-          />
-        </div>
 
         {fields.map((f) => (
           <div key={f.id} className="mb-4">
