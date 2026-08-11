@@ -148,6 +148,31 @@ export async function computeStayPrice(
       const mmdd = date.slice(5)
       const daysUntil = Math.round((new Date(`${date}T00:00:00Z`).getTime() - todayMs) / 86400000)
       const occ = occByDate.get(date) ?? 0
+
+      // advance_booking／early_bird 是「級距」規則（同一種規則依天數分好幾檔，例如
+      // 當天訂房 30%、1 天前 25%、2 天前 20%、5 天前 15%）——這些檔位的判斷條件本來
+      // 就會互相涵蓋（「當天訂房」同時也符合「5 天內」的條件），只能套用最貼近的那一
+      // 檔，不能把每一檔符合條件的都疊乘上去，否則會疊出離譜的價格（真實案例：一間
+      // 1800 元的房間，四檔全部疊上去變成 4000 多元）。
+      let bestAdvanceBooking: RuleRow | null = null
+      let bestEarlyBird: RuleRow | null = null
+      for (const rule of sortedRules) {
+        const c = rule.conditions ?? {}
+        if (rule.rule_type === 'advance_booking') {
+          const threshold = (c.days_before as number) ?? 0
+          if (daysUntil <= threshold) {
+            const bestThreshold = (bestAdvanceBooking?.conditions?.days_before as number) ?? Infinity
+            if (threshold < bestThreshold) bestAdvanceBooking = rule
+          }
+        } else if (rule.rule_type === 'early_bird') {
+          const threshold = (c.days_before as number) ?? 90
+          if (daysUntil >= threshold) {
+            const bestThreshold = (bestEarlyBird?.conditions?.days_before as number) ?? -Infinity
+            if (threshold > bestThreshold) bestEarlyBird = rule
+          }
+        }
+      }
+
       for (const rule of sortedRules) {
         const c = rule.conditions ?? {}
         let applies = false
@@ -159,8 +184,8 @@ export async function computeStayPrice(
             applies = !!(s && e && mmdd >= s && mmdd <= e); break
           }
           case 'occupancy':       applies = occ >= ((c.threshold as number) ?? 0.8); break
-          case 'advance_booking': applies = daysUntil <= ((c.days_before as number) ?? 0); break
-          case 'early_bird':      applies = daysUntil >= ((c.days_before as number) ?? 90); break
+          case 'advance_booking': applies = rule === bestAdvanceBooking; break
+          case 'early_bird':      applies = rule === bestEarlyBird; break
         }
         if (applies) {
           price = rule.adjustment_type === 'percent'
