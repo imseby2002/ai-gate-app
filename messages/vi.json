@@ -3886,6 +3886,9 @@
     "subitems": "Mục con",
     "addSubitem": "Thêm mục con",
     "subitemPh": "Tiêu đề mục con…",
+    "editSubitem": "Sửa",
+    "save": "Lưu",
+    "cancel": "Hủy",
     "ownerOnlyDone": "Chỉ chủ sở hữu mới đánh dấu hoàn thành",
     "deadlineFieldLabel": "Hạn chót"
   },

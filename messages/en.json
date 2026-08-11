@@ -3979,6 +3979,9 @@
     "subitems": "Sub-items",
     "addSubitem": "Add sub-item",
     "subitemPh": "Sub-item title…",
+    "editSubitem": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
     "ownerOnlyDone": "Only the owner can mark done",
     "deadlineFieldLabel": "Due date"
   },
