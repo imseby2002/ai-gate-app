@@ -1151,17 +1151,21 @@ async function saveFormSubmissionFromChat(
   try {
     const notifyTarget = form.notify_target
     const isImmediate = notifyTarget?.batchMode === 'immediate'
-    await getServiceClient().from('cs_form_submissions').insert({
+    const { data: inserted } = await getServiceClient().from('cs_form_submissions').insert({
       form_id: form.id, user_id: userId, industry,
       answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
-      ...(isImmediate ? { notified_at: new Date().toISOString() } : {}),
-    })
-    if (isImmediate) {
+    }).select('id').single()
+    // notified_at 只在真的送出成功才標記——之前不管有沒有送成功都直接標記，
+    // 通知因為 LINE token 失效送不出去時完全沒有人知道。
+    if (isImmediate && inserted) {
       void notifyFormSubmission(
         userId, notifyTarget, form.name,
         formatFormSubmission(form.name, form.fields, submit.answers, null),
         { fields: form.fields, answers: submit.answers, roomRef: null },
-      )
+      ).then(result => getServiceClient()
+        .from('cs_form_submissions')
+        .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
+        .eq('id', inserted.id))
     }
   } catch { /* 不中斷主流程 */ }
 }

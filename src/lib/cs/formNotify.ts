@@ -40,45 +40,59 @@ function buildAnswersByLabel(fields: CsFormField[], answers: Record<string, stri
   return out
 }
 
+export interface NotifyResult { ok: boolean; error?: string }
+
 // 用表單自己指定的 OA 憑證直接 push（跳過平台分頁那組共用憑證）——
 // 讓不同表單可以各自綁定不同的 LINE 官方帳號（例如早餐店自己的 OA），
 // 前提跟平台分頁那組憑證一樣：這個 OA 帳號本身要先被加入目標群組。
-async function pushLineWithToken(token: string, to: string, text: string): Promise<boolean> {
-  const res = await fetch('https://api.line.me/v2/bot/message/push', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
-    signal: AbortSignal.timeout(8000),
-  })
-  return res.ok
+async function pushLineWithToken(token: string, to: string, text: string): Promise<NotifyResult> {
+  try {
+    const res = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.ok) return { ok: true }
+    const body = await res.text().catch(() => '')
+    return { ok: false, error: `LINE push 失敗 (${res.status})：${body.slice(0, 200)}` }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'LINE push 發生未知錯誤' }
+  }
 }
 
+// 真實案例：客人透過公開表單訂了早餐，通知一直沒送到——原因是呼叫端不管這裡實際
+// 有沒有送成功，一律直接把 notified_at 標記為已通知（且用 void 不等結果、內部把
+// 所有錯誤都吞掉），LINE token 失效/過期這種真的送不出去的狀況完全沒有人知道。
+// 這裡改成把「是否真的送成功」老實回傳出去，呼叫端才能依實際結果決定要不要標記
+// notified_at，失敗時也留下原因方便之後排查或重試。
 export async function notifyFormSubmission(
   userId: string,
   notifyTarget: CsFormNotifyTarget | null | undefined,
   formName: string,
   text: string,
   webhook?: { fields: CsFormField[]; answers: Record<string, string>; roomRef: string | null },
-): Promise<void> {
-  if (!notifyTarget?.platform || !notifyTarget.to) return
+): Promise<NotifyResult> {
+  if (!notifyTarget?.platform || !notifyTarget.to) return { ok: false, error: '尚未設定通知對象' }
   try {
     if (notifyTarget.platform === 'line') {
       if (notifyTarget.lineToken?.trim()) {
-        await pushLineWithToken(notifyTarget.lineToken.trim(), notifyTarget.to, text)
-      } else {
-        await sendToCustomer(userId, 'line', notifyTarget.to, text)
+        return await pushLineWithToken(notifyTarget.lineToken.trim(), notifyTarget.to, text)
       }
+      const r = await sendToCustomer(userId, 'line', notifyTarget.to, text)
+      return { ok: r.ok, error: r.error }
     } else if (notifyTarget.platform === 'email' && process.env.RESEND_API_KEY) {
       const { Resend } = await import('resend')
       const resend = new Resend(process.env.RESEND_API_KEY)
-      await resend.emails.send({
+      const { error } = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL ?? 'onboarding@resend.dev',
         to: notifyTarget.to,
         subject: `新表單提交通知：${formName}`,
         text,
       })
+      return error ? { ok: false, error: String(error.message ?? error) } : { ok: true }
     } else if (notifyTarget.platform === 'webhook' && isSafeWebhookUrl(notifyTarget.to)) {
-      await fetch(notifyTarget.to, {
+      const res = await fetch(notifyTarget.to, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,6 +105,10 @@ export async function notifyFormSubmission(
         }),
         signal: AbortSignal.timeout(8000),
       })
+      return res.ok ? { ok: true } : { ok: false, error: `webhook 回應 ${res.status}` }
     }
-  } catch { /* 不中斷主流程 */ }
+    return { ok: false, error: '通知平台設定不完整或不支援' }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : '通知時發生未知錯誤' }
+  }
 }
