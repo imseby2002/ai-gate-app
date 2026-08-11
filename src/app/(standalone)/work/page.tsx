@@ -805,6 +805,8 @@ function SubItems({
 }) {
   const [subs, setSubs] = useState<Item[]>([])
   const [title, setTitle] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -837,16 +839,58 @@ function SubItems({
     await supabase.from('work_docs').delete().eq('id', id)
   }
 
+  function startEdit(s: Item) {
+    setEditingId(s.id)
+    setDraft(s.title)
+  }
+
+  async function saveEdit(id: string) {
+    const v = draft.trim()
+    setEditingId(null)
+    if (!v) return
+    setSubs(prev => prev.map(x => (x.id === id ? { ...x, title: v } : x)))
+    await supabase.from('work_docs').update({ title: v, updated_at: new Date().toISOString() }).eq('id', id)
+  }
+
   return (
     <div className="space-y-1.5 rounded-lg border p-2.5">
       <p className="text-xs font-medium text-muted-foreground">{t('subitems')}{subs.length ? ` (${subs.length})` : ''}</p>
       {subs.map(s => {
         const trd = tr(s.title)
+        const editing = editingId === s.id
         return (
           <div key={s.id} className="flex items-start gap-2 text-sm">
             <input type="checkbox" checked={s.done} onChange={() => toggle(s)} className="mt-1 h-3.5 w-3.5 shrink-0" />
-            <span className={`min-w-0 flex-1 whitespace-pre-wrap break-words ${s.done ? 'text-muted-foreground line-through' : ''}`}>{trd}</span>
-            <button onClick={() => remove(s.id)} className="mt-0.5 shrink-0 text-xs text-muted-foreground hover:text-red-500">✕</button>
+            {editing ? (
+              <div className="min-w-0 flex-1 space-y-1">
+                <Textarea
+                  autoFocus
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setEditingId(null)
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveEdit(s.id)
+                  }}
+                  rows={Math.min(8, Math.max(2, draft.split('\n').length))}
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => saveEdit(s.id)} disabled={!draft.trim()}>{t('save')}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>{t('cancel')}</Button>
+                </div>
+              </div>
+            ) : (
+              <span
+                onDoubleClick={() => startEdit(s)}
+                className={`min-w-0 flex-1 cursor-text whitespace-pre-wrap break-words ${s.done ? 'text-muted-foreground line-through' : ''}`}
+              >{trd}</span>
+            )}
+            {!editing && (
+              <>
+                <button onClick={() => startEdit(s)} title={t('editSubitem')} className="mt-0.5 shrink-0 text-xs text-muted-foreground hover:text-blue-500">✎</button>
+                <button onClick={() => remove(s.id)} className="mt-0.5 shrink-0 text-xs text-muted-foreground hover:text-red-500">✕</button>
+              </>
+            )}
           </div>
         )
       })}
