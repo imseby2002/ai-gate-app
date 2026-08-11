@@ -453,6 +453,7 @@ async function replyToCustomer(
 interface CsChatForm {
   id: string
   name: string
+  slug: string
   fields: CsFormField[]
   trigger_keywords: string
   notify_target: CsFormNotifyTarget
@@ -552,7 +553,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   // 別的表單/別的通知對象」，就建多個表單、各自設定開放星期即可）
   const { data: formRows } = await supabase
     .from('cs_forms')
-    .select('id, name, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields')
+    .select('id, name, slug, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields')
     .eq('user_id', userId)
     .eq('enabled', true)
     .neq('trigger_keywords', '')
@@ -1101,6 +1102,7 @@ const FORM_SUBMIT_RE = /\n*<<<FORM_SUBMIT:(\{[\s\S]*?\})>>>\n*/
 
 function buildFormsSection(forms: CsChatForm[]): string {
   if (!forms.length) return ''
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const list = forms.map(f => {
     const kws = f.trigger_keywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
     const fieldLines = f.fields.map(field => {
@@ -1110,7 +1112,8 @@ function buildFormsSection(forms: CsChatForm[]): string {
     const confirmNote = f.confirm_before_fields
       ? `開始問欄位之前：如果同一件事上方知識庫另外還列了其他替代方案或選項（例如同一個需求有兩種不同的滿足方式），要先把選項列給客人選、確認客人明確選的是這個表單對應的方案，才能開始依序問欄位；客人選的是其他替代方案，就依知識庫內容回答，不要問這裡的欄位。如果知識庫沒有列出替代方案，可以直接開始問欄位，不用多問一輪。`
       : `這個表單不用先確認替代方案，客人提到觸發字詞就可以直接依序開始問下面的欄位。`
-    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}`
+    const linkNote = appUrl ? `這個表單的公開填寫連結是：${appUrl}/f/${f.slug}——客人如果想要自己點連結填寫（而不是在對話裡一題一題回答），或明確要求「給我連結/網址」，可以直接照抄提供這個連結，不用只靠對話問欄位這一種方式。` : ''
+    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}${linkNote ? `\n${linkNote}` : ''}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}`
   }).join('\n\n')
 
   return `\n\n【自建表單問答——比照下方規則執行】
