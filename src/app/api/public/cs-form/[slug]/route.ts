@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const roomRef = typeof body?.roomRef === 'string' ? body.roomRef.trim().slice(0, 100) : null
   const notifyTarget = form.notify_target as CsFormNotifyTarget | null
 
-  const { error } = await supabase
+  const { data: inserted, error } = await supabase
     .from('cs_form_submissions')
     .insert({
       form_id: form.id,
@@ -68,17 +68,23 @@ export async function POST(req: NextRequest, { params }: Params) {
       answers,
       room_ref: roomRef,
       source: 'public_form',
-      ...(notifyTarget?.batchMode === 'immediate' ? { notified_at: new Date().toISOString() } : {}),
     })
+    .select('id')
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // notified_at 只在真的送出成功才標記——之前不管有沒有送成功都直接標記，
+  // 客人透過公開表單訂了早餐，通知卻因為 LINE token 失效送不出去，沒有人知道。
   if (notifyTarget?.batchMode === 'immediate') {
     void notifyFormSubmission(
       form.user_id, notifyTarget, form.name,
       formatFormSubmission(form.name, fields, answers, roomRef),
       { fields, answers, roomRef },
-    )
+    ).then(result => supabase
+      .from('cs_form_submissions')
+      .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
+      .eq('id', inserted.id))
   }
 
   return NextResponse.json({ ok: true })

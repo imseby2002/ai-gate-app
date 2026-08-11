@@ -29,6 +29,8 @@ interface CsFormSubmission {
   source: string
   platform: string | null
   created_at: string
+  notified_at: string | null
+  notify_error: string | null
 }
 
 const FIELD_TYPES: { value: CsFormField['type']; label: string }[] = [
@@ -360,10 +362,18 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                   {!subsLoading && subs.length === 0 && <div className="text-xs text-gray-400">尚無提交紀錄</div>}
                   {!subsLoading && subs.map(s => (
                     <div key={s.id} className="text-xs bg-gray-50 rounded-lg p-2 space-y-0.5">
-                      <div className="flex items-center gap-2 text-gray-400">
+                      <div className="flex items-center gap-2 text-gray-400 flex-wrap">
                         <span>{new Date(s.created_at).toLocaleString('zh-TW')}</span>
                         {s.room_ref && <span className="px-1.5 py-0.5 rounded bg-gray-100 border">房號/訂單：{s.room_ref}</span>}
                         <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{s.source === 'public_form' ? '掃碼填寫' : 'CS 對話'}</span>
+                        {s.notify_error && (
+                          <span className="px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-red-600" title={s.notify_error}>
+                            通知失敗：{s.notify_error.slice(0, 40)}
+                          </span>
+                        )}
+                        {!s.notify_error && !s.notified_at && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-600">等待通知</span>
+                        )}
                       </div>
                       <div className="text-gray-600">
                         {f.fields.map(field => s.answers[field.id] ? (

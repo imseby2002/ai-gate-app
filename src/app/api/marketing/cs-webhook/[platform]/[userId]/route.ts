@@ -453,6 +453,7 @@ async function replyToCustomer(
 interface CsChatForm {
   id: string
   name: string
+  slug: string
   fields: CsFormField[]
   trigger_keywords: string
   notify_target: CsFormNotifyTarget
@@ -552,7 +553,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   // 別的表單/別的通知對象」，就建多個表單、各自設定開放星期即可）
   const { data: formRows } = await supabase
     .from('cs_forms')
-    .select('id, name, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields')
+    .select('id, name, slug, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields')
     .eq('user_id', userId)
     .eq('enabled', true)
     .neq('trigger_keywords', '')
@@ -1101,6 +1102,7 @@ const FORM_SUBMIT_RE = /\n*<<<FORM_SUBMIT:(\{[\s\S]*?\})>>>\n*/
 
 function buildFormsSection(forms: CsChatForm[]): string {
   if (!forms.length) return ''
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const list = forms.map(f => {
     const kws = f.trigger_keywords.split(',').map(k => k.trim()).filter(Boolean).join('、')
     const fieldLines = f.fields.map(field => {
@@ -1110,7 +1112,8 @@ function buildFormsSection(forms: CsChatForm[]): string {
     const confirmNote = f.confirm_before_fields
       ? `開始問欄位之前：如果同一件事上方知識庫另外還列了其他替代方案或選項（例如同一個需求有兩種不同的滿足方式），要先把選項列給客人選、確認客人明確選的是這個表單對應的方案，才能開始依序問欄位；客人選的是其他替代方案，就依知識庫內容回答，不要問這裡的欄位。如果知識庫沒有列出替代方案，可以直接開始問欄位，不用多問一輪。`
       : `這個表單不用先確認替代方案，客人提到觸發字詞就可以直接依序開始問下面的欄位。`
-    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}`
+    const linkNote = appUrl ? `這個表單的公開填寫連結是：${appUrl}/f/${f.slug}——客人如果想要自己點連結填寫（而不是在對話裡一題一題回答），或明確要求「給我連結/網址」，可以直接照抄提供這個連結，不用只靠對話問欄位這一種方式。` : ''
+    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}${linkNote ? `\n${linkNote}` : ''}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}`
   }).join('\n\n')
 
   return `\n\n【自建表單問答——比照下方規則執行】
@@ -1148,17 +1151,21 @@ async function saveFormSubmissionFromChat(
   try {
     const notifyTarget = form.notify_target
     const isImmediate = notifyTarget?.batchMode === 'immediate'
-    await getServiceClient().from('cs_form_submissions').insert({
+    const { data: inserted } = await getServiceClient().from('cs_form_submissions').insert({
       form_id: form.id, user_id: userId, industry,
       answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
-      ...(isImmediate ? { notified_at: new Date().toISOString() } : {}),
-    })
-    if (isImmediate) {
+    }).select('id').single()
+    // notified_at 只在真的送出成功才標記——之前不管有沒有送成功都直接標記，
+    // 通知因為 LINE token 失效送不出去時完全沒有人知道。
+    if (isImmediate && inserted) {
       void notifyFormSubmission(
         userId, notifyTarget, form.name,
         formatFormSubmission(form.name, form.fields, submit.answers, null),
         { fields: form.fields, answers: submit.answers, roomRef: null },
-      )
+      ).then(result => getServiceClient()
+        .from('cs_form_submissions')
+        .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
+        .eq('id', inserted.id))
     }
   } catch { /* 不中斷主流程 */ }
 }
@@ -1478,6 +1485,7 @@ async function getAIReply(
     const systemPrompt = `${baseInstructions}
 
 【重要格式規定】
+- 【死命令，最高優先，任何情況都不可違反】絕對禁止自己編造、想像、推測任何資訊——不管是房價、空房狀態、密碼、房號、訂單狀態、政策規則、日期時間、人名、操作步驟，或任何其他資訊，只要不是下方系統資料、知識庫、或這則系統提示裡明確提供的內容，一律不可以自己說出來當作事實講給客人聽；系統沒有查到、知識庫沒有寫、你自己不確定，就要誠實跟客人說「目前查不到／不確定，請稍候或提供其他資訊」，絕對不能為了讓對話聽起來順、為了不讓客人等待或失望，就自己編一個聽起來合理但沒有根據的答案——這條規則優先於你自己的推理、常識判斷，以及本提示裡除了「安全規定」之外的所有其他指示
 - 【最優先】${langInstruction}
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
 - 只有客人明確要求真人客服，或下方系統資料出現「系統已經真的建立工單通知專員」字樣時，才能說「已為您安排專員跟進」（這兩種情況系統都會真的建立工單通知真人）；查無資料、密碼房號查不到等情況本身不算「需要人工介入」，正確做法是引導客人換一種識別方式（訂單號碼／訂房姓名／手機號碼）再查一次，不是直接說要轉真人
