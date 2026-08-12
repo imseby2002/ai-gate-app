@@ -1197,24 +1197,32 @@ function cleanReply(raw: string): string {
 // 前面加了再多「禁止捏造」的系統提示，本質上都只是「拜託模型別亂講」，模型仍然可能
 // 不遵守（真實案例：客人給的訂單碼格式沒觸發任何查詢，模型還是自己編了一組房號密碼）。
 // 這裡不再靠「猜有哪些輸入格式該觸發查詢」來補洞，而是直接在輸出端做事實查核：
-// 回覆裡如果出現「密碼/房號」後面接著一串英數字，但這組值從來沒有出現在系統真正查到
-// 的資料（externalDataSection）或這通對話先前已經給過的內容裡，一律視為捏造，攔截换成
-// 制式的「請提供識別資訊」，不讓這種回覆真的送到客人手上。
+// 回覆裡如果出現「密碼/房號/門鎖代碼」後面接著一串英數字，但這組值從來沒有出現在系統
+// 真正查到的資料（externalDataSection）或這通對話先前已經給過的內容裡，一律視為捏造，
+// 攔截换成制式的「請提供識別資訊」，不讓這種回覆真的送到客人手上。
 // 上限從 10 拉到 32：門鎖/WiFi 密碼偶爾比 10 碼長（例如知識庫常見的英數混合密碼），
 // 上限太短會讓超長的捏造值完全落在偵測範圍外、悄悄放行。
-const SENSITIVE_REVEAL_RE = /(?:密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,32})/g
+// 用捕獲群組留住標籤（密碼/房號/門鎖代碼），房號的「有憑有據」判斷比密碼更嚴格——見下方。
+const SENSITIVE_REVEAL_RE = /(密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,32})/g
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
 
 function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string): string {
-  const matches = [...reply.matchAll(SENSITIVE_REVEAL_RE)].map(m => m[1])
+  const matches = [...reply.matchAll(SENSITIVE_REVEAL_RE)]
   if (!matches.length) return reply
-  // 這組值只要出現在「這次真的查到的系統資料」「這通對話先前已經說過的內容」，
-  // 或「知識庫本身就白紙黑字寫的」（例如全館通用的 WiFi 密碼、公共門鎖代碼，這種
-  // 不是客人專屬的訂單資料，本來就不需要走查詢流程，直接照知識庫講就是對的），
-  // 就有憑有據，不是平白冒出來。
   const priorAssistantText = history.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
-  const backedElsewhere = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v) || knowledgeBase.includes(v)
-  const hasUnbackedValue = matches.some(v => !backedElsewhere(v))
+  const backedByQuery = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v)
+  // 真實案例：查無資料的情況下，AI 還是自己編了一個「房號：201」——201 剛好也出現在
+  // 知識庫的房型介紹清單裡（房型列表本來就會列出全部房號），舊版邏輯把「知識庫裡有出現
+  // 這個字串」當成有憑有據，結果知識庫的房型清單反而變成 AI 捏造房號時的擋箭牌。
+  // 房號是「這位客人的房間是幾號」這種客人專屬事實，只能來自這次真的查到的訂單資料，
+  // 不能只因為知識庫的房型列表剛好提到同一個數字就當作有根據；密碼/門鎖代碼則維持原本
+  // 允許知識庫背書（全館通用的 WiFi 密碼、公共門鎖代碼本來就白紙黑字寫在知識庫裡，不是
+  // 客人專屬資料，不需要走查詢流程）。
+  const hasUnbackedValue = matches.some(([, label, value]) => {
+    if (backedByQuery(value)) return false
+    if (label === '房號') return true
+    return !knowledgeBase.includes(value)
+  })
   return hasUnbackedValue ? NO_FABRICATION_FALLBACK : reply
 }
 
