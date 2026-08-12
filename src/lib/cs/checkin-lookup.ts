@@ -45,6 +45,31 @@ export async function looksLikeGuestName(text: string, model: LanguageModel): Pr
   }
 }
 
+// 客人回覆「請問訂房登記的姓名是不是「XXX」呢？」時，判斷是不是明確的肯定答案。
+// 真實案例：客人回「對對！」，舊版用固定 regex（只認得單獨一個「對」字或「是的／沒錯」
+// 等固定詞語）判斷是否為肯定回覆，「對對！」不在清單裡，判定失敗，系統從此再也不會用
+// 已核對過的姓名重新查詢，客人被卡在一直被要求提供手機號碼（但那組手機號碼本來就查不
+// 到）的死循環裡，永遠拿不到密碼。跟 looksLikeGuestName 用一樣的思路：口語肯定回覆的
+// 說法千變萬化，用固定詞語表列治標不治本，改用 LLM 做語意判斷。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function isAffirmativeReply(text: string, model: LanguageModel): Promise<'yes' | 'no' | 'unclear'> {
+  try {
+    const { text: reply } = await generateText({
+      model,
+      messages: [{
+        role: 'user',
+        content: `客服系統剛剛問了客人一個是非題，客人回覆：「${text}」\n\n請判斷客人的回覆是不是明確的肯定答案（各種口語說法都算，例如「對、對對、是、是的、沒錯、對啊、係、yes、就是我、答對了」等，不限於固定詞語）。如果是明確肯定，回 YES；如果是明確否定（不是、不對、錯了、不是我等），回 NO；如果客人答非所問、給了其他資訊、或含糊不清，回 UNCLEAR。只回一個詞：YES、NO 或 UNCLEAR。`,
+      }],
+    })
+    const t = reply.trim().toUpperCase()
+    if (t.startsWith('YES')) return 'yes'
+    if (t.startsWith('NO')) return 'no'
+    return 'unclear'
+  } catch {
+    return 'unclear'
+  }
+}
+
 // 圖片辨識出的訂單號碼/姓名終究是 AI 視覺模型的「猜測」，不是客人親自打的資料——即使剛好
 // 比對到系統裡一筆真實存在的訂單，也可能是辨識到別人的訂單截圖或不相關的圖片內容（真實
 // 案例：客人只是在詢問訂房，自己都還沒訂房，卻因為傳了一張圖片，AI 就把「別人」的旅客

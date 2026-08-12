@@ -12,7 +12,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
-import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName } from '@/lib/cs/checkin-lookup'
+import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
@@ -1325,11 +1325,15 @@ async function getAIReply(
       // 上一輪如果是「請問訂房登記的姓名是不是「XXX」呢？」的身份核對問句，且客人這則訊息
       // 是明確的肯定回覆（且沒有夾帶新的訂單號碼/電話，那種情況讓下面照舊走新的查詢），
       // 才用這個已經核對過的姓名重查、直接給密碼——沒有核對過的模糊比對絕對不能直接洩漏。
+      // 真實案例：客人回「對對！」，固定 regex 只認得單獨「對」字或「是的／沒錯」等固定
+      // 詞語，判斷失敗後系統再也不會用核對過的姓名重查，客人被卡在一直被要求提供手機
+      // 號碼（但那組手機號碼本來就查不到）的死循環裡，永遠拿不到密碼——改用 LLM 判斷
+      // 客人是否為肯定回覆，涵蓋各種口語說法。
       const lastAssistantMsg = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
       const verifyMatch = lastAssistantMsg.match(NAME_VERIFY_ASK_RE)
       let handledByConfirm = false
-      if (verifyMatch && ORDER_CONFIRM_RE.test(message) && !ORDER_DENY_RE.test(message)
-        && !NUMERIC_ORDER_RE.test(message) && !ALPHANUMERIC_ORDER_RE.test(message) && !PHONE_RE.test(message)) {
+      if (verifyMatch && !NUMERIC_ORDER_RE.test(message) && !ALPHANUMERIC_ORDER_RE.test(message) && !PHONE_RE.test(message)
+        && (await isAffirmativeReply(message.trim(), google('gemini-3.1-flash-lite'))) === 'yes') {
         handledByConfirm = true
         orderLookupDone = true
         currentLookupKind = 'name'
