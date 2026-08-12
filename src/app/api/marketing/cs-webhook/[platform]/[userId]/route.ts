@@ -1356,6 +1356,24 @@ async function getAIReply(
             if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
+      } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
+        // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查。
+        // 必須排在 ALPHANUMERIC_ORDER_RE 之前判斷：真實案例，客人傳「Chuang Wei Tso
+        // \n0929768181」（姓名換行接手機號碼），ALPHANUMERIC_ORDER_RE 會把姓氏字尾
+        // 「Tso」+換行+手機號碼誤判成一組英數字訂單碼（例如「Tso\n0929768181」），
+        // 導致查的是一個查無此號的假訂單碼，手機號碼本身反而完全沒被拿去查，AI 在
+        // 「查無資料」的情況下還是編了房號跟一句「請使用訂房時設定之密碼」的假密碼
+        // 說法給客人。手機號碼是更明確、不會誤判的憑證，優先判斷可以避免這種誤觸發。
+        orderLookupDone = true
+        currentLookupKind = 'phone'
+        try {
+          const phone = message.match(PHONE_RE)?.[0] ?? ''
+          const byPhone = await queryBookingByPhone(getServiceClient(), userId, phone)
+          if (byPhone) {
+            currentLookupFailed = byPhone.includes('查無')
+            externalDataSection = `\n\n${byPhone}${externalDataSection}`
+          }
+        } catch { /* 不中斷主流程 */ }
       } else if (ALPHANUMERIC_ORDER_RE.test(message)) {
         // 訂房平台顯示給客人的訂單碼常有英文字母前綴（如易遊網「ORD0031572074」），
         // 系統存的是平台同步給民宿的另一組純數字碼，兩者對不上——但這仍然是客人在
@@ -1373,18 +1391,6 @@ async function getAIReply(
           } else {
             const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(getServiceClient(), userId)
             if (before) externalDataSection = `\n\n【系統強制指令——最高優先】目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；只能告知客人入住時間為今日 ${checkinTime}，請於該時間後再查詢。${externalDataSection}`
-          }
-        } catch { /* 不中斷主流程 */ }
-      } else if (PHONE_RE.test(message) && !passwordFromDatasource) {
-        // 沒有訂單號碼，但訊息中有手機號碼——視為與訂單號碼同等強度的身份憑證，直接查
-        orderLookupDone = true
-        currentLookupKind = 'phone'
-        try {
-          const phone = message.match(PHONE_RE)?.[0] ?? ''
-          const byPhone = await queryBookingByPhone(getServiceClient(), userId, phone)
-          if (byPhone) {
-            currentLookupFailed = byPhone.includes('查無')
-            externalDataSection = `\n\n${byPhone}${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
       } else {
