@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getSkill } from '@/lib/skills/registry'
 import { createSkillContext } from '@/lib/skills/runtime'
 import { getBalance, deductCredits, logSkillRun } from '@/lib/skills/billing'
+import { getSkillKnowledge } from '@/lib/skills/knowledge'
+import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
 export const maxDuration = 120
 
@@ -50,10 +52,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 內建專家「知識附掛」：僅 TEAM+ 方案（含 admin/employee 內部帳號）享有專業知識庫注入；
+  // free/pro 使用基礎版專家。knowledge 為空時 skill 走原本提示詞，行為不變。
+  let knowledge = ''
+  const rawKnowledge = getSkillKnowledge(skill.id)
+  if (rawKnowledge) {
+    const { features } = await getMarketingEntitlements(supabase, user.id)
+    if (features.customExpertBuild) knowledge = rawKnowledge
+  }
+
   // 執行
   let result
   try {
-    const ctx = createSkillContext(user.id)
+    const ctx = createSkillContext(user.id, knowledge)
     result = await skill.run(input, ctx)
   } catch (err) {
     await logSkillRun({

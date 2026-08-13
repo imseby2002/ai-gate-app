@@ -21,13 +21,14 @@ const FAL_TTS_VOICES: Record<string, string> = {
   male: 'Dexter (English (US)/American)',
 }
 
-export function createSkillContext(userId?: string): SkillRunContext {
+export function createSkillContext(userId?: string, knowledge?: string): SkillRunContext {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new Error('ANTHROPIC_API_KEY 未設定')
   }
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   return {
+    knowledge,
     async callModel({ system, prompt, maxOutputTokens = 2000 }) {
       const res = await generateText({
         model: anthropic('claude-sonnet-4-6'),
