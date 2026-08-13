@@ -28,6 +28,9 @@ export interface SkillRunContext {
   generateAudio: (text: string, voice?: string) => Promise<string>
   // 上傳檔案至 storage，回傳公開下載 URL
   storeFile: (bytes: Uint8Array, filename: string, contentType: string) => Promise<string>
+  // 內建專家的專業知識庫（由 /api/skills/run 依方案 TEAM+ 決定是否注入）；
+  // 有值時各 skill 應把它前置到 system prompt，讓專家套用實戰方法論作答。
+  knowledge?: string
 }
 
 export interface SkillResult {
@@ -156,8 +159,11 @@ const viralVideoCopywriting: SkillDef = {
     ] },
   ],
   async run(input, ctx) {
+    const baseSystem = '你是短影音爆款腳本專家，深諳前 3 秒鉤子、節奏與留人技巧，輸出需含鏡頭分鏡與口播逐字稿。'
+    // TEAM+ 方案會注入實戰爆款方法論知識庫（見 lib/skills/knowledge.ts）
+    const system = ctx.knowledge ? `${baseSystem}\n\n${ctx.knowledge}` : baseSystem
     const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system: '你是短影音爆款腳本專家，深諳前 3 秒鉤子、節奏與留人技巧，輸出需含鏡頭分鏡與口播逐字稿。',
+      system,
       prompt: `請產出一支約 ${num(input, 'duration', 30)} 秒短影音腳本，包含：①3 個可選的前 3 秒鉤子 ②分鏡表（時間軸 / 畫面 / 口播）③結尾 CTA ④建議的 hashtag。
 
 影片主題：${str(input, 'topic')}
