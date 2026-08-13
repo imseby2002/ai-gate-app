@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Sparkles, Loader2, Coins, ArrowLeft, Copy, Check } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Sparkles, Loader2, Coins, ArrowLeft, Copy, Check, BookOpen, Trash2, Upload, Link2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -24,6 +24,15 @@ interface SkillInfo {
   category: string
   priceCredits: number
   fields: SkillField[]
+}
+
+interface KnowledgeSource {
+  id: string
+  type: 'url' | 'file' | 'text'
+  name: string
+  source_url: string | null
+  char_count: number
+  created_at: string
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -51,6 +60,17 @@ export function SkillRunner({ module, title }: { module: string; title: string }
   const [lastCost, setLastCost] = useState<number | null>(null)
   const [copied, setCopied] = useState(false)
 
+  // 內建專家「知識附掛」（TEAM+）：對目前選中的專家上傳連結／文字／檔案作為專屬知識庫
+  const [kSources, setKSources] = useState<KnowledgeSource[]>([])
+  const [kCanBuild, setKCanBuild] = useState(false)
+  const [kTab, setKTab] = useState<'url' | 'text' | 'file'>('url')
+  const [kUrl, setKUrl] = useState('')
+  const [kText, setKText] = useState('')
+  const [kName, setKName] = useState('')
+  const [kBusy, setKBusy] = useState(false)
+  const [kError, setKError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     fetch(`/api/skills?module=${encodeURIComponent(module)}`)
       .then(r => r.json())
@@ -69,6 +89,89 @@ export function SkillRunner({ module, title }: { module: string; title: string }
     const init: Record<string, string> = {}
     for (const f of s.fields) init[f.name] = f.default != null ? String(f.default) : ''
     setValues(init)
+    // 載入該專家的知識庫
+    setKSources([])
+    setKError('')
+    setKUrl('')
+    setKText('')
+    setKName('')
+    loadKnowledge(s.id)
+  }
+
+  async function loadKnowledge(skillId: string) {
+    try {
+      const res = await fetch(`/api/marketing/skill-knowledge?skillId=${encodeURIComponent(skillId)}`)
+      const data = await res.json()
+      if (res.ok) {
+        setKSources(data.sources ?? [])
+        setKCanBuild(!!data.canBuild)
+      }
+    } catch {
+      /* 靜默 */
+    }
+  }
+
+  async function addKnowledge(payload: Record<string, unknown>) {
+    if (!selected) return
+    setKBusy(true)
+    setKError('')
+    try {
+      const res = await fetch('/api/marketing/skill-knowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skillId: selected.id, ...payload }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setKError(res.status === 403 ? '訓練專家知識需 TEAM 以上方案' : (data.error ?? '新增失敗'))
+        return
+      }
+      if (data.source) setKSources(v => [data.source, ...v])
+      if (typeof data.balance === 'number') setBalance(data.balance)
+      setKUrl('')
+      setKText('')
+      setKName('')
+    } catch {
+      setKError('連線失敗')
+    } finally {
+      setKBusy(false)
+    }
+  }
+
+  async function addFile(file: File) {
+    if (!selected) return
+    setKBusy(true)
+    setKError('')
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('category', 'document')
+      const up = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
+      const upData = await up.json()
+      if (!up.ok) {
+        setKError(upData.error ?? '檔案上傳失敗')
+        return
+      }
+      if (!upData.textContent) {
+        setKError('此檔案無法萃取文字內容（僅支援 docx / xlsx / csv / txt / pdf）')
+        return
+      }
+      await addKnowledge({ type: 'file', text: upData.textContent, name: upData.name })
+    } catch {
+      setKError('檔案處理失敗')
+    } finally {
+      setKBusy(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function delKnowledge(id: string) {
+    setKSources(v => v.filter(s => s.id !== id))
+    try {
+      await fetch(`/api/marketing/skill-knowledge?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+    } catch {
+      /* 已從列表移除，忽略錯誤 */
+    }
   }
 
   async function run() {
@@ -205,6 +308,92 @@ export function SkillRunner({ module, title }: { module: string; title: string }
               </pre>
             </div>
           )}
+
+          {/* 內建專家「知識附掛」：訓練這位專家（TEAM+） */}
+          <div className="mt-6 border rounded-xl bg-white">
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <BookOpen className="h-4 w-4 text-indigo-600" />
+              <span className="text-sm font-semibold text-gray-800">訓練這位專家</span>
+              <span className="text-[11px] text-gray-400">上傳連結／文字／檔案，執行時自動參考</span>
+            </div>
+
+            {!kCanBuild ? (
+              <div className="px-4 py-4 text-sm text-gray-500">
+                訓練專屬知識庫為 <span className="font-medium text-indigo-600">TEAM 以上方案</span> 功能。升級後可讓這位專家學習你上傳的爆款案例、風格與資料。
+              </div>
+            ) : (
+              <div className="px-4 py-4 space-y-3">
+                {kSources.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {kSources.map(s => (
+                      <li key={s.id} className="flex items-center gap-2 text-sm bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="text-[10px] font-medium text-gray-500 bg-white border rounded px-1.5 py-0.5">
+                          {s.type === 'url' ? '連結' : s.type === 'file' ? '檔案' : '文字'}
+                        </span>
+                        {s.source_url ? (
+                          <a href={s.source_url} target="_blank" rel="noreferrer"
+                            className="flex-1 truncate text-indigo-600 hover:underline">{s.name}</a>
+                        ) : (
+                          <span className="flex-1 truncate text-gray-700">{s.name}</span>
+                        )}
+                        <span className="text-[11px] text-gray-400">{s.char_count} 字</span>
+                        <button onClick={() => delKnowledge(s.id)} className="text-gray-400 hover:text-rose-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="flex gap-1 text-xs">
+                  {(['url', 'text', 'file'] as const).map(t => (
+                    <button key={t} onClick={() => { setKTab(t); setKError('') }}
+                      className={cn('px-3 py-1.5 rounded-full border',
+                        kTab === t ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white text-gray-500 hover:text-gray-800')}>
+                      {t === 'url' ? '網址連結' : t === 'text' ? '貼上文字' : '上傳檔案'}
+                    </button>
+                  ))}
+                </div>
+
+                {kTab === 'url' && (
+                  <div className="flex gap-2">
+                    <Input placeholder="https://…（文章 / 貼文 / 網頁）" value={kUrl}
+                      onChange={e => setKUrl(e.target.value)} />
+                    <Button variant="outline" disabled={kBusy || !kUrl.trim()}
+                      onClick={() => addKnowledge({ type: 'url', url: kUrl.trim() })}>
+                      {kBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                )}
+
+                {kTab === 'text' && (
+                  <div className="space-y-2">
+                    <Input placeholder="這份知識的名稱（選填）" value={kName}
+                      onChange={e => setKName(e.target.value)} />
+                    <Textarea rows={4} placeholder="貼上爆款案例、方法論、風格範例等文字…" value={kText}
+                      onChange={e => setKText(e.target.value)} />
+                    <Button variant="outline" disabled={kBusy || !kText.trim()}
+                      onClick={() => addKnowledge({ type: 'text', text: kText.trim(), name: kName.trim() })}>
+                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 新增中…</> : <><Plus className="h-4 w-4 mr-2" /> 加入知識</>}
+                    </Button>
+                  </div>
+                )}
+
+                {kTab === 'file' && (
+                  <div>
+                    <input ref={fileRef} type="file" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) addFile(f) }} />
+                    <Button variant="outline" disabled={kBusy} onClick={() => fileRef.current?.click()}>
+                      {kBusy ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> 處理中…</> : <><Upload className="h-4 w-4 mr-2" /> 選擇檔案</>}
+                    </Button>
+                    <p className="text-[11px] text-gray-400 mt-1.5">支援 docx / xlsx / csv / txt / pdf，自動萃取文字</p>
+                  </div>
+                )}
+
+                {kError && <div className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{kError}</div>}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

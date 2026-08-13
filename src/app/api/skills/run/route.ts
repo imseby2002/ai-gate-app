@@ -54,11 +54,41 @@ export async function POST(req: NextRequest) {
 
   // 內建專家「知識附掛」：僅 TEAM+ 方案（含 admin/employee 內部帳號）享有專業知識庫注入；
   // free/pro 使用基礎版專家。knowledge 為空時 skill 走原本提示詞，行為不變。
+  // 內容 = 內建精煉知識（getSkillKnowledge）＋ 使用者自訂上傳知識（builtin_expert_knowledge）。
   let knowledge = ''
   const rawKnowledge = getSkillKnowledge(skill.id)
-  if (rawKnowledge) {
-    const { features } = await getMarketingEntitlements(supabase, user.id)
-    if (features.customExpertBuild) knowledge = rawKnowledge
+  const { features } = await getMarketingEntitlements(supabase, user.id)
+  if (features.customExpertBuild) {
+    const parts: string[] = []
+    if (rawKnowledge) parts.push(rawKnowledge)
+
+    const { data: userKnowledge } = await supabase
+      .from('builtin_expert_knowledge')
+      .select('name, extracted_text')
+      .eq('user_id', user.id)
+      .eq('skill_id', skill.id)
+      .order('created_at', { ascending: true })
+
+    if (userKnowledge?.length) {
+      // 使用者自訂知識合併注入，總量上限約 20000 字，避免 prompt 過長。
+      const MAX_USER_KNOWLEDGE = 20000
+      let used = 0
+      const blocks: string[] = []
+      for (const row of userKnowledge) {
+        const text = String(row.extracted_text ?? '').trim()
+        if (!text) continue
+        const remaining = MAX_USER_KNOWLEDGE - used
+        if (remaining <= 0) break
+        const clip = text.slice(0, remaining)
+        blocks.push(`【${row.name || '知識來源'}】\n${clip}`)
+        used += clip.length
+      }
+      if (blocks.length) {
+        parts.push(`以下是使用者提供的專屬參考資料，請優先參考其中的風格、案例與知識：\n\n${blocks.join('\n\n---\n\n')}`)
+      }
+    }
+
+    knowledge = parts.join('\n\n')
   }
 
   // 執行
