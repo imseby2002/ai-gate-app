@@ -3935,7 +3935,11 @@
     "unsupported": "此瀏覽器不支援語音辨識，請改用電腦版 Chrome／Edge；仍可即時看別人的紀錄。",
     "micDenied": "無法存取麥克風，請在瀏覽器允許麥克風權限後再試。",
     "notFound": "找不到會議或已結束，請確認代碼。",
-    "createFailed": "建立失敗，請稍後再試。"
+    "createFailed": "建立失敗，請稍後再試。",
+    "videoStart": "開啟視訊",
+    "videoStop": "關閉視訊",
+    "videoLoading": "連線中…",
+    "videoFailed": "視訊連線失敗，請稍後再試。"
   },
   "Work": {
     "title": "工作項目",

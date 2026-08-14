@@ -3842,7 +3842,11 @@
     "unsupported": "Trình duyệt này không hỗ trợ nhận dạng giọng nói. Hãy dùng Chrome/Edge trên máy tính; bạn vẫn xem được nội dung của người khác.",
     "micDenied": "Không truy cập được micro. Vui lòng cấp quyền micro rồi thử lại.",
     "notFound": "Không tìm thấy cuộc họp hoặc đã kết thúc. Kiểm tra lại mã.",
-    "createFailed": "Không tạo được cuộc họp. Vui lòng thử lại."
+    "createFailed": "Không tạo được cuộc họp. Vui lòng thử lại.",
+    "videoStart": "Bật video",
+    "videoStop": "Tắt video",
+    "videoLoading": "Đang kết nối…",
+    "videoFailed": "Không kết nối được video. Vui lòng thử lại."
   },
   "Work": {
     "title": "Hạng mục công việc",
