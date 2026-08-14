@@ -3935,7 +3935,11 @@
     "unsupported": "This browser doesn’t support speech recognition. Use desktop Chrome/Edge; you can still see others’ notes live.",
     "micDenied": "Can’t access the microphone. Please allow mic permission and try again.",
     "notFound": "Meeting not found or already ended. Check the code.",
-    "createFailed": "Couldn’t create the meeting. Please try again."
+    "createFailed": "Couldn’t create the meeting. Please try again.",
+    "videoStart": "Start video",
+    "videoStop": "Stop video",
+    "videoLoading": "Connecting…",
+    "videoFailed": "Couldn’t connect video. Please try again."
   },
   "Work": {
     "title": "Work Items",
