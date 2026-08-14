@@ -159,11 +159,9 @@ const viralVideoCopywriting: SkillDef = {
     ] },
   ],
   async run(input, ctx) {
-    const baseSystem = '你是短影音爆款腳本專家，深諳前 3 秒鉤子、節奏與留人技巧，輸出需含鏡頭分鏡與口播逐字稿。'
-    // TEAM+ 方案會注入實戰爆款方法論知識庫（見 lib/skills/knowledge.ts）
-    const system = ctx.knowledge ? `${baseSystem}\n\n${ctx.knowledge}` : baseSystem
+    // TEAM+ 方案的專家知識庫由 ctx.callModel 統一注入（見 lib/skills/runtime.ts）
     const { text, inputTokens, outputTokens } = await ctx.callModel({
-      system,
+      system: '你是短影音爆款腳本專家，深諳前 3 秒鉤子、節奏與留人技巧，輸出需含鏡頭分鏡與口播逐字稿。',
       prompt: `請產出一支約 ${num(input, 'duration', 30)} 秒短影音腳本，包含：①3 個可選的前 3 秒鉤子 ②分鏡表（時間軸 / 畫面 / 口播）③結尾 CTA ④建議的 hashtag。
 
 影片主題：${str(input, 'topic')}

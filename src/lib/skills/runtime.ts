@@ -30,9 +30,12 @@ export function createSkillContext(userId?: string, knowledge?: string): SkillRu
   return {
     knowledge,
     async callModel({ system, prompt, maxOutputTokens = 2000 }) {
+      // 內建專家「知識附掛」：TEAM+ 使用者為該專家掛載的知識，於此統一注入 system prompt，
+      // 讓每個 skill 皆可套用；knowledge 為空時行為不變（見 /api/skills/run）。
+      const finalSystem = knowledge ? `${system}\n\n${knowledge}` : system
       const res = await generateText({
         model: anthropic('claude-sonnet-4-6'),
-        system,
+        system: finalSystem,
         messages: [{ role: 'user', content: prompt }],
         maxOutputTokens,
       })
