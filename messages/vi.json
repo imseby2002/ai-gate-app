@@ -3427,6 +3427,7 @@
       "tabTickets": "Phiếu",
       "tabInbox": "Hộp thư",
       "tabForms": "Biểu mẫu",
+      "tabCorrections": "Sửa lỗi AI",
       "platformsIntro": "Cài API Key của từng nền tảng, rồi sao chép Webhook URL vào backend nền tảng tương ứng.",
       "connected": "Đã kết nối",
       "notSet": "Chưa cài",

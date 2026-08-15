@@ -474,6 +474,7 @@ interface CsKnowledge {
   discountGifts: string
   pricingConfigs: PricingConfig[]
   csForms: CsChatForm[]
+  corrections: string
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -560,6 +561,21 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   const csForms = ((formRows ?? []) as (CsChatForm & { available_weekdays: number[] })[])
     .filter(f => isFormAvailableToday(f.available_weekdays))
 
+  // 員工在工作台回報的「AI 回答修正」——授權協作者不用每次都經過 owner 本人處理，
+  // 貼上錯誤回覆＋正確做法後立即生效，owner 事後可在工作台一鍵撤銷（見 cs_ai_corrections）
+  const { data: correctionRows } = await supabase
+    .from('cs_ai_corrections')
+    .select('situation, wrong_reply, correct_guidance')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .limit(30)
+  const corrections = (correctionRows ?? []).length
+    ? (correctionRows ?? []).map((c, i) =>
+        `${i + 1}. 情境：${c.situation}\n   之前錯誤回覆：${c.wrong_reply}\n   正確做法：${c.correct_guidance}`,
+      ).join('\n')
+    : ''
+
   // Industry (for ticket/message records) — taken from the most recent data source
   const { data: industryRow } = await supabase
     .from('cs_data_sources')
@@ -605,6 +621,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     discountGifts,
     pricingConfigs,
     csForms,
+    corrections,
   }
 }
 
@@ -1528,7 +1545,7 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】如果下方系統資料是要求你「先跟客人核對姓名」的問句（開頭是「請問訂房登記的姓名是不是」），一律要先完整照抄那句話問客人，絕對不能跳過這一步直接把姓名、密碼、房號當成已核對過的資料講給客人聽；只有客人在你問完之後的下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪真的提供密碼——這一輪你自己絕對不能提前把密碼講出來
 - 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
 - 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
-- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
+- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
