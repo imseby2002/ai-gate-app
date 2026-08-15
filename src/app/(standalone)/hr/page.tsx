@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { CsvImportPanel, type CsvColumn, type ImportResult } from '@/components/hr/CsvImportPanel'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'employees' | 'payroll' | 'leave'
+type Tab = 'employees' | 'payroll' | 'attendance' | 'leave'
 
 interface Employee {
   id: string
@@ -871,6 +871,134 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
 }
 
 // ─── Main Page ────────────────────────────────────────────────────
+// ─── Attendance Tab（考勤時數）────────────────────────────────────
+interface Attendance {
+  id: string; store: string; year: number; month: number
+  attendance_no: string; name: string; att_type: string
+  machine_hours: number; work_days: number; adjust_hours: number; adjust_note: string
+}
+const hrs = (n: number) => Math.round((Number(n) || 0) * 100) / 100
+const attTypeLabel = (t: string) => (t.includes('计时') || t.includes('計時') ? '時薪' : t.includes('正常') ? '正職' : (t || '—'))
+
+function AttendanceTab() {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [list, setList] = useState<Attendance[]>([])
+  const [loading, setLoading] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [err, setErr] = useState('')
+  const [msg, setMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch(`/api/hr/attendance?year=${year}&month=${month}`)
+    const d = await res.json()
+    setList((d.attendance ?? []) as Attendance[])
+    setLoading(false)
+  }, [year, month])
+  useEffect(() => { load() }, [load])
+
+  async function onFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (fileRef.current) fileRef.current.value = ''
+    if (!file) return
+    setErr(''); setMsg(''); setImporting(true)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await fetch('/api/hr/attendance/import', { method: 'POST', body: fd })
+      const d = await res.json()
+      if (!res.ok) { setErr(d.error ?? '匯入失敗'); return }
+      setYear(d.year); setMonth(d.month)
+      setMsg(`已匯入 ${d.year}年${d.month}月 ${d.imported} 人（門市：${(d.stores ?? []).join('、') || '—'}）`)
+      await load()
+    } catch (e2) { setErr('匯入失敗：' + String(e2)) } finally { setImporting(false) }
+  }
+
+  async function saveAdjust(row: Attendance, adjust_hours: number, adjust_note: string) {
+    setList(prev => prev.map(x => x.id === row.id ? { ...x, adjust_hours, adjust_note } : x))
+    await fetch('/api/hr/attendance', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: row.id, adjust_hours, adjust_note }),
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <InputEl value={year} onChange={v => setYear(parseInt(v) || year)} type="number" />
+        <div className="flex gap-0.5">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+            <button key={m} onClick={() => setMonth(m)}
+              className={`h-8 w-8 rounded-lg text-xs font-medium transition-colors ${month === m ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}>{m}</button>
+          ))}
+        </div>
+        <Button size="sm" className="ml-auto gap-1" disabled={importing} onClick={() => fileRef.current?.click()}>
+          {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}上傳考勤 .xls
+        </Button>
+        <input ref={fileRef} type="file" accept=".xls" className="hidden" onChange={onFile} />
+      </div>
+
+      <p className="text-xs text-gray-500">
+        選擇該門市當月的考勤機匯出檔（.xls），系統會彙總每人月時數（＝每日實際工作小時數相加）。重複上傳會更新機器時數，你的手動補登會保留。
+      </p>
+      {msg && <p className="text-sm text-green-600">{msg}</p>}
+      {err && <p className="text-sm text-red-500">{err}</p>}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
+      ) : list.length === 0 ? (
+        <div className="py-12 text-center text-gray-400">
+          <Clock className="mx-auto mb-2 h-10 w-10 opacity-30" />
+          <p className="text-sm">{year}年{month}月尚無考勤資料，請上傳考勤機 .xls</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50 text-xs text-gray-500 dark:bg-gray-900/40">
+                <th className="px-3 py-2 text-left">門市</th>
+                <th className="px-3 py-2 text-left">姓名</th>
+                <th className="px-3 py-2 text-left">工号</th>
+                <th className="px-3 py-2 text-left">類型</th>
+                <th className="px-3 py-2 text-right">天數</th>
+                <th className="px-3 py-2 text-right">機器時數</th>
+                <th className="px-3 py-2 text-right">補登</th>
+                <th className="px-3 py-2 text-right">合計</th>
+                <th className="px-3 py-2 text-left">補登備註</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map(a => (
+                <tr key={a.id} className="border-b last:border-0">
+                  <td className="px-3 py-2 text-gray-500">{a.store || '—'}</td>
+                  <td className="px-3 py-2 font-medium">{a.name || '—'}</td>
+                  <td className="px-3 py-2 text-gray-500">{a.attendance_no}</td>
+                  <td className="px-3 py-2"><Badge variant="secondary">{attTypeLabel(a.att_type)}</Badge></td>
+                  <td className="px-3 py-2 text-right tabular-nums">{a.work_days}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{hrs(a.machine_hours)}</td>
+                  <td className="px-3 py-2 text-right">
+                    <input type="number" step="0.25" defaultValue={a.adjust_hours}
+                      onBlur={e => { const v = Number(e.target.value) || 0; if (v !== a.adjust_hours) saveAdjust(a, v, a.adjust_note) }}
+                      className="h-7 w-20 rounded border px-2 text-right text-sm outline-none" />
+                  </td>
+                  <td className="px-3 py-2 text-right font-bold tabular-nums">{hrs(a.machine_hours + a.adjust_hours)}</td>
+                  <td className="px-3 py-2">
+                    <input type="text" defaultValue={a.adjust_note} placeholder="忘打卡簽單…"
+                      onBlur={e => { if (e.target.value !== a.adjust_note) saveAdjust(a, a.adjust_hours, e.target.value) }}
+                      className="h-7 w-full min-w-[8rem] rounded border px-2 text-sm outline-none" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function HRPage() {
   const [tab, setTab] = useState<Tab>('employees')
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -905,6 +1033,7 @@ export default function HRPage() {
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
     { id: 'employees', label: '員工管理', icon: <Users className="h-4 w-4" /> },
     { id: 'payroll',   label: '薪資管理', icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'attendance', label: '考勤時數', icon: <Clock className="h-4 w-4" /> },
     { id: 'leave',     label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
   ]
 
@@ -963,6 +1092,7 @@ export default function HRPage() {
       <Card className="p-5">
         {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
+        {tab === 'attendance' && <AttendanceTab />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
     </div>
