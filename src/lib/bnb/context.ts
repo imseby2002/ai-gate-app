@@ -16,6 +16,8 @@ export interface BnbContext {
   canWrite: boolean
   /** owner / admin 可改設定（房源、定價規則、通路、模板…）；manager 不可 */
   canSettings: boolean
+  /** owner 一律可以；協作者需要 owner 額外勾選 can_correct_ai 才能直接送出「AI 回答修正」 */
+  canCorrectAi: boolean
 }
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
@@ -40,12 +42,13 @@ export async function getBnbContext(
   const requested = cookieStore.get(ACTIVE_BNB_COOKIE)?.value
 
   const selfCtx = (): BnbContext => ({
-    user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true,
+    user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true, canCorrectAi: true,
   })
-  const memberCtx = (ownerId: string, role: BnbRole): BnbContext => ({
+  const memberCtx = (ownerId: string, role: BnbRole, canCorrectAi = false): BnbContext => ({
     user, ownerId, role, isOwner: false,
     canWrite: role === 'admin' || role === 'manager',
     canSettings: role === 'admin',
+    canCorrectAi: (role === 'admin' || role === 'manager') && canCorrectAi,
   })
 
   // 使用者主動選了自己的民宿
@@ -57,7 +60,7 @@ export async function getBnbContext(
   if (!requested) {
     const { data: memberships } = await sb
       .from('bnb_members')
-      .select('owner_id, role')
+      .select('owner_id, role, can_correct_ai')
       .eq('member_id', user.id)
       .eq('status', 'active')
       .eq('scope', scope)
@@ -68,7 +71,7 @@ export async function getBnbContext(
         .from('properties')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
-      if (!count) return memberCtx(memberships[0].owner_id, memberships[0].role as BnbRole)
+      if (!count) return memberCtx(memberships[0].owner_id, memberships[0].role as BnbRole, memberships[0].can_correct_ai)
     }
     return selfCtx()
   }
@@ -77,13 +80,13 @@ export async function getBnbContext(
   // 代客戶設定 CS。以 owner 等級權限操作（可寫、可改設定）。
   const { data: me } = await sb.from('profiles').select('user_type').eq('id', user.id).maybeSingle()
   if (me?.user_type === 'admin') {
-    return { user, ownerId: requested, role: 'admin', isOwner: false, canWrite: true, canSettings: true }
+    return { user, ownerId: requested, role: 'admin', isOwner: false, canWrite: true, canSettings: true, canCorrectAi: true }
   }
 
   // requested 指向他人 → 依模組（scope）驗證協作授權：booking 助理未必有 cs 權限，反之亦然
   const { data: member } = await sb
     .from('bnb_members')
-    .select('role, status')
+    .select('role, status, can_correct_ai')
     .eq('owner_id', requested)
     .eq('member_id', user.id)
     .eq('status', 'active')
@@ -91,5 +94,5 @@ export async function getBnbContext(
     .maybeSingle()
 
   if (!member) return selfCtx() // 無效的切換目標 → 退回自己的民宿
-  return memberCtx(requested, member.role as BnbRole)
+  return memberCtx(requested, member.role as BnbRole, member.can_correct_ai)
 }

@@ -54,13 +54,13 @@ export async function GET() {
   const byEmail: Record<string, {
     email: string
     member: { email: string | null; full_name: string | null } | null
-    scopes: Partial<Record<Scope, { id: string; role: Role; status: string }>>
+    scopes: Partial<Record<Scope, { id: string; role: Role; status: string; canCorrectAi: boolean }>>
   }> = {}
   for (const m of managing ?? []) {
     const key = m.invited_email
     if (!byEmail[key]) byEmail[key] = { email: key, member: m.member_id ? profiles[m.member_id] ?? null : null, scopes: {} }
     if (m.member_id && !byEmail[key].member) byEmail[key].member = profiles[m.member_id] ?? null
-    byEmail[key].scopes[m.scope as Scope] = { id: m.id, role: m.role as Role, status: m.status }
+    byEmail[key].scopes[m.scope as Scope] = { id: m.id, role: m.role as Role, status: m.status, canCorrectAi: !!m.can_correct_ai }
   }
 
   // 我參與協作的對象，依 owner 聚合
@@ -156,17 +156,25 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-// 修改單一模組角色
+// 修改單一模組角色，或（cs 模組）是否授權可直接修正 AI 回答
 export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, role } = await req.json()
-  if (!id || !ROLES.includes(role)) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
+  const { id, role, canCorrectAi } = await req.json()
+  if (!id) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
+
+  const patch: Record<string, unknown> = {}
+  if (role !== undefined) {
+    if (!ROLES.includes(role)) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
+    patch.role = role
+  }
+  if (canCorrectAi !== undefined) patch.can_correct_ai = !!canCorrectAi
+  if (Object.keys(patch).length === 0) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
 
   const { error } = await supabase
-    .from('bnb_members').update({ role }).eq('id', id).eq('owner_id', user.id)
+    .from('bnb_members').update(patch).eq('id', id).eq('owner_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

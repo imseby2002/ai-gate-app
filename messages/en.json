@@ -3520,6 +3520,7 @@
       "tabTickets": "Tickets",
       "tabInbox": "Inbox",
       "tabForms": "Forms",
+      "tabCorrections": "AI Corrections",
       "platformsIntro": "Set each platform's API key, then copy the Webhook URL into the platform's backend.",
       "connected": "Connected",
       "notSet": "Not set",

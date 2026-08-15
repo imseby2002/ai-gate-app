@@ -6,12 +6,13 @@ import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
-  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send,
+  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
 import { CsSupportPanel } from './CsSupportPanel'
 import { CsFormsPanel } from './CsFormsPanel'
+import { CsCorrectionsPanel } from './CsCorrectionsPanel'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
 
 // ─── 與 marketing-auto 共用的小型型別／helper（原本定義在 marketing-auto/page.tsx，
@@ -279,7 +280,7 @@ const CS_PLATFORMS = [
   },
 ]
 
-type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'pricing' | 'forms' | 'test' | 'logs' | 'tickets' | 'inbox'
+type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'pricing' | 'forms' | 'corrections' | 'test' | 'logs' | 'tickets' | 'inbox'
 
 interface CsDataSource {
   id: string
@@ -1403,17 +1404,17 @@ function Unit12CustomerService({
       </div>
       <div className="flex flex-col sm:flex-row gap-5 items-start">
         <nav className="flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap sm:w-48 sm:shrink-0">
-          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'forms', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
+          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'forms', 'corrections', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
             const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
             const labels: Record<Cs12Tab, string> = {
               platforms: t('u12.tabPlatforms'), 'ai-settings': t('u12.tabAiSettings'), 'dialogue-files': t('u12.tabKnowledge'),
-              'data-sources': t('u12.tabDataSources'), pricing: t('u12.tabPricing'), forms: t('u12.tabForms'), test: t('u12.tabTest'), logs: t('u12.tabLogs'),
+              'data-sources': t('u12.tabDataSources'), pricing: t('u12.tabPricing'), forms: t('u12.tabForms'), corrections: t('u12.tabCorrections'), test: t('u12.tabTest'), logs: t('u12.tabLogs'),
               tickets: `${t('u12.tabTickets')}${openCount > 0 ? ` (${openCount})` : ''}`,
               inbox: t('u12.tabInbox'),
             }
             const icons: Record<Cs12Tab, LucideIcon> = {
               platforms: MessageSquare, 'ai-settings': Sparkles, 'dialogue-files': BookOpen,
-              'data-sources': Database, pricing: Calculator, forms: FileText, test: FlaskConical, logs: ClipboardList,
+              'data-sources': Database, pricing: Calculator, forms: FileText, corrections: ShieldCheck, test: FlaskConical, logs: ClipboardList,
               tickets: Ticket, inbox: Inbox,
             }
             const Icon = icons[tb]
@@ -2691,6 +2692,11 @@ function Unit12CustomerService({
       {/* ── Tab: Forms ──────────────────────────────────────────────────────── */}
       {tab === 'forms' && (
         <CsFormsPanel industry={industry ?? 'homestay'} appUrl={appUrl} />
+      )}
+
+      {/* ── Tab: AI 回答修正 ────────────────────────────────────────────────── */}
+      {tab === 'corrections' && (
+        <CsCorrectionsPanel />
       )}
 
       {/* ── Tab: Test ───────────────────────────────────────────────────────── */}

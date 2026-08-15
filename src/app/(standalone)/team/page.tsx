@@ -13,7 +13,7 @@ const ROLE_LABEL: Record<Role, string> = {
 }
 const ROLE_SHORT: Record<Role, string> = { admin: '管理員', manager: '一般管理', viewer: '唯讀' }
 
-type ScopeInfo = { id: string; role: Role; status: string }
+type ScopeInfo = { id: string; role: Role; status: string; canCorrectAi: boolean }
 type Member = {
   email: string
   member: { email: string | null; full_name: string | null } | null
@@ -98,6 +98,14 @@ export default function TeamPage() {
     await fetch('/api/collab/members', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, role }),
+    })
+    await load()
+  }
+
+  async function changeCanCorrectAi(id: string, canCorrectAi: boolean) {
+    await fetch('/api/collab/members', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, canCorrectAi }),
     })
     await load()
   }
@@ -256,6 +264,13 @@ export default function TeamPage() {
                               <option key={r} value={r}>{ROLE_SHORT[r]}</option>
                             ))}
                           </select>
+                          {s === 'cs' && info.role !== 'viewer' && (
+                            <label className="flex items-center gap-1 text-xs text-gray-500 cursor-pointer" title="授權後，這位夥伴可以在客服工作台直接提交「AI 回答修正」，立即生效">
+                              <input type="checkbox" checked={info.canCorrectAi}
+                                onChange={e => changeCanCorrectAi(info.id, e.target.checked)} />
+                              可修正 AI
+                            </label>
+                          )}
                           <button onClick={() => removeScope(info.id)}
                             className="text-gray-300 hover:text-red-500" title={`移除${MODULE_LABEL[s]}權限`}>
                             <Trash2 className="h-3.5 w-3.5" />
