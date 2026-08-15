@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,8 +26,28 @@ interface Employee {
   id_number: string
   notes: string
   status: string
+  staff_category: string
+  insurance_required: boolean
+  insurance_status: string
+  insurance_number: string
+  insurance_salary: number
   created_at: string
 }
+
+interface InsSettings { insurance_mode: string; insurance_threshold: number; insurance_currency: string }
+const DEFAULT_INS_SETTINGS: InsSettings = { insurance_mode: 'threshold', insurance_threshold: 5000000, insurance_currency: 'VND' }
+
+// 建議是否需投保：正職即刻投保；工讀依公司政策（全員 or 月薪超過門檻）
+function suggestInsurance(staffCategory: string, monthlySalary: number, s: InsSettings): boolean {
+  if (staffCategory === 'fulltime') return true
+  if (s.insurance_mode === 'all') return true
+  return monthlySalary > s.insurance_threshold
+}
+
+const STAFF_CATEGORIES = ['fulltime', 'hourly']
+const INS_STATUSES = ['none', 'pending', 'enrolled']
+const STAFF_LABEL: Record<string, string> = { fulltime: '正職', hourly: '工讀' }
+const INS_STATUS_LABEL: Record<string, string> = { none: '不需投保', pending: '待投保', enrolled: '已投保' }
 
 interface Payroll {
   id: string
@@ -70,6 +90,8 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   name: '', email: '', phone: '', department: '', position: '',
   employment_type: 'full-time', hire_date: null, base_salary: 0,
   bank_account: '', id_number: '', notes: '', status: 'active',
+  staff_category: 'fulltime', insurance_required: false, insurance_status: 'none',
+  insurance_number: '', insurance_salary: 0,
 }
 
 const LABELS: Record<string, string> = {
@@ -96,6 +118,7 @@ const EMP_COLUMNS: CsvColumn[] = [
   { key: 'phone', header: '電話', example: '0912345678' },
   { key: 'department', header: '部門', example: '門市' },
   { key: 'position', header: '職稱', example: '店員' },
+  { key: 'staff_category', header: '類別', example: '正職', map: v => (v.trim() === '工讀' || v.trim() === 'hourly' ? 'hourly' : 'fulltime') },
   { key: 'employment_type', header: '聘用類型', example: '全職', map: v => EMP_TYPE_REV[v.trim()] ?? (v.trim() || 'full-time') },
   { key: 'hire_date', header: '到職日', example: '2025-01-15', map: v => v.trim() || null },
   { key: 'base_salary', header: '底薪', example: '36000', map: toNum },
@@ -164,14 +187,16 @@ function SelectEl({ value, onChange, options, disabled }: {
 }
 
 // ─── Employee Form ────────────────────────────────────────────────
-function EmployeeForm({ initial, onSave, onCancel, saving }: {
+function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
   initial: Omit<Employee, 'id' | 'created_at'>
   onSave: (d: Omit<Employee, 'id' | 'created_at'>) => void
   onCancel: () => void
   saving: boolean
+  settings: InsSettings
 }) {
   const [d, setD] = useState(initial)
-  const set = (k: keyof typeof d, v: string | number | null) => setD(prev => ({ ...prev, [k]: v }))
+  const set = (k: keyof typeof d, v: string | number | boolean | null) => setD(prev => ({ ...prev, [k]: v }))
+  const suggested = suggestInsurance(d.staff_category, Number(d.base_salary) || 0, settings)
 
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
@@ -179,6 +204,10 @@ function EmployeeForm({ initial, onSave, onCancel, saving }: {
         <Field label="姓名 *"><InputEl value={d.name} onChange={v => set('name', v)} placeholder="王小明" disabled={saving} /></Field>
         <Field label="部門"><InputEl value={d.department} onChange={v => set('department', v)} placeholder="業務部" disabled={saving} /></Field>
         <Field label="職稱"><InputEl value={d.position} onChange={v => set('position', v)} placeholder="業務專員" disabled={saving} /></Field>
+        <Field label="類別 *">
+          <SelectEl value={d.staff_category} onChange={v => set('staff_category', v)}
+            options={STAFF_CATEGORIES.map(t => ({ value: t, label: STAFF_LABEL[t] }))} disabled={saving} />
+        </Field>
         <Field label="僱用類型">
           <SelectEl value={d.employment_type} onChange={v => set('employment_type', v)}
             options={EMPLOYMENT_TYPES.map(t => ({ value: t, label: LABELS[t] ?? t }))} disabled={saving} />
@@ -194,6 +223,34 @@ function EmployeeForm({ initial, onSave, onCancel, saving }: {
             options={EMP_STATUS.map(s => ({ value: s, label: LABELS[s] ?? s }))} disabled={saving} />
         </Field>
       </div>
+
+      {/* 保險 */}
+      <div className="space-y-2 rounded-lg border bg-white p-3 dark:bg-gray-900/40">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-sm font-medium">
+            <input type="checkbox" checked={d.insurance_required} onChange={e => set('insurance_required', e.target.checked)} disabled={saving} className="h-4 w-4" />
+            需投保
+          </label>
+          <span className="text-xs text-gray-500">
+            （建議：{suggested ? '需要' : '不需要'}{d.staff_category === 'hourly' && settings.insurance_mode === 'threshold' ? `　工讀月薪 > ${fmt(settings.insurance_threshold)} ${settings.insurance_currency} 才需投保` : d.staff_category === 'fulltime' ? '　正職即刻投保' : ''}）
+          </span>
+          {d.insurance_required !== suggested && (
+            <Button variant="outline" size="sm" className="h-6 px-2 text-xs" disabled={saving}
+              onClick={() => set('insurance_required', suggested)}>套用建議</Button>
+          )}
+        </div>
+        {d.insurance_required && (
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="保險狀態">
+              <SelectEl value={d.insurance_status} onChange={v => set('insurance_status', v)}
+                options={INS_STATUSES.map(s => ({ value: s, label: INS_STATUS_LABEL[s] }))} disabled={saving} />
+            </Field>
+            <Field label="保險編號"><InputEl value={d.insurance_number} onChange={v => set('insurance_number', v)} placeholder="社保號" disabled={saving} /></Field>
+            <Field label="投保薪資"><InputEl value={d.insurance_salary} onChange={v => set('insurance_salary', Number(v) || 0)} type="number" placeholder="0" disabled={saving} /></Field>
+          </div>
+        )}
+      </div>
+
       <Field label="備註">
         <textarea value={d.notes} onChange={e => set('notes', e.target.value)} disabled={saving} rows={2}
           placeholder="其他說明..." className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
@@ -310,8 +367,63 @@ function LeaveForm({ employees, initial, onSave, onCancel, saving }: {
   )
 }
 
+// ─── 保險設定面板 ─────────────────────────────────────────────────
+function InsuranceSettingsPanel({ settings, onSaved, onClose }: {
+  settings: InsSettings
+  onSaved: (s: InsSettings) => void
+  onClose: () => void
+}) {
+  const [d, setD] = useState(settings)
+  const [saving, setSaving] = useState(false)
+  async function save() {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/hr/settings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d),
+      })
+      const j = await res.json()
+      if (res.ok && j.settings) onSaved({
+        insurance_mode: j.settings.insurance_mode,
+        insurance_threshold: Number(j.settings.insurance_threshold) || 0,
+        insurance_currency: j.settings.insurance_currency ?? 'VND',
+      })
+    } finally { setSaving(false) }
+  }
+  return (
+    <div className="space-y-3 rounded-xl border bg-gray-50 p-4 dark:bg-gray-900/40">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-sm font-semibold"><Shield className="h-4 w-4" />保險政策</p>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+      </div>
+      <p className="text-xs text-gray-500">正職一律即刻投保；此設定決定「工讀」何時需投保。</p>
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="工讀投保條件">
+          <SelectEl value={d.insurance_mode} onChange={v => setD(p => ({ ...p, insurance_mode: v }))}
+            options={[{ value: 'threshold', label: '超過門檻才投保' }, { value: 'all', label: '全員投保' }]} disabled={saving} />
+        </Field>
+        <Field label="門檻金額">
+          <InputEl value={d.insurance_threshold} onChange={v => setD(p => ({ ...p, insurance_threshold: Number(v) || 0 }))}
+            type="number" disabled={saving || d.insurance_mode === 'all'} />
+        </Field>
+        <Field label="幣別">
+          <InputEl value={d.insurance_currency} onChange={v => setD(p => ({ ...p, insurance_currency: v }))} placeholder="VND" disabled={saving} />
+        </Field>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>取消</Button>
+        <Button size="sm" onClick={save} disabled={saving}>
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}儲存
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Employees Tab ────────────────────────────────────────────────
-function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]; loading: boolean; onRefresh: () => void }) {
+function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChange }: {
+  employees: Employee[]; loading: boolean; onRefresh: () => void
+  settings: InsSettings; onSettingsChange: (s: InsSettings) => void
+}) {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Employee | null>(null)
   const [saving, setSaving] = useState(false)
@@ -319,6 +431,7 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
   const [err, setErr] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('active')
   const [showImport, setShowImport] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   const save = async (data: Omit<Employee, 'id' | 'created_at'>) => {
     setSaving(true); setErr('')
@@ -349,6 +462,9 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
           </Button>
         ))}
         <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowSettings(v => !v)}>
+            <Shield className="h-4 w-4" />保險設定
+          </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
             <Upload className="h-4 w-4" />批次上傳
           </Button>
@@ -357,6 +473,10 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
           </Button>
         </div>
       </div>
+
+      {showSettings && (
+        <InsuranceSettingsPanel settings={settings} onSaved={s => { onSettingsChange(s); setShowSettings(false) }} onClose={() => setShowSettings(false)} />
+      )}
 
       {showImport && (
         <CsvImportPanel
@@ -370,7 +490,7 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
       )}
 
       {showForm && !editing && (
-        <EmployeeForm initial={{ ...EMPTY_EMP }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />
+        <EmployeeForm initial={{ ...EMPTY_EMP }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} settings={settings} />
       )}
       {err && <p className="text-sm text-red-500">{err}</p>}
 
@@ -395,7 +515,10 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
                     {emp.department && <span className="text-xs text-gray-400">{emp.department}</span>}
                     {emp.position && <span className="text-xs text-gray-400">· {emp.position}</span>}
                     <StatusBadge value={emp.status} kind="emp" />
-                    <Badge variant="secondary">{LABELS[emp.employment_type] ?? emp.employment_type}</Badge>
+                    <Badge variant={emp.staff_category === 'hourly' ? 'secondary' : 'default'}>{STAFF_LABEL[emp.staff_category] ?? emp.staff_category}</Badge>
+                    {emp.insurance_required
+                      ? <Badge variant={emp.insurance_status === 'enrolled' ? 'success' : 'destructive'} className="gap-1"><Shield className="h-3 w-3" />{INS_STATUS_LABEL[emp.insurance_status] ?? '待投保'}</Badge>
+                      : <Badge variant="secondary" className="text-gray-400">免保</Badge>}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     {emp.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{emp.email}</span>}
@@ -415,7 +538,7 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
 
               {editing?.id === emp.id && (
                 <div className="px-4 pb-4">
-                  <EmployeeForm initial={{ ...emp }} onSave={save} onCancel={() => setEditing(null)} saving={saving} />
+                  <EmployeeForm initial={{ ...emp }} onSave={save} onCancel={() => setEditing(null)} saving={saving} settings={settings} />
                 </div>
               )}
 
@@ -427,6 +550,8 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
                   <span>{emp.bank_account || '—'}</span>
                   <span className="text-gray-400">身分證</span>
                   <span>{emp.id_number || '—'}</span>
+                  <span className="text-gray-400 flex items-center gap-1"><Shield className="h-3 w-3" />保險</span>
+                  <span>{emp.insurance_required ? `${INS_STATUS_LABEL[emp.insurance_status] ?? '待投保'}${emp.insurance_number ? `（${emp.insurance_number}）` : ''}${emp.insurance_salary ? `　投保薪資 ${fmt(emp.insurance_salary)}` : ''}` : '免投保'}</span>
                   {emp.notes && <><span className="text-gray-400">備註</span><span className="whitespace-pre-wrap">{emp.notes}</span></>}
                 </div>
               )}
@@ -751,6 +876,19 @@ export default function HRPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [empLoading, setEmpLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+  const [settings, setSettings] = useState<InsSettings>(DEFAULT_INS_SETTINGS)
+
+  const loadSettings = useCallback(async () => {
+    const res = await fetch('/api/hr/settings')
+    if (!res.ok) return
+    const d = await res.json()
+    if (d.settings) setSettings({
+      insurance_mode: d.settings.insurance_mode ?? 'threshold',
+      insurance_threshold: Number(d.settings.insurance_threshold) || 0,
+      insurance_currency: d.settings.insurance_currency ?? 'VND',
+    })
+  }, [])
+  useEffect(() => { loadSettings() }, [loadSettings])
 
   const loadEmployees = useCallback(async () => {
     setEmpLoading(true)
@@ -823,7 +961,7 @@ export default function HRPage() {
 
       {/* Tab Content */}
       <Card className="p-5">
-        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
+        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
