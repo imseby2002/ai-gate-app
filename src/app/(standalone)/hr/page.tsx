@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { CsvImportPanel, type CsvColumn, type ImportResult } from '@/components/hr/CsvImportPanel'
 
 // ─── Types ───────────────────────────────────────────────────────
 type Tab = 'employees' | 'payroll' | 'leave'
@@ -83,6 +84,46 @@ const LABELS: Record<string, string> = {
 
 const fmt = (n: number) => n.toLocaleString('zh-TW')
 const fmtDate = (s?: string | null) => s ? new Date(s).toLocaleDateString('zh-TW') : '—'
+
+// ─── CSV 批次匯入欄位設定 ─────────────────────────────────────────
+const EMP_TYPE_REV: Record<string, string> = { '全職': 'full-time', '兼職': 'part-time', '約聘': 'contract', '實習': 'intern' }
+const EMP_STATUS_REV: Record<string, string> = { '在職': 'active', '停職': 'inactive', '離職': 'resigned' }
+const toNum = (v: string) => Number(String(v).replace(/[,\s]/g, '')) || 0
+
+const EMP_COLUMNS: CsvColumn[] = [
+  { key: 'name', header: '姓名', required: true, example: '王小明' },
+  { key: 'email', header: 'Email', example: 'ming@example.com' },
+  { key: 'phone', header: '電話', example: '0912345678' },
+  { key: 'department', header: '部門', example: '門市' },
+  { key: 'position', header: '職稱', example: '店員' },
+  { key: 'employment_type', header: '聘用類型', example: '全職', map: v => EMP_TYPE_REV[v.trim()] ?? (v.trim() || 'full-time') },
+  { key: 'hire_date', header: '到職日', example: '2025-01-15', map: v => v.trim() || null },
+  { key: 'base_salary', header: '底薪', example: '36000', map: toNum },
+  { key: 'bank_account', header: '銀行帳號', example: '' },
+  { key: 'id_number', header: '身分證字號', example: '' },
+  { key: 'status', header: '狀態', example: '在職', map: v => EMP_STATUS_REV[v.trim()] ?? (v.trim() || 'active') },
+  { key: 'notes', header: '備註', example: '' },
+]
+
+const PAY_COLUMNS: CsvColumn[] = [
+  { key: 'name', header: '員工姓名', required: true, example: '王小明' },
+  { key: 'year', header: '年', required: true, example: String(new Date().getFullYear()), map: v => parseInt(v) || 0 },
+  { key: 'month', header: '月', required: true, example: String(new Date().getMonth() + 1), map: v => parseInt(v) || 0 },
+  { key: 'base_salary', header: '底薪', example: '36000', map: toNum },
+  { key: 'allowances', header: '加給', example: '2000', map: toNum },
+  { key: 'deductions', header: '扣除', example: '1000', map: toNum },
+  { key: 'bonus', header: '獎金', example: '0', map: toNum },
+  { key: 'notes', header: '備註', example: '' },
+]
+
+async function postBulk(url: string, rows: Record<string, unknown>[]): Promise<ImportResult> {
+  const res = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
+  })
+  const d = await res.json().catch(() => ({}))
+  if (!res.ok) return { inserted: 0, errors: [{ line: 0, reason: d.error ?? `HTTP ${res.status}` }] }
+  return { inserted: d.inserted ?? 0, errors: d.errors ?? [] }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────
 function StatusBadge({ value, kind }: { value: string; kind: 'emp' | 'leave' | 'payroll' }) {
@@ -277,6 +318,7 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('active')
+  const [showImport, setShowImport] = useState(false)
 
   const save = async (data: Omit<Employee, 'id' | 'created_at'>) => {
     setSaving(true); setErr('')
@@ -306,10 +348,26 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
             {s === 'all' ? `全部 (${employees.length})` : `${LABELS[s] ?? s} (${employees.filter(e => e.status === s).length})`}
           </Button>
         ))}
-        <Button size="sm" className="ml-auto gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-          <Plus className="h-4 w-4" />新增員工
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
+            <Upload className="h-4 w-4" />批次上傳
+          </Button>
+          <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+            <Plus className="h-4 w-4" />新增員工
+          </Button>
+        </div>
       </div>
+
+      {showImport && (
+        <CsvImportPanel
+          title="批次匯入員工名單（CSV）"
+          columns={EMP_COLUMNS}
+          templateFilename="員工名單範本.csv"
+          submit={rows => postBulk('/api/hr/employees/bulk', rows)}
+          onClose={() => setShowImport(false)}
+          onDone={onRefresh}
+        />
+      )}
 
       {showForm && !editing && (
         <EmployeeForm initial={{ ...EMPTY_EMP }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />
@@ -381,7 +439,7 @@ function EmployeesTab({ employees, loading, onRefresh }: { employees: Employee[]
 }
 
 // ─── Payroll Tab ──────────────────────────────────────────────────
-function PayrollTab({ employees, loading: empLoading }: { employees: Employee[]; loading: boolean }) {
+function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: Employee[]; loading: boolean; onRefresh: () => void }) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -391,6 +449,7 @@ function PayrollTab({ employees, loading: empLoading }: { employees: Employee[];
   const [editing, setEditing] = useState<Payroll | null>(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -446,10 +505,26 @@ function PayrollTab({ employees, loading: empLoading }: { employees: Employee[];
             </button>
           ))}
         </div>
-        <Button size="sm" className="ml-auto gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-          <Plus className="h-4 w-4" />新增薪資單
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
+            <Upload className="h-4 w-4" />批次上傳
+          </Button>
+          <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+            <Plus className="h-4 w-4" />新增薪資單
+          </Button>
+        </div>
       </div>
+
+      {showImport && (
+        <CsvImportPanel
+          title="批次匯入薪資（CSV）"
+          columns={PAY_COLUMNS}
+          templateFilename="薪資資料範本.csv"
+          submit={rows => postBulk('/api/hr/payroll/bulk', rows)}
+          onClose={() => setShowImport(false)}
+          onDone={() => { load(); onRefresh() }}
+        />
+      )}
 
       {/* Summary */}
       {payroll.length > 0 && (
@@ -749,7 +824,7 @@ export default function HRPage() {
       {/* Tab Content */}
       <Card className="p-5">
         {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
-        {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} />}
+        {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
     </div>
