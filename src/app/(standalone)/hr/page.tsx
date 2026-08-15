@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -34,6 +34,7 @@ interface Employee {
   hourly_rate: number
   attendance_no: string
   store: string
+  bank_name: string
   created_at: string
 }
 
@@ -95,7 +96,7 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   bank_account: '', id_number: '', notes: '', status: 'active',
   staff_category: 'fulltime', insurance_required: false, insurance_status: 'none',
   insurance_number: '', insurance_salary: 0,
-  hourly_rate: 0, attendance_no: '', store: '',
+  hourly_rate: 0, attendance_no: '', store: '', bank_name: '',
 }
 
 const LABELS: Record<string, string> = {
@@ -130,6 +131,7 @@ const EMP_COLUMNS: CsvColumn[] = [
   { key: 'store', header: '門市', example: '' },
   { key: 'attendance_no', header: '考勤工号', example: '' },
   { key: 'bank_account', header: '銀行帳號', example: '' },
+  { key: 'bank_name', header: '收款銀行', example: '' },
   { key: 'id_number', header: '身分證字號', example: '' },
   { key: 'status', header: '狀態', example: '在職', map: v => EMP_STATUS_REV[v.trim()] ?? (v.trim() || 'active') },
   { key: 'notes', header: '備註', example: '' },
@@ -227,6 +229,7 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
         <Field label="門市"><InputEl value={d.store} onChange={v => set('store', v)} placeholder="對應考勤門市，如 giang vo" disabled={saving} /></Field>
         <Field label="考勤工号"><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder="考勤機編號" disabled={saving} /></Field>
         <Field label="銀行帳號"><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder="銀行代碼＋帳號" disabled={saving} /></Field>
+        <Field label="收款銀行"><InputEl value={d.bank_name} onChange={v => set('bank_name', v)} placeholder="留空＝預設 TPBank" disabled={saving} /></Field>
         <Field label="身分證字號"><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
         <Field label="在職狀態">
           <SelectEl value={d.status} onChange={v => set('status', v)}
@@ -603,6 +606,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [attHours, setAttHours] = useState<Record<string, number>>({}) // employee.id → 當月考勤總時數
 
   const load = useCallback(async () => {
@@ -654,6 +658,19 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
     load()
   }
 
+  async function exportBank() {
+    setErr(''); setExporting(true)
+    try {
+      const res = await fetch(`/api/hr/payroll/bank-export?year=${year}&month=${month}`)
+      if (!res.ok) { setErr('匯出失敗'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `TPBank_salary_${year}_${String(month).padStart(2, '0')}.xlsx`
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+    } catch { setErr('匯出失敗') } finally { setExporting(false) }
+  }
+
   const totalNet = payroll.reduce((s, p) => s + (p.net_pay ?? 0), 0)
   const paidCount = payroll.filter(p => p.status === 'paid').length
 
@@ -674,6 +691,9 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={exportBank} disabled={exporting || payroll.length === 0} title="依 TPBank 範本匯出本月撥款檔">
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}銀行撥款檔
+          </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
             <Upload className="h-4 w-4" />批次上傳
           </Button>
