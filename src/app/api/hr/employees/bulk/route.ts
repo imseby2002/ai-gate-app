@@ -13,6 +13,7 @@ async function getAdminUser() {
 
 const EMP_TYPES = new Set(['full-time', 'part-time', 'contract', 'intern'])
 const EMP_STATUS = new Set(['active', 'inactive', 'resigned'])
+const STAFF_CATS = new Set(['fulltime', 'hourly'])
 
 // 批次匯入員工。body: { rows: Record<string, unknown>[] }
 export async function POST(req: NextRequest) {
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     if (!name) { errors.push({ line, reason: '缺少姓名' }); return }
     const employment_type = EMP_TYPES.has(String(r.employment_type)) ? String(r.employment_type) : 'full-time'
     const status = EMP_STATUS.has(String(r.status)) ? String(r.status) : 'active'
+    const staff_category = STAFF_CATS.has(String(r.staff_category)) ? String(r.staff_category) : 'fulltime'
     toInsert.push({
       owner_id: user.id,
       name,
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
       id_number: String(r.id_number ?? ''),
       notes: String(r.notes ?? ''),
       status,
+      staff_category,
     })
   })
 

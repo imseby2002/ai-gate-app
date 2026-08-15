@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { name, email, phone, department, position, employment_type, hire_date, base_salary, bank_account, id_number, notes, status } = body
+  const {
+    name, email, phone, department, position, employment_type, hire_date, base_salary,
+    bank_account, id_number, notes, status,
+    staff_category, insurance_required, insurance_status, insurance_number, insurance_salary,
+  } = body
   if (!name?.trim()) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
   const { data, error } = await supabase
@@ -43,6 +47,11 @@ export async function POST(req: NextRequest) {
       base_salary: base_salary ?? 0,
       bank_account: bank_account ?? '', id_number: id_number ?? '',
       notes: notes ?? '', status: status ?? 'active',
+      staff_category: staff_category ?? 'fulltime',
+      insurance_required: insurance_required ?? false,
+      insurance_status: insurance_status ?? 'none',
+      insurance_number: insurance_number ?? '',
+      insurance_salary: insurance_salary ?? 0,
     })
     .select('*').single()
 
