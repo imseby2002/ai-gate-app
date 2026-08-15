@@ -50,6 +50,9 @@ export async function POST(req: NextRequest) {
       notes: String(r.notes ?? ''),
       status,
       staff_category,
+      hourly_rate: Number(r.hourly_rate) || 0,
+      attendance_no: String(r.attendance_no ?? ''),
+      store: String(r.store ?? ''),
     })
   })
 

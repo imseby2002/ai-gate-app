@@ -31,6 +31,9 @@ interface Employee {
   insurance_status: string
   insurance_number: string
   insurance_salary: number
+  hourly_rate: number
+  attendance_no: string
+  store: string
   created_at: string
 }
 
@@ -92,6 +95,7 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   bank_account: '', id_number: '', notes: '', status: 'active',
   staff_category: 'fulltime', insurance_required: false, insurance_status: 'none',
   insurance_number: '', insurance_salary: 0,
+  hourly_rate: 0, attendance_no: '', store: '',
 }
 
 const LABELS: Record<string, string> = {
@@ -122,6 +126,9 @@ const EMP_COLUMNS: CsvColumn[] = [
   { key: 'employment_type', header: '聘用類型', example: '全職', map: v => EMP_TYPE_REV[v.trim()] ?? (v.trim() || 'full-time') },
   { key: 'hire_date', header: '到職日', example: '2025-01-15', map: v => v.trim() || null },
   { key: 'base_salary', header: '底薪', example: '36000', map: toNum },
+  { key: 'hourly_rate', header: '時薪', example: '0', map: toNum },
+  { key: 'store', header: '門市', example: '' },
+  { key: 'attendance_no', header: '考勤工号', example: '' },
   { key: 'bank_account', header: '銀行帳號', example: '' },
   { key: 'id_number', header: '身分證字號', example: '' },
   { key: 'status', header: '狀態', example: '在職', map: v => EMP_STATUS_REV[v.trim()] ?? (v.trim() || 'active') },
@@ -215,7 +222,10 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
         <Field label="電子郵件"><InputEl value={d.email} onChange={v => set('email', v)} type="email" placeholder="email@company.com" disabled={saving} /></Field>
         <Field label="電話"><InputEl value={d.phone} onChange={v => set('phone', v)} placeholder="0912345678" disabled={saving} /></Field>
         <Field label="到職日期"><InputEl value={d.hire_date ?? ''} onChange={v => set('hire_date', v || null)} type="date" disabled={saving} /></Field>
-        <Field label="本薪（元）"><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
+        <Field label="本薪（月）"><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
+        <Field label={d.staff_category === 'hourly' ? '時薪 ★' : '時薪'}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder="工讀計時用" disabled={saving} /></Field>
+        <Field label="門市"><InputEl value={d.store} onChange={v => set('store', v)} placeholder="對應考勤門市，如 giang vo" disabled={saving} /></Field>
+        <Field label="考勤工号"><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder="考勤機編號" disabled={saving} /></Field>
         <Field label="銀行帳號"><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder="銀行代碼＋帳號" disabled={saving} /></Field>
         <Field label="身分證字號"><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
         <Field label="在職狀態">
@@ -267,16 +277,21 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
 }
 
 // ─── Payroll Form ─────────────────────────────────────────────────
-function PayrollForm({ employees, initial, onSave, onCancel, saving }: {
+function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours }: {
   employees: Employee[]
   initial: { employee_id: string; year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; notes: string }
   onSave: (d: typeof initial) => void
   onCancel: () => void
   saving: boolean
+  attHours: Record<string, number>
 }) {
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
   const net = d.base_salary + d.allowances + d.bonus - d.deductions
+  const emp = employees.find(e => e.id === d.employee_id)
+  const hours = Math.round((attHours[d.employee_id] ?? 0) * 100) / 100
+  const rate = emp?.hourly_rate ?? 0
+  const byHours = Math.round(hours * rate)
 
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
@@ -299,6 +314,19 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving }: {
         </Field>
         <Field label="本薪（元）"><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" disabled={saving} /></Field>
         <Field label="補貼（元）"><InputEl value={d.allowances} onChange={v => set('allowances', Number(v) || 0)} type="number" disabled={saving} /></Field>
+      </div>
+
+      {d.employee_id && (hours > 0 || rate > 0) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-white px-3 py-2 text-sm dark:bg-gray-900/40">
+          <Clock className="h-4 w-4 text-gray-400" />
+          <span className="text-gray-600">本月考勤時數 <b className="tabular-nums">{hours}</b>{rate > 0 && <> × 時薪 <b className="tabular-nums">{fmt(rate)}</b> = <b className="tabular-nums text-green-600">{fmt(byHours)}</b></>}</span>
+          {rate > 0
+            ? <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" disabled={saving} onClick={() => set('base_salary', byHours)}>帶入本薪</Button>
+            : <span className="text-xs text-amber-600">（此員工未設時薪，請到員工管理填「時薪」）</span>}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
         <Field label="扣款（勞健保等，元）"><InputEl value={d.deductions} onChange={v => set('deductions', Number(v) || 0)} type="number" disabled={saving} /></Field>
         <Field label="獎金（元）"><InputEl value={d.bonus} onChange={v => set('bonus', Number(v) || 0)} type="number" disabled={saving} /></Field>
       </div>
@@ -575,14 +603,29 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [attHours, setAttHours] = useState<Record<string, number>>({}) // employee.id → 當月考勤總時數
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch(`/api/hr/payroll?year=${year}&month=${month}`)
-    const d = await res.json()
-    setPayroll(d.payroll ?? [])
+    const [pRes, aRes] = await Promise.all([
+      fetch(`/api/hr/payroll?year=${year}&month=${month}`),
+      fetch(`/api/hr/attendance?year=${year}&month=${month}`),
+    ])
+    const pd = await pRes.json()
+    setPayroll(pd.payroll ?? [])
+    // 考勤時數 → 對應員工（優先 考勤工号＋門市，否則姓名）
+    const ad = await aRes.json()
+    const norm = (s: string) => (s ?? '').trim().toLowerCase()
+    const map: Record<string, number> = {}
+    for (const a of (ad.attendance ?? []) as { store: string; attendance_no: string; name: string; machine_hours: number; adjust_hours: number }[]) {
+      const total = (Number(a.machine_hours) || 0) + (Number(a.adjust_hours) || 0)
+      const emp = employees.find(e => e.attendance_no && e.attendance_no === a.attendance_no && (!e.store || norm(e.store) === norm(a.store)))
+        ?? employees.find(e => norm(e.name) === norm(a.name))
+      if (emp) map[emp.id] = (map[emp.id] ?? 0) + total
+    }
+    setAttHours(map)
     setLoading(false)
-  }, [year, month])
+  }, [year, month, employees])
 
   useEffect(() => { load() }, [load])
 
@@ -670,7 +713,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
       )}
 
       {showForm && !editing && (
-        <PayrollForm employees={employees} initial={{ ...PAYROLL_BLANK, year, month }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />
+        <PayrollForm employees={employees} initial={{ ...PAYROLL_BLANK, year, month }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} attHours={attHours} />
       )}
       {err && <p className="text-sm text-red-500">{err}</p>}
 
@@ -732,7 +775,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                     <tr key={`${p.id}-edit`}><td colSpan={8} className="pb-3 pt-1">
                       <PayrollForm employees={employees}
                         initial={{ employee_id: p.employee_id, year: p.year, month: p.month, base_salary: p.base_salary, allowances: p.allowances, deductions: p.deductions, bonus: p.bonus, notes: p.notes }}
-                        onSave={save} onCancel={() => setEditing(null)} saving={saving} />
+                        onSave={save} onCancel={() => setEditing(null)} saving={saving} attHours={attHours} />
                     </td></tr>
                   )}
                 </>
