@@ -29,6 +29,7 @@ interface CsFormSubmission {
   source: string
   platform: string | null
   created_at: string
+  updated_at: string | null
   notified_at: string | null
   notify_error: string | null
 }
@@ -364,11 +365,21 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                     <div key={s.id} className="text-xs bg-gray-50 rounded-lg p-2 space-y-0.5">
                       <div className="flex items-center gap-2 text-gray-400 flex-wrap">
                         <span>{new Date(s.created_at).toLocaleString('zh-TW')}</span>
+                        {s.updated_at && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-600">
+                            已更新：{new Date(s.updated_at).toLocaleString('zh-TW')}
+                          </span>
+                        )}
                         {s.room_ref && <span className="px-1.5 py-0.5 rounded bg-gray-100 border">房號/訂單：{s.room_ref}</span>}
                         <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{s.source === 'public_form' ? '掃碼填寫' : 'CS 對話'}</span>
                         {s.notify_error && (
                           <span className="px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-red-600" title={s.notify_error}>
                             通知失敗：{s.notify_error.slice(0, 40)}
+                          </span>
+                        )}
+                        {!s.notify_error && s.notified_at && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-600">
+                            已通知：{new Date(s.notified_at).toLocaleString('zh-TW')}
                           </span>
                         )}
                         {!s.notify_error && !s.notified_at && (

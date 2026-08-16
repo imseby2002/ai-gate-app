@@ -85,15 +85,22 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // notified_at 只在真的送出成功才標記——之前不管有沒有送成功都直接標記，
   // 客人透過公開表單訂了早餐，通知卻因為 LINE token 失效送不出去，沒有人知道。
+  //
+  // 這裡改成 await 而不是 void fire-and-forget：真實案例顯示「立即通知」設定下，
+  // 訊息其實沒有真的立即送達，而是隔了將近 20 分鐘才由「孤兒補送」cron 撿到——
+  // 這個 API route 一回應，serverless function 就可能被中止，還沒送出的 LINE push
+  // 跟著被砍斷。公開表單本來就是單純的送出→等結果，await 多花的時間可以接受，
+  // 換來「立即通知」名副其實。
   if (notifyTarget?.batchMode === 'immediate') {
-    void notifyFormSubmission(
+    const result = await notifyFormSubmission(
       form.user_id, notifyTarget, form.name,
       formatFormSubmission(form.name, fields, answers, roomRef, isUpdate),
       { fields, answers, roomRef },
-    ).then(result => supabase
+    )
+    await supabase
       .from('cs_form_submissions')
       .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
-      .eq('id', row.id))
+      .eq('id', row.id)
   }
 
   return NextResponse.json({ ok: true, updated: isUpdate })
