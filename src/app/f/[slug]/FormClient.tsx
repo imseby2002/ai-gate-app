@@ -92,8 +92,10 @@ export default function FormClient({
                 required={f.required}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
               >
-                <option value="" disabled>
-                  請選擇
+                {/* 選填欄位：這個選項要能一直選回去，客人才能把不小心選到的內容取消掉；
+                    必填欄位才鎖住不能選回空白，避免漏填 */}
+                <option value="" disabled={f.required}>
+                  {f.required ? '請選擇' : '不需要'}
                 </option>
                 {(f.options ?? []).map((opt) => (
                   <option key={opt} value={opt}>
@@ -118,6 +120,13 @@ export default function FormClient({
                     {opt}
                   </label>
                 ))}
+                {/* 選填欄位原生 radio 選了就沒辦法取消勾選，補一個清除按鈕讓客人能改回未選 */}
+                {!f.required && answers[f.id] && (
+                  <button type="button" onClick={() => setAnswer(f.id, '')}
+                    className="text-xs text-gray-400 hover:text-gray-600 underline">
+                    清除選擇
+                  </button>
+                )}
               </div>
             )}
 
