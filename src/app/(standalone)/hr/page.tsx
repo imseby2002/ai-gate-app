@@ -1097,8 +1097,11 @@ interface Candidate {
   interview_at: string | null
   stage: string
   hired_employee_id: string | null
+  apply_token: string | null
+  identity_locked: boolean
   created_at: string
 }
+interface CandDoc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
 
 const CAND_STAGES = ['new', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected'] as const
 const CAND_STAGE_LABEL: Record<string, string> = {
@@ -1120,6 +1123,9 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Candidate> | null>(null)
   const [busy, setBusy] = useState(false)
+  const [applyCode, setApplyCode] = useState('')
+  const [docsFor, setDocsFor] = useState<Candidate | null>(null)
+  const [docs, setDocs] = useState<CandDoc[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1129,6 +1135,28 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code) })
+  }, [])
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const applyUrl = applyCode ? `${origin}/apply/${applyCode}` : ''
+  const copy = (text: string, msg: string) => { navigator.clipboard?.writeText(text); alert(msg) }
+
+  const toggleLock = async (c: Candidate) => {
+    await fetch('/api/hr/candidates', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: c.id, identity_locked: !c.identity_locked }),
+    })
+    load()
+  }
+
+  const openDocs = async (c: Candidate) => {
+    setDocsFor(c); setDocs([])
+    const res = await fetch(`/api/hr/candidates/documents?candidate_id=${c.id}`)
+    if (res.ok) setDocs((await res.json()).documents ?? [])
+  }
 
   const save = async () => {
     if (!editing?.name?.trim()) return
@@ -1183,6 +1211,15 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
         </Button>
       </div>
 
+      {applyUrl && (
+        <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-sm">
+          <span className="text-blue-700 font-medium whitespace-nowrap">公開應徵連結</span>
+          <code className="flex-1 truncate text-xs text-blue-900">{applyUrl}</code>
+          <button onClick={() => copy(applyUrl, '已複製應徵連結')}
+            className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">複製</button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
       ) : candidates.length === 0 ? (
@@ -1213,8 +1250,24 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                         </div>
                       </div>
                       {c.store && <div className="text-xs text-gray-500">門市：{c.store}</div>}
-                      {c.staff_category && <Badge variant="outline" className="text-[10px]">{STAFF_LABEL[c.staff_category]}</Badge>}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {c.staff_category && <Badge variant="outline" className="text-[10px]">{STAFF_LABEL[c.staff_category]}</Badge>}
+                        <Badge variant="outline" className={`text-[10px] ${c.identity_locked ? 'text-amber-600 border-amber-300' : 'text-gray-400'}`}>
+                          {c.identity_locked ? '🔒 已鎖定' : '可修改'}
+                        </Badge>
+                      </div>
                       {c.phone && <div className="text-xs text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
+
+                      <div className="flex flex-wrap gap-1 text-[10px]">
+                        <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">文件</button>
+                        <button onClick={() => toggleLock(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
+                          {c.identity_locked ? '開放修改' : '鎖定資料'}
+                        </button>
+                        {c.apply_token && (
+                          <button onClick={() => copy(`${origin}/apply/edit/${c.apply_token}`, '已複製應徵者專屬連結')}
+                            className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">應徵者連結</button>
+                        )}
+                      </div>
 
                       {c.stage !== 'hired' && (
                         <div className="flex flex-wrap gap-1 pt-1 border-t">
@@ -1237,6 +1290,32 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {docsFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsFor(null)}>
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">{docsFor.name} 的應徵文件</h3>
+              <button onClick={() => setDocsFor(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            {docs.length === 0 ? (
+              <p className="text-sm text-gray-400 py-4 text-center">尚未上傳任何文件</p>
+            ) : (
+              <div className="space-y-2">
+                {docs.map(d => (
+                  <div key={d.id} className="flex items-center justify-between gap-2 text-sm border rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="font-medium">{d.label}</div>
+                      <div className="text-xs text-gray-400 truncate">{d.file_name}</div>
+                    </div>
+                    <a href={d.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">開啟</a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
