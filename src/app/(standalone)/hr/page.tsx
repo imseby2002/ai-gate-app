@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { CsvImportPanel, type CsvColumn, type ImportResult } from '@/components/hr/CsvImportPanel'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'recruitment' | 'employees' | 'evaluation' | 'payroll' | 'attendance' | 'leave'
+type Tab = 'recruitment' | 'employees' | 'evaluation' | 'payroll' | 'attendance' | 'insurance' | 'leave'
 
 interface Employee {
   id: string
@@ -1784,6 +1784,146 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
   )
 }
 
+// ─── 保險彙整 ────────────────────────────────────────────────
+interface InsRow {
+  id: string; name: string; staff_category: string; store: string
+  monthly: number; need: boolean; insurance_required: boolean; insurance_status: string
+}
+
+function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [rows, setRows] = useState<InsRow[]>([])
+  const [threshold, setThreshold] = useState(5000000)
+  const [mode, setMode] = useState('threshold')
+  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch(`/api/hr/insurance?year=${year}&month=${month}`)
+    if (res.ok) {
+      const d = await res.json()
+      setRows(d.rows ?? []); setThreshold(d.threshold ?? 5000000); setMode(d.mode ?? 'threshold')
+    }
+    setLoading(false)
+  }, [year, month])
+  useEffect(() => { load() }, [load])
+
+  const aggregate = async () => {
+    setBusy(true)
+    const res = await fetch('/api/hr/insurance', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ year, month }),
+    })
+    setBusy(false)
+    if (res.ok) {
+      const d = await res.json()
+      alert(d.newly_count > 0 ? `新增 ${d.newly_count} 人需投保：${d.newly.join('、')}，已通知人事。` : '沒有新增需投保人員。')
+      load(); onRefresh()
+    }
+  }
+
+  const setStatus = async (r: InsRow, status: string) => {
+    await fetch('/api/hr/employees', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: r.id, insurance_status: status, insurance_required: status !== 'none' }),
+    })
+    load(); onRefresh()
+  }
+
+  const exportList = async () => {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/hr/insurance-export')
+      if (!res.ok) { alert('匯出失敗'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `insurance_application_${year}${String(month).padStart(2, '0')}.xlsx`
+      a.click(); URL.revokeObjectURL(url)
+    } finally { setExporting(false) }
+  }
+
+  const needCount = rows.filter(r => r.need).length
+  const gapCount = rows.filter(r => r.need && r.insurance_status !== 'enrolled').length
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 className="font-semibold">保險彙整</h3>
+          <p className="text-sm text-gray-500">
+            正職一律投保；工讀{mode === 'all' ? '（全員投保）' : `當月薪資 > ${fmt(threshold)} 才需投保`}。依當月薪資自動判定。
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
+            {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}
+          </select>
+          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button size="sm" className="gap-1.5" onClick={aggregate} disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}依當月薪資重新彙整
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={exportList} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出保險申請名單
+        </Button>
+        <span className="text-sm text-gray-500 ml-1">需投保 <b>{needCount}</b> 人，待處理 <b className="text-amber-600">{gapCount}</b> 人</span>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+      ) : rows.length === 0 ? (
+        <div className="text-center py-10 text-gray-400 text-sm">尚無在職員工</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b">
+                <th className="py-2 pr-2">姓名</th><th className="pr-2">類別</th><th className="pr-2">門市</th>
+                <th className="pr-2 text-right">當月薪資</th><th className="pr-2 text-center">判定</th>
+                <th className="pr-2 text-center">投保狀態</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id} className="border-b last:border-0">
+                  <td className="py-2 pr-2 font-medium">{r.name}</td>
+                  <td className="pr-2">{STAFF_LABEL[r.staff_category] ?? r.staff_category}</td>
+                  <td className="pr-2 text-gray-500">{r.store || '—'}</td>
+                  <td className="pr-2 text-right tabular-nums">{fmt(r.monthly)}</td>
+                  <td className="pr-2 text-center">
+                    {r.need ? <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">需投保</Badge>
+                      : <span className="text-gray-300 text-xs">—</span>}
+                  </td>
+                  <td className="pr-2 text-center">
+                    <select value={r.insurance_status || 'none'} onChange={e => setStatus(r, e.target.value)}
+                      className="h-8 rounded-md border px-1.5 text-xs">
+                      {INS_STATUSES.map(s => <option key={s} value={s}>{INS_STATUS_LABEL[s]}</option>)}
+                    </select>
+                  </td>
+                  <td className="text-right">
+                    {r.need && r.insurance_status !== 'enrolled' && (
+                      <button onClick={() => setStatus(r, 'enrolled')} className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">標記已投保</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function HRPage() {
   const [tab, setTab] = useState<Tab>('recruitment')
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -1821,6 +1961,7 @@ export default function HRPage() {
     { id: 'evaluation', label: '人員評估', icon: <ClipboardCheck className="h-4 w-4" /> },
     { id: 'payroll',   label: '薪資管理', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'attendance', label: '考勤時數', icon: <Clock className="h-4 w-4" /> },
+    { id: 'insurance', label: '保險', icon: <Shield className="h-4 w-4" /> },
     { id: 'leave',     label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
   ]
 
@@ -1882,6 +2023,7 @@ export default function HRPage() {
         {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'attendance' && <AttendanceTab />}
+        {tab === 'insurance' && <InsuranceTab onRefresh={loadEmployees} />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
     </div>
