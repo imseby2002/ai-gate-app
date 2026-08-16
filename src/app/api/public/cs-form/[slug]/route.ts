@@ -10,6 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
+import { isDuplicateFormSubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 
 type Params = { params: Promise<{ slug: string }> }
 
@@ -55,6 +56,12 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: `「${f.label}」為必填` }, { status: 400 })
     }
   }
+
+  if (await isDuplicateFormSubmission(supabase, form.id, answers)) {
+    return NextResponse.json({ error: '這筆內容今天已經送出過了，如需修改請直接聯繫我們' }, { status: 409 })
+  }
+  const roomCheck = await verifyRoomCheckedInToday(supabase, form.user_id, fields, answers)
+  if (!roomCheck.ok) return NextResponse.json({ error: roomCheck.reason }, { status: 403 })
 
   const roomRef = typeof body?.roomRef === 'string' ? body.roomRef.trim().slice(0, 100) : null
   const notifyTarget = form.notify_target as CsFormNotifyTarget | null
