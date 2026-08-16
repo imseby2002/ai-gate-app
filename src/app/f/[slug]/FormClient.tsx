@@ -16,6 +16,7 @@ export default function FormClient({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [updated, setUpdated] = useState(false)
 
   const setAnswer = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }))
@@ -36,6 +37,7 @@ export default function FormClient({
         setError(data.error || '送出失敗，請稍後再試')
         return
       }
+      setUpdated(!!data.updated)
       setDone(true)
     } catch {
       setError('送出失敗，請稍後再試')
@@ -49,8 +51,10 @@ export default function FormClient({
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm">
           <div className="mb-3 text-3xl">✅</div>
-          <h1 className="mb-2 text-lg font-semibold text-gray-900">已送出</h1>
-          <p className="text-sm text-gray-500">感謝您的填寫，我們已收到您的回覆。</p>
+          <h1 className="mb-2 text-lg font-semibold text-gray-900">{updated ? '已更新' : '已送出'}</h1>
+          <p className="text-sm text-gray-500">
+            {updated ? '您今天的內容已經更新為最新版本，我們已收到。' : '感謝您的填寫，我們已收到您的回覆。'}
+          </p>
         </div>
       </div>
     )

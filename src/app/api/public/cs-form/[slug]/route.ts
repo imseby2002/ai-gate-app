@@ -10,7 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
-import { isDuplicateFormSubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
+import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 
 type Params = { params: Promise<{ slug: string }> }
 
@@ -57,7 +57,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   }
 
-  if (await isDuplicateFormSubmission(supabase, form.id, answers)) {
+  const match = await resolveTodaySubmission(supabase, form.id, fields, answers)
+  if (match.kind === 'duplicate') {
     return NextResponse.json({ error: '這筆內容今天已經送出過了，如需修改請直接聯繫我們' }, { status: 409 })
   }
   const roomCheck = await verifyRoomCheckedInToday(supabase, form.user_id, fields, answers)
@@ -65,19 +66,20 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const roomRef = typeof body?.roomRef === 'string' ? body.roomRef.trim().slice(0, 100) : null
   const notifyTarget = form.notify_target as CsFormNotifyTarget | null
+  const isUpdate = match.kind === 'update'
 
-  const { data: inserted, error } = await supabase
-    .from('cs_form_submissions')
-    .insert({
-      form_id: form.id,
-      user_id: form.user_id,
-      industry: form.industry,
-      answers,
-      room_ref: roomRef,
-      source: 'public_form',
-    })
-    .select('id')
-    .single()
+  // 同一個房號當天已有紀錄、但這次答案不同 → 客人是在改原本的訂單，直接覆蓋原紀錄，
+  // 不要另開一筆讓員工分不清哪筆才是最終版本（見 resolveTodaySubmission 註解）
+  const { data: row, error } = isUpdate
+    ? await supabase.from('cs_form_submissions')
+        .update({ answers, room_ref: roomRef, updated_at: new Date().toISOString(), notified_at: null, notify_error: null })
+        .eq('id', match.existingId!)
+        .select('id')
+        .single()
+    : await supabase.from('cs_form_submissions')
+        .insert({ form_id: form.id, user_id: form.user_id, industry: form.industry, answers, room_ref: roomRef, source: 'public_form' })
+        .select('id')
+        .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -86,13 +88,13 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (notifyTarget?.batchMode === 'immediate') {
     void notifyFormSubmission(
       form.user_id, notifyTarget, form.name,
-      formatFormSubmission(form.name, fields, answers, roomRef),
+      formatFormSubmission(form.name, fields, answers, roomRef, isUpdate),
       { fields, answers, roomRef },
     ).then(result => supabase
       .from('cs_form_submissions')
       .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
-      .eq('id', inserted.id))
+      .eq('id', row.id))
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, updated: isUpdate })
 }

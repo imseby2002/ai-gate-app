@@ -16,25 +16,54 @@ function taipeiTodayRange(): { startIso: string; endIso: string } {
   return { startIso: start.toISOString(), endIso: new Date(start.getTime() + 86400000).toISOString() }
 }
 
-export async function isDuplicateFormSubmission(
-  supabase: SupabaseClient, formId: string, answers: Record<string, string>,
-): Promise<boolean> {
-  const { startIso, endIso } = taipeiTodayRange()
-  const { data } = await supabase
-    .from('cs_form_submissions')
-    .select('answers')
-    .eq('form_id', formId)
-    .gte('created_at', startIso)
-    .lt('created_at', endIso)
-    .limit(50)
-  const key = JSON.stringify(answers)
-  return (data ?? []).some(s => JSON.stringify(s.answers) === key)
-}
-
 const ROOM_FIELD_RE = /房號|房型|room/i
 
 function normalizeRoomText(s: string): string {
   return s.replace(/\s+/g, '').toLowerCase()
+}
+
+function roomAnswerValue(fields: CsFormField[], answers: Record<string, string>): string {
+  const roomField = fields.find(f => ROOM_FIELD_RE.test(f.label))
+  return roomField ? (answers[roomField.id] ?? '').trim() : ''
+}
+
+export interface TodaySubmissionMatch {
+  kind: 'duplicate' | 'update' | 'new'
+  existingId?: string
+}
+
+/**
+ * 同一天內、同一張表單，比對是否已經有紀錄：
+ * - 表單有「房號」類欄位時，用房號當識別 key——同房號已有紀錄，新答案完全相同
+ *   視為客人重複點擊；答案不同（例如客人改了餐點）視為更新，覆蓋原紀錄，不再
+ *   另開一筆讓員工分不清哪筆才是最終版本
+ * - 沒有房號欄位（無法辨識是誰的訂單）就退回單純比對整份回答內容是否完全相同
+ */
+export async function resolveTodaySubmission(
+  supabase: SupabaseClient, formId: string, fields: CsFormField[], answers: Record<string, string>,
+): Promise<TodaySubmissionMatch> {
+  const { startIso, endIso } = taipeiTodayRange()
+  const { data } = await supabase
+    .from('cs_form_submissions')
+    .select('id, answers')
+    .eq('form_id', formId)
+    .gte('created_at', startIso)
+    .lt('created_at', endIso)
+    .order('created_at', { ascending: false })
+    .limit(50)
+  const rows = (data ?? []) as { id: string; answers: Record<string, string> }[]
+  const key = JSON.stringify(answers)
+
+  const roomKey = roomAnswerValue(fields, answers)
+  if (roomKey) {
+    const sameRoom = rows.find(r => roomAnswerValue(fields, r.answers) === roomKey)
+    if (!sameRoom) return { kind: 'new' }
+    return JSON.stringify(sameRoom.answers) === key
+      ? { kind: 'duplicate' }
+      : { kind: 'update', existingId: sameRoom.id }
+  }
+
+  return rows.some(r => JSON.stringify(r.answers) === key) ? { kind: 'duplicate' } : { kind: 'new' }
 }
 
 export async function verifyRoomCheckedInToday(

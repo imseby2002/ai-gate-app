@@ -19,7 +19,7 @@ import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
-import { isDuplicateFormSubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
+import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 import { sendToCustomer } from '@/lib/cs/send'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
@@ -1178,7 +1178,8 @@ async function saveFormSubmissionFromChat(
   if (!form) return
   try {
     const supabase = getServiceClient()
-    if (await isDuplicateFormSubmission(supabase, form.id, submit.answers)) return
+    const match = await resolveTodaySubmission(supabase, form.id, form.fields, submit.answers)
+    if (match.kind === 'duplicate') return
 
     const roomCheck = await verifyRoomCheckedInToday(supabase, userId, form.fields, submit.answers)
     if (!roomCheck.ok) {
@@ -1188,21 +1189,30 @@ async function saveFormSubmissionFromChat(
 
     const notifyTarget = form.notify_target
     const isImmediate = notifyTarget?.batchMode === 'immediate'
-    const { data: inserted } = await getServiceClient().from('cs_form_submissions').insert({
-      form_id: form.id, user_id: userId, industry,
-      answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
-    }).select('id').single()
+    const isUpdate = match.kind === 'update'
+    // 同一個房號當天已有紀錄、但這次答案不同 → 客人是在改原本的訂單，直接覆蓋原紀錄，
+    // 不要另開一筆讓員工分不清哪筆才是最終版本（見 resolveTodaySubmission 註解）
+    const { data: row } = isUpdate
+      ? await supabase.from('cs_form_submissions')
+          .update({ answers: submit.answers, updated_at: new Date().toISOString(), notified_at: null, notify_error: null })
+          .eq('id', match.existingId!)
+          .select('id')
+          .single()
+      : await supabase.from('cs_form_submissions').insert({
+          form_id: form.id, user_id: userId, industry,
+          answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
+        }).select('id').single()
     // notified_at 只在真的送出成功才標記——之前不管有沒有送成功都直接標記，
     // 通知因為 LINE token 失效送不出去時完全沒有人知道。
-    if (isImmediate && inserted) {
+    if (isImmediate && row) {
       void notifyFormSubmission(
         userId, notifyTarget, form.name,
-        formatFormSubmission(form.name, form.fields, submit.answers, null),
+        formatFormSubmission(form.name, form.fields, submit.answers, null, isUpdate),
         { fields: form.fields, answers: submit.answers, roomRef: null },
       ).then(result => getServiceClient()
         .from('cs_form_submissions')
         .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
-        .eq('id', inserted.id))
+        .eq('id', row.id))
     }
   } catch { /* 不中斷主流程 */ }
 }
