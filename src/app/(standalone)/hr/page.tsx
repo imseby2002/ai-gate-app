@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { CsvImportPanel, type CsvColumn, type ImportResult } from '@/components/hr/CsvImportPanel'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'employees' | 'payroll' | 'attendance' | 'leave'
+type Tab = 'recruitment' | 'employees' | 'payroll' | 'attendance' | 'leave'
 
 interface Employee {
   id: string
@@ -1079,8 +1079,213 @@ function AttendanceTab() {
   )
 }
 
+// ─── 應徵管理（招募看板）────────────────────────────────────────
+interface Candidate {
+  id: string
+  name: string
+  email: string
+  phone: string
+  position: string
+  source: string
+  notes: string
+  score: number | null
+  store: string
+  staff_category: string
+  id_number: string
+  birthday: string | null
+  address: string
+  interview_at: string | null
+  stage: string
+  hired_employee_id: string | null
+  created_at: string
+}
+
+const CAND_STAGES = ['new', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected'] as const
+const CAND_STAGE_LABEL: Record<string, string> = {
+  new: '新應徵', screening: '篩選中', interview_scheduled: '已排面試',
+  interviewed: '已面試', offered: '已錄取', hired: '已轉員工', rejected: '未錄取',
+}
+const CAND_STAGE_COLOR: Record<string, string> = {
+  new: '#3b82f6', screening: '#8b5cf6', interview_scheduled: '#f59e0b',
+  interviewed: '#0ea5e9', offered: '#10b981', hired: '#059669', rejected: '#9ca3af',
+}
+
+const emptyCandidate = (): Partial<Candidate> => ({
+  name: '', email: '', phone: '', position: '', source: '', notes: '',
+  store: '', staff_category: '', id_number: '', birthday: '', address: '', interview_at: '', stage: 'new',
+})
+
+function RecruitmentTab({ onHired }: { onHired: () => void }) {
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<Partial<Candidate> | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch('/api/hr/candidates')
+    const d = await res.json()
+    setCandidates(d.candidates ?? [])
+    setLoading(false)
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const save = async () => {
+    if (!editing?.name?.trim()) return
+    setBusy(true)
+    const method = editing.id ? 'PATCH' : 'POST'
+    const res = await fetch('/api/hr/candidates', {
+      method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
+    })
+    setBusy(false)
+    if (res.ok) { setEditing(null); load() }
+    else alert((await res.json()).error ?? '儲存失敗')
+  }
+
+  const setStage = async (c: Candidate, stage: string) => {
+    await fetch('/api/hr/candidates', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: c.id, stage }),
+    })
+    load()
+  }
+
+  const remove = async (c: Candidate) => {
+    if (!confirm(`確定刪除應徵者「${c.name}」？`)) return
+    await fetch('/api/hr/candidates', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+    })
+    load()
+  }
+
+  const hire = async (c: Candidate) => {
+    if (!confirm(`將「${c.name}」轉為${STAFF_LABEL[c.staff_category] || '（未分類）'}員工？\n請先於編輯視窗選好「錄取分類」。`)) return
+    setBusy(true)
+    const res = await fetch('/api/hr/candidates/hire', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
+    })
+    setBusy(false)
+    if (res.ok) { load(); onHired() }
+    else alert((await res.json()).error ?? '轉員工失敗')
+  }
+
+  const byStage = (s: string) => candidates.filter(c => c.stage === s)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold">應徵管理</h3>
+          <p className="text-sm text-gray-500">應徵 → 面試 → 錄取 → 一鍵轉員工</p>
+        </div>
+        <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
+          <Plus className="h-4 w-4" />新增應徵者
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+      ) : candidates.length === 0 ? (
+        <div className="text-center py-10 text-gray-400 text-sm">尚無應徵者，點「新增應徵者」開始</div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-2">
+          {CAND_STAGES.map(stage => {
+            const list = byStage(stage)
+            return (
+              <div key={stage} className="flex-shrink-0 w-56 space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: CAND_STAGE_COLOR[stage] }} />
+                  <span className="text-sm font-medium">{CAND_STAGE_LABEL[stage]}</span>
+                  <span className="text-xs text-gray-400">{list.length}</span>
+                </div>
+                <div className="space-y-2">
+                  {list.map(c => (
+                    <div key={c.id} className="rounded-lg border bg-white p-3 space-y-2 text-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{c.name}</div>
+                          {c.position && <div className="text-xs text-gray-500 truncate">{c.position}</div>}
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => setEditing({ ...c, birthday: c.birthday ?? '', interview_at: c.interview_at ?? '' })}
+                            className="text-gray-400 hover:text-gray-700"><Pencil className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => remove(c)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </div>
+                      </div>
+                      {c.store && <div className="text-xs text-gray-500">門市：{c.store}</div>}
+                      {c.staff_category && <Badge variant="outline" className="text-[10px]">{STAFF_LABEL[c.staff_category]}</Badge>}
+                      {c.phone && <div className="text-xs text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
+
+                      {c.stage !== 'hired' && (
+                        <div className="flex flex-wrap gap-1 pt-1 border-t">
+                          {CAND_STAGES.filter(s => s !== c.stage && s !== 'hired').map(s => (
+                            <button key={s} onClick={() => setStage(c, s)}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
+                              {CAND_STAGE_LABEL[s]}
+                            </button>
+                          ))}
+                          <button onClick={() => hire(c)} disabled={busy}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-0.5">
+                            <ArrowRight className="h-3 w-3" />轉員工
+                          </button>
+                        </div>
+                      )}
+                      {c.stage === 'hired' && <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />已建立員工資料</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">{editing.id ? '編輯應徵者' : '新增應徵者'}</h3>
+              <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="姓名 *"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
+              <Field label="應徵職位"><Input value={editing.position ?? ''} onChange={e => setEditing({ ...editing, position: e.target.value })} /></Field>
+              <Field label="電話"><Input value={editing.phone ?? ''} onChange={e => setEditing({ ...editing, phone: e.target.value })} /></Field>
+              <Field label="Email"><Input value={editing.email ?? ''} onChange={e => setEditing({ ...editing, email: e.target.value })} /></Field>
+              <Field label="門市"><Input value={editing.store ?? ''} onChange={e => setEditing({ ...editing, store: e.target.value })} /></Field>
+              <Field label="錄取分類">
+                <select value={editing.staff_category ?? ''} onChange={e => setEditing({ ...editing, staff_category: e.target.value })}
+                  className="w-full h-9 rounded-md border px-2 text-sm">
+                  <option value="">未定</option>
+                  <option value="fulltime">正職</option>
+                  <option value="hourly">工讀</option>
+                </select>
+              </Field>
+              <Field label="身分證字號"><Input value={editing.id_number ?? ''} onChange={e => setEditing({ ...editing, id_number: e.target.value })} /></Field>
+              <Field label="生日"><Input type="date" value={editing.birthday ?? ''} onChange={e => setEditing({ ...editing, birthday: e.target.value })} /></Field>
+              <Field label="面試時間"><Input type="datetime-local" value={editing.interview_at ?? ''} onChange={e => setEditing({ ...editing, interview_at: e.target.value })} /></Field>
+              <Field label="來源"><Input value={editing.source ?? ''} onChange={e => setEditing({ ...editing, source: e.target.value })} /></Field>
+            </div>
+            <Field label="地址"><Input value={editing.address ?? ''} onChange={e => setEditing({ ...editing, address: e.target.value })} /></Field>
+            <Field label="備註">
+              <textarea value={editing.notes ?? ''} onChange={e => setEditing({ ...editing, notes: e.target.value })}
+                className="w-full rounded-md border px-2 py-1.5 text-sm" rows={2} />
+            </Field>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+              <Button size="sm" onClick={save} disabled={busy || !editing.name?.trim()}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function HRPage() {
-  const [tab, setTab] = useState<Tab>('employees')
+  const [tab, setTab] = useState<Tab>('recruitment')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [empLoading, setEmpLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -1111,6 +1316,7 @@ export default function HRPage() {
   useEffect(() => { loadEmployees() }, [loadEmployees])
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
+    { id: 'recruitment', label: '應徵管理', icon: <UserPlus className="h-4 w-4" /> },
     { id: 'employees', label: '員工管理', icon: <Users className="h-4 w-4" /> },
     { id: 'payroll',   label: '薪資管理', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'attendance', label: '考勤時數', icon: <Clock className="h-4 w-4" /> },
@@ -1170,6 +1376,7 @@ export default function HRPage() {
 
       {/* Tab Content */}
       <Card className="p-5">
+        {tab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
         {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'attendance' && <AttendanceTab />}
