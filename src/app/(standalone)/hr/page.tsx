@@ -53,6 +53,8 @@ const INS_STATUSES = ['none', 'pending', 'enrolled']
 const STAFF_LABEL: Record<string, string> = { fulltime: '正職', hourly: '工讀' }
 const INS_STATUS_LABEL: Record<string, string> = { none: '不需投保', pending: '待投保', enrolled: '已投保' }
 
+interface EvalSummary { bonus: number; reward: number; penalty: number }
+
 interface Payroll {
   id: string
   employee_id: string
@@ -280,13 +282,14 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
 }
 
 // ─── Payroll Form ─────────────────────────────────────────────────
-function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours }: {
+function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, evals }: {
   employees: Employee[]
   initial: { employee_id: string; year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; notes: string }
   onSave: (d: typeof initial) => void
   onCancel: () => void
   saving: boolean
   attHours: Record<string, number>
+  evals: Record<string, EvalSummary>
 }) {
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
@@ -295,6 +298,8 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours }:
   const hours = Math.round((attHours[d.employee_id] ?? 0) * 100) / 100
   const rate = emp?.hourly_rate ?? 0
   const byHours = Math.round(hours * rate)
+  const ev = evals[d.employee_id]
+  const evNet = ev ? ev.bonus + ev.reward - ev.penalty : 0
 
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
@@ -329,9 +334,19 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours }:
         </div>
       )}
 
+      {d.employee_id && ev && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-white px-3 py-2 text-sm dark:bg-gray-900/40">
+          <ClipboardCheck className="h-4 w-4 text-gray-400" />
+          <span className="text-gray-600">
+            評估：獎金 <b className="tabular-nums">{fmt(ev.bonus)}</b>　獎勵 <b className="tabular-nums text-emerald-600">{fmt(ev.reward)}</b>　懲罰 <b className="tabular-nums text-red-500">{fmt(ev.penalty)}</b>　＝ 淨 <b className="tabular-nums">{fmt(evNet)}</b>
+          </span>
+          <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" disabled={saving} onClick={() => set('bonus', evNet)}>帶入評估獎懲</Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <Field label="扣款（勞健保等，元）"><InputEl value={d.deductions} onChange={v => set('deductions', Number(v) || 0)} type="number" disabled={saving} /></Field>
-        <Field label="獎金（元）"><InputEl value={d.bonus} onChange={v => set('bonus', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label="獎金（含評估獎懲，元）"><InputEl value={d.bonus} onChange={v => set('bonus', Number(v) || 0)} type="number" disabled={saving} /></Field>
       </div>
       <div className="flex items-center justify-between rounded-lg bg-white border px-4 py-2.5">
         <span className="text-sm font-medium text-gray-600">實發金額</span>
@@ -625,15 +640,24 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
   const [showImport, setShowImport] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [attHours, setAttHours] = useState<Record<string, number>>({}) // employee.id → 當月考勤總時數
+  const [evals, setEvals] = useState<Record<string, EvalSummary>>({}) // employee.id → 當月評估獎懲
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [pRes, aRes] = await Promise.all([
+    const [pRes, aRes, eRes] = await Promise.all([
       fetch(`/api/hr/payroll?year=${year}&month=${month}`),
       fetch(`/api/hr/attendance?year=${year}&month=${month}`),
+      fetch(`/api/hr/evaluations?year=${year}&month=${month}`),
     ])
     const pd = await pRes.json()
     setPayroll(pd.payroll ?? [])
+    // 評估表獎懲 → 對應員工
+    const ed = await eRes.json()
+    const emap: Record<string, EvalSummary> = {}
+    for (const ev of (ed.evaluations ?? []) as { employee_id: string; bonus: number; reward_total: number; penalty_total: number }[]) {
+      emap[ev.employee_id] = { bonus: Number(ev.bonus) || 0, reward: Number(ev.reward_total) || 0, penalty: Number(ev.penalty_total) || 0 }
+    }
+    setEvals(emap)
     // 考勤時數 → 對應員工（優先 考勤工号＋門市，否則姓名）
     const ad = await aRes.json()
     const norm = (s: string) => (s ?? '').trim().toLowerCase()
@@ -750,7 +774,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
       )}
 
       {showForm && !editing && (
-        <PayrollForm employees={employees} initial={{ ...PAYROLL_BLANK, year, month }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} attHours={attHours} />
+        <PayrollForm employees={employees} initial={{ ...PAYROLL_BLANK, year, month }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} attHours={attHours} evals={evals} />
       )}
       {err && <p className="text-sm text-red-500">{err}</p>}
 
@@ -812,7 +836,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                     <tr key={`${p.id}-edit`}><td colSpan={8} className="pb-3 pt-1">
                       <PayrollForm employees={employees}
                         initial={{ employee_id: p.employee_id, year: p.year, month: p.month, base_salary: p.base_salary, allowances: p.allowances, deductions: p.deductions, bonus: p.bonus, notes: p.notes }}
-                        onSave={save} onCancel={() => setEditing(null)} saving={saving} attHours={attHours} />
+                        onSave={save} onCancel={() => setEditing(null)} saving={saving} attHours={attHours} evals={evals} />
                     </td></tr>
                   )}
                 </>
