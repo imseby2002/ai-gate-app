@@ -1,18 +1,21 @@
 'use client'
 
 import { useState, useEffect, useCallback, use, useRef } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
-const DOC_TYPES = [
-  { type: 'resume', label: '履歷', copy: '影印本' },
-  { type: 'id_card', label: '身分證', copy: '正本＋影印本' },
-  { type: 'application', label: '求職申請書', copy: '正本' },
-  { type: 'cv', label: 'CV', copy: '影印本' },
-  { type: 'diploma', label: '畢業證／學生證', copy: '影印本' },
-  { type: 'health', label: '健康證明', copy: '正本' },
-  { type: 'birth', label: '出生證明', copy: '影印本' },
-  { type: 'residence', label: '居住證明', copy: '影印本' },
-  { type: 'other', label: '其他', copy: '影印本' },
-]
+const COPY_KEY: Record<string, string> = { original: 'copyOriginal', copy: 'copyCopy', both: 'copyBoth' }
+const DOC_TYPE_KEYS = [
+  { type: 'resume', key: 'docResume', copyKind: 'copy' },
+  { type: 'id_card', key: 'docIdCard', copyKind: 'both' },
+  { type: 'application', key: 'docApplication', copyKind: 'original' },
+  { type: 'cv', key: 'docCv', copyKind: 'copy' },
+  { type: 'diploma', key: 'docDiploma', copyKind: 'copy' },
+  { type: 'health', key: 'docHealth', copyKind: 'original' },
+  { type: 'birth', key: 'docBirth', copyKind: 'copy' },
+  { type: 'residence', key: 'docResidence', copyKind: 'copy' },
+  { type: 'other', key: 'docOther', copyKind: 'copy' },
+] as const
 
 interface Cand {
   id: string; name: string; phone: string; email: string; position: string; store: string
@@ -23,6 +26,8 @@ interface Doc { id: string; doc_type: string; label: string; file_name: string; 
 
 export default function ApplyEditPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params)
+  const t = useTranslations('Apply')
+  const locale = useLocale()
   const [cand, setCand] = useState<Cand | null>(null)
   const [docs, setDocs] = useState<Doc[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,7 +61,7 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cand),
     })
     if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
-    else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+    else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
 
   const pickFile = (type: string) => { pendingType.current = type; fileRef.current?.click() }
@@ -71,18 +76,18 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
     const res = await fetch(`/api/hr/apply/${token}/documents`, { method: 'POST', body: fd })
     setUploading(null)
     if (res.ok) load()
-    else alert((await res.json().catch(() => ({}))).error ?? '上傳失敗')
+    else alert((await res.json().catch(() => ({}))).error ?? t('uploadFailed'))
   }
   const removeDoc = async (id: string) => {
-    if (!confirm('刪除此文件？')) return
+    if (!confirm(t('deleteConfirm'))) return
     await fetch(`/api/hr/apply/${token}/documents`, {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }),
     })
     load()
   }
 
-  if (loading) return <Center>載入中…</Center>
-  if (notFound || !cand) return <Center>連結無效或已失效</Center>
+  if (loading) return <Center>{t('loading')}</Center>
+  if (notFound || !cand) return <Center>{t('invalidLink')}</Center>
 
   const setF = (k: keyof Cand) => (e: React.ChangeEvent<HTMLInputElement>) => setCand({ ...cand, [k]: e.target.value })
   const docsOf = (type: string) => docs.filter(d => d.doc_type === type)
@@ -94,80 +99,79 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
       <input ref={fileRef} type="file" hidden onChange={onFile}
         accept="image/*,application/pdf,.doc,.docx" />
       <div style={{ width: '100%', maxWidth: 520, display: 'grid', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <LanguageSwitcher currentLocale={locale} />
+        </div>
         <div style={card}>
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>我的應徵資料</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700 }}>{t('editTitle')}</h1>
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-            日後修改資料、補上傳文件，都從這個網址進入。
+            {t('editSubtitle')}
           </p>
           <div style={{ marginTop: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#b45309' }}>⚠️ 請把此頁網址存起來（加到書籤）</div>
-            <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>這是您專屬的連結，關閉後可再打開此網址回來修改。</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#b45309' }}>{t('saveLinkWarning')}</div>
+            <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>{t('saveLinkHint')}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <input readOnly value={pageUrl}
                 style={{ flex: 1, height: 36, borderRadius: 8, border: '1px solid #fcd34d', background: 'white', padding: '0 10px', fontSize: 12, color: '#78350f', boxSizing: 'border-box' }} />
               <button onClick={copyLink}
                 style={{ height: 36, padding: '0 14px', borderRadius: 8, border: 'none', background: '#f59e0b', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                {linkCopied ? '已複製 ✓' : '複製連結'}
+                {linkCopied ? t('linkCopied') : t('copyLink')}
               </button>
             </div>
           </div>
         </div>
 
         <div style={card}>
-          <h2 style={h2}>基本資料</h2>
+          <h2 style={h2}>{t('basicInfo')}</h2>
           {locked && (
             <p style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>
-              🔒 重要基本資料已鎖定，僅可修改電話與地址。如需更改其他欄位，請聯繫人事開放。
+              {t('lockedNotice')}
             </p>
           )}
           <div style={{ display: 'grid', gap: 12 }}>
-            <F label="姓名"><input style={lockedInp} disabled={locked} value={cand.name} onChange={setF('name')} /></F>
-            <F label="聯絡電話"><input style={inp} value={cand.phone} onChange={setF('phone')} /></F>
-            <F label="Email"><input style={lockedInp} disabled={locked} value={cand.email} onChange={setF('email')} /></F>
-            <F label="應徵職位"><input style={lockedInp} disabled={locked} value={cand.position} onChange={setF('position')} /></F>
-            <F label="應徵門市"><input style={lockedInp} disabled={locked} value={cand.store} onChange={setF('store')} /></F>
-            <F label="身分證字號"><input style={lockedInp} disabled={locked} value={cand.id_number} onChange={setF('id_number')} /></F>
-            <F label="生日"><input style={lockedInp} disabled={locked} type="date" value={cand.birthday ?? ''} onChange={setF('birthday')} /></F>
-            <F label="地址"><input style={inp} value={cand.address} onChange={setF('address')} /></F>
-            <F label="接收通知方式">
+            <F label={t('name')}><input style={lockedInp} disabled={locked} value={cand.name} onChange={setF('name')} /></F>
+            <F label={t('phone')}><input style={inp} value={cand.phone} onChange={setF('phone')} /></F>
+            <F label={t('email')}><input style={lockedInp} disabled={locked} value={cand.email} onChange={setF('email')} /></F>
+            <F label={t('position')}><input style={lockedInp} disabled={locked} value={cand.position} onChange={setF('position')} /></F>
+            <F label={t('store')}><input style={lockedInp} disabled={locked} value={cand.store} onChange={setF('store')} /></F>
+            <F label={t('idNumber')}><input style={lockedInp} disabled={locked} value={cand.id_number} onChange={setF('id_number')} /></F>
+            <F label={t('birthday')}><input style={lockedInp} disabled={locked} type="date" value={cand.birthday ?? ''} onChange={setF('birthday')} /></F>
+            <F label={t('address')}><input style={inp} value={cand.address} onChange={setF('address')} /></F>
+            <F label={t('notifyChannel')}>
               <select value={cand.notify_channel || 'email'} onChange={e => setCand({ ...cand, notify_channel: e.target.value })}
                 style={{ ...inp, appearance: 'auto' as React.CSSProperties['appearance'] }}>
-                <option value="email">Email（面試/錄取通知寄到信箱）</option>
-                <option value="zalo">ZALO（需先加入本公司官方帳號 OA）</option>
+                <option value="email">{t('notifyEmail')}</option>
+                <option value="zalo">{t('notifyZalo')}</option>
               </select>
             </F>
             {cand.notify_channel === 'zalo' && (
-              <p style={{ fontSize: 12, color: '#b45309', gridColumn: '1 / -1' }}>
-                選 ZALO 者，請先搜尋並加入本公司 ZALO 官方帳號（OA），否則無法收到通知。
-              </p>
+              <p style={{ fontSize: 12, color: '#b45309' }}>{t('zaloHint')}</p>
             )}
           </div>
           <button onClick={save}
             style={{ marginTop: 16, height: 42, width: '100%', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
-            {saved ? '已儲存 ✓' : '儲存資料'}
+            {saved ? t('saved') : t('save')}
           </button>
         </div>
 
         <div style={card}>
-          <h2 style={h2}>應徵文件</h2>
-          <p style={{ fontSize: 12, color: '#64748b', marginTop: -8, marginBottom: 12 }}>
-            請一次上傳所有文件（含日後保險會用到的）。標示為「正本」者，報到時需另繳紙本正本。
-          </p>
+          <h2 style={h2}>{t('documents')}</h2>
+          <p style={{ fontSize: 12, color: '#64748b', marginTop: -8, marginBottom: 12 }}>{t('documentsHint')}</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            {DOC_TYPES.map(dt => {
+            {DOC_TYPE_KEYS.map(dt => {
               const list = docsOf(dt.type)
               return (
                 <div key={dt.type} style={{ border: '1px solid #f1f5f9', borderRadius: 10, padding: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>
-                      {dt.label}
-                      <span style={{ fontSize: 11, fontWeight: 400, color: dt.copy.includes('正本') ? '#b45309' : '#94a3b8', marginLeft: 6 }}>
-                        （紙本：{dt.copy}）
+                      {t(dt.key)}
+                      <span style={{ fontSize: 11, fontWeight: 400, color: dt.copyKind !== 'copy' ? '#b45309' : '#94a3b8', marginLeft: 6 }}>
+                        （{t('paper')}：{t(COPY_KEY[dt.copyKind])}）
                       </span>
                     </span>
                     <button onClick={() => pickFile(dt.type)} disabled={uploading === dt.type}
                       style={{ fontSize: 13, padding: '5px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer' }}>
-                      {uploading === dt.type ? '上傳中…' : '＋ 上傳'}
+                      {uploading === dt.type ? t('uploading') : t('upload')}
                     </button>
                   </div>
                   {list.map(d => (
@@ -175,7 +179,7 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
                       <a href={d.url} target="_blank" rel="noreferrer" style={{ color: '#2563eb', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>
                         {d.file_name}
                       </a>
-                      <button onClick={() => removeDoc(d.id)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13 }}>刪除</button>
+                      <button onClick={() => removeDoc(d.id)} style={{ color: '#ef4444', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13 }}>{t('delete')}</button>
                     </div>
                   ))}
                 </div>
