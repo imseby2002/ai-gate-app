@@ -3,14 +3,15 @@
 import { useState, useEffect, useCallback, use, useRef } from 'react'
 
 const DOC_TYPES = [
-  { type: 'resume', label: '履歷' },
-  { type: 'id_card', label: '身分證' },
-  { type: 'application', label: '求職申請' },
-  { type: 'cv', label: 'CV' },
-  { type: 'diploma', label: '畢業證／學生證' },
-  { type: 'health', label: '健康證明' },
-  { type: 'birth', label: '出生證明' },
-  { type: 'other', label: '其他' },
+  { type: 'resume', label: '履歷', copy: '影印本' },
+  { type: 'id_card', label: '身分證', copy: '正本＋影印本' },
+  { type: 'application', label: '求職申請書', copy: '正本' },
+  { type: 'cv', label: 'CV', copy: '影印本' },
+  { type: 'diploma', label: '畢業證／學生證', copy: '影印本' },
+  { type: 'health', label: '健康證明', copy: '正本' },
+  { type: 'birth', label: '出生證明', copy: '影印本' },
+  { type: 'residence', label: '居住證明', copy: '影印本' },
+  { type: 'other', label: '其他', copy: '影印本' },
 ]
 
 interface Cand {
@@ -137,13 +138,21 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
 
         <div style={card}>
           <h2 style={h2}>應徵文件</h2>
+          <p style={{ fontSize: 12, color: '#64748b', marginTop: -8, marginBottom: 12 }}>
+            請一次上傳所有文件（含日後保險會用到的）。標示為「正本」者，報到時需另繳紙本正本。
+          </p>
           <div style={{ display: 'grid', gap: 10 }}>
             {DOC_TYPES.map(dt => {
               const list = docsOf(dt.type)
               return (
                 <div key={dt.type} style={{ border: '1px solid #f1f5f9', borderRadius: 10, padding: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{dt.label}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>
+                      {dt.label}
+                      <span style={{ fontSize: 11, fontWeight: 400, color: dt.copy.includes('正本') ? '#b45309' : '#94a3b8', marginLeft: 6 }}>
+                        （紙本：{dt.copy}）
+                      </span>
+                    </span>
                     <button onClick={() => pickFile(dt.type)} disabled={uploading === dt.type}
                       style={{ fontSize: 13, padding: '5px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer' }}>
                       {uploading === dt.type ? '上傳中…' : '＋ 上傳'}

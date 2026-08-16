@@ -1099,9 +1099,24 @@ interface Candidate {
   hired_employee_id: string | null
   apply_token: string | null
   identity_locked: boolean
+  docs_submitted_complete: boolean
   created_at: string
 }
 interface CandDoc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
+interface CheckItem { doc_key: string; original_received: boolean; copy_received: boolean; note: string }
+
+// 完整文件目錄（與後端 DOC_CATALOG 對齊）
+const HR_DOC_CATALOG: { type: string; label: string; copy: string; needOriginal: boolean }[] = [
+  { type: 'resume', label: '履歷', copy: '影印本', needOriginal: false },
+  { type: 'id_card', label: '身分證', copy: '正本＋影印本', needOriginal: true },
+  { type: 'application', label: '求職申請書', copy: '正本', needOriginal: true },
+  { type: 'cv', label: 'CV', copy: '影印本', needOriginal: false },
+  { type: 'diploma', label: '畢業證／學生證', copy: '影印本', needOriginal: false },
+  { type: 'health', label: '健康證明', copy: '正本', needOriginal: true },
+  { type: 'birth', label: '出生證明', copy: '影印本', needOriginal: false },
+  { type: 'residence', label: '居住證明', copy: '影印本', needOriginal: false },
+  { type: 'other', label: '其他', copy: '影印本', needOriginal: false },
+]
 
 const CAND_STAGES = ['new', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected'] as const
 const CAND_STAGE_LABEL: Record<string, string> = {
@@ -1126,6 +1141,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [applyCode, setApplyCode] = useState('')
   const [docsFor, setDocsFor] = useState<Candidate | null>(null)
   const [docs, setDocs] = useState<CandDoc[]>([])
+  const [checklist, setChecklist] = useState<CheckItem[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1153,9 +1169,35 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   const openDocs = async (c: Candidate) => {
-    setDocsFor(c); setDocs([])
-    const res = await fetch(`/api/hr/candidates/documents?candidate_id=${c.id}`)
-    if (res.ok) setDocs((await res.json()).documents ?? [])
+    setDocsFor(c); setDocs([]); setChecklist([])
+    const res = await fetch(`/api/hr/candidates/checklist?candidate_id=${c.id}`)
+    if (res.ok) {
+      const d = await res.json()
+      setDocs(d.documents ?? [])
+      setChecklist(d.checklist ?? [])
+    }
+  }
+
+  const checkOf = (docKey: string): CheckItem =>
+    checklist.find(x => x.doc_key === docKey) ?? { doc_key: docKey, original_received: false, copy_received: false, note: '' }
+
+  const setCheck = async (docKey: string, patch: Partial<CheckItem>) => {
+    if (!docsFor) return
+    const next = { ...checkOf(docKey), ...patch }
+    setChecklist(prev => [...prev.filter(x => x.doc_key !== docKey), next])
+    await fetch('/api/hr/candidates/checklist', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidate_id: docsFor.id, doc_key: docKey, ...patch }),
+    })
+  }
+
+  const toggleSubmitComplete = async (c: Candidate) => {
+    await fetch('/api/hr/candidates', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: c.id, docs_submitted_complete: !c.docs_submitted_complete }),
+    })
+    setDocsFor({ ...c, docs_submitted_complete: !c.docs_submitted_complete })
+    load()
   }
 
   const save = async () => {
@@ -1258,6 +1300,9 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                       </div>
                       {c.phone && <div className="text-xs text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
 
+                      {c.docs_submitted_complete && (
+                        <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />文件繳交完成</div>
+                      )}
                       <div className="flex flex-wrap gap-1 text-[10px]">
                         <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">文件</button>
                         <button onClick={() => toggleLock(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
@@ -1295,26 +1340,53 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
 
       {docsFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsFor(null)}>
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{docsFor.name} 的應徵文件</h3>
+              <h3 className="font-semibold">{docsFor.name} 的文件與繳交</h3>
               <button onClick={() => setDocsFor(null)}><X className="h-5 w-5 text-gray-400" /></button>
             </div>
-            {docs.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">尚未上傳任何文件</p>
-            ) : (
-              <div className="space-y-2">
-                {docs.map(d => (
-                  <div key={d.id} className="flex items-center justify-between gap-2 text-sm border rounded-lg px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="font-medium">{d.label}</div>
-                      <div className="text-xs text-gray-400 truncate">{d.file_name}</div>
+
+            <label className="flex items-center gap-2 text-sm bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 cursor-pointer">
+              <input type="checkbox" checked={docsFor.docs_submitted_complete} onChange={() => toggleSubmitComplete(docsFor)} />
+              <span className="font-medium text-emerald-700">紙本已全部繳交到辦公室（完成）</span>
+            </label>
+
+            <div className="text-xs text-gray-400 flex gap-3 px-1">
+              <span>上傳＝掃描檔</span><span>正/影＝紙本收到勾選</span>
+            </div>
+
+            <div className="space-y-2">
+              {HR_DOC_CATALOG.map(spec => {
+                const uploaded = docs.filter(d => d.doc_type === spec.type)
+                const chk = checkOf(spec.type)
+                return (
+                  <div key={spec.type} className="border rounded-lg px-3 py-2 text-sm space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-medium">{spec.label}</span>
+                        <span className={`text-[11px] ml-1.5 ${spec.needOriginal ? 'text-amber-600' : 'text-gray-400'}`}>紙本：{spec.copy}</span>
+                      </div>
+                      {uploaded.length > 0
+                        ? <span className="text-[11px] text-emerald-600 whitespace-nowrap flex items-center gap-0.5"><Check className="h-3 w-3" />已上傳 {uploaded.length}</span>
+                        : <span className="text-[11px] text-gray-300 whitespace-nowrap">未上傳</span>}
                     </div>
-                    <a href={d.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">開啟</a>
+                    {uploaded.map(d => (
+                      <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-xs text-primary hover:underline truncate">📎 {d.file_name}</a>
+                    ))}
+                    <div className="flex items-center gap-3 pt-0.5">
+                      {spec.copy.includes('正本') && (
+                        <label className="flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="checkbox" checked={chk.original_received} onChange={e => setCheck(spec.type, { original_received: e.target.checked })} />正本已繳
+                        </label>
+                      )}
+                      <label className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox" checked={chk.copy_received} onChange={e => setCheck(spec.type, { copy_received: e.target.checked })} />影印本已繳
+                      </label>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
