@@ -28,8 +28,16 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
   const [notFound, setNotFound] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const pendingType = useRef<string>('other')
+
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const copyLink = () => {
+    navigator.clipboard?.writeText(pageUrl)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/hr/apply/${token}`)
@@ -88,8 +96,20 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
         <div style={card}>
           <h1 style={{ fontSize: 20, fontWeight: 700 }}>我的應徵資料</h1>
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-            可隨時回到此連結修改資料與上傳文件。請保存好此網址。
+            日後修改資料、補上傳文件，都從這個網址進入。
           </p>
+          <div style={{ marginTop: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#b45309' }}>⚠️ 請把此頁網址存起來（加到書籤）</div>
+            <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>這是您專屬的連結，關閉後可再打開此網址回來修改。</div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <input readOnly value={pageUrl}
+                style={{ flex: 1, height: 36, borderRadius: 8, border: '1px solid #fcd34d', background: 'white', padding: '0 10px', fontSize: 12, color: '#78350f', boxSizing: 'border-box' }} />
+              <button onClick={copyLink}
+                style={{ height: 36, padding: '0 14px', borderRadius: 8, border: 'none', background: '#f59e0b', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {linkCopied ? '已複製 ✓' : '複製連結'}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div style={card}>
