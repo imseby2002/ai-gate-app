@@ -44,8 +44,8 @@ export function genToken(): string {
   return randomBytes(24).toString('base64url')
 }
 
-// 應徵者可隨時修改的欄位：電話、地址（＋文件上傳）
-export const FREE_FIELDS = ['phone', 'address'] as const
+// 應徵者可隨時修改的欄位：電話、地址、通知方式（＋文件上傳）
+export const FREE_FIELDS = ['phone', 'address', 'notify_channel'] as const
 // 重要基本資料：鎖定後需人事開放，應徵者才能修改
 export const IDENTITY_FIELDS = ['name', 'email', 'position', 'store', 'id_number', 'birthday'] as const
 // 應徵者可能送出的所有欄位

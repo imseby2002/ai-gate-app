@@ -17,7 +17,7 @@ const DOC_TYPES = [
 interface Cand {
   id: string; name: string; phone: string; email: string; position: string; store: string
   id_number: string; birthday: string | null; address: string; stage: string; hired_employee_id: string | null
-  identity_locked: boolean
+  identity_locked: boolean; notify_channel: string
 }
 interface Doc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
 
@@ -129,6 +129,18 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
             <F label="身分證字號"><input style={lockedInp} disabled={locked} value={cand.id_number} onChange={setF('id_number')} /></F>
             <F label="生日"><input style={lockedInp} disabled={locked} type="date" value={cand.birthday ?? ''} onChange={setF('birthday')} /></F>
             <F label="地址"><input style={inp} value={cand.address} onChange={setF('address')} /></F>
+            <F label="接收通知方式">
+              <select value={cand.notify_channel || 'email'} onChange={e => setCand({ ...cand, notify_channel: e.target.value })}
+                style={{ ...inp, appearance: 'auto' as React.CSSProperties['appearance'] }}>
+                <option value="email">Email（面試/錄取通知寄到信箱）</option>
+                <option value="zalo">ZALO（需先加入本公司官方帳號 OA）</option>
+              </select>
+            </F>
+            {cand.notify_channel === 'zalo' && (
+              <p style={{ fontSize: 12, color: '#b45309', gridColumn: '1 / -1' }}>
+                選 ZALO 者，請先搜尋並加入本公司 ZALO 官方帳號（OA），否則無法收到通知。
+              </p>
+            )}
           </div>
           <button onClick={save}
             style={{ marginTop: 16, height: 42, width: '100%', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', fontWeight: 600, cursor: 'pointer' }}>

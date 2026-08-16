@@ -1100,10 +1100,19 @@ interface Candidate {
   apply_token: string | null
   identity_locked: boolean
   docs_submitted_complete: boolean
+  notify_channel: string
   created_at: string
 }
 interface CandDoc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
 interface CheckItem { doc_key: string; original_received: boolean; copy_received: boolean; note: string }
+interface HRNotif { id: string; kind: string; title: string; body: string; candidate_id: string | null; is_read: boolean; created_at: string }
+
+// 通知應徵者常用範本
+const NOTIFY_TEMPLATES: { label: string; subject: string; message: string }[] = [
+  { label: '邀請面試', subject: '面試邀請', message: '您好，我們已收到您的應徵，誠摯邀請您前來面試。請與我們聯繫確認時間。' },
+  { label: '錄取可上班', subject: '錄取通知', message: '恭喜您通過面試，歡迎加入！請攜帶所需文件（含正本）至辦公室辦理報到手續。' },
+  { label: '請補件', subject: '文件補件通知', message: '您好，您的應徵文件尚有缺漏，請登入您的專屬連結補齊文件，謝謝。' },
+]
 
 // 完整文件目錄（與後端 DOC_CATALOG 對齊）
 const HR_DOC_CATALOG: { type: string; label: string; copy: string; needOriginal: boolean }[] = [
@@ -1142,6 +1151,11 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [docsFor, setDocsFor] = useState<Candidate | null>(null)
   const [docs, setDocs] = useState<CandDoc[]>([])
   const [checklist, setChecklist] = useState<CheckItem[]>([])
+  const [notifs, setNotifs] = useState<HRNotif[]>([])
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifyPrefs, setNotifyPrefs] = useState({ telegram: false, email: false })
+  const [notifyTarget, setNotifyTarget] = useState<Candidate | null>(null)
+  const [notifyMsg, setNotifyMsg] = useState({ subject: '', message: '' })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1152,9 +1166,55 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }, [])
   useEffect(() => { load() }, [load])
 
+  const loadNotifs = useCallback(async () => {
+    const res = await fetch('/api/hr/notifications')
+    if (res.ok) setNotifs((await res.json()).notifications ?? [])
+  }, [])
+  useEffect(() => { loadNotifs() }, [loadNotifs])
+
+  useEffect(() => {
+    fetch('/api/hr/settings').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.settings) setNotifyPrefs({ telegram: !!d.settings.notify_telegram, email: !!d.settings.notify_email })
+    })
+  }, [])
+
+  const toggleNotifyPref = async (key: 'telegram' | 'email') => {
+    const next = { ...notifyPrefs, [key]: !notifyPrefs[key] }
+    setNotifyPrefs(next)
+    await fetch('/api/hr/settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notify_telegram: next.telegram, notify_email: next.email }),
+    })
+  }
+
   useEffect(() => {
     fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code) })
   }, [])
+
+  const unreadCount = notifs.filter(n => !n.is_read).length
+  const markNotifsRead = async () => {
+    await fetch('/api/hr/notifications', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all: true }),
+    })
+    loadNotifs()
+  }
+
+  const openNotify = (c: Candidate) => {
+    setNotifyTarget(c)
+    setNotifyMsg({ subject: '', message: '' })
+  }
+  const sendNotify = async () => {
+    if (!notifyTarget || !notifyMsg.subject.trim() || !notifyMsg.message.trim()) return
+    setBusy(true)
+    const res = await fetch('/api/hr/candidates/notify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: notifyTarget.id, ...notifyMsg }),
+    })
+    setBusy(false)
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) { alert(`已透過 ${d.channel === 'zalo' ? 'ZALO' : 'Email'} 送出`); setNotifyTarget(null) }
+    else alert(d.error ?? '發送失敗')
+  }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const applyUrl = applyCode ? `${origin}/apply/${applyCode}` : ''
@@ -1248,10 +1308,51 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
           <h3 className="font-semibold">應徵管理</h3>
           <p className="text-sm text-gray-500">應徵 → 面試 → 錄取 → 一鍵轉員工</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
-          <Plus className="h-4 w-4" />新增應徵者
-        </Button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowNotifs(v => !v)}
+            className="relative px-2.5 py-2 rounded-lg border hover:bg-gray-50 text-gray-600">
+            🔔
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">{unreadCount}</span>
+            )}
+          </button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
+            <Plus className="h-4 w-4" />新增應徵者
+          </Button>
+        </div>
       </div>
+
+      {showNotifs && (
+        <div className="rounded-lg border bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">站內通知</span>
+            {unreadCount > 0 && <button onClick={markNotifsRead} className="text-xs text-primary hover:underline">全部標為已讀</button>}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-600 bg-gray-50 rounded-md px-2.5 py-1.5">
+            <span className="text-gray-400">同步通知到：</span>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" checked={notifyPrefs.telegram} onChange={() => toggleNotifyPref('telegram')} />Telegram
+            </label>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" checked={notifyPrefs.email} onChange={() => toggleNotifyPref('email')} />Email
+            </label>
+            <span className="text-gray-300 ml-auto">（Token 於客服平台設定）</span>
+          </div>
+          {notifs.length === 0 ? (
+            <p className="text-xs text-gray-400 py-2 text-center">目前沒有通知</p>
+          ) : (
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {notifs.map(n => (
+                <div key={n.id} className={`text-sm rounded-md px-2.5 py-1.5 ${n.is_read ? 'bg-gray-50' : 'bg-blue-50'}`}>
+                  <div className="font-medium">{n.title}</div>
+                  <div className="text-xs text-gray-500">{n.body}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{new Date(n.created_at).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {applyUrl && (
         <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-sm">
@@ -1305,6 +1406,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                       )}
                       <div className="flex flex-wrap gap-1 text-[10px]">
                         <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">文件</button>
+                        <button onClick={() => openNotify(c)} className="px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700">通知</button>
                         <button onClick={() => toggleLock(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
                           {c.identity_locked ? '開放修改' : '鎖定資料'}
                         </button>
@@ -1335,6 +1437,39 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {notifyTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setNotifyTarget(null)}>
+          <div className="bg-white rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">通知 {notifyTarget.name}</h3>
+              <button onClick={() => setNotifyTarget(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            <p className="text-xs text-gray-500">
+              將以應徵者設定的方式發送：
+              <span className="font-medium text-gray-700">{notifyTarget.notify_channel === 'zalo' ? ' ZALO' : ' Email'}</span>
+              {notifyTarget.notify_channel !== 'zalo' && notifyTarget.email ? `（${notifyTarget.email}）` : ''}
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {NOTIFY_TEMPLATES.map(t => (
+                <button key={t.label} onClick={() => setNotifyMsg({ subject: t.subject, message: t.message })}
+                  className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{t.label}</button>
+              ))}
+            </div>
+            <Field label="主旨"><Input value={notifyMsg.subject} onChange={e => setNotifyMsg({ ...notifyMsg, subject: e.target.value })} /></Field>
+            <Field label="內容">
+              <textarea value={notifyMsg.message} onChange={e => setNotifyMsg({ ...notifyMsg, message: e.target.value })}
+                className="w-full rounded-md border px-2 py-1.5 text-sm" rows={5} />
+            </Field>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setNotifyTarget(null)}>取消</Button>
+              <Button size="sm" onClick={sendNotify} disabled={busy || !notifyMsg.subject.trim() || !notifyMsg.message.trim()}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '發送'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
