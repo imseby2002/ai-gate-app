@@ -12,11 +12,13 @@ export function formatFormSubmission(
   fields: CsFormField[],
   answers: Record<string, string>,
   roomRef: string | null,
+  isUpdate = false,
 ): string {
   const lines = fields
     .map(f => (answers[f.id] ? `${f.label}：${answers[f.id]}` : null))
     .filter((l): l is string => !!l)
-  return `📋 ${formName} 新提交\n${roomRef ? `房號/訂單：${roomRef}\n` : ''}${lines.join('\n')}`
+  const header = isUpdate ? '✏️ ' + formName + ' 已更新（客人改了原本的內容，以此為準）' : `📋 ${formName} 新提交`
+  return `${header}\n${roomRef ? `房號/訂單：${roomRef}\n` : ''}${lines.join('\n')}`
 }
 
 export function formatFormSubmissionBatch(

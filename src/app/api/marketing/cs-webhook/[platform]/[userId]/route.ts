@@ -19,6 +19,8 @@ import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
+import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
+import { sendToCustomer } from '@/lib/cs/send'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
 // 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
@@ -1164,6 +1166,10 @@ function extractFormSubmit(reply: string): { visibleReply: string; submit: Parse
 }
 
 // 命中標記 → 寫入 cs_form_submissions（來源標記為 cs_chat），並依 notifyTarget 立即通知（daily 批次由 cron 處理）
+// AI 在生成這則回覆時已經跟客人說「已收到」，這裡如果查到當天已有一模一樣的內容，
+// 代表是重複送出（同一份訂單被問完兩次），靜默略過即可，不用再打擾客人；但如果是
+// 查無入住紀錄，代表可能不是當天入住的客人，AI 沒能力事先擋下（標記是回覆生成完
+// 才解析出來），只能事後主動補一則訊息請客人確認，而不是照樣通知員工出餐。
 async function saveFormSubmissionFromChat(
   userId: string, platform: string, customerId: string, industry: string,
   forms: CsChatForm[], submit: ParsedFormSubmit,
@@ -1171,23 +1177,42 @@ async function saveFormSubmissionFromChat(
   const form = forms.find(f => f.id === submit.formId)
   if (!form) return
   try {
+    const supabase = getServiceClient()
+    const match = await resolveTodaySubmission(supabase, form.id, form.fields, submit.answers)
+    if (match.kind === 'duplicate') return
+
+    const roomCheck = await verifyRoomCheckedInToday(supabase, userId, form.fields, submit.answers)
+    if (!roomCheck.ok) {
+      void sendToCustomer(userId, platform, customerId, `不好意思，${roomCheck.reason}`)
+      return
+    }
+
     const notifyTarget = form.notify_target
     const isImmediate = notifyTarget?.batchMode === 'immediate'
-    const { data: inserted } = await getServiceClient().from('cs_form_submissions').insert({
-      form_id: form.id, user_id: userId, industry,
-      answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
-    }).select('id').single()
+    const isUpdate = match.kind === 'update'
+    // 同一個房號當天已有紀錄、但這次答案不同 → 客人是在改原本的訂單，直接覆蓋原紀錄，
+    // 不要另開一筆讓員工分不清哪筆才是最終版本（見 resolveTodaySubmission 註解）
+    const { data: row } = isUpdate
+      ? await supabase.from('cs_form_submissions')
+          .update({ answers: submit.answers, updated_at: new Date().toISOString(), notified_at: null, notify_error: null })
+          .eq('id', match.existingId!)
+          .select('id')
+          .single()
+      : await supabase.from('cs_form_submissions').insert({
+          form_id: form.id, user_id: userId, industry,
+          answers: submit.answers, source: 'cs_chat', platform, from_id: customerId,
+        }).select('id').single()
     // notified_at 只在真的送出成功才標記——之前不管有沒有送成功都直接標記，
     // 通知因為 LINE token 失效送不出去時完全沒有人知道。
-    if (isImmediate && inserted) {
+    if (isImmediate && row) {
       void notifyFormSubmission(
         userId, notifyTarget, form.name,
-        formatFormSubmission(form.name, form.fields, submit.answers, null),
+        formatFormSubmission(form.name, form.fields, submit.answers, null, isUpdate),
         { fields: form.fields, answers: submit.answers, roomRef: null },
       ).then(result => getServiceClient()
         .from('cs_form_submissions')
         .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
-        .eq('id', inserted.id))
+        .eq('id', row.id))
     }
   } catch { /* 不中斷主流程 */ }
 }
