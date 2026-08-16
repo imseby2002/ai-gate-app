@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { genToken } from '@/lib/hr/apply'
+import { notifyHR } from '@/lib/hr/notify'
 
 // 公開應徵表單送出（無需登入）。body: { code, name, phone, email, position, store }
 export async function POST(req: NextRequest) {
@@ -34,6 +35,14 @@ export async function POST(req: NextRequest) {
     })
     .select('id, apply_token').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 通知人事：有新應徵
+  await notifyHR(setting.owner_id, {
+    kind: 'new_application',
+    title: '🆕 新應徵者',
+    body: `${name}${body.position ? `（應徵 ${body.position}）` : ''}${body.store ? `｜門市 ${body.store}` : ''} 已送出應徵申請。`,
+    candidateId: data.id,
+  }).catch(() => {})
 
   return NextResponse.json({ token: data.apply_token })
 }

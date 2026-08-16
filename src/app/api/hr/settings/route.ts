@@ -25,16 +25,18 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const insurance_mode = body.insurance_mode === 'all' ? 'all' : 'threshold'
-  const insurance_threshold = Number(body.insurance_threshold) || 0
-  const insurance_currency = String(body.insurance_currency ?? 'VND').trim() || 'VND'
+  const patch: Record<string, unknown> = { owner_id: user.id, updated_at: new Date().toISOString() }
+
+  // 保險設定：僅在有帶時才更新，避免只切通知偏好卻覆蓋保險設定
+  if (body.insurance_mode !== undefined) patch.insurance_mode = body.insurance_mode === 'all' ? 'all' : 'threshold'
+  if (body.insurance_threshold !== undefined) patch.insurance_threshold = Number(body.insurance_threshold) || 0
+  if (body.insurance_currency !== undefined) patch.insurance_currency = String(body.insurance_currency ?? 'VND').trim() || 'VND'
+  if (body.notify_telegram !== undefined) patch.notify_telegram = !!body.notify_telegram
+  if (body.notify_email !== undefined) patch.notify_email = !!body.notify_email
 
   const { data, error } = await supabase
     .from('hr_settings')
-    .upsert({
-      owner_id: user.id, insurance_mode, insurance_threshold, insurance_currency,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'owner_id' })
+    .upsert(patch, { onConflict: 'owner_id' })
     .select('*').single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

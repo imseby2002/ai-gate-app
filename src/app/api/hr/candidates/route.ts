@@ -17,6 +17,7 @@ const STAFF_CATS = new Set(['', 'fulltime', 'hourly'])
 const FIELDS = [
   'name', 'email', 'phone', 'position', 'source', 'notes', 'score',
   'store', 'staff_category', 'id_number', 'birthday', 'address', 'interview_at', 'stage', 'identity_locked',
+  'docs_submitted_complete',
 ] as const
 
 export async function GET() {

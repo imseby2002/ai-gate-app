@@ -4105,6 +4105,16 @@
     "saveLinkWarning": "⚠️ Please save this page's link (bookmark it)",
     "saveLinkHint": "This is your personal link — reopen this URL anytime after closing to make changes.",
     "copyLink": "Copy Link",
-    "linkCopied": "Copied ✓"
+    "linkCopied": "Copied ✓",
+    "docResidence": "Proof of Residence",
+    "documentsHint": "Please upload all documents at once (including those needed later for insurance). Items marked \"Original\" also require a paper original at onboarding.",
+    "paper": "Paper",
+    "copyOriginal": "Original",
+    "copyCopy": "Photocopy",
+    "copyBoth": "Original + Photocopy",
+    "notifyChannel": "Notification method",
+    "notifyEmail": "Email (interview/offer notices sent to your inbox)",
+    "notifyZalo": "ZALO (must add our Official Account first)",
+    "zaloHint": "If you choose ZALO, please search for and add our company ZALO Official Account (OA) first, otherwise you will not receive notifications."
   }
 }

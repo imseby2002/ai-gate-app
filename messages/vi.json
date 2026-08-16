@@ -4012,6 +4012,16 @@
     "saveLinkWarning": "⚠️ Vui lòng lưu lại liên kết của trang này (đánh dấu trang)",
     "saveLinkHint": "Đây là liên kết riêng của bạn — sau khi đóng, bạn có thể mở lại địa chỉ này để chỉnh sửa.",
     "copyLink": "Sao chép liên kết",
-    "linkCopied": "Đã sao chép ✓"
+    "linkCopied": "Đã sao chép ✓",
+    "docResidence": "Giấy xác nhận cư trú",
+    "documentsHint": "Vui lòng tải lên tất cả giấy tờ cùng lúc (bao gồm cả giấy tờ cần cho bảo hiểm sau này). Mục ghi \"Bản gốc\" cần nộp thêm bản gốc giấy khi nhận việc.",
+    "paper": "Bản giấy",
+    "copyOriginal": "Bản gốc",
+    "copyCopy": "Bản sao",
+    "copyBoth": "Bản gốc + Bản sao",
+    "notifyChannel": "Phương thức nhận thông báo",
+    "notifyEmail": "Email (thông báo phỏng vấn/trúng tuyển gửi tới hộp thư)",
+    "notifyZalo": "ZALO (cần thêm OA của công ty trước)",
+    "zaloHint": "Nếu chọn ZALO, vui lòng tìm và thêm Official Account (OA) ZALO của công ty trước, nếu không sẽ không nhận được thông báo."
   }
 }

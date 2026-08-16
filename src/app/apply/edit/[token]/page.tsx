@@ -4,21 +4,23 @@ import { useState, useEffect, useCallback, use, useRef } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
+const COPY_KEY: Record<string, string> = { original: 'copyOriginal', copy: 'copyCopy', both: 'copyBoth' }
 const DOC_TYPE_KEYS = [
-  { type: 'resume', key: 'docResume' },
-  { type: 'id_card', key: 'docIdCard' },
-  { type: 'application', key: 'docApplication' },
-  { type: 'cv', key: 'docCv' },
-  { type: 'diploma', key: 'docDiploma' },
-  { type: 'health', key: 'docHealth' },
-  { type: 'birth', key: 'docBirth' },
-  { type: 'other', key: 'docOther' },
+  { type: 'resume', key: 'docResume', copyKind: 'copy' },
+  { type: 'id_card', key: 'docIdCard', copyKind: 'both' },
+  { type: 'application', key: 'docApplication', copyKind: 'original' },
+  { type: 'cv', key: 'docCv', copyKind: 'copy' },
+  { type: 'diploma', key: 'docDiploma', copyKind: 'copy' },
+  { type: 'health', key: 'docHealth', copyKind: 'original' },
+  { type: 'birth', key: 'docBirth', copyKind: 'copy' },
+  { type: 'residence', key: 'docResidence', copyKind: 'copy' },
+  { type: 'other', key: 'docOther', copyKind: 'copy' },
 ] as const
 
 interface Cand {
   id: string; name: string; phone: string; email: string; position: string; store: string
   id_number: string; birthday: string | null; address: string; stage: string; hired_employee_id: string | null
-  identity_locked: boolean
+  identity_locked: boolean; notify_channel: string
 }
 interface Doc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
 
@@ -135,6 +137,16 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
             <F label={t('idNumber')}><input style={lockedInp} disabled={locked} value={cand.id_number} onChange={setF('id_number')} /></F>
             <F label={t('birthday')}><input style={lockedInp} disabled={locked} type="date" value={cand.birthday ?? ''} onChange={setF('birthday')} /></F>
             <F label={t('address')}><input style={inp} value={cand.address} onChange={setF('address')} /></F>
+            <F label={t('notifyChannel')}>
+              <select value={cand.notify_channel || 'email'} onChange={e => setCand({ ...cand, notify_channel: e.target.value })}
+                style={{ ...inp, appearance: 'auto' as React.CSSProperties['appearance'] }}>
+                <option value="email">{t('notifyEmail')}</option>
+                <option value="zalo">{t('notifyZalo')}</option>
+              </select>
+            </F>
+            {cand.notify_channel === 'zalo' && (
+              <p style={{ fontSize: 12, color: '#b45309' }}>{t('zaloHint')}</p>
+            )}
           </div>
           <button onClick={save}
             style={{ marginTop: 16, height: 42, width: '100%', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
@@ -144,13 +156,19 @@ export default function ApplyEditPage({ params }: { params: Promise<{ token: str
 
         <div style={card}>
           <h2 style={h2}>{t('documents')}</h2>
+          <p style={{ fontSize: 12, color: '#64748b', marginTop: -8, marginBottom: 12 }}>{t('documentsHint')}</p>
           <div style={{ display: 'grid', gap: 10 }}>
             {DOC_TYPE_KEYS.map(dt => {
               const list = docsOf(dt.type)
               return (
                 <div key={dt.type} style={{ border: '1px solid #f1f5f9', borderRadius: 10, padding: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{t(dt.key)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600 }}>
+                      {t(dt.key)}
+                      <span style={{ fontSize: 11, fontWeight: 400, color: dt.copyKind !== 'copy' ? '#b45309' : '#94a3b8', marginLeft: 6 }}>
+                        （{t('paper')}：{t(COPY_KEY[dt.copyKind])}）
+                      </span>
+                    </span>
                     <button onClick={() => pickFile(dt.type)} disabled={uploading === dt.type}
                       style={{ fontSize: 13, padding: '5px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: 'white', cursor: 'pointer' }}>
                       {uploading === dt.type ? t('uploading') : t('upload')}

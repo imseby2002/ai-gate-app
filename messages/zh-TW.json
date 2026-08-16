@@ -4105,6 +4105,16 @@
     "saveLinkWarning": "⚠️ 請把此頁網址存起來（加到書籤）",
     "saveLinkHint": "這是您專屬的連結，關閉後可再打開此網址回來修改。",
     "copyLink": "複製連結",
-    "linkCopied": "已複製 ✓"
+    "linkCopied": "已複製 ✓",
+    "docResidence": "居住證明",
+    "documentsHint": "請一次上傳所有文件（含日後保險會用到的）。標示為「正本」者，報到時需另繳紙本正本。",
+    "paper": "紙本",
+    "copyOriginal": "正本",
+    "copyCopy": "影印本",
+    "copyBoth": "正本＋影印本",
+    "notifyChannel": "接收通知方式",
+    "notifyEmail": "Email（面試/錄取通知寄到信箱）",
+    "notifyZalo": "ZALO（需先加入本公司官方帳號 OA）",
+    "zaloHint": "選 ZALO 者，請先搜尋並加入本公司 ZALO 官方帳號（OA），否則無法收到通知。"
   }
 }

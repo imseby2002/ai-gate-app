@@ -1,15 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { APPLY_BUCKET, DOC_LABEL, DOC_TYPE_SET } from '@/lib/hr/apply'
+import { APPLY_BUCKET, DOC_CATALOG, DOC_LABEL, DOC_TYPE_SET } from '@/lib/hr/apply'
+import { notifyHR } from '@/lib/hr/notify'
 
 type Ctx = { params: Promise<{ token: string }> }
 const MAX_SIZE = 10 * 1024 * 1024
+// 必備文件（除「其他」外全部）
+const REQUIRED_KEYS = DOC_CATALOG.filter(d => d.type !== 'other').map(d => d.type)
 
 async function findCandidate(admin: ReturnType<typeof createAdminClient>, token: string) {
   const { data } = await admin
-    .from('agent_hr_candidates').select('id, user_id').eq('apply_token', token).single()
+    .from('agent_hr_candidates').select('id, user_id, name, docs_upload_notified').eq('apply_token', token).single()
   return data
+}
+
+// 上傳後檢查是否已備齊必備文件；首次備齊時通知人事
+async function maybeNotifyComplete(
+  admin: ReturnType<typeof createAdminClient>,
+  cand: { id: string; user_id: string; name: string; docs_upload_notified: boolean },
+) {
+  if (cand.docs_upload_notified) return
+  const { data: docs } = await admin
+    .from('hr_candidate_documents').select('doc_type').eq('candidate_id', cand.id)
+  const have = new Set((docs ?? []).map(d => d.doc_type))
+  const complete = REQUIRED_KEYS.every(k => have.has(k))
+  if (!complete) return
+  await admin.from('agent_hr_candidates').update({ docs_upload_notified: true }).eq('id', cand.id)
+  await notifyHR(cand.user_id, {
+    kind: 'docs_complete',
+    title: '📎 應徵文件已全部上傳',
+    body: `${cand.name} 已上傳所有必備文件，可安排後續繳交紙本與審核。`,
+    candidateId: cand.id,
+  }).catch(() => {})
 }
 
 // 應徵者以 token 上傳文件（multipart：file, doc_type）
@@ -45,6 +68,8 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     await admin.storage.from(APPLY_BUCKET).remove([path])
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  await maybeNotifyComplete(admin, cand)
   return NextResponse.json({ document: data })
 }
 

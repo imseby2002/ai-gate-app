@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { CsvImportPanel, type CsvColumn, type ImportResult } from '@/components/hr/CsvImportPanel'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'recruitment' | 'employees' | 'payroll' | 'attendance' | 'leave'
+type Tab = 'recruitment' | 'employees' | 'evaluation' | 'payroll' | 'attendance' | 'leave'
 
 interface Employee {
   id: string
@@ -1099,9 +1099,33 @@ interface Candidate {
   hired_employee_id: string | null
   apply_token: string | null
   identity_locked: boolean
+  docs_submitted_complete: boolean
+  notify_channel: string
   created_at: string
 }
 interface CandDoc { id: string; doc_type: string; label: string; file_name: string; uploaded_at: string; url: string }
+interface CheckItem { doc_key: string; original_received: boolean; copy_received: boolean; note: string }
+interface HRNotif { id: string; kind: string; title: string; body: string; candidate_id: string | null; is_read: boolean; created_at: string }
+
+// 通知應徵者常用範本
+const NOTIFY_TEMPLATES: { label: string; subject: string; message: string }[] = [
+  { label: '邀請面試', subject: '面試邀請', message: '您好，我們已收到您的應徵，誠摯邀請您前來面試。請與我們聯繫確認時間。' },
+  { label: '錄取可上班', subject: '錄取通知', message: '恭喜您通過面試，歡迎加入！請攜帶所需文件（含正本）至辦公室辦理報到手續。' },
+  { label: '請補件', subject: '文件補件通知', message: '您好，您的應徵文件尚有缺漏，請登入您的專屬連結補齊文件，謝謝。' },
+]
+
+// 完整文件目錄（與後端 DOC_CATALOG 對齊）
+const HR_DOC_CATALOG: { type: string; label: string; copy: string; needOriginal: boolean }[] = [
+  { type: 'resume', label: '履歷', copy: '影印本', needOriginal: false },
+  { type: 'id_card', label: '身分證', copy: '正本＋影印本', needOriginal: true },
+  { type: 'application', label: '求職申請書', copy: '正本', needOriginal: true },
+  { type: 'cv', label: 'CV', copy: '影印本', needOriginal: false },
+  { type: 'diploma', label: '畢業證／學生證', copy: '影印本', needOriginal: false },
+  { type: 'health', label: '健康證明', copy: '正本', needOriginal: true },
+  { type: 'birth', label: '出生證明', copy: '影印本', needOriginal: false },
+  { type: 'residence', label: '居住證明', copy: '影印本', needOriginal: false },
+  { type: 'other', label: '其他', copy: '影印本', needOriginal: false },
+]
 
 const CAND_STAGES = ['new', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected'] as const
 const CAND_STAGE_LABEL: Record<string, string> = {
@@ -1126,6 +1150,12 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [applyCode, setApplyCode] = useState('')
   const [docsFor, setDocsFor] = useState<Candidate | null>(null)
   const [docs, setDocs] = useState<CandDoc[]>([])
+  const [checklist, setChecklist] = useState<CheckItem[]>([])
+  const [notifs, setNotifs] = useState<HRNotif[]>([])
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifyPrefs, setNotifyPrefs] = useState({ telegram: false, email: false })
+  const [notifyTarget, setNotifyTarget] = useState<Candidate | null>(null)
+  const [notifyMsg, setNotifyMsg] = useState({ subject: '', message: '' })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1136,9 +1166,55 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }, [])
   useEffect(() => { load() }, [load])
 
+  const loadNotifs = useCallback(async () => {
+    const res = await fetch('/api/hr/notifications')
+    if (res.ok) setNotifs((await res.json()).notifications ?? [])
+  }, [])
+  useEffect(() => { loadNotifs() }, [loadNotifs])
+
+  useEffect(() => {
+    fetch('/api/hr/settings').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.settings) setNotifyPrefs({ telegram: !!d.settings.notify_telegram, email: !!d.settings.notify_email })
+    })
+  }, [])
+
+  const toggleNotifyPref = async (key: 'telegram' | 'email') => {
+    const next = { ...notifyPrefs, [key]: !notifyPrefs[key] }
+    setNotifyPrefs(next)
+    await fetch('/api/hr/settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notify_telegram: next.telegram, notify_email: next.email }),
+    })
+  }
+
   useEffect(() => {
     fetch('/api/hr/apply-config').then(r => r.ok ? r.json() : null).then(d => { if (d?.code) setApplyCode(d.code) })
   }, [])
+
+  const unreadCount = notifs.filter(n => !n.is_read).length
+  const markNotifsRead = async () => {
+    await fetch('/api/hr/notifications', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all: true }),
+    })
+    loadNotifs()
+  }
+
+  const openNotify = (c: Candidate) => {
+    setNotifyTarget(c)
+    setNotifyMsg({ subject: '', message: '' })
+  }
+  const sendNotify = async () => {
+    if (!notifyTarget || !notifyMsg.subject.trim() || !notifyMsg.message.trim()) return
+    setBusy(true)
+    const res = await fetch('/api/hr/candidates/notify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: notifyTarget.id, ...notifyMsg }),
+    })
+    setBusy(false)
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) { alert(`已透過 ${d.channel === 'zalo' ? 'ZALO' : 'Email'} 送出`); setNotifyTarget(null) }
+    else alert(d.error ?? '發送失敗')
+  }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const applyUrl = applyCode ? `${origin}/apply/${applyCode}` : ''
@@ -1153,9 +1229,35 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   const openDocs = async (c: Candidate) => {
-    setDocsFor(c); setDocs([])
-    const res = await fetch(`/api/hr/candidates/documents?candidate_id=${c.id}`)
-    if (res.ok) setDocs((await res.json()).documents ?? [])
+    setDocsFor(c); setDocs([]); setChecklist([])
+    const res = await fetch(`/api/hr/candidates/checklist?candidate_id=${c.id}`)
+    if (res.ok) {
+      const d = await res.json()
+      setDocs(d.documents ?? [])
+      setChecklist(d.checklist ?? [])
+    }
+  }
+
+  const checkOf = (docKey: string): CheckItem =>
+    checklist.find(x => x.doc_key === docKey) ?? { doc_key: docKey, original_received: false, copy_received: false, note: '' }
+
+  const setCheck = async (docKey: string, patch: Partial<CheckItem>) => {
+    if (!docsFor) return
+    const next = { ...checkOf(docKey), ...patch }
+    setChecklist(prev => [...prev.filter(x => x.doc_key !== docKey), next])
+    await fetch('/api/hr/candidates/checklist', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidate_id: docsFor.id, doc_key: docKey, ...patch }),
+    })
+  }
+
+  const toggleSubmitComplete = async (c: Candidate) => {
+    await fetch('/api/hr/candidates', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: c.id, docs_submitted_complete: !c.docs_submitted_complete }),
+    })
+    setDocsFor({ ...c, docs_submitted_complete: !c.docs_submitted_complete })
+    load()
   }
 
   const save = async () => {
@@ -1206,10 +1308,51 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
           <h3 className="font-semibold">應徵管理</h3>
           <p className="text-sm text-gray-500">應徵 → 面試 → 錄取 → 一鍵轉員工</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
-          <Plus className="h-4 w-4" />新增應徵者
-        </Button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowNotifs(v => !v)}
+            className="relative px-2.5 py-2 rounded-lg border hover:bg-gray-50 text-gray-600">
+            🔔
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">{unreadCount}</span>
+            )}
+          </button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
+            <Plus className="h-4 w-4" />新增應徵者
+          </Button>
+        </div>
       </div>
+
+      {showNotifs && (
+        <div className="rounded-lg border bg-white p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">站內通知</span>
+            {unreadCount > 0 && <button onClick={markNotifsRead} className="text-xs text-primary hover:underline">全部標為已讀</button>}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-gray-600 bg-gray-50 rounded-md px-2.5 py-1.5">
+            <span className="text-gray-400">同步通知到：</span>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" checked={notifyPrefs.telegram} onChange={() => toggleNotifyPref('telegram')} />Telegram
+            </label>
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" checked={notifyPrefs.email} onChange={() => toggleNotifyPref('email')} />Email
+            </label>
+            <span className="text-gray-300 ml-auto">（Token 於客服平台設定）</span>
+          </div>
+          {notifs.length === 0 ? (
+            <p className="text-xs text-gray-400 py-2 text-center">目前沒有通知</p>
+          ) : (
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {notifs.map(n => (
+                <div key={n.id} className={`text-sm rounded-md px-2.5 py-1.5 ${n.is_read ? 'bg-gray-50' : 'bg-blue-50'}`}>
+                  <div className="font-medium">{n.title}</div>
+                  <div className="text-xs text-gray-500">{n.body}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5">{new Date(n.created_at).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {applyUrl && (
         <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-sm">
@@ -1258,8 +1401,12 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                       </div>
                       {c.phone && <div className="text-xs text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
 
+                      {c.docs_submitted_complete && (
+                        <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />文件繳交完成</div>
+                      )}
                       <div className="flex flex-wrap gap-1 text-[10px]">
                         <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">文件</button>
+                        <button onClick={() => openNotify(c)} className="px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700">通知</button>
                         <button onClick={() => toggleLock(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
                           {c.identity_locked ? '開放修改' : '鎖定資料'}
                         </button>
@@ -1293,28 +1440,88 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
         </div>
       )}
 
+      {notifyTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setNotifyTarget(null)}>
+          <div className="bg-white rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">通知 {notifyTarget.name}</h3>
+              <button onClick={() => setNotifyTarget(null)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            <p className="text-xs text-gray-500">
+              將以應徵者設定的方式發送：
+              <span className="font-medium text-gray-700">{notifyTarget.notify_channel === 'zalo' ? ' ZALO' : ' Email'}</span>
+              {notifyTarget.notify_channel !== 'zalo' && notifyTarget.email ? `（${notifyTarget.email}）` : ''}
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {NOTIFY_TEMPLATES.map(t => (
+                <button key={t.label} onClick={() => setNotifyMsg({ subject: t.subject, message: t.message })}
+                  className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{t.label}</button>
+              ))}
+            </div>
+            <Field label="主旨"><Input value={notifyMsg.subject} onChange={e => setNotifyMsg({ ...notifyMsg, subject: e.target.value })} /></Field>
+            <Field label="內容">
+              <textarea value={notifyMsg.message} onChange={e => setNotifyMsg({ ...notifyMsg, message: e.target.value })}
+                className="w-full rounded-md border px-2 py-1.5 text-sm" rows={5} />
+            </Field>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setNotifyTarget(null)}>取消</Button>
+              <Button size="sm" onClick={sendNotify} disabled={busy || !notifyMsg.subject.trim() || !notifyMsg.message.trim()}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '發送'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {docsFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsFor(null)}>
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{docsFor.name} 的應徵文件</h3>
+              <h3 className="font-semibold">{docsFor.name} 的文件與繳交</h3>
               <button onClick={() => setDocsFor(null)}><X className="h-5 w-5 text-gray-400" /></button>
             </div>
-            {docs.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">尚未上傳任何文件</p>
-            ) : (
-              <div className="space-y-2">
-                {docs.map(d => (
-                  <div key={d.id} className="flex items-center justify-between gap-2 text-sm border rounded-lg px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="font-medium">{d.label}</div>
-                      <div className="text-xs text-gray-400 truncate">{d.file_name}</div>
+
+            <label className="flex items-center gap-2 text-sm bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 cursor-pointer">
+              <input type="checkbox" checked={docsFor.docs_submitted_complete} onChange={() => toggleSubmitComplete(docsFor)} />
+              <span className="font-medium text-emerald-700">紙本已全部繳交到辦公室（完成）</span>
+            </label>
+
+            <div className="text-xs text-gray-400 flex gap-3 px-1">
+              <span>上傳＝掃描檔</span><span>正/影＝紙本收到勾選</span>
+            </div>
+
+            <div className="space-y-2">
+              {HR_DOC_CATALOG.map(spec => {
+                const uploaded = docs.filter(d => d.doc_type === spec.type)
+                const chk = checkOf(spec.type)
+                return (
+                  <div key={spec.type} className="border rounded-lg px-3 py-2 text-sm space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-medium">{spec.label}</span>
+                        <span className={`text-[11px] ml-1.5 ${spec.needOriginal ? 'text-amber-600' : 'text-gray-400'}`}>紙本：{spec.copy}</span>
+                      </div>
+                      {uploaded.length > 0
+                        ? <span className="text-[11px] text-emerald-600 whitespace-nowrap flex items-center gap-0.5"><Check className="h-3 w-3" />已上傳 {uploaded.length}</span>
+                        : <span className="text-[11px] text-gray-300 whitespace-nowrap">未上傳</span>}
                     </div>
-                    <a href={d.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline whitespace-nowrap">開啟</a>
+                    {uploaded.map(d => (
+                      <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-xs text-primary hover:underline truncate">📎 {d.file_name}</a>
+                    ))}
+                    <div className="flex items-center gap-3 pt-0.5">
+                      {spec.copy.includes('正本') && (
+                        <label className="flex items-center gap-1 text-xs cursor-pointer">
+                          <input type="checkbox" checked={chk.original_received} onChange={e => setCheck(spec.type, { original_received: e.target.checked })} />正本已繳
+                        </label>
+                      )}
+                      <label className="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox" checked={chk.copy_received} onChange={e => setCheck(spec.type, { copy_received: e.target.checked })} />影印本已繳
+                      </label>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1363,6 +1570,196 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   )
 }
 
+// ─── 人員評估表（由管理／主管填寫）──────────────────────────
+interface EvalItem { kind: 'reward' | 'penalty'; label: string; amount: number }
+interface Evaluation {
+  id: string; employee_id: string; year: number; month: number
+  rating: string; bonus: number; items: EvalItem[]
+  reward_total: number; penalty_total: number; notes: string; evaluator: string
+}
+const RATINGS = ['', '優', '佳', '普', '待改進']
+
+function EvaluationTab({ employees, loading }: { employees: Employee[]; loading: boolean }) {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [evals, setEvals] = useState<Record<string, Evaluation>>({})
+  const [editing, setEditing] = useState<{ emp: Employee; draft: Partial<Evaluation> } | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/hr/evaluations?year=${year}&month=${month}`)
+    if (!res.ok) return
+    const d = await res.json()
+    const map: Record<string, Evaluation> = {}
+    for (const e of (d.evaluations ?? []) as Evaluation[]) map[e.employee_id] = e
+    setEvals(map)
+  }, [year, month])
+  useEffect(() => { load() }, [load])
+
+  const active = employees.filter(e => e.status === 'active')
+
+  const openEdit = (emp: Employee) => {
+    const ev = evals[emp.id]
+    setEditing({
+      emp,
+      draft: ev
+        ? { ...ev, items: [...(ev.items ?? [])] }
+        : { rating: '', bonus: 0, items: [], notes: '', evaluator: '' },
+    })
+  }
+
+  const draftTotals = (d: Partial<Evaluation>) => {
+    const items = d.items ?? []
+    const reward = items.filter(i => i.kind === 'reward').reduce((s, i) => s + (Number(i.amount) || 0), 0)
+    const penalty = items.filter(i => i.kind === 'penalty').reduce((s, i) => s + (Number(i.amount) || 0), 0)
+    const net = (Number(d.bonus) || 0) + reward - penalty
+    return { reward, penalty, net }
+  }
+
+  const saveEdit = async () => {
+    if (!editing) return
+    setBusy(true)
+    const res = await fetch('/api/hr/evaluations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employee_id: editing.emp.id, year, month, ...editing.draft }),
+    })
+    setBusy(false)
+    if (res.ok) { setEditing(null); load() }
+    else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+  }
+
+  const setDraft = (patch: Partial<Evaluation>) => setEditing(e => e ? { ...e, draft: { ...e.draft, ...patch } } : e)
+  const addItem = (kind: 'reward' | 'penalty') =>
+    setEditing(e => e ? { ...e, draft: { ...e.draft, items: [...(e.draft.items ?? []), { kind, label: '', amount: 0 }] } } : e)
+  const setItem = (idx: number, patch: Partial<EvalItem>) =>
+    setEditing(e => {
+      if (!e) return e
+      const items = [...(e.draft.items ?? [])]
+      items[idx] = { ...items[idx], ...patch }
+      return { ...e, draft: { ...e.draft, items } }
+    })
+  const removeItem = (idx: number) =>
+    setEditing(e => e ? { ...e, draft: { ...e.draft, items: (e.draft.items ?? []).filter((_, i) => i !== idx) } } : e)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 className="font-semibold">人員評估表</h3>
+          <p className="text-sm text-gray-500">由管理／主管填寫；獎金、獎勵、懲罰將帶入薪資彙整</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
+            {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}
+          </select>
+          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+      ) : active.length === 0 ? (
+        <div className="text-center py-10 text-gray-400 text-sm">尚無在職員工</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b">
+                <th className="py-2 pr-2">姓名</th><th className="pr-2">門市</th><th className="pr-2">評等</th>
+                <th className="pr-2 text-right">獎金</th><th className="pr-2 text-right">獎勵</th>
+                <th className="pr-2 text-right">懲罰</th><th className="pr-2 text-right">淨獎懲</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {active.map(emp => {
+                const ev = evals[emp.id]
+                const net = ev ? (Number(ev.bonus) + Number(ev.reward_total) - Number(ev.penalty_total)) : 0
+                return (
+                  <tr key={emp.id} className="border-b last:border-0">
+                    <td className="py-2 pr-2 font-medium">{emp.name}</td>
+                    <td className="pr-2 text-gray-500">{emp.store || '—'}</td>
+                    <td className="pr-2">{ev?.rating || '—'}</td>
+                    <td className="pr-2 text-right">{ev ? fmt(Number(ev.bonus)) : '—'}</td>
+                    <td className="pr-2 text-right text-emerald-600">{ev ? fmt(Number(ev.reward_total)) : '—'}</td>
+                    <td className="pr-2 text-right text-red-500">{ev ? fmt(Number(ev.penalty_total)) : '—'}</td>
+                    <td className="pr-2 text-right font-semibold">{ev ? fmt(net) : '—'}</td>
+                    <td className="text-right">
+                      <button onClick={() => openEdit(emp)} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
+                        {ev ? '編輯' : '填寫'}
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editing && (() => {
+        const t = draftTotals(editing.draft)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
+            <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">{editing.emp.name}　{year}/{month} 評估</h3>
+                <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="評等">
+                  <select value={editing.draft.rating ?? ''} onChange={e => setDraft({ rating: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
+                    {RATINGS.map(r => <option key={r} value={r}>{r || '（未評）'}</option>)}
+                  </select>
+                </Field>
+                <Field label="獎金"><Input type="number" value={String(editing.draft.bonus ?? 0)} onChange={e => setDraft({ bonus: Number(e.target.value) || 0 })} /></Field>
+                <Field label="填寫者（主管）"><Input value={editing.draft.evaluator ?? ''} onChange={e => setDraft({ evaluator: e.target.value })} /></Field>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">獎勵／懲罰明細</span>
+                  <div className="flex gap-1">
+                    <button onClick={() => addItem('reward')} className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">＋獎勵</button>
+                    <button onClick={() => addItem('penalty')} className="text-xs px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200">＋懲罰</button>
+                  </div>
+                </div>
+                {(editing.draft.items ?? []).length === 0 && <p className="text-xs text-gray-400">尚無項目</p>}
+                {(editing.draft.items ?? []).map((it, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className={`text-[11px] px-1.5 py-0.5 rounded ${it.kind === 'reward' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
+                      {it.kind === 'reward' ? '獎勵' : '懲罰'}
+                    </span>
+                    <Input value={it.label} onChange={e => setItem(i, { label: e.target.value })} placeholder="項目說明" />
+                    <Input type="number" value={String(it.amount)} onChange={e => setItem(i, { amount: Number(e.target.value) || 0 })} placeholder="金額" />
+                    <button onClick={() => removeItem(i)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                ))}
+              </div>
+
+              <Field label="備註">
+                <textarea value={editing.draft.notes ?? ''} onChange={e => setDraft({ notes: e.target.value })} className="w-full rounded-md border px-2 py-1.5 text-sm" rows={2} />
+              </Field>
+
+              <div className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                <span className="text-gray-500">獎勵 {fmt(t.reward)}　懲罰 {fmt(t.penalty)}</span>
+                <span className="font-semibold">淨獎懲：{fmt(t.net)}</span>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+                <Button size="sm" onClick={saveEdit} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}</Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
 export default function HRPage() {
   const [tab, setTab] = useState<Tab>('recruitment')
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -1397,6 +1794,7 @@ export default function HRPage() {
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
     { id: 'recruitment', label: '應徵管理', icon: <UserPlus className="h-4 w-4" /> },
     { id: 'employees', label: '員工管理', icon: <Users className="h-4 w-4" /> },
+    { id: 'evaluation', label: '人員評估', icon: <ClipboardCheck className="h-4 w-4" /> },
     { id: 'payroll',   label: '薪資管理', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'attendance', label: '考勤時數', icon: <Clock className="h-4 w-4" /> },
     { id: 'leave',     label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
@@ -1457,6 +1855,7 @@ export default function HRPage() {
       <Card className="p-5">
         {tab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
         {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
+        {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} />}
         {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'attendance' && <AttendanceTab />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}

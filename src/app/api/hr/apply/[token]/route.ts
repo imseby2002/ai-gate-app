@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
   const admin = createAdminClient()
   const { data: cand } = await admin
     .from('agent_hr_candidates')
-    .select('id, user_id, name, phone, email, position, store, id_number, birthday, address, stage, hired_employee_id, identity_locked')
+    .select('id, user_id, name, phone, email, position, store, id_number, birthday, address, stage, hired_employee_id, identity_locked, notify_channel')
     .eq('apply_token', token).single()
   if (!cand) return NextResponse.json({ error: '連結無效' }, { status: 404 })
 
@@ -49,9 +49,13 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const body = await req.json().catch(() => ({}))
   const updates: Record<string, unknown> = {}
 
-  // 電話、地址：隨時可改
+  // 電話、地址、通知方式：隨時可改
   for (const f of FREE_FIELDS) {
-    if (body[f] !== undefined) updates[f] = body[f]
+    if (body[f] === undefined) continue
+    if (f === 'notify_channel' && body[f] !== 'email' && body[f] !== 'zalo') {
+      return NextResponse.json({ error: '通知方式僅能是 email 或 zalo' }, { status: 400 })
+    }
+    updates[f] = body[f]
   }
   // 重要基本資料：鎖定時不得變更（值不同即擋下）
   const rec = cand as Record<string, unknown>
