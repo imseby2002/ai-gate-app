@@ -463,6 +463,20 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   const [statusFilter, setStatusFilter] = useState<string>('active')
   const [showImport, setShowImport] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [exportingIns, setExportingIns] = useState(false)
+
+  async function exportInsurance() {
+    setErr(''); setExportingIns(true)
+    try {
+      const res = await fetch('/api/hr/insurance-export')
+      if (!res.ok) { setErr('匯出失敗'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `insurance_application_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
+    } catch { setErr('匯出失敗') } finally { setExportingIns(false) }
+  }
 
   const save = async (data: Omit<Employee, 'id' | 'created_at'>) => {
     setSaving(true); setErr('')
@@ -495,6 +509,9 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowSettings(v => !v)}>
             <Shield className="h-4 w-4" />保險設定
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1" onClick={exportInsurance} disabled={exportingIns} title="匯出需投保員工名單（保險申請單）">
+            {exportingIns ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}保險申請單
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
             <Upload className="h-4 w-4" />批次上傳
