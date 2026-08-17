@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -993,6 +993,7 @@ function AttendanceTab() {
   const [importing, setImporting] = useState(false)
   const [err, setErr] = useState('')
   const [msg, setMsg] = useState('')
+  const [store, setStore] = useState('')
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const load = useCallback(async () => {
@@ -1011,6 +1012,7 @@ function AttendanceTab() {
     setErr(''); setMsg(''); setImporting(true)
     try {
       const fd = new FormData(); fd.append('file', file)
+      if (store.trim()) fd.append('store', store.trim())
       const res = await fetch('/api/hr/attendance/import', { method: 'POST', body: fd })
       const d = await res.json()
       if (!res.ok) { setErr(d.error ?? '匯入失敗'); return }
@@ -1038,14 +1040,17 @@ function AttendanceTab() {
               className={`h-8 w-8 rounded-lg text-xs font-medium transition-colors ${month === m ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}>{m}</button>
           ))}
         </div>
-        <Button size="sm" className="ml-auto gap-1" disabled={importing} onClick={() => fileRef.current?.click()}>
-          {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}上傳考勤 .xls
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <InputEl value={store} onChange={setStore} placeholder="門市（如 YL）" />
+          <Button size="sm" className="gap-1" disabled={importing} onClick={() => fileRef.current?.click()}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}上傳考勤 .xls
+          </Button>
+        </div>
         <input ref={fileRef} type="file" accept=".xls" className="hidden" onChange={onFile} />
       </div>
 
       <p className="text-xs text-gray-500">
-        選擇該門市當月的考勤機匯出檔（.xls），系統會彙總每人月時數（＝每日實際工作小時數相加）。重複上傳會更新機器時數，你的手動補登會保留。
+        每個檔案為單一門市：請先填「門市」（與員工資料、POS 一致，如 YL），再選該門市當月考勤機匯出檔（.xls）。系統彙總每人月時數（＝每日實際工作小時數相加）；未填門市才退回用檔案「部门」欄。重複上傳會更新機器時數，手動補登會保留。
       </p>
       {msg && <p className="text-sm text-green-600">{msg}</p>}
       {err && <p className="text-sm text-red-500">{err}</p>}
@@ -1992,6 +1997,11 @@ export default function HRPage() {
           <span className="text-sm text-gray-400 mr-1">
             共 <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> 名在職員工
           </span>
+          <Link href="/store-reports">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Store className="h-4 w-4" />門市報表
+            </Button>
+          </Link>
           <Link href="/finance">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Wallet className="h-4 w-4" />出納總務

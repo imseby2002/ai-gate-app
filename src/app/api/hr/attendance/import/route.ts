@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
   const form = await req.formData()
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: '缺少檔案' }, { status: 400 })
+  // 上傳時指定門市（每個檔案一個門市）；未指定才退回用檔案「部门」欄
+  const storeOverride = str(form.get('store') as XlsCell | undefined)
 
   let rows: XlsCell[][]
   try {
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
   for (let r = 1; r < rows.length; r++) {
     const no = str(rows[r][cNo]); const name = str(rows[r][cName])
     if (!no && !name) continue
-    const store = cDept >= 0 ? str(rows[r][cDept]) : ''
+    const store = storeOverride || (cDept >= 0 ? str(rows[r][cDept]) : '')
     const key = store + '|' + no
     let a = map.get(key)
     if (!a) { a = { store, attendance_no: no, name, att_type: cType >= 0 ? str(rows[r][cType]) : '', machine_hours: 0, work_days: 0 }; map.set(key, a) }
