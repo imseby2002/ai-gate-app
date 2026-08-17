@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -1997,6 +1997,11 @@ export default function HRPage() {
           <span className="text-sm text-gray-400 mr-1">
             共 <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> 名在職員工
           </span>
+          <Link href="/store-reports">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Store className="h-4 w-4" />門市報表
+            </Button>
+          </Link>
           <Link href="/finance">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Wallet className="h-4 w-4" />出納總務
