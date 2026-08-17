@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X } from 'lucide-react'
+import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -64,7 +64,7 @@ export default function StoreReportsPage() {
           <h1 className="text-2xl font-bold">門市報表</h1>
           <p className="text-sm text-gray-500">業績、進銷存、配方與差異分析</p>
         </div>
-        <div className="ml-auto"><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2"><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發</Button></Link><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
       </div>
 
       {/* 門市 / 年月（報表與差異用） */}
@@ -225,9 +225,14 @@ function RecipesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">每個成品用多少原料/杯。原料來自已匯入的進銷存。</p>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', note: '', items: [] })}><Plus className="h-4 w-4" />新增配方</Button>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-sm text-gray-500">每個成品用多少原料/杯。可至「研發」進行檔案匯入與完整設計。</p>
+        <div className="flex items-center gap-2">
+          <Link href="/rd">
+            <Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發配方中心</Button>
+          </Link>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', note: '', items: [] })}><Plus className="h-4 w-4" />新增配方</Button>
+        </div>
       </div>
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : recipes.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無配方</div>
