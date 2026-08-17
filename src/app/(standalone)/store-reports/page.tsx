@@ -22,7 +22,7 @@ interface Material { code: string; name: string; unit: string }
 interface RecipeItem { material_code: string; material_name: string; qty_per_cup: number }
 interface Recipe { id: string; name: string; note: string; items: RecipeItem[] }
 interface ProductMap { product_code: string; product_name: string; recipe_id: string | null }
-interface VarRow { material_code: string; material_name: string; unit: string; theoretical: number; actual: number; remaining: number; diff: number; pct: number | null; over: boolean }
+interface VarRow { material_code: string; material_name: string; unit: string; theoretical: number; actual: number; remaining: number; diff: number; pct: number | null; over: boolean; price: number; money_loss: number }
 
 export default function StoreReportsPage() {
   const now = new Date()
@@ -109,6 +109,7 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
   const [uploading, setUploading] = useState('')
   const posRef = useRef<HTMLInputElement>(null)
   const invRef = useRef<HTMLInputElement>(null)
+  const priceRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     if (!store) { setReport(null); return }
@@ -140,14 +141,26 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
     const d = await res.json().catch(() => ({}))
     if (res.ok) { setMsg(`進銷存匯入：${(d.stores ?? []).map((s: { store: string; count: number }) => `${s.store}(${s.count})`).join('、')}`); onImported(); load() } else setMsg(d.error ?? '匯入失敗')
   }
+  const uploadPrice = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    setUploading('price'); setMsg('')
+    const fd = new FormData(); fd.append('file', file)
+    const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
+    setUploading('')
+    const d = await res.json().catch(() => ({}))
+    setMsg(res.ok ? `標準價匯入 ${d.imported} 筆` : (d.error ?? '匯入失敗'))
+  }
 
   return (
     <div className="space-y-4">
       <input ref={posRef} type="file" hidden accept=".xls" onChange={uploadPos} />
       <input ref={invRef} type="file" hidden accept=".xlsx" onChange={uploadInv} />
+      <input ref={priceRef} type="file" hidden accept=".xlsx" onChange={uploadPrice} />
       <div className="flex gap-2 flex-wrap">
         <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => posRef.current?.click()}>{uploading === 'pos' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入 POS(.xls)</Button>
         <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => invRef.current?.click()}>{uploading === 'inv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入進銷存(.xlsx)</Button>
+        <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => priceRef.current?.click()}>{uploading === 'price' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入標準價(.xlsx)</Button>
         {msg && <span className="text-sm text-blue-600 self-center">{msg}</span>}
       </div>
 
@@ -305,16 +318,26 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
   const [unmapped, setUnmapped] = useState<{ product_code: string; product_name: string; qty: number }[]>([])
   const [threshold, setThreshold] = useState(10)
   const [overCount, setOverCount] = useState(0)
+  const [totalLoss, setTotalLoss] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [notifying, setNotifying] = useState(false)
 
   const load = useCallback(async () => {
     if (!store) { setRows([]); return }
     setLoading(true)
     const res = await fetch(`/api/inv/variance?store=${encodeURIComponent(store)}&year=${year}&month=${month}`)
-    if (res.ok) { const d = await res.json(); setRows(d.rows ?? []); setUnmapped(d.unmapped ?? []); setThreshold(d.threshold ?? 10); setOverCount(d.over_count ?? 0) }
+    if (res.ok) { const d = await res.json(); setRows(d.rows ?? []); setUnmapped(d.unmapped ?? []); setThreshold(d.threshold ?? 10); setOverCount(d.over_count ?? 0); setTotalLoss(d.total_loss ?? 0) }
     setLoading(false)
   }, [store, year, month])
   useEffect(() => { load() }, [load])
+
+  const notify = async () => {
+    setNotifying(true)
+    const res = await fetch('/api/inv/variance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store, year, month }) })
+    setNotifying(false)
+    const d = await res.json().catch(() => ({}))
+    alert(res.ok ? (d.notified ? `已通知人事（${d.over_count} 項超標）` : '目前無超標項目') : (d.error ?? '通知失敗'))
+  }
 
   const saveThreshold = async (v: number) => {
     setThreshold(v)
@@ -328,6 +351,10 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
         <label className="flex items-center gap-2 text-sm"><span className="text-gray-500">誤差警示門檻</span>
           <Input type="number" value={String(threshold)} onChange={e => setThreshold(Number(e.target.value) || 0)} onBlur={e => saveThreshold(Number(e.target.value) || 0)} className="w-20" /><span className="text-gray-500">%</span></label>
         {overCount > 0 && <span className="text-sm text-red-600 font-medium">⚠️ {overCount} 項超過門檻</span>}
+        {totalLoss > 0 && <span className="text-sm text-red-500">估計金額損失 <b>{fmt(totalLoss)}</b></span>}
+        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" disabled={notifying || overCount === 0} onClick={notify}>
+          {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
+        </Button>
       </div>
       {unmapped.length > 0 && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -337,7 +364,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">無資料。請先匯入 POS＋進銷存、建立配方並完成對照。</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">理論用量</th><th className="pr-2 text-right">實際出庫</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">剩餘</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">理論用量</th><th className="pr-2 text-right">實際出庫</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">金額損失</th><th className="pr-2 text-right">剩餘</th></tr></thead>
           <tbody>{rows.map(r => (
             <tr key={r.material_code} className={`border-b last:border-0 ${r.over ? 'bg-red-50' : ''}`}>
               <td className="py-1.5 pr-2">{r.material_name}</td>
@@ -346,6 +373,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
               <td className="pr-2 text-right tabular-nums">{fmt1(r.actual)}</td>
               <td className={`pr-2 text-right tabular-nums ${r.diff > 0 ? 'text-red-500' : 'text-emerald-600'}`}>{fmt1(r.diff)}</td>
               <td className={`pr-2 text-right tabular-nums font-medium ${r.over ? 'text-red-600' : ''}`}>{r.pct === null ? '—' : `${fmt1(r.pct)}%`}</td>
+              <td className={`pr-2 text-right tabular-nums ${r.money_loss > 0 ? 'text-red-500' : 'text-gray-400'}`}>{r.price > 0 ? fmt(r.money_loss) : '—'}</td>
               <td className="pr-2 text-right tabular-nums text-gray-500">{fmt1(r.remaining)}</td>
             </tr>))}</tbody></table></div>}
     </div>
