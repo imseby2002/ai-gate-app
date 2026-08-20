@@ -23,8 +23,12 @@ const txt = (v: unknown) => String(v ?? '').trim()
 // 0 Mã,1 Tên,3 ĐVT,4 期初數量,5 期初金額,9 Tổng nhập,10 Tổng tiền nhập,
 // 14 Xuất bán POS,15 Tổng xuất,16 Tổng tiền xuất,17 期末數量,18 期末金額
 function parseSheetRows(rows: Cell[][], ownerId: string, store: string, year: number, month: number) {
-  let hi = rows.findIndex(r => r.some(c => txt(c).includes('Tổng nhập')))
+  const hi = rows.findIndex(r => r.some(c => txt(c).includes('Tổng nhập')))
   if (hi < 0) return []
+  // 「lượng dùng tháng」＝當月原料使用量（排除「tổng lượng dùng」）；預設第 19 欄
+  const header = rows[hi] ?? []
+  const usageCol = header.findIndex(c => /^lượng dùng/i.test(txt(c)))
+  const uc = usageCol >= 0 ? usageCol : 19
   const recs: Record<string, unknown>[] = []
   for (let i = hi + 1; i < rows.length; i++) {
     const r = rows[i]
@@ -39,6 +43,7 @@ function parseSheetRows(rows: Cell[][], ownerId: string, store: string, year: nu
       in_total: num(r[9]), in_value: num(r[10]),
       out_pos: num(r[14]), out_total: num(r[15]), out_value: num(r[16]),
       close_qty: num(r[17]), close_value: num(r[18]),
+      usage_month: num(r[uc]),
     })
   }
   return recs

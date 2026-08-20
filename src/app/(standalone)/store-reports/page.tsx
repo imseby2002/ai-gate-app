@@ -21,8 +21,15 @@ interface Report {
 interface Material { code: string; name: string; unit: string }
 interface RecipeItem { material_code: string; material_name: string; qty_per_cup: number }
 interface Recipe { id: string; name: string; note: string; items: RecipeItem[] }
-interface ProductMap { product_code: string; product_name: string; recipe_id: string | null }
+interface ProductMap { product_code: string; product_name: string; recipe_id: string | null; kind: string }
 interface VarRow { material_code: string; material_name: string; unit: string; theoretical: number; actual: number; remaining: number; diff: number; pct: number | null; over: boolean; price: number; money_loss: number }
+interface CrossChecks {
+  cups_sold: number; cup_used: number | null; cup_diff: number | null
+  tea_used: number | null; creamer_used: number | null
+  ratio_actual: number | null; ratio_recipe: number | null
+  implied_cups_tea: number | null; implied_cups_creamer: number | null; configured: boolean
+}
+interface InvSettings { variance_threshold: number; cup_code: string; tea_code: string; creamer_code: string; tea_per_cup: number; creamer_per_cup: number }
 
 export default function StoreReportsPage() {
   const now = new Date()
@@ -289,25 +296,37 @@ function MappingTab() {
   }, [])
   useEffect(() => { load() }, [load])
 
-  const setMap = async (p: ProductMap, recipe_id: string) => {
-    setProducts(prev => prev.map(x => x.product_code === p.product_code ? { ...x, recipe_id: recipe_id || null } : x))
-    await fetch('/api/inv/product-map', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_code: p.product_code, product_name: p.product_name, recipe_id: recipe_id || null }) })
+  const save = async (p: ProductMap, patch: Partial<ProductMap>) => {
+    const next = { ...p, ...patch }
+    setProducts(prev => prev.map(x => x.product_code === p.product_code ? next : x))
+    await fetch('/api/inv/product-map', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_code: p.product_code, product_name: p.product_name, recipe_id: next.recipe_id || null, kind: next.kind }),
+    })
   }
 
   const mapped = products.filter(p => p.recipe_id).length
   return (
     <div className="space-y-3">
-      <p className="text-sm text-gray-500">把每個 POS 成品綁到一個配方。已綁 {mapped}/{products.length}。</p>
+      <p className="text-sm text-gray-500">把每個 POS 成品綁到一個配方，並標「飲料/加料」。已綁 {mapped}/{products.length}。加料(TOPPING)的配方可用<b>負值</b>填「排擠的基底」（如 −茶、−奶精）。</p>
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : products.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無 POS 成品，請先於「報表」匯入 POS。</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">成品碼</th><th className="pr-2">名稱</th><th className="pr-2">對照配方</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">成品碼</th><th className="pr-2">名稱</th><th className="pr-2">類別</th><th className="pr-2">對照配方</th></tr></thead>
           <tbody>{products.map(p => (
             <tr key={p.product_code} className="border-b last:border-0">
               <td className="py-1.5 pr-2 tabular-nums text-gray-500">{p.product_code}</td>
               <td className="pr-2">{p.product_name}</td>
               <td className="pr-2">
-                <select value={p.recipe_id ?? ''} onChange={e => setMap(p, e.target.value)} className={`h-8 rounded-md border px-1.5 text-xs ${p.recipe_id ? '' : 'text-amber-600 border-amber-300'}`}>
+                <select value={p.kind || ''} onChange={e => save(p, { kind: e.target.value })} className="h-8 rounded-md border px-1.5 text-xs">
+                  <option value="">未分類</option>
+                  <option value="drink">飲料</option>
+                  <option value="topping">加料</option>
+                  <option value="other">其他</option>
+                </select>
+              </td>
+              <td className="pr-2">
+                <select value={p.recipe_id ?? ''} onChange={e => save(p, { recipe_id: e.target.value || null })} className={`h-8 rounded-md border px-1.5 text-xs ${p.recipe_id ? '' : 'text-amber-600 border-amber-300'}`}>
                   <option value="">（未對照）</option>
                   {recipes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
@@ -317,24 +336,33 @@ function MappingTab() {
   )
 }
 
-// ── 差異分析 ──
+// ── 差異分析（智能）──
 function VarianceTab({ store, year, month }: { store: string; year: number; month: number }) {
   const [rows, setRows] = useState<VarRow[]>([])
   const [unmapped, setUnmapped] = useState<{ product_code: string; product_name: string; qty: number }[]>([])
+  const [cc, setCc] = useState<CrossChecks | null>(null)
   const [threshold, setThreshold] = useState(10)
   const [overCount, setOverCount] = useState(0)
   const [totalLoss, setTotalLoss] = useState(0)
   const [loading, setLoading] = useState(false)
   const [notifying, setNotifying] = useState(false)
+  const [showCfg, setShowCfg] = useState(false)
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [cfg, setCfg] = useState<InvSettings>({ variance_threshold: 10, cup_code: '', tea_code: '', creamer_code: '', tea_per_cup: 0, creamer_per_cup: 0 })
 
   const load = useCallback(async () => {
     if (!store) { setRows([]); return }
     setLoading(true)
     const res = await fetch(`/api/inv/variance?store=${encodeURIComponent(store)}&year=${year}&month=${month}`)
-    if (res.ok) { const d = await res.json(); setRows(d.rows ?? []); setUnmapped(d.unmapped ?? []); setThreshold(d.threshold ?? 10); setOverCount(d.over_count ?? 0); setTotalLoss(d.total_loss ?? 0) }
+    if (res.ok) { const d = await res.json(); setRows(d.rows ?? []); setUnmapped(d.unmapped ?? []); setThreshold(d.threshold ?? 10); setOverCount(d.over_count ?? 0); setTotalLoss(d.total_loss ?? 0); setCc(d.cross_checks ?? null) }
     setLoading(false)
   }, [store, year, month])
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    fetch('/api/inv/settings').then(r => r.ok ? r.json() : null).then(d => { if (d) setCfg({ variance_threshold: d.variance_threshold ?? 10, cup_code: d.cup_code ?? '', tea_code: d.tea_code ?? '', creamer_code: d.creamer_code ?? '', tea_per_cup: d.tea_per_cup ?? 0, creamer_per_cup: d.creamer_per_cup ?? 0 }) })
+    fetch('/api/inv/recipes').then(r => r.ok ? r.json() : null).then(d => { if (d) setMaterials(d.materials ?? []) })
+  }, [])
 
   const notify = async () => {
     setNotifying(true)
@@ -349,6 +377,10 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
     await fetch('/api/inv/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ variance_threshold: v }) })
     load()
   }
+  const saveCfg = async () => {
+    await fetch('/api/inv/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cfg) })
+    setShowCfg(false); load()
+  }
 
   return (
     <div className="space-y-3">
@@ -357,10 +389,45 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
           <Input type="number" value={String(threshold)} onChange={e => setThreshold(Number(e.target.value) || 0)} onBlur={e => saveThreshold(Number(e.target.value) || 0)} className="w-20" /><span className="text-gray-500">%</span></label>
         {overCount > 0 && <span className="text-sm text-red-600 font-medium">⚠️ {overCount} 項超過門檻</span>}
         {totalLoss > 0 && <span className="text-sm text-red-500">估計金額損失 <b>{fmt(totalLoss)}</b></span>}
-        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" disabled={notifying || overCount === 0} onClick={notify}>
+        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowCfg(v => !v)}>交叉檢核設定</Button>
+        <Button size="sm" variant="outline" className="gap-1.5" disabled={notifying || overCount === 0} onClick={notify}>
           {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
         </Button>
       </div>
+
+      <p className="text-xs text-gray-400">實耗＝IVT「lượng dùng tháng（當月使用量）」欄；未填才用 期初＋叫貨−期末。理論用量含配方負值（加料排擠基底）。</p>
+
+      {showCfg && (
+        <Card className="p-3 space-y-2">
+          <div className="text-sm font-medium">交叉檢核設定（指定杯子/茶/奶精原料與每杯基準）</div>
+          <div className="grid md:grid-cols-3 gap-2 text-xs">
+            <label className="space-y-1"><span className="text-gray-500">杯子原料</span>
+              <select value={cfg.cup_code} onChange={e => setCfg({ ...cfg, cup_code: e.target.value })} className="w-full h-8 rounded-md border px-1.5"><option value="">—</option>{materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-gray-500">茶原料</span>
+              <select value={cfg.tea_code} onChange={e => setCfg({ ...cfg, tea_code: e.target.value })} className="w-full h-8 rounded-md border px-1.5"><option value="">—</option>{materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-gray-500">奶精原料</span>
+              <select value={cfg.creamer_code} onChange={e => setCfg({ ...cfg, creamer_code: e.target.value })} className="w-full h-8 rounded-md border px-1.5"><option value="">—</option>{materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}</option>)}</select></label>
+            <label className="space-y-1"><span className="text-gray-500">每杯茶量（反推用）</span><Input type="number" value={String(cfg.tea_per_cup)} onChange={e => setCfg({ ...cfg, tea_per_cup: Number(e.target.value) || 0 })} className="h-8" /></label>
+            <label className="space-y-1"><span className="text-gray-500">每杯奶精量（反推用）</span><Input type="number" value={String(cfg.creamer_per_cup)} onChange={e => setCfg({ ...cfg, creamer_per_cup: Number(e.target.value) || 0 })} className="h-8" /></label>
+          </div>
+          <div className="flex justify-end"><Button size="sm" onClick={saveCfg}>儲存</Button></div>
+        </Card>
+      )}
+
+      {cc && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <CcCard label="售出杯數（飲料）" value={fmt(cc.cups_sold)} hint={cc.cups_sold === 0 ? '請到成品對照標「飲料」' : ''} />
+          <CcCard label="杯子對帳" value={cc.cup_used === null ? '—' : fmt(cc.cup_used)}
+            hint={cc.cup_diff === null ? '未設杯子原料' : `差 ${fmt(cc.cup_diff)}`} tone={cc.cup_diff !== null && Math.abs(cc.cup_diff) > cc.cups_sold * 0.05 ? 'red' : undefined} />
+          <CcCard label="茶:奶精 實際" value={cc.ratio_actual === null ? '—' : fmt1(cc.ratio_actual)}
+            hint={cc.ratio_recipe === null ? '未設每杯量' : `配方 ${fmt1(cc.ratio_recipe)}`}
+            tone={cc.ratio_actual !== null && cc.ratio_recipe !== null && Math.abs(cc.ratio_actual - cc.ratio_recipe) / cc.ratio_recipe > 0.15 ? 'red' : undefined} />
+          <CcCard label="反推等效杯數（茶）" value={cc.implied_cups_tea === null ? '—' : fmt(cc.implied_cups_tea)}
+            hint={cc.implied_cups_tea === null ? '未設每杯茶量' : `售出 ${fmt(cc.cups_sold)}`}
+            tone={cc.implied_cups_tea !== null && cc.cups_sold > 0 && Math.abs(cc.implied_cups_tea - cc.cups_sold) / cc.cups_sold > 0.1 ? 'red' : undefined} />
+        </div>
+      )}
+
       {unmapped.length > 0 && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           有 {unmapped.length} 個成品尚未對照配方（不計入理論用量）：{unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、')}{unmapped.length > 8 ? '…' : ''}
@@ -369,7 +436,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">無資料。請先匯入 POS＋進銷存、建立配方並完成對照。</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">理論用量</th><th className="pr-2 text-right">實際出庫</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">金額損失</th><th className="pr-2 text-right">剩餘</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">理論用量</th><th className="pr-2 text-right">實耗</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">金額損失</th><th className="pr-2 text-right">剩餘</th></tr></thead>
           <tbody>{rows.map(r => (
             <tr key={r.material_code} className={`border-b last:border-0 ${r.over ? 'bg-red-50' : ''}`}>
               <td className="py-1.5 pr-2">{r.material_name}</td>
@@ -382,6 +449,16 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
               <td className="pr-2 text-right tabular-nums text-gray-500">{fmt1(r.remaining)}</td>
             </tr>))}</tbody></table></div>}
     </div>
+  )
+}
+
+function CcCard({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'red' }) {
+  return (
+    <Card className="p-3">
+      <div className="text-xs text-gray-500">{label}</div>
+      <div className={`text-lg font-bold tabular-nums ${tone === 'red' ? 'text-red-600' : 'text-gray-800'}`}>{value}</div>
+      {hint && <div className="text-[11px] text-gray-400 mt-0.5">{hint}</div>}
+    </Card>
   )
 }
 
