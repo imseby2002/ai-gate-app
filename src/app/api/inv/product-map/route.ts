@@ -17,14 +17,14 @@ export async function GET() {
 
   const [{ data: pos }, { data: map }, { data: recipes }] = await Promise.all([
     supabase.from('inv_pos_sales').select('product_code, product_name').eq('owner_id', user.id),
-    supabase.from('inv_product_map').select('product_code, recipe_id').eq('owner_id', user.id),
+    supabase.from('inv_product_map').select('product_code, recipe_id, kind').eq('owner_id', user.id),
     supabase.from('inv_recipes').select('id, name').eq('owner_id', user.id).order('name'),
   ])
-  const mapByCode: Record<string, string | null> = {}
-  for (const m of map ?? []) mapByCode[m.product_code] = m.recipe_id
+  const mapByCode: Record<string, { recipe_id: string | null; kind: string }> = {}
+  for (const m of map ?? []) mapByCode[m.product_code] = { recipe_id: m.recipe_id, kind: m.kind ?? '' }
   const seen = new Map<string, string>()
   for (const p of pos ?? []) if (!seen.has(p.product_code)) seen.set(p.product_code, p.product_name)
-  const products = [...seen.entries()].map(([code, name]) => ({ product_code: code, product_name: name, recipe_id: mapByCode[code] ?? null }))
+  const products = [...seen.entries()].map(([code, name]) => ({ product_code: code, product_name: name, recipe_id: mapByCode[code]?.recipe_id ?? null, kind: mapByCode[code]?.kind ?? '' }))
     .sort((a, b) => a.product_code.localeCompare(b.product_code))
 
   return NextResponse.json({ products, recipes: recipes ?? [] })
@@ -38,11 +38,14 @@ export async function POST(req: NextRequest) {
   const product_code = String(body.product_code ?? '').trim()
   if (!product_code) return NextResponse.json({ error: 'product_code required' }, { status: 400 })
 
-  const { error } = await supabase.from('inv_product_map').upsert({
+  const KINDS = new Set(['', 'drink', 'topping', 'other'])
+  const row: Record<string, unknown> = {
     owner_id: user.id, product_code,
     product_name: String(body.product_name ?? ''),
     recipe_id: body.recipe_id || null,
-  }, { onConflict: 'owner_id,product_code' })
+  }
+  if (body.kind !== undefined) row.kind = KINDS.has(body.kind) ? body.kind : ''
+  const { error } = await supabase.from('inv_product_map').upsert(row, { onConflict: 'owner_id,product_code' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
