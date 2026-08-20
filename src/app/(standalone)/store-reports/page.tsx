@@ -395,7 +395,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
         </Button>
       </div>
 
-      <p className="text-xs text-gray-400">實耗＝IVT 期初＋叫貨−期末。理論用量含配方負值（加料排擠基底）。</p>
+      <p className="text-xs text-gray-400">實耗＝IVT「lượng dùng tháng（當月使用量）」欄；未填才用 期初＋叫貨−期末。理論用量含配方負值（加料排擠基底）。</p>
 
       {showCfg && (
         <Card className="p-3 space-y-2">

@@ -20,7 +20,7 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
     supabase.from('inv_pos_sales').select('product_code, product_name, qty').eq('owner_id', ownerId).eq('store', store).eq('year', year).eq('month', month),
     supabase.from('inv_product_map').select('product_code, recipe_id, kind').eq('owner_id', ownerId),
     supabase.from('inv_recipe_items').select('recipe_id, material_code, material_name, qty_per_cup').eq('owner_id', ownerId),
-    supabase.from('inv_movements').select('material_code, material_name, unit, open_qty, in_total, out_total, close_qty').eq('owner_id', ownerId).eq('store', store).eq('year', year).eq('month', month),
+    supabase.from('inv_movements').select('material_code, material_name, unit, open_qty, in_total, out_total, close_qty, usage_month').eq('owner_id', ownerId).eq('store', store).eq('year', year).eq('month', month),
     supabase.from('inv_settings').select('variance_threshold, cup_code, tea_code, creamer_code, tea_per_cup, creamer_per_cup').eq('owner_id', ownerId).single(),
     supabase.from('inv_material_prices').select('material_code, export_price').eq('owner_id', ownerId),
   ])
@@ -48,10 +48,12 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
     }
   }
 
-  // 實耗 = 期初 ＋ 叫貨(入庫) − 期末
+  // 實耗：優先用 IVT「lượng dùng tháng（當月使用量）」；沒填才用 期初＋叫貨−期末
   const actualMap = new Map<string, { name: string; unit: string; used: number; close: number }>()
   for (const m of mov ?? []) {
-    const used = (Number(m.open_qty) || 0) + (Number(m.in_total) || 0) - (Number(m.close_qty) || 0)
+    const computed = (Number(m.open_qty) || 0) + (Number(m.in_total) || 0) - (Number(m.close_qty) || 0)
+    const usageMonth = Number(m.usage_month) || 0
+    const used = usageMonth > 0 ? usageMonth : computed
     actualMap.set(m.material_code, { name: m.material_name, unit: m.unit, used, close: Number(m.close_qty) || 0 })
   }
 
