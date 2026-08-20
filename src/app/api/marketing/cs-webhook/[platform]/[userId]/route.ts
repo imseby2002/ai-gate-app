@@ -80,6 +80,7 @@ type CsCustomerRow = {
   stage: string | null
   price_ask_count: number
   message_count: number
+  discount_offered_at: string | null
 }
 
 // 偵測猶豫關鍵字
@@ -97,7 +98,9 @@ function buildSellSection(cust: CsCustomerRow | null, convoPriceAsks: number, is
   const isHesitating = HESITATION_RE.test(currentMessage) || convoPriceAsks >= 2 || cust?.stage === 'negotiating'
 
   if (isHesitating) {
-    lines.push('\n\n【客戶正在猶豫——此刻才啟動業務模式】同理客戶的考量，簡短找出真正顧慮，提供一個具體誘因或解法，最後用二選一收尾推進決定。語氣溫暖，不施壓，不拖長篇幅。')
+    lines.push(cust?.discount_offered_at
+      ? '\n\n【客戶正在猶豫——此刻才啟動業務模式】這位客人這次對話已經拿過一次優惠了（見下方標記），同理客戶的考量、簡短找出真正顧慮並用非金錢的方式回應（例如說明品質、服務保證、解答疑慮），最後用二選一收尾推進決定；絕對不可以再追加折扣或贈品，優惠一個對話只能給一次。'
+      : '\n\n【客戶正在猶豫——此刻才啟動業務模式】同理客戶的考量，簡短找出真正顧慮，提供一個具體誘因或解法，最後用二選一收尾推進決定。語氣溫暖，不施壓，不拖長篇幅。')
   }
 
   // 報價提示：只加一句，不展開銷售話術
@@ -415,14 +418,15 @@ async function replyToCustomer(
   try {
     const { data } = await getServiceClient()
       .from('cs_customers')
-      .select('name, summary, stage, price_ask_count, message_count')
+      .select('name, summary, stage, price_ask_count, message_count, discount_offered_at')
       .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', knowledge.industry)
       .single()
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId)
-  const { visibleReply: reply, submit: formSubmit } = extractFormSubmit(rawReply)
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at)
+  const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply)
+  const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
 
@@ -443,6 +447,7 @@ async function replyToCustomer(
       price_ask_count: (cust?.price_ask_count ?? 0) + (isPriceAskNow ? 1 : 0),
       message_count: (cust?.message_count ?? 0) + 1,
       summary: cust?.summary ?? null,
+      discount_offered_at: cust?.discount_offered_at ?? (discountJustOffered ? new Date().toISOString() : null),
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,platform,from_id,industry' })
@@ -896,7 +901,7 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
 
 // ── Sales context: availability + urgency, closing toolkit, social proof ──────
 // Mirrors the cs-chat sandbox so live customers get the same business-minded behavior.
-async function buildSalesContext(userId: string, discountMaxPct: number, discountGifts: string): Promise<string> {
+async function buildSalesContext(userId: string, discountMaxPct: number, discountGifts: string, discountAlreadyOffered: boolean): Promise<string> {
   const supabase = getServiceClient()
   const sections: string[] = []
 
@@ -940,15 +945,24 @@ async function buildSalesContext(userId: string, discountMaxPct: number, discoun
     }
   } catch { /* 不中斷主流程 */ }
 
-  // Closing toolkit (discounts / gifts)
+  // Closing toolkit (discounts / gifts) —— 整個對話最多只能主動提供一次，真實案例：
+  // 客人在同一次對話裡分兩次表達價格不滿（第一次擔心暈船、第二次抱怨長輩票價變貴），
+  // AI 依規則兩次都各自送出一次優惠（折價券 + 再折現金），把整趟行程的利潤折光，
+  // 因為規則本身沒有記錄「這次對話是否已經給過優惠」。現在用 cs_customers.discount_offered_at
+  // 這個實際欄位擋住第二次，而不是只靠提示詞叫 AI 自己記得。
   const giftList = (discountGifts ?? '').split('\n').map(g => g.trim()).filter(Boolean)
   if (discountMaxPct > 0 || giftList.length) {
-    const lines = ['【促成工具箱——客人猶豫或嫌貴時才使用，每次只說一項，不一次全列】']
-    lines.push('使用時機：客人第一次表現出價格猶豫或不滿就要主動提出，不要等客人講第二次才給——包括但不限於「有點貴」「我再想想」「考慮看看」「太貴了」「能不能便宜一點」「以前/之前訂比較便宜」「怎麼差那麼多」「別家比較便宜」等任何對價格表達疑慮或比較的說法，只要客人在問完價格後表達了「不滿意/意外/猶豫」的情緒，就算沒有用到上面例句的字眼，也要主動提出優惠，不要只顧著解釋定價邏輯而不提供優惠')
-    if (discountMaxPct > 0) lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額告知客人，客人確認則生效）`)
-    if (giftList.length) { lines.push('\n可贈送項目（從以下選一項，問客人偏好）：'); giftList.forEach(g => lines.push(`• ${g}`)) }
-    lines.push('\n優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
-    sections.push(lines.join('\n'))
+    if (discountAlreadyOffered) {
+      sections.push('【促成工具箱——這位客人這次對話已經拿過優惠了】絕對不可以再提供任何折扣或贈品，就算客人又表達不滿或抱怨也一樣；只能同理客戶的感受、用非金錢方式回應（例如強調品質、服務保證、解答疑慮），不要提到「已經用完優惠額度」這類會讓客人追問的說法，自然地把話題帶回行程本身。')
+    } else {
+      const lines = ['【促成工具箱——客人猶豫或嫌貴時才使用，整個對話最多主動提供一次，用過就不能再用】']
+      lines.push('使用時機：客人第一次表現出價格猶豫或不滿就要主動提出，不要等客人講第二次才給——包括但不限於「有點貴」「我再想想」「考慮看看」「太貴了」「能不能便宜一點」「以前/之前訂比較便宜」「怎麼差那麼多」「別家比較便宜」等任何對價格表達疑慮或比較的說法，只要客人在問完價格後表達了「不滿意/意外/猶豫」的情緒，就算沒有用到上面例句的字眼，也要主動提出優惠，不要只顧著解釋定價邏輯而不提供優惠')
+      if (discountMaxPct > 0) lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額告知客人，客人確認則生效）`)
+      if (giftList.length) { lines.push('\n可贈送項目（從以下選一項，問客人偏好）：'); giftList.forEach(g => lines.push(`• ${g}`)) }
+      lines.push('\n優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
+      lines.push('\n【重要】這個優惠整個對話只能主動提供一次——一旦你在這則回覆裡真的提出折扣或贈品，就要在回覆最後另起一行，原樣輸出（客人看不到，系統會自動移除）：\n<<<DISCOUNT_OFFERED>>>\n如果只是在解釋定價、還沒有真正給出優惠，就不要輸出這行。')
+      sections.push(lines.join('\n'))
+    }
   }
 
   // Reviews / social proof
@@ -1118,6 +1132,16 @@ function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[],
 // 固定欄位可以用正則抽取），所以改用「AI 自己在回覆最後標記已收集完成」的方式，
 // 而不是 detectBookingCompletion 那種伺服器端正則偵測。標記客人看不到，送出前會被移除。
 const FORM_SUBMIT_RE = /\n*<<<FORM_SUBMIT:(\{[\s\S]*?\})>>>\n*/
+
+// 促成工具箱標記——AI 這則回覆真的有給折扣/贈品時才會輸出，用來讓伺服器記住
+// 「這位客人這次對話已經拿過優惠」，下一輪起擋掉促成工具箱，不能靠 AI 自己記得
+// （見 buildSalesContext 註解：真實案例客人分兩次抱怨，AI 兩次都各自給了優惠）
+const DISCOUNT_OFFERED_RE = /\n*<<<DISCOUNT_OFFERED>>>\n*/
+
+function extractDiscountOffered(reply: string): { visibleReply: string; offered: boolean } {
+  const offered = DISCOUNT_OFFERED_RE.test(reply)
+  return { visibleReply: offered ? reply.replace(DISCOUNT_OFFERED_RE, '').trim() : reply, offered }
+}
 
 function buildFormsSection(forms: CsChatForm[]): string {
   if (!forms.length) return ''
@@ -1316,6 +1340,7 @@ async function getAIReply(
   imageMimeType?: string,
   platform = '',
   customerId = '',
+  discountAlreadyOffered = false,
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -1549,7 +1574,7 @@ async function getAIReply(
     }
 
     const salesContext = userId
-      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts)
+      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts, discountAlreadyOffered)
       : ''
 
     const systemPrompt = `${baseInstructions}
