@@ -13,14 +13,16 @@ async function getAdminUser() {
 
 type SB = Awaited<ReturnType<typeof createClient>>
 
-// 智能差異：理論用量（售出×配方，含 TOPPING 排擠負值）vs 實耗（IVT 期初＋叫貨−期末）；
-// 誤差% 超門檻警示；標準價換算金額損失；並附多重交叉檢核。
+// 智能差異：直接採用 IVT 檔本身的兩欄——
+//   規定用量＝「Xuất bán POS」(out_pos，依點單推算的應耗)；實耗＝「lượng dùng tháng」(usage_month)。
+//   差額／誤差% 即檔內 chenh／phan tram。配方理論(售出×配方，含 TOPPING 排擠負值)僅作對照參考。
+//   誤差% 超門檻警示；標準價換算金額損失；並附交叉檢核與「加料排擠」可能性分析。
 async function compute(supabase: SB, ownerId: string, store: string, year: number, month: number) {
   const [{ data: pos }, { data: map }, { data: items }, { data: mov }, { data: setting }, { data: prices }] = await Promise.all([
     supabase.from('inv_pos_sales').select('product_code, product_name, qty').eq('owner_id', ownerId).eq('store', store).eq('year', year).eq('month', month),
     supabase.from('inv_product_map').select('product_code, recipe_id, kind').eq('owner_id', ownerId),
     supabase.from('inv_recipe_items').select('recipe_id, material_code, material_name, qty_per_cup').eq('owner_id', ownerId),
-    supabase.from('inv_movements').select('material_code, material_name, unit, open_qty, in_total, out_total, close_qty, usage_month').eq('owner_id', ownerId).eq('store', store).eq('year', year).eq('month', month),
+    supabase.from('inv_movements').select('material_code, material_name, unit, open_qty, in_total, out_pos, out_total, close_qty, usage_month').eq('owner_id', ownerId).eq('store', store).eq('year', year).eq('month', month),
     supabase.from('inv_settings').select('variance_threshold, cup_code, tea_code, creamer_code, tea_per_cup, creamer_per_cup').eq('owner_id', ownerId).single(),
     supabase.from('inv_material_prices').select('material_code, export_price').eq('owner_id', ownerId),
   ])
@@ -34,6 +36,7 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
   const itemsByRecipe: Record<string, { material_code: string; material_name: string; qty_per_cup: number }[]> = {}
   for (const it of items ?? []) (itemsByRecipe[it.recipe_id] ??= []).push(it)
 
+  // 配方理論用量（僅對照參考；不作為差額基準）
   const theo: Record<string, { name: string; qty: number }> = {}
   const unmapped: { product_code: string; product_name: string; qty: number }[] = []
   let cupsSold = 0 // 售出杯數（飲料類）
@@ -48,32 +51,34 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
     }
   }
 
-  // 實耗：優先用 IVT「lượng dùng tháng（當月使用量）」；沒填才用 期初＋叫貨−期末
-  const actualMap = new Map<string, { name: string; unit: string; used: number; close: number }>()
+  // 檔內兩欄：規定用量(out_pos＝Xuất bán POS) 與 實耗(usage_month＝lượng dùng tháng)。
+  // usage_month 未填才退回 期初＋叫貨−期末。
+  const movMap = new Map<string, { name: string; unit: string; expected: number; actual: number; close: number }>()
   for (const m of mov ?? []) {
     const computed = (Number(m.open_qty) || 0) + (Number(m.in_total) || 0) - (Number(m.close_qty) || 0)
     const usageMonth = Number(m.usage_month) || 0
-    const used = usageMonth > 0 ? usageMonth : computed
-    actualMap.set(m.material_code, { name: m.material_name, unit: m.unit, used, close: Number(m.close_qty) || 0 })
+    const actual = usageMonth > 0 ? usageMonth : computed
+    movMap.set(m.material_code, { name: m.material_name, unit: m.unit, expected: Number(m.out_pos) || 0, actual, close: Number(m.close_qty) || 0 })
   }
 
-  const codes = new Set<string>([...Object.keys(theo), ...actualMap.keys()])
+  const codes = new Set<string>([...movMap.keys(), ...Object.keys(theo)])
   const rows = [...codes].map(code => {
-    const t = theo[code]?.qty ?? 0
-    const a = actualMap.get(code)
-    const actual = a?.used ?? 0
-    const diff = actual - t
-    const pct = t > 0 ? (diff / t) * 100 : (actual > 0 ? null : 0)
+    const mv = movMap.get(code)
+    const expected = mv?.expected ?? 0         // 規定用量（POS 點單推算）
+    const actual = mv?.actual ?? 0             // 實耗（當月使用量）
+    const recipe_theo = theo[code]?.qty ?? 0   // 配方理論（對照）
+    const diff = actual - expected             // ＝檔內 chenh
+    const pct = expected > 0 ? (diff / expected) * 100 : (actual > 0 ? null : 0) // ＝檔內 phan tram
     const over = pct !== null && Math.abs(pct) > threshold
     const price = priceOf[code] ?? 0
     const money_loss = diff * price
     return {
       material_code: code,
-      material_name: a?.name || theo[code]?.name || code,
-      unit: a?.unit ?? '',
-      theoretical: t, actual, remaining: a?.close ?? 0, diff, pct, over, price, money_loss,
+      material_name: mv?.name || theo[code]?.name || code,
+      unit: mv?.unit ?? '',
+      expected, actual, recipe_theo, remaining: mv?.close ?? 0, diff, pct, over, price, money_loss,
     }
-  }).filter(r => Math.abs(r.theoretical) > 0.0001 || Math.abs(r.actual) > 0.0001)
+  }).filter(r => Math.abs(r.expected) > 0.0001 || Math.abs(r.actual) > 0.0001 || Math.abs(r.recipe_theo) > 0.0001)
     .sort((x, y) => {
       const ax = x.pct === null ? -Infinity : Math.abs(x.pct)
       const ay = y.pct === null ? -Infinity : Math.abs(y.pct)
@@ -82,16 +87,17 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
 
   const total_loss = rows.reduce((s, r) => s + (r.diff > 0 ? r.money_loss : 0), 0)
 
-  // ── 多重交叉檢核 ──
-  const usedOf = (code: string) => (code ? actualMap.get(code)?.used ?? null : null)
+  // ── 交叉檢核 ──
   const cupCode = setting?.cup_code ?? ''
   const teaCode = setting?.tea_code ?? ''
   const creamerCode = setting?.creamer_code ?? ''
   const teaPerCup = Number(setting?.tea_per_cup) || 0
   const creamerPerCup = Number(setting?.creamer_per_cup) || 0
-  const cupUsed = usedOf(cupCode)
-  const teaUsed = usedOf(teaCode)
-  const creamerUsed = usedOf(creamerCode)
+  const actualOf = (code: string) => (code ? movMap.get(code)?.actual ?? null : null)
+  const expectedOf = (code: string) => (code ? movMap.get(code)?.expected ?? null : null)
+  const cupUsed = actualOf(cupCode)
+  const teaUsed = actualOf(teaCode)
+  const creamerUsed = actualOf(creamerCode)
   const impliedByTea = teaPerCup > 0 && teaUsed !== null ? teaUsed / teaPerCup : null
   const impliedByCreamer = creamerPerCup > 0 && creamerUsed !== null ? creamerUsed / creamerPerCup : null
   const crossChecks = {
@@ -106,7 +112,24 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
     configured: !!(cupCode || teaCode || creamerCode),
   }
 
-  return { store, year, month, threshold, rows, unmapped, over_count: rows.filter(r => r.over).length, total_loss, cross_checks: crossChecks }
+  // ── 加料排擠可能性分析 ──
+  // POS 點單只記錄「單一或無 topping」，故規定用量(out_pos)對茶／奶精偏高：
+  // 客人實際多加 topping 時基底(茶／奶精)被排擠 → 實耗 < 規定。
+  // 若 tea_gap 為正，代表茶「少用」，很可能由多加料訂單解釋，而非短少／浪費。
+  const gapAnalysis = (code: string, perCup: number) => {
+    const exp = expectedOf(code)
+    const act = actualOf(code)
+    if (exp === null || act === null) return null
+    const gap = exp - act                                   // 正＝實際少用（可能被加料排擠）
+    return { expected: exp, actual: act, gap, gap_cups: perCup > 0 ? gap / perCup : null }
+  }
+  const possibility = {
+    configured: !!(teaCode || creamerCode),
+    tea: teaCode ? gapAnalysis(teaCode, teaPerCup) : null,
+    creamer: creamerCode ? gapAnalysis(creamerCode, creamerPerCup) : null,
+  }
+
+  return { store, year, month, threshold, rows, unmapped, over_count: rows.filter(r => r.over).length, total_loss, cross_checks: crossChecks, possibility }
 }
 
 export async function GET(req: NextRequest) {
