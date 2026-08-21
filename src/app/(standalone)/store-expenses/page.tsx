@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-type Tab = 'stores' | 'categories'
+const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
+type Tab = 'stores' | 'categories' | 'bills' | 'report'
 interface StoreRow { id: string; code: string; name: string; region: string; active: boolean }
 interface CatRow { id: string; code: string; name: string; entry_method: string; vendor_service: string; sort: number }
 
@@ -33,6 +34,8 @@ export default function StoreExpensesPage() {
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
     { id: 'stores', label: '門市／區域', icon: <Store className="h-4 w-4" /> },
     { id: 'categories', label: '費用科目', icon: <Tags className="h-4 w-4" /> },
+    { id: 'bills', label: '月度費用', icon: <Table2 className="h-4 w-4" /> },
+    { id: 'report', label: '收支報表', icon: <BarChart3 className="h-4 w-4" /> },
   ]
 
   return (
@@ -57,6 +60,178 @@ export default function StoreExpensesPage() {
 
       {tab === 'stores' && <StoresTab />}
       {tab === 'categories' && <CategoriesTab />}
+      {tab === 'bills' && <BillsTab />}
+      {tab === 'report' && <ReportTab />}
+    </div>
+  )
+}
+
+// ── 月度費用格 ──
+interface GridStore { code: string; name: string; region: string }
+interface GridCat { code: string; name: string; entry_method: string; vendor_service: string }
+interface Bill { store_code: string; category_code: string; amount: number; source: string }
+
+const billKey = (s: string, c: string) => `${s}|${c}`
+
+function BillsTab() {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [stores, setStores] = useState<GridStore[]>([])
+  const [cats, setCats] = useState<GridCat[]>([])
+  const [amounts, setAmounts] = useState<Record<string, number>>({}) // `${store}|${cat}` → amount
+  const [loading, setLoading] = useState(true)
+  const [importing, setImporting] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [showImport, setShowImport] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [tick, setTick] = useState(0)
+  const reload = () => setTick(t => t + 1)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    fetch(`/api/fin/bills?year=${year}&month=${month}`).then(r => (r.ok ? r.json() : null)).then(d => {
+      if (!alive) return
+      if (d) {
+        setStores(d.stores ?? []); setCats(d.categories ?? [])
+        const m: Record<string, number> = {}
+        for (const b of (d.bills ?? []) as Bill[]) m[billKey(b.store_code, b.category_code)] = Number(b.amount) || 0
+        setAmounts(m)
+      }
+      setLoading(false)
+    })
+    return () => { alive = false }
+  }, [year, month, tick])
+
+  const saveCell = async (store_code: string, category_code: string, amount: number) => {
+    setAmounts(p => ({ ...p, [billKey(store_code, category_code)]: amount }))
+    await fetch('/api/fin/bills', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store_code, category_code, year, month, amount, source: 'manual' }),
+    })
+  }
+
+  const doImport = async () => {
+    const rows = importText.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+      const [store_code, category_code, amount] = l.split(/[,\t]/).map(x => x.trim())
+      return { store_code, category_code, amount }
+    })
+    if (rows.length === 0) { setMsg('沒有資料'); return }
+    setImporting(true)
+    const res = await fetch('/api/fin/bills/import', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ year, month, rows }),
+    })
+    setImporting(false)
+    const d = await res.json().catch(() => ({}))
+    if (res.ok) { setMsg(`匯入 ${d.imported} 筆`); setShowImport(false); setImportText(''); reload() } else setMsg(d.error ?? '匯入失敗')
+  }
+
+  const colTotal = (c: string) => stores.reduce((s, st) => s + (amounts[billKey(st.code, c)] ?? 0), 0)
+  const rowTotal = (s: string) => cats.reduce((sum, c) => sum + (amounts[billKey(s, c.code)] ?? 0), 0)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}</select>
+        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}</select>
+        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowImport(v => !v)}><Upload className="h-4 w-4" />水電匯入</Button>
+        {msg && <span className="text-sm text-blue-600">{msg}</span>}
+      </div>
+
+      {showImport && (
+        <Card className="p-3 space-y-2">
+          <p className="text-xs text-gray-500">每行一筆：<code>門市編碼,科目編碼,金額</code>（可貼 Excel 兩欄，用逗號或 Tab 分隔）。科目如 WATER/ELEC。</p>
+          <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={5} className="w-full rounded-md border px-2 py-1.5 text-sm font-mono" placeholder={'YL,WATER,1200000\nYL,ELEC,3400000'} />
+          <div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setShowImport(false)}>取消</Button><Button size="sm" onClick={doImport} disabled={importing}>{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : '匯入'}</Button></div>
+        </Card>
+      )}
+
+      {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+        : stores.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無門市，請先到「門市／區域」新增。</div>
+        : <div className="overflow-x-auto"><table className="text-sm border-collapse">
+          <thead><tr className="text-gray-500 border-b">
+            <th className="text-left py-2 pr-3 sticky left-0 bg-white">門市</th>
+            {cats.map(c => <th key={c.code} className="px-2 text-right whitespace-nowrap">{c.name || c.code}</th>)}
+            <th className="px-2 text-right">合計</th>
+          </tr></thead>
+          <tbody>{stores.map(st => (
+            <tr key={st.code} className="border-b last:border-0">
+              <td className="py-1 pr-3 sticky left-0 bg-white"><span className="font-medium">{st.code}</span>{st.region && <span className="text-gray-400 text-xs ml-1">{st.region}</span>}</td>
+              {cats.map(c => (
+                <td key={c.code} className="px-1">
+                  <input type="number" value={amounts[billKey(st.code, c.code)] ?? ''}
+                    onChange={e => setAmounts(p => ({ ...p, [billKey(st.code, c.code)]: Number(e.target.value) || 0 }))}
+                    onBlur={e => saveCell(st.code, c.code, Number(e.target.value) || 0)}
+                    className="w-24 h-8 rounded border px-1.5 text-right tabular-nums" />
+                </td>
+              ))}
+              <td className="px-2 text-right tabular-nums font-medium">{fmt(rowTotal(st.code))}</td>
+            </tr>))}
+            <tr className="border-t font-medium">
+              <td className="py-2 pr-3 sticky left-0 bg-white">合計</td>
+              {cats.map(c => <td key={c.code} className="px-2 text-right tabular-nums">{fmt(colTotal(c.code))}</td>)}
+              <td className="px-2 text-right tabular-nums">{fmt(stores.reduce((s, st) => s + rowTotal(st.code), 0))}</td>
+            </tr>
+          </tbody></table></div>}
+      <p className="text-xs text-gray-400">直接在格子輸入金額，離開欄位自動儲存。瓦斯/冰塊之後會由廠商填（階段 3）。</p>
+    </div>
+  )
+}
+
+// ── 收支報表 ──
+interface Rep { income: number; expense: number; net: number; expense_cash: number; bills_total: number; expense_rows: { name: string; amount: number; kind: string }[] }
+
+function ReportTab() {
+  const now = new Date()
+  const [stores, setStores] = useState<GridStore[]>([])
+  const [store, setStore] = useState('')
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+  const [rep, setRep] = useState<Rep | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/fin/stores').then(r => r.ok ? r.json() : null).then(d => setStores(d?.stores ?? []))
+  }, [])
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch(`/api/fin/report?store=${encodeURIComponent(store)}&year=${year}&month=${month}`)
+    setRep(res.ok ? await res.json() : null)
+    setLoading(false)
+  }, [store, year, month])
+  useEffect(() => { load() }, [load])
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <select value={store} onChange={e => setStore(e.target.value)} className="h-9 rounded-md border px-2 text-sm">
+          <option value="">全部門市</option>
+          {stores.map(s => <option key={s.code} value={s.code}>{s.code}{s.name ? ` ${s.name}` : ''}</option>)}
+        </select>
+        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}</select>
+        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}</select>
+      </div>
+
+      {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+        : !rep ? <div className="text-center py-10 text-gray-400 text-sm">無資料</div>
+        : <>
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="p-3"><div className="text-xs text-gray-500">收入</div><div className="text-xl font-bold text-green-600 tabular-nums">{fmt(rep.income)}</div></Card>
+            <Card className="p-3"><div className="text-xs text-gray-500">支出（含費用）</div><div className="text-xl font-bold text-red-500 tabular-nums">{fmt(rep.expense)}</div></Card>
+            <Card className="p-3"><div className="text-xs text-gray-500">淨額</div><div className={`text-xl font-bold tabular-nums ${rep.net < 0 ? 'text-red-600' : 'text-gray-800'}`}>{fmt(rep.net)}</div></Card>
+          </div>
+          <Card className="p-4">
+            <h3 className="font-semibold mb-2">支出明細</h3>
+            <p className="text-xs text-gray-400 mb-2">月度費用（水電瓦斯冰塊等）{fmt(rep.bills_total)}　+　日常支出 {fmt(rep.expense_cash)}</p>
+            {rep.expense_rows.length === 0 ? <p className="text-sm text-gray-400">無支出</p>
+              : <table className="w-full text-sm"><tbody>{rep.expense_rows.map((r, i) => (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="py-1.5">{r.name} {r.kind === 'bill' && <span className="text-[10px] text-gray-400">月度費用</span>}</td>
+                  <td className="text-right tabular-nums text-red-500">{fmt(r.amount)}</td>
+                </tr>))}</tbody></table>}
+          </Card>
+        </>}
     </div>
   )
 }
