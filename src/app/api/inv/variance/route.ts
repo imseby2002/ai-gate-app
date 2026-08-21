@@ -115,7 +115,7 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
   // ── 加料排擠可能性分析 ──
   // POS 點單只記錄「單一或無 topping」，故規定用量(out_pos)對茶／奶精偏高：
   // 客人實際多加 topping 時基底(茶／奶精)被排擠 → 實耗 < 規定。
-  // 若 tea_gap 為正，代表茶「少用」，很可能由多加料訂單解釋，而非短少／浪費。
+  // 若 tea_gap 為正（茶「少用」），很可能由多加料訂單解釋，而非短少／浪費。
   const gapAnalysis = (code: string, perCup: number) => {
     const exp = expectedOf(code)
     const act = actualOf(code)
@@ -123,10 +123,72 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
     const gap = exp - act                                   // 正＝實際少用（可能被加料排擠）
     return { expected: exp, actual: act, gap, gap_cups: perCup > 0 ? gap / perCup : null }
   }
+
+  // 深化：由各 topping 原料「規定 vs 實耗」推算實際多做的加料份數，
+  // 再乘上該加料配方對茶／奶精的排擠量，估算能解釋多少基底少用。
+  const baseCodes = new Set([teaCode, creamerCode, cupCode].filter(Boolean))
+  // 收集 kind='topping' 成品所綁配方
+  const toppingRecipeIds = new Set<string>()
+  for (const pcode of Object.keys(kindOf)) {
+    if (kindOf[pcode] === 'topping' && recipeOf[pcode]) toppingRecipeIds.add(recipeOf[pcode] as string)
+  }
+  // 每個加料配方：主原料(最大正值、非基底) ＋ 對茶／奶精的排擠量(負值取絕對值)
+  const toppingInfo = new Map<string, { name: string; per: number; tea_disp: number; creamer_disp: number }>()
+  for (const rid of toppingRecipeIds) {
+    const its = itemsByRecipe[rid] ?? []
+    let teaDisp = 0, creamerDisp = 0
+    let primary: { code: string; name: string; qty: number } | null = null
+    for (const it of its) {
+      const q = Number(it.qty_per_cup) || 0
+      if (teaCode && it.material_code === teaCode && q < 0) teaDisp += -q
+      if (creamerCode && it.material_code === creamerCode && q < 0) creamerDisp += -q
+      if (q > 0 && !baseCodes.has(it.material_code) && (!primary || q > primary.qty)) {
+        primary = { code: it.material_code, name: it.material_name, qty: q }
+      }
+    }
+    if (primary) {
+      const prev = toppingInfo.get(primary.code)
+      // 同一原料被多個加料配方引用時，累加排擠量、per 取較大者
+      toppingInfo.set(primary.code, {
+        name: primary.name,
+        per: Math.max(prev?.per ?? 0, primary.qty),
+        tea_disp: (prev?.tea_disp ?? 0) + teaDisp,
+        creamer_disp: (prev?.creamer_disp ?? 0) + creamerDisp,
+      })
+    }
+  }
+
+  let teaExplained = 0, creamerExplained = 0
+  const toppings = [...toppingInfo.entries()].map(([code, info]) => {
+    const exp = expectedOf(code) ?? 0        // 規定份數×per
+    const act = actualOf(code) ?? 0          // 實耗
+    const servings_expected = info.per > 0 ? exp / info.per : 0
+    const servings_actual = info.per > 0 ? act / info.per : 0
+    const extra_servings = servings_actual - servings_expected // 正＝實際多做的加料份數
+    teaExplained += extra_servings * info.tea_disp
+    creamerExplained += extra_servings * info.creamer_disp
+    return {
+      material_code: code, material_name: info.name,
+      servings_expected, servings_actual, extra_servings,
+      tea_disp: info.tea_disp, creamer_disp: info.creamer_disp,
+    }
+  }).filter(t => Math.abs(t.servings_expected) > 0.001 || Math.abs(t.servings_actual) > 0.001)
+    .sort((a, b) => b.extra_servings - a.extra_servings)
+
+  const teaGap = teaCode ? (expectedOf(teaCode) ?? 0) - (actualOf(teaCode) ?? 0) : 0
+  const creamerGap = creamerCode ? (expectedOf(creamerCode) ?? 0) - (actualOf(creamerCode) ?? 0) : 0
+  const extra_topping_servings = toppings.reduce((s, t) => s + Math.max(0, t.extra_servings), 0)
   const possibility = {
     configured: !!(teaCode || creamerCode),
     tea: teaCode ? gapAnalysis(teaCode, teaPerCup) : null,
     creamer: creamerCode ? gapAnalysis(creamerCode, creamerPerCup) : null,
+    toppings,
+    extra_topping_servings,
+    tea_explained: teaExplained,          // 加料排擠可解釋的茶少用量
+    creamer_explained: creamerExplained,
+    tea_explained_pct: teaGap > 0.001 ? Math.min(999, (teaExplained / teaGap) * 100) : null,
+    creamer_explained_pct: creamerGap > 0.001 ? Math.min(999, (creamerExplained / creamerGap) * 100) : null,
+    has_displacement: teaExplained > 0.001 || creamerExplained > 0.001,
   }
 
   return { store, year, month, threshold, rows, unmapped, over_count: rows.filter(r => r.over).length, total_loss, cross_checks: crossChecks, possibility }

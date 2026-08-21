@@ -30,7 +30,13 @@ interface CrossChecks {
   implied_cups_tea: number | null; implied_cups_creamer: number | null; configured: boolean
 }
 interface GapInfo { expected: number; actual: number; gap: number; gap_cups: number | null }
-interface Possibility { configured: boolean; tea: GapInfo | null; creamer: GapInfo | null }
+interface ToppingRow { material_code: string; material_name: string; servings_expected: number; servings_actual: number; extra_servings: number; tea_disp: number; creamer_disp: number }
+interface Possibility {
+  configured: boolean; tea: GapInfo | null; creamer: GapInfo | null
+  toppings: ToppingRow[]; extra_topping_servings: number
+  tea_explained: number; creamer_explained: number
+  tea_explained_pct: number | null; creamer_explained_pct: number | null; has_displacement: boolean
+}
 interface InvSettings { variance_threshold: number; cup_code: string; tea_code: string; creamer_code: string; tea_per_cup: number; creamer_per_cup: number }
 
 export default function StoreReportsPage() {
@@ -436,9 +442,34 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
           <div className="text-sm font-medium flex items-center gap-1.5"><Scale className="h-4 w-4 text-indigo-500" />加料排擠可能性分析</div>
           <p className="text-[11px] text-gray-400">POS 點單只記錄「單一或無 topping」，故規定用量對茶／奶精偏高。客人實際多加 topping 時基底被排擠，實耗會少於規定——此「少用」多半由多加料訂單解釋，而非短少。</p>
           <div className="grid md:grid-cols-2 gap-2">
-            {poss.tea && <GapCard label="茶" info={poss.tea} />}
-            {poss.creamer && <GapCard label="奶精" info={poss.creamer} />}
+            {poss.tea && <GapCard label="茶" info={poss.tea} explainedPct={poss.tea_explained_pct} explained={poss.tea_explained} />}
+            {poss.creamer && <GapCard label="奶精" info={poss.creamer} explainedPct={poss.creamer_explained_pct} explained={poss.creamer_explained} />}
           </div>
+
+          {poss.toppings.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs font-medium text-gray-600">各加料實際份數推算（規定份數＝POS，實際＝實耗÷每份用量）</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead><tr className="text-left text-gray-400 border-b"><th className="py-1 pr-2">加料</th><th className="pr-2 text-right">規定份數</th><th className="pr-2 text-right">實際份數</th><th className="pr-2 text-right">多做份數</th><th className="pr-2 text-right">排擠茶/份</th></tr></thead>
+                  <tbody>{poss.toppings.map(t => (
+                    <tr key={t.material_code} className="border-b last:border-0">
+                      <td className="py-1 pr-2">{t.material_name}</td>
+                      <td className="pr-2 text-right tabular-nums">{fmt(t.servings_expected)}</td>
+                      <td className="pr-2 text-right tabular-nums">{fmt(t.servings_actual)}</td>
+                      <td className={`pr-2 text-right tabular-nums font-medium ${t.extra_servings > 0 ? 'text-indigo-600' : t.extra_servings < 0 ? 'text-red-500' : 'text-gray-400'}`}>{t.extra_servings > 0 ? '+' : ''}{fmt(t.extra_servings)}</td>
+                      <td className="pr-2 text-right tabular-nums text-gray-400">{t.tea_disp ? fmt1(t.tea_disp) : '—'}</td>
+                    </tr>))}</tbody>
+                </table>
+              </div>
+              <div className="text-[11px] text-gray-500">
+                估計多做加料 <b>{fmt(poss.extra_topping_servings)}</b> 份
+                {poss.has_displacement
+                  ? <>，可解釋茶少用約 <b>{fmt1(poss.tea_explained)}</b>{poss.creamer_explained > 0.001 ? <>、奶精 <b>{fmt1(poss.creamer_explained)}</b></> : null}。</>
+                  : <>。（加料配方未填「排擠茶／奶精」的負值，無法估算基底排擠量——可到「成品對照／配方」為加料補上 −茶／−奶精。）</>}
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
@@ -467,8 +498,10 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
   )
 }
 
-function GapCard({ label, info }: { label: string; info: GapInfo }) {
+function GapCard({ label, info, explainedPct, explained }: { label: string; info: GapInfo; explainedPct?: number | null; explained?: number }) {
   const less = info.gap > 0 // 實際少用
+  const pct = explainedPct ?? null
+  const unexplained = less && explained !== undefined ? Math.max(0, info.gap - explained) : null
   return (
     <div className="rounded-lg border p-3 space-y-0.5">
       <div className="text-sm font-medium">{label}</div>
@@ -477,9 +510,16 @@ function GapCard({ label, info }: { label: string; info: GapInfo }) {
         {less ? '少用' : info.gap < 0 ? '超用' : '持平'} {fmt1(Math.abs(info.gap))}
         {info.gap_cups !== null && Math.abs(info.gap_cups) >= 1 && <span className="text-gray-400 font-normal">（約 {fmt(Math.abs(info.gap_cups))} 杯份）</span>}
       </div>
-      <div className="text-[11px] text-gray-400">
-        {less ? '可能由多加料訂單排擠基底，屬正常範圍' : info.gap < 0 ? '實耗高於規定，需查核是否浪費／短少' : '與規定一致'}
-      </div>
+      {less && pct !== null ? (
+        <div className={`text-[11px] ${pct >= 70 ? 'text-emerald-600' : pct >= 30 ? 'text-amber-600' : 'text-red-500'}`}>
+          加料排擠可解釋約 <b>{fmt(pct)}%</b>
+          {unexplained !== null && unexplained > 0.001 ? <>，尚有 <b>{fmt1(unexplained)}</b> 無法解釋{pct < 30 ? '（疑短少／浪費）' : ''}</> : '（大致可解釋）'}
+        </div>
+      ) : (
+        <div className="text-[11px] text-gray-400">
+          {less ? '可能由多加料訂單排擠基底，屬正常範圍' : info.gap < 0 ? '實耗高於規定，需查核是否浪費／短少' : '與規定一致'}
+        </div>
+      )}
     </div>
   )
 }
