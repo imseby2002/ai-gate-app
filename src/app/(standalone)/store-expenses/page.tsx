@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
 const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
-type Tab = 'stores' | 'categories' | 'bills' | 'report'
+type Tab = 'stores' | 'categories' | 'bills' | 'vendors' | 'report'
 interface StoreRow { id: string; code: string; name: string; region: string; active: boolean }
 interface CatRow { id: string; code: string; name: string; entry_method: string; vendor_service: string; sort: number }
 
@@ -35,6 +35,7 @@ export default function StoreExpensesPage() {
     { id: 'stores', label: '門市／區域', icon: <Store className="h-4 w-4" /> },
     { id: 'categories', label: '費用科目', icon: <Tags className="h-4 w-4" /> },
     { id: 'bills', label: '月度費用', icon: <Table2 className="h-4 w-4" /> },
+    { id: 'vendors', label: '廠商填報', icon: <Truck className="h-4 w-4" /> },
     { id: 'report', label: '收支報表', icon: <BarChart3 className="h-4 w-4" /> },
   ]
 
@@ -61,7 +62,101 @@ export default function StoreExpensesPage() {
       {tab === 'stores' && <StoresTab />}
       {tab === 'categories' && <CategoriesTab />}
       {tab === 'bills' && <BillsTab />}
+      {tab === 'vendors' && <VendorsTab />}
       {tab === 'report' && <ReportTab />}
+    </div>
+  )
+}
+
+// ── 廠商填報 ──
+interface Vendor { id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean }
+
+function VendorsTab() {
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [regions, setRegions] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<Partial<Vendor> | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [tick, setTick] = useState(0)
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    fetch('/api/fin/vendors').then(r => (r.ok ? r.json() : null)).then(d => {
+      if (!alive) return
+      if (d) { setVendors(d.vendors ?? []); setRegions(d.regions ?? []) }
+      setLoading(false)
+    })
+    return () => { alive = false }
+  }, [tick])
+  const reload = () => setTick(t => t + 1)
+
+  const save = async () => {
+    if (!editing?.name?.trim()) return
+    setBusy(true)
+    const res = await fetch('/api/fin/vendors', {
+      method: editing.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
+    })
+    setBusy(false)
+    if (res.ok) { setEditing(null); reload() } else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+  }
+  const remove = async (v: Vendor) => {
+    if (!confirm(`刪除廠商「${v.name}」？`)) return
+    await fetch('/api/fin/vendors', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v.id }) }); reload()
+  }
+  const copyLink = (v: Vendor) => { navigator.clipboard?.writeText(`${origin}/vendor/${v.fill_token}`); alert('已複製廠商填報連結') }
+  const toggleRegion = (r: string) => setEditing(e => {
+    if (!e) return e
+    const cur = e.regions ?? []
+    return { ...e, regions: cur.includes(r) ? cur.filter(x => x !== r) : [...cur, r] }
+  })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">瓦斯＝1 家(全部門市)；冰塊＝多家(依區域)。每家一條私密填報連結。</p>
+        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'ice', regions: [], active: true })}><Plus className="h-4 w-4" />新增廠商</Button>
+      </div>
+      {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+        : vendors.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無廠商</div>
+        : <div className="grid gap-2">{vendors.map(v => (
+          <Card key={v.id} className="p-3 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="font-medium">{v.name} <span className="text-xs text-gray-400 ml-1">{v.service === 'gas' ? '瓦斯' : '冰塊'}</span>{!v.active && <span className="text-xs text-red-400 ml-1">停用</span>}</div>
+              <div className="text-xs text-gray-500">{v.service === 'gas' ? '全部門市' : (v.regions.length ? `區域：${v.regions.join('、')}` : '（未指定區域＝全部）')}</div>
+            </div>
+            <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+              <button onClick={() => copyLink(v)} className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">複製填報連結</button>
+              <button onClick={() => setEditing({ ...v })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">編輯</button>
+              <button onClick={() => remove(v)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+            </div>
+          </Card>))}</div>}
+
+      {editing && (
+        <Modal title={editing.id ? '編輯廠商' : '新增廠商'} onClose={() => setEditing(null)}>
+          <Field label="廠商名稱 *"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
+          <Field label="服務別">
+            <select value={editing.service ?? 'ice'} onChange={e => setEditing({ ...editing, service: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
+              <option value="gas">瓦斯（涵蓋全部門市）</option><option value="ice">冰塊（依區域）</option>
+            </select>
+          </Field>
+          {editing.service === 'ice' && (
+            <div className="space-y-1">
+              <span className="text-xs text-gray-500">涵蓋區域（不選＝全部）</span>
+              <div className="flex flex-wrap gap-1.5">
+                {regions.length === 0 && <span className="text-xs text-gray-400">尚無區域，請先於門市設定區域</span>}
+                {regions.map(r => (
+                  <button key={r} onClick={() => toggleRegion(r)} type="button"
+                    className={`text-xs px-2 py-1 rounded border ${(editing.regions ?? []).includes(r) ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600'}`}>{r}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} />啟用</label>
+          <ModalActions busy={busy} disabled={!editing.name?.trim()} onCancel={() => setEditing(null)} onSave={save} />
+        </Modal>
+      )}
     </div>
   )
 }
