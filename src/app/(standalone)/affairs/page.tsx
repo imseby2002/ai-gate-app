@@ -305,7 +305,28 @@ function SettingsTab() {
         <label className="space-y-1"><span className="text-xs text-gray-500">預設到期提前天數</span><Input type="number" value={String(cfg.default_remind_days)} onChange={e => set({ default_remind_days: Number(e.target.value) || 0 })} /></label>
         <label className="space-y-1"><span className="text-xs text-gray-500">預設繳費提前天數</span><Input type="number" value={String(cfg.default_pay_remind_days)} onChange={e => set({ default_pay_remind_days: Number(e.target.value) || 0 })} /></label>
       </Card>
-      <div className="flex justify-end"><Button size="sm" onClick={save} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? '已儲存 ✓' : '儲存'}</Button></div>
+      <div className="flex items-center justify-between">
+        <RunRemindersButton />
+        <Button size="sm" onClick={save} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? '已儲存 ✓' : '儲存'}</Button>
+      </div>
+    </div>
+  )
+}
+
+function RunRemindersButton() {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const run = async () => {
+    setBusy(true); setMsg('')
+    const res = await fetch('/api/affairs/run-reminders', { method: 'POST' })
+    setBusy(false)
+    const d = await res.json().catch(() => ({}))
+    setMsg(res.ok ? `已發送：到期 ${d.expiry ?? 0}、繳費 ${d.payment ?? 0}（已發過的不重送）` : (d.error ?? '執行失敗'))
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={run} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}立即檢查提醒</Button>
+      {msg && <span className="text-xs text-gray-500">{msg}</span>}
     </div>
   )
 }
