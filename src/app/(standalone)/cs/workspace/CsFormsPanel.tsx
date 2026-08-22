@@ -233,7 +233,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">開放的星期（例如早餐直送週三四不送，就取消勾選週三、週四）</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">開放的星期（指客人「可以送出表單」的那一天，不是服務當天——例如早餐直送是前一天22:00前下單、隔天才送達，若週三、週四不送早餐，要取消勾選的是週二、週三，不是週三、週四）</label>
             <div className="flex gap-1.5">
               {WEEKDAY_LABELS.map((label, d) => (
                 <button key={d} type="button" onClick={() => toggleWeekday(d)}
