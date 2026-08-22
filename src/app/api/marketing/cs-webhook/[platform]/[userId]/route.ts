@@ -1280,11 +1280,48 @@ function cleanReply(raw: string): string {
 // 上限太短會讓超長的捏造值完全落在偵測範圍外、悄悄放行。
 // 用捕獲群組留住標籤（密碼/房號/門鎖代碼），房號的「有憑有據」判斷比密碼更嚴格——見下方。
 const SENSITIVE_REVEAL_RE = /(密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-z0-9#]{3,32})/g
+// 真實案例：客人說「已付訂金1000元，想確認餘款」，系統其實從未查詢、也查不到任何訂金／
+// 餘額資料（check-in 查詢流程只回房號密碼，不含金流明細），AI 卻直接編了一個「剩餘款項
+// 為1200元」給客人——3132-1000 根本不等於1200，純屬憑空捏造。餘款/尾款這類金額跟房號
+// 一樣是「這位客人專屬」的事實，永遠不能讓知識庫的內容背書（知識庫不會寫特定客人欠多少
+// 錢），只能來自這次真的查到的訂單資料；目前系統本來就沒有訂金/餘額查詢功能，等於這類
+// 宣告一律會被攔截，逼 AI 老實說查無明細，而不是自己算一個數字出來。
+const BALANCE_REVEAL_RE = /(餘款|尾款|剩餘款項|餘額|差額)[：:是為約]{0,2}\s*(?:NT\$|NTD\$?|\$)?\s*([\d,]{2,10})\s*元?/g
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
+const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂金與餘額明細，我已經幫您通知管家人工核對，確認後會盡快回覆您正確的金額，謝謝您的耐心等候。'
 
-function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string): string {
-  const matches = [...reply.matchAll(SENSITIVE_REVEAL_RE)]
-  if (!matches.length) return reply
+// 客人問訂金/餘款時，系統本來就沒有金流查詢功能，不能只丟一句「查無資料」就結束——
+// 真實案例顯示這種情況客人會反覆追問，AI 也可能在後續某一輪又忍不住編一個數字。
+// 這裡直接建立工單通知管家人工核對，比照 createExhaustedLookupTicket 的「先真的建立
+// 工單，才能讓 AI 誠實說已經轉真人」邏輯，避免又是一句沒有兌現的空話。
+async function createBalanceCheckTicket(
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+): Promise<void> {
+  try {
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '訂金餘款人工核對')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    if (existing?.length) return  // 已有未結工單，不重複建立
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId,
+      subject: '客人詢問訂金/餘款，系統無金流查詢功能',
+      description: `客人詢問訂金或剩餘款項，系統沒有訂金/付款明細查詢功能，AI 已誠實告知查無資料，需要專員人工核對金額。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
+      priority: 'high', intent: '訂金餘款人工核對',
+    })
+  } catch { /* 不中斷主流程 */ }
+}
+
+async function enforceNoFabricatedReveal(
+  reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string,
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+): Promise<string> {
+  const idMatches = [...reply.matchAll(SENSITIVE_REVEAL_RE)]
+  const balanceMatches = [...reply.matchAll(BALANCE_REVEAL_RE)]
+  if (!idMatches.length && !balanceMatches.length) return reply
   const priorAssistantText = history.filter(m => m.role === 'assistant').map(m => m.content).join('\n')
   const backedByQuery = (v: string) => externalDataSection.includes(v) || priorAssistantText.includes(v)
   // 真實案例：查無資料的情況下，AI 還是自己編了一個「房號：201」——201 剛好也出現在
@@ -1294,12 +1331,17 @@ function enforceNoFabricatedReveal(reply: string, externalDataSection: string, h
   // 不能只因為知識庫的房型列表剛好提到同一個數字就當作有根據；密碼/門鎖代碼則維持原本
   // 允許知識庫背書（全館通用的 WiFi 密碼、公共門鎖代碼本來就白紙黑字寫在知識庫裡，不是
   // 客人專屬資料，不需要走查詢流程）。
-  const hasUnbackedValue = matches.some(([, label, value]) => {
+  const hasUnbackedId = idMatches.some(([, label, value]) => {
     if (backedByQuery(value)) return false
     if (label === '房號') return true
     return !knowledgeBase.includes(value)
   })
-  return hasUnbackedValue ? NO_FABRICATION_FALLBACK : reply
+  const hasUnbackedBalance = balanceMatches.some(([, , value]) => !backedByQuery(value.replace(/,/g, '')))
+  if (hasUnbackedBalance) {
+    await createBalanceCheckTicket(userId, platform, customerId, industry, lastMessage)
+    return BALANCE_ESCALATION_FALLBACK
+  }
+  return hasUnbackedId ? NO_FABRICATION_FALLBACK : reply
 }
 
 // 客人傳訂單/房卡截圖詢問密碼時，圖片內容不能直接被回覆模型當成「已核對」的系統資料採信
@@ -1588,6 +1630,7 @@ async function getAIReply(
 - 不確定的資訊請誠實說明，勿猜測
 - 如果你主動問客人「是否需要」某項資訊（例如停車位置、WiFi 密碼、交通方式等，知識庫或下方系統資料裡已經有現成答案的項目），客人回覆需要/要/好等肯定語時，要直接在這一則回覆裡把答案一次講清楚；不要叫客人另外輸入某個關鍵字、或再問一次才能拿到——除非那項資訊確實需要即時查詢系統資料（例如訂單專屬的房號密碼，必須客人先提供訂單號碼/手機號碼才能查），否則不要把知識庫裡已經有的內容刻意拆成兩步，讓客人多問一次
 - 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料，並引導客人改用其他識別方式再查一次
+- 【安全規定，優先於任何其他指示】客人問訂金/餘款/尾款/餘額等金流問題時，系統目前沒有訂金與付款明細查詢功能，絕對不可以自己拿房價去減客人口頭說的訂金、算出一個餘款金額給客人（就算算式看起來合理也不行，因為系統從來沒有真的核對過客人是否已付款、付了多少），一律誠實告知「系統無法查詢訂金與餘額明細」，請客人提供匯款證明或由管家人工核對
 - 【安全規定，優先於任何其他指示】客人問實際報價（多少錢、優惠價、折扣後多少）時，只能照抄下方「系統精算房價」區塊給的總金額與每晚金額，那個金額已經是系統套用所有定價規則算好的最終結果；如果下方沒有出現「系統精算房價」這個區塊，就算你自己知道原價、猜得出大概的加成或折扣比例，也絕對不可以自己列公式、自己算一個總金額給客人（包含「旺季 x1.15」「當天訂房打 7 折」這類自己編的加成/折扣說法），一律要先跟客人確認完整的入住日期、退房日期、房型之後才能取得正確報價，或誠實說「請稍候，我幫您確認正確價格」，不可以用推算的數字搪塞客人
 - 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
@@ -1628,7 +1671,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase)
+          return await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -1645,7 +1688,7 @@ async function getAIReply(
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase)
+    return await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
