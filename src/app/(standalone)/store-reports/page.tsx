@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical } from 'lucide-react'
+import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -79,7 +79,7 @@ export default function StoreReportsPage() {
           <h1 className="text-2xl font-bold">門市報表</h1>
           <p className="text-sm text-gray-500">業績、進銷存、配方與差異分析</p>
         </div>
-        <div className="ml-auto flex items-center gap-2"><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發</Button></Link><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2"><Link href="/store-inventory"><Button variant="outline" size="sm" className="gap-1.5"><ClipboardList className="h-4 w-4 text-blue-600" />盤點・訂貨</Button></Link><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發</Button></Link><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
       </div>
 
       {/* 門市 / 年月（報表與差異用） */}
