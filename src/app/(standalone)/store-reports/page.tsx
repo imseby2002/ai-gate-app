@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical } from 'lucide-react'
+import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -79,7 +79,7 @@ export default function StoreReportsPage() {
           <h1 className="text-2xl font-bold">門市報表</h1>
           <p className="text-sm text-gray-500">業績、進銷存、配方與差異分析</p>
         </div>
-        <div className="ml-auto flex items-center gap-2"><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發</Button></Link><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2"><Link href="/store-inventory"><Button variant="outline" size="sm" className="gap-1.5"><ClipboardList className="h-4 w-4 text-blue-600" />盤點・訂貨</Button></Link><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發</Button></Link><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
       </div>
 
       {/* 門市 / 年月（報表與差異用） */}
@@ -124,7 +124,6 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
   const [uploading, setUploading] = useState('')
   const posRef = useRef<HTMLInputElement>(null)
   const invRef = useRef<HTMLInputElement>(null)
-  const priceRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     if (!store) { setReport(null); return }
@@ -156,26 +155,14 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
     const d = await res.json().catch(() => ({}))
     if (res.ok) { setMsg(`進銷存匯入：${(d.stores ?? []).map((s: { store: string; count: number }) => `${s.store}(${s.count})`).join('、')}`); onImported(); load() } else setMsg(d.error ?? '匯入失敗')
   }
-  const uploadPrice = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = ''
-    if (!file) return
-    setUploading('price'); setMsg('')
-    const fd = new FormData(); fd.append('file', file)
-    const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
-    setUploading('')
-    const d = await res.json().catch(() => ({}))
-    setMsg(res.ok ? `標準價匯入 ${d.imported} 筆` : (d.error ?? '匯入失敗'))
-  }
-
   return (
     <div className="space-y-4">
       <input ref={posRef} type="file" hidden accept=".xls" onChange={uploadPos} />
       <input ref={invRef} type="file" hidden accept=".xlsx" onChange={uploadInv} />
-      <input ref={priceRef} type="file" hidden accept=".xlsx" onChange={uploadPrice} />
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => posRef.current?.click()}>{uploading === 'pos' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入 POS(.xls)</Button>
         <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => invRef.current?.click()}>{uploading === 'inv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入進銷存(.xlsx)</Button>
-        <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => priceRef.current?.click()}>{uploading === 'price' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入標準價(.xlsx)</Button>
+        <span className="text-xs text-gray-400">標準價由「研發」中央維護</span>
         {msg && <span className="text-sm text-blue-600 self-center">{msg}</span>}
       </div>
 
@@ -404,6 +391,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
         </Button>
       </div>
 
+      <p className="text-xs text-gray-500">🔍 稽核用途：比對規定與實耗，檢查門市操作是否有誤或亂賣。</p>
       <p className="text-xs text-gray-400">規定用量＝IVT「Xuất bán POS」欄（依點單推算的應耗）；實耗＝「lượng dùng tháng（當月使用量）」欄。差額／誤差% 即檔內 chenh／phan tram。配方理論僅作對照。</p>
 
       {showCfg && (

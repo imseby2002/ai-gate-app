@@ -47,6 +47,7 @@ export default function RdPage() {
   const [busy, setBusy] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
+  const priceRef = useRef<HTMLInputElement>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -96,6 +97,25 @@ export default function RdPage() {
       } else {
         setMsg({ text: d.error ?? '匯入失敗', type: 'error' })
       }
+    } catch (err) {
+      setMsg({ text: `匯入發生錯誤：${err instanceof Error ? err.message : err}`, type: 'error' })
+    }
+    setUploading(false)
+  }
+
+  // 匯入原料標準價（中央維護，非每月、非門市）
+  const handleUploadPrice = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setMsg(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
+      const d = await res.json()
+      setMsg(res.ok ? { text: `標準價匯入 ${d.imported} 筆！`, type: 'success' } : { text: d.error ?? '匯入失敗', type: 'error' })
     } catch (err) {
       setMsg({ text: `匯入發生錯誤：${err instanceof Error ? err.message : err}`, type: 'error' })
     }
@@ -228,6 +248,13 @@ export default function RdPage() {
         accept=".xlsx,.xls"
         onChange={handleUpload}
       />
+      <input
+        ref={priceRef}
+        type="file"
+        hidden
+        accept=".xlsx"
+        onChange={handleUploadPrice}
+      />
 
       {/* 訊息提示 */}
       {msg && (
@@ -275,9 +302,9 @@ export default function RdPage() {
         <Card className="p-4 flex items-center justify-between gap-2">
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground font-medium">快速操作</p>
-            <p className="text-xs text-gray-500">支援 Excel / CSV 匯入與手動新增</p>
+            <p className="text-xs text-gray-500">配方與原料標準價由此中央維護（非每月、非門市）</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               size="sm"
               variant="outline"
@@ -290,7 +317,21 @@ export default function RdPage() {
               ) : (
                 <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
               )}
-              匯入檔案
+              匯入配方
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              disabled={uploading}
+              onClick={() => priceRef.current?.click()}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-4 w-4 text-amber-600" />
+              )}
+              匯入標準價
             </Button>
             <Button
               size="sm"
