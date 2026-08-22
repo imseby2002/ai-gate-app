@@ -313,6 +313,16 @@ const ORDER_CONFIRM_MARKER_RE = /以上資訊是否正確|預訂確認/
 const ORDER_CONFIRM_RE = /正確|沒錯|沒問題|是的|對了|確認|可以|好的|好喔|^好$|^對$|ok|okay|yes/i
 const ORDER_DENY_RE = /不對|不正確|錯了|有錯|不要|取消|等等|先不|不用|修改|改一下|再想|不是/
 
+// 真實案例：客人整段訂房完全是自由對話談成的（商家自訂了 systemPrompt，等於
+// buildBookingSystemPrompt 那套「所有預訂步驟已完成」的結構化偵測跟著失效），
+// AI 問完匯款帳號末五碼、客人回覆一串數字後，AI 說「您的訂房已處理完成」，
+// 但系統完全沒有建立任何工單或訂單紀錄——客人事後想查訂單號碼，系統當然查無
+// 資料，只能不斷循環要求換方式查詢。「AI 剛問完匯款末五碼、客人回一串數字」
+// 是金流確認的強訊號，不管前面的訂房走的是哪一套流程，都直接建工單通知管家
+// 核對並手動建立訂單，不能讓已經付款的客人查無憑據。
+const PAYMENT_SUFFIX_ASK_RE = /末五碼|後五碼|末三碼|末3碼|帳號後五碼|轉帳帳號後/
+const PAYMENT_SUFFIX_REPLY_RE = /^\D{0,6}\d{3,6}\D{0,6}$/
+
 // Order confirmed → open a follow-up ticket so staff see it in the inbox.
 // The AI only *says* "會安排專員跟進"; without this nothing notifies staff.
 async function maybeCreateOrderTicket(
@@ -341,6 +351,35 @@ async function maybeCreateOrderTicket(
     })
     // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員
     void notifyStaffOrder(userId, lastAssistant)
+  } catch { /* 不中斷主流程 */ }
+}
+
+// 客人提供匯款末五碼 → 不管訂房前面走的是結構化流程還是自由對話，都直接建工單
+// 通知管家核對並手動建立訂單，見上方 PAYMENT_SUFFIX_ASK_RE 註解。
+async function maybeCreatePaymentProofTicket(
+  userId: string, platform: string, customerId: string, industry: string,
+  history: HistoryMsg[], text: string,
+): Promise<void> {
+  try {
+    const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
+    if (!PAYMENT_SUFFIX_ASK_RE.test(lastAssistant)) return
+    if (!PAYMENT_SUFFIX_REPLY_RE.test(text.trim())) return
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '付款確認待跟進')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    if (existing?.length) return
+    const recentText = history.slice(-10).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId,
+      subject: '客人已匯款並提供末五碼，需人工核對並建立訂單',
+      description: `客人提供匯款帳號末五碼「${text.trim()}」，請專員核對款項並手動建立訂單紀錄（本次訂房可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
+      priority: 'high', intent: '付款確認待跟進',
+    })
+    void notifyStaffOrder(userId, `客人已提供匯款末五碼「${text.trim()}」，請核對款項並手動建立訂單。`)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -434,6 +473,8 @@ async function replyToCustomer(
   if (knowledge.bookingFlowEnabled) {
     void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text)
   }
+  // 客人提供匯款末五碼 → 不論訂房走的是哪套流程，都直接建工單通知管家核對
+  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text)
 
   try {
     let stage = cust?.stage ?? 'new'
@@ -1638,6 +1679,7 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】如果下方系統資料是要求你「先跟客人核對姓名」的問句（開頭是「請問訂房登記的姓名是不是」），一律要先完整照抄那句話問客人，絕對不能跳過這一步直接把姓名、密碼、房號當成已核對過的資料講給客人聽；只有客人在你問完之後的下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪真的提供密碼——這一輪你自己絕對不能提前把密碼講出來
 - 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
 - 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
+- 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
