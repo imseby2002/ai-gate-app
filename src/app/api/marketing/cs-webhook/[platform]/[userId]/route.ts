@@ -1288,8 +1288,37 @@ const SENSITIVE_REVEAL_RE = /(密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-
 // 宣告一律會被攔截，逼 AI 老實說查無明細，而不是自己算一個數字出來。
 const BALANCE_REVEAL_RE = /(餘款|尾款|剩餘款項|餘額|差額)[：:是為約]{0,2}\s*(?:NT\$|NTD\$?|\$)?\s*([\d,]{2,10})\s*元?/g
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
+const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂金與餘額明細，我已經幫您通知管家人工核對，確認後會盡快回覆您正確的金額，謝謝您的耐心等候。'
 
-function enforceNoFabricatedReveal(reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string): string {
+// 客人問訂金/餘款時，系統本來就沒有金流查詢功能，不能只丟一句「查無資料」就結束——
+// 真實案例顯示這種情況客人會反覆追問，AI 也可能在後續某一輪又忍不住編一個數字。
+// 這裡直接建立工單通知管家人工核對，比照 createExhaustedLookupTicket 的「先真的建立
+// 工單，才能讓 AI 誠實說已經轉真人」邏輯，避免又是一句沒有兌現的空話。
+async function createBalanceCheckTicket(
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+): Promise<void> {
+  try {
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '訂金餘款人工核對')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    if (existing?.length) return  // 已有未結工單，不重複建立
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId,
+      subject: '客人詢問訂金/餘款，系統無金流查詢功能',
+      description: `客人詢問訂金或剩餘款項，系統沒有訂金/付款明細查詢功能，AI 已誠實告知查無資料，需要專員人工核對金額。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
+      priority: 'high', intent: '訂金餘款人工核對',
+    })
+  } catch { /* 不中斷主流程 */ }
+}
+
+async function enforceNoFabricatedReveal(
+  reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string,
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+): Promise<string> {
   const idMatches = [...reply.matchAll(SENSITIVE_REVEAL_RE)]
   const balanceMatches = [...reply.matchAll(BALANCE_REVEAL_RE)]
   if (!idMatches.length && !balanceMatches.length) return reply
@@ -1308,7 +1337,11 @@ function enforceNoFabricatedReveal(reply: string, externalDataSection: string, h
     return !knowledgeBase.includes(value)
   })
   const hasUnbackedBalance = balanceMatches.some(([, , value]) => !backedByQuery(value.replace(/,/g, '')))
-  return (hasUnbackedId || hasUnbackedBalance) ? NO_FABRICATION_FALLBACK : reply
+  if (hasUnbackedBalance) {
+    await createBalanceCheckTicket(userId, platform, customerId, industry, lastMessage)
+    return BALANCE_ESCALATION_FALLBACK
+  }
+  return hasUnbackedId ? NO_FABRICATION_FALLBACK : reply
 }
 
 // 客人傳訂單/房卡截圖詢問密碼時，圖片內容不能直接被回覆模型當成「已核對」的系統資料採信
@@ -1638,7 +1671,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase)
+          return await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -1655,7 +1688,7 @@ async function getAIReply(
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase)
+    return await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
