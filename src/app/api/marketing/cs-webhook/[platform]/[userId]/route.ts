@@ -1477,6 +1477,16 @@ async function getAIReply(
       ? await queryDataSources(userId, message, knowledge.bookingFlowEnabled, { conversationText: convUserText, verifyName })
       : ''
 
+    // 真實案例：管家人工提示客人「輸入『帳號』二字取得付款資訊」（民宿慣用的付款觸發詞，
+    // 知識庫的賞鯨付款說明也是這樣寫），但客人真的只回一個「帳號」時，這則訊息完全沒有
+    // 上下文可依循（跟管家提示之間常常隔了好幾小時，系統會判斷成新的一輪對話），AI 只能
+    // 自己猜「帳號」是在問什麼，結果猜成 WiFi 帳號。這裡直接把它當成固定觸發詞處理，
+    // 不讓 AI 用猜的。
+    const PAYMENT_ACCOUNT_KEYWORD_RE = /^(匯款)?帳(號|戶)$/
+    if (PAYMENT_ACCOUNT_KEYWORD_RE.test(message.trim()) && knowledge.paymentInfo) {
+      externalDataSection = `\n\n【系統提示——客人輸入的「帳號」是本民宿詢問付款/匯款帳號的固定觸發詞，不是在問 WiFi 帳號或其他帳號，請直接提供以下匯款資訊】\n${knowledge.paymentInfo}${externalDataSection}`
+    }
+
     // 偵測訂單號 → 提供入住密碼（兩種來源都受入住時間限制）
     let orderLookupDone = false
     let currentLookupKind: LookupKind | null = null
