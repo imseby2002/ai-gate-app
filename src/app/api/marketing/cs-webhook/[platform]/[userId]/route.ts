@@ -1482,8 +1482,12 @@ async function getAIReply(
     // 上下文可依循（跟管家提示之間常常隔了好幾小時，系統會判斷成新的一輪對話），AI 只能
     // 自己猜「帳號」是在問什麼，結果猜成 WiFi 帳號。這裡直接把它當成固定觸發詞處理，
     // 不讓 AI 用猜的。
+    // 這支路由是全平台商家共用的同一份程式碼，不是只服務單一商家——「帳號＝匯款帳號」
+    // 只是民宿業「線上訂房/訂行程一律用匯款」這種場景的慣例，換成其他產業（例如會員制、
+    // 教育類），客人講「帳號」很可能是在問登入帳號，此時套用這條規則反而會答錯，所以
+    // 額外限制只在 homestay 產業才啟用，避免這條規則影響到其他產業的商家。
     const PAYMENT_ACCOUNT_KEYWORD_RE = /^(匯款)?帳(號|戶)$/
-    if (PAYMENT_ACCOUNT_KEYWORD_RE.test(message.trim()) && knowledge.paymentInfo) {
+    if (knowledge.industry === 'homestay' && PAYMENT_ACCOUNT_KEYWORD_RE.test(message.trim()) && knowledge.paymentInfo) {
       externalDataSection = `\n\n【系統提示——客人輸入的「帳號」是本民宿詢問付款/匯款帳號的固定觸發詞，不是在問 WiFi 帳號或其他帳號，請直接提供以下匯款資訊】\n${knowledge.paymentInfo}${externalDataSection}`
     }
 
