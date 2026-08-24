@@ -7,27 +7,33 @@ export type CopyKind = 'original' | 'copy' | 'both'
 export const COPY_LABEL: Record<CopyKind, string> = {
   original: '正本', copy: '影印本', both: '正本＋影印本',
 }
-export type DocCategory = 'recruit' | 'insurance'
+// recruit＝勞動檔案、insurance＝保險檔案、tax＝所得稅檔案
+export type DocCategory = 'recruit' | 'insurance' | 'tax'
+export const CATEGORY_LABEL: Record<DocCategory, string> = {
+  recruit: '勞動檔案', insurance: '保險檔案', tax: '所得稅檔案',
+}
 
 export interface DocSpec {
   type: string
   label: string
   copy: CopyKind          // 紙本需繳型態
-  categories: DocCategory[] // 求職 / 保險
+  categories: DocCategory[] // 勞動 / 保險 / 所得稅
 }
 
-// 完整文件目錄（依 HO_SO_NHAN_VIEN：求職資料＋保險文件）
-// 一次要齊所有日後會用到的檔案，含保險，不等到要保險時才補件。
+// 完整文件目錄（依 HO_SO_NHAN_VIEN：勞動＋保險＋所得稅）
+// 一次要齊所有日後會用到的檔案，不等到要用時才補件。
 export const DOC_CATALOG: DocSpec[] = [
-  { type: 'resume',      label: '履歷',           copy: 'copy',     categories: ['recruit', 'insurance'] },
-  { type: 'id_card',     label: '身分證',         copy: 'both',     categories: ['recruit', 'insurance'] },
-  { type: 'application', label: '求職申請書',     copy: 'original', categories: ['recruit'] },
-  { type: 'cv',          label: 'CV',             copy: 'copy',     categories: ['recruit'] },
-  { type: 'diploma',     label: '畢業證／學生證', copy: 'copy',     categories: ['recruit'] },
-  { type: 'health',      label: '健康證明',       copy: 'original', categories: ['recruit', 'insurance'] },
-  { type: 'birth',       label: '出生證明',       copy: 'copy',     categories: ['recruit', 'insurance'] },
-  { type: 'residence',   label: '居住證明',       copy: 'copy',     categories: ['insurance'] },
-  { type: 'other',       label: '其他',           copy: 'copy',     categories: ['recruit'] },
+  { type: 'resume',       label: '履歷（公證正本）', copy: 'original', categories: ['recruit', 'insurance'] },
+  { type: 'id_card',      label: '公民身分證(CCCD)', copy: 'copy',     categories: ['recruit', 'insurance', 'tax'] },
+  { type: 'application',  label: '求職申請書',       copy: 'original', categories: ['recruit'] },
+  { type: 'cv',           label: 'CV',               copy: 'copy',     categories: ['recruit'] },
+  { type: 'diploma',      label: '學歷／證照／成績單', copy: 'copy',   categories: ['recruit'] },
+  { type: 'student_card', label: '學生證',           copy: 'copy',     categories: ['recruit'] },
+  { type: 'health',       label: '健康檢查（正本）', copy: 'original', categories: ['recruit', 'insurance'] },
+  { type: 'birth',        label: '出生證明',         copy: 'copy',     categories: ['insurance'] },
+  { type: 'vneid',        label: 'VNEID（電子身分）', copy: 'copy',    categories: ['insurance', 'tax'] },
+  { type: 'residence',    label: '居住證明',         copy: 'copy',     categories: ['insurance'] },
+  { type: 'other',        label: '其他',             copy: 'copy',     categories: ['recruit'] },
 ]
 
 // 相容舊介面

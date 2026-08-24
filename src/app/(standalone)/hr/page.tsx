@@ -1145,13 +1145,15 @@ const NOTIFY_TEMPLATES: { label: string; subject: string; message: string }[] = 
 
 // 完整文件目錄（與後端 DOC_CATALOG 對齊）
 const HR_DOC_CATALOG: { type: string; label: string; copy: string; needOriginal: boolean }[] = [
-  { type: 'resume', label: '履歷', copy: '影印本', needOriginal: false },
-  { type: 'id_card', label: '身分證', copy: '正本＋影印本', needOriginal: true },
+  { type: 'resume', label: '履歷（公證正本）', copy: '正本', needOriginal: true },
+  { type: 'id_card', label: '公民身分證(CCCD)', copy: '影印本', needOriginal: false },
   { type: 'application', label: '求職申請書', copy: '正本', needOriginal: true },
   { type: 'cv', label: 'CV', copy: '影印本', needOriginal: false },
-  { type: 'diploma', label: '畢業證／學生證', copy: '影印本', needOriginal: false },
-  { type: 'health', label: '健康證明', copy: '正本', needOriginal: true },
+  { type: 'diploma', label: '學歷／證照／成績單', copy: '影印本', needOriginal: false },
+  { type: 'student_card', label: '學生證', copy: '影印本', needOriginal: false },
+  { type: 'health', label: '健康檢查（正本）', copy: '正本', needOriginal: true },
   { type: 'birth', label: '出生證明', copy: '影印本', needOriginal: false },
+  { type: 'vneid', label: 'VNEID（電子身分）', copy: '影印本', needOriginal: false },
   { type: 'residence', label: '居住證明', copy: '影印本', needOriginal: false },
   { type: 'other', label: '其他', copy: '影印本', needOriginal: false },
 ]
@@ -1997,6 +1999,11 @@ export default function HRPage() {
           <span className="text-sm text-gray-400 mr-1">
             共 <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> 名在職員工
           </span>
+          <Link href="/personnel">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Users className="h-4 w-4" />人員資料
+            </Button>
+          </Link>
           <Link href="/store-reports">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Store className="h-4 w-4" />門市報表
