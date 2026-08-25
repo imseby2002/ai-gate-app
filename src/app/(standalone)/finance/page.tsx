@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
-import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -924,6 +924,11 @@ export default function FinancePage() {
           <Link href="/store-expenses">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Store className="h-4 w-4" />門市費用
+            </Button>
+          </Link>
+          <Link href="/vendors">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Truck className="h-4 w-4" />廠商資料
             </Button>
           </Link>
           <Link href="/affairs">
