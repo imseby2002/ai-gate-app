@@ -926,6 +926,11 @@ export default function FinancePage() {
               <Store className="h-4 w-4" />門市費用
             </Button>
           </Link>
+          <Link href="/units">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Building2 className="h-4 w-4" />單位資料
+            </Button>
+          </Link>
           <Link href="/vendors">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Truck className="h-4 w-4" />廠商資料
