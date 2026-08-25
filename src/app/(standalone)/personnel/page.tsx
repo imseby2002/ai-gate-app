@@ -17,7 +17,7 @@ interface Checklist { doc_key: string; original_received: boolean; copy_received
 interface Contract { id: string; contract_no: string; sign_date: string | null; start_date: string | null; end_date: string | null; file_name: string; url: string; note: string }
 interface Employee { base_salary: number; hourly_rate: number; employment_type: string; insurance_required: boolean; insurance_status: string; insurance_salary: number; attendance_no: string; bank_name: string; bank_account: string; department: string; position: string }
 interface Payroll { year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; net_pay: number; status: string }
-interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string }
+interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string }
 
 export default function PersonnelPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -195,9 +195,37 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
         </Card>
       )}
 
+      {/* AI 彙整基本資料 */}
+      <AiProfileSection id={id} profileText={data.person.profile_text} hasDocs={data.documents.length > 0} onChange={reload} />
+
       {/* 勞動合同 */}
       <ContractSection candidateId={id} contracts={data.contracts} onChange={reload} />
     </div>
+  )
+}
+
+function AiProfileSection({ id, profileText, hasDocs, onChange }: { id: string; profileText: string; hasDocs: boolean; onChange: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const run = async () => {
+    setBusy(true); setMsg('')
+    const res = await fetch('/api/hr/personnel/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (res.ok) { setMsg(`已彙整（處理 ${d.used} 份文件）`); onChange() } else setMsg(d.error ?? '失敗')
+  }
+  return (
+    <Card className="p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm flex items-center gap-1.5"><FileText className="h-4 w-4 text-indigo-500" />AI 彙整基本資料</h3>
+        <div className="flex items-center gap-2">{msg && <span className="text-xs text-gray-500">{msg}</span>}
+          <Button size="sm" variant="outline" onClick={run} disabled={busy || !hasDocs} className="gap-1.5">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{profileText ? '重新彙整' : 'AI 彙整'}</Button></div>
+      </div>
+      {!hasDocs && <p className="text-xs text-gray-400">尚無上傳文件可供彙整。</p>}
+      {profileText
+        ? <pre className="text-xs text-gray-600 whitespace-pre-wrap max-h-80 overflow-y-auto bg-gray-50 rounded-lg p-3">{profileText}</pre>
+        : hasDocs && <p className="text-xs text-gray-400">尚未彙整。點「AI 彙整」讓 AI 讀取已上傳文件，整理成完整基本資料（日後選材可用）。</p>}
+    </Card>
   )
 }
 
