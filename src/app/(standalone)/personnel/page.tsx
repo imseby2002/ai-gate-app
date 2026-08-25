@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, ArrowLeft, Loader2, AlertCircle, Search, FileText, Upload, Trash2, ExternalLink, Save, Building2, CheckCircle2, XCircle, DollarSign } from 'lucide-react'
+import { Users, ArrowLeft, Loader2, AlertCircle, Search, FileText, Upload, Trash2, ExternalLink, Save, Building2, CheckCircle2, XCircle, DollarSign, Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -59,7 +59,10 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <div className="space-y-3">
-      <div className="relative"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋姓名或門市…" className="pl-9" /></div>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋姓名或門市…" className="pl-9" /></div>
+        <RemindButton />
+      </div>
       {filtered.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">無人員資料</div>
         : <div className="grid gap-2">{filtered.map(p => (
           <button key={p.id} onClick={() => onOpen(p.id)} className="text-left">
@@ -75,6 +78,24 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
                 : <span className="text-xs text-emerald-600 shrink-0 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />文件齊</span>}
             </Card>
           </button>))}</div>}
+    </div>
+  )
+}
+
+function RemindButton() {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const run = async () => {
+    setBusy(true); setMsg('')
+    const res = await fetch('/api/hr/doc-reminders', { method: 'POST' })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    setMsg(res.ok ? `已通知 ${d.notified ?? 0} 人；紙本待收 ${d.hr_pending ?? 0}` : (d.error ?? '失敗'))
+  }
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      {msg && <span className="text-xs text-gray-500">{msg}</span>}
+      <Button size="sm" variant="outline" className="gap-1.5" onClick={run} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}寄缺件提醒</Button>
     </div>
   )
 }
