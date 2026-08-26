@@ -220,6 +220,11 @@ export default function RdPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/rd-recipes">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <FlaskConical className="h-4 w-4 text-purple-600" />配方成本
+            </Button>
+          </Link>
           <Link href="/work">
             <Button variant="outline" size="sm">
               WORK 列表
