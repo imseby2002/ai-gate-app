@@ -225,6 +225,11 @@ export default function RdPage() {
               <FlaskConical className="h-4 w-4 text-purple-600" />配方成本
             </Button>
           </Link>
+          <Link href="/rd-ai">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <FlaskConical className="h-4 w-4 text-indigo-600" />研發討論AI
+            </Button>
+          </Link>
           <Link href="/work">
             <Button variant="outline" size="sm">
               WORK 列表
