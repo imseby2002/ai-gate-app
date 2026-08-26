@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
 
   // Only allow safe field updates
-  const allowedFields = ['is_active', 'user_type', 'monthly_budget', 'department', 'enabled_modules']
+  const allowedFields = ['is_active', 'user_type', 'monthly_budget', 'department', 'enabled_modules', 'units']
   const safeUpdates = Object.fromEntries(
     Object.entries(updates).filter(([k]) => allowedFields.includes(k))
   )
