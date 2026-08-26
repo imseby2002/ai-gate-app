@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
+import { summarizeChat } from '@/lib/rd/summarize'
 
 export const maxDuration = 60
 
@@ -88,6 +89,10 @@ export async function POST(req: NextRequest) {
 
   await supabase.from('rd_messages').insert({ chat_id: chatId, owner_id: user.id, role: 'assistant', content: reply, suggestion })
   await supabase.from('rd_chats').update({ mode, updated_at: new Date().toISOString() }).eq('id', chatId).eq('owner_id', user.id)
+
+  // 自動日誌：每累積數則對話就摘要一次（成本受限）
+  const total = (hist?.length ?? 0) + 2
+  if (total >= 4 && total % 4 === 0) await summarizeChat(supabase, user.id, chatId).catch(() => {})
 
   return NextResponse.json({ chat_id: chatId, reply, suggestion })
 }
