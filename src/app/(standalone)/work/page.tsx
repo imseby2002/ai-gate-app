@@ -382,6 +382,11 @@ export default function WorkPage() {
           <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Link href="/office">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Building2 className="h-4 w-4" />公司入口
+            </Button>
+          </Link>
           {canHr && (
             <Link href="/hr">
               <Button variant="outline" size="sm" className="gap-1.5">
