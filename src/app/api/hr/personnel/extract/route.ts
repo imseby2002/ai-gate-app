@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
-import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getUnitContext } from '@/lib/auth/unit-access'
 import { APPLY_BUCKET, DOC_LABEL } from '@/lib/hr/apply'
 
 export const maxDuration = 120
-
-async function getAdminUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { user: null, supabase }
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  if (profile?.user_type !== 'admin') return { user: null, supabase }
-  return { user, supabase }
-}
 
 const MAX_DOCS = 10
 const MAX_BYTES = 6 * 1024 * 1024 // 單檔上限，避免請求過大
@@ -30,22 +20,21 @@ function mediaTypeOf(name: string): string | null {
 
 // AI 將該人員上傳的文件轉文字並彙整成「完整基本資料」，存入 profile_text（日後選材）。
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const ctx = await getUnitContext('hr')
+  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
+  const { admin, ownerId } = ctx
 
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const { data: person } = await supabase.from('agent_hr_candidates')
-    .select('id, name, position, store').eq('id', id).eq('user_id', user.id).single()
+  const { data: person } = await admin.from('agent_hr_candidates')
+    .select('id, name, position, store').eq('id', id).eq('user_id', ownerId).single()
   if (!person) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-  const { data: docs } = await supabase.from('hr_candidate_documents')
-    .select('doc_type, label, file_name, storage_path').eq('candidate_id', id).eq('owner_id', user.id)
+  const { data: docs } = await admin.from('hr_candidate_documents')
+    .select('doc_type, label, file_name, storage_path').eq('candidate_id', id).eq('owner_id', ownerId)
   if (!docs || docs.length === 0) return NextResponse.json({ error: '此人員尚無上傳文件' }, { status: 400 })
-
-  const admin = createAdminClient()
   const parts: Array<Record<string, unknown>> = [{
     type: 'text',
     text: `以下是員工「${person.name || ''}」上傳的人事文件。請逐份辨識內容，將每份文件轉為文字，並彙整成一份「完整個人基本資料」（繁體中文）。\n` +
@@ -85,7 +74,7 @@ export async function POST(req: NextRequest) {
 
   const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ')
   const profile_text = `【AI 彙整 ${stamp}】\n${text}${skipped.length ? `\n\n（未處理：${skipped.join('、')}）` : ''}`
-  const { error: upErr } = await supabase.from('agent_hr_candidates').update({ profile_text, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', user.id)
+  const { error: upErr } = await admin.from('agent_hr_candidates').update({ profile_text, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', ownerId)
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, used, skipped, profile_text })

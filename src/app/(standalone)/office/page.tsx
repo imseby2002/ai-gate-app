@@ -16,7 +16,10 @@ export default function OfficePage() {
   useEffect(() => { fetch('/api/org/access').then(r => r.ok ? r.json() : { isAdmin: false, units: [] }).then(setAccess) }, [])
   if (!access) return <div className="flex h-full items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
 
-  const visibleAreas = UNIT_AREAS.filter(a => hasUnit(access.isAdmin, access.units, a.key))
+  const visibleAreas = UNIT_AREAS
+    .filter(a => hasUnit(access.isAdmin, access.units, a.key))
+    .map(a => ({ ...a, pages: a.pages.filter(p => access.isAdmin || !p.adminOnly) }))
+    .filter(a => a.pages.length > 0)
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-6 space-y-5">
