@@ -8,7 +8,7 @@ export interface UnitArea { key: string; label: string; pages: UnitPage[] }
 // 各單位群（access 以此 key 記於 profiles.units）
 export const UNIT_AREAS: UnitArea[] = [
   { key: 'hr', label: '人事', pages: [
-    { href: '/hr', label: '人事管理', adminOnly: true }, { href: '/personnel', label: '人員資料' },
+    { href: '/hr', label: '人事管理' }, { href: '/personnel', label: '人員資料' },
   ] },
   { key: 'finance', label: '出納・總務・會計', pages: [
     { href: '/finance', label: '出納總務', adminOnly: true }, { href: '/store-expenses', label: '門市費用', adminOnly: true },
