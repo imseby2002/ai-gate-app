@@ -1977,7 +1977,7 @@ export default function HRPage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold">僅管理者可使用人事管理功能</p>
+          <p className="font-semibold">僅人事單位可使用人事管理功能</p>
           <p className="text-sm text-gray-400">請以管理者帳號登入後再試</p>
         </div>
       </div>

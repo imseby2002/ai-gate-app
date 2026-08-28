@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getUnitContext } from '@/lib/auth/unit-access'
 import { xlsToRows, type XlsCell } from '@/lib/hr/xls'
 
 export const maxDuration = 60
 
 async function getAdminUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { user: null, supabase }
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  if (profile?.user_type !== 'admin') return { user: null, supabase }
-  return { user, supabase }
+  const ctx = await getUnitContext('hr')
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }
 
 const num = (v: XlsCell | undefined) => (typeof v === 'number' ? v : parseFloat(String(v ?? '')) || 0)
