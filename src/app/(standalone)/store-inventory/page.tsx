@@ -37,7 +37,7 @@ export default function StoreInventoryPage() {
     ['count', '盤點・訂貨', <ClipboardList key="a" className="h-4 w-4" />],
     ['batch', '原料・批次', <Boxes key="d" className="h-4 w-4" />],
     ['safety', '安全庫存', <ShieldAlert key="b" className="h-4 w-4" />],
-    ['foreman', '領班設定', <Bell key="c" className="h-4 w-4" />],
+    ['foreman', '通知設定', <Bell key="c" className="h-4 w-4" />],
   ]
 
   return (
@@ -458,35 +458,78 @@ function OverridesCard({ store }: { store: string }) {
   )
 }
 
-// ── 領班設定 ──
+// ── 通知設定（各角色聯絡管道＋到期通知天數） ──
+const ROLES: [string, string, string][] = [
+  // [key 前綴, 標題, 說明]
+  ['foreman', '領班／門市人員', '低於安全量緊急叫貨、到期前 N 天優先使用'],
+  ['mgmt', '管理', '安全量、到期各級皆通知'],
+  ['audit', '稽核', '到期前中後段與過期未報廢'],
+  ['office', '辦公室', '過期未報廢時通知'],
+]
+type Contacts = Record<string, string>
+
 function ForemanTab({ store }: { store: string }) {
-  const [tg, setTg] = useState('')
-  const [email, setEmail] = useState('')
+  const [c, setC] = useState<Contacts>({})
+  const [remind, setRemind] = useState({ staff: 7, audit: 3, mgmt: 1 })
   const [saving, setSaving] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
     setMsg('')
-    fetch(`/api/inv/store-contacts?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : null).then(d => { if (d) { setTg(d.foreman_telegram ?? ''); setEmail(d.foreman_email ?? '') } })
+    fetch(`/api/inv/store-contacts?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : {}).then(d => setC(d ?? {}))
+    fetch('/api/inv/settings').then(r => r.ok ? r.json() : null).then(d => { if (d) setRemind({ staff: d.expiry_remind_staff ?? 7, audit: d.expiry_remind_audit ?? 3, mgmt: d.expiry_remind_mgmt ?? 1 }) })
   }, [store])
 
+  const set = (k: string, v: string) => setC(p => ({ ...p, [k]: v }))
   const save = async () => {
     setSaving(true); setMsg('')
-    const res = await fetch('/api/inv/store-contacts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store, foreman_telegram: tg, foreman_email: email }) })
+    const [r1, r2] = await Promise.all([
+      fetch('/api/inv/store-contacts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store, ...c }) }),
+      fetch('/api/inv/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ expiry_remind_staff: remind.staff, expiry_remind_audit: remind.audit, expiry_remind_mgmt: remind.mgmt }) }),
+    ])
     setSaving(false)
-    setMsg(res.ok ? '已儲存' : '儲存失敗')
+    setMsg(r1.ok && r2.ok ? '已儲存' : '儲存失敗')
+  }
+  const checkNow = async () => {
+    setChecking(true); setMsg('')
+    const res = await fetch('/api/inv/expiry/run', { method: 'POST' })
+    setChecking(false)
+    const d = await res.json().catch(() => ({}))
+    setMsg(res.ok ? `已檢查，發送 ${d.notified ?? 0} 則到期通知` : (d.error ?? '檢查失敗'))
   }
 
   return (
-    <Card className="p-4 space-y-3 max-w-md">
-      <div className="text-sm font-medium">{store} 領班聯絡管道</div>
-      <p className="text-xs text-gray-500">盤點時若有原料低於安全量，會發緊急通知到這裡。</p>
-      <label className="block space-y-1"><span className="text-xs text-gray-500">Telegram chat id</span><Input value={tg} onChange={e => setTg(e.target.value)} /></label>
-      <label className="block space-y-1"><span className="text-xs text-gray-500">Email</span><Input value={email} onChange={e => setEmail(e.target.value)} /></label>
+    <div className="space-y-4 max-w-3xl">
+      <Card className="p-4 space-y-3">
+        <div className="text-sm font-medium">{store} 各角色聯絡管道</div>
+        <p className="text-xs text-gray-500">低於安全量、原料到期分級提醒會依角色發送到這裡（Telegram chat id／Email，可留空）。</p>
+        <div className="space-y-3">
+          {ROLES.map(([key, label, desc]) => (
+            <div key={key} className="grid grid-cols-1 md:grid-cols-[10rem_1fr_1fr] gap-2 items-center">
+              <div><div className="text-sm font-medium">{label}</div><div className="text-[11px] text-gray-400">{desc}</div></div>
+              <Input placeholder="Telegram chat id" value={c[`${key}_telegram`] ?? ''} onChange={e => set(`${key}_telegram`, e.target.value)} className="h-8" />
+              <Input placeholder="Email" value={c[`${key}_email`] ?? ''} onChange={e => set(`${key}_email`, e.target.value)} className="h-8" />
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <div className="text-sm font-medium">到期通知天數（單位預設，批次可各自覆寫）</div>
+        <div className="grid grid-cols-3 gap-3 max-w-md">
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">前 N 天→門市＋管理</span><Input type="number" value={String(remind.staff)} onChange={e => setRemind({ ...remind, staff: Number(e.target.value) || 0 })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">前 N 天→管理＋稽核</span><Input type="number" value={String(remind.audit)} onChange={e => setRemind({ ...remind, audit: Number(e.target.value) || 0 })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">前 N 天→管理＋稽核</span><Input type="number" value={String(remind.mgmt)} onChange={e => setRemind({ ...remind, mgmt: Number(e.target.value) || 0 })} className="h-8" /></label>
+        </div>
+        <p className="text-[11px] text-gray-400">過期當天若未報廢，另通知管理＋稽核＋辦公室。每日自動檢查一次。</p>
+      </Card>
+
       <div className="flex items-center gap-2">
-        <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}</Button>
+        <Button size="sm" onClick={save} disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存</Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={checkNow} disabled={checking}>{checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}立即檢查到期</Button>
         {msg && <span className="text-sm text-gray-500">{msg}</span>}
       </div>
-    </Card>
+    </div>
   )
 }
