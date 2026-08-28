@@ -11,8 +11,8 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/hr', label: '人事管理' }, { href: '/personnel', label: '人員資料' },
   ] },
   { key: 'finance', label: '出納・總務・會計', pages: [
-    { href: '/finance', label: '出納總務', adminOnly: true }, { href: '/store-expenses', label: '門市費用', adminOnly: true },
-    { href: '/vendors', label: '廠商資料', adminOnly: true }, { href: '/units', label: '單位資料', adminOnly: true },
+    { href: '/finance', label: '出納總務' }, { href: '/store-expenses', label: '門市費用' },
+    { href: '/vendors', label: '廠商資料' }, { href: '/units', label: '單位資料' },
   ] },
   { key: 'rd', label: '研發', pages: [
     { href: '/rd', label: '配方中心', adminOnly: true }, { href: '/rd-recipes', label: '配方成本', adminOnly: true },

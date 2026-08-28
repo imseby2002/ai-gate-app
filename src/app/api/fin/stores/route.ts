@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { user: null, supabase }
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  if (profile?.user_type !== 'admin') return { user: null, supabase }
-  return { user, supabase }
+  const ctx = await getUnitContext('finance')
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }
 
 const UNIT_FIELDS = ['unit_type', 'short_name', 'electricity_no', 'water_no', 'address'] as const
