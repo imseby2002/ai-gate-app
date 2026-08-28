@@ -23,7 +23,7 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/pos', label: '門市點單', adminOnly: true },
   ] },
   { key: 'affairs', label: '外務', pages: [
-    { href: '/affairs', label: '外務・證照', adminOnly: true },
+    { href: '/affairs', label: '外務・證照' },
   ] },
 ]
 
