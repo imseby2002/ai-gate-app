@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History } from 'lucide-react'
+import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-type Tab = 'count' | 'safety' | 'foreman'
+type Tab = 'count' | 'batch' | 'safety' | 'foreman'
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('zh-TW')
 
 interface Material { material_code: string; material_name: string; unit: string; book_qty: number }
@@ -35,6 +35,7 @@ export default function StoreInventoryPage() {
 
   const TABS: [Tab, string, ReactNode][] = [
     ['count', '盤點・訂貨', <ClipboardList key="a" className="h-4 w-4" />],
+    ['batch', '原料・批次', <Boxes key="d" className="h-4 w-4" />],
     ['safety', '安全庫存', <ShieldAlert key="b" className="h-4 w-4" />],
     ['foreman', '領班設定', <Bell key="c" className="h-4 w-4" />],
   ]
@@ -69,6 +70,7 @@ export default function StoreInventoryPage() {
 
       {!store ? <div className="text-center py-10 text-gray-400 text-sm">請先選擇門市（需已匯入進銷存）。</div>
         : tab === 'count' ? <CountTab store={store} />
+        : tab === 'batch' ? <BatchTab store={store} />
         : tab === 'safety' ? <SafetyTab store={store} />
         : <ForemanTab store={store} />}
     </div>
@@ -208,6 +210,107 @@ function CountTab({ store }: { store: string }) {
   )
 }
 
+// ── 原料・批次（進貨批次＋到期） ──
+interface Batch {
+  id: string; material_code: string; material_name: string; unit: string
+  purchase_date: string | null; expiry_date: string; qty: number
+  remind_staff: number | null; remind_audit: number | null; remind_mgmt: number | null
+  status: string; days_to_expiry: number | null; note: string
+}
+
+function BatchTab({ store }: { store: string }) {
+  const [rows, setRows] = useState<Batch[]>([])
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [tick, setTick] = useState(0)
+  const fileRef = useRef<HTMLInputElement>(null)
+  // 單筆新增表單
+  const [f, setF] = useState({ material_code: '', material_name: '', unit: '', purchase_date: '', expiry_date: '', qty: '' as number | '' })
+  const [adding, setAdding] = useState(false)
+
+  useEffect(() => {
+    setLoading(true); setMsg('')
+    fetch(`/api/inv/batches?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : { rows: [] })
+      .then((d: { rows: Batch[] }) => { setRows(d.rows ?? []); setLoading(false) })
+  }, [store, tick])
+
+  const add = async () => {
+    if (!f.material_code || !f.expiry_date) { setMsg('原料碼與到期日必填'); return }
+    setAdding(true); setMsg('')
+    const res = await fetch('/api/inv/batches', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store, ...f, qty: f.qty || 0 }),
+    })
+    setAdding(false)
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg(d.error ?? '新增失敗'); return }
+    setF({ material_code: '', material_name: '', unit: '', purchase_date: '', expiry_date: '', qty: '' })
+    setTick(t => t + 1); setMsg('已新增批次')
+  }
+  const del = async (id: string) => {
+    const res = await fetch('/api/inv/batches', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (res.ok) setTick(t => t + 1)
+  }
+  const upload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    setMsg('匯入中…')
+    const fd = new FormData(); fd.append('file', file); fd.append('store', store)
+    const res = await fetch('/api/inv/import/batches', { method: 'POST', body: fd })
+    const d = await res.json().catch(() => ({}))
+    setMsg(res.ok ? `匯入 ${d.imported} 筆${d.skipped ? `（略過 ${d.skipped} 筆無到期日）` : ''}` : (d.error ?? '匯入失敗'))
+    if (res.ok) setTick(t => t + 1)
+  }
+
+  // 到期狀態底色：已過期紅、7 天內橘、30 天內黃
+  const rowClass = (d: number | null) => d === null ? '' : d < 0 ? 'bg-red-50' : d <= 7 ? 'bg-orange-50' : d <= 30 ? 'bg-amber-50' : ''
+  const dLabel = (d: number | null) => d === null ? '—' : d < 0 ? `已過期 ${-d} 天` : d === 0 ? '今天到期' : `${d} 天`
+
+  return (
+    <div className="space-y-4">
+      <input ref={fileRef} type="file" hidden accept=".xlsx" onChange={upload} />
+      <p className="text-xs text-gray-500">每批進貨各自記到期日；到期前依「單位設定」的天數分級通知。到期當天請在此改走「耗損」報廢（下一階段）。</p>
+
+      <Card className="p-4 space-y-3">
+        <div className="text-sm font-medium flex items-center gap-1.5"><Plus className="h-4 w-4 text-primary" />新增進貨批次</div>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">原料碼*</span><Input value={f.material_code} onChange={e => setF({ ...f, material_code: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">名稱</span><Input value={f.material_name} onChange={e => setF({ ...f, material_name: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">單位</span><Input value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">進貨日</span><Input type="date" value={f.purchase_date} onChange={e => setF({ ...f, purchase_date: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">到期日*</span><Input type="date" value={f.expiry_date} onChange={e => setF({ ...f, expiry_date: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">數量</span><Input type="number" value={f.qty === '' ? '' : String(f.qty)} onChange={e => setF({ ...f, qty: e.target.value === '' ? '' : Number(e.target.value) })} className="h-8" /></label>
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <Button size="sm" onClick={add} disabled={adding}>{adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}新增</Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.open(`/api/inv/batches/xlsx?store=${encodeURIComponent(store)}`)}><Download className="h-4 w-4" />下載批次表</Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4" />上傳批次表</Button>
+          {msg && <span className="text-sm text-blue-600 basis-full">{msg}</span>}
+        </div>
+      </Card>
+
+      {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+        : rows.length === 0 ? <div className="text-center py-8 text-gray-400 text-sm">尚無進貨批次，於上方新增或上傳批次表。</div>
+        : <Card className="p-4">
+          <div className="text-sm font-medium flex items-center gap-1.5 mb-2"><CalendarClock className="h-4 w-4 text-gray-400" />進貨批次（{rows.length} 筆，依到期日排序）</div>
+          <div className="overflow-x-auto max-h-96">
+            <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2">進貨日</th><th className="pr-2">到期日</th><th className="pr-2 text-right">數量</th><th className="pr-2 text-right">剩餘</th><th className="pr-2"></th></tr></thead>
+              <tbody>{rows.map(b => (
+                <tr key={b.id} className={`border-b last:border-0 ${rowClass(b.days_to_expiry)}`}>
+                  <td className="py-1 pr-2">{b.material_name || b.material_code}</td>
+                  <td className="pr-2 text-gray-400">{b.unit}</td>
+                  <td className="pr-2 text-gray-500">{b.purchase_date ?? '—'}</td>
+                  <td className="pr-2 font-medium">{b.expiry_date}</td>
+                  <td className="pr-2 text-right tabular-nums">{fmt(b.qty)}</td>
+                  <td className={`pr-2 text-right tabular-nums ${b.days_to_expiry !== null && b.days_to_expiry <= 7 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>{dLabel(b.days_to_expiry)}</td>
+                  <td className="pr-2 text-right"><button onClick={() => del(b.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></td>
+                </tr>))}</tbody></table>
+          </div>
+        </Card>}
+    </div>
+  )
+}
+
 // ── 安全庫存 ──
 function SafetyTab({ store }: { store: string }) {
   const [rows, setRows] = useState<SafetyRow[]>([])
@@ -281,7 +384,77 @@ function SafetyTab({ store }: { store: string }) {
                 </tr>))}</tbody></table>
           </div>
         </Card>}
+
+      <OverridesCard store={store} />
     </div>
+  )
+}
+
+// ── 節慶／日期區間覆寫（可變安全量・滿倉量） ──
+interface Override { id: string; material_code: string; label: string; start_date: string; end_date: string; safety_qty: number; full_qty: number }
+
+function OverridesCard({ store }: { store: string }) {
+  const [rows, setRows] = useState<Override[]>([])
+  const [msg, setMsg] = useState('')
+  const [tick, setTick] = useState(0)
+  const [f, setF] = useState({ material_code: '', label: '', start_date: '', end_date: '', safety_qty: '' as number | '', full_qty: '' as number | '' })
+  const [adding, setAdding] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/inv/safety/overrides?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : { rows: [] })
+      .then((d: { rows: Override[] }) => setRows(d.rows ?? []))
+  }, [store, tick])
+
+  const add = async () => {
+    if (!f.material_code || !f.start_date || !f.end_date) { setMsg('原料碼與起訖日必填'); return }
+    setAdding(true); setMsg('')
+    const res = await fetch('/api/inv/safety/overrides', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store, ...f, safety_qty: f.safety_qty || 0, full_qty: f.full_qty || 0 }),
+    })
+    setAdding(false)
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg(d.error ?? '新增失敗'); return }
+    setF({ material_code: '', label: '', start_date: '', end_date: '', safety_qty: '', full_qty: '' })
+    setTick(t => t + 1); setMsg('已新增覆寫')
+  }
+  const del = async (id: string) => {
+    const res = await fetch('/api/inv/safety/overrides', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (res.ok) setTick(t => t + 1)
+  }
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="text-sm font-medium flex items-center gap-1.5"><CalendarClock className="h-4 w-4 text-primary" />節慶覆寫（特定日期區間的安全量／滿倉量）</div>
+      <p className="text-xs text-gray-500">在指定日期區間內，該原料改用此處的安全量／滿倉量（生效於盤點・訂貨為下一階段）。</p>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+        <label className="space-y-1"><span className="block text-[11px] text-gray-500">原料碼*</span><Input value={f.material_code} onChange={e => setF({ ...f, material_code: e.target.value })} className="h-8" /></label>
+        <label className="space-y-1"><span className="block text-[11px] text-gray-500">節慶名</span><Input value={f.label} onChange={e => setF({ ...f, label: e.target.value })} className="h-8" placeholder="如 中秋" /></label>
+        <label className="space-y-1"><span className="block text-[11px] text-gray-500">起始日*</span><Input type="date" value={f.start_date} onChange={e => setF({ ...f, start_date: e.target.value })} className="h-8" /></label>
+        <label className="space-y-1"><span className="block text-[11px] text-gray-500">結束日*</span><Input type="date" value={f.end_date} onChange={e => setF({ ...f, end_date: e.target.value })} className="h-8" /></label>
+        <label className="space-y-1"><span className="block text-[11px] text-gray-500">安全量</span><Input type="number" value={f.safety_qty === '' ? '' : String(f.safety_qty)} onChange={e => setF({ ...f, safety_qty: e.target.value === '' ? '' : Number(e.target.value) })} className="h-8" /></label>
+        <label className="space-y-1"><span className="block text-[11px] text-gray-500">滿倉量</span><Input type="number" value={f.full_qty === '' ? '' : String(f.full_qty)} onChange={e => setF({ ...f, full_qty: e.target.value === '' ? '' : Number(e.target.value) })} className="h-8" /></label>
+      </div>
+      <div className="flex gap-2 items-center flex-wrap">
+        <Button size="sm" onClick={add} disabled={adding}>{adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}新增覆寫</Button>
+        {msg && <span className="text-sm text-blue-600">{msg}</span>}
+      </div>
+
+      {rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">原料碼</th><th className="pr-2">節慶</th><th className="pr-2">區間</th><th className="pr-2 text-right">安全量</th><th className="pr-2 text-right">滿倉量</th><th className="pr-2"></th></tr></thead>
+            <tbody>{rows.map(o => (
+              <tr key={o.id} className="border-b last:border-0">
+                <td className="py-1 pr-2">{o.material_code}</td>
+                <td className="pr-2">{o.label || '—'}</td>
+                <td className="pr-2 text-gray-500">{o.start_date} ~ {o.end_date}</td>
+                <td className="pr-2 text-right tabular-nums">{fmt(o.safety_qty)}</td>
+                <td className="pr-2 text-right tabular-nums">{fmt(o.full_qty)}</td>
+                <td className="pr-2 text-right"><button onClick={() => del(o.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></td>
+              </tr>))}</tbody></table>
+        </div>
+      )}
+    </Card>
   )
 }
 
