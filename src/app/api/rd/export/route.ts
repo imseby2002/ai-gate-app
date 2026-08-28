@@ -1,14 +1,11 @@
+import { getUnitContext } from '@/lib/auth/unit-access'
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { buildXlsx, type XlsxCell } from '@/lib/hr/xlsx'
 
 async function getAdminUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { user: null, supabase }
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  if (profile?.user_type !== 'admin') return { user: null, supabase }
-  return { user, supabase }
+  const ctx = await getUnitContext('rd')
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }
 
 // 所有配方一起匯出（.xlsx）：每個配方一段（表頭＋原料＋合計）。

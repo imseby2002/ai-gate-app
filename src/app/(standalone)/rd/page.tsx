@@ -186,7 +186,7 @@ export default function RdPage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold text-lg">僅管理者可存取研發模組</p>
+          <p className="font-semibold text-lg">僅研發單位可存取研發模組</p>
         </div>
       </div>
     )
