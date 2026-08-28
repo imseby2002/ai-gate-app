@@ -1,18 +1,16 @@
+import { getUnitContext } from '@/lib/auth/unit-access'
+import type { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
-import { createClient } from '@/lib/supabase/server'
 import { summarizeChat } from '@/lib/rd/summarize'
 
 export const maxDuration = 60
 
 async function getAdminUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { user: null, supabase }
-  const { data: profile } = await supabase.from('profiles').select('user_type').eq('id', user.id).single()
-  if (profile?.user_type !== 'admin') return { user: null, supabase }
-  return { user, supabase }
+  const ctx = await getUnitContext('rd')
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }
 const s = (v: unknown) => String(v ?? '').trim()
 type SB = Awaited<ReturnType<typeof createClient>>

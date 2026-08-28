@@ -15,8 +15,8 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/vendors', label: '廠商資料' }, { href: '/units', label: '單位資料' },
   ] },
   { key: 'rd', label: '研發', pages: [
-    { href: '/rd', label: '配方中心', adminOnly: true }, { href: '/rd-recipes', label: '配方成本', adminOnly: true },
-    { href: '/rd-ai', label: '研發討論AI', adminOnly: true }, { href: '/rd-logs', label: '研發日誌', adminOnly: true },
+    { href: '/rd', label: '配方中心' }, { href: '/rd-recipes', label: '配方成本' },
+    { href: '/rd-ai', label: '研發討論AI' }, { href: '/rd-logs', label: '研發日誌' },
   ] },
   { key: 'store', label: '門市營運', pages: [
     { href: '/store-reports', label: '門市報表', adminOnly: true }, { href: '/store-inventory', label: '盤點・訂貨', adminOnly: true },
