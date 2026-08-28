@@ -19,7 +19,7 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/rd-ai', label: '研發討論AI' }, { href: '/rd-logs', label: '研發日誌' },
   ] },
   { key: 'store', label: '門市營運', pages: [
-    { href: '/store-reports', label: '門市報表', adminOnly: true }, { href: '/store-inventory', label: '盤點・訂貨', adminOnly: true },
+    { href: '/store-reports', label: '門市報表' }, { href: '/store-inventory', label: '盤點・訂貨' },
     { href: '/pos', label: '門市點單', adminOnly: true },
   ] },
   { key: 'affairs', label: '外務', pages: [
