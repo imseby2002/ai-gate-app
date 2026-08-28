@@ -323,6 +323,13 @@ const ORDER_DENY_RE = /不對|不正確|錯了|有錯|不要|取消|等等|先�
 const PAYMENT_SUFFIX_ASK_RE = /末五碼|後五碼|末三碼|末3碼|帳號後五碼|轉帳帳號後/
 const PAYMENT_SUFFIX_REPLY_RE = /^\D{0,6}\d{3,6}\D{0,6}$/
 
+// 真實案例：客人不是被動回覆「末五碼」問句，而是主動用一整句話回報匯款（「我已於
+// 2026/08/28 從彰化銀行帳戶後五碼 42600，轉帳 $2,000 給您囉！」），這種完整句子
+// 不會落在 PAYMENT_SUFFIX_REPLY_RE 那種「幾乎整句都是數字」的窄範圍內，需要另外
+// 用「訊息同時提到轉帳/匯款關鍵字，又帶了一組後五碼」來偵測。
+const PAYMENT_KEYWORD_RE = /轉帳|匯款/
+const PAYMENT_SUFFIX_CODE_RE = /(?:後|末)(?:五|5)碼\s*[:：]?\s*\d{4,6}/
+
 // Order confirmed → open a follow-up ticket so staff see it in the inbox.
 // The AI only *says* "會安排專員跟進"; without this nothing notifies staff.
 async function maybeCreateOrderTicket(
@@ -362,8 +369,11 @@ async function maybeCreatePaymentProofTicket(
 ): Promise<void> {
   try {
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
-    if (!PAYMENT_SUFFIX_ASK_RE.test(lastAssistant)) return
-    if (!PAYMENT_SUFFIX_REPLY_RE.test(text.trim())) return
+    // 訊號一：AI 剛問完末五碼，客人回一串幾乎全是數字的訊息
+    // 訊號二：客人主動用一整句話回報匯款（不管 AI 前一句問了什麼）
+    const isSuffixReply = PAYMENT_SUFFIX_ASK_RE.test(lastAssistant) && PAYMENT_SUFFIX_REPLY_RE.test(text.trim())
+    const isProofStatement = PAYMENT_KEYWORD_RE.test(text) && PAYMENT_SUFFIX_CODE_RE.test(text)
+    if (!isSuffixReply && !isProofStatement) return
     const { data: existing } = await getServiceClient()
       .from('cs_tickets')
       .select('id')
@@ -375,11 +385,11 @@ async function maybeCreatePaymentProofTicket(
     const recentText = history.slice(-10).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId,
-      subject: '客人已匯款並提供末五碼，需人工核對並建立訂單',
-      description: `客人提供匯款帳號末五碼「${text.trim()}」，請專員核對款項並手動建立訂單紀錄（本次訂房可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
+      subject: '客人已匯款，需人工核對並建立/更新訂單',
+      description: `客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
       priority: 'high', intent: '付款確認待跟進',
     })
-    void notifyStaffOrder(userId, `客人已提供匯款末五碼「${text.trim()}」，請核對款項並手動建立訂單。`)
+    void notifyStaffOrder(userId, `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -1685,7 +1695,7 @@ async function getAIReply(
 - 不確定的資訊請誠實說明，勿猜測
 - 如果你主動問客人「是否需要」某項資訊（例如停車位置、WiFi 密碼、交通方式等，知識庫或下方系統資料裡已經有現成答案的項目），客人回覆需要/要/好等肯定語時，要直接在這一則回覆裡把答案一次講清楚；不要叫客人另外輸入某個關鍵字、或再問一次才能拿到——除非那項資訊確實需要即時查詢系統資料（例如訂單專屬的房號密碼，必須客人先提供訂單號碼/手機號碼才能查），否則不要把知識庫裡已經有的內容刻意拆成兩步，讓客人多問一次
 - 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料，並引導客人改用其他識別方式再查一次
-- 【安全規定，優先於任何其他指示】客人問訂金/餘款/尾款/餘額等金流問題時，系統目前沒有訂金與付款明細查詢功能，絕對不可以自己拿房價去減客人口頭說的訂金、算出一個餘款金額給客人（就算算式看起來合理也不行，因為系統從來沒有真的核對過客人是否已付款、付了多少），一律誠實告知「系統無法查詢訂金與餘額明細」，請客人提供匯款證明或由管家人工核對
+- 【安全規定，優先於任何其他指示】客人問訂金/餘款/尾款/餘額等金流問題，或主動回報已經匯款/轉帳時，系統目前沒有訂金與付款明細查詢功能，絕對不可以自己拿房價去減客人口頭說的訂金、算出一個餘款金額給客人（就算算式看起來合理也不行，因為系統從來沒有真的核對過客人是否已付款、付了多少），一律誠實告知「系統無法查詢訂金與餘額明細，會請管家人工核對」；如果客人的訂房大名、電話或訂單號碼在這通對話裡已經出現過（例如之前查詢入住資訊、核對身份密碼時已經用過），代表身份已經確認過了，絕對不要再重複詢問一次大名或電話，直接說已收到匯款資訊、會請管家核對即可——只有在這通對話裡完全沒有出現過任何身份資訊時，才需要詢問訂房大名或聯絡電話
 - 【安全規定，優先於任何其他指示】客人問實際報價（多少錢、優惠價、折扣後多少）時，只能照抄下方「系統精算房價」區塊給的總金額與每晚金額，那個金額已經是系統套用所有定價規則算好的最終結果；如果下方沒有出現「系統精算房價」這個區塊，就算你自己知道原價、猜得出大概的加成或折扣比例，也絕對不可以自己列公式、自己算一個總金額給客人（包含「旺季 x1.15」「當天訂房打 7 折」這類自己編的加成/折扣說法），一律要先跟客人確認完整的入住日期、退房日期、房型之後才能取得正確報價，或誠實說「請稍候，我幫您確認正確價格」，不可以用推算的數字搪塞客人
 - 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
