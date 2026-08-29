@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus } from 'lucide-react'
+import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus, Ban, PackageMinus, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-type Tab = 'count' | 'batch' | 'safety' | 'foreman'
+type Tab = 'count' | 'batch' | 'loss' | 'safety' | 'foreman'
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('zh-TW')
 
 interface Material { material_code: string; material_name: string; unit: string; book_qty: number }
@@ -36,6 +36,7 @@ export default function StoreInventoryPage() {
   const TABS: [Tab, string, ReactNode][] = [
     ['count', '盤點・訂貨', <ClipboardList key="a" className="h-4 w-4" />],
     ['batch', '原料・批次', <Boxes key="d" className="h-4 w-4" />],
+    ['loss', '耗損', <PackageMinus key="e" className="h-4 w-4" />],
     ['safety', '安全庫存', <ShieldAlert key="b" className="h-4 w-4" />],
     ['foreman', '通知設定', <Bell key="c" className="h-4 w-4" />],
   ]
@@ -71,6 +72,7 @@ export default function StoreInventoryPage() {
       {!store ? <div className="text-center py-10 text-gray-400 text-sm">請先選擇門市（需已匯入進銷存）。</div>
         : tab === 'count' ? <CountTab store={store} />
         : tab === 'batch' ? <BatchTab store={store} />
+        : tab === 'loss' ? <LossTab store={store} />
         : tab === 'safety' ? <SafetyTab store={store} />
         : <ForemanTab store={store} />}
     </div>
@@ -251,6 +253,14 @@ function BatchTab({ store }: { store: string }) {
     const res = await fetch('/api/inv/batches', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     if (res.ok) setTick(t => t + 1)
   }
+  const scrap = async (b: Batch) => {
+    if (!confirm(`報廢「${b.material_name || b.material_code}」此批次（數量 ${fmt(b.qty)}）？將自動放入耗損並扣庫存。`)) return
+    setMsg('')
+    const res = await fetch('/api/inv/batches/scrap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.id, reason: 'expired' }) })
+    const d = await res.json().catch(() => ({}))
+    setMsg(res.ok ? '已報廢並放入耗損' : (d.error ?? '報廢失敗'))
+    if (res.ok) setTick(t => t + 1)
+  }
   const upload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = ''
     if (!file) return
@@ -303,7 +313,97 @@ function BatchTab({ store }: { store: string }) {
                   <td className="pr-2 font-medium">{b.expiry_date}</td>
                   <td className="pr-2 text-right tabular-nums">{fmt(b.qty)}</td>
                   <td className={`pr-2 text-right tabular-nums ${b.days_to_expiry !== null && b.days_to_expiry <= 7 ? 'text-red-600 font-medium' : 'text-gray-500'}`}>{dLabel(b.days_to_expiry)}</td>
-                  <td className="pr-2 text-right"><button onClick={() => del(b.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></td>
+                  <td className="pr-2 text-right whitespace-nowrap">
+                    <button onClick={() => scrap(b)} title="報廢並放入耗損" className="text-gray-400 hover:text-orange-600 mr-2 align-middle"><Ban className="h-4 w-4 inline" /></button>
+                    <button onClick={() => del(b.id)} title="刪除（輸入錯誤）" className="text-gray-300 hover:text-red-500 align-middle"><Trash2 className="h-4 w-4 inline" /></button>
+                  </td>
+                </tr>))}</tbody></table>
+          </div>
+        </Card>}
+    </div>
+  )
+}
+
+// ── 耗損（報廢／丟棄，扣庫存） ──
+interface Loss { id: string; material_code: string; material_name: string; unit: string; qty: number; reason: string; loss_date: string; batch_id: string | null; note: string }
+const REASON_LABEL: Record<string, string> = { expired: '過期', damaged: '損壞', other: '其他' }
+const IVT_CANCEL_URL = 'https://ivt.ipos.vn/good-issue/cancel'
+
+function LossTab({ store }: { store: string }) {
+  const [rows, setRows] = useState<Loss[]>([])
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [tick, setTick] = useState(0)
+  const [f, setF] = useState({ material_code: '', material_name: '', unit: '', qty: '' as number | '', reason: 'damaged', loss_date: '', note: '' })
+  const [adding, setAdding] = useState(false)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/inv/losses?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : { rows: [] })
+      .then((d: { rows: Loss[] }) => { setRows(d.rows ?? []); setLoading(false) })
+  }, [store, tick])
+
+  const add = async () => {
+    if (!f.material_code) { setMsg('原料碼必填'); return }
+    setAdding(true); setMsg('')
+    const res = await fetch('/api/inv/losses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store, ...f, qty: f.qty || 0 }) })
+    setAdding(false)
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg(d.error ?? '新增失敗'); return }
+    setF({ material_code: '', material_name: '', unit: '', qty: '', reason: 'damaged', loss_date: '', note: '' })
+    setTick(t => t + 1); setMsg('已新增耗損')
+  }
+  const del = async (id: string) => {
+    const res = await fetch('/api/inv/losses', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    if (res.ok) setTick(t => t + 1)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+        <div>耗損（過期報廢或丟棄）系統會扣庫存並留存於此；IVT 無耗損上傳功能，請另於 IVT 手動填寫。
+          <a href={IVT_CANCEL_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 ml-1 underline font-medium">IVT 耗損填寫<ExternalLink className="h-3 w-3" /></a>
+        </div>
+      </div>
+
+      <Card className="p-4 space-y-3">
+        <div className="text-sm font-medium flex items-center gap-1.5"><Plus className="h-4 w-4 text-primary" />新增耗損（獨立填報；批次過期請於「原料・批次」按報廢）</div>
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">原料碼*</span><Input value={f.material_code} onChange={e => setF({ ...f, material_code: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">名稱</span><Input value={f.material_name} onChange={e => setF({ ...f, material_name: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">單位</span><Input value={f.unit} onChange={e => setF({ ...f, unit: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">數量</span><Input type="number" value={f.qty === '' ? '' : String(f.qty)} onChange={e => setF({ ...f, qty: e.target.value === '' ? '' : Number(e.target.value) })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">原因</span>
+            <select value={f.reason} onChange={e => setF({ ...f, reason: e.target.value })} className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm">
+              <option value="damaged">損壞</option><option value="expired">過期</option><option value="other">其他</option>
+            </select>
+          </label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">日期</span><Input type="date" value={f.loss_date} onChange={e => setF({ ...f, loss_date: e.target.value })} className="h-8" /></label>
+          <label className="space-y-1"><span className="block text-[11px] text-gray-500">備註</span><Input value={f.note} onChange={e => setF({ ...f, note: e.target.value })} className="h-8" /></label>
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <Button size="sm" onClick={add} disabled={adding}>{adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}新增耗損</Button>
+          {msg && <span className="text-sm text-blue-600">{msg}</span>}
+        </div>
+      </Card>
+
+      {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+        : rows.length === 0 ? <div className="text-center py-8 text-gray-400 text-sm">尚無耗損紀錄。</div>
+        : <Card className="p-4">
+          <div className="text-sm font-medium flex items-center gap-1.5 mb-2"><PackageMinus className="h-4 w-4 text-gray-400" />耗損紀錄（{rows.length} 筆）</div>
+          <div className="overflow-x-auto max-h-96">
+            <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">日期</th><th className="pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">數量</th><th className="pr-2">原因</th><th className="pr-2">來源</th><th className="pr-2">備註</th><th className="pr-2"></th></tr></thead>
+              <tbody>{rows.map(l => (
+                <tr key={l.id} className="border-b last:border-0">
+                  <td className="py-1 pr-2 text-gray-500">{l.loss_date}</td>
+                  <td className="pr-2">{l.material_name || l.material_code}</td>
+                  <td className="pr-2 text-gray-400">{l.unit}</td>
+                  <td className="pr-2 text-right tabular-nums">{fmt(l.qty)}</td>
+                  <td className="pr-2">{REASON_LABEL[l.reason] ?? l.reason}</td>
+                  <td className="pr-2 text-gray-400">{l.batch_id ? '批次報廢' : '手動'}</td>
+                  <td className="pr-2 text-gray-500">{l.note}</td>
+                  <td className="pr-2 text-right"><button onClick={() => del(l.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button></td>
                 </tr>))}</tbody></table>
           </div>
         </Card>}
