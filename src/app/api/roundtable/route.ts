@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { runRoundtable, type Seat, type RoundtableEvent } from '@/lib/ai/roundtable'
+import { runRoundtable, DEFAULT_SEATS, DEFAULT_MODERATOR, type Seat, type RoundtableEvent } from '@/lib/ai/roundtable'
 
 export const maxDuration = 300
 
@@ -45,18 +45,32 @@ export async function POST(req: NextRequest) {
   // 沒有自訂 seats 時，把每個席位選的 expertId 合併進 DEFAULT_SEATS
   let resolvedSeats: Seat[] | undefined = seats
   if (!resolvedSeats && seatExpertIds?.length) {
-    const { DEFAULT_SEATS } = await import('@/lib/ai/roundtable')
     resolvedSeats = DEFAULT_SEATS.map((seat, i) => ({
       ...seat,
       expertId: seatExpertIds[i] ?? undefined,
     }))
   }
+  const finalSeats = resolvedSeats ?? DEFAULT_SEATS
+  const roleByName = new Map<string, string>([
+    ...finalSeats.map(s => [s.name, s.role] as const),
+    [DEFAULT_MODERATOR.name, DEFAULT_MODERATOR.role],
+  ])
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
+      const transcript: { round: number; name: string; role: string; content: string }[] = []
+      let report: string | null = null
       const emit = (e: RoundtableEvent) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`))
+        if (e.type === 'seat-start') {
+          transcript.push({ round: e.round, name: e.name, role: roleByName.get(e.name) ?? '', content: '' })
+        } else if (e.type === 'delta') {
+          const block = [...transcript].reverse().find(b => b.round === e.round && b.name === e.name)
+          if (block) block.content += e.content
+        } else if (e.type === 'report') {
+          report = e.content
+        }
       }
       try {
         await runRoundtable({ bossInstruction: instruction, seats: resolvedSeats, rebuttal }, emit)
@@ -65,6 +79,17 @@ export async function POST(req: NextRequest) {
         console.error('[roundtable] error:', err)
         emit({ type: 'error', name: 'system', error: String(err) })
       } finally {
+        // 存檔失敗不影響已經串流給前端的結果，只記 log；serverless 環境下
+        // 必須在 close() 前 await，不然函式執行環境可能在寫入完成前就被回收。
+        const { error } = await supabase.from('roundtable_sessions').insert({
+          user_id: user.id,
+          instruction,
+          seats: finalSeats,
+          rebuttal: rebuttal !== false,
+          transcript,
+          report,
+        })
+        if (error) console.error('[roundtable] save session failed:', error)
         controller.close()
       }
     },

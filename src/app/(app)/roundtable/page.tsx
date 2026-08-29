@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, History } from 'lucide-react'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
 
 interface SeatBlock {
@@ -13,6 +13,12 @@ interface SeatBlock {
   name: string
   model?: string
   content: string
+}
+
+interface SessionSummary {
+  id: string
+  instruction: string
+  created_at: string
 }
 
 const PHASE_LABEL: Record<number, string> = {
@@ -32,7 +38,54 @@ export default function RoundtablePage() {
   const [showExpertConfig, setShowExpertConfig] = useState(false)
   // 每個席位選的 expertId（單選）：index → expertId[]
   const [seatExperts, setSeatExperts] = useState<Record<number, string[]>>({ 0: [], 1: [], 2: [] })
+  const [history, setHistory] = useState<SessionSummary[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [loadingSession, setLoadingSession] = useState(false)
+  const [viewingId, setViewingId] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    fetchHistory()
+  }, [])
+
+  async function fetchHistory() {
+    try {
+      const res = await fetch('/api/roundtable/sessions')
+      if (!res.ok) return
+      const data = await res.json()
+      setHistory(data.sessions ?? [])
+    } catch {
+      // ignore
+    }
+  }
+
+  async function loadSession(id: string) {
+    if (loadingSession) return
+    setLoadingSession(true)
+    try {
+      const res = await fetch(`/api/roundtable/sessions/${id}`)
+      if (!res.ok) return
+      const { session } = await res.json()
+      const seatModelByName = new Map<string, string>(
+        (session.seats ?? []).map((s: { name: string; model: string }) => [s.name, s.model])
+      )
+      setInstruction(session.instruction)
+      setBlocks(
+        (session.transcript ?? []).map((t: { round: number; name: string; content: string }) => ({
+          round: t.round,
+          name: t.name,
+          model: seatModelByName.get(t.name),
+          content: t.content,
+        }))
+      )
+      setReport(session.report ?? '')
+      setPhase('')
+      setViewingId(session.id)
+      setShowHistory(false)
+    } finally {
+      setLoadingSession(false)
+    }
+  }
 
   function setSeatExpert(idx: number, ids: string[]) {
     setSeatExperts(prev => ({ ...prev, [idx]: ids }))
@@ -44,6 +97,7 @@ export default function RoundtablePage() {
     setBlocks([])
     setReport('')
     setPhase('')
+    setViewingId(null)
 
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -105,6 +159,7 @@ export default function RoundtablePage() {
       // aborted or network error
     } finally {
       setRunning(false)
+      fetchHistory()
     }
   }
 
@@ -118,12 +173,58 @@ export default function RoundtablePage() {
   return (
     <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">AI 圓桌研議</h1>
-        <p className="text-sm text-muted-foreground">
-          下達指令，指派數個大模型「員工」分輪研究、互評，最後由整合者彙整成完整報告。
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">AI 圓桌研議</h1>
+          <p className="text-sm text-muted-foreground">
+            下達指令，指派數個大模型「員工」分輪研究、互評，最後由整合者彙整成完整報告。
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShowHistory(v => !v)}>
+          <History className="mr-1.5 h-4 w-4" />
+          歷史紀錄
+        </Button>
       </div>
+
+      {showHistory && (
+        <Card className="p-4 space-y-2">
+          <p className="text-sm font-medium">過往研議紀錄</p>
+          {history.length === 0 ? (
+            <p className="text-sm text-muted-foreground">還沒有任何紀錄</p>
+          ) : (
+            <div className="divide-y">
+              {history.map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => loadSession(s.id)}
+                  disabled={loadingSession}
+                  className="w-full py-2 text-left hover:bg-muted/30 transition-colors disabled:opacity-50"
+                >
+                  <p className="text-sm line-clamp-1">{s.instruction}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(s.created_at).toLocaleString('zh-TW')}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {viewingId && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+          <span>正在檢視歷史紀錄</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto py-0.5"
+            onClick={() => { setViewingId(null); setBlocks([]); setReport(''); setInstruction('') }}
+          >
+            開始新的研議
+          </Button>
+        </div>
+      )}
 
       <Card className="space-y-3 p-4">
         <Textarea
