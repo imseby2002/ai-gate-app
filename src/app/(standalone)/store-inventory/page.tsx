@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 
 type Tab = 'count' | 'batch' | 'loss' | 'safety' | 'foreman'
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('zh-TW')
+const IVT_STOCKTAKING_URL = 'https://ivt.ipos.vn/stock/stock-taking'
+const IVT_ORDER_URL = 'https://ivt.ipos.vn/order/purchase-order-internal'
 
 interface Material { material_code: string; material_name: string; unit: string; book_qty: number }
 interface CountRow { material_code: string; material_name: string; unit: string; book_qty: number; counted: number | '' }
@@ -181,6 +183,14 @@ function CountTab({ store }: { store: string }) {
               {result.urgent_count > 0 && <Button size="sm" variant="outline" className="gap-1.5 text-red-600 border-red-200" onClick={() => resend(result.id)}><Bell className="h-4 w-4" />通知領班（{result.urgent_count} 緊急）</Button>}
               <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.open(`/api/inv/stocktake/xlsx?kind=order&id=${result.id}`)}><Download className="h-4 w-4" />下載訂貨表</Button>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-sky-50 border border-sky-200 p-2 text-xs">
+            <span className="font-medium text-sky-800">IVT 匯入檔：</span>
+            <Button size="sm" variant="outline" className="h-7 gap-1" onClick={() => window.open(`/api/inv/stocktake/xlsx?kind=ivt-count&id=${result.id}`)}><Download className="h-3.5 w-3.5" />IVT 盤點</Button>
+            <a href={IVT_STOCKTAKING_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-700 underline">上傳到 IVT 盤點<ExternalLink className="h-3 w-3" /></a>
+            <span className="text-sky-300">|</span>
+            <Button size="sm" variant="outline" className="h-7 gap-1" onClick={() => window.open(`/api/inv/stocktake/xlsx?kind=ivt-order&id=${result.id}`)}><Download className="h-3.5 w-3.5" />IVT 訂貨</Button>
+            <a href={IVT_ORDER_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-700 underline">上傳到 IVT 訂貨<ExternalLink className="h-3 w-3" /></a>
           </div>
           {orderRows.length === 0 ? <p className="text-sm text-gray-400">目前庫存皆已達滿倉，無需訂貨。</p>
             : <div className="overflow-x-auto max-h-80">
