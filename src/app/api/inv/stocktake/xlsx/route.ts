@@ -10,6 +10,13 @@ async function getAdminUser() {
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
+
+// IVT 匯入格式（stock-taking / purchase-order-internal 共用）：
+// 工作表名 "Dữ liệu dùng để import"，欄位：Mã hàng(*), Tên hàng, Mã ĐVT(*), Tên ĐVT, Số lượng(*)
+const IVT_SHEET = 'Dữ liệu dùng để import'
+const IVT_HEADER: XlsxCell[] = ['Mã hàng (*)', 'Tên hàng', 'Mã ĐVT (*)', 'Tên ĐVT ', 'Số lượng (*)']
+const ivtRow = (code: string, name: string, unit: string, qty: number): XlsxCell[] => [code, name, unit, '', qty]
+
 function xlsxResponse(buf: Buffer, filename: string) {
   return new NextResponse(new Uint8Array(buf), {
     headers: {
@@ -56,6 +63,35 @@ export async function GET(req: NextRequest) {
     const rows: XlsxCell[][] = [['原料碼', '名稱', '單位', '實盤', '滿倉量', '訂貨量', '緊急']]
     for (const o of order) rows.push([o.material_code, o.material_name, o.unit, o.counted, o.full, o.order_qty, o.urgent ? '緊急' : ''])
     return xlsxResponse(buildXlsx('訂貨表', rows), `訂貨表_${head.store}_${head.taken_on}.xlsx`)
+  }
+
+  // IVT 盤點匯入檔（實盤數）：kind=ivt-count&id=
+  if (kind === 'ivt-count') {
+    const id = s(sp.get('id'))
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    const { data: head } = await supabase.from('inv_stocktakes').select('store, taken_on').eq('id', id).eq('owner_id', user.id).single()
+    if (!head) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    const { data: items } = await supabase.from('inv_stocktake_items')
+      .select('material_code, material_name, unit, counted_qty').eq('stocktake_id', id).eq('owner_id', user.id)
+    const rows: XlsxCell[][] = [IVT_HEADER]
+    for (const it of items ?? []) rows.push(ivtRow(s(it.material_code), s(it.material_name), s(it.unit), Number(it.counted_qty) || 0))
+    return xlsxResponse(buildXlsx(IVT_SHEET, rows), `IVT盤點_${head.store}_${head.taken_on}.xlsx`)
+  }
+
+  // IVT 訂貨匯入檔（補到滿倉的訂貨量）：kind=ivt-order&id=
+  if (kind === 'ivt-order') {
+    const id = s(sp.get('id'))
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+    const { data: head } = await supabase.from('inv_stocktakes').select('store, taken_on').eq('id', id).eq('owner_id', user.id).single()
+    if (!head) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    const [{ data: items }, safety] = await Promise.all([
+      supabase.from('inv_stocktake_items').select('material_code, material_name, unit, counted_qty').eq('stocktake_id', id).eq('owner_id', user.id),
+      loadEffectiveSafety(supabase, user.id, head.store, head.taken_on),
+    ])
+    const order = computeOrder((items ?? []) as CountRow[], safety).filter(o => o.order_qty > 0)
+    const rows: XlsxCell[][] = [IVT_HEADER]
+    for (const o of order) rows.push(ivtRow(o.material_code, o.material_name, o.unit, o.order_qty))
+    return xlsxResponse(buildXlsx(IVT_SHEET, rows), `IVT訂貨_${head.store}_${head.taken_on}.xlsx`)
   }
 
   return NextResponse.json({ error: 'kind required' }, { status: 400 })
