@@ -106,6 +106,13 @@ async function speak(
       prompt: userPrompt,
       maxOutputTokens: maxTokens,
       abortSignal: AbortSignal.timeout(60000),
+      // Gemini 預設會開「思考」，思考 token 會算進 maxOutputTokens 裡——常常還沒開始輸出
+      // 看得到的正文，額度就先被思考耗光，導致像這裡員工C（gemini-2.5-pro）發言常常只有
+      // 兩三行就被截斷。比照這個 repo 其他呼叫 Gemini 的地方（marketing/analyze、
+      // product-designer/*、simulate）一律關閉思考，讓 maxOutputTokens 全部留給正文。
+      ...(seat.model.startsWith('google/') ? {
+        providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+      } : {}),
     })
     for await (const part of result.fullStream) {
       if (part.type === 'text-delta') {
