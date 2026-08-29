@@ -10,6 +10,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
+import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply } from '@/lib/cs/checkin-lookup'
@@ -293,6 +294,41 @@ async function setNotifyLineRecipients(userId: string, recipients: string[], ind
   }
 }
 
+// 工作台「工單通知設定」（unit_data[12].notifyWebhooks，LINE Messaging API / Telegram
+// Bot / Webhook 三選多）——過去只有工作台「測試」分頁的模擬對談會呼叫到（cs-chat/route.ts
+// 的 dispatchHandoffTicket），真實客人在這支路由觸發的工單完全沒有串接，商家設定了
+// Telegram/Webhook 通知也永遠收不到。這裡補上同一套發送邏輯，跟下面的 notifyStaffOrder
+// （LINE OA 綁定專員清單，另一套獨立機制）並存，兩邊都會通知。
+type NotifyWebhook = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
+
+function dispatchTicketNotify(notifyWebhooks: NotifyWebhook[], notifyMsg: string): void {
+  if (!notifyWebhooks?.length) return
+  void Promise.allSettled(notifyWebhooks.filter(wh => wh.value?.trim()).map(wh => {
+    if (wh.type === 'line_messaging') {
+      if (!wh.target?.trim()) return Promise.resolve()
+      return fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
+      })
+    } else if (wh.type === 'telegram') {
+      if (!wh.target?.trim()) return Promise.resolve()
+      return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
+      })
+    } else {
+      if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
+      return fetch(wh.value.trim(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: notifyMsg }),
+      })
+    }
+  }))
+}
+
 // 訂單確認 → 用租戶自己的 LINE OA push 通知已綁定的專員
 async function notifyStaffOrder(userId: string, orderDetail: string): Promise<void> {
   try {
@@ -334,7 +370,7 @@ const PAYMENT_SUFFIX_CODE_RE = /(?:後|末)(?:五|5)碼\s*[:：]?\s*\d{4,6}/
 // The AI only *says* "會安排專員跟進"; without this nothing notifies staff.
 async function maybeCreateOrderTicket(
   userId: string, platform: string, customerId: string, industry: string,
-  history: HistoryMsg[], text: string,
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[],
 ): Promise<void> {
   try {
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
@@ -356,8 +392,9 @@ async function maybeCreateOrderTicket(
       description: `客人已確認訂單，請專員跟進。\n\n【訂單確認內容】\n${lastAssistant.slice(0, 1000)}`,
       priority: 'high', intent: '新訂單待跟進',
     })
-    // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員
+    // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員 + 工作台設定的工單通知管道
     void notifyStaffOrder(userId, lastAssistant)
+    dispatchTicketNotify(notifyWebhooks, `🔔 有新訂單已確認，請盡快跟進：\n\n${lastAssistant.slice(0, 900)}`)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -365,7 +402,7 @@ async function maybeCreateOrderTicket(
 // 通知管家核對並手動建立訂單，見上方 PAYMENT_SUFFIX_ASK_RE 註解。
 async function maybeCreatePaymentProofTicket(
   userId: string, platform: string, customerId: string, industry: string,
-  history: HistoryMsg[], text: string,
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[],
 ): Promise<void> {
   try {
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
@@ -389,7 +426,9 @@ async function maybeCreatePaymentProofTicket(
       description: `客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
       priority: 'high', intent: '付款確認待跟進',
     })
-    void notifyStaffOrder(userId, `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`)
+    const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`
+    void notifyStaffOrder(userId, notifyMsg)
+    dispatchTicketNotify(notifyWebhooks, notifyMsg)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -425,6 +464,7 @@ async function replyToCustomer(
         priority: 'high', intent: '人工客服請求',
       })
     } catch { /* ignore */ }
+    dispatchTicketNotify(knowledge.notifyWebhooks, `🔔 客人要求人工客服：\n\n${text.slice(0, 300)}`)
     const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
@@ -441,6 +481,7 @@ async function replyToCustomer(
         priority: 'high', intent: '人工客服請求',
       })
     } catch { /* ignore */ }
+    dispatchTicketNotify(knowledge.notifyWebhooks, `🔔 客人提出退換貨/退款需求：\n\n${text.slice(0, 300)}`)
     const reply = '好的，退換貨/退款需要專人為您處理，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
@@ -481,10 +522,10 @@ async function replyToCustomer(
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
   if (knowledge.bookingFlowEnabled) {
-    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text)
+    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks)
   }
   // 客人提供匯款末五碼 → 不論訂房走的是哪套流程，都直接建工單通知管家核對
-  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text)
+  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks)
 
   try {
     let stage = cust?.stage ?? 'new'
@@ -533,6 +574,7 @@ interface CsKnowledge {
   pricingConfigs: PricingConfig[]
   csForms: CsChatForm[]
   corrections: string
+  notifyWebhooks: NotifyWebhook[]
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -555,6 +597,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let bookingFlows: BookingFlowDef[] = []
   let discountMaxPct = 0
   let discountGifts = ''
+  let notifyWebhooks: NotifyWebhook[] = []
   const knowledgeParts: string[] = []
 
   // Find first campaign that has unit_data[12] with content
@@ -571,6 +614,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
       if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
       if (typeof unit12.discountMaxPct === 'number') discountMaxPct = unit12.discountMaxPct
       if (unit12.discountGifts) discountGifts = String(unit12.discountGifts)
+      if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
 
       // Direct text knowledge input
       if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
@@ -680,6 +724,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     pricingConfigs,
     csForms,
     corrections,
+    notifyWebhooks,
   }
 }
 
@@ -765,7 +810,7 @@ function priorFailedLookupKinds(history: HistoryMsg[]): Set<LookupKind> {
 
 // 三種方式都查無資料時才會呼叫——真的建立工單，之後才能讓 AI 誠實告知客人已建立工單
 async function createExhaustedLookupTicket(
-  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[],
 ): Promise<void> {
   try {
     const { data: existing } = await getServiceClient()
@@ -782,6 +827,7 @@ async function createExhaustedLookupTicket(
       description: `客人依序嘗試訂單號碼、手機號碼、訂房姓名三種方式查詢，系統都查無對應資料，需要專員人工協助核對。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
       priority: 'high', intent: '查無資料人工協助',
     })
+    dispatchTicketNotify(notifyWebhooks, `🔔 客人訂單號碼/手機號碼/訂房姓名皆查無資料：\n\n${lastMessage.slice(0, 300)}`)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -1346,7 +1392,7 @@ const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂�
 // 這裡直接建立工單通知管家人工核對，比照 createExhaustedLookupTicket 的「先真的建立
 // 工單，才能讓 AI 誠實說已經轉真人」邏輯，避免又是一句沒有兌現的空話。
 async function createBalanceCheckTicket(
-  userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[],
 ): Promise<void> {
   try {
     const { data: existing } = await getServiceClient()
@@ -1363,12 +1409,14 @@ async function createBalanceCheckTicket(
       description: `客人詢問訂金或剩餘款項，系統沒有訂金/付款明細查詢功能，AI 已誠實告知查無資料，需要專員人工核對金額。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
       priority: 'high', intent: '訂金餘款人工核對',
     })
+    dispatchTicketNotify(notifyWebhooks, `🔔 客人詢問訂金/餘款，需人工核對：\n\n${lastMessage.slice(0, 300)}`)
   } catch { /* 不中斷主流程 */ }
 }
 
 async function enforceNoFabricatedReveal(
   reply: string, externalDataSection: string, history: HistoryMsg[], knowledgeBase: string,
   userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
+  notifyWebhooks: NotifyWebhook[] = [],
 ): Promise<string> {
   const idMatches = [...reply.matchAll(SENSITIVE_REVEAL_RE)]
   const balanceMatches = [...reply.matchAll(BALANCE_REVEAL_RE)]
@@ -1389,7 +1437,7 @@ async function enforceNoFabricatedReveal(
   })
   const hasUnbackedBalance = balanceMatches.some(([, , value]) => !backedByQuery(value.replace(/,/g, '')))
   if (hasUnbackedBalance) {
-    await createBalanceCheckTicket(userId, platform, customerId, industry, lastMessage)
+    await createBalanceCheckTicket(userId, platform, customerId, industry, lastMessage, notifyWebhooks)
     return BALANCE_ESCALATION_FALLBACK
   }
   return hasUnbackedId ? NO_FABRICATION_FALLBACK : reply
@@ -1651,7 +1699,7 @@ async function getAIReply(
         const failedKinds = priorFailedLookupKinds(history)
         failedKinds.add(currentLookupKind)
         if (failedKinds.has('order') && failedKinds.has('phone') && failedKinds.has('name')) {
-          await createExhaustedLookupTicket(userId, platform, customerId, knowledge.industry, message)
+          await createExhaustedLookupTicket(userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
           externalDataSection += `\n\n【系統提示——最高優先，覆蓋上方「引導客人換方式查詢」的指示】客人已經依序嘗試訂單號碼、手機號碼、訂房姓名三種識別方式，系統查詢都查無資料，這次系統已經真的建立工單通知專員。現在可以且應該告訴客人「已經為您建立工單，專員會盡快協助核對資料並與您聯繫」，不用再要求客人換方式查詢。`
         }
       }
@@ -1737,7 +1785,7 @@ async function getAIReply(
             system: systemPrompt,
             messages,
           })
-          return await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message)
+          return await enforceNoFabricatedReveal(cleanReply(text) || FALLBACK, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
         } catch { /* fall through to L2 chain */ }
       }
     }
@@ -1754,7 +1802,7 @@ async function getAIReply(
         ? await generateCsReplyL3(systemPrompt, messages)
         : await generateCsReplyL2(systemPrompt, messages)
     const finalReply = (result ? cleanReply(result.reply) : '') || FALLBACK
-    return await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message)
+    return await enforceNoFabricatedReveal(finalReply, externalDataSection, history, knowledge.knowledgeBase, userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
   } catch (err) {
     console.error('[cs-webhook] getAIReply failed, falling back to canned reply:', err)
     return FALLBACK
