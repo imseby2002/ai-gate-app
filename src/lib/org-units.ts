@@ -20,7 +20,7 @@ export const UNIT_AREAS: UnitArea[] = [
   ] },
   { key: 'store', label: '門市營運', pages: [
     { href: '/store-reports', label: '門市報表' }, { href: '/store-inventory', label: '盤點・訂貨' },
-    { href: '/pos', label: '門市點單' },
+    { href: '/shift', label: '排班' }, { href: '/pos', label: '門市點單' },
   ] },
   { key: 'affairs', label: '外務', pages: [
     { href: '/affairs', label: '外務・證照' },
