@@ -20,13 +20,14 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     .select('id, store, title, start_date, end_date, slots, status').eq('id', id).eq('owner_id', user.id).single()
   if (!period) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
-  const [{ data: tokens }, { data: avail }] = await Promise.all([
+  const [{ data: tokens }, { data: avail }, { data: assigns }] = await Promise.all([
     supabase.from('shift_tokens').select('employee_id, employee_name, token, submitted_at').eq('owner_id', user.id).eq('period_id', id),
     supabase.from('shift_availability').select('employee_id, work_date, slot_code').eq('owner_id', user.id).eq('period_id', id),
+    supabase.from('shift_assignments').select('employee_id, work_date, slot_code').eq('owner_id', user.id).eq('period_id', id),
   ])
   return NextResponse.json({
     period, dates: listDates(period.start_date, period.end_date),
-    employees: tokens ?? [], availability: avail ?? [],
+    employees: tokens ?? [], availability: avail ?? [], assignments: assigns ?? [],
   })
 }
 
