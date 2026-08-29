@@ -2,7 +2,7 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 import type { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { computeOrder, notifyForeman, type CountRow } from '@/lib/inv/reorder'
+import { computeOrder, loadEffectiveSafety, notifyForeman, type CountRow } from '@/lib/inv/reorder'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
@@ -13,11 +13,6 @@ async function getAdminUser() {
 const s = (v: unknown) => String(v ?? '').trim()
 const num = (v: unknown) => { const n = Number(String(v ?? '').replace(/[,\s]/g, '')); return Number.isFinite(n) ? n : 0 }
 
-async function safetyOf(supabase: Awaited<ReturnType<typeof createClient>>, ownerId: string, store: string) {
-  const { data } = await supabase.from('inv_safety_stock')
-    .select('material_code, safety_qty, full_qty').eq('owner_id', ownerId).eq('store', store)
-  return data ?? []
-}
 async function storeNameOf(supabase: Awaited<ReturnType<typeof createClient>>, ownerId: string, store: string) {
   const { data } = await supabase.from('fin_stores').select('name').eq('owner_id', ownerId).eq('code', store).single()
   return data?.name || store
@@ -36,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (!head) return NextResponse.json({ error: 'not found' }, { status: 404 })
     const { data: items } = await supabase.from('inv_stocktake_items')
       .select('material_code, material_name, unit, counted_qty').eq('stocktake_id', id).eq('owner_id', user.id)
-    const safety = await safetyOf(supabase, user.id, head.store)
+    const safety = await loadEffectiveSafety(supabase, user.id, head.store, head.taken_on)
     const order = computeOrder((items ?? []) as CountRow[], safety)
     return NextResponse.json({ stocktake: head, order })
   }
@@ -72,7 +67,7 @@ export async function POST(req: NextRequest) {
   const { error: e2 } = await admin.from('inv_stocktake_items').insert(rows)
   if (e2) { await admin.from('inv_stocktakes').delete().eq('id', head.id); return NextResponse.json({ error: e2.message }, { status: 500 }) }
 
-  const safety = await safetyOf(supabase, user.id, store)
+  const safety = await loadEffectiveSafety(supabase, user.id, store, head.taken_on)
   const order = computeOrder(items as CountRow[], safety)
   const urgent = order.filter(o => o.urgent)
   let notified = false

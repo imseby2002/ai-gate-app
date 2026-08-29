@@ -526,7 +526,7 @@ function OverridesCard({ store }: { store: string }) {
   return (
     <Card className="p-4 space-y-3">
       <div className="text-sm font-medium flex items-center gap-1.5"><CalendarClock className="h-4 w-4 text-primary" />節慶覆寫（特定日期區間的安全量／滿倉量）</div>
-      <p className="text-xs text-gray-500">在指定日期區間內，該原料改用此處的安全量／滿倉量（生效於盤點・訂貨為下一階段）。</p>
+      <p className="text-xs text-gray-500">在指定日期區間內，該原料改用此處的安全量／滿倉量（盤點・訂貨計算會依盤點日期自動採用）。</p>
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
         <label className="space-y-1"><span className="block text-[11px] text-gray-500">原料碼*</span><Input value={f.material_code} onChange={e => setF({ ...f, material_code: e.target.value })} className="h-8" /></label>
         <label className="space-y-1"><span className="block text-[11px] text-gray-500">節慶名</span><Input value={f.label} onChange={e => setF({ ...f, label: e.target.value })} className="h-8" placeholder="如 中秋" /></label>

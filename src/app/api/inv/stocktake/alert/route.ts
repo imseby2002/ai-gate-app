@@ -1,7 +1,7 @@
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { computeOrder, notifyForeman, type CountRow } from '@/lib/inv/reorder'
+import { computeOrder, loadEffectiveSafety, notifyForeman, type CountRow } from '@/lib/inv/reorder'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
@@ -16,14 +16,14 @@ export async function POST(req: NextRequest) {
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-  const { data: head } = await supabase.from('inv_stocktakes').select('store').eq('id', id).eq('owner_id', user.id).single()
+  const { data: head } = await supabase.from('inv_stocktakes').select('store, taken_on').eq('id', id).eq('owner_id', user.id).single()
   if (!head) return NextResponse.json({ error: 'not found' }, { status: 404 })
-  const [{ data: items }, { data: safety }, { data: st }] = await Promise.all([
+  const [{ data: items }, safety, { data: st }] = await Promise.all([
     supabase.from('inv_stocktake_items').select('material_code, material_name, unit, counted_qty').eq('stocktake_id', id).eq('owner_id', user.id),
-    supabase.from('inv_safety_stock').select('material_code, safety_qty, full_qty').eq('owner_id', user.id).eq('store', head.store),
+    loadEffectiveSafety(supabase, user.id, head.store, head.taken_on),
     supabase.from('fin_stores').select('name').eq('owner_id', user.id).eq('code', head.store).single(),
   ])
-  const urgent = computeOrder((items ?? []) as CountRow[], safety ?? []).filter(o => o.urgent)
+  const urgent = computeOrder((items ?? []) as CountRow[], safety).filter(o => o.urgent)
   if (urgent.length === 0) return NextResponse.json({ urgent_count: 0, notified: false })
   const notified = await notifyForeman(createAdminClient(), user.id, head.store, st?.name || head.store, urgent)
   return NextResponse.json({ urgent_count: urgent.length, notified })
