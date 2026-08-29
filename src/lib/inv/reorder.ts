@@ -14,6 +14,24 @@ export interface OrderRow {
   counted: number; safety: number; full: number; order_qty: number; urgent: boolean
 }
 
+// 取某門市在指定日期的「有效安全量／滿倉量」：節慶／日期區間覆寫優先，否則用基準 inv_safety_stock。
+// date 未給則以台灣時區今日。回傳可直接餵給 computeOrder 的 SafetyRow[]。
+export async function loadEffectiveSafety(admin: Admin, ownerId: string, store: string, date?: string): Promise<SafetyRow[]> {
+  const day = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+  const [{ data: base }, { data: overrides }] = await Promise.all([
+    admin.from('inv_safety_stock').select('material_code, safety_qty, full_qty').eq('owner_id', ownerId).eq('store', store),
+    admin.from('inv_safety_overrides').select('material_code, safety_qty, full_qty, start_date')
+      .eq('owner_id', ownerId).eq('store', store).lte('start_date', day).gte('end_date', day),
+  ])
+  const map = new Map<string, SafetyRow>()
+  for (const b of base ?? []) map.set(b.material_code, { material_code: b.material_code, safety_qty: Number(b.safety_qty) || 0, full_qty: Number(b.full_qty) || 0 })
+  // 覆寫優先；多筆覆蓋同日時，取 start_date 較晚（較貼近當前檔期）者
+  for (const o of [...(overrides ?? [])].sort((a, b) => (a.start_date < b.start_date ? -1 : 1))) {
+    map.set(o.material_code, { material_code: o.material_code, safety_qty: Number(o.safety_qty) || 0, full_qty: Number(o.full_qty) || 0 })
+  }
+  return [...map.values()]
+}
+
 export function computeOrder(counts: CountRow[], safety: SafetyRow[]): OrderRow[] {
   const safeOf = new Map(safety.map(s => [s.material_code, s]))
   return counts.map(c => {

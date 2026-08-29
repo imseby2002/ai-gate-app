@@ -1,7 +1,7 @@
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { buildXlsx, type XlsxCell } from '@/lib/hr/xlsx'
-import { computeOrder, type CountRow } from '@/lib/inv/reorder'
+import { computeOrder, loadEffectiveSafety, type CountRow } from '@/lib/inv/reorder'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
@@ -48,11 +48,11 @@ export async function GET(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const { data: head } = await supabase.from('inv_stocktakes').select('store, taken_on').eq('id', id).eq('owner_id', user.id).single()
     if (!head) return NextResponse.json({ error: 'not found' }, { status: 404 })
-    const [{ data: items }, { data: safety }] = await Promise.all([
+    const [{ data: items }, safety] = await Promise.all([
       supabase.from('inv_stocktake_items').select('material_code, material_name, unit, counted_qty').eq('stocktake_id', id).eq('owner_id', user.id),
-      supabase.from('inv_safety_stock').select('material_code, safety_qty, full_qty').eq('owner_id', user.id).eq('store', head.store),
+      loadEffectiveSafety(supabase, user.id, head.store, head.taken_on),
     ])
-    const order = computeOrder((items ?? []) as CountRow[], safety ?? []).filter(o => o.order_qty > 0)
+    const order = computeOrder((items ?? []) as CountRow[], safety).filter(o => o.order_qty > 0)
     const rows: XlsxCell[][] = [['原料碼', '名稱', '單位', '實盤', '滿倉量', '訂貨量', '緊急']]
     for (const o of order) rows.push([o.material_code, o.material_name, o.unit, o.counted, o.full, o.order_qty, o.urgent ? '緊急' : ''])
     return xlsxResponse(buildXlsx('訂貨表', rows), `訂貨表_${head.store}_${head.taken_on}.xlsx`)
