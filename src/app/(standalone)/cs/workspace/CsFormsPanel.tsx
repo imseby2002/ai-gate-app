@@ -259,12 +259,13 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                 className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
                 <option value="">不通知</option>
                 <option value="line">LINE（個人或群組）</option>
+                <option value="telegram">Telegram（個人或群組）</option>
                 <option value="email">Email</option>
                 <option value="webhook">Webhook（例如既有的 Google Apps Script）</option>
               </select>
               {notifyTarget.platform && (
                 <input value={notifyTarget.to} onChange={e => setNotifyTarget(prev => ({ ...prev, to: e.target.value }))}
-                  placeholder={notifyTarget.platform === 'line' ? 'LINE 使用者或群組 ID' : notifyTarget.platform === 'email' ? 'Email 地址' : 'https://...'}
+                  placeholder={notifyTarget.platform === 'line' ? 'LINE 使用者或群組 ID' : notifyTarget.platform === 'telegram' ? 'Telegram Chat ID（個人或群組）' : notifyTarget.platform === 'email' ? 'Email 地址' : 'https://...'}
                   className="flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
               )}
             </div>
@@ -274,6 +275,14 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                   placeholder="這個表單專用的 LINE Channel Access Token（選填）"
                   className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
                 <div className="text-[10px] text-gray-400 mt-0.5">留空則用「平台」分頁設定的預設 OA 帳號；要用不同的 OA 帳號通知這個表單（例如早餐店自己的群組），才需要填這裡，且該 OA 帳號必須已加入上面填的群組</div>
+              </div>
+            )}
+            {notifyTarget.platform === 'telegram' && (
+              <div>
+                <input value={notifyTarget.telegramBotToken ?? ''} onChange={e => setNotifyTarget(prev => ({ ...prev, telegramBotToken: e.target.value }))}
+                  placeholder="這個表單專用的 Telegram Bot Token（選填）"
+                  className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
+                <div className="text-[10px] text-gray-400 mt-0.5">留空則用「平台」分頁設定的預設 Bot；要用不同的 Bot 通知這個表單，才需要填這裡，且該 Bot 必須已加入上面填的群組</div>
               </div>
             )}
             {notifyTarget.platform && (

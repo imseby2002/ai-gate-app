@@ -44,6 +44,24 @@ function buildAnswersByLabel(fields: CsFormField[], answers: Record<string, stri
 
 export interface NotifyResult { ok: boolean; error?: string }
 
+// 用表單自己指定的 Telegram Bot Token 直接送出（跳過平台分頁那組共用 Bot）——
+// 前提跟 LINE 那組一樣：這個 Bot 本身要先被加入目標群組。
+async function pushTelegramWithToken(botToken: string, chatId: string, text: string): Promise<NotifyResult> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.ok) return { ok: true }
+    const body = await res.text().catch(() => '')
+    return { ok: false, error: `Telegram 送訊失敗 (${res.status})：${body.slice(0, 200)}` }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Telegram 送訊發生未知錯誤' }
+  }
+}
+
 // 用表單自己指定的 OA 憑證直接 push（跳過平台分頁那組共用憑證）——
 // 讓不同表單可以各自綁定不同的 LINE 官方帳號（例如早餐店自己的 OA），
 // 前提跟平台分頁那組憑證一樣：這個 OA 帳號本身要先被加入目標群組。
@@ -82,6 +100,12 @@ export async function notifyFormSubmission(
         return await pushLineWithToken(notifyTarget.lineToken.trim(), notifyTarget.to, text)
       }
       const r = await sendToCustomer(userId, 'line', notifyTarget.to, text)
+      return { ok: r.ok, error: r.error }
+    } else if (notifyTarget.platform === 'telegram') {
+      if (notifyTarget.telegramBotToken?.trim()) {
+        return await pushTelegramWithToken(notifyTarget.telegramBotToken.trim(), notifyTarget.to, text)
+      }
+      const r = await sendToCustomer(userId, 'telegram', notifyTarget.to, text)
       return { ok: r.ok, error: r.error }
     } else if (notifyTarget.platform === 'email' && process.env.RESEND_API_KEY) {
       const { Resend } = await import('resend')
