@@ -1,0 +1,18 @@
+{
+  "name": "ai-gate-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "獨立自動化 worker（在另一台 VM 執行，非主 app）。各部門的瀏覽器上傳/下載任務掛在此。",
+  "bin": {
+    "ai-gate-worker": "run.mjs"
+  },
+  "scripts": {
+    "postinstall": "playwright install chromium",
+    "ivt-upload": "node run.mjs ivt-upload"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.48.0"
+  }
+}
