@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { CalendarDays, Loader2, AlertCircle, Store, Plus, Trash2, Copy, Check, Users } from 'lucide-react'
+import { CalendarDays, Loader2, AlertCircle, Store, Plus, Trash2, Copy, Check, Users, Wand2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ interface Slot { code: string; label: string }
 interface Period { id: string; title: string; start_date: string; end_date: string; slots: Slot[]; status: string }
 interface Emp { employee_id: string; employee_name: string; token: string; submitted_at: string | null }
 interface Avail { employee_id: string; work_date: string; slot_code: string }
+interface Assign { employee_id: string; work_date: string; slot_code: string }
 const WEEKDAY = ['日', '一', '二', '三', '四', '五', '六']
 const wd = (d: string) => WEEKDAY[new Date(d + 'T00:00:00Z').getUTCDay()] ?? ''
 const STATUS_LABEL: Record<string, string> = { collecting: '收集中', suggested: '已建議', confirmed: '已確認' }
@@ -119,14 +120,23 @@ function CreatePeriod({ store, onCreated }: { store: string; onCreated: () => vo
 }
 
 function PeriodDetail({ periodId, onChanged, onDeleted }: { periodId: string; onChanged: () => void; onDeleted: () => void }) {
-  const [data, setData] = useState<{ period: Period; dates: string[]; employees: Emp[]; availability: Avail[] } | null>(null)
+  const [data, setData] = useState<{ period: Period; dates: string[]; employees: Emp[]; availability: Avail[]; assignments: Assign[] } | null>(null)
+  const [assignSet, setAssignSet] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState('')
+  const [need, setNeed] = useState(1)
+  const [busy, setBusy] = useState('')
+  const [msg, setMsg] = useState('')
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true)
-    fetch(`/api/shift/periods/${periodId}`).then(r => r.ok ? r.json() : null).then(d => { setData(d); setLoading(false) })
+    fetch(`/api/shift/periods/${periodId}`).then(r => r.ok ? r.json() : null).then(d => {
+      setData(d)
+      setAssignSet(new Set<string>((d?.assignments ?? []).map((a: Assign) => `${a.employee_id}|${a.work_date}|${a.slot_code}`)))
+      setLoading(false)
+    })
   }, [periodId])
+  useEffect(() => { load() }, [load])
 
   const copy = (token: string) => {
     const url = `${location.origin}/shift/${token}`
@@ -137,25 +147,47 @@ function PeriodDetail({ periodId, onChanged, onDeleted }: { periodId: string; on
     const res = await fetch('/api/shift/periods', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: periodId }) })
     if (res.ok) onDeleted()
   }
+  const suggest = async () => {
+    setBusy('suggest'); setMsg('')
+    const res = await fetch(`/api/shift/periods/${periodId}/suggest`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ need }) })
+    setBusy('')
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg(d.error ?? '建議失敗'); return }
+    setMsg(`已產生建議，共排 ${d.assigned} 班`); load(); onChanged()
+  }
+  const confirmSend = async () => {
+    if (!confirm('確認排班並寄送班表給各員工？確認後將鎖定。')) return
+    setBusy('confirm'); setMsg('')
+    const res = await fetch(`/api/shift/periods/${periodId}/confirm`, { method: 'POST' })
+    setBusy('')
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg(d.error ?? '確認失敗'); return }
+    setMsg(`已確認，${d.employees} 位員工、寄出 ${d.emailed} 封 Email`); load(); onChanged()
+  }
+  const toggleAssign = async (empId: string, date: string, slot: string) => {
+    const key = `${empId}|${date}|${slot}`
+    const on = assignSet.has(key)
+    setAssignSet(p => { const n = new Set(p); on ? n.delete(key) : n.add(key); return n })
+    const res = await fetch('/api/shift/assignments', {
+      method: on ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ period_id: periodId, employee_id: empId, work_date: date, slot_code: slot }),
+    })
+    if (!res.ok) { setAssignSet(p => { const n = new Set(p); on ? n.add(key) : n.delete(key); return n }); const d = await res.json().catch(() => ({})); setMsg(d.error ?? '調整失敗') }
+  }
 
   if (loading) return <Card className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></Card>
   if (!data) return <Card className="p-8 text-center text-gray-400 text-sm">讀取失敗。</Card>
   const { period, dates, employees, availability } = data
   const slots = period.slots ?? []
-  // 彙整：日期|slot → 可上班人數
-  const countMap = new Map<string, number>()
-  const nameMap = new Map<string, string[]>()
   const nameOf = new Map(employees.map(e => [e.employee_id, e.employee_name]))
-  for (const a of availability) {
-    const k = `${a.work_date}|${a.slot_code}`
-    countMap.set(k, (countMap.get(k) ?? 0) + 1)
-    ;(nameMap.get(k) ?? nameMap.set(k, []).get(k)!).push(nameOf.get(a.employee_id) || '?')
-  }
+  const availByCell = new Map<string, string[]>()
+  for (const a of availability) { const k = `${a.work_date}|${a.slot_code}`; (availByCell.get(k) ?? availByCell.set(k, []).get(k)!).push(a.employee_id) }
   const submitted = employees.filter(e => e.submitted_at).length
+  const confirmed = period.status === 'confirmed'
 
   return (
     <Card className="p-4 space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <div>
           <div className="font-semibold">{period.title || `${period.start_date} ~ ${period.end_date}`}</div>
           <div className="text-xs text-gray-400">{period.start_date} ~ {period.end_date}・{STATUS_LABEL[period.status] ?? period.status}</div>
@@ -177,23 +209,36 @@ function PeriodDetail({ periodId, onChanged, onDeleted }: { periodId: string; on
           ))}</div>}
       </div>
 
-      <div>
-        <div className="text-sm font-medium mb-2">可上班彙整（每格＝可上班人數）</div>
+      <div className="border-t pt-3 space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-sm font-medium">班表（點名字＝指派／取消）</div>
+          {!confirmed && <label className="ml-auto text-xs text-gray-500 flex items-center gap-1">每格需求
+            <Input type="number" value={String(need)} onChange={e => setNeed(Math.max(1, Number(e.target.value) || 1))} className="w-14 h-7" /></label>}
+          {!confirmed && <Button size="sm" variant="outline" className="gap-1.5" onClick={suggest} disabled={busy !== ''}>{busy === 'suggest' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}自動建議</Button>}
+          {!confirmed && <Button size="sm" className="gap-1.5" onClick={confirmSend} disabled={busy !== ''}>{busy === 'confirm' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}確認並發送</Button>}
+          {msg && <span className="text-xs text-blue-600 basis-full">{msg}</span>}
+        </div>
+        {confirmed && <p className="text-[11px] text-amber-600">此排班已確認並發送，如需調整請新增排班期。</p>}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm"><thead><tr className="text-gray-500 border-b"><th className="text-left py-2 pr-2">日期</th>{slots.map(s => <th key={s.code} className="px-2 text-center">{s.label}</th>)}</tr></thead>
+          <table className="w-full text-sm"><thead><tr className="text-gray-500 border-b"><th className="text-left py-2 pr-2">日期</th>{slots.map(s => <th key={s.code} className="px-2 text-left">{s.label}</th>)}</tr></thead>
             <tbody>{dates.map(d => (
-              <tr key={d} className="border-b last:border-0">
-                <td className="py-1 pr-2 whitespace-nowrap">{d.slice(5)} <span className="text-gray-400">({wd(d)})</span></td>
+              <tr key={d} className="border-b last:border-0 align-top">
+                <td className="py-1.5 pr-2 whitespace-nowrap">{d.slice(5)} <span className="text-gray-400">({wd(d)})</span></td>
                 {slots.map(s => {
-                  const k = `${d}|${s.code}`; const c = countMap.get(k) ?? 0
-                  return <td key={s.code} className="px-2 text-center" title={(nameMap.get(k) ?? []).join('、')}>
-                    <span className={c === 0 ? 'text-gray-300' : c === 1 ? 'text-amber-600 font-medium' : 'text-emerald-600 font-medium'}>{c}</span>
+                  const pool = availByCell.get(`${d}|${s.code}`) ?? []
+                  return <td key={s.code} className="px-2 py-1.5">
+                    {pool.length === 0 ? <span className="text-gray-300 text-xs">—</span>
+                      : <div className="flex flex-wrap gap-1">{pool.map(emp => {
+                        const on = assignSet.has(`${emp}|${d}|${s.code}`)
+                        return <button key={emp} disabled={confirmed} onClick={() => toggleAssign(emp, d, s.code)}
+                          className={`px-1.5 py-0.5 rounded text-[11px] ${on ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{nameOf.get(emp) || '?'}</button>
+                      })}</div>}
                   </td>
                 })}
               </tr>
             ))}</tbody></table>
         </div>
-        <p className="text-[11px] text-gray-400 mt-2">數字為該時段可上班人數（滑鼠移上顯示名單）。自動排班建議與確認發送為下一步。</p>
+        <p className="text-[11px] text-gray-400">灰底＝可上班未排；藍底＝已排班。自動建議會平衡各員工總班數，之後可手動調整再確認發送。</p>
       </div>
     </Card>
   )
