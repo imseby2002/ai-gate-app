@@ -240,7 +240,10 @@ const REFUND_POLICY_RE = /政策|規定|規則|辦法|退款(方式|流程|條�
 // 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
 const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 需要即時網路資訊（天氣、附近景點、路況等知識庫不會有的即時資料）僅 PRO+ 觸發搜尋分支
-const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|weather|nearby|traffic/i
+// 真實案例：客人問「有推薦的當地特產嗎？比如鴨賞之類的」完全沒有落入下面任何一個字，
+// 搜尋分支沒被觸發，AI 只能誠實說系統資料沒有，沒有機會用網路搜尋幫客人找當地美食／
+// 伴手禮這類知識庫本來就不會有、但客人很常問的在地資訊。
+const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|特產|名產|伴手禮|美食|小吃|好吃|好玩|必吃|必買|必去|哪裡(買|吃|玩)|weather|nearby|traffic/i
 
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
