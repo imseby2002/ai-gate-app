@@ -240,7 +240,10 @@ const REFUND_POLICY_RE = /政策|規定|規則|辦法|退款(方式|流程|條�
 // 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
 const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 需要即時網路資訊（天氣、附近景點、路況等知識庫不會有的即時資料）僅 PRO+ 觸發搜尋分支
-const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|weather|nearby|traffic/i
+// 真實案例：客人問「有推薦的當地特產嗎？比如鴨賞之類的」完全沒有落入下面任何一個字，
+// 搜尋分支沒被觸發，AI 只能誠實說系統資料沒有，沒有機會用網路搜尋幫客人找當地美食／
+// 伴手禮這類知識庫本來就不會有、但客人很常問的在地資訊。
+const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|特產|名產|伴手禮|美食|小吃|好吃|好玩|必吃|必買|必去|哪裡(買|吃|玩)|weather|nearby|traffic/i
 
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
@@ -301,8 +304,27 @@ async function setNotifyLineRecipients(userId: string, recipients: string[], ind
 // （LINE OA 綁定專員清單，另一套獨立機制）並存，兩邊都會通知。
 type NotifyWebhook = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
 
-function dispatchTicketNotify(notifyWebhooks: NotifyWebhook[], notifyMsg: string): void {
+const NOTIFY_PLATFORM_LABELS: Record<string, string> = {
+  line: 'LINE', 'line-oa': 'LINE', whatsapp: 'WhatsApp', 'whatsapp-biz': 'WhatsApp',
+  'whatsapp-personal': 'WhatsApp', telegram: 'Telegram', zalo: 'Zalo', 'zalo-oa': 'Zalo', wechat: 'WeChat',
+}
+
+// 真實案例：專員收到 Telegram/LINE 工單通知，訊息裡完全沒說是哪位客人（只有訊息內容），
+// 專員不知道要去哪裡找這位客人，Telegram 上直接回覆也不會送到客人的 LINE（單向通知，
+// 不是雙向橋接）。這裡在每則通知都補上「客人是誰（平台＋ID/大名）」＋「點此直接開啟
+// 對話回覆」的深連結（開到工作台收件匣、自動選取這位客人），專員點了就能用工作台
+// 真的回覆客人，不用自己在清單裡大海撈針，也不會誤以為在 Telegram 回覆就會送到客人手上。
+function dispatchTicketNotify(
+  notifyWebhooks: NotifyWebhook[],
+  info: { platform: string; customerId: string; industry: string; fromName?: string },
+  body: string,
+): void {
   if (!notifyWebhooks?.length) return
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const platLabel = NOTIFY_PLATFORM_LABELS[info.platform] ?? info.platform
+  const who = info.fromName?.trim() ? `${info.fromName.trim()}（${platLabel}）` : `${platLabel} 客人（${info.customerId}）`
+  const link = `${appUrl}/cs/inbox?industry=${encodeURIComponent(info.industry)}&platform=${encodeURIComponent(info.platform)}&to=${encodeURIComponent(info.customerId)}`
+  const notifyMsg = `${body}\n\n客人：${who}\n點此直接回覆客人：${link}`
   void Promise.allSettled(notifyWebhooks.filter(wh => wh.value?.trim()).map(wh => {
     if (wh.type === 'line_messaging') {
       if (!wh.target?.trim()) return Promise.resolve()
@@ -370,7 +392,7 @@ const PAYMENT_SUFFIX_CODE_RE = /(?:後|末)(?:五|5)碼\s*[:：]?\s*\d{4,6}/
 // The AI only *says* "會安排專員跟進"; without this nothing notifies staff.
 async function maybeCreateOrderTicket(
   userId: string, platform: string, customerId: string, industry: string,
-  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[],
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], fromName?: string,
 ): Promise<void> {
   try {
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
@@ -394,7 +416,7 @@ async function maybeCreateOrderTicket(
     })
     // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員 + 工作台設定的工單通知管道
     void notifyStaffOrder(userId, lastAssistant)
-    dispatchTicketNotify(notifyWebhooks, `🔔 有新訂單已確認，請盡快跟進：\n\n${lastAssistant.slice(0, 900)}`)
+    dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 有新訂單已確認，請盡快跟進：\n\n${lastAssistant.slice(0, 900)}`)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -402,7 +424,7 @@ async function maybeCreateOrderTicket(
 // 通知管家核對並手動建立訂單，見上方 PAYMENT_SUFFIX_ASK_RE 註解。
 async function maybeCreatePaymentProofTicket(
   userId: string, platform: string, customerId: string, industry: string,
-  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[],
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], fromName?: string,
 ): Promise<void> {
   try {
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
@@ -428,7 +450,7 @@ async function maybeCreatePaymentProofTicket(
     })
     const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`
     void notifyStaffOrder(userId, notifyMsg)
-    dispatchTicketNotify(notifyWebhooks, notifyMsg)
+    dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, notifyMsg)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -464,7 +486,7 @@ async function replyToCustomer(
         priority: 'high', intent: '人工客服請求',
       })
     } catch { /* ignore */ }
-    dispatchTicketNotify(knowledge.notifyWebhooks, `🔔 客人要求人工客服：\n\n${text.slice(0, 300)}`)
+    dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人要求人工客服：\n\n${text.slice(0, 300)}`)
     const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
@@ -481,7 +503,7 @@ async function replyToCustomer(
         priority: 'high', intent: '人工客服請求',
       })
     } catch { /* ignore */ }
-    dispatchTicketNotify(knowledge.notifyWebhooks, `🔔 客人提出退換貨/退款需求：\n\n${text.slice(0, 300)}`)
+    dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人提出退換貨/退款需求：\n\n${text.slice(0, 300)}`)
     const reply = '好的，退換貨/退款需要專人為您處理，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
@@ -522,10 +544,10 @@ async function replyToCustomer(
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
   if (knowledge.bookingFlowEnabled) {
-    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks)
+    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
   }
   // 客人提供匯款末五碼 → 不論訂房走的是哪套流程，都直接建工單通知管家核對
-  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks)
+  void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
 
   try {
     let stage = cust?.stage ?? 'new'
@@ -827,7 +849,7 @@ async function createExhaustedLookupTicket(
       description: `客人依序嘗試訂單號碼、手機號碼、訂房姓名三種方式查詢，系統都查無對應資料，需要專員人工協助核對。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
       priority: 'high', intent: '查無資料人工協助',
     })
-    dispatchTicketNotify(notifyWebhooks, `🔔 客人訂單號碼/手機號碼/訂房姓名皆查無資料：\n\n${lastMessage.slice(0, 300)}`)
+    dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry }, `🔔 客人訂單號碼/手機號碼/訂房姓名皆查無資料：\n\n${lastMessage.slice(0, 300)}`)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -1409,7 +1431,7 @@ async function createBalanceCheckTicket(
       description: `客人詢問訂金或剩餘款項，系統沒有訂金/付款明細查詢功能，AI 已誠實告知查無資料，需要專員人工核對金額。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
       priority: 'high', intent: '訂金餘款人工核對',
     })
-    dispatchTicketNotify(notifyWebhooks, `🔔 客人詢問訂金/餘款，需人工核對：\n\n${lastMessage.slice(0, 300)}`)
+    dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry }, `🔔 客人詢問訂金/餘款，需人工核對：\n\n${lastMessage.slice(0, 300)}`)
   } catch { /* 不中斷主流程 */ }
 }
 
