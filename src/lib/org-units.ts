@@ -25,6 +25,9 @@ export const UNIT_AREAS: UnitArea[] = [
   { key: 'affairs', label: '外務', pages: [
     { href: '/affairs', label: '外務・證照' },
   ] },
+  { key: 'audit', label: '稽核', pages: [
+    { href: '/audit', label: '原物料合理性' },
+  ] },
 ]
 
 // 共用（所有登入者都可見）
