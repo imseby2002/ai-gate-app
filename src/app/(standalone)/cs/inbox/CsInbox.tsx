@@ -36,7 +36,7 @@ interface Bubble {
   at: string
 }
 
-export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
+export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: string; initialTarget?: { platform: string; from_id: string } | null }) {
   const t = useTranslations('CsInbox')
   const locale = useLocale()
   const stageLabel = (s: string) => t.has(`stages.${s}`) ? t(`stages.${s}`) : ''
@@ -108,6 +108,21 @@ export function CsInbox({ initialIndustry }: { initialIndustry: string }) {
     setErr(null)
     loadThread(c)
   }
+
+  // 從工單通知（Telegram/LINE/Webhook）點連結進來時，直接開啟指定客人對話，
+  // 不用讓專員自己在清單裡大海撈針找是誰——真實案例：專員收到 Telegram 工單通知
+  // 完全不知道是哪位客人，也無法直接在 Telegram 回覆客人（Telegram 只是單向通知）。
+  const openedFromLink = useRef(false)
+  useEffect(() => {
+    if (!initialTarget || openedFromLink.current || loadingList) return
+    openedFromLink.current = true
+    const match = convos.find(c => c.platform === initialTarget.platform && c.from_id === initialTarget.from_id)
+    openConvo(match ?? {
+      platform: initialTarget.platform, from_id: initialTarget.from_id,
+      name: null, stage: '', messageCount: 0, lastMessageAt: '', takeover: false,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTarget, loadingList, convos])
 
   const send = async () => {
     const text = draft.trim()
