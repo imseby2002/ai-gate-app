@@ -1,9 +1,9 @@
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { xlsToRows } from '@/lib/hr/xls'
 
 async function getAdminUser() {
-  const ctx = await getUnitContext('store')
+  const ctx = await getUnitContextAny(['store', 'audit'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }

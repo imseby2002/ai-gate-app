@@ -24,14 +24,15 @@ async function resolveCompanyOwner(admin: Admin, companyId: string | null): Prom
   return data?.member_id ?? null
 }
 
-// 驗證單位存取。unitKey 例：'hr' / 'finance' / 'rd' / 'store' / 'affairs'
-export async function getUnitContext(unitKey: string): Promise<UnitContext> {
+// 驗證單位存取（符合任一單位即通過；管理者全開）。unitKeys 例：['store', 'audit']
+export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return DENY
   const { data: profile } = await supabase.from('profiles').select('user_type, units, company_id').eq('id', user.id).single()
   const isAdmin = profile?.user_type === 'admin'
-  const hasUnit = (profile?.units ?? []).includes(unitKey)
+  const units = profile?.units ?? []
+  const hasUnit = unitKeys.some(k => units.includes(k))
   if (!isAdmin && !hasUnit) return DENY
 
   const admin = createAdminClient()
@@ -43,4 +44,9 @@ export async function getUnitContext(unitKey: string): Promise<UnitContext> {
     ownerId = owner
   }
   return { ok: true, userId: user.id, ownerId, isAdmin, admin }
+}
+
+// 驗證單位存取。unitKey 例：'hr' / 'finance' / 'rd' / 'store' / 'affairs' / 'audit'
+export async function getUnitContext(unitKey: string): Promise<UnitContext> {
+  return getUnitContextAny([unitKey])
 }
