@@ -1,18 +1,42 @@
 // 任務：把一份 xlsx 上傳到 IVT 指定頁（盤點 / 訂貨）。
-// 用法：node run.mjs ivt-upload --page stock-taking|purchase-order --file /path/to.xlsx
+// 用法一（手動檔）：node run.mjs ivt-upload --page stock-taking|purchase-order --file /path/to.xlsx
+// 用法二（自動取檔）：node run.mjs ivt-upload --page stock-taking --store YL
+//   需 env：APP_BASE_URL（主 app 網址）、WORKER_SECRET（與主 app 相同）。
 import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { env, firstVisible, screenshot, launch, loginIvt } from '../lib/browser.mjs'
 
 const PAGE_URL = {
   'stock-taking': () => env('IVT_PAGE_STOCK_TAKING', 'https://ivt.ipos.vn/stock/stock-taking'),
   'purchase-order': () => env('IVT_PAGE_PURCHASE_ORDER', 'https://ivt.ipos.vn/order/purchase-order-internal'),
 }
+const PAGE_KIND = { 'stock-taking': 'ivt-count', 'purchase-order': 'ivt-order' }
+
+// 由主 app 取「某門市最新盤點」的 IVT 匯入檔，存成暫存檔並回傳路徑。
+async function fetchFromApp(pageKey, store) {
+  const base = env('APP_BASE_URL')
+  const secret = env('WORKER_SECRET')
+  if (!base || !secret) throw new Error('自動取檔需設定 APP_BASE_URL 與 WORKER_SECRET（或改用 --file）')
+  const url = `${base.replace(/\/$/, '')}/api/worker/ivt-xlsx?secret=${encodeURIComponent(secret)}&store=${encodeURIComponent(store)}&kind=${PAGE_KIND[pageKey]}`
+  const res = await fetch(url)
+  if (!res.ok) {
+    const msg = await res.text().catch(() => '')
+    throw new Error(`向主 app 取檔失敗（${res.status}）：${msg.slice(0, 200)}`)
+  }
+  const buf = Buffer.from(await res.arrayBuffer())
+  const tmp = path.join(os.tmpdir(), `ivt-${pageKey}-${store}-${Date.now()}.xlsx`)
+  fs.writeFileSync(tmp, buf)
+  return tmp
+}
 
 export async function run(args) {
   const pageKey = args.page
-  const file = args.file
   if (!pageKey || !PAGE_URL[pageKey]) throw new Error(`--page 需為 ${Object.keys(PAGE_URL).join(' | ')}`)
-  if (!file || !fs.existsSync(file)) throw new Error(`找不到檔案：${file}（請用 --file 指定 xlsx 路徑）`)
+
+  let file = args.file
+  if (!file && args.store) file = await fetchFromApp(pageKey, args.store)
+  if (!file || !fs.existsSync(file)) throw new Error('請用 --file 指定 xlsx，或用 --store 由主 app 自動取檔')
 
   const { browser, page } = await launch()
   try {

@@ -21,12 +21,23 @@ sudo npx playwright install-deps   # 安裝 headless Chromium 系統相依
 ```
 
 ## 執行
+兩種取檔方式：
+
+**手動檔**（自己先從主 app 下載 IVT 盤點/訂貨檔）：
 ```bash
-# 盤點上傳
-node run.mjs ivt-upload --page stock-taking --file /path/IVT盤點_YL_2026-08-29.xlsx
-# 訂貨上傳
+node run.mjs ivt-upload --page stock-taking   --file /path/IVT盤點_YL_2026-08-29.xlsx
 node run.mjs ivt-upload --page purchase-order --file /path/IVT訂貨_YL_2026-08-29.xlsx
 ```
+
+**自動取檔**（worker 直接向主 app 抓「該門市最新盤點」的 IVT 檔，免手動下載）：
+```bash
+node run.mjs ivt-upload --page stock-taking   --store YL
+node run.mjs ivt-upload --page purchase-order --store YL
+```
+需在 `.env` 設 `APP_BASE_URL` 與 `WORKER_SECRET`；**主 app 端**另需設環境變數：
+- `WORKER_SECRET`（與此處相同的共用密鑰）
+- `WORKER_OWNER_ID`（公司 owner 的 profile id，決定抓誰的資料）
+
 成功／失敗會輸出一行 JSON；失敗時於 `out/` 存錯誤截圖。
 
 ## 首次上線一定要做（重要）
