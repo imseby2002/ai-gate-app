@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardCheck, Loader2, AlertCircle, Upload, Store, ShoppingCart, Boxes, Tag, FlaskConical, Gauge, Bell, Settings } from 'lucide-react'
+import { ClipboardCheck, Loader2, AlertCircle, Upload, Store, ShoppingCart, Boxes, Tag, FlaskConical, Gauge, Bell, Settings, MessageSquare, Plus, Trash2, ScrollText, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-type Tab = 'analysis' | 'sales' | 'balance' | 'prices' | 'recipes'
+type Tab = 'analysis' | 'chat' | 'sales' | 'balance' | 'prices' | 'recipes'
 const fmt = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('zh-TW')
 const now = new Date()
 
@@ -32,6 +32,7 @@ export default function AuditPage() {
 
   const TABS: [Tab, string, ReactNode][] = [
     ['analysis', '合理性分析', <Gauge key="z" className="h-4 w-4" />],
+    ['chat', 'AI 對談', <MessageSquare key="y" className="h-4 w-4" />],
     ['sales', 'IPOS 銷售', <ShoppingCart key="a" className="h-4 w-4" />],
     ['balance', 'IVT 進銷存', <Boxes key="b" className="h-4 w-4" />],
     ['prices', '進貨價', <Tag key="c" className="h-4 w-4" />],
@@ -68,6 +69,7 @@ export default function AuditPage() {
       </div>
 
       {tab === 'analysis' ? <AnalysisTab store={store} year={year} month={month} />
+        : tab === 'chat' ? <ChatTab store={store} year={year} month={month} />
         : tab === 'sales' ? <SalesTab store={store} year={year} month={month} />
         : tab === 'balance' ? <BalanceTab store={store} year={year} month={month} />
         : tab === 'prices' ? <PricesTab />
@@ -174,6 +176,93 @@ function AnalysisTab({ store, year, month }: { store: string; year: number; mont
         </div>
         {data.unmapped.length > 0 && <p className="text-[11px] text-amber-600 mt-2">未對應配方的產品 {data.unmapped.length} 項（如 {data.unmapped.slice(0, 3).map(u => u.product_name || u.product_code).join('、')}…），請至研發/產品對應補齊。</p>}
         <p className="text-[11px] text-gray-400 mt-1">規定用量＝POS 點單推算(Xuất bán POS)；實耗＝當月使用量。AI 對談與硬性規則為下一階段。</p>
+      </Card>
+    </div>
+  )
+}
+
+interface Rule { id: string; store: string; rule: string; active: boolean }
+interface Msg { role: string; content: string }
+
+function ChatTab({ store, year, month }: { store: string; year: number; month: number }) {
+  const [msgs, setMsgs] = useState<Msg[]>([])
+  const [chatId, setChatId] = useState('')
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [rules, setRules] = useState<Rule[]>([])
+  const [newRule, setNewRule] = useState('')
+  const [ruleScope, setRuleScope] = useState<'store' | 'all'>('store')
+
+  const loadRules = useCallback(() => {
+    if (!store) { setRules([]); return }
+    fetch(`/api/audit/rules?store=${encodeURIComponent(store)}`).then(r => r.ok ? r.json() : { rules: [] }).then(d => setRules(d.rules ?? []))
+  }, [store])
+  useEffect(() => { loadRules() }, [loadRules])
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text) return
+    setInput(''); setMsgs(m => [...m, { role: 'user', content: text }]); setSending(true)
+    // 取當月分析作為 AI 脈絡
+    let analysis: unknown = null
+    if (store) analysis = await fetch(`/api/inv/variance?store=${encodeURIComponent(store)}&year=${year}&month=${month}`).then(r => r.ok ? r.json() : null).catch(() => null)
+    const res = await fetch('/api/audit/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chatId, store, message: text, analysis }) })
+    setSending(false)
+    const d = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsgs(m => [...m, { role: 'assistant', content: `⚠️ ${d.error ?? '失敗'}` }]); return }
+    setChatId(d.chat_id)
+    setMsgs(m => [...m, { role: 'assistant', content: d.reply + (d.saved_rule ? `\n\n✅ 已設為硬性規定：「${d.saved_rule}」` : '') }])
+    if (d.saved_rule) loadRules()
+  }
+  const addRule = async () => {
+    const rule = newRule.trim(); if (!rule) return
+    const res = await fetch('/api/audit/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rule, store: ruleScope === 'store' ? store : '' }) })
+    if (res.ok) { setNewRule(''); loadRules() }
+  }
+  const toggleRule = async (r: Rule) => { await fetch('/api/audit/rules', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id, active: !r.active }) }); loadRules() }
+  const delRule = async (id: string) => { await fetch('/api/audit/rules', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); loadRules() }
+
+  return (
+    <div className="grid md:grid-cols-[1fr_20rem] gap-4">
+      <Card className="p-4 flex flex-col" style={{ height: '30rem' }}>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="text-sm font-medium">與 AI 討論合理性（{store || '—'} {year}/{month}）</div>
+          <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => { setChatId(''); setMsgs([]) }}><Plus className="h-4 w-4" />新對談</Button>
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+          {msgs.length === 0 && <p className="text-xs text-gray-400 py-8 text-center">開始討論，例如「YL 這個月茶少用 3kg，可能是多加珍珠嗎？」或「把『冰塊誤差 15% 內視為正常』設為硬性規定」。</p>}
+          {msgs.map((m, i) => (
+            <div key={i} className={`text-sm whitespace-pre-wrap rounded-lg px-3 py-2 ${m.role === 'user' ? 'bg-primary/10 ml-8' : 'bg-gray-100 mr-8'}`}>{m.content}</div>
+          ))}
+          {sending && <div className="text-sm bg-gray-100 mr-8 rounded-lg px-3 py-2 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />思考中…</div>}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} placeholder="輸入訊息…" className="h-9" disabled={sending} />
+          <Button size="sm" onClick={send} disabled={sending || !input.trim()}><Send className="h-4 w-4" /></Button>
+        </div>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <div className="text-sm font-medium flex items-center gap-1.5"><ScrollText className="h-4 w-4 text-primary" />硬性規定</div>
+        <p className="text-[11px] text-gray-400">AI 判斷時會遵守這些規則。可手動新增，或在對話中請 AI「設為硬性規定」。</p>
+        <div className="space-y-1.5">
+          <Input value={newRule} onChange={e => setNewRule(e.target.value)} placeholder="新增規則…" className="h-8" />
+          <div className="flex items-center gap-2">
+            <select value={ruleScope} onChange={e => setRuleScope(e.target.value as 'store' | 'all')} className="h-8 rounded-md border border-input bg-background px-2 text-xs">
+              <option value="store">限 {store || '本門市'}</option><option value="all">所有門市</option>
+            </select>
+            <Button size="sm" className="gap-1 h-8" onClick={addRule} disabled={!newRule.trim()}><Plus className="h-3.5 w-3.5" />加入</Button>
+          </div>
+        </div>
+        <div className="space-y-1.5 max-h-72 overflow-y-auto">
+          {rules.length === 0 ? <p className="text-xs text-gray-400">尚無規則。</p> : rules.map(r => (
+            <div key={r.id} className={`text-xs border rounded-lg px-2 py-1.5 flex items-start gap-2 ${r.active ? '' : 'opacity-50'}`}>
+              <button onClick={() => toggleRule(r)} title={r.active ? '停用' : '啟用'} className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${r.active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+              <span className="flex-1">{r.rule}{r.store ? <span className="text-gray-400">（限 {r.store}）</span> : <span className="text-gray-400">（全門市）</span>}</span>
+              <button onClick={() => delRule(r.id)} className="text-gray-300 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+            </div>
+          ))}
+        </div>
       </Card>
     </div>
   )
