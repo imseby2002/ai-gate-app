@@ -50,4 +50,5 @@ next-env.d.ts
 
 .vercel
 
-.claude/
+# local scratch files
+/scratch/
