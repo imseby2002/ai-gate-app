@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen,
+  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -49,6 +49,7 @@ const TOOL_NAV: NavItem[] = [
 // 僅總管理員可見的連結
 const ADMIN_NAV: NavItem[] = [
   { labelKey: 'llmProxy',  label: 'LLM Proxy',  href: '/cli-proxy',  icon: Terminal,         module: null, adminOnly: true },
+  { labelKey: 'programing', label: '網頁程式開發', href: '/programing', icon: Code2,        module: null, adminOnly: true },
   { labelKey: 'feedback',  label: '意見回饋',    href: '/feedback',   icon: MessageSquarePlus, module: null },
 ]
 

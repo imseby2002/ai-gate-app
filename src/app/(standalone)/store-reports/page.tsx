@@ -383,12 +383,31 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
       <div className="flex items-center gap-3 flex-wrap">
         <label className="flex items-center gap-2 text-sm"><span className="text-gray-500">誤差警示門檻</span>
           <Input type="number" value={String(threshold)} onChange={e => setThreshold(Number(e.target.value) || 0)} onBlur={e => saveThreshold(Number(e.target.value) || 0)} className="w-20" /><span className="text-gray-500">%</span></label>
-        {overCount > 0 && <span className="text-sm text-red-600 font-medium">⚠️ {overCount} 項超過門檻</span>}
+        
+        {rows.length > 0 && (
+          overCount === 0 ? (
+            <span className="inline-flex items-center gap-1 text-sm text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+              ✅ 使用量正常
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-sm text-rose-700 font-medium bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
+              ⚠️ 使用量異常（{overCount} 項超標）
+            </span>
+          )
+        )}
+
         {totalLoss > 0 && <span className="text-sm text-red-500">估計金額損失 <b>{fmt(totalLoss)}</b></span>}
-        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowCfg(v => !v)}>交叉檢核設定</Button>
-        <Button size="sm" variant="outline" className="gap-1.5" disabled={notifying || overCount === 0} onClick={notify}>
-          {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setShowCfg(v => !v)}>交叉檢核設定</Button>
+          <Link href="/rd">
+            <Button size="sm" variant="outline" className="gap-1 text-xs">
+              <FlaskConical className="h-3.5 w-3.5 text-purple-600" />至研發調整配方
+            </Button>
+          </Link>
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs" disabled={notifying || overCount === 0} onClick={notify}>
+            {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
+          </Button>
+        </div>
       </div>
 
       <p className="text-xs text-gray-500">🔍 稽核用途：比對規定與實耗，檢查門市操作是否有誤或亂賣。</p>
@@ -427,7 +446,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
 
       {poss && poss.configured && (poss.tea || poss.creamer) && (
         <Card className="p-3 space-y-2">
-          <div className="text-sm font-medium flex items-center gap-1.5"><Scale className="h-4 w-4 text-indigo-500" />加料排擠可能性分析</div>
+          <div className="text-sm font-medium flex items-center gap-1.5"><Scale className="h-4 w-4 text-indigo-500" />加料排擠可能性 analysis</div>
           <p className="text-[11px] text-gray-400">POS 點單只記錄「單一或無 topping」，故規定用量對茶／奶精偏高。客人實際多加 topping 時基底被排擠，實耗會少於規定——此「少用」多半由多加料訂單解釋，而非短少。</p>
           <div className="grid md:grid-cols-2 gap-2">
             {poss.tea && <GapCard label="茶" info={poss.tea} explainedPct={poss.tea_explained_pct} explained={poss.tea_explained} />}
@@ -462,23 +481,32 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
       )}
 
       {unmapped.length > 0 && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-          有 {unmapped.length} 個成品尚未對照配方（不計入配方理論）：{unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、')}{unmapped.length > 8 ? '…' : ''}
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+          <span>有 {unmapped.length} 個成品尚未對照配方（不計入理論用量）：{unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、')}{unmapped.length > 8 ? '…' : ''}</span>
+          <Link href="/rd" className="text-purple-600 underline font-medium shrink-0">前往對照配方 →</Link>
         </div>
       )}
+
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">無資料。請先匯入 POS＋進銷存、建立配方並完成對照。</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">規定(POS)</th><th className="pr-2 text-right">實耗</th><th className="pr-2 text-right text-gray-400">配方理論</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">金額損失</th><th className="pr-2 text-right">剩餘</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-center">使用狀態</th><th className="pr-2 text-right">規定(POS)</th><th className="pr-2 text-right">實耗</th><th className="pr-2 text-right text-gray-400">配方理論</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">金額損失</th><th className="pr-2 text-right">剩餘</th></tr></thead>
           <tbody>{rows.map(r => (
-            <tr key={r.material_code} className={`border-b last:border-0 ${r.over ? 'bg-red-50' : ''}`}>
-              <td className="py-1.5 pr-2">{r.material_name}</td>
+            <tr key={r.material_code} className={`border-b last:border-0 ${r.over ? 'bg-red-50/60' : ''}`}>
+              <td className="py-1.5 pr-2 font-medium">{r.material_name}</td>
               <td className="pr-2 text-gray-400">{r.unit}</td>
+              <td className="pr-2 text-center">
+                {r.over ? (
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">異常超標</span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">正常</span>
+                )}
+              </td>
               <td className="pr-2 text-right tabular-nums">{fmt1(r.expected)}</td>
               <td className="pr-2 text-right tabular-nums">{fmt1(r.actual)}</td>
               <td className="pr-2 text-right tabular-nums text-gray-400">{r.recipe_theo ? fmt1(r.recipe_theo) : '—'}</td>
-              <td className={`pr-2 text-right tabular-nums ${r.diff > 0 ? 'text-red-500' : 'text-emerald-600'}`}>{fmt1(r.diff)}</td>
-              <td className={`pr-2 text-right tabular-nums font-medium ${r.over ? 'text-red-600' : ''}`}>{r.pct === null ? '—' : `${fmt1(r.pct)}%`}</td>
+              <td className={`pr-2 text-right tabular-nums ${r.diff > 0 ? 'text-red-500 font-medium' : 'text-emerald-600'}`}>{fmt1(r.diff)}</td>
+              <td className={`pr-2 text-right tabular-nums font-semibold ${r.over ? 'text-red-600' : 'text-gray-700'}`}>{r.pct === null ? '—' : `${fmt1(r.pct)}%`}</td>
               <td className={`pr-2 text-right tabular-nums ${r.money_loss > 0 ? 'text-red-500' : 'text-gray-400'}`}>{r.price > 0 ? fmt(r.money_loss) : '—'}</td>
               <td className="pr-2 text-right tabular-nums text-gray-500">{fmt1(r.remaining)}</td>
             </tr>))}</tbody></table></div>}
