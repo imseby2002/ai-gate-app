@@ -79,7 +79,23 @@ export default function StoreReportsPage() {
           <h1 className="text-2xl font-bold">門市報表</h1>
           <p className="text-sm text-gray-500">業績、進銷存、配方與差異分析</p>
         </div>
-        <div className="ml-auto flex items-center gap-2"><Link href="/store-inventory"><Button variant="outline" size="sm" className="gap-1.5"><ClipboardList className="h-4 w-4 text-blue-600" />盤點・訂貨</Button></Link><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發</Button></Link><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/store-inventory">
+              <ClipboardList className="h-4 w-4 text-blue-600" />盤點・訂貨
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/rd">
+              <FlaskConical className="h-4 w-4 text-purple-600" />研發
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/hr">
+              <Building2 className="h-4 w-4" />人事管理
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* 門市 / 年月（報表與差異用） */}
@@ -399,11 +415,11 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
         {totalLoss > 0 && <span className="text-sm text-red-500">估計金額損失 <b>{fmt(totalLoss)}</b></span>}
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setShowCfg(v => !v)}>交叉檢核設定</Button>
-          <Link href="/rd">
-            <Button size="sm" variant="outline" className="gap-1 text-xs">
+          <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs">
+            <Link href="/rd">
               <FlaskConical className="h-3.5 w-3.5 text-purple-600" />至研發調整配方
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <Button size="sm" variant="outline" className="gap-1.5 text-xs" disabled={notifying || overCount === 0} onClick={notify}>
             {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
           </Button>
