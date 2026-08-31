@@ -50,6 +50,7 @@ export default function ProgramingPage() {
   // GitHub States
   const [token, setToken] = useState('')
   const [showTokenInput, setShowTokenInput] = useState(false)
+  const [hasSavedToken, setHasSavedToken] = useState(false)
   const [repos, setRepos] = useState<any[]>([])
   const [selectedRepo, setSelectedRepo] = useState('') // format: owner/repo
   const [branches, setBranches] = useState<string[]>([])
@@ -94,6 +95,7 @@ export default function ProgramingPage() {
     const savedToken = localStorage.getItem('git_pat')
     if (savedToken) {
       setToken(savedToken)
+      setHasSavedToken(true)
       fetchRepos(savedToken)
     } else {
       setShowTokenInput(true)
@@ -228,6 +230,7 @@ export default function ProgramingPage() {
   const handleSaveToken = () => {
     if (!token.trim()) return
     localStorage.setItem('git_pat', token.trim())
+    setHasSavedToken(true)
     setShowTokenInput(false)
     fetchRepos(token.trim())
   }
@@ -236,6 +239,7 @@ export default function ProgramingPage() {
   const handleDisconnect = () => {
     if (confirm('確定要中斷與 GitHub 的連線並清除本機 Token 嗎？')) {
       localStorage.removeItem('git_pat')
+      setHasSavedToken(false)
       setToken('')
       setRepos([])
       setFlatFiles([])
@@ -1001,7 +1005,7 @@ export default function ProgramingPage() {
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
-              {localStorage.getItem('git_pat') && (
+              {hasSavedToken && (
                 <Button variant="ghost" onClick={() => setShowTokenInput(false)} size="sm">
                   取消
                 </Button>
@@ -1192,7 +1196,7 @@ export default function ProgramingPage() {
               <Button
                 onClick={() => setShowCommitModal(true)}
                 disabled={!activeFile.isDirty || isSaving}
-                size="xs"
+                size="sm"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-1 px-3 py-1 rounded text-xs shrink-0"
               >
                 {isSaving ? (
@@ -1230,7 +1234,7 @@ export default function ProgramingPage() {
               value={activeFile.content}
               onChange={handleEditorChange}
               theme="vs-dark"
-              onMount={(editor, monaco) => {
+              onMount={(editor: any, monaco: Monaco) => {
                 editorRef.current = editor
                 monacoRef.current = monaco
               }}
