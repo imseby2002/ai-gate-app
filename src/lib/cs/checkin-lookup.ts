@@ -121,6 +121,65 @@ export async function checkBeforeCheckin(supabase: any, userId: string): Promise
   return { before: nowHHMM < checkinTime, checkinTime, nowHHMM }
 }
 
+// 輔助函式：取得房型與大門密碼。若當日記錄尚未產生（或欄位為空），依系統「延續之後日期」原則，
+// 自動回退尋找該房型最近一次設定過的有效密碼，避免因當日尚未開啟管理後台而誤報「尚未設定」。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function resolveRoomAndGatePassword(
+  supabase: any,
+  userId: string,
+  roomName: string,
+  currentRoomPwd?: string | null,
+  currentGatePwd?: string | null,
+  referenceDate?: string
+): Promise<{ room_password: string; gate_password: string }> {
+  let roomPwd = currentRoomPwd?.trim() || ''
+  let gatePwd = currentGatePwd?.trim() || ''
+
+  const todayStr = referenceDate || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+
+  if (!roomPwd || !gatePwd) {
+    const { data: latest } = await supabase
+      .from('bnb_daily_records')
+      .select('room_password, gate_password')
+      .eq('user_id', userId)
+      .eq('room_name', roomName)
+      .lte('date', todayStr)
+      .not('room_password', 'is', null)
+      .neq('room_password', '')
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (latest) {
+      if (!roomPwd && latest.room_password) roomPwd = latest.room_password.trim()
+      if (!gatePwd && latest.gate_password) gatePwd = latest.gate_password.trim()
+    }
+  }
+
+  // 大門密碼若仍為空，從全館任一有設定大門密碼的最近記錄繼承（全棟共用）
+  if (!gatePwd) {
+    const { data: latestGate } = await supabase
+      .from('bnb_daily_records')
+      .select('gate_password')
+      .eq('user_id', userId)
+      .lte('date', todayStr)
+      .not('gate_password', 'is', null)
+      .neq('gate_password', '')
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (latestGate?.gate_password) {
+      gatePwd = latestGate.gate_password.trim()
+    }
+  }
+
+  return {
+    room_password: roomPwd || '（尚未設定，請聯繫工作人員）',
+    gate_password: gatePwd || '（尚未設定，請聯繫工作人員）',
+  }
+}
+
 // 依訂單號碼從「訂單系統」(bnb_daily_records → bookings) 查今日入住資訊與門鎖密碼。
 // cs-chat 沙盒與 cs-webhook 生產共用。
 // 與訂房模組的串接（讓 CS 讀訂房每日入住資料）是訂房 PRO 以上才有的功能，
@@ -148,13 +207,14 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
 
   if (rec) {
     if (beforeCheckin) return notYetMsg('的今日入住資訊')
+    const pw = await resolveRoomAndGatePassword(supabase, userId, rec.room_name, rec.room_password, rec.gate_password, todayDate)
     const lines = [
       `【入住資訊查詢結果】`,
       `找到訂單「${orderNum}」的今日入住資訊：`,
       rec.guest_name ? `・旅客姓名：${rec.guest_name}` : null,
       `・房間：${rec.room_name || '（尚未設定，請聯繫工作人員）'}`,
-      `・房門密碼：${rec.room_password || '（尚未設定，請聯繫工作人員）'}`,
-      `・大門密碼：${rec.gate_password || '（尚未設定，請聯繫工作人員）'}`,
+      `・房門密碼：${pw.room_password}`,
+      `・大門密碼：${pw.gate_password}`,
       `（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`,
     ].filter(Boolean).join('\n')
     return lines
@@ -213,8 +273,9 @@ async function formatBookingsWithPassword(supabase: any, userId: string, rows: M
           .eq('date', todayDate)
           .eq('room_name', prop.name)
           .maybeSingle()
-        lines.push(`　房門密碼：${daily?.room_password || '（尚未設定，請聯繫工作人員）'}`)
-        lines.push(`　大門密碼：${daily?.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+        const pw = await resolveRoomAndGatePassword(supabase, userId, prop.name, daily?.room_password, daily?.gate_password, todayDate)
+        lines.push(`　房門密碼：${pw.room_password}`)
+        lines.push(`　大門密碼：${pw.gate_password}`)
       } else {
         lines.push(`・房間密碼：（尚未設定，請聯繫工作人員確認）`)
       }
@@ -371,11 +432,12 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
         }
         const lines = [`【訂單查詢結果】`, `找到旅客「${lookupName}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
         if (group.length > 1) lines.push(`・共訂了 ${group.length} 個房型，以下逐一列出：`)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const r of group as any[]) {
-          lines.push(`・房間：${r.room_name || '（尚未設定，請聯繫工作人員）'}`)
-          lines.push(`　房門密碼：${r.room_password || '（尚未設定，請聯繫工作人員）'}`)
-          lines.push(`　大門密碼：${r.gate_password || '（尚未設定，請聯繫工作人員）'}`)
+          const roomName = r.room_name || '（尚未設定，請聯繫工作人員）'
+          lines.push(`・房間：${roomName}`)
+          const pw = await resolveRoomAndGatePassword(supabase, userId, r.room_name, r.room_password, r.gate_password, r.date)
+          lines.push(`　房門密碼：${pw.room_password}`)
+          lines.push(`　大門密碼：${pw.gate_password}`)
         }
         lines.push(`（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`)
         return lines.join('\n')
