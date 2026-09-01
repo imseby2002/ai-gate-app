@@ -85,6 +85,17 @@ interface Statement {
   content: string
 }
 
+function isReasoningModel(model: string): boolean {
+  return /^(openai\/)?(o\d+|gpt-5)/i.test(model)
+}
+
+function getGoogleThinkingBudget(model: string): number {
+  // gemini-2.5-pro 為強制思考模型，禁止設為 0 (Google API 會回 400: Budget 0 is invalid. This model only works in thinking mode)
+  // 設定 512 限制思考長度，把充足 token 空間留給正文。
+  // flash 等非強制思考模型可直接設為 0 關閉思考。
+  return model.toLowerCase().includes('pro') ? 512 : 0
+}
+
 // ── 單一發言 (串流逐字回拋) ──────────────────────────────────────────────────
 
 async function speak(
@@ -93,7 +104,7 @@ async function speak(
   userPrompt: string,
   round: number,
   emit: (e: RoundtableEvent) => void,
-  maxTokens = 2048,
+  maxTokens = 4096,
   expertContext?: string,
 ): Promise<string> {
   emit({ type: 'seat-start', round, name: seat.name, model: seat.model })
@@ -105,13 +116,27 @@ async function speak(
       system: fullSystem,
       prompt: userPrompt,
       maxOutputTokens: maxTokens,
-      abortSignal: AbortSignal.timeout(60000),
-      // Gemini 預設會開「思考」，思考 token 會算進 maxOutputTokens 裡——常常還沒開始輸出
-      // 看得到的正文，額度就先被思考耗光，導致像這裡員工C（gemini-2.5-pro）發言常常只有
-      // 兩三行就被截斷。比照這個 repo 其他呼叫 Gemini 的地方（marketing/analyze、
-      // product-designer/*、simulate）一律關閉思考，讓 maxOutputTokens 全部留給正文。
+      abortSignal: AbortSignal.timeout(120000),
+      // 1. Google Gemini:
+      // 依模型類型決定 thinkingBudget：pro 設 512，flash 設 0，避免 400 錯誤與 token 被思考耗光。
       ...(seat.model.startsWith('google/') ? {
-        providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+        providerOptions: {
+          google: {
+            thinkingConfig: {
+              thinkingBudget: getGoogleThinkingBudget(seat.model),
+            },
+          },
+        },
+      } : {}),
+      // 2. OpenAI:
+      // gpt-5 / o-series 等推理模型預設會耗盡所有 completion tokens 進行內部 reasoning，
+      // 導致輸出給使用者的正文為 0 字。設定 reasoningEffort: 'low' 限制思考長度，正文即可完整輸出。
+      ...(seat.model.startsWith('openai/') && isReasoningModel(seat.model) ? {
+        providerOptions: {
+          openai: {
+            reasoningEffort: 'low',
+          },
+        },
       } : {}),
     })
     for await (const part of result.fullStream) {
@@ -123,6 +148,7 @@ async function speak(
       }
     }
   } catch (err) {
+    console.error(`[roundtable] error speaking for ${seat.name} (${seat.model}):`, err)
     emit({ type: 'error', name: seat.name, error: String(err) })
   }
   emit({ type: 'seat-end', round, name: seat.name })
@@ -173,7 +199,7 @@ export async function runRoundtable(
     const system =
       `你是一場高層會議的與會員工，定位：${seat.role}。\n` +
       `請針對老闆的指令，提出你專業、具體、有依據的觀點。獨立思考，不需客套。`
-    const content = await speak(seat, system, `老闆的指令：\n${boss}`, 1, emit, 2048, expertCtx)
+    const content = await speak(seat, system, `老闆的指令：\n${boss}`, 1, emit, 4096, expertCtx)
     round1.push({ name: seat.name, role: seat.role, content })
   }
 
@@ -191,7 +217,7 @@ export async function runRoundtable(
         `並針對分歧表態。只談新增與修正，不要重複第一輪。`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n第一輪全體發言：\n${transcript}`
-      const content = await speak(seat, system, userPrompt, 2, emit, 2048, expertCtx)
+      const content = await speak(seat, system, userPrompt, 2, emit, 4096, expertCtx)
       round2.push({ name: seat.name, role: seat.role, content })
     }
   }

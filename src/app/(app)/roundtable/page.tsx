@@ -13,6 +13,7 @@ interface SeatBlock {
   name: string
   model?: string
   content: string
+  error?: string
 }
 
 interface SessionSummary {
@@ -151,7 +152,17 @@ export default function RoundtablePage() {
           } else if (e.type === 'report') {
             setReport(e.content)
           } else if (e.type === 'error') {
-            setReport(prev => prev + `\n⚠️ ${e.name}: ${e.error}`)
+            setBlocks(prev => {
+              const next = [...prev]
+              const idx = next.findLastIndex(b => b.name === e.name)
+              if (idx >= 0) {
+                next[idx] = { ...next[idx], error: e.error }
+              }
+              return next
+            })
+            if (e.name === 'system') {
+              setReport(prev => prev ? `${prev}\n⚠️ ${e.error}` : `⚠️ ${e.error}`)
+            }
           }
         }
       }
@@ -285,7 +296,13 @@ export default function RoundtablePage() {
                   {b.model && <span className="text-xs text-muted-foreground">{b.model}</span>}
                 </div>
                 <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {b.content || <span className="text-muted-foreground">思考中…</span>}
+                  {b.content ? (
+                    b.content
+                  ) : b.error ? (
+                    <span className="text-destructive font-medium">⚠️ 研議失敗：{b.error}</span>
+                  ) : (
+                    <span className="text-muted-foreground">思考中…</span>
+                  )}
                 </div>
               </Card>
             ))}
