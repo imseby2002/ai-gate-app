@@ -3,11 +3,15 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 import { CompanyDataForm } from '@/components/settings/CompanyDataForm'
+import { CompanyMembershipSection } from '@/components/settings/CompanyMembershipSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) {
+    redirect('/login')
+    return null
+  }
 
   const t = await getTranslations('Settings')
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -24,10 +28,21 @@ export default async function SettingsPage() {
         </div>
         <SettingsForm profile={profile} creditBalance={creditBalance ?? 0} />
 
+        {/* Company & Team Membership Section */}
+        <div>
+          <div className="mb-6">
+            <h2 className="text-lg font-bold">公司與團隊成員</h2>
+            <p className="text-muted-foreground text-sm mt-1">
+              管理所屬公司實體、成員名冊與協同邀請權限。
+            </p>
+          </div>
+          <CompanyMembershipSection />
+        </div>
+
         {/* Company Data Section */}
         <div>
           <div className="mb-6">
-            <h2 className="text-lg font-bold">公司資料</h2>
+            <h2 className="text-lg font-bold">品牌與行銷資料庫</h2>
             <p className="text-muted-foreground text-sm mt-1">
               管理品牌資料與素材，供行銷自動化模組使用。填寫後點擊「一鍵轉檔」生成 AI 快取。
             </p>

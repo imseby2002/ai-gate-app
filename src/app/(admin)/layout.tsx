@@ -1,12 +1,15 @@
-﻿import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Wrench, Bot } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Wrench, Bot, Building2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) {
+    redirect('/login')
+    return null
+  }
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -18,6 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const navItems = [
     { href: '/admin', label: '總覽', icon: BarChart3 },
+    { href: '/admin/companies', label: '公司管理', icon: Building2 },
     { href: '/admin/users', label: '用戶管理', icon: Users },
     { href: '/admin/cs-plans', label: 'CS 方案管理', icon: Headphones },
     { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },

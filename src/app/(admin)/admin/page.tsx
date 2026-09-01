@@ -1,6 +1,6 @@
-﻿import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
-import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus } from 'lucide-react'
+import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus, Building2 } from 'lucide-react'
 import NextLink from 'next/link'
 
 export default async function AdminDashboardPage() {
@@ -11,10 +11,9 @@ export default async function AdminDashboardPage() {
     .from('profiles')
     .select('*', { count: 'exact', head: true })
 
-  const { count: activeUsers } = await supabase
-    .from('profiles')
+  const { count: totalCompanies } = await supabase
+    .from('companies')
     .select('*', { count: 'exact', head: true })
-    .eq('is_active', true)
 
   const { count: employeeCount } = await supabase
     .from('profiles')
@@ -41,12 +40,13 @@ export default async function AdminDashboardPage() {
 
   const stats = [
     { label: '總用戶數', value: String(totalUsers ?? 0), icon: Users, iconBg: 'bg-blue-50 dark:bg-blue-950/50', iconColor: 'text-blue-600 dark:text-blue-400' },
-    { label: '員工帳號', value: String(employeeCount ?? 0), icon: Activity, iconBg: 'bg-emerald-50 dark:bg-emerald-950/50', iconColor: 'text-emerald-600 dark:text-emerald-400' },
+    { label: '獨立公司數', value: String(totalCompanies ?? 0), icon: Building2, iconBg: 'bg-indigo-50 dark:bg-indigo-950/50', iconColor: 'text-indigo-600 dark:text-indigo-400' },
     { label: '本月 API 費用', value: formatCost(totalCost), icon: DollarSign, iconBg: 'bg-amber-50 dark:bg-amber-950/50', iconColor: 'text-amber-600 dark:text-amber-400' },
     { label: '本月對話次數', value: String(totalMessages), icon: MessageSquare, iconBg: 'bg-violet-50 dark:bg-violet-950/50', iconColor: 'text-violet-600 dark:text-violet-400' },
   ]
 
   const adminLinks = [
+    { href: '/admin/companies', label: '公司管理',   desc: '建置獨立公司實體、指派負責人與納入成員', icon: Building2 },
     { href: '/admin/users',    label: '用戶管理',   desc: '管理用戶帳號、類型與模組權限', icon: Users },
     { href: '/admin/models',   label: '模型設定',   desc: '管理 AI 模型與計費配置', icon: Activity },
     { href: '/admin/usage',    label: '平台用量',   desc: '查看全平台 API 用量明細', icon: DollarSign },

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, ChevronDown, ChevronUp } from 'lucide-react'
+import { Search, ChevronDown, ChevronUp, Building2 } from 'lucide-react'
 import { formatCost } from '@/lib/utils/format'
 
 const ALL_MODULES = [
@@ -31,14 +31,17 @@ interface UserRow {
   monthly_cost: number
   monthly_messages: number
   enabled_modules: string[] | null
+  company_id?: string | null
+  company?: { id: string; name: string } | null
   subscriptions: Array<{ plan_id: string; status: string }> | null
 }
 
 interface Props {
   users: UserRow[]
+  companies?: Array<{ id: string; name: string }>
 }
 
-export function UserManagementTable({ users }: Props) {
+export function UserManagementTable({ users, companies = [] }: Props) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'employee' | 'external' | 'admin'>('all')
@@ -117,6 +120,7 @@ export function UserManagementTable({ users }: Props) {
           <thead>
             <tr className="border-b bg-gray-50">
               <th className="text-left px-5 py-3 font-medium text-gray-500">用戶</th>
+              <th className="text-left px-5 py-3 font-medium text-gray-500">所屬公司</th>
               <th className="text-left px-5 py-3 font-medium text-gray-500">類型</th>
               <th className="text-right px-5 py-3 font-medium text-gray-500">本月費用</th>
               <th className="text-right px-5 py-3 font-medium text-gray-500">本月對話</th>
@@ -146,6 +150,44 @@ export function UserManagementTable({ users }: Props) {
                           ))
                         )}
                       </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <select
+                        value={user.company_id ?? ''}
+                        onChange={async e => {
+                          const nextCompId = e.target.value
+                          setSaving(user.id + ':company')
+                          try {
+                            if (nextCompId) {
+                              await fetch(`/api/admin/companies/${nextCompId}/members`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id, role: 'viewer' }),
+                              })
+                            } else if (user.company_id) {
+                              await fetch(`/api/admin/companies/${user.company_id}/members`, {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ memberId: user.id }),
+                              })
+                            }
+                          } catch (err) {
+                            console.error(err)
+                          }
+                          setSaving(null)
+                          router.refresh()
+                        }}
+                        disabled={saving === user.id + ':company'}
+                        className="text-xs px-2 py-1 rounded-md border bg-white dark:bg-card hover:bg-gray-50 max-w-[150px] truncate"
+                        title="指派公司"
+                      >
+                        <option value="">(無公司)</option>
+                        {companies.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-5 py-3">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[user.user_type]}`}>
@@ -189,7 +231,7 @@ export function UserManagementTable({ users }: Props) {
                   </tr>
                   {isExpanded && (
                     <tr key={user.id + '_modules'} className="border-b bg-indigo-50/40">
-                      <td colSpan={6} className="px-5 py-3 space-y-2">
+                      <td colSpan={7} className="px-5 py-3 space-y-2">
                         <div className="flex flex-wrap gap-2 items-center">
                           <span className="text-xs text-gray-500 font-medium mr-1">快速設定：</span>
                           <button
