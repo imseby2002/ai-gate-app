@@ -1,6 +1,14 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { runRoundtable, DEFAULT_SEATS, DEFAULT_MODERATOR, type Seat, type RoundtableEvent } from '@/lib/ai/roundtable'
+import {
+  runRoundtable,
+  DEFAULT_SEATS,
+  DEFAULT_MODERATOR,
+  type Seat,
+  type RoundtableEvent,
+  type RoundtableDomain,
+  type Statement,
+} from '@/lib/ai/roundtable'
 
 export const maxDuration = 300
 
@@ -22,7 +30,6 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Account suspended' }), { status: 403 })
   }
 
-  // 圓桌會議跨多模型多輪，成本較高 → 外部用戶需有足夠餘額
   if (profile.user_type === 'external') {
     const { data: balance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
     if ((balance ?? 0) < 0.1) {
@@ -31,18 +38,26 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { instruction, seats, seatExpertIds, rebuttal } = body as {
+  const {
+    instruction,
+    domain,
+    seats,
+    seatExpertIds,
+    rebuttal,
+    interactive = true, // 預設啟用老闆介入互動機制
+  } = body as {
     instruction: string
+    domain?: RoundtableDomain
     seats?: Seat[]
     seatExpertIds?: (string | null)[]
     rebuttal?: boolean
+    interactive?: boolean
   }
 
   if (!instruction?.trim()) {
     return new Response(JSON.stringify({ error: 'Instruction required' }), { status: 400 })
   }
 
-  // 沒有自訂 seats 時，把每個席位選的 expertId 合併進 DEFAULT_SEATS
   let resolvedSeats: Seat[] | undefined = seats
   if (!resolvedSeats && seatExpertIds?.length) {
     resolvedSeats = DEFAULT_SEATS.map((seat, i) => ({
@@ -56,40 +71,94 @@ export async function POST(req: NextRequest) {
     [DEFAULT_MODERATOR.name, DEFAULT_MODERATOR.role],
   ])
 
+  const sessionId = crypto.randomUUID()
   const encoder = new TextEncoder()
+
   const stream = new ReadableStream({
     async start(controller) {
-      const transcript: { round: number; name: string; role: string; content: string }[] = []
+      // 廣播 sessionId 給前端
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'session-created', sessionId })}\n\n`))
+
+      const transcript: Statement[] = []
+      let factBriefing = ''
+      let detectedDomain: RoundtableDomain = domain ?? 'auto'
       let report: string | null = null
+      let isWaitingBoss = false
+
       const emit = (e: RoundtableEvent) => {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`))
-        if (e.type === 'seat-start') {
-          transcript.push({ round: e.round, name: e.name, role: roleByName.get(e.name) ?? '', content: '' })
+
+        if (e.type === 'domain-detected') {
+          detectedDomain = e.domain
+        } else if (e.type === 'briefing-end') {
+          factBriefing = e.content
+        } else if (e.type === 'seat-start') {
+          transcript.push({
+            round: e.round,
+            name: e.name,
+            role: roleByName.get(e.name) ?? '',
+            stance: e.stance,
+            content: '',
+          })
         } else if (e.type === 'delta') {
           const block = [...transcript].reverse().find(b => b.round === e.round && b.name === e.name)
           if (block) block.content += e.content
+        } else if (e.type === 'waiting_boss') {
+          isWaitingBoss = true
         } else if (e.type === 'report') {
           report = e.content
         }
       }
+
       try {
-        await runRoundtable({ bossInstruction: instruction, seats: resolvedSeats, rebuttal }, emit)
+        await runRoundtable(
+          {
+            bossInstruction: instruction,
+            domain,
+            seats: resolvedSeats,
+            rebuttal,
+            interactive,
+          },
+          emit,
+        )
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (err) {
         console.error('[roundtable] error:', err)
         emit({ type: 'error', name: 'system', error: String(err) })
       } finally {
-        // 存檔失敗不影響已經串流給前端的結果，只記 log；serverless 環境下
-        // 必須在 close() 前 await，不然函式執行環境可能在寫入完成前就被回收。
-        const { error } = await supabase.from('roundtable_sessions').insert({
+        // 嘗試寫入完整資料庫記錄 (相容新舊欄位)
+        const payload: Record<string, unknown> = {
+          id: sessionId,
           user_id: user.id,
           instruction,
           seats: finalSeats,
           rebuttal: rebuttal !== false,
           transcript,
           report,
-        })
-        if (error) console.error('[roundtable] save session failed:', error)
+          domain: detectedDomain,
+          fact_briefing: factBriefing,
+          status: isWaitingBoss ? 'waiting_boss' : 'completed',
+        }
+
+        const { error } = await supabase.from('roundtable_sessions').upsert(payload)
+        if (error) {
+          // 若遠端欄位尚未執行 migration，退回基礎欄位寫入以防存檔失敗
+          console.warn('[roundtable] upsert with v2 fields failed, falling back to basic columns:', error.message)
+          const fallbackPayload = {
+            id: sessionId,
+            user_id: user.id,
+            instruction,
+            seats: finalSeats,
+            rebuttal: rebuttal !== false,
+            transcript: [
+              ...(factBriefing ? [{ round: 0, name: '資料專員', role: '會前客觀事實簡報', content: factBriefing }] : []),
+              ...transcript,
+            ],
+            report,
+          }
+          const { error: fbErr } = await supabase.from('roundtable_sessions').upsert(fallbackPayload)
+          if (fbErr) console.error('[roundtable] save session fallback failed:', fbErr)
+        }
         controller.close()
       }
     },
