@@ -2,14 +2,38 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Truck, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Building2, Link2, Search } from 'lucide-react'
+import { Truck, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Building2, Link2, Search, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
 const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', ice: '冰塊', '': '一般' }
 const PAY_LABEL: Record<string, string> = { postpaid: '後付', prepaid: '預付', '': '—' }
+
+const VENDOR_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '廠商名稱', required: true, example: '台灣茶葉供應商', aliases: ['name', '廠商名稱', '廠商'] },
+  { key: 'tax_id', label: '統一編號', example: '12345678', aliases: ['tax_id', '統編', '統一編號'] },
+  { key: 'service', label: '類別', example: '一般', aliases: ['service', '類別', '服務項目'] },
+  { key: 'contact', label: '聯絡人', example: '陳先生', aliases: ['contact', '聯絡人'] },
+  { key: 'phone', label: '電話', example: '02-23456789', aliases: ['phone', '電話', '手機'] },
+  { key: 'address', label: '地址', example: '台北市大安區...', aliases: ['address', '地址'] },
+  { key: 'products', label: '提供產品', example: '茶葉、原物料', aliases: ['products', '產品', '供應品項'] },
+  { key: 'pay_terms', label: '付款方式', example: '後付', aliases: ['pay_terms', '付款方式'] },
+  { key: 'billing_cycle', label: '結帳週期', example: '月結', aliases: ['billing_cycle', '結帳週期', '週期'] },
+  { key: 'billing_day', label: '結帳日', example: 25, aliases: ['billing_day', '結帳日'] },
+  { key: 'active', label: '啟用狀態', example: '是', aliases: ['active', '啟用', '狀態'] },
+]
+
+const PURCHASE_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'purchased_on', label: '採購日期', required: true, example: '2026-03-01', aliases: ['purchased_on', '採購日期', '日期'] },
+  { key: 'product', label: '採購品項', required: true, example: '高級錫蘭紅茶', aliases: ['product', '採購品項', '產品', '品項'] },
+  { key: 'qty', label: '數量', example: 50, aliases: ['qty', '數量'] },
+  { key: 'amount', label: '金額', required: true, example: 25000, aliases: ['amount', '金額', '小計'] },
+  { key: 'note', label: '備註', example: '第一批進貨', aliases: ['note', '備註'] },
+]
 
 interface Vendor {
   id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean
@@ -25,6 +49,7 @@ export default function VendorsPage() {
   const [loading, setLoading] = useState(true)
   const [sel, setSel] = useState<string | null>(null)
   const [q, setQ] = useState('')
+  const [showImport, setShowImport] = useState(false)
   const [tick, setTick] = useState(0)
   const reload = () => setTick(t => t + 1)
 
@@ -51,12 +76,35 @@ export default function VendorsPage() {
         <div className="ml-auto"><Link href="/store-expenses"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />門市費用</Button></Link></div>
       </div>
 
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新廠商資料"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新，否則新增。"
+          columns={VENDOR_IMPORT_COLUMNS}
+          templateFilename="廠商資料範本"
+          sheetName="廠商名冊"
+          onClose={() => setShowImport(false)}
+          onSuccess={reload}
+          onSubmit={async rows => {
+            const res = await fetch('/api/fin/vendors/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
+
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : selected ? <VendorDetail vendor={selected} regions={regions} onBack={() => setSel(null)} onSaved={reload} />
         : (
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋廠商名稱…" className="pl-9" /></div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋廠商名稱…" className="pl-9" /></div>
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入廠商 (Excel/CSV)
+              </Button>
               <NewVendorButton onCreated={id => { reload(); setSel(id) }} />
             </div>
             {vendors.filter(v => !q || v.name.toLowerCase().includes(q.toLowerCase())).map(v => (
@@ -164,6 +212,7 @@ function PurchaseSection({ vendorId }: { vendorId: string }) {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [f, setF] = useState({ purchased_on: new Date().toISOString().slice(0, 10), product: '', qty: '', amount: '', note: '' })
   const [tick, setTick] = useState(0)
 
@@ -181,10 +230,35 @@ function PurchaseSection({ vendorId }: { vendorId: string }) {
 
   return (
     <Card className="p-4 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-semibold text-sm">採購紀錄 <span className="text-xs text-gray-400 font-normal">總額 {fmt(total)}・{rows.length} 筆</span></h3>
-        <Button size="sm" variant="outline" onClick={() => setAdding(a => !a)}>{adding ? '取消' : '＋新增紀錄'}</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入採購 (Excel/CSV)
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setAdding(a => !a)}>{adding ? '取消' : '＋新增紀錄'}</Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入採購紀錄"
+          description="支援 .xlsx, .xls 與 .csv 檔案。請填寫採購日期、採購品項與金額。"
+          columns={PURCHASE_IMPORT_COLUMNS}
+          templateFilename="採購紀錄範本"
+          sheetName="採購清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => setTick(t => t + 1)}
+          onSubmit={async rows => {
+            const res = await fetch('/api/fin/vendor-purchases/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ vendor_id: vendorId, rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
       {adding && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 border rounded-lg p-3 bg-gray-50">
           <Input type="date" value={f.purchased_on} onChange={e => setF({ ...f, purchased_on: e.target.value })} className="h-9" />

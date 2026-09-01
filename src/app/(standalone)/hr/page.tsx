@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { CsvImportPanel, type CsvColumn, type ImportResult } from '@/components/hr/CsvImportPanel'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
 
 // ─── Types ───────────────────────────────────────────────────────
 type Tab = 'recruitment' | 'employees' | 'evaluation' | 'payroll' | 'attendance' | 'insurance' | 'leave'
@@ -106,58 +107,90 @@ const LABELS: Record<string, string> = {
   'active': '在職', 'inactive': '停職', 'resigned': '離職',
   'annual': '特休', 'sick': '病假', 'personal': '事假', 'maternity': '產假',
   'paternity': '陪產假', 'unpaid': '無薪假', 'other': '其他',
-  'approved': '核准', 'pending': '待審', 'rejected': '拒絕',
-  'paid': '已發放', 'pending_pay': '待發放',
-  'income': '收入', 'expense': '支出',
+  'pending': '待審核', 'approved': '已核准', 'rejected': '已拒絕',
+  'paid': '已發放',
 }
 
-const fmt = (n: number) => n.toLocaleString('zh-TW')
+const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
 const fmtDate = (s?: string | null) => s ? new Date(s).toLocaleDateString('zh-TW') : '—'
 
-// ─── CSV 批次匯入欄位設定 ─────────────────────────────────────────
-const EMP_TYPE_REV: Record<string, string> = { '全職': 'full-time', '兼職': 'part-time', '約聘': 'contract', '實習': 'intern' }
-const EMP_STATUS_REV: Record<string, string> = { '在職': 'active', '停職': 'inactive', '離職': 'resigned' }
-const toNum = (v: string) => Number(String(v).replace(/[,\s]/g, '')) || 0
-
-const EMP_COLUMNS: CsvColumn[] = [
-  { key: 'name', header: '姓名', required: true, example: '王小明' },
-  { key: 'email', header: 'Email', example: 'ming@example.com' },
-  { key: 'phone', header: '電話', example: '0912345678' },
-  { key: 'department', header: '部門', example: '門市' },
-  { key: 'position', header: '職稱', example: '店員' },
-  { key: 'staff_category', header: '類別', example: '正職', map: v => (v.trim() === '工讀' || v.trim() === 'hourly' ? 'hourly' : 'fulltime') },
-  { key: 'employment_type', header: '聘用類型', example: '全職', map: v => EMP_TYPE_REV[v.trim()] ?? (v.trim() || 'full-time') },
-  { key: 'hire_date', header: '到職日', example: '2025-01-15', map: v => v.trim() || null },
-  { key: 'base_salary', header: '底薪', example: '36000', map: toNum },
-  { key: 'hourly_rate', header: '時薪', example: '0', map: toNum },
-  { key: 'store', header: '門市', example: '' },
-  { key: 'attendance_no', header: '考勤工号', example: '' },
-  { key: 'bank_account', header: '銀行帳號', example: '' },
-  { key: 'bank_name', header: '收款銀行', example: '' },
-  { key: 'id_number', header: '身分證字號', example: '' },
-  { key: 'status', header: '狀態', example: '在職', map: v => EMP_STATUS_REV[v.trim()] ?? (v.trim() || 'active') },
-  { key: 'notes', header: '備註', example: '' },
+// ─── 批次匯入欄位設定 ─────────────────────────────────────────
+const EMPLOYEE_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '姓名', required: true, example: '王小明', aliases: ['name', '全名'] },
+  { key: 'email', label: 'Email', example: 'ming@example.com', aliases: ['email', '信箱'] },
+  { key: 'phone', label: '電話', example: '0912345678', aliases: ['phone', '手機'] },
+  { key: 'department', label: '部門', example: '門市', aliases: ['department', '單位'] },
+  { key: 'position', label: '職稱', example: '店員', aliases: ['position', '職稱', '職務'] },
+  { key: 'staff_category', label: '正兼職', example: '正職', aliases: ['staff_category', '正兼職', '類別'] },
+  { key: 'employment_type', label: '聘用類型', example: '全職', aliases: ['employment_type', '聘用類型'] },
+  { key: 'hire_date', label: '到職日', example: '2025-01-15', aliases: ['hire_date', '到職日', '到職日期'] },
+  { key: 'base_salary', label: '底薪', example: 36000, aliases: ['base_salary', '底薪', '月薪'] },
+  { key: 'hourly_rate', label: '時薪', example: 0, aliases: ['hourly_rate', '時薪'] },
+  { key: 'store', label: '門市', example: 'YL', aliases: ['store', '門市'] },
+  { key: 'attendance_no', label: '考勤工號', example: '001', aliases: ['attendance_no', '考勤工號', '出勤編號'] },
+  { key: 'bank_account', label: '銀行帳號', example: '1234567890', aliases: ['bank_account', '銀行帳號'] },
+  { key: 'bank_name', label: '收款銀行', example: '國泰世華', aliases: ['bank_name', '收款銀行', '銀行名稱'] },
+  { key: 'id_number', label: '身分證字號', example: 'A123456789', aliases: ['id_number', '身分證字號', '身分證'] },
+  { key: 'status', label: '狀態', example: '在職', aliases: ['status', '狀態'] },
+  { key: 'notes', label: '備註', example: '', aliases: ['notes', '備註'] },
 ]
 
-const PAY_COLUMNS: CsvColumn[] = [
-  { key: 'name', header: '員工姓名', required: true, example: '王小明' },
-  { key: 'year', header: '年', required: true, example: String(new Date().getFullYear()), map: v => parseInt(v) || 0 },
-  { key: 'month', header: '月', required: true, example: String(new Date().getMonth() + 1), map: v => parseInt(v) || 0 },
-  { key: 'base_salary', header: '底薪', example: '36000', map: toNum },
-  { key: 'allowances', header: '加給', example: '2000', map: toNum },
-  { key: 'deductions', header: '扣除', example: '1000', map: toNum },
-  { key: 'bonus', header: '獎金', example: '0', map: toNum },
-  { key: 'notes', header: '備註', example: '' },
+const PAYROLL_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '員工姓名', required: true, example: '王小明', aliases: ['name', '姓名', '員工姓名'] },
+  { key: 'year', label: '年', required: true, example: new Date().getFullYear(), aliases: ['year', '年度', '年'] },
+  { key: 'month', label: '月', required: true, example: new Date().getMonth() + 1, aliases: ['month', '月份', '月'] },
+  { key: 'base_salary', label: '底薪', example: 36000, aliases: ['base_salary', '底薪'] },
+  { key: 'allowances', label: '加給', example: 2000, aliases: ['allowances', '加給', '津貼'] },
+  { key: 'deductions', label: '扣除', example: 1000, aliases: ['deductions', '扣除', '扣款'] },
+  { key: 'bonus', label: '獎金', example: 5000, aliases: ['bonus', '獎金'] },
+  { key: 'notes', label: '備註', example: '', aliases: ['notes', '備註'] },
 ]
 
-async function postBulk(url: string, rows: Record<string, unknown>[]): Promise<ImportResult> {
-  const res = await fetch(url, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
-  })
-  const d = await res.json().catch(() => ({}))
-  if (!res.ok) return { inserted: 0, errors: [{ line: 0, reason: d.error ?? `HTTP ${res.status}` }] }
-  return { inserted: d.inserted ?? 0, errors: d.errors ?? [] }
-}
+const CANDIDATE_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '姓名', required: true, example: '李大同', aliases: ['name', '姓名', '應徵者'] },
+  { key: 'phone', label: '電話', example: '0987654321', aliases: ['phone', '電話', '手機'] },
+  { key: 'email', label: 'Email', example: 'candidate@example.com', aliases: ['email', '信箱'] },
+  { key: 'position', label: '應徵職務', example: '調飲師', aliases: ['position', '應徵職務', '應徵職稱'] },
+  { key: 'store', label: '應徵門市', example: 'YL', aliases: ['store', '應徵門市', '門市'] },
+  { key: 'staff_category', label: '正兼職', example: '正職', aliases: ['staff_category', '正兼職'] },
+  { key: 'stage', label: '應徵階段', example: 'applied', aliases: ['stage', '階段', '應徵階段'] },
+  { key: 'birthday', label: '生日', example: '2000-01-01', aliases: ['birthday', '生日'] },
+  { key: 'id_number', label: '身分證號', example: 'B123456789', aliases: ['id_number', '身分證號'] },
+]
+
+const EVALUATION_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '員工姓名', required: true, example: '王小明', aliases: ['name', '姓名', '員工姓名'] },
+  { key: 'attendance_no', label: '考勤工號', example: '001', aliases: ['attendance_no', '考勤工號', '出勤編號'] },
+  { key: 'year', label: '年', example: new Date().getFullYear(), aliases: ['year', '年', '年度'] },
+  { key: 'month', label: '月', example: new Date().getMonth() + 1, aliases: ['month', '月', '月份'] },
+  { key: 'bonus', label: '獎金', example: 3000, aliases: ['bonus', '獎金'] },
+  { key: 'reward', label: '獎勵金額', example: 1000, aliases: ['reward', '獎勵金額', '獎勵'] },
+  { key: 'penalty', label: '懲罰扣款', example: 0, aliases: ['penalty', '懲罰扣款', '懲罰'] },
+  { key: 'score', label: '評分', example: 85, aliases: ['score', '評分', '考績'] },
+  { key: 'notes', label: '評語備註', example: '出勤良好表現優異', aliases: ['notes', '評語', '備註'] },
+]
+
+const INSURANCE_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '員工姓名', required: true, example: '王小明', aliases: ['name', '姓名', '員工姓名'] },
+  { key: 'id_number', label: '身分證號', example: 'A123456789', aliases: ['id_number', '身分證號', '身分證'] },
+  { key: 'attendance_no', label: '考勤工號', example: '001', aliases: ['attendance_no', '考勤工號'] },
+  { key: 'insurance_required', label: '是否需投保', example: '是', aliases: ['insurance_required', '需投保', '是否投保'] },
+  { key: 'insurance_status', label: '投保狀態', example: '已投保', aliases: ['insurance_status', '投保狀態', '狀態'] },
+  { key: 'insurance_number', label: '保險證號', example: 'INS12345', aliases: ['insurance_number', '保險證號', '保號'] },
+  { key: 'insurance_salary', label: '投保薪資', example: 36000, aliases: ['insurance_salary', '投保薪資', '投保級距'] },
+]
+
+const LEAVE_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '員工姓名', required: true, example: '王小明', aliases: ['name', '姓名', '員工姓名'] },
+  { key: 'attendance_no', label: '考勤工號', example: '001', aliases: ['attendance_no', '考勤工號'] },
+  { key: 'leave_type', label: '假別', required: true, example: '特休', aliases: ['leave_type', '假別', '請假類別'] },
+  { key: 'start_date', label: '開始日期', required: true, example: '2026-03-01', aliases: ['start_date', '開始日期', '起始日'] },
+  { key: 'end_date', label: '結束日期', example: '2026-03-01', aliases: ['end_date', '結束日期', '到期日'] },
+  { key: 'days', label: '天數', example: 1, aliases: ['days', '天數', '請假天數'] },
+  { key: 'reason', label: '事由', example: '家庭事宜', aliases: ['reason', '事由', '請假原因'] },
+  { key: 'status', label: '審核狀態', example: '已核准', aliases: ['status', '審核狀態', '狀態'] },
+  { key: 'notes', label: '備註', example: '', aliases: ['notes', '備註'] },
+]
 
 // ─── Helpers ─────────────────────────────────────────────────────
 function StatusBadge({ value, kind }: { value: string; kind: 'emp' | 'leave' | 'payroll' }) {
@@ -529,7 +562,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
             {exportingIns ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}保險申請單
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
-            <Upload className="h-4 w-4" />批次上傳
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
           </Button>
           <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
             <Plus className="h-4 w-4" />新增員工
@@ -542,13 +575,22 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
       )}
 
       {showImport && (
-        <CsvImportPanel
-          title="批次匯入員工名單（CSV）"
-          columns={EMP_COLUMNS}
-          templateFilename="員工名單範本.csv"
-          submit={rows => postBulk('/api/hr/employees/bulk', rows)}
+        <ExcelImportModal
+          title="批次匯入 / 更新員工資料"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若姓名與身分證號已存在將自動更新，否則新增。"
+          columns={EMPLOYEE_IMPORT_COLUMNS}
+          templateFilename="員工名單範本"
+          sheetName="員工資料"
           onClose={() => setShowImport(false)}
-          onDone={onRefresh}
+          onSuccess={onRefresh}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/employees/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
         />
       )}
 
@@ -736,7 +778,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}銀行撥款檔
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
-            <Upload className="h-4 w-4" />批次上傳
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
           </Button>
           <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
             <Plus className="h-4 w-4" />新增薪資單
@@ -745,13 +787,22 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
       </div>
 
       {showImport && (
-        <CsvImportPanel
-          title="批次匯入薪資（CSV）"
-          columns={PAY_COLUMNS}
-          templateFilename="薪資資料範本.csv"
-          submit={rows => postBulk('/api/hr/payroll/bulk', rows)}
+        <ExcelImportModal
+          title="批次匯入 / 更新月度薪資"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若名單中已有該員工當月薪資將自動覆蓋更新，未建立之員工將自動建立。"
+          columns={PAYROLL_IMPORT_COLUMNS}
+          templateFilename="薪資資料範本"
+          sheetName="月薪資表"
           onClose={() => setShowImport(false)}
-          onDone={() => { load(); onRefresh() }}
+          onSuccess={() => { load(); onRefresh() }}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/payroll/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
         />
       )}
 
@@ -854,6 +905,7 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState<Leave | null>(null)
   const [saving, setSaving] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -906,10 +958,35 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
             {s === 'pending' && pendingCount > 0 && <span className="ml-1 bg-amber-500 text-white text-[10px] rounded-full px-1.5">{pendingCount}</span>}
           </Button>
         ))}
-        <Button size="sm" className="ml-auto gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-          <Plus className="h-4 w-4" />新增請假
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          </Button>
+          <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+            <Plus className="h-4 w-4" />新增請假
+          </Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入請假紀錄"
+          description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。"
+          columns={LEAVE_IMPORT_COLUMNS}
+          templateFilename="請假紀錄範本"
+          sheetName="請假清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/leave/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {showForm && !editing && (
         <LeaveForm employees={employees} initial={{ ...LEAVE_BLANK }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />
@@ -1177,6 +1254,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Candidate> | null>(null)
+  const [showImport, setShowImport] = useState(false)
   const [busy, setBusy] = useState(false)
   const [applyCode, setApplyCode] = useState('')
   const [docsFor, setDocsFor] = useState<Candidate | null>(null)
@@ -1347,11 +1425,34 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">{unreadCount}</span>
             )}
           </button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
             <Plus className="h-4 w-4" />新增應徵者
           </Button>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新應徵者名單"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若電話、Email 或身分證號相符將自動更新，否則新增。"
+          columns={CANDIDATE_IMPORT_COLUMNS}
+          templateFilename="應徵者名單範本"
+          sheetName="應徵者清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/candidates/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {showNotifs && (
         <div className="rounded-lg border bg-white p-3 space-y-2">
@@ -1617,6 +1718,7 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
   const [evals, setEvals] = useState<Record<string, Evaluation>>({})
   const [editing, setEditing] = useState<{ emp: Employee; draft: Partial<Evaluation> } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/hr/evaluations?year=${year}&month=${month}`)
@@ -1681,6 +1783,9 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
           <p className="text-sm text-gray-500">由管理／主管填寫；獎金、獎勵、懲罰將帶入薪資彙整</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          </Button>
           <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
             {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}
           </select>
@@ -1689,6 +1794,26 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
           </select>
         </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新考核獎懲資料"
+          description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名或考勤工號。"
+          columns={EVALUATION_IMPORT_COLUMNS}
+          templateFilename="員工考核獎懲範本"
+          sheetName="考核獎懲"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/evaluations/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
@@ -1807,6 +1932,7 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1879,11 +2005,34 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
         <Button size="sm" className="gap-1.5" onClick={aggregate} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}依當月薪資重新彙整
         </Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+        </Button>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={exportList} disabled={exporting}>
           {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出保險申請名單
         </Button>
         <span className="text-sm text-gray-500 ml-1">需投保 <b>{needCount}</b> 人，待處理 <b className="text-amber-600">{gapCount}</b> 人</span>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新勞健保資料"
+          description="支援 .xlsx, .xls 與 .csv 檔案。可比對員工姓名、身分證號或考勤工號更新投保狀態、證號與投保薪資。"
+          columns={INSURANCE_IMPORT_COLUMNS}
+          templateFilename="員工投保資料範本"
+          sheetName="投保名單"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { load(); onRefresh() }}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/insurance/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>

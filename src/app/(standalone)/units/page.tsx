@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search } from 'lucide-react'
+import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
 const UNIT_TYPES: { value: string; label: string }[] = [
@@ -16,6 +18,19 @@ const UNIT_TYPES: { value: string; label: string }[] = [
   { value: 'hr', label: '人事' }, { value: 'repair', label: '維修' },
 ]
 const TYPE_LABEL = Object.fromEntries(UNIT_TYPES.map(t => [t.value, t.label]))
+
+const UNIT_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'code', label: '單位編號', required: true, example: 'YL', aliases: ['code', '編號', '代碼', '門市代碼'] },
+  { key: 'name', label: '單位名稱', required: true, example: '怡朗店', aliases: ['name', '名稱', '門市名稱'] },
+  { key: 'unit_type', label: '類型', example: '門市', aliases: ['unit_type', '類型', '單位類型'] },
+  { key: 'short_name', label: '簡稱', example: '怡朗', aliases: ['short_name', '簡稱'] },
+  { key: 'region', label: '區域', example: '胡志明', aliases: ['region', '區域', '地區'] },
+  { key: 'base_hourly_rate', label: '基本時薪', example: 25000, aliases: ['base_hourly_rate', '基本時薪', '時薪'] },
+  { key: 'electricity_no', label: '電號', example: 'PE01234567', aliases: ['electricity_no', '電號', '電費編號'] },
+  { key: 'water_no', label: '水號', example: 'PW01234567', aliases: ['water_no', '水號', '水費編號'] },
+  { key: 'address', label: '地址', example: '胡志明市第一郡...', aliases: ['address', '地址'] },
+  { key: 'active', label: '啟用狀態', example: '是', aliases: ['active', '啟用', '狀態'] },
+]
 
 interface Unit {
   id: string; code: string; name: string; region: string; active: boolean
@@ -30,6 +45,7 @@ export default function UnitsPage() {
   const [sel, setSel] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [showImport, setShowImport] = useState(false)
   const [tick, setTick] = useState(0)
   const reload = () => setTick(t => t + 1)
 
@@ -62,6 +78,26 @@ export default function UnitsPage() {
         <div className="ml-auto"><Link href="/finance"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />財務</Button></Link></div>
       </div>
 
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新單位資料"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若單位編號相符將自動更新，否則新增。"
+          columns={UNIT_IMPORT_COLUMNS}
+          templateFilename="單位資料範本"
+          sheetName="單位清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={reload}
+          onSubmit={async rows => {
+            const res = await fetch('/api/fin/stores/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
+
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : selected ? <UnitDetail unit={selected} defaultRate={defaultRate} onBack={() => setSel(null)} onSaved={reload} />
         : (
@@ -71,11 +107,14 @@ export default function UnitsPage() {
                 <Input type="number" defaultValue={String(defaultRate)} onBlur={e => saveDefault(Number(e.target.value) || 0)} className="w-28 h-9" /></label>
               <span className="text-xs text-gray-400">各單位可覆寫；單位填 0＝用此預設</span>
             </Card>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-9 rounded-md border px-2 text-sm">
                 <option value="">全部類型</option>{UNIT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
-              <div className="relative flex-1"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋名稱或編號…" className="pl-9" /></div>
+              <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋名稱或編號…" className="pl-9" /></div>
+              <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+              </Button>
               <NewUnitButton onCreated={id => { reload(); setSel(id) }} />
             </div>
             {units.filter(u => (!filterType || u.unit_type === filterType) && (!q || u.name.toLowerCase().includes(q.toLowerCase()) || u.code.toLowerCase().includes(q.toLowerCase()))).map(u => (

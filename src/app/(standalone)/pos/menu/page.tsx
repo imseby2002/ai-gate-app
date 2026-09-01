@@ -10,7 +10,17 @@ import { Textarea } from '@/components/ui/textarea'
 import type { PosCategory, PosItem } from '@/lib/pos/types'
 import type { PosTranslations } from '@/lib/pos/i18n'
 import { DEFAULT_MODIFIER_GROUPS } from '@/lib/pos/types'
-import { Loader2, Sparkles, Upload } from 'lucide-react'
+import { Loader2, Sparkles, Upload, FileSpreadsheet } from 'lucide-react'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
+
+const POS_MENU_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '商品名稱', required: true, example: '珍珠奶茶', aliases: ['name', '品名', '商品名稱', '品項'] },
+  { key: 'category', label: '商品分類', required: true, example: '經典茶飲', aliases: ['category', '分類', '類別', 'category_name'] },
+  { key: 'price', label: '售價(元)', required: true, example: 60, aliases: ['price', '價格', '售價', '單價'] },
+  { key: 'description', label: '商品描述', example: '濃郁奶香搭配現煮波霸珍珠', aliases: ['description', '描述', '商品描述', '說明'] },
+  { key: 'barcode', label: '條碼', example: '4710001', aliases: ['barcode', '條碼'] },
+]
 
 interface Store { id: string; name: string; slug: string }
 
@@ -30,6 +40,7 @@ export default function PosMenuPage() {
   const [categories, setCategories] = useState<PosCategory[]>([])
   const [items, setItems] = useState<PosItem[]>([])
   const [revision, setRevision] = useState(1)
+  const [showImport, setShowImport] = useState(false)
   const [catName, setCatName] = useState('')
   const [catScope, setCatScope] = useState('')
   const [itemName, setItemName] = useState('')
@@ -184,8 +195,33 @@ export default function PosMenuPage() {
           <h1 className="text-2xl font-bold">菜單編輯</h1>
           <p className="text-sm text-muted-foreground">上傳圖片、多語系名稱與描述，Kiosk 依語言顯示</p>
         </div>
-        <Badge variant="secondary">版本 {revision}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">版本 {revision}</Badge>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入菜單 (Excel/CSV)
+          </Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新 POS 菜單"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若分類不存在將自動建立，若品項名稱相符將自動更新，否則新增。"
+          columns={POS_MENU_IMPORT_COLUMNS}
+          templateFilename="POS菜單範本"
+          sheetName="菜單品項"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/pos/menu/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant={storeFilter === 'all' ? 'default' : 'outline'} onClick={() => setStoreFilter('all')}>全部</Button>

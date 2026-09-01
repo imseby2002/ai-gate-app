@@ -2,10 +2,25 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { FileText, Upload, Loader2, AlertCircle, Plus, Trash2, X, Bell, Building2, CalendarClock, ExternalLink } from 'lucide-react'
+import { FileText, Upload, Loader2, AlertCircle, Plus, Trash2, X, Bell, Building2, CalendarClock, ExternalLink, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
+
+const AFFAIRS_DOC_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'title', label: '文件標題', required: true, example: '怡朗店店面租賃契約', aliases: ['title', '文件標題', '標題', '合約名稱'] },
+  { key: 'doc_type', label: '文件類別', example: '門市租約', aliases: ['doc_type', '文件類別', '類別', '合約類型'] },
+  { key: 'store_code', label: '門市代碼', example: 'YL', aliases: ['store_code', '門市代碼', '門市編號', '門市'] },
+  { key: 'counterparty', label: '簽約對象', example: '房東 王大明', aliases: ['counterparty', '簽約對象', '簽約方', '對象', '廠商'] },
+  { key: 'effective_date', label: '生效起日', example: '2025-01-01', aliases: ['effective_date', '生效起日', '起日', '簽約日'] },
+  { key: 'expiry_date', label: '到期日', example: '2027-12-31', aliases: ['expiry_date', '到期日', '迄日', '到期日期'] },
+  { key: 'monthly_rent', label: '月租金/費用', example: 35000, aliases: ['monthly_rent', '月租金', '租金', '金額'] },
+  { key: 'payment_day', label: '每月繳款日', example: 5, aliases: ['payment_day', '每月繳款日', '繳費日', '付款日'] },
+  { key: 'contact_phone', label: '聯絡電話', example: '0912345678', aliases: ['contact_phone', '聯絡電話', '電話'] },
+  { key: 'notes', label: '備註', example: '押金兩個月', aliases: ['notes', '備註', '說明'] },
+]
 
 type Tab = 'docs' | 'settings'
 interface StoreOpt { code: string; name: string; region: string }
@@ -79,6 +94,7 @@ function DocsTab() {
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('')
   const [editing, setEditing] = useState<Partial<Doc> | null>(null)
+  const [showImport, setShowImport] = useState(false)
   const [tick, setTick] = useState(0)
   const reload = () => setTick(t => t + 1)
 
@@ -107,8 +123,33 @@ function DocsTab() {
           <option value="">全部類別</option>
           {TYPE_ORDER.map(t => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
         </select>
-        <Button size="sm" className="gap-1.5 ml-auto" onClick={() => setEditing({ doc_type: 'lease', remind_days_before: 30, pay_remind_days_before: 5 })}><Plus className="h-4 w-4" />新增文件</Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ doc_type: 'lease', remind_days_before: 30, pay_remind_days_before: 5 })}><Plus className="h-4 w-4" />新增文件</Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入外務證照合約"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若文件標題相符將自動更新。"
+          columns={AFFAIRS_DOC_IMPORT_COLUMNS}
+          templateFilename="外務證照合約範本"
+          sheetName="合約證照清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={reload}
+          onSubmit={async rows => {
+            const res = await fetch('/api/affairs/documents/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {upcoming.length > 0 && (
         <Card className="p-3 border-amber-200 bg-amber-50/60">

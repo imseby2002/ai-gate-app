@@ -2,11 +2,30 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
-import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
+
+const ACCOUNT_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '帳戶名稱', required: true, example: '主要銀行帳戶', aliases: ['name', '帳戶名稱', '帳戶'] },
+  { key: 'kind', label: '帳戶類型', example: '銀行', aliases: ['kind', '帳戶類型', '類型'] },
+  { key: 'opening_balance', label: '期初餘額', example: 100000, aliases: ['opening_balance', '期初餘額', '餘額'] },
+  { key: 'currency', label: '幣別', example: 'TWD', aliases: ['currency', '幣別'] },
+  { key: 'note', label: '備註', example: '玉山銀行信義分行', aliases: ['note', '備註'] },
+]
+
+const CASHFLOW_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'date', label: '日期', required: true, example: '2026-03-01', aliases: ['date', '日期'] },
+  { key: 'type', label: '類型', required: true, example: '支出', aliases: ['type', '類型', '收支'] },
+  { key: 'category', label: '分類', example: '採購費', aliases: ['category', '分類', '科目'] },
+  { key: 'amount', label: '金額', required: true, example: 5000, aliases: ['amount', '金額'] },
+  { key: 'description', label: '摘要', example: '辦公室耗材採購', aliases: ['description', '摘要', '說明'] },
+  { key: 'account_name', label: '帳戶名稱', example: '零用金', aliases: ['account_name', '帳戶名稱', '帳戶'] },
+]
 
 // ─── Types ───────────────────────────────────────────────────────
 import PnlReport from './PnlReport'
@@ -203,6 +222,7 @@ function CashflowTab() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState<Cashflow | null>(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -280,10 +300,46 @@ function CashflowTab() {
             </Button>
           ))}
         </div>
-        <Button size="sm" className="ml-auto gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+        <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setShowImport(true)}>
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+        </Button>
+        <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
           <Plus className="h-4 w-4" />新增記錄
         </Button>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入出納帳務"
+          description="支援 .xlsx, .xls 與 .csv 檔案。請包含日期、類型（收入/支出）、金額等。"
+          columns={CASHFLOW_IMPORT_COLUMNS}
+          templateFilename="出納帳務範本"
+          sheetName="收支紀錄"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { load(); loadAccounts() }}
+          onSubmit={async rows => {
+            const recordsToImport = rows.map(r => {
+              const type = ['收入', 'income', '+'].includes(String(r.type ?? '').trim().toLowerCase()) ? 'income' : 'expense'
+              const acct = accounts.find(a => a.name.trim().toLowerCase() === String(r.account_name ?? '').trim().toLowerCase())
+              return {
+                type,
+                date: String(r.date ?? '').trim(),
+                category: String(r.category ?? '').trim(),
+                amount: Number(r.amount) || 0,
+                description: String(r.description ?? '').trim(),
+                account_id: acct?.id || null,
+              }
+            }).filter(r => r.amount > 0 && !!r.date)
+            const res = await fetch('/api/hr/cashflow/import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ records: recordsToImport }),
+            })
+            const d = await res.json()
+            return { ok: res.ok, inserted: d.imported, skipped: d.skipped, error: d.error }
+          }}
+        />
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -434,6 +490,7 @@ function AccountsTab() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState<Account | null>(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -472,18 +529,43 @@ function AccountsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Card className="p-4 flex-1">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Card className="p-4 flex-1 min-w-[200px]">
           <div className="flex items-center gap-2 mb-1">
             <Wallet className="h-4 w-4 text-primary" />
             <span className="text-xs text-gray-500">總資產（所有帳戶結餘）</span>
           </div>
           <p className="text-2xl font-bold text-gray-800">NT$ {fmt(total)}</p>
         </Card>
-        <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-          <Plus className="h-4 w-4" />新增帳戶
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入帳戶 (Excel/CSV)
+          </Button>
+          <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+            <Plus className="h-4 w-4" />新增帳戶
+          </Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入 / 更新帳戶"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若帳戶名稱相符將自動更新。"
+          columns={ACCOUNT_IMPORT_COLUMNS}
+          templateFilename="帳戶清單範本"
+          sheetName="帳戶清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/hr/accounts/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {showForm && !editing && <AccountForm initial={{ ...BLANK }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />}
       {err && <p className="text-sm text-red-500">{err}</p>}

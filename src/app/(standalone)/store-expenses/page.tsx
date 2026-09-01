@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
 
 const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
 type Tab = 'stores' | 'categories' | 'bills' | 'vendors' | 'report'
@@ -14,6 +16,28 @@ interface CatRow { id: string; code: string; name: string; entry_method: string;
 
 const METHOD_LABEL: Record<string, string> = { import: '人工匯入', vendor: '廠商填', manual: '手動' }
 const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', ice: '冰塊', '': '—' }
+
+const STORE_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'code', label: '門市編碼', required: true, example: 'YL', aliases: ['code', '編碼', '門市代碼'] },
+  { key: 'name', label: '門市名稱', required: true, example: '怡朗店', aliases: ['name', '名稱', '門市名稱'] },
+  { key: 'region', label: '區域', example: '胡志明', aliases: ['region', '區域'] },
+  { key: 'active', label: '啟用狀態', example: '是', aliases: ['active', '啟用', '狀態'] },
+]
+
+const CATEGORY_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'code', label: '科目編碼', required: true, example: 'WATER', aliases: ['code', '科目編碼', '代碼'] },
+  { key: 'name', label: '科目名稱', required: true, example: '水費', aliases: ['name', '科目名稱', '名稱'] },
+  { key: 'entry_method', label: '填寫方式', example: '人工匯入', aliases: ['entry_method', '填寫方式', '方式'] },
+  { key: 'vendor_service', label: '廠商別', example: '', aliases: ['vendor_service', '廠商別', '廠商服務'] },
+  { key: 'sort', label: '排序', example: 1, aliases: ['sort', '排序'] },
+]
+
+const VENDOR_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'name', label: '廠商名稱', required: true, example: '台灣瓦斯', aliases: ['name', '廠商名稱', '廠商'] },
+  { key: 'service', label: '服務別', example: '瓦斯', aliases: ['service', '服務別', '服務項目'] },
+  { key: 'regions', label: '涵蓋區域', example: '胡志明,河內', aliases: ['regions', '區域', '涵蓋區域'] },
+  { key: 'active', label: '啟用狀態', example: '是', aliases: ['active', '啟用', '狀態'] },
+]
 
 export default function StoreExpensesPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -77,6 +101,7 @@ function VendorsTab() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Vendor> | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [tick, setTick] = useState(0)
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -114,10 +139,35 @@ function VendorsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-500">瓦斯＝1 家(全部門市)；冰塊＝多家(依區域)。每家一條私密填報連結。</p>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'ice', regions: [], active: true })}><Plus className="h-4 w-4" />新增廠商</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入廠商 (Excel/CSV)
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'ice', regions: [], active: true })}><Plus className="h-4 w-4" />新增廠商</Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入廠商資料"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若統編或廠商名稱相符將自動更新。"
+          columns={VENDOR_IMPORT_COLUMNS}
+          templateFilename="廠商資料範本"
+          sheetName="廠商名冊"
+          onClose={() => setShowImport(false)}
+          onSuccess={reload}
+          onSubmit={async rows => {
+            const res = await fetch('/api/fin/vendors/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : vendors.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無廠商</div>
         : <div className="grid gap-2">{vendors.map(v => (
@@ -336,6 +386,7 @@ function StoresTab() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<StoreRow> | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -362,10 +413,35 @@ function StoresTab() {
   const regions = [...new Set(rows.map(r => r.region).filter(Boolean))]
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-500">每個門市有編碼與所屬區域（冰塊廠商依區域涵蓋）。</p>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', region: '', active: true })}><Plus className="h-4 w-4" />新增門市</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入門市 (Excel/CSV)
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', region: '', active: true })}><Plus className="h-4 w-4" />新增門市</Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入門市 / 區域"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若門市代碼相符將自動更新。"
+          columns={STORE_IMPORT_COLUMNS}
+          templateFilename="門市資料範本"
+          sheetName="門市清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/fin/stores/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無門市</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
@@ -402,6 +478,7 @@ function CategoriesTab() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<CatRow> | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -427,10 +504,35 @@ function CategoriesTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-500">水電＝人工匯入；瓦斯/冰塊＝廠商填。可自訂新增。</p>
-        <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', entry_method: 'manual', vendor_service: '', sort: 0 })}><Plus className="h-4 w-4" />新增科目</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入科目 (Excel/CSV)
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', entry_method: 'manual', vendor_service: '', sort: 0 })}><Plus className="h-4 w-4" />新增科目</Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入費用科目"
+          description="支援 .xlsx, .xls 與 .csv 檔案。若科目代碼相符將自動更新。"
+          columns={CATEGORY_IMPORT_COLUMNS}
+          templateFilename="費用科目範本"
+          sheetName="科目清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={load}
+          onSubmit={async rows => {
+            const res = await fetch('/api/fin/categories/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">編碼</th><th className="pr-2">名稱</th><th className="pr-2">填寫方式</th><th className="pr-2">廠商別</th><th></th></tr></thead>

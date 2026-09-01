@@ -9,7 +9,16 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Building2, Wallet, UtensilsCrossed, Mic, FlaskConical } from 'lucide-react'
+import { Building2, Wallet, UtensilsCrossed, Mic, FlaskConical, FileSpreadsheet } from 'lucide-react'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
+
+const WORK_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'title', label: '任務標題', required: true, example: '完成第三季菜單研發測試', aliases: ['title', '任務標題', '工作事項', '任務', '項目'] },
+  { key: 'status', label: '狀態說明', example: '進行中', aliases: ['status', '狀態', '進度', '備註'] },
+  { key: 'done', label: '是否已完成', example: '否', aliases: ['done', '是否完成', '完成', '已完成'] },
+  { key: 'deadline', label: '截止日', example: '2026-03-31', aliases: ['deadline', '截止日', '到期日', '預計完成日'] },
+]
 
 type SB = ReturnType<typeof createClient>
 type T = ReturnType<typeof useTranslations>
@@ -174,6 +183,8 @@ export default function WorkPage() {
   const [title, setTitle] = useState('')
   const [filter, setFilter] = useState<'active' | 'done' | 'all'>('active')
   const [scope, setScope] = useState<'all' | 'mine' | 'shared'>('all')
+  const [showImport, setShowImport] = useState(false)
+  const [tick, setTick] = useState(0)
   const now = useNow()
   const pending = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -262,7 +273,7 @@ export default function WorkPage() {
       alive = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase])
+  }, [supabase, tick])
 
   // Realtime（postgres_changes 受 RLS 限制，僅收到可存取的列）
   useEffect(() => {
@@ -419,7 +430,7 @@ export default function WorkPage() {
         </div>
       </div>
 
-      <Card className="flex gap-2 p-3">
+      <Card className="flex items-center gap-2 p-3">
         <Input
           value={title}
           onChange={e => setTitle(e.target.value)}
@@ -429,7 +440,30 @@ export default function WorkPage() {
           placeholder={t('addPlaceholder')}
         />
         <Button onClick={add} disabled={!title.trim()}>{t('add')}</Button>
+        <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+        </Button>
       </Card>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入任務"
+          description="支援 .xlsx, .xls 與 .csv 檔案。請填寫任務標題、狀態說明、截止日等。"
+          columns={WORK_IMPORT_COLUMNS}
+          templateFilename="任務清單範本"
+          sheetName="任務清單"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => setTick(t => t + 1)}
+          onSubmit={async rows => {
+            const res = await fetch('/api/work/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       {/* 來源 + 狀態：同一列，小螢幕自動換行 */}
       <div className="flex flex-wrap items-center gap-1">

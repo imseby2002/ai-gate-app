@@ -2,10 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { CalendarDays, Loader2, AlertCircle, Store, Plus, Trash2, Copy, Check, Users, Wand2, Send } from 'lucide-react'
+import { CalendarDays, Loader2, AlertCircle, Store, Plus, Trash2, Copy, Check, Users, Wand2, Send, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import type { ImportColumn } from '@/lib/excel/universal-import'
+
+const SHIFT_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'employee_name', label: '員工姓名', required: true, example: '王小明', aliases: ['employee_name', '姓名', '員工'] },
+  { key: 'work_date', label: '工作日期', required: true, example: '2026-03-05', aliases: ['work_date', '日期', '排班日期'] },
+  { key: 'slot_code', label: '時段', required: true, example: '早', aliases: ['slot_code', '時段', '班別', '早晚班'] },
+]
 
 interface Slot { code: string; label: string }
 interface Period { id: string; title: string; start_date: string; end_date: string; slots: Slot[]; status: string }
@@ -127,6 +135,7 @@ function PeriodDetail({ periodId, onChanged, onDeleted }: { periodId: string; on
   const [need, setNeed] = useState(1)
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState('')
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -192,8 +201,33 @@ function PeriodDetail({ periodId, onChanged, onDeleted }: { periodId: string; on
           <div className="font-semibold">{period.title || `${period.start_date} ~ ${period.end_date}`}</div>
           <div className="text-xs text-gray-400">{period.start_date} ~ {period.end_date}・{STATUS_LABEL[period.status] ?? period.status}</div>
         </div>
-        <Button size="sm" variant="outline" className="ml-auto gap-1.5 text-red-600 border-red-200" onClick={del}><Trash2 className="h-4 w-4" />刪除</Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入班表 (Excel/CSV)
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5 text-red-600 border-red-200" onClick={del}><Trash2 className="h-4 w-4" />刪除</Button>
+        </div>
       </div>
+
+      {showImport && (
+        <ExcelImportModal
+          title="批次匯入排班表"
+          description="支援 .xlsx, .xls 與 .csv 檔案。請填寫員工姓名、工作日期（YYYY-MM-DD）與時段（如：早、午、晚）。"
+          columns={SHIFT_IMPORT_COLUMNS}
+          templateFilename="門市排班範本"
+          sheetName="排班表"
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { load(); onChanged() }}
+          onSubmit={async rows => {
+            const res = await fetch('/api/shift/import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ period_id: periodId, rows }),
+            })
+            return await res.json()
+          }}
+        />
+      )}
 
       <div>
         <div className="text-sm font-medium flex items-center gap-1.5 mb-2"><Users className="h-4 w-4 text-gray-400" />員工填報連結（{submitted}/{employees.length} 已交）</div>
