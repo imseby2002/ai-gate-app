@@ -37,7 +37,7 @@ interface Checklist { doc_key: string; original_received: boolean; copy_received
 interface Contract { id: string; contract_no: string; sign_date: string | null; start_date: string | null; end_date: string | null; file_name: string; url: string; note: string }
 interface Employee { base_salary: number; hourly_rate: number; employment_type: string; insurance_required: boolean; insurance_status: string; insurance_salary: number; attendance_no: string; bank_name: string; bank_account: string; department: string; position: string }
 interface Payroll { year: number; month: number; base_salary: number; allowances: number; deductions: number; bonus: number; net_pay: number; status: string }
-interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string }
+interface Person { id: string; name: string; gender: string; native_place: string; birthday: string | null; id_number: string; education: string; email: string; company_email: string; zalo_user_id: string; payroll_no: string; position: string; store: string; staff_category: string; address: string; phone: string; apply_token: string; profile_text: string; hired_employee_id?: string | null }
 
 export default function PersonnelPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
