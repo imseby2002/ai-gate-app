@@ -24,26 +24,43 @@ async function resolveCompanyOwner(admin: Admin, companyId: string | null): Prom
   return data?.member_id ?? null
 }
 
-// 驗證單位存取（符合任一單位即通過；管理者全開）。unitKeys 例：['store', 'audit']
+// 驗證單位存取（符合任一單位即通過；總管理者或公司負責人/IT 全開）。unitKeys 例：['store', 'audit', 'hr']
 export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return DENY
-  const { data: profile } = await supabase.from('profiles').select('user_type, units, company_id').eq('id', user.id).single()
-  const isAdmin = profile?.user_type === 'admin'
-  const units = profile?.units ?? []
-  const hasUnit = unitKeys.some(k => units.includes(k))
-  if (!isAdmin && !hasUnit) return DENY
 
   const admin = createAdminClient()
-  // 管理者／owner：資料在自己名下；一般成員：解析公司 owner
-  let ownerId = user.id
-  if (!isAdmin) {
-    const owner = await resolveCompanyOwner(admin, profile?.company_id ?? null)
-    if (!owner) return DENY
-    ownerId = owner
+  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id').eq('id', user.id).single()
+  const isSuperAdmin = profile?.user_type === 'admin'
+
+  // 檢查是否為公司負責人 (owner) 或公司 IT (admin)
+  let isCompanyAdmin = false
+  if (profile?.company_id) {
+    const { data: m } = await admin.from('company_members')
+      .select('role')
+      .eq('company_id', profile.company_id)
+      .eq('member_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (m?.role === 'owner' || m?.role === 'admin') {
+      isCompanyAdmin = true
+    }
   }
-  return { ok: true, userId: user.id, ownerId, isAdmin, admin }
+
+  const units = profile?.units ?? []
+  const hasUnit = unitKeys.some(k => units.includes(k))
+  if (!isSuperAdmin && !isCompanyAdmin && !hasUnit) return DENY
+
+  // 管理者／owner：資料在自己名下；IT 或一般成員：解析公司 owner
+  let ownerId = user.id
+  if (!isSuperAdmin) {
+    const owner = await resolveCompanyOwner(admin, profile?.company_id ?? null)
+    if (owner) {
+      ownerId = owner
+    }
+  }
+  return { ok: true, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin }
 }
 
 // 驗證單位存取。unitKey 例：'hr' / 'finance' / 'rd' / 'store' / 'affairs' / 'audit'

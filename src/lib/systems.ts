@@ -43,7 +43,7 @@ export const SYSTEM_SUBDOMAIN: Partial<Record<SystemKey, string>> = {
   marketing: 'marketing',
   chat:      'chat',
   resume:    'work',
-  office:    'work',
+  office:    'office',
   agent:     'agent',
 }
 

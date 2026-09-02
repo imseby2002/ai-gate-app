@@ -53,11 +53,13 @@ export async function GET() {
   const result = (companies ?? []).map(c => {
     const compMembers = membersByCompany.get(c.id) ?? []
     const ownerMember = compMembers.find(m => m.role === 'owner' && m.status === 'active')
+    const itMember = compMembers.find(m => m.role === 'admin' && m.status === 'active')
     const creatorProfile = profMap.get(c.created_by) ?? null
     return {
       ...c,
       creator: creatorProfile,
       owner: ownerMember?.profile ?? null,
+      it: itMember?.profile ?? null,
       memberCount: compMembers.filter(m => m.status === 'active').length,
       pendingCount: compMembers.filter(m => m.status === 'pending').length,
       members: compMembers,
@@ -74,9 +76,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, ownerId, enabledModules, bnbOwnerId } = body as {
+    const { name, ownerId, itId, enabledModules, bnbOwnerId } = body as {
       name?: string
       ownerId?: string
+      itId?: string
       enabledModules?: string[]
       bnbOwnerId?: string
     }
@@ -104,7 +107,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: compErr?.message ?? '建立公司失敗' }, { status: 500 })
     }
 
-    // 2. 若有指定負責人 (owner)，直接將其納入公司作為 owner
+    // 2. 若有指定負責人 (owner)，納入公司作為 owner
     if (ownerId) {
       const { data: ownerProfile } = await admin
         .from('profiles')
@@ -113,7 +116,6 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (ownerProfile) {
-        // 先清理該用戶先前的 active 關係（保證一人一公司）
         await admin.from('company_members').delete().eq('member_id', ownerId)
 
         const { error: memErr } = await admin.from('company_members').insert({
@@ -132,6 +134,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 3. 若有指定公司 IT (admin)，納入公司作為 admin/IT
+    if (itId && itId !== ownerId) {
+      const { data: itProfile } = await admin
+        .from('profiles')
+        .select('id, email')
+        .eq('id', itId)
+        .single()
+
+      if (itProfile) {
+        await admin.from('company_members').delete().eq('member_id', itId)
+
+        const { error: itErr } = await admin.from('company_members').insert({
+          company_id: company.id,
+          member_id: itProfile.id,
+          invited_email: (itProfile.email ?? '').toLowerCase(),
+          role: 'admin',
+          status: 'active',
+          invited_by: auth.user!.id,
+          accepted_at: new Date().toISOString(),
+        })
+
+        if (itErr) {
+          console.error('[admin/companies] Failed to assign IT:', itErr)
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true, company })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? '內部伺服器錯誤' }, { status: 500 })
@@ -145,12 +174,13 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
       bnbOwnerId?: string | null
       ownerId?: string
+      itId?: string
     }
 
     if (!id) {
@@ -168,7 +198,7 @@ export async function PATCH(req: NextRequest) {
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
     }
 
-    // 若變更擁有者
+    // 若變更負責人
     if (ownerId) {
       const { data: ownerProfile } = await admin
         .from('profiles')
@@ -177,10 +207,10 @@ export async function PATCH(req: NextRequest) {
         .single()
 
       if (ownerProfile) {
-        // 先將原 owner 降為 admin
+        // 先將原 owner 降為 manager（若有）
         await admin
           .from('company_members')
-          .update({ role: 'admin' })
+          .update({ role: 'manager' })
           .eq('company_id', id)
           .eq('role', 'owner')
 
@@ -197,6 +227,47 @@ export async function PATCH(req: NextRequest) {
           invited_by: auth.user!.id,
           accepted_at: new Date().toISOString(),
         })
+      }
+    }
+
+    // 若變更公司 IT
+    if (itId !== undefined) {
+      if (!itId) {
+        // 解除公司 IT
+        await admin
+          .from('company_members')
+          .update({ role: 'manager' })
+          .eq('company_id', id)
+          .eq('role', 'admin')
+      } else {
+        const { data: itProfile } = await admin
+          .from('profiles')
+          .select('id, email')
+          .eq('id', itId)
+          .single()
+
+        if (itProfile) {
+          // 先將原 IT 降為 manager
+          await admin
+            .from('company_members')
+            .update({ role: 'manager' })
+            .eq('company_id', id)
+            .eq('role', 'admin')
+
+          // 移除新 IT 先前的記錄
+          await admin.from('company_members').delete().eq('member_id', itId)
+
+          // 寫入新 IT
+          await admin.from('company_members').insert({
+            company_id: id,
+            member_id: itProfile.id,
+            invited_email: (itProfile.email ?? '').toLowerCase(),
+            role: 'admin',
+            status: 'active',
+            invited_by: auth.user!.id,
+            accepted_at: new Date().toISOString(),
+          })
+        }
       }
     }
 

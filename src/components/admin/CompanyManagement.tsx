@@ -26,10 +26,10 @@ const ALL_MODULES = [
 ] as const
 
 const ROLE_MAP: Record<string, { label: string; color: string }> = {
-  owner:   { label: '公司擁有者', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  admin:   { label: '管理員',     color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  manager: { label: '主管 / 經理', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  viewer:  { label: '一般成員',   color: 'bg-slate-100 text-slate-700 border-slate-200' },
+  owner:   { label: '公司負責人',     color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  admin:   { label: '公司 IT / 管理員', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  manager: { label: '主管 / 經理',     color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  viewer:  { label: '一般成員',       color: 'bg-slate-100 text-slate-700 border-slate-200' },
 }
 
 export interface CompanyItem {
@@ -41,6 +41,7 @@ export interface CompanyItem {
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
+  it: { id: string; email: string; full_name: string | null } | null
   memberCount: number
   pendingCount: number
   members: Array<{
@@ -84,6 +85,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   // Form states for Create / Edit Company
   const [formName, setFormName] = useState('')
   const [formOwnerId, setFormOwnerId] = useState('')
+  const [formItId, setFormItId] = useState('')
   const [formModules, setFormModules] = useState<string[]>([])
 
   // Member Management state
@@ -129,6 +131,8 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
       c.name.toLowerCase().includes(s) ||
       c.owner?.email.toLowerCase().includes(s) ||
       (c.owner?.full_name?.toLowerCase().includes(s)) ||
+      c.it?.email.toLowerCase().includes(s) ||
+      (c.it?.full_name?.toLowerCase().includes(s)) ||
       c.creator?.email.toLowerCase().includes(s)
     )
   })
@@ -137,6 +141,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const handleOpenCreate = () => {
     setFormName('')
     setFormOwnerId('')
+    setFormItId('')
     setFormModules(ALL_MODULES.map(m => m.id))
     setShowCreateModal(true)
   }
@@ -154,6 +159,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
         body: JSON.stringify({
           name: formName.trim(),
           ownerId: formOwnerId || undefined,
+          itId: formItId || undefined,
           enabledModules: formModules,
         }),
       })
@@ -173,6 +179,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setEditingCompany(company)
     setFormName(company.name)
     setFormOwnerId(company.owner?.id ?? '')
+    setFormItId(company.it?.id ?? '')
     setFormModules(company.enabled_modules ?? ALL_MODULES.map(m => m.id))
   }
 
@@ -187,6 +194,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           id: editingCompany.id,
           name: formName.trim(),
           ownerId: formOwnerId || undefined,
+          itId: formItId,
           enabledModules: formModules,
         }),
       })
@@ -388,7 +396,8 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
             <thead>
               <tr className="border-b bg-muted/30 text-muted-foreground text-left">
                 <th className="px-5 py-3.5 font-medium">公司名稱</th>
-                <th className="px-5 py-3.5 font-medium">負責人 (Owner)</th>
+                <th className="px-5 py-3.5 font-medium">公司負責人 (Owner)</th>
+                <th className="px-5 py-3.5 font-medium">公司 IT (Admin)</th>
                 <th className="px-5 py-3.5 font-medium text-center">成員數</th>
                 <th className="px-5 py-3.5 font-medium">開通模組</th>
                 <th className="px-5 py-3.5 font-medium">建立時間</th>
@@ -398,7 +407,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
             <tbody className="divide-y">
               {filteredCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <Building2 className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
                     尚無符合條件的公司。點擊上方「建立新公司」開始使用。
                   </td>
@@ -423,6 +432,19 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                       ) : (
                         <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                           尚未指派負責人
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-4">
+                      {comp.it ? (
+                        <div>
+                          <div className="font-medium text-slate-800 dark:text-slate-200">{comp.it.full_name || '未設姓名'}</div>
+                          <div className="text-xs text-muted-foreground">{comp.it.email}</div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                          尚未指派 IT
                         </span>
                       )}
                     </td>
@@ -539,6 +561,24 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
               </div>
 
               <div>
+                <label className="font-semibold block mb-1">指派公司 IT (Admin)</label>
+                <select
+                  value={formItId}
+                  onChange={e => setFormItId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- 先不指定 IT（後續再指派） --</option>
+                  {allUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name ? `${u.full_name} (${u.email})` : u.email}
+                      {u.company_id ? ' [已有公司]' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">公司 IT 具備維護公司人員名單與單位授權之權限。</p>
+              </div>
+
+              <div>
                 <label className="font-semibold block mb-2">開通模組權限</label>
                 <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto p-2 border rounded-lg bg-slate-50 dark:bg-muted/20">
                   {ALL_MODULES.map(m => {
@@ -609,6 +649,23 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="font-semibold block mb-1">變更公司 IT (Admin)</label>
+                <select
+                  value={formItId}
+                  onChange={e => setFormItId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border bg-background text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- 未指派 IT / 移除 IT --</option>
+                  {allUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name ? `${u.full_name} (${u.email})` : u.email}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">公司 IT 具備維護公司人員名單與單位授權之權限。</p>
               </div>
 
               <div>
@@ -695,9 +752,9 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     onChange={e => setSelectedRoleToAdd(e.target.value as any)}
                     className="w-full h-9 px-3 rounded-lg border bg-white dark:bg-card text-xs outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="owner">擁有者 (Owner)</option>
-                    <option value="admin">管理員 (Admin)</option>
-                    <option value="manager">主管/經理 (Manager)</option>
+                    <option value="owner">公司負責人 (Owner)</option>
+                    <option value="admin">公司 IT / 管理員 (Admin)</option>
+                    <option value="manager">主管 / 經理 (Manager)</option>
                     <option value="viewer">一般成員 (Viewer)</option>
                   </select>
                 </div>
@@ -738,8 +795,8 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     onChange={e => setSelectedRoleToAdd(e.target.value as any)}
                     className="w-full h-9 px-3 rounded-lg border bg-white dark:bg-card text-xs outline-none focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="admin">管理員 (Admin)</option>
-                    <option value="manager">主管/經理 (Manager)</option>
+                    <option value="admin">公司 IT / 管理員 (Admin)</option>
+                    <option value="manager">主管 / 經理 (Manager)</option>
                     <option value="viewer">一般成員 (Viewer)</option>
                   </select>
                 </div>
@@ -795,9 +852,9 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                             onChange={e => handleChangeMemberRole(m.id, e.target.value)}
                             className={`h-7 px-2 text-[11px] font-medium rounded border ${roleInfo.color} outline-none cursor-pointer`}
                           >
-                            <option value="owner">擁有者</option>
-                            <option value="admin">管理員</option>
-                            <option value="manager">主管/經理</option>
+                            <option value="owner">公司負責人</option>
+                            <option value="admin">公司 IT / 管理員</option>
+                            <option value="manager">主管 / 經理</option>
                             <option value="viewer">一般成員</option>
                           </select>
 

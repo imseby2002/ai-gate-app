@@ -35,11 +35,13 @@ export default async function AdminCompaniesPage() {
   const initialCompanies = (companies ?? []).map(c => {
     const compMembers = membersByCompany.get(c.id) ?? []
     const ownerMember = compMembers.find(m => m.role === 'owner' && m.status === 'active')
+    const itMember = compMembers.find(m => m.role === 'admin' && m.status === 'active')
     const creatorProfile = profMap.get(c.created_by) ?? null
     return {
       ...c,
       creator: creatorProfile,
       owner: ownerMember?.profile ?? null,
+      it: itMember?.profile ?? null,
       memberCount: compMembers.filter(m => m.status === 'active').length,
       pendingCount: compMembers.filter(m => m.status === 'pending').length,
       members: compMembers,
