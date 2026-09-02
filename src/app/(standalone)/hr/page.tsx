@@ -1390,11 +1390,16 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   const remove = async (c: Candidate) => {
-    if (!confirm(`確定刪除應徵者「${c.name}」？`)) return
-    await fetch('/api/hr/candidates', {
+    if (!confirm(`確定刪除應徵者「${c.name}」？\n此動作將一併刪除該應徵者的所有資料與文件紀錄，無法復原。`)) return
+    const res = await fetch('/api/hr/candidates', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
     })
-    load()
+    if (res.ok) {
+      load()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      alert(d.error ?? '刪除失敗')
+    }
   }
 
   const hire = async (c: Candidate) => {
@@ -1689,11 +1694,26 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
               <textarea value={editing.notes ?? ''} onChange={e => setEditing({ ...editing, notes: e.target.value })}
                 className="w-full rounded-md border px-2 py-1.5 text-sm" rows={2} />
             </Field>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
-              <Button size="sm" onClick={save} disabled={busy || !editing.name?.trim()}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}
-              </Button>
+            <div className="flex items-center justify-between pt-1">
+              {editing.id ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 gap-1.5"
+                  onClick={() => {
+                    remove(editing as Candidate)
+                    setEditing(null)
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />刪除應徵者
+                </Button>
+              ) : <div />}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+                <Button size="sm" onClick={save} disabled={busy || !editing.name?.trim()}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -99,8 +99,23 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  // 1. 清理 Storage 檔案（如有上傳的履歷、證件、合同）
+  const [{ data: docs }, { data: contracts }] = await Promise.all([
+    supabase.from('hr_candidate_documents').select('storage_path').eq('candidate_id', id).eq('owner_id', user.id),
+    supabase.from('hr_contracts').select('storage_path').eq('candidate_id', id).eq('owner_id', user.id),
+  ])
+  const paths = [
+    ...(docs ?? []).map(d => d.storage_path).filter(Boolean),
+    ...(contracts ?? []).map(c => c.storage_path).filter(Boolean),
+  ]
+  if (paths.length > 0) {
+    await supabase.storage.from('hr-candidate-docs').remove(paths).catch(() => {})
+  }
+
   const { error } = await supabase
     .from('agent_hr_candidates').delete().eq('id', id).eq('user_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
+

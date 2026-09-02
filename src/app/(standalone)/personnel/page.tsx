@@ -74,6 +74,25 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
 
   const reload = () => setTick(t => t + 1)
 
+  const removePerson = async (p: PersonLite) => {
+    const isHired = !!p.hired_employee_id
+    const promptMsg = isHired
+      ? `確定刪除「${p.name || '此人員'}」？\n此人員已轉為正式員工，刪除將清除應徵與相關人事文件紀錄。`
+      : `確定刪除應徵者「${p.name || '此名單'}」？\n此動作將徹底刪除其應徵資料、文件紀錄，無法復原。`
+    if (!confirm(promptMsg)) return
+    const res = await fetch('/api/hr/personnel', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: p.id }),
+    })
+    if (res.ok) {
+      reload()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      alert(d.error ?? '刪除失敗')
+    }
+  }
+
   useEffect(() => {
     fetch('/api/hr/personnel').then(r => r.ok ? r.json() : { people: [] }).then(d => { setPeople(d.people ?? []); setLoading(false) })
   }, [tick])
@@ -114,19 +133,34 @@ function PeopleList({ onOpen }: { onOpen: (id: string) => void }) {
 
       {filtered.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">無人員資料</div>
         : <div className="grid gap-2">{filtered.map(p => (
-          <button key={p.id} onClick={() => onOpen(p.id)} className="text-left">
-            <Card className="p-3 flex items-center gap-3 hover:shadow-md transition-shadow">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2"><span className="font-medium">{p.name || '（未命名）'}</span>
-                  <span className="text-xs text-gray-400">{p.position}{p.store ? `・${p.store}` : ''}</span>
-                  <span className="text-[11px] px-1.5 rounded bg-gray-100 text-gray-500">{p.staff_category === 'parttime' ? '兼職' : p.staff_category === 'fulltime' ? '正職' : p.hired_employee_id ? '在職' : '應徵中'}</span>
+          <div key={p.id} className="flex items-center gap-2">
+            <button onClick={() => onOpen(p.id)} className="text-left flex-1 min-w-0">
+              <Card className="p-3 flex items-center gap-3 hover:shadow-md transition-shadow">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{p.name || '（未命名）'}</span>
+                    <span className="text-xs text-gray-400">{p.position}{p.store ? `・${p.store}` : ''}</span>
+                    <span className={`text-[11px] px-1.5 rounded ${!p.hired_employee_id ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
+                      {p.staff_category === 'parttime' ? '兼職' : p.staff_category === 'fulltime' ? '正職' : p.hired_employee_id ? '在職' : '應徵中'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              {p.doc_missing > 0
-                ? <span className="text-xs text-amber-600 shrink-0">缺件 {p.doc_missing}/{p.doc_total}</span>
-                : <span className="text-xs text-emerald-600 shrink-0 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />文件齊</span>}
-            </Card>
-          </button>))}</div>}
+                {p.doc_missing > 0
+                  ? <span className="text-xs text-amber-600 shrink-0">缺件 {p.doc_missing}/{p.doc_total}</span>
+                  : <span className="text-xs text-emerald-600 shrink-0 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" />文件齊</span>}
+              </Card>
+            </button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-gray-400 hover:text-red-600 hover:bg-red-50 h-10 w-10 p-0 shrink-0"
+              title="刪除此名單"
+              onClick={() => removePerson(p)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}</div>}
     </div>
   )
 }
@@ -154,6 +188,7 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [tick, setTick] = useState(0)
   const [form, setForm] = useState<Partial<Person>>({})
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
@@ -168,6 +203,30 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
     const res = await fetch('/api/hr/personnel', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...form }) })
     setSaving(false); setMsg(res.ok ? '已儲存' : '儲存失敗')
   }
+
+  const removeCurrent = async () => {
+    const personName = data?.person?.name || '此人員'
+    const isHired = !!data?.person?.hired_employee_id
+    const promptMsg = isHired
+      ? `確定刪除「${personName}」？\n此人員已轉為正式員工，刪除將清除應徵與相關人事文件紀錄。`
+      : `確定刪除應徵者「${personName}」？\n此動作將徹底刪除其應徵資料、文件紀錄，無法復原。`
+    if (!confirm(promptMsg)) return
+    setDeleting(true)
+    const res = await fetch('/api/hr/personnel', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setDeleting(false)
+    if (res.ok) {
+      alert(`已成功刪除「${personName}」`)
+      onBack()
+    } else {
+      const d = await res.json().catch(() => ({}))
+      alert(d.error ?? '刪除失敗')
+    }
+  }
+
   const haveDoc = new Map(data.documents.map(d => [d.doc_type, d]))
   const paperOf = new Map(data.checklist.map(c => [c.doc_key, c]))
   const togglePaper = async (doc_key: string, v: boolean) => {
@@ -182,7 +241,19 @@ function PersonDetail({ id, onBack }: { id: string; onBack: () => void }) {
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"><ArrowLeft className="h-4 w-4" />返回清單</button>
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"><ArrowLeft className="h-4 w-4" />返回清單</button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+          onClick={removeCurrent}
+          disabled={deleting}
+        >
+          {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          刪除名單
+        </Button>
+      </div>
 
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">基本資料</h3>

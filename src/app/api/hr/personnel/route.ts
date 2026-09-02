@@ -83,3 +83,33 @@ export async function PATCH(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ ok: true })
 }
+
+// 刪除應徵者/人員名單。body: { id }
+export async function DELETE(req: NextRequest) {
+  const ctx = await getUnitContext('hr')
+  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { admin, ownerId } = ctx
+  const b = await req.json().catch(() => ({}))
+  const id = s(b.id)
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  // 1. 清理 Storage 檔案（如有上傳的履歷、證件、合同）
+  const [{ data: docs }, { data: contracts }] = await Promise.all([
+    admin.from('hr_candidate_documents').select('storage_path').eq('candidate_id', id).eq('owner_id', ownerId),
+    admin.from('hr_contracts').select('storage_path').eq('candidate_id', id).eq('owner_id', ownerId),
+  ])
+  const paths = [
+    ...(docs ?? []).map(d => d.storage_path).filter(Boolean),
+    ...(contracts ?? []).map(c => c.storage_path).filter(Boolean),
+  ]
+  if (paths.length > 0) {
+    await admin.storage.from(APPLY_BUCKET).remove(paths).catch(() => {})
+  }
+
+  // 2. 刪除應徵者/人員主表記錄（關聯的 documents, checklist, contracts 會因 DB on delete cascade 自動刪除）
+  const { error } = await admin.from('agent_hr_candidates').delete().eq('id', id).eq('user_id', ownerId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ ok: true })
+}
+
