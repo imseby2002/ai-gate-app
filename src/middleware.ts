@@ -235,7 +235,7 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = subHome!
       const rewriteRes = NextResponse.rewrite(url, { request })
-      supabaseResponse.cookies.getAll().forEach(c => rewriteRes.cookies.set(c))
+      supabaseResponse.cookies.getAll().forEach((c: { name: string; value: string }) => rewriteRes.cookies.set(c))
       return rewriteRes
     }
 
