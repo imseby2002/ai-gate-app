@@ -234,10 +234,75 @@ export const DEFAULT_SEATS: Seat[] = [
   { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
 
+export type SynthesisStyle = 'default' | 'risk' | 'growth' | 'consulting'
+
+export interface SynthesisStyleOption {
+  id: SynthesisStyle
+  label: string
+  shortLabel: string
+  description: string
+  instruction: string
+}
+
+export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
+  {
+    id: 'default',
+    label: '🏛️ 首席幕僚長（標準中立・平衡取捨）',
+    shortLabel: '標準中立幕僚長',
+    description: '不偏不倚，客觀評估各方得失，給出推薦的主路徑與 Plan B 備案。',
+    instruction: '以董事會首席幕僚長的中立超然視角，不偏袒任何一方，客觀檢驗各學派論據漏洞，權衡整體風險與回報，給予明確的第一順位推薦路徑與 Plan B 備選路線。',
+  },
+  {
+    id: 'risk',
+    label: '🛡️ 極限風控 / 審計法官（極度保守・本金安全）',
+    shortLabel: '極限風控法官',
+    description: '假設最壞情況必然發生，死守現金流與合規防線，優先確保不虧損。',
+    instruction: '以最嚴苛的審計與極限風控法官視角進行收斂。假設最壞情況必然發生，以「保證本金絕對安全、嚴防現金流斷裂與監管暴雷」為最高準則，無情剔除高風險與樂觀假設。',
+  },
+  {
+    id: 'growth',
+    label: '🚀 破局操盤手（進攻擴張・爭奪市場先機）',
+    shortLabel: '進攻破局操盤手',
+    description: '以 10x 增長與市場份額為第一導向，大膽選擇能拉開差距的進攻方案。',
+    instruction: '以激進破局與進攻擴張操盤手視角進行收斂。以「搶佔市場心智、建立規模壁壘與爭奪 10x 顛覆機會」為第一導向，大膽選擇最能拉開差距的突破方案，拒絕平庸保守。',
+  },
+  {
+    id: 'consulting',
+    label: '📊 頂級戰略諮詢（MECE 矩陣打分・資源分配）',
+    shortLabel: 'MECE 戰略諮詢矩陣',
+    description: '產出加權評分矩陣與具體資源配置優先級（P0/P1/P2）。',
+    instruction: '以麥肯錫/BCG 頂級戰略諮詢顧問的 MECE 框架進行收斂。出具各方案的加權綜合評分矩陣（戰略契合度、ROI、執行難度），並給出精確的人力、預算、時程優先級（P0/P1/P2）配置清單。',
+  },
+]
+
+export const MODERATOR_MODELS = [
+  { id: 'anthropic/claude-opus-4-8', name: 'Claude 3.7 Opus (Anthropic)', shortName: 'Claude 3.7 Opus', badge: '頂級旗艦 · 商業白皮書首選' },
+  { id: 'openai/gpt-5', name: 'GPT-4o / o1 (OpenAI)', shortName: 'GPT-4o / o1', badge: '深度推理與數理邏輯' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文與跨文檔' },
+  { id: 'deepseek/deepseek-r1', name: 'DeepSeek-R1', shortName: 'DeepSeek-R1', badge: '博弈思維鏈與極限壓力測試' },
+  { id: 'anthropic/claude-sonnet-4-6', name: 'Claude 3.7 Sonnet (Anthropic)', shortName: 'Claude 3.7 Sonnet', badge: '高速敏捷分析' },
+]
+
+export function formatModelDisplayName(model?: string): string {
+  if (!model) return ''
+  const m = model.toLowerCase()
+  if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude 3.7 Opus'
+  if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude 3.7 Sonnet'
+  if (m.includes('claude-3-5-sonnet') || m.includes('claude-3.5-sonnet')) return 'Claude 3.5 Sonnet'
+  if (m.includes('gpt-5') || m.includes('gpt-4o')) return 'GPT-4o (OpenAI)'
+  if (m.includes('o1')) return 'o1 (OpenAI)'
+  if (m.includes('o3-mini')) return 'o3-mini (OpenAI)'
+  if (m.includes('gemini-2.5-pro') || m.includes('gemini-pro')) return 'Gemini 2.5 Pro'
+  if (m.includes('gemini-2.5-flash') || m.includes('gemini-flash')) return 'Gemini 2.5 Flash'
+  if (m.includes('deepseek-r1') || m.includes('deepseek')) return 'DeepSeek-R1'
+  if (m.includes('sonar') || m.includes('perplexity')) return 'Perplexity Sonar'
+  return model.replace(/^[^/]+\//, '')
+}
+
 export const DEFAULT_MODERATOR: Seat = {
-  name: '整合者',
+  name: '首席幕僚長',
   model: 'anthropic/claude-opus-4-8',
-  role: '會議主持人，負責綜觀全場、標註分歧並彙整為交付老闆的最終決策報告',
+  role: '董事會首席幕僚長，負責綜觀全場、公正裁斷分歧並彙整交付老闆的最高決策白皮書',
 }
 
 // ── 事件 (供 SSE 即時串流) ───────────────────────────────────────────────────
@@ -385,7 +450,7 @@ export async function fetchFactBriefing(
   emit?: (e: RoundtableEvent) => void,
   uploadedFilesContext?: string,
 ): Promise<string> {
-  emit?.({ type: 'phase', phase: 'briefing', label: '會前準備 · 客觀事實查核' })
+  emit?.({ type: 'phase', phase: 'briefing', label: '會前事實查核 · Gemini Flash & Perplexity 聯網檢索' })
 
   const preset = DOMAIN_PRESETS[domain] ?? DOMAIN_PRESETS.auto
   const systemPrompt =
@@ -428,7 +493,31 @@ export async function fetchFactBriefing(
     }
   }
 
-  // 若 Google Search 失敗或未設定，退回一般語言模型推論
+  // 雙軌備援：若 Gemini Search 失敗或未設定，嘗試 Perplexity 即時聯網查證
+  if (!fullText.trim() && process.env.PERPLEXITY_API_KEY) {
+    try {
+      const perplexity = createOpenAI({
+        apiKey: process.env.PERPLEXITY_API_KEY,
+        baseURL: 'https://api.perplexity.ai',
+      })
+      const result = await streamText({
+        model: perplexity.chat('sonar-pro'),
+        system: systemPrompt,
+        prompt: userPrompt,
+        maxOutputTokens: 4096,
+      })
+      for await (const part of result.fullStream) {
+        if (part.type === 'text-delta') {
+          fullText += part.text
+          emit?.({ type: 'briefing-delta', content: part.text })
+        }
+      }
+    } catch (pErr) {
+      console.warn('[fact-briefing] Perplexity fallback error:', pErr)
+    }
+  }
+
+  // 若聯網搜尋皆不可用，退回一般語言模型推論
   if (!fullText.trim()) {
     try {
       const fallbackModel = resolveModel('google/gemini-2.5-flash')
@@ -801,12 +890,19 @@ export async function executeSynthesize(
   allStatements: Statement[],
   moderator: Seat,
   emit: (e: RoundtableEvent) => void,
+  synthesisStyle: SynthesisStyle = 'default',
 ): Promise<string> {
-  emit({ type: 'phase', phase: 'synthesize', label: '最終收斂 · 交付高層報告' })
+  const styleConfig = SYNTHESIS_STYLES.find(s => s.id === synthesisStyle) ?? SYNTHESIS_STYLES[0]
+  emit({
+    type: 'phase',
+    phase: 'synthesize',
+    label: `最終收斂 · 首席幕僚長出具報告 (${formatModelDisplayName(moderator.model)})`,
+  })
 
   const moderatorSystem =
-    `你是會議主持人，${moderator.role}。\n` +
-    `全體資深合夥人已針對老闆的指令展開激烈辯論，現在請把全體研議收斂成一份結構完整、可直接落地的決策報告。\n\n` +
+    `你是董事會【首席幕僚長】，代表職責：${moderator.role}。\n` +
+    `全體資深合夥人已針對老闆的指令展開激烈辯論，現在請把全體研議收斂成一份結構完整、可直接落地的最高決策報告。\n\n` +
+    `【本次收斂風格指導原則】：\n${styleConfig.instruction}\n\n` +
     `報告必須包含以下結構：\n` +
     `1. 💡 30 秒高層結論 (讓老闆在 30 秒內看懂最核心定論與推薦路徑)\n` +
     `2. 📊 客觀事實與關鍵指標矩陣摘要 (引用 Fact Sheet 數據)\n` +
@@ -820,7 +916,7 @@ export async function executeSynthesize(
     `【老闆最初指令】：\n${bossInstruction}\n\n` +
     `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
     `【會議全程研議紀錄】：\n${fullDebate}\n\n` +
-    `請綜觀全場，出具交付老闆的最終結構化決策報告。`
+    `請以首席幕僚長之最高視野綜觀全場，出具交付老闆的最終結構化決策報告。`
 
   const report = await speak(moderator, moderatorSystem, userPrompt, 99, emit, 8192)
   emit({ type: 'report', content: report })
@@ -837,6 +933,7 @@ export interface RoundtableConfig {
   rebuttal?: boolean
   interactive?: boolean // 若為 true，跑完第 2 輪後即暫停並拋出 waiting_boss
   uploadedFilesContext?: string
+  synthesisStyle?: SynthesisStyle
 }
 
 export async function runRoundtable(
@@ -894,6 +991,6 @@ export async function runRoundtable(
   }
 
   // ── 階段 3：最終收斂報告 ───────────────────────────────────────────────────
-  const report = await executeSynthesize(boss, factBriefing, allStatements, moderator, emit)
+  const report = await executeSynthesize(boss, factBriefing, allStatements, moderator, emit, config.synthesisStyle)
   return report
 }

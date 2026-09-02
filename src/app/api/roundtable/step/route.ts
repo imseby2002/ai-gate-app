@@ -30,12 +30,16 @@ export async function POST(req: NextRequest) {
     bossGuidance = '',
     targetSeat,
     crossExamine = true,
+    moderatorModel,
+    synthesisStyle = 'default',
   } = body as {
     sessionId: string
     action: 'continue_all' | 'call_on' | 'synthesize'
     bossGuidance?: string
     targetSeat?: string
     crossExamine?: boolean
+    moderatorModel?: string
+    synthesisStyle?: SynthesisStyle
   }
 
   if (!sessionId) {
@@ -96,12 +100,18 @@ export async function POST(req: NextRequest) {
       try {
         if (action === 'synthesize') {
           // 結會收斂
+          const moderatorToUse: Seat = {
+            name: '首席幕僚長',
+            model: moderatorModel || DEFAULT_MODERATOR.model,
+            role: DEFAULT_MODERATOR.role,
+          }
           const report = await executeSynthesize(
             session.instruction,
             factBriefing,
             priorTranscript,
-            DEFAULT_MODERATOR,
+            moderatorToUse,
             emit,
+            synthesisStyle,
           )
           finalReport = report
         } else {

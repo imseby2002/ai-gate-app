@@ -45,6 +45,8 @@ export async function POST(req: NextRequest) {
     seatExpertIds,
     rebuttal,
     interactive = true, // 預設啟用老闆介入互動機制
+    moderator,
+    synthesisStyle,
   } = body as {
     instruction: string
     domain?: RoundtableDomain
@@ -52,6 +54,8 @@ export async function POST(req: NextRequest) {
     seatExpertIds?: (string | null)[]
     rebuttal?: boolean
     interactive?: boolean
+    moderator?: Seat
+    synthesisStyle?: SynthesisStyle
   }
 
   if (!instruction?.trim()) {
@@ -123,6 +127,8 @@ export async function POST(req: NextRequest) {
             seats: resolvedSeats,
             rebuttal,
             interactive,
+            moderator,
+            synthesisStyle,
           },
           emit,
         )

@@ -23,7 +23,16 @@ import {
 } from 'lucide-react'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
 import { cn } from '@/lib/utils/cn'
-import { DEFAULT_SEATS, DOMAIN_PRESETS, type RoundtableDomain } from '@/lib/ai/roundtable'
+import {
+  DEFAULT_SEATS,
+  DEFAULT_MODERATOR,
+  MODERATOR_MODELS,
+  SYNTHESIS_STYLES,
+  formatModelDisplayName,
+  DOMAIN_PRESETS,
+  type RoundtableDomain,
+  type SynthesisStyle,
+} from '@/lib/ai/roundtable'
 
 interface SeatBlock {
   round: number
@@ -149,6 +158,10 @@ export default function RoundtablePage() {
     ])
     setTargetSeat('員工A')
   }
+
+  // 首席幕僚長（總結者）設定
+  const [moderatorModel, setModeratorModel] = useState<string>(DEFAULT_MODERATOR.model)
+  const [synthesisStyle, setSynthesisStyle] = useState<SynthesisStyle>('default')
 
   // 歷史紀錄
   const [history, setHistory] = useState<SessionSummary[]>([])
@@ -282,6 +295,12 @@ export default function RoundtablePage() {
           seats: finalSeatsToSend,
           seatExpertIds: hasExperts ? seatExpertIds : undefined,
           interactive: true,
+          moderator: {
+            name: '首席幕僚長',
+            model: moderatorModel,
+            role: DEFAULT_MODERATOR.role,
+          },
+          synthesisStyle,
         }),
         signal: ctrl.signal,
       })
@@ -342,6 +361,8 @@ export default function RoundtablePage() {
           bossGuidance: currentInput,
           targetSeat,
           crossExamine,
+          moderatorModel,
+          synthesisStyle,
         }),
         signal: ctrl.signal,
       })
@@ -635,7 +656,7 @@ export default function RoundtablePage() {
                           席位 {i === 0 ? 'A' : i === 1 ? 'B' : 'C'}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground font-mono">
-                          {DEFAULT_SEATS[i].model}
+                          {formatModelDisplayName(DEFAULT_SEATS[i].model)}
                         </span>
                       </div>
 
@@ -684,6 +705,55 @@ export default function RoundtablePage() {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* 👑 董事會首席幕僚長（決策收斂官）設定 */}
+                <div className="rounded-lg border p-3.5 bg-background/90 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-xs text-foreground flex items-center gap-1.5">
+                        👑 董事會首席幕僚長（決策收斂官）
+                      </span>
+                      <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+                        主筆高層白皮書
+                      </Badge>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">
+                      當研議完成時，由首席幕僚長綜觀全場分歧、出具決策白皮書
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">主筆幕僚長旗艦模型</label>
+                      <select
+                        value={moderatorModel}
+                        onChange={e => setModeratorModel(e.target.value)}
+                        className="w-full text-xs px-2.5 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring font-medium"
+                      >
+                        {MODERATOR_MODELS.map(m => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} —— {m.badge}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">決策收斂風格 (選填)</label>
+                      <select
+                        value={synthesisStyle}
+                        onChange={e => setSynthesisStyle(e.target.value as SynthesisStyle)}
+                        className="w-full text-xs px-2.5 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring font-medium"
+                      >
+                        {SYNTHESIS_STYLES.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -754,10 +824,14 @@ export default function RoundtablePage() {
         {/* 階段 0：資料專員 · 客觀事實簡報 */}
         {factBriefing && (
           <Card className="border-blue-500/40 bg-blue-50/20 dark:bg-blue-950/10 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-blue-600 hover:bg-blue-700">📊 資料專員 · 會前客觀事實簡報 (Fact Sheet)</Badge>
-                <span className="text-xs text-muted-foreground">Google 即時檢索已查證</span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
+                  📊 資料專員 · 會前客觀事實簡報 (Fact Sheet)
+                </Badge>
+                <Badge variant="outline" className="text-xs bg-background text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 font-normal">
+                  🌐 Gemini 2.5 Flash & Perplexity 即時聯網查證引擎
+                </Badge>
               </div>
               <Button
                 variant="ghost"
@@ -806,8 +880,8 @@ export default function RoundtablePage() {
                 {seatItems.map((b, i) => (
                   <Card key={`${roundNum}-${b.name}-${i}`} className="p-5 space-y-3 flex flex-col justify-between border shadow-sm hover:shadow-md transition-shadow bg-card/95">
                     <div>
-                      <div className="flex items-center justify-between gap-1 mb-2.5 pb-2 border-b border-border/50">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-start justify-between gap-2 mb-2.5 pb-2 border-b border-border/50 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Badge variant="outline" className="font-semibold text-xs px-2.5 py-0.5">{b.name}</Badge>
                           {b.stance && (
                             <Badge className="bg-secondary text-secondary-foreground text-[11px] font-normal">
@@ -815,7 +889,11 @@ export default function RoundtablePage() {
                             </Badge>
                           )}
                         </div>
-                        {b.model && <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[150px]">{b.model}</span>}
+                        {b.model && (
+                          <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5 bg-muted/60 text-foreground/85 font-medium shrink-0 border-border/70">
+                            🤖 {formatModelDisplayName(b.model)}
+                          </Badge>
+                        )}
                       </div>
                       <div className="whitespace-pre-wrap text-sm leading-relaxed max-h-[600px] overflow-y-auto pr-1 text-foreground/90">
                         {b.content ? (
@@ -884,18 +962,75 @@ export default function RoundtablePage() {
 
               <button
                 type="button"
-                onClick={() => submitBossStep('synthesize')}
-                className="p-3 rounded-lg border border-border bg-muted/40 hover:bg-primary/10 text-left transition-all"
+                onClick={() => setBossAction('synthesize')}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  bossAction === 'synthesize'
+                    ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-sm'
+                    : 'border-border bg-muted/40 hover:bg-emerald-50/20'
+                }`}
               >
                 <p className="text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  討論已足夠 · 結會
+                  討論已足夠 · 呼叫首席幕僚長結會
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  隨時收斂，呼叫整合者產出交付高層的完整決策報告
+                  由首席幕僚長 ({formatModelDisplayName(moderatorModel)}) 綜觀全場分歧，出具最終決策報告
                 </p>
               </button>
             </div>
+
+            {/* 首席幕僚長結會選項與確認 */}
+            {bossAction === 'synthesize' && (
+              <div className="space-y-3 bg-background p-3.5 rounded-lg border text-xs animate-in fade-in">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    👑 首席幕僚長收斂設定：
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    可依本場辯論氛圍，隨時微調主筆模型與收斂風格
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">主筆幕僚長旗艦模型</label>
+                    <select
+                      value={moderatorModel}
+                      onChange={e => setModeratorModel(e.target.value)}
+                      className="w-full border rounded px-2 py-1.5 bg-background text-foreground font-medium"
+                    >
+                      {MODERATOR_MODELS.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} —— {m.badge}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">決策收斂風格 (選填)</label>
+                    <select
+                      value={synthesisStyle}
+                      onChange={e => setSynthesisStyle(e.target.value as SynthesisStyle)}
+                      className="w-full border rounded px-2 py-1.5 bg-background text-foreground font-medium"
+                    >
+                      {SYNTHESIS_STYLES.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <Button
+                    onClick={() => submitBossStep('synthesize')}
+                    disabled={running}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 font-medium"
+                  >
+                    🚀 確認結會，產出首席幕僚長決策白皮書
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* 點名單挑選項 */}
             {bossAction === 'call_on' && (
@@ -955,13 +1090,23 @@ export default function RoundtablePage() {
         {/* 最終收斂決策報告 */}
         {report && (
           <Card className="space-y-3 border-2 border-emerald-500 p-6 shadow-md bg-emerald-50/10">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  🏆 交付老闆 · 最終高層決策報告
+            <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
+                  👑 董事會首席幕僚長 · 最終高層決策報告
                 </Badge>
-                <span className="text-xs text-muted-foreground">整合者 (Claude Opus) 全場收斂</span>
+                <Badge variant="outline" className="text-xs font-mono bg-background text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 font-medium">
+                  主筆模型：{formatModelDisplayName(moderatorModel)}
+                </Badge>
+                {synthesisStyle !== 'default' && (
+                  <Badge variant="secondary" className="text-xs">
+                    {SYNTHESIS_STYLES.find(s => s.id === synthesisStyle)?.shortLabel}
+                  </Badge>
+                )}
               </div>
+              <span className="text-xs text-muted-foreground font-medium">
+                全場分歧收斂完畢 · 交付高層裁決
+              </span>
             </div>
             <div className="whitespace-pre-wrap text-sm leading-relaxed prose dark:prose-invert max-w-none">
               {report}
