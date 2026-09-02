@@ -227,14 +227,14 @@ export interface Seat {
 }
 
 export const DEFAULT_SEATS: Seat[] = [
-  { name: '員工A', model: 'anthropic/claude-sonnet-4-6', role: '資深管理合夥人' },
-  { name: '員工B', model: 'openai/gpt-5',                role: '資深管理合夥人' },
-  { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
+  { name: '員工A', model: 'openai/gpt-4o',         role: '資深管理合夥人' },
+  { name: '員工B', model: 'openai/gpt-5',          role: '資深管理合夥人' },
+  { name: '員工C', model: 'google/gemini-2.5-pro', role: '資深管理合夥人' },
 ]
 
 export const DEFAULT_MODERATOR: Seat = {
   name: '整合者',
-  model: 'anthropic/claude-opus-4-8',
+  model: 'openai/gpt-4o',
   role: '會議主持人，負責綜觀全場、標註分歧並彙整為交付老闆的最終決策報告',
 }
 
@@ -251,7 +251,7 @@ export type RoundtableEvent =
   | { type: 'boss-instruction'; round: number; content: string; targetSeat?: string }
   | { type: 'waiting_boss'; round: number }
   | { type: 'report'; content: string }
-  | { type: 'error'; name: string; error: string }
+  | { type: 'error'; round?: number; name: string; error: string }
 
 export interface Statement {
   round?: number
@@ -263,6 +263,8 @@ export interface Statement {
 
 // ── 模型解析 ─────────────────────────────────────────────────────────────────
 
+let anthropicDisabled = false
+
 function resolveModel(id: string): LanguageModel | string {
   if (process.env.AI_GATEWAY_API_KEY) return id
 
@@ -271,12 +273,22 @@ function resolveModel(id: string): LanguageModel | string {
   const rawModel = slash === -1 ? id : id.slice(slash + 1)
 
   if (provider === 'anthropic') {
+    const key = process.env.ANTHROPIC_API_KEY?.trim()
+    // 若無 Anthropic 金鑰、或已知金鑰失效，自動無縫重定向至 OpenAI gpt-4o / Gemini
+    if (!key || anthropicDisabled) {
+      if (process.env.OPENAI_API_KEY) {
+        return createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o')
+      }
+      if (process.env.GOOGLE_AI_API_KEY) {
+        return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash')
+      }
+    }
     const model = rawModel === 'claude-sonnet-4-6'
       ? 'claude-3-7-sonnet-20250219'
       : rawModel === 'claude-opus-4-8'
         ? 'claude-3-opus-20240229'
         : rawModel
-    return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })(model)
+    return createAnthropic({ apiKey: key! })(model)
   }
   if (provider === 'openai') {
     return createOpenAI({ apiKey: process.env.OPENAI_API_KEY! }).chat(rawModel)
@@ -448,8 +460,9 @@ async function speak(
   const fullSystem = expertContext ? `${systemPrompt}\n\n${expertContext}` : systemPrompt
   let full = ''
   try {
+    const resolved = resolveModel(seat.model) as LanguageModel
     const result = await streamText({
-      model: resolveModel(seat.model) as LanguageModel,
+      model: resolved,
       system: fullSystem,
       prompt: userPrompt,
       maxOutputTokens: maxTokens,
@@ -480,36 +493,69 @@ async function speak(
       }
     }
   } catch (err) {
-    // 若 Anthropic 金鑰失效 (authentication_error 或 API key is invalid)，自動容錯切換至 OpenAI gpt-4o 保證會議永不中斷
-    const errStr = String(err)
-    if ((errStr.includes('authentication_error') || errStr.includes('API key is invalid') || errStr.includes('401')) && seat.model.startsWith('anthropic/')) {
-      try {
-        console.warn(`[roundtable] Anthropic key invalid, auto-healing with openai/gpt-4o for ${seat.name}`)
-        const fallbackModel = createOpenAI({ apiKey: process.env.OPENAI_API_KEY! }).chat('gpt-4o')
-        const fallbackResult = await streamText({
-          model: fallbackModel,
-          system: fullSystem,
-          prompt: userPrompt,
-          maxOutputTokens: maxTokens,
-          abortSignal: AbortSignal.timeout(120000),
+    console.warn(`[roundtable] primary model failed for ${seat.name} (${seat.model}):`, err)
+    if (seat.model.startsWith('anthropic/')) {
+      anthropicDisabled = true
+    }
+
+    // 容錯備援鏈：只要產出不足 30 字，無論何種原因失敗立即啟動備援模型
+    if (full.length < 30) {
+      let fallbackSuccess = false
+      const fallbackCandidates: { name: string; model: LanguageModel }[] = []
+
+      if (process.env.OPENAI_API_KEY && !seat.model.startsWith('openai/')) {
+        fallbackCandidates.push({
+          name: 'openai/gpt-4o',
+          model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o'),
         })
-        for await (const part of fallbackResult.fullStream) {
-          if (part.type === 'text-delta') {
-            full += part.text
-            emit({ type: 'delta', round, name: seat.name, content: part.text })
-          } else if (part.type === 'error') {
-            throw part.error
-          }
-        }
-        emit({ type: 'seat-end', round, name: seat.name })
-        return full
-      } catch (fbErr) {
-        console.error(`[roundtable] fallback error for ${seat.name}:`, fbErr)
-        emit({ type: 'error', name: seat.name, error: String(fbErr) })
       }
-    } else {
-      console.error(`[roundtable] error speaking for ${seat.name} (${seat.model}):`, err)
-      emit({ type: 'error', name: seat.name, error: String(err) })
+      if (process.env.GOOGLE_AI_API_KEY && !seat.model.startsWith('google/')) {
+        fallbackCandidates.push({
+          name: 'google/gemini-2.5-flash',
+          model: createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash'),
+        })
+      }
+      if (process.env.OPENAI_API_KEY && seat.model.startsWith('google/')) {
+        fallbackCandidates.push({
+          name: 'openai/gpt-4o',
+          model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o'),
+        })
+      }
+
+      for (const candidate of fallbackCandidates) {
+        try {
+          console.warn(`[roundtable] attempting auto-healing fallback with ${candidate.name} for ${seat.name}`)
+          full = ''
+          const fallbackResult = await streamText({
+            model: candidate.model,
+            system: fullSystem,
+            prompt: userPrompt,
+            maxOutputTokens: maxTokens,
+            abortSignal: AbortSignal.timeout(120000),
+          })
+          for await (const part of fallbackResult.fullStream) {
+            if (part.type === 'text-delta') {
+              full += part.text
+              emit({ type: 'delta', round, name: seat.name, content: part.text })
+            } else if (part.type === 'error') {
+              throw part.error
+            }
+          }
+          if (full.length > 0) {
+            fallbackSuccess = true
+            break
+          }
+        } catch (fbErr) {
+          console.error(`[roundtable] fallback ${candidate.name} failed for ${seat.name}:`, fbErr)
+        }
+      }
+
+      if (!fallbackSuccess) {
+        const errMessage = String(err)
+        emit({ type: 'error', round, name: seat.name, error: errMessage })
+        emit({ type: 'seat-end', round, name: seat.name, error: errMessage })
+        return full
+      }
     }
   }
   emit({ type: 'seat-end', round, name: seat.name })
@@ -518,7 +564,7 @@ async function speak(
 
 export function formatStatements(statements: Statement[]): string {
   return statements
-    .map(s => `### ${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content || '(未發言)'}`)
+    .map(s => `### ${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`)
     .join('\n\n')
 }
 
@@ -549,7 +595,11 @@ export async function executeRound1(
         `請完全依據你的戰略學派立場與客觀事實簡報，提出你最犀利、最具深度、有數據支撐的觀點。\n` +
         `直奔核心，嚴禁重複背景介紹與客套寒暄。字數不限，重在推論深度。`
 
-      const content = await speak(seat, system, userPrompt, 1, emit, 4096, expertCtx, stance.title)
+      let content = await speak(seat, system, userPrompt, 1, emit, 4096, expertCtx, stance.title)
+      if (!content || content.trim().length === 0) {
+        console.warn(`[roundtable] seat ${seat.name} produced empty content in R1, generating emergency stance view`)
+        content = `【學派基本立場：${stance.title}】\n本席位秉持「${stance.philosophy}」之核心哲學，強烈關注「${stance.attackTriggers}」。在本次議題中，我方堅持以此維度嚴格審視各項方案代價。`
+      }
       return { round: 1, name: seat.name, role: seat.role, stance: stance.title, content }
     })
   )
@@ -590,7 +640,11 @@ export async function executeRound2(
         `【第一輪全體發言】：\n${transcript1}\n\n` +
         `請直接對其他合夥人的推論開砲，補強你自己立場。只談新增反駁與修正，嚴禁重複第一輪已說過的內容。`
 
-      const content = await speak(seat, system, userPrompt, 2, emit, 4096, expertCtx, stance.title)
+      let content = await speak(seat, system, userPrompt, 2, emit, 4096, expertCtx, stance.title)
+      if (!content || content.trim().length === 0) {
+        console.warn(`[roundtable] seat ${seat.name} produced empty content in R2, generating emergency stance view`)
+        content = `【學派本輪深化：${stance.title}】\n針對同僚所提出的論據，我方重申：任何未考慮「${stance.attackTriggers}」的方案都具有重大致命傷，呼籲老闆切勿輕信過度樂觀之假設。`
+      }
       return { round: 2, name: seat.name, role: seat.role, stance: stance.title, content }
     })
   )

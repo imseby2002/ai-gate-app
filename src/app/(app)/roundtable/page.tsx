@@ -290,7 +290,7 @@ export default function RoundtablePage() {
           if (e.error) {
             setBlocks(prev => {
               const next = [...prev]
-              const idx = next.findLastIndex(b => b.round === e.round && b.name === e.name)
+              const idx = next.findLastIndex(b => (e.round ? b.round === e.round : true) && b.name === e.name)
               if (idx >= 0) next[idx] = { ...next[idx], error: e.error }
               return next
             })
@@ -304,6 +304,13 @@ export default function RoundtablePage() {
         } else if (e.type === 'error') {
           if (e.name === 'system') {
             setReport(prev => (prev ? `${prev}\n⚠️ ${e.error}` : `⚠️ ${e.error}`))
+          } else {
+            setBlocks(prev => {
+              const next = [...prev]
+              const idx = next.findLastIndex(b => (e.round ? b.round === e.round : true) && b.name === e.name)
+              if (idx >= 0) next[idx] = { ...next[idx], error: e.error }
+              return next
+            })
           }
         }
       }
