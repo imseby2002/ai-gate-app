@@ -1,7 +1,7 @@
 // 各獨立系統的定義：每個系統有自己的登入/註冊入口，登入後 session 被限定在該系統。
 // 切換系統需從另一系統的登入頁進入（會更新 scope cookie）。
 
-export type SystemKey = 'chat' | 'booking' | 'cs' | 'marketing' | 'leads' | 'resume' | 'agent'
+export type SystemKey = 'chat' | 'booking' | 'cs' | 'marketing' | 'leads' | 'resume' | 'agent' | 'office'
 
 export interface SystemDef {
   key: SystemKey
@@ -17,7 +17,8 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
   cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
   marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call'] },
   leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
-  resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume', '/hr', '/finance', '/work', '/pos'] },
+  office:    { key: 'office',    label: '公司入口',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs', '/store-reports', '/store-inventory', '/shift', '/pos', '/affairs', '/audit', '/meeting', '/work'] },
+  resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume'] },
   agent:     { key: 'agent',     label: 'AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
 }
 
@@ -30,7 +31,8 @@ export const SUBDOMAIN_SYSTEM: Record<string, SystemKey> = {
   booking:   'booking',
   marketing: 'marketing',
   chat:      'chat',
-  work:      'resume',
+  work:      'office',
+  office:    'office',
   agent:     'agent',
 }
 
@@ -41,6 +43,7 @@ export const SYSTEM_SUBDOMAIN: Partial<Record<SystemKey, string>> = {
   marketing: 'marketing',
   chat:      'chat',
   resume:    'work',
+  office:    'work',
   agent:     'agent',
 }
 
@@ -49,7 +52,7 @@ export const SCOPE_SESSION_KEY = 'ai_gate_scope'
 
 // 不受 scope 限制、任何系統都可存取的共用路徑
 // /dashboard 不在此列：為 owner 專用總控台，非管理者會被導向 /apps
-const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/work']
+const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/work', '/office']
 
 export function isSystemKey(s: string | undefined | null): s is SystemKey {
   return !!s && Object.prototype.hasOwnProperty.call(SYSTEMS, s)

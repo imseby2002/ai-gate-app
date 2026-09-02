@@ -16,6 +16,21 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const [href, setHref] = useState('/apps')
 
   useEffect(() => {
+    // 1. Office 系統任一地方（/office, /hr, /personnel, /finance, /store-expenses,
+    //    /vendors, /units, /rd, /rd-recipes, /rd-ai, /rd-logs, /store-reports,
+    //    /store-inventory, /shift, /pos, /affairs, /audit, /meeting, /work）
+    //    點「返回主選單」一律回到 /office，絕不跳到 /work！
+    const OFFICE_PREFIXES = [
+      '/office', '/hr', '/personnel', '/finance', '/store-expenses',
+      '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs',
+      '/store-reports', '/store-inventory', '/shift', '/pos',
+      '/affairs', '/audit', '/meeting', '/work'
+    ]
+    if (OFFICE_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+      setHref('/office')
+      return
+    }
+
     // 管理者與使用者一致：一律依「目前所在路徑」推回所屬功能系統主頁，
     // 不再回 /dashboard（dashboard 為 owner 專用總控台）。
     // /marketing-auto 同時被行銷與客服系統共用，靠 ?module=cs 區分。
@@ -28,14 +43,22 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
       setHref(SYSTEMS.marketing.home); return
     }
     const sys = systemForPath(pathname)
-    if (sys) { setHref(SYSTEMS[sys].home); return }
+    if (sys) {
+      const targetHome = SYSTEMS[sys].home === '/work' ? '/office' : SYSTEMS[sys].home
+      setHref(targetHome)
+      return
+    }
 
     // 路徑無法判別（如 /team、/apps 等共用頁）時，
     // 優先依「目前子域」回該系統首頁，確保停留在所在子域，不跳到通用 /apps。
     try {
       const sub = window.location.hostname.split('.')[0]
       const bySub = SUBDOMAIN_SYSTEM[sub]
-      if (bySub) { setHref(SYSTEMS[bySub].home); return }
+      if (bySub) {
+        const targetHome = SYSTEMS[bySub].home === '/work' ? '/office' : SYSTEMS[bySub].home
+        setHref(targetHome)
+        return
+      }
     } catch {
       // window 不可用時往下退回
     }
@@ -43,7 +66,11 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     // 再退回 per-tab scope，最後才是 /apps
     try {
       const scope = sessionStorage.getItem(SCOPE_SESSION_KEY)
-      if (isSystemKey(scope)) setHref(SYSTEMS[scope].home)
+      if (isSystemKey(scope)) {
+        const targetHome = SYSTEMS[scope].home === '/work' ? '/office' : SYSTEMS[scope].home
+        setHref(targetHome)
+        return
+      }
     } catch {
       // sessionStorage 不可用（私密模式等），保持 /apps
     }

@@ -260,9 +260,10 @@ export default function RdPage() {
               <FlaskConical className="h-4 w-4 text-indigo-600" />研發討論AI
             </Button>
           </Link>
-          <Link href="/work">
-            <Button variant="outline" size="sm">
-              WORK 列表
+          <Link href="/office">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Building2 className="h-4 w-4" />
+              公司入口
             </Button>
           </Link>
           <Link href="/store-reports">

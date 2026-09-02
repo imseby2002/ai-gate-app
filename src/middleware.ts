@@ -35,7 +35,8 @@ export async function middleware(request: NextRequest) {
       booking:   '/booking',       // 訂房系統
       marketing: '/marketing',     // 行銷中心（多工具入口，非單一自動化行銷頁）
       chat:      '/apps',          // 對話系統（功能選單）
-      work:      '/resume',        // 工作系統
+      work:      '/office',        // 公司辦公系統（首頁為 /office，絕不到 /work）
+      office:    '/office',        // 辦公系統
       agent:     '/agent',         // AI Agent 系統
       www:       '/dashboard',     // owner 主控台
     }
