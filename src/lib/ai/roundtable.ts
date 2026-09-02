@@ -227,14 +227,14 @@ export interface Seat {
 }
 
 export const DEFAULT_SEATS: Seat[] = [
-  { name: '員工A', model: 'openai/gpt-4o',         role: '資深管理合夥人' },
-  { name: '員工B', model: 'openai/gpt-5',          role: '資深管理合夥人' },
-  { name: '員工C', model: 'google/gemini-2.5-pro', role: '資深管理合夥人' },
+  { name: '員工A', model: 'anthropic/claude-sonnet-4-6', role: '資深管理合夥人' },
+  { name: '員工B', model: 'openai/gpt-5',                role: '資深管理合夥人' },
+  { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
 
 export const DEFAULT_MODERATOR: Seat = {
   name: '整合者',
-  model: 'openai/gpt-4o',
+  model: 'anthropic/claude-opus-4-8',
   role: '會議主持人，負責綜觀全場、標註分歧並彙整為交付老闆的最終決策報告',
 }
 
@@ -273,22 +273,40 @@ function resolveModel(id: string): LanguageModel | string {
   const rawModel = slash === -1 ? id : id.slice(slash + 1)
 
   if (provider === 'anthropic') {
-    const key = process.env.ANTHROPIC_API_KEY?.trim()
-    // 若無 Anthropic 金鑰、或已知金鑰失效，自動無縫重定向至 OpenAI gpt-4o / Gemini
-    if (!key || anthropicDisabled) {
-      if (process.env.OPENAI_API_KEY) {
-        return createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o')
-      }
-      if (process.env.GOOGLE_AI_API_KEY) {
-        return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash')
-      }
+    // 優先策略 1：若有有效的 OPENROUTER_API_KEY，直連真實 Anthropic Claude 模型（Claude 3.7 / 4.6 Sonnet & Opus）
+    if (process.env.OPENROUTER_API_KEY) {
+      const openrouter = createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      })
+      const orModel =
+        rawModel === 'claude-sonnet-4-6' || rawModel === 'claude-3-7-sonnet-20250219'
+          ? 'anthropic/claude-sonnet-4.6'
+          : rawModel === 'claude-opus-4-8' || rawModel === 'claude-3-opus-20240229'
+            ? 'anthropic/claude-opus-4.8'
+            : `anthropic/${rawModel}`
+      return openrouter.chat(orModel)
     }
-    const model = rawModel === 'claude-sonnet-4-6'
-      ? 'claude-3-7-sonnet-20250219'
-      : rawModel === 'claude-opus-4-8'
-        ? 'claude-3-opus-20240229'
-        : rawModel
-    return createAnthropic({ apiKey: key! })(model)
+
+    // 優先策略 2：直連 Anthropic API
+    const key = process.env.ANTHROPIC_API_KEY?.trim()
+    if (key && !anthropicDisabled) {
+      const model =
+        rawModel === 'claude-sonnet-4-6'
+          ? 'claude-3-7-sonnet-20250219'
+          : rawModel === 'claude-opus-4-8'
+            ? 'claude-3-opus-20240229'
+            : rawModel
+      return createAnthropic({ apiKey: key })(model)
+    }
+
+    // 容錯備援：若 Anthropic 完全不可用，自動切換至 OpenAI gpt-4o 或 Gemini
+    if (process.env.OPENAI_API_KEY) {
+      return createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o')
+    }
+    if (process.env.GOOGLE_AI_API_KEY) {
+      return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash')
+    }
   }
   if (provider === 'openai') {
     return createOpenAI({ apiKey: process.env.OPENAI_API_KEY! }).chat(rawModel)
