@@ -224,6 +224,8 @@ export interface Seat {
   role: string
   expertId?: string
   stance?: string
+  customPhilosophy?: string
+  customAttackTriggers?: string
 }
 
 export const DEFAULT_SEATS: Seat[] = [
@@ -580,6 +582,25 @@ async function speak(
   return full
 }
 
+// ── 席位立場與觀點解析輔助函式 ───────────────────────────────────────────────
+
+export function resolveSeatStance(seat: Seat, idx: number, domainPreset: DomainPreset) {
+  const preset = domainPreset.stances[idx] ?? domainPreset.stances[0]
+  const title = seat.stance?.trim() || preset.title
+  const philosophy =
+    seat.customPhilosophy?.trim() ||
+    (seat.stance?.trim()
+      ? `完全代表【${seat.name}】之【${title}】核心視角、利益主張與分析框架進行專業推演。`
+      : preset.philosophy)
+  const attackTriggers =
+    seat.customAttackTriggers?.trim() ||
+    (seat.stance?.trim()
+      ? `無情檢驗其他合夥人是否忽視了【${title}】所重視的關鍵維度、假設是否脫離客觀現實。`
+      : preset.attackTriggers)
+
+  return { title, philosophy, attackTriggers }
+}
+
 export function formatStatements(statements: Statement[]): string {
   return statements
     .map(s => `### ${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`)
@@ -600,17 +621,18 @@ export async function executeRound1(
 
   const results = await Promise.all(
     seats.map(async (seat, idx) => {
-      const stance = domainPreset.stances[idx] ?? domainPreset.stances[0]
+      const stance = resolveSeatStance(seat, idx, domainPreset)
       const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
       const system =
-        `你是一家頂尖決策委員會的資深合夥人，你的核心戰略學派：【${stance.title}】。\n` +
-        `你的底層信仰：${stance.philosophy}\n` +
+        `你是一家頂尖決策委員會的資深合夥人，你的席位與身分代表：【${seat.name}】。\n` +
+        `你的核心戰略學派與觀點立場：【${stance.title}】。\n` +
+        `你的底層信仰與立論依據：${stance.philosophy}\n` +
         `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
         ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
-        `請完全依據你的戰略學派立場與客觀事實簡報，提出你最犀利、最具深度、有數據支撐的觀點。\n` +
+        `請完全依據你代表的【${seat.name}】（${stance.title}）戰略立場與客觀事實簡報，提出你最犀利、最具深度、有數據支撐的觀點。\n` +
         `直奔核心，嚴禁重複背景介紹與客套寒暄。字數不限，重在推論深度。`
 
       let content = await speak(seat, system, userPrompt, 1, emit, 4096, expertCtx, stance.title)
@@ -641,11 +663,12 @@ export async function executeRound2(
 
   const results = await Promise.all(
     seats.map(async (seat, idx) => {
-      const stance = domainPreset.stances[idx] ?? domainPreset.stances[0]
+      const stance = resolveSeatStance(seat, idx, domainPreset)
       const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
       const system =
-        `你是一家頂尖決策委員會的資深合夥人，你的核心戰略學派：【${stance.title}】。\n` +
-        `你的底層信仰：${stance.philosophy}\n` +
+        `你是一家頂尖決策委員會的資深合夥人，你的席位與身分代表：【${seat.name}】。\n` +
+        `你的核心戰略學派與觀點立場：【${stance.title}】。\n` +
+        `你的底層信仰與立論依據：${stance.philosophy}\n` +
         `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
         `【本輪核心任務】：針鋒相對、無情挑刺！\n` +
         `1. 請仔細檢驗其他合夥人在第一輪發言中的邏輯盲點、過度樂觀的虛假假設或漏洞。\n` +
@@ -694,14 +717,14 @@ export async function executeBossStep(
   if (action === 'call_on' && targetSeatName) {
     // 點名單挑：指定該席位獨立發言
     const targetSeat = seats.find(s => s.name === targetSeatName) ?? seats[0]
-    const seatIdx = seats.indexOf(targetSeat)
-    const stance = domainPreset.stances[seatIdx] ?? domainPreset.stances[0]
+    const seatIdx = Math.max(0, seats.indexOf(targetSeat))
+    const stance = resolveSeatStance(targetSeat, seatIdx, domainPreset)
     const expertCtx = targetSeat.expertId ? expertContextMap.get(targetSeat.expertId) : undefined
 
     emit({ type: 'phase', phase: 'discuss', label: `第 ${currentRound} 輪 · 點名發言 (${targetSeat.name})` })
 
     const system =
-      `你是資深合夥人，學派：【${stance.title}】。\n` +
+      `你是資深合夥人【${targetSeat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
       `老闆現在親自點名你回答問題。\n` +
       `請針對老闆的最新指示，依據你的戰略學派與客觀數據，正面且深入作答。\n\n` +
       ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
@@ -723,11 +746,11 @@ export async function executeBossStep(
       const crossResults = await Promise.all(
         otherSeats.map(async (seat) => {
           const idx = seats.indexOf(seat)
-          const otherStance = domainPreset.stances[idx] ?? domainPreset.stances[0]
+          const otherStance = resolveSeatStance(seat, idx, domainPreset)
           const otherExpert = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
           const crossSystem =
-            `你是資深合夥人，學派：【${otherStance.title}】。\n` +
-            `老闆剛才點名了 ${targetSeat.name}，現在請你針對 ${targetSeat.name} 的回答提出反駁、質疑或補充。\n\n` +
+            `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${otherStance.title}】。\n` +
+            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】的回答提出反駁、質疑或補充。\n\n` +
             ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
           const crossPrompt =
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
@@ -747,10 +770,10 @@ export async function executeBossStep(
 
     const allResults = await Promise.all(
       seats.map(async (seat, idx) => {
-        const stance = domainPreset.stances[idx] ?? domainPreset.stances[0]
+        const stance = resolveSeatStance(seat, idx, domainPreset)
         const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
         const system =
-          `你是資深合夥人，學派：【${stance.title}】。\n` +
+          `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
           `老闆剛剛介入了會議並給予了最新的戰略指示。\n` +
           `請針對老闆的最新導向，依據你的戰略學派進一步深化你的方案，並回應先前的爭議焦點。\n\n` +
           ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
@@ -823,16 +846,21 @@ export async function runRoundtable(
   const domain = detectDomain(config.bossInstruction, config.domain)
   const preset = DOMAIN_PRESETS[domain] ?? DOMAIN_PRESETS.auto
 
+  const seats = config.seats?.length ? config.seats : DEFAULT_SEATS
+  const moderator = config.moderator ?? DEFAULT_MODERATOR
+  const boss = config.bossInstruction.trim()
+
+  const broadcastStances = seats.map((s, idx) => {
+    const st = resolveSeatStance(s, idx, preset)
+    return { name: s.name, title: st.title }
+  })
+
   emit({
     type: 'domain-detected',
     domain,
     label: preset.label,
-    stances: preset.stances.map(s => ({ name: s.name, title: s.title })),
+    stances: broadcastStances,
   })
-
-  const seats = config.seats?.length ? config.seats : DEFAULT_SEATS
-  const moderator = config.moderator ?? DEFAULT_MODERATOR
-  const boss = config.bossInstruction.trim()
 
   // 預先載入專家知識
   const expertContextMap = new Map<string, string>()

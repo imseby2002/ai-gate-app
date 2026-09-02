@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
 import { cn } from '@/lib/utils/cn'
-import type { RoundtableDomain } from '@/lib/ai/roundtable'
+import { DEFAULT_SEATS, DOMAIN_PRESETS, type RoundtableDomain } from '@/lib/ai/roundtable'
 
 interface SeatBlock {
   round: number
@@ -39,6 +39,43 @@ interface SessionSummary {
   instruction: string
   created_at: string
 }
+
+export interface CustomSeatConfig {
+  name: string
+  stance: string
+  philosophy: string
+  attackTriggers: string
+}
+
+export const ROLE_PRESETS = [
+  {
+    label: '🏦 頂級投行激辯 (大摩 vs 先鋒 vs 小摩)',
+    description: '華爾街主流機構視角碰撞',
+    seats: [
+      { name: '摩根大通 (JPMorgan)', stance: '宏觀流動性與利率週期觀點', philosophy: '緊盯美聯儲政策利率路徑、投行承銷景氣與全球流動性收緊風險。', attackTriggers: '攻擊忽視資本成本上升、抨擊估值過高難以為繼。' },
+      { name: '先鋒集團 (Vanguard)', stance: '長期被動配置與安全邊際', philosophy: '極致注重費率成本、長期資產配置、穩健被動分散風險。', attackTriggers: '抨擊主動擇時盲動、質疑高換手率的高額代價。' },
+      { name: '摩根士丹利 (Morgan Stanley)', stance: '產業護城河與目標價重估', philosophy: '深度挖掘產業基本面變化、結構性市佔率移轉與獲利修正。', attackTriggers: '質疑增長故事缺乏實質營收訂單支撐、挑剔獲利質量。' },
+    ],
+  },
+  {
+    label: '💼 企業高管交鋒 (成長長 vs 財務長 vs 技術長)',
+    description: 'C-Suite 經營管理視角',
+    seats: [
+      { name: '成長長 (CGO)', stance: '激進擴張與市佔率優先', philosophy: '唯快不破。搶佔市場規模與用戶心智是第一優先，規模擴大後利潤自然隨之而來。', attackTriggers: '攻擊保守風控阻礙業務擴展、痛批錯失先發市場紅利。' },
+      { name: '財務長 (CFO)', stance: '現金流安全邊際與成本嚴控', philosophy: '活下去才能贏。嚴格控制燒錢率、確保自由現金流與投資回報率 (ROI)。', attackTriggers: '砲轟畫大餅不顧財務崩潰風險、嚴防現金流斷裂。' },
+      { name: '技術長 (CTO)', stance: '技術架構壁壘與研發交付可行性', philosophy: '工程紀律與架構護城河。所有的商業願景必須有扎實的技術深度與工程可行性。', attackTriggers: '攻擊不懂技術硬傷瞎指揮、質疑交付時程與架構擴展性。' },
+    ],
+  },
+  {
+    label: '🚀 創投與對沖機構 (矽谷 VC vs 價值基金 vs 做空機構)',
+    description: '資本市場不同風格激進碰撞',
+    seats: [
+      { name: '矽谷風投 (VC)', stance: '指數級想像空間與網路效應', philosophy: '尋找潛在 100 倍回報。只要天花板夠高、技術範式轉移明確，就值得承擔高失敗率。', attackTriggers: '嘲笑線性思維無法理解非線性爆發、攻擊過早自我設限。' },
+      { name: '價值基金 (Value Fund)', stance: '穩健股息與本益比安全防守', philosophy: '以合理價格買入卓越公司。重視資產負債表強韌度與股息安全。', attackTriggers: '抨擊泡沫幻覺與沒有護城河的偽創新、嚴防本金永久性損失。' },
+      { name: '做空機構 (Short Seller)', stance: '深度質疑財報漏洞與商業死角', philosophy: '假設一切都在撒謊。以最嚴苛的審計與偵探視角，尋找財報美化與商業模式漏洞。', attackTriggers: '抓取隱瞞的負債與庫存積壓、拆穿過度美化的成長神話。' },
+    ],
+  },
+]
 
 const DOMAIN_OPTIONS: { id: RoundtableDomain; label: string; icon: typeof TrendingUp }[] = [
   { id: 'auto', label: '智慧自動', icon: Sparkles },
@@ -77,6 +114,41 @@ export default function RoundtablePage() {
   // 專家知識設定
   const [showExpertConfig, setShowExpertConfig] = useState(false)
   const [seatExperts, setSeatExperts] = useState<Record<number, string[]>>({ 0: [], 1: [], 2: [] })
+
+  // 自訂角色觀點設定
+  const [showRoleConfig, setShowRoleConfig] = useState(false)
+  const [customSeats, setCustomSeats] = useState<CustomSeatConfig[]>([
+    { name: '員工A', stance: '', philosophy: '', attackTriggers: '' },
+    { name: '員工B', stance: '', philosophy: '', attackTriggers: '' },
+    { name: '員工C', stance: '', philosophy: '', attackTriggers: '' },
+  ])
+
+  const isAnySeatCustomized = customSeats.some(
+    (s, idx) => s.name.trim() !== DEFAULT_SEAT_NAMES[idx] || s.stance.trim() !== '' || s.philosophy.trim() !== ''
+  )
+
+  const updateCustomSeat = (idx: number, field: keyof CustomSeatConfig, value: string) => {
+    setCustomSeats(prev => {
+      const next = [...prev]
+      next[idx] = { ...next[idx], [field]: value }
+      return next
+    })
+  }
+
+  const applyPreset = (preset: typeof ROLE_PRESETS[0]) => {
+    setCustomSeats(preset.seats.map(s => ({ ...s })))
+    setTargetSeat(preset.seats[0].name)
+    setShowRoleConfig(true)
+  }
+
+  const resetCustomSeats = () => {
+    setCustomSeats([
+      { name: '員工A', stance: '', philosophy: '', attackTriggers: '' },
+      { name: '員工B', stance: '', philosophy: '', attackTriggers: '' },
+      { name: '員工C', stance: '', philosophy: '', attackTriggers: '' },
+    ])
+    setTargetSeat('員工A')
+  }
 
   // 歷史紀錄
   const [history, setHistory] = useState<SessionSummary[]>([])
@@ -125,6 +197,16 @@ export default function RoundtablePage() {
       )
       setInstruction(session.instruction)
       setFactBriefing(session.fact_briefing ?? '')
+      if (session.seats?.length) {
+        setCustomSeats(
+          session.seats.map((s: { name?: string; stance?: string; customPhilosophy?: string; customAttackTriggers?: string }, i: number) => ({
+            name: s.name || DEFAULT_SEAT_NAMES[i],
+            stance: s.stance || '',
+            philosophy: s.customPhilosophy || '',
+            attackTriggers: s.customAttackTriggers || '',
+          }))
+        )
+      }
       setBlocks(
         (session.transcript ?? []).map((t: { round: number; name: string; content: string; stance?: string }) => ({
           round: t.round,
@@ -177,6 +259,19 @@ export default function RoundtablePage() {
     const seatExpertIds = DEFAULT_SEAT_NAMES.map((_, i) => seatExperts[i]?.[0] ?? null)
     const hasExperts = seatExpertIds.some(Boolean)
 
+    const finalSeatsToSend = customSeats.map((cs, i) => {
+      const defaultSeat = DEFAULT_SEATS[i]
+      return {
+        name: cs.name.trim() || defaultSeat.name,
+        model: defaultSeat.model,
+        role: defaultSeat.role,
+        stance: cs.stance.trim() || undefined,
+        customPhilosophy: cs.philosophy.trim() || undefined,
+        customAttackTriggers: cs.attackTriggers.trim() || undefined,
+        expertId: seatExperts[i]?.[0] || undefined,
+      }
+    })
+
     try {
       const res = await fetch('/api/roundtable', {
         method: 'POST',
@@ -184,6 +279,7 @@ export default function RoundtablePage() {
         body: JSON.stringify({
           instruction,
           domain: selectedDomain,
+          seats: finalSeatsToSend,
           seatExpertIds: hasExperts ? seatExpertIds : undefined,
           interactive: true,
         }),
@@ -475,6 +571,124 @@ export default function RoundtablePage() {
             disabled={running}
           />
 
+          {/* 自訂合夥人角色與視角觀點 (選填) */}
+          <div className="border rounded-lg overflow-hidden bg-card/50">
+            <button
+              type="button"
+              onClick={() => setShowRoleConfig(v => !v)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs text-muted-foreground hover:bg-muted/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  🎭 自訂合夥人角色與視角觀點 (選填)
+                </span>
+                {isAnySeatCustomized ? (
+                  <Badge variant="secondary" className="text-[10px] px-2 py-0 bg-primary/15 text-primary border-primary/20 font-medium">
+                    ✨ 已啟用自訂觀點 ({customSeats.filter(s => s.stance.trim() || (s.name.trim() && !DEFAULT_SEAT_NAMES.includes(s.name.trim()))).length} 席)
+                  </Badge>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                    (可設定摩根大通、先鋒、大摩、或企業高管等多元視角)
+                  </span>
+                )}
+              </div>
+              {showRoleConfig ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+
+            {showRoleConfig && (
+              <div className="border-t p-3.5 space-y-3.5 bg-muted/10">
+                {/* 快捷範本按鈕 */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted-foreground">⚡ 一鍵套用經典對立組合：</span>
+                    {isAnySeatCustomized && (
+                      <button
+                        type="button"
+                        onClick={resetCustomSeats}
+                        className="text-[11px] text-primary hover:underline"
+                      >
+                        🔄 恢復領域預設學派
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ROLE_PRESETS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => applyPreset(preset)}
+                        className="text-xs px-2.5 py-1 rounded-md border bg-background hover:bg-muted/60 transition-colors text-left"
+                        title={preset.description}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 三席位編輯卡片 */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  {customSeats.map((seat, i) => (
+                    <div key={i} className="rounded-lg border p-3 space-y-2.5 bg-background text-xs shadow-xs">
+                      <div className="flex items-center justify-between border-b pb-1.5">
+                        <Badge variant="outline" className="font-semibold text-xs">
+                          席位 {i === 0 ? 'A' : i === 1 ? 'B' : 'C'}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {DEFAULT_SEATS[i].model}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">席位名稱 / 代表機構</label>
+                        <input
+                          type="text"
+                          value={seat.name}
+                          onChange={e => updateCustomSeat(i, 'name', e.target.value)}
+                          placeholder={DEFAULT_SEAT_NAMES[i]}
+                          className="w-full text-xs px-2.5 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">戰略學派 / 視角觀點</label>
+                        <input
+                          type="text"
+                          value={seat.stance}
+                          onChange={e => updateCustomSeat(i, 'stance', e.target.value)}
+                          placeholder={`預設：${DOMAIN_PRESETS[selectedDomain]?.stances[i]?.title || '學派立場'}`}
+                          className="w-full text-xs px-2.5 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">底層哲學 / 關注指標 (選填)</label>
+                        <input
+                          type="text"
+                          value={seat.philosophy}
+                          onChange={e => updateCustomSeat(i, 'philosophy', e.target.value)}
+                          placeholder="例如：重視流動性與資本成本"
+                          className="w-full text-xs px-2.5 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">挑刺開砲觸發點 (選填)</label>
+                        <input
+                          type="text"
+                          value={seat.attackTriggers}
+                          onChange={e => updateCustomSeat(i, 'attackTriggers', e.target.value)}
+                          placeholder="例如：抨擊忽視資本成本上升"
+                          className="w-full text-xs px-2.5 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* 專家知識設定（選填） */}
           <div className="border rounded-lg overflow-hidden">
             <button
@@ -487,16 +701,19 @@ export default function RoundtablePage() {
             </button>
             {showExpertConfig && (
               <div className="border-t divide-y">
-                {DEFAULT_SEAT_NAMES.map((name, i) => (
-                  <div key={name} className="p-2.5 space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">{name} 專屬知識庫</p>
-                    <ExpertSelector
-                      selectedIds={seatExperts[i] ?? []}
-                      onChange={ids => setSeatExpert(i, ids)}
-                      single
-                    />
-                  </div>
-                ))}
+                {DEFAULT_SEAT_NAMES.map((name, i) => {
+                  const displayName = customSeats[i]?.name.trim() || name
+                  return (
+                    <div key={name} className="p-2.5 space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">{displayName} 專屬知識庫</p>
+                      <ExpertSelector
+                        selectedIds={seatExperts[i] ?? []}
+                        onChange={ids => setSeatExpert(i, ids)}
+                        single
+                      />
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -687,11 +904,14 @@ export default function RoundtablePage() {
                 <select
                   value={targetSeat}
                   onChange={e => setTargetSeat(e.target.value)}
-                  className="border rounded px-2 py-1 bg-background text-foreground"
+                  className="border rounded px-2 py-1 bg-background text-foreground font-medium"
                 >
-                  {DEFAULT_SEAT_NAMES.map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
+                  {customSeats.map((cs, i) => {
+                    const n = cs.name.trim() || DEFAULT_SEAT_NAMES[i]
+                    return (
+                      <option key={n} value={n}>{n}</option>
+                    )
+                  })}
                 </select>
                 <label className="flex items-center gap-1.5 cursor-pointer ml-auto">
                   <input

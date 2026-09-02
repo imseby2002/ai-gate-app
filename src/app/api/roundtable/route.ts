@@ -59,7 +59,12 @@ export async function POST(req: NextRequest) {
   }
 
   let resolvedSeats: Seat[] | undefined = seats
-  if (!resolvedSeats && seatExpertIds?.length) {
+  if (resolvedSeats && seatExpertIds?.length) {
+    resolvedSeats = resolvedSeats.map((seat, i) => ({
+      ...seat,
+      expertId: seat.expertId ?? seatExpertIds[i] ?? undefined,
+    }))
+  } else if (!resolvedSeats && seatExpertIds?.length) {
     resolvedSeats = DEFAULT_SEATS.map((seat, i) => ({
       ...seat,
       expertId: seatExpertIds[i] ?? undefined,
