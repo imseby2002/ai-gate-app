@@ -18,8 +18,11 @@ import {
   FileText,
   UserCheck,
   CheckCircle2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
+import { cn } from '@/lib/utils/cn'
 import type { RoundtableDomain } from '@/lib/ai/roundtable'
 
 interface SeatBlock {
@@ -81,6 +84,18 @@ export default function RoundtablePage() {
   const [loadingSession, setLoadingSession] = useState(false)
   const [viewingId, setViewingId] = useState<string | null>(null)
 
+  // 版面極大化與側邊欄動態收合聯動
+  const [isWideView, setIsWideView] = useState(true)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  const toggleSidebar = (collapse?: boolean) => {
+    const next = collapse !== undefined ? collapse : !sidebarCollapsed
+    setSidebarCollapsed(next)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sidebar:collapse', { detail: { collapsed: next } }))
+    }
+  }
+
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -125,6 +140,9 @@ export default function RoundtablePage() {
       setViewingId(session.id)
       setWaitingBoss(session.status === 'waiting_boss' && !session.report)
       setShowHistory(false)
+      // 載入紀錄時自動極大化
+      toggleSidebar(true)
+      setIsWideView(true)
     } finally {
       setLoadingSession(false)
     }
@@ -138,6 +156,11 @@ export default function RoundtablePage() {
 
   async function start() {
     if (!instruction.trim() || running) return
+
+    // 開始會議時，自動將左側功能表縮小，盡量佔滿整個螢幕，讓三個員工視窗極大化
+    toggleSidebar(true)
+    setIsWideView(true)
+
     setRunning(true)
     setBlocks([])
     setFactBriefing('')
@@ -327,8 +350,15 @@ export default function RoundtablePage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-4xl space-y-6 p-6">
-        {/* 標題與歷史紀錄按鈕 */}
+      <div
+        className={cn(
+          "mx-auto space-y-6 transition-all duration-300 ease-in-out",
+          isWideView && (blocks.length > 0 || running)
+            ? "max-w-[1800px] w-full px-4 md:px-8 py-6"
+            : "max-w-4xl px-4 md:px-6 py-6"
+        )}
+      >
+        {/* 標題與操作按鈕 */}
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -339,10 +369,25 @@ export default function RoundtablePage() {
               客觀事實查核先行，三大戰略學派平行激辯。老闆全程掌握主持權，隨時追問挑刺、一鍵收斂決策報告。
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowHistory(v => !v)}>
-            <History className="mr-1.5 h-4 w-4" />
-            歷史紀錄
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = !isWideView
+                setIsWideView(next)
+                toggleSidebar(next)
+              }}
+              title={isWideView ? '收合為標準寬度' : '切換為寬螢幕極大化'}
+            >
+              {isWideView ? <Minimize2 className="mr-1.5 h-4 w-4" /> : <Maximize2 className="mr-1.5 h-4 w-4" />}
+              {isWideView ? '極大化視窗' : '標準視窗'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowHistory(v => !v)}>
+              <History className="mr-1.5 h-4 w-4" />
+              歷史紀錄
+            </Button>
+          </div>
         </div>
 
         {/* 歷史紀錄抽屜 */}
@@ -507,7 +552,7 @@ export default function RoundtablePage() {
               </Button>
             </div>
             {showFactBriefing && (
-              <div className="whitespace-pre-wrap text-sm leading-relaxed border-t pt-2 max-h-96 overflow-y-auto font-mono text-xs">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed border-t pt-3 max-h-[500px] overflow-y-auto font-mono text-xs bg-background/50 p-3 rounded mt-2 border">
                 {factBriefing}
               </div>
             )}
@@ -540,22 +585,22 @@ export default function RoundtablePage() {
                 </h2>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-3">
                 {seatItems.map((b, i) => (
-                  <Card key={`${roundNum}-${b.name}-${i}`} className="p-4 space-y-2 flex flex-col justify-between">
+                  <Card key={`${roundNum}-${b.name}-${i}`} className="p-5 space-y-3 flex flex-col justify-between border shadow-sm hover:shadow-md transition-shadow bg-card/95">
                     <div>
-                      <div className="flex items-center justify-between gap-1 mb-2">
-                        <Badge variant="outline" className="font-semibold">{b.name}</Badge>
-                        {b.model && <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{b.model}</span>}
-                      </div>
-                      {b.stance && (
-                        <div className="mb-2">
-                          <Badge className="bg-secondary text-secondary-foreground text-[11px] font-normal">
-                            {b.stance}
-                          </Badge>
+                      <div className="flex items-center justify-between gap-1 mb-2.5 pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-semibold text-xs px-2.5 py-0.5">{b.name}</Badge>
+                          {b.stance && (
+                            <Badge className="bg-secondary text-secondary-foreground text-[11px] font-normal">
+                              {b.stance}
+                            </Badge>
+                          )}
                         </div>
-                      )}
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed max-h-96 overflow-y-auto">
+                        {b.model && <span className="text-[11px] text-muted-foreground font-mono truncate max-w-[150px]">{b.model}</span>}
+                      </div>
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed max-h-[600px] overflow-y-auto pr-1 text-foreground/90">
                         {b.content ? (
                           b.content
                         ) : b.error ? (

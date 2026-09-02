@@ -68,6 +68,20 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
     if (isSystemKey(ss)) setScope(ss)
   }, [])
 
+  // 支援全域事件動態控制收合 (例如圓桌會議啟動時極大化主視窗)
+  useEffect(() => {
+    const handleCollapseEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ collapsed?: boolean }>
+      if (customEvent.detail?.collapsed !== undefined) {
+        setCollapsed(Boolean(customEvent.detail.collapsed))
+      } else {
+        setCollapsed(true)
+      }
+    }
+    window.addEventListener('sidebar:collapse', handleCollapseEvent)
+    return () => window.removeEventListener('sidebar:collapse', handleCollapseEvent)
+  }, [])
+
   // 連結可見性：管理員看全部；非管理員若帶系統範圍（scope）只看該系統，否則依 enabled_modules
   const isVisible = (item: NavItem) => {
     if (item.alwaysShow) return true
