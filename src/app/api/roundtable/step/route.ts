@@ -131,6 +131,7 @@ export async function POST(req: NextRequest) {
         emit({ type: 'error', name: 'system', error: String(err) })
       } finally {
         // 更新資料庫
+        const updatedTranscript = [...priorTranscript, ...newStatements]
         const { error: updErr } = await supabase
           .from('roundtable_sessions')
           .update({
