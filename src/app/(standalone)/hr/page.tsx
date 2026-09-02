@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet } from 'lucide-react'
+import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
+import { ContractsTab } from '@/components/hr/ContractsTab'
+import { UnionTab } from '@/components/hr/UnionTab'
 
 // ─── Types ───────────────────────────────────────────────────────
-type Tab = 'recruitment' | 'employees' | 'evaluation' | 'payroll' | 'attendance' | 'insurance' | 'leave'
+type Tab = 'recruitment' | 'attendance' | 'payroll' | 'evaluation' | 'contracts' | 'insurance' | 'union' | 'employees' | 'leave'
 
 interface Employee {
   id: string
@@ -741,17 +743,38 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
     load()
   }
 
+  const [sendingPayslips, setSendingPayslips] = useState(false)
+
   async function exportBank() {
     setErr(''); setExporting(true)
     try {
-      const res = await fetch(`/api/hr/payroll/bank-export?year=${year}&month=${month}`)
+      const res = await fetch(`/api/hr/payroll/tpbank-export?year=${year}&month=${month}`)
       if (!res.ok) { setErr('匯出失敗'); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = `TPBank_salary_${year}_${String(month).padStart(2, '0')}.xlsx`
+      a.href = url; a.download = `TPBank_Salary_T${month}_${year}.xlsx`
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
     } catch { setErr('匯出失敗') } finally { setExporting(false) }
+  }
+
+  async function sendPayslips() {
+    if (payroll.length === 0) return
+    if (!confirm(`確定要透過 Zalo OA 與 Email 向本月 ${payroll.length} 位員工私密發送個人電子薪資條？`)) return
+    setSendingPayslips(true)
+    try {
+      const res = await fetch('/api/hr/payroll/send-payslip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payroll_ids: payroll.map(p => p.id) }),
+      })
+      const d = await res.json()
+      if (res.ok) alert(`🎉 已成功發送 ${d.sentCount} 則電子薪資條！員工可點擊專屬連結在手機線上確認簽收回執。`)
+      else alert(d.error ?? '發送失敗')
+    } catch (e: any) {
+      alert(e.message)
+    }
+    setSendingPayslips(false)
   }
 
   const totalNet = payroll.reduce((s, p) => s + (p.net_pay ?? 0), 0)
@@ -774,13 +797,16 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1" onClick={exportBank} disabled={exporting || payroll.length === 0} title="依 TPBank 範本匯出本月撥款檔">
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}銀行撥款檔
+          <Button size="sm" variant="outline" className="gap-1 bg-indigo-50/70 border-indigo-200 text-indigo-700 hover:bg-indigo-100" onClick={sendPayslips} disabled={sendingPayslips || payroll.length === 0} title="透過 Zalo OA / Email 發送個人專屬電子薪資條">
+            {sendingPayslips ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}發送電子薪資條 (Zalo/Email)
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportBank} disabled={exporting || payroll.length === 0} title="一鍵下載符合 TPBank 官方格式之企業網銀薪資檔 (Chuyển tiền chi lương)">
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}下載 TPBank 專用薪資表
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
           </Button>
-          <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
+          <Button size="sm" className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => { setShowForm(true); setEditing(null) }}>
             <Plus className="h-4 w-4" />新增薪資單
           </Button>
         </div>
@@ -856,7 +882,16 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                 <>
                   <tr key={p.id} className="border-b hover:bg-gray-50">
                     <td className="py-2.5 pr-4">
-                      <div className="font-medium">{p.hr_employees?.name ?? '—'}</div>
+                      <div className="font-medium flex items-center gap-1.5">
+                        <span>{p.hr_employees?.name ?? '—'}</span>
+                        {(() => {
+                          const emp = employees.find(e => e.id === p.employee_id)
+                          if (emp?.staff_category === 'hourly' && (p.net_pay ?? 0) >= 5000000) {
+                            return <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold" title="越南社保法：兼職單月薪資滿500萬需強制加保">🚨 需加保</span>
+                          }
+                          return null
+                        })()}
+                      </div>
                       <div className="text-xs text-gray-400">{p.hr_employees?.department} {p.hr_employees?.position}</div>
                     </td>
                     <td className="text-right py-2.5 px-3 tabular-nums">{fmt(p.base_salary)}</td>
@@ -1109,6 +1144,18 @@ function AttendanceTab() {
 
   return (
     <div className="space-y-4">
+      {/* 考勤機來源端與雙軌制說明卡片 */}
+      <div className="p-3 bg-slate-50 border rounded-xl flex items-center justify-between text-xs flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-slate-700">考勤機後台來源端：</span>
+          <a href="http://222.252.17.12/" target="_blank" rel="noreferrer" className="bg-white px-2 py-0.5 rounded border text-indigo-600 font-mono hover:underline">
+            http://222.252.17.12/
+          </a>
+          <span className="text-slate-500">· 帳號密碼預存於設定，支援月中/月底排程匯出與手動上傳 bcc yl t7.xls</span>
+        </div>
+        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">雙軌同步已啟用</span>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <InputEl value={year} onChange={v => setYear(parseInt(v) || year)} type="number" />
         <div className="flex gap-0.5">
@@ -1986,16 +2033,18 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
     load(); onRefresh()
   }
 
-  const exportList = async () => {
+  const exportList = async (mode = 'd02lt') => {
     setExporting(true)
     try {
-      const res = await fetch('/api/hr/insurance-export')
+      const res = await fetch(`/api/hr/insurance-export?mode=${mode}`)
       if (!res.ok) { alert('匯出失敗'); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = `insurance_application_${year}${String(month).padStart(2, '0')}.xlsx`
-      a.click(); URL.revokeObjectURL(url)
+      a.href = url
+      a.download = mode === 'tk1ts' ? `Mau_TK1_TS_${year}${String(month).padStart(2, '0')}.xlsx` : `Mau_D02_LT_${year}${String(month).padStart(2, '0')}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
     } finally { setExporting(false) }
   }
 
@@ -2006,9 +2055,9 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className="font-semibold">保險彙整</h3>
+          <h3 className="font-semibold">社會保險管理與合規通報 (BHXH / BHYT / BHTN)</h3>
           <p className="text-sm text-gray-500">
-            正職一律投保；工讀{mode === 'all' ? '（全員投保）' : `當月薪資 > ${fmt(threshold)} 才需投保`}。依當月薪資自動判定。
+            越南《社會保險法》合規：正職一律投保；兼職單月薪資 ≥ 5,000,000 VND 自動觸發加保預警。支援對接 VssID 與社保軟體。
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -2022,14 +2071,17 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <Button size="sm" className="gap-1.5" onClick={aggregate} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}依當月薪資重新彙整
+        <Button size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={aggregate} disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}依當月薪資重新檢核（500萬加保預警）
         </Button>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
           <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
         </Button>
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={exportList} disabled={exporting}>
-          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出保險申請名單
+        <Button size="sm" variant="outline" className="gap-1.5 border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100" onClick={() => exportList('d02lt')} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出 Mẫu D02-LT (VNPT/Viettel-BHXH)
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1.5 border-blue-300 text-blue-700 bg-blue-50/50 hover:bg-blue-100" onClick={() => exportList('tk1ts')} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出 Mẫu TK1-TS (新進參保清冊)
         </Button>
         <span className="text-sm text-gray-500 ml-1">需投保 <b>{needCount}</b> 人，待處理 <b className="text-amber-600">{gapCount}</b> 人</span>
       </div>
@@ -2132,13 +2184,15 @@ export default function HRPage() {
   useEffect(() => { loadEmployees() }, [loadEmployees])
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: 'recruitment', label: '應徵管理', icon: <UserPlus className="h-4 w-4" /> },
-    { id: 'employees', label: '員工管理', icon: <Users className="h-4 w-4" /> },
-    { id: 'evaluation', label: '人員評估', icon: <ClipboardCheck className="h-4 w-4" /> },
-    { id: 'payroll',   label: '薪資管理', icon: <DollarSign className="h-4 w-4" /> },
-    { id: 'attendance', label: '考勤時數', icon: <Clock className="h-4 w-4" /> },
-    { id: 'insurance', label: '保險', icon: <Shield className="h-4 w-4" /> },
-    { id: 'leave',     label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
+    { id: 'recruitment', label: '1. 應徵入職', icon: <UserPlus className="h-4 w-4" /> },
+    { id: 'attendance',  label: '2. 考勤工時', icon: <Clock className="h-4 w-4" /> },
+    { id: 'payroll',     label: '3. 薪資發薪 (TPBank)', icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'evaluation',  label: '4. 考核評分', icon: <ClipboardCheck className="h-4 w-4" /> },
+    { id: 'contracts',   label: '5. 勞動合同', icon: <FileText className="h-4 w-4" /> },
+    { id: 'insurance',   label: '6. 社會保險', icon: <Shield className="h-4 w-4" /> },
+    { id: 'union',       label: '7. 工會系統', icon: <HeartHandshake className="h-4 w-4 text-red-600" /> },
+    { id: 'employees',   label: '員工名冊', icon: <Users className="h-4 w-4" /> },
+    { id: 'leave',       label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
   ]
 
   if (isAdmin === false) {
@@ -2161,8 +2215,8 @@ export default function HRPage() {
           <Building2 className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">人事管理</h1>
-          <p className="text-sm text-gray-500">員工資料、薪資計算、請假管理</p>
+          <h1 className="text-2xl font-bold">人事部門・人力資源管理系統</h1>
+          <p className="text-sm text-gray-500">應徵入職、考勤工時、薪資與 TPBank 發薪、勞動合同、社會保險、工會系統</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-gray-400 mr-1">
@@ -2197,10 +2251,10 @@ export default function HRPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit flex-wrap">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all"
             style={tab === t.id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
             {t.icon}{t.label}
           </button>
@@ -2210,11 +2264,13 @@ export default function HRPage() {
       {/* Tab Content */}
       <Card className="p-5">
         {tab === 'recruitment' && <RecruitmentTab onHired={loadEmployees} />}
-        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
-        {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} />}
-        {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
         {tab === 'attendance' && <AttendanceTab />}
+        {tab === 'payroll'   && <PayrollTab employees={employees} loading={empLoading} onRefresh={loadEmployees} />}
+        {tab === 'evaluation' && <EvaluationTab employees={employees} loading={empLoading} />}
+        {tab === 'contracts' && <ContractsTab employees={employees} />}
         {tab === 'insurance' && <InsuranceTab onRefresh={loadEmployees} />}
+        {tab === 'union'     && <UnionTab />}
+        {tab === 'employees' && <EmployeesTab employees={employees} loading={empLoading} onRefresh={loadEmployees} settings={settings} onSettingsChange={setSettings} />}
         {tab === 'leave'     && <LeaveTab employees={employees} loading={empLoading} />}
       </Card>
     </div>

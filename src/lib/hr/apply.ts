@@ -20,20 +20,20 @@ export interface DocSpec {
   categories: DocCategory[] // 勞動 / 保險 / 所得稅
 }
 
-// 完整文件目錄（依 HO_SO_NHAN_VIEN：勞動＋保險＋所得稅）
-// 一次要齊所有日後會用到的檔案，不等到要用時才補件。
+// 完整文件目錄（嚴格對接越南勞動法與門市必備 7 大文件清單＋常規檔案）
 export const DOC_CATALOG: DocSpec[] = [
-  { type: 'resume',       label: '履歷（公證正本）', copy: 'original', categories: ['recruit', 'insurance'] },
-  { type: 'id_card',      label: '公民身分證(CCCD)', copy: 'copy',     categories: ['recruit', 'insurance', 'tax'] },
-  { type: 'application',  label: '求職申請書',       copy: 'original', categories: ['recruit'] },
-  { type: 'cv',           label: 'CV',               copy: 'copy',     categories: ['recruit'] },
-  { type: 'diploma',      label: '學歷／證照／成績單', copy: 'copy',   categories: ['recruit'] },
-  { type: 'student_card', label: '學生證',           copy: 'copy',     categories: ['recruit'] },
-  { type: 'health',       label: '健康檢查（正本）', copy: 'original', categories: ['recruit', 'insurance'] },
-  { type: 'birth',        label: '出生證明',         copy: 'copy',     categories: ['insurance'] },
-  { type: 'vneid',        label: 'VNEID（電子身分）', copy: 'copy',    categories: ['insurance', 'tax'] },
-  { type: 'residence',    label: '居住證明',         copy: 'copy',     categories: ['insurance'] },
-  { type: 'other',        label: '其他',             copy: 'copy',     categories: ['recruit'] },
+  { type: 'cccd_notarized', label: 'CCCD公證影本 (Bản sao công chứng CCCD - 2份)', copy: 'both', categories: ['recruit', 'insurance', 'tax'] },
+  { type: 'curriculum_vitae', label: '個人履歷自傳表 (Sơ yếu lý lịch - 需人委會蓋章)', copy: 'original', categories: ['recruit', 'insurance'] },
+  { type: 'health_cert', label: '餐飲體檢證明 (Giấy khám sức khỏe - 通報32/2023二級醫院)', copy: 'original', categories: ['recruit', 'insurance'] },
+  { type: 'bank_account', label: 'TPBank 銀行帳戶存摺/截圖 (Thông tin tài khoản ngân hàng)', copy: 'copy', categories: ['recruit'] },
+  { type: 'tax_bhxh', label: '個人稅號與社保代碼 (Mã số thuế MST & Mã số BHXH)', copy: 'copy', categories: ['insurance', 'tax'] },
+  { type: 'residence_proof', label: '居住證明 CT07/CT08 (Giấy xác nhận thông tin cư trú)', copy: 'copy', categories: ['insurance'] },
+  { type: 'photo_id', label: '大頭照 3x4 / 4x6 (Ảnh 3x4 hoặc 4x6製作工卡)', copy: 'original', categories: ['recruit'] },
+  // 相容歷史既有選項
+  { type: 'id_card', label: '身分證 (CCCD 正反面)', copy: 'copy', categories: ['recruit'] },
+  { type: 'resume', label: '應徵履歷表 (CV)', copy: 'copy', categories: ['recruit'] },
+  { type: 'diploma', label: '學歷／證照／成績單 (Bằng cấp)', copy: 'copy', categories: ['recruit'] },
+  { type: 'other', label: '其他補充文書 (Khác)', copy: 'copy', categories: ['recruit'] },
 ]
 
 // 相容舊介面
