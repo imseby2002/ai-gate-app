@@ -4592,14 +4592,14 @@ function UnitPlanLock({ requiredPlan, currentPlan }: { requiredPlan: string | nu
   return (
     <div className="flex items-center justify-center min-h-[280px]">
       <div className="max-w-sm w-full rounded-2xl border bg-white p-8 text-center space-y-4">
-        <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-          <Lock className="h-5 w-5 text-gray-400" />
+        <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+          <Lock className="h-5 w-5 text-muted-foreground" />
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           此單元需 {requiredPlan} 方案，目前方案：{currentPlan === 'free' ? '免費' : currentPlan.toUpperCase()}
         </p>
         <a href="/marketing/plan"
-          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-indigo-600">
+          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-sm font-semibold text-primary-foreground bg-primary">
           查看方案並升級
         </a>
       </div>
