@@ -62,10 +62,9 @@ export default function StoreInventoryPage() {
         </label>
       </Card>
 
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
         {TABS.map(([id, label, icon]) => (
-          <button key={id} onClick={() => setTab(id)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={tab === id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
+          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
             {icon}{label}
           </button>
         ))}

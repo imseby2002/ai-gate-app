@@ -114,8 +114,8 @@ export default function AffairsPage() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-          <FileText className="h-5 w-5 text-indigo-600" />
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+          <FileText className="h-5 w-5 text-primary" />
         </div>
         <div>
           <h1 className="text-2xl font-bold">外務部門・租約與證書管理</h1>
@@ -130,13 +130,12 @@ export default function AffairsPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
         {([['docs', '文件與合約', <FileText key="a" className="h-4 w-4" />], ['settings', '通知管道與提醒天數設定', <Bell key="b" className="h-4 w-4" />]] as [Tab, string, ReactNode][]).map(([id, label, icon]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={tab === id ? { background: 'white', color: '#4f46e5', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}
           >
             {icon}{label}
           </button>

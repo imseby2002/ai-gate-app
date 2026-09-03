@@ -74,10 +74,9 @@ export default function StoreExpensesPage() {
         <div className="ml-auto"><Link href="/finance"><Button variant="outline" size="sm" className="gap-1.5"><Wallet className="h-4 w-4" />出納總務</Button></Link></div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all"
-            style={tab === t.id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
             {t.icon}{t.label}
           </button>
         ))}
@@ -198,7 +197,7 @@ function VendorsTab() {
                 {regions.length === 0 && <span className="text-xs text-gray-400">尚無區域，請先於門市設定區域</span>}
                 {regions.map(r => (
                   <button key={r} onClick={() => toggleRegion(r)} type="button"
-                    className={`text-xs px-2 py-1 rounded border ${(editing.regions ?? []).includes(r) ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600'}`}>{r}</button>
+                    className={`text-xs px-2 py-1 rounded border ${(editing.regions ?? []).includes(r) ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground'}`}>{r}</button>
                 ))}
               </div>
             </div>
@@ -296,13 +295,13 @@ function BillsTab() {
         : stores.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無門市，請先到「門市／區域」新增。</div>
         : <div className="overflow-x-auto"><table className="text-sm border-collapse">
           <thead><tr className="text-gray-500 border-b">
-            <th className="text-left py-2 pr-3 sticky left-0 bg-white">門市</th>
+            <th className="text-left py-2 pr-3 sticky left-0 bg-card">門市</th>
             {cats.map(c => <th key={c.code} className="px-2 text-right whitespace-nowrap">{c.name || c.code}</th>)}
             <th className="px-2 text-right">合計</th>
           </tr></thead>
           <tbody>{stores.map(st => (
             <tr key={st.code} className="border-b last:border-0">
-              <td className="py-1 pr-3 sticky left-0 bg-white"><span className="font-medium">{st.code}</span>{st.region && <span className="text-gray-400 text-xs ml-1">{st.region}</span>}</td>
+              <td className="py-1 pr-3 sticky left-0 bg-card"><span className="font-medium">{st.code}</span>{st.region && <span className="text-gray-400 text-xs ml-1">{st.region}</span>}</td>
               {cats.map(c => (
                 <td key={c.code} className="px-1">
                   <input type="number" value={amounts[billKey(st.code, c.code)] ?? ''}
@@ -314,7 +313,7 @@ function BillsTab() {
               <td className="px-2 text-right tabular-nums font-medium">{fmt(rowTotal(st.code))}</td>
             </tr>))}
             <tr className="border-t font-medium">
-              <td className="py-2 pr-3 sticky left-0 bg-white">合計</td>
+              <td className="py-2 pr-3 sticky left-0 bg-card">合計</td>
               {cats.map(c => <td key={c.code} className="px-2 text-right tabular-nums">{fmt(colTotal(c.code))}</td>)}
               <td className="px-2 text-right tabular-nums">{fmt(stores.reduce((s, st) => s + rowTotal(st.code), 0))}</td>
             </tr>
@@ -580,7 +579,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
+      <div className="bg-card rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between"><h3 className="font-semibold">{title}</h3><button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button></div>
         {children}
       </div>

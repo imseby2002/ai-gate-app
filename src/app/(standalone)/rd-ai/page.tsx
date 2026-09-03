@@ -87,9 +87,9 @@ export default function RdAiPage() {
         {/* 主畫面 */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center gap-2 mb-2">
-            <div className="flex gap-1 p-0.5 bg-gray-100 rounded-lg">
-              <button onClick={() => setMode('discuss')} className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium" style={mode === 'discuss' ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}><MessageCircle className="h-3.5 w-3.5" />討論</button>
-              <button onClick={() => setMode('guide')} className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium" style={mode === 'guide' ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}><Compass className="h-3.5 w-3.5" />引導</button>
+            <div className="flex gap-1 p-0.5 bg-muted rounded-lg">
+              <button onClick={() => setMode('discuss')} className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium ${mode === 'discuss' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}><MessageCircle className="h-3.5 w-3.5" />討論</button>
+              <button onClick={() => setMode('guide')} className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium ${mode === 'guide' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}><Compass className="h-3.5 w-3.5" />引導</button>
             </div>
             <button onClick={() => setSuggest(v => !v)} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border ${suggest ? 'bg-amber-50 text-amber-700 border-amber-300' : 'text-gray-500 border-gray-200'}`}><Lightbulb className="h-3.5 w-3.5" />建議</button>
             <span className="text-xs text-gray-400 ml-1">{mode === 'discuss' ? '討論式：一起討論、不直接給答案' : '引導式：一步步帶你推進'}{suggest ? '｜右側顯示建議答案' : ''}</span>
@@ -148,7 +148,7 @@ function KnowledgePanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
-      <div className="bg-white w-full max-w-md h-full overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+      <div className="bg-card w-full max-w-md h-full overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between"><h3 className="font-semibold flex items-center gap-1.5"><BookOpen className="h-4 w-4" />研發知識庫</h3><button onClick={onClose}><X className="h-5 w-5 text-gray-400" /></button></div>
         <p className="text-xs text-gray-500">補充訓練資料（配方、公司產品、外部相關產品、筆記），AI 對話時會參考。</p>
         <div className="space-y-2 border rounded-lg p-3 bg-gray-50">
