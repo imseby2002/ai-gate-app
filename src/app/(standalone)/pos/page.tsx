@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Store, UtensilsCrossed, ClipboardList, Monitor } from 'lucide-react'
+import { Store, UtensilsCrossed, ClipboardList, Monitor, ShoppingBag } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 
 const LINKS = [
@@ -13,10 +13,13 @@ const LINKS = [
 
 export default function PosHubPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold">門市點單</h1>
-        <p className="text-sm text-muted-foreground">雲端編輯菜單、多店同步；Debian 終端離線點單後上傳。</p>
+    <div className="mx-auto max-w-3xl px-6 py-6 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><ShoppingBag className="h-5 w-5 text-primary" /></div>
+        <div>
+          <h1 className="text-2xl font-bold">門市點單</h1>
+          <p className="text-sm text-muted-foreground">雲端編輯菜單、多店同步；Debian 終端離線點單後上傳。</p>
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {LINKS.map(l => (

@@ -64,11 +64,11 @@ export default function RunDetailPage({ params }: { params: Promise<{ runId: str
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
   }
   if (!run) {
-    return <div className="px-8 py-8"><p className="text-sm text-muted-foreground">找不到此執行紀錄。</p></div>
+    return <div className="px-6 py-6"><p className="text-sm text-muted-foreground">找不到此執行紀錄。</p></div>
   }
 
   return (
-    <div className="px-8 py-8 space-y-6 max-w-4xl mx-auto">
+    <div className="px-6 py-6 space-y-6 max-w-4xl mx-auto">
       <Link href="/agent" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
         <ArrowLeft className="h-4 w-4" />返回
       </Link>

@@ -113,7 +113,7 @@ export default function AgentPage() {
   }
 
   return (
-    <div className="px-8 py-8 space-y-6 max-w-5xl mx-auto">
+    <div className="px-6 py-6 space-y-5 max-w-5xl mx-auto">
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-700 to-zinc-900 flex items-center justify-center">
           <Bot className="h-5 w-5 text-white" />
