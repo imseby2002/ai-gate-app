@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/lib/supabase/client'
+import { ClipboardList } from 'lucide-react'
 import type { PosCartLine, PosOrderStatus } from '@/lib/pos/types'
 
 interface OrderRow {
@@ -66,8 +67,11 @@ export default function PosOrdersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 p-6">
-      <h1 className="text-2xl font-bold">訂單管理</h1>
+    <div className="mx-auto max-w-3xl px-6 py-6 space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><ClipboardList className="h-5 w-5 text-primary" /></div>
+        <h1 className="text-2xl font-bold">訂單管理</h1>
+      </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant={!filter ? 'default' : 'outline'} onClick={() => setFilter('')}>全部</Button>
         {STATUS.map(s => (

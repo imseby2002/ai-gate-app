@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { PosCategory, PosItem } from '@/lib/pos/types'
 import type { PosTranslations } from '@/lib/pos/i18n'
 import { DEFAULT_MODIFIER_GROUPS } from '@/lib/pos/types'
-import { Loader2, Sparkles, Upload, FileSpreadsheet } from 'lucide-react'
+import { Loader2, Sparkles, Upload, FileSpreadsheet, UtensilsCrossed } from 'lucide-react'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
@@ -189,11 +189,14 @@ export default function PosMenuPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-4xl px-6 py-6 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">菜單編輯</h1>
-          <p className="text-sm text-muted-foreground">上傳圖片、多語系名稱與描述，Kiosk 依語言顯示</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><UtensilsCrossed className="h-5 w-5 text-primary" /></div>
+          <div>
+            <h1 className="text-2xl font-bold">菜單編輯</h1>
+            <p className="text-sm text-muted-foreground">上傳圖片、多語系名稱與描述，Kiosk 依語言顯示</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">版本 {revision}</Badge>
