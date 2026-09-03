@@ -768,13 +768,13 @@ export default function WorkerToolsPage() {
             <ArrowLeft className="h-4 w-4" />{t('back')}
           </button>
         )}
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Zap className="h-6 w-6" style={{ color: 'var(--primary)' }} />
-            {t('pageTitle')}
-          </h1>
-          {!selectedTool && <p className="text-gray-500 text-sm mt-1">{t('pageSubtitle')}</p>}
-          {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Zap className="h-5 w-5 text-primary" /></div>
+          <div>
+            <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
+            {!selectedTool && <p className="text-gray-500 text-sm mt-1">{t('pageSubtitle')}</p>}
+            {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Link href="/office">

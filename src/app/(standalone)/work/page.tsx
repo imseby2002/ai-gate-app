@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Building2, Wallet, UtensilsCrossed, Mic, FlaskConical, FileSpreadsheet } from 'lucide-react'
+import { Building2, Wallet, UtensilsCrossed, Mic, FlaskConical, FileSpreadsheet, ClipboardList } from 'lucide-react'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
@@ -388,9 +388,12 @@ export default function WorkPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5 p-6">
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><ClipboardList className="h-5 w-5 text-primary" /></div>
+          <div>
+            <h1 className="text-2xl font-bold">{t('title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/office">
