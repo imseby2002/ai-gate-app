@@ -546,6 +546,15 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     onRefresh()
   }
 
+  // 清單的 id_number／bank_account 為遮罩值，編輯時改抓單筆原始值
+  const startEdit = async (emp: Employee) => {
+    setShowForm(false)
+    setEditing(emp)
+    const res = await fetch(`/api/hr/employees?id=${emp.id}`)
+    const d = await res.json().catch(() => null)
+    if (d?.employee) setEditing(d.employee)
+  }
+
   const filtered = statusFilter === 'all' ? employees : employees.filter(e => e.status === statusFilter)
 
   return (
@@ -634,7 +643,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(emp); setShowForm(false) }}>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => startEdit(emp)}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-500" onClick={() => remove(emp.id)}>

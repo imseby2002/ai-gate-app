@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
+import { maskIdNumber, maskBankAccount } from '@/lib/utils/mask'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
@@ -7,9 +8,21 @@ async function getAdminUser() {
   return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
-export async function GET() {
+// 清單：遮罩身分證字號／銀行帳號。?id= 取單筆原始值（供編輯表單使用）
+export async function GET(req: NextRequest) {
   const { user, supabase, status: authStatus } = await getAdminUser()
   if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
+
+  const id = new URL(req.url).searchParams.get('id')
+  if (id) {
+    const { data, error } = await supabase
+      .from('hr_employees')
+      .select('*')
+      .eq('id', id).eq('owner_id', user.id)
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+    return NextResponse.json({ employee: data })
+  }
 
   const { data, error } = await supabase
     .from('hr_employees')
@@ -18,7 +31,8 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ employees: data })
+  const employees = (data ?? []).map(e => ({ ...e, id_number: maskIdNumber(e.id_number), bank_account: maskBankAccount(e.bank_account) }))
+  return NextResponse.json({ employees })
 }
 
 export async function POST(req: NextRequest) {
