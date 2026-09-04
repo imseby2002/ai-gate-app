@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Truck, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Building2, Link2, Search, FileSpreadsheet } from 'lucide-react'
+import { Truck, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Building2, Link2, Search, FileSpreadsheet, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -100,6 +100,7 @@ export default function VendorsPage() {
         : selected ? <VendorDetail vendor={selected} regions={regions} onBack={() => setSel(null)} onSaved={reload} />
         : (
           <div className="space-y-3">
+            <PriceCompareBox />
             <div className="flex items-center gap-2 flex-wrap">
               <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋廠商名稱…" className="pl-9" /></div>
               <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
@@ -138,6 +139,77 @@ function NewVendorButton({ onCreated }: { onCreated: (id: string) => void }) {
     if (res.ok && d.id) onCreated(d.id); else alert(d.error ?? '新增失敗')
   }
   return <Button size="sm" className="gap-1.5 shrink-0" onClick={add} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}新增廠商</Button>
+}
+
+// ── 採購比價建議（模糊比對歷史採購紀錄，跨廠商）──
+interface CompareResult {
+  vendorId: string; vendorName: string; matchCount: number; bestMatchProduct: string
+  latest: { product: string; unitPrice: number; qty: number; amount: number; purchasedOn: string }
+  minUnitPrice: number; avgUnitPrice: number
+}
+
+function PriceCompareBox() {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [results, setResults] = useState<CompareResult[] | null>(null)
+  const [note, setNote] = useState('')
+  const [err, setErr] = useState('')
+
+  const search = async () => {
+    if (!query.trim()) return
+    setLoading(true); setErr(''); setResults(null)
+    try {
+      const res = await fetch(`/api/fin/vendor-purchases/compare?q=${encodeURIComponent(query.trim())}`)
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? '查詢失敗')
+      setResults(d.results ?? [])
+      setNote(d.note ?? '')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="p-3">
+      <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between text-sm font-semibold">
+        <span className="flex items-center gap-1.5"><TrendingDown className="h-4 w-4 text-primary" />採購比價建議（跨廠商歷史採購紀錄）</span>
+        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="pt-3 space-y-3">
+          <div className="flex gap-2">
+            <Input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && search()} placeholder="輸入品項關鍵字，例如：茶葉" className="flex-1" />
+            <Button size="sm" onClick={search} disabled={loading || !query.trim()}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : '查詢'}</Button>
+          </div>
+          {err && <p className="text-xs text-destructive">{err}</p>}
+          {results && (
+            results.length === 0 ? (
+              <p className="text-xs text-muted-foreground">沒有找到相似品項的歷史採購紀錄。</p>
+            ) : (
+              <div className="space-y-2">
+                {results.map(r => (
+                  <div key={r.vendorId} className="flex items-center justify-between gap-3 border rounded-lg px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium">{r.vendorName}</div>
+                      <div className="text-xs text-muted-foreground truncate">最近一筆「{r.latest.product}」・{r.latest.purchasedOn}・{r.matchCount} 筆相似紀錄</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-bold tabular-nums">{fmt(r.latest.unitPrice)}</div>
+                      <div className="text-xs text-muted-foreground tabular-nums">最低 {fmt(r.minUnitPrice)}・平均 {fmt(r.avgUnitPrice)}</div>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground">{note}</p>
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </Card>
+  )
 }
 
 function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; regions: string[]; onBack: () => void; onSaved: () => void }) {

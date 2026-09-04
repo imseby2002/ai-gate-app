@@ -54,9 +54,9 @@ export async function GET(req: NextRequest) {
       monthly_rent: d.monthly_rent ?? extra.monthly_rent ?? null,
       contract_text: d.contract_text ?? extra.contract_text ?? '',
       is_renewed: d.is_renewed ?? extra.is_renewed ?? false,
-      remind_days_before: Number(d.remind_days_before) || 90,
-      remind_days_stage2: d.remind_days_stage2 ?? extra.remind_days_stage2 ?? 30,
-      remind_days_urgent: d.remind_days_urgent ?? extra.remind_days_urgent ?? 15,
+      remind_days_before: Number(d.remind_days_before) || 30,
+      remind_days_stage2: d.remind_days_stage2 ?? extra.remind_days_stage2 ?? 15,
+      remind_days_urgent: d.remind_days_urgent ?? extra.remind_days_urgent ?? 7,
       pay_remind_days_before: Number(d.pay_remind_days_before) || 3,
       pay_remind_days_2: d.pay_remind_days_2 ?? extra.pay_remind_days_2 ?? 1,
       url,
@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
   const monthly_rent = numOrNull(form.get('monthly_rent'))
   const contract_text = s(form.get('contract_text'))
   const is_renewed = form.get('is_renewed') === 'true'
-  const remind_days_before = Math.max(0, parseInt(s(form.get('remind_days_before'))) || 90)
-  const remind_days_stage2 = Math.max(0, parseInt(s(form.get('remind_days_stage2'))) || 30)
-  const remind_days_urgent = Math.max(0, parseInt(s(form.get('remind_days_urgent'))) || 15)
+  const remind_days_before = Math.max(0, parseInt(s(form.get('remind_days_before'))) || 30)
+  const remind_days_stage2 = Math.max(0, parseInt(s(form.get('remind_days_stage2'))) || 15)
+  const remind_days_urgent = Math.max(0, parseInt(s(form.get('remind_days_urgent'))) || 7)
   const pay_remind_days_before = Math.max(0, parseInt(s(form.get('pay_remind_days_before'))) || 3)
   const pay_remind_days_2 = Math.max(0, parseInt(s(form.get('pay_remind_days_2'))) || 1)
 
