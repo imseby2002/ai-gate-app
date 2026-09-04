@@ -3,8 +3,8 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 type Item = { kind: 'reward' | 'penalty'; label: string; amount: number }
@@ -27,8 +27,8 @@ function normItems(raw: unknown): { items: Item[]; reward: number; penalty: numb
 
 // 列出某年月的評估表。query: year, month
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const sp = new URL(req.url).searchParams
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 
 // 建立/更新單一員工的評估表（依 employee+year+month upsert）
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json().catch(() => ({}))
   const employee_id = String(body.employee_id ?? '')

@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -13,8 +13,8 @@ const REASONS = new Set(['expired', 'damaged', 'other'])
 // 報廢一個批次：批次改為 scrapped（不再觸發到期通知），並自動放入耗損（扣庫存）。
 // body: { id, reason?（預設 expired）, note? }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

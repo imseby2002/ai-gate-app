@@ -5,8 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('affairs')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const TEXT_FIELDS = [
@@ -25,8 +25,8 @@ const NUM_FIELDS = [
 ] as const
 
 export async function GET() {
-  const { user } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const admin = createAdminClient()
   const settings = await getAffairSettings(admin, user.id)
@@ -34,8 +34,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const { user } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const b = await req.json().catch(() => ({}))
   const admin = createAdminClient()

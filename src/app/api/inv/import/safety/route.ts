@@ -4,8 +4,8 @@ import { readXlsx, type Cell } from '@/lib/inv/xlsxRead'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const txt = (v: Cell) => String(v ?? '').trim()
@@ -13,8 +13,8 @@ const num = (v: Cell) => { const n = Number(String(v ?? '').replace(/[,\s]/g, ''
 
 // 匯入安全庫存表（.xlsx）。form: file, store。欄位：原料碼,名稱,單位,安全量,滿倉量
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const form = await req.formData().catch(() => null)
   const file = form?.get('file')
   const store = String(form?.get('store') ?? '').trim()

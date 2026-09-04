@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['store', 'audit'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { data } = await supabase.from('inv_settings')
     .select('variance_threshold, cup_code, tea_code, creamer_code, tea_per_cup, creamer_per_cup, expiry_remind_staff, expiry_remind_audit, expiry_remind_mgmt')
     .eq('owner_id', user.id).single()
@@ -24,8 +24,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const body = await req.json().catch(() => ({}))
   const patch: Record<string, unknown> = { owner_id: user.id, updated_at: new Date().toISOString() }
   if (body.variance_threshold !== undefined) patch.variance_threshold = Math.max(0, Number(body.variance_threshold) || 0)

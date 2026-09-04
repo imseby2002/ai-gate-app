@@ -18,8 +18,8 @@ const STATUSES = new Set(['active', 'expired', 'archived'])
 
 async function getAdminUser() {
   const ctx = await getUnitContext('affairs')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -29,8 +29,8 @@ const numOrNull = (v: unknown) => { const n = Number(s(v)); return !isNaN(n) && 
 
 // 清單（可依類別／狀態／門市過濾），附簽章 URL
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const sp = new URL(req.url).searchParams
   let q = supabase.from('affair_documents').select('*').eq('owner_id', user.id)
   const type = s(sp.get('doc_type'))
@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
 
 // 建檔（multipart：可含 file ＋ 各欄位）。
 export async function POST(req: NextRequest) {
-  const { user } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const admin = createAdminClient()
 
   const form = await req.formData().catch(() => null)
@@ -138,8 +138,8 @@ export async function POST(req: NextRequest) {
 
 // 編輯欄位／狀態。body: { id, ...fields }
 export async function PATCH(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -180,8 +180,8 @@ export async function PATCH(req: NextRequest) {
 
 // 刪除（連同檔案）。body: { id }
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { data: doc } = await supabase.from('affair_documents').select('storage_path').eq('id', id).eq('owner_id', user.id).single()

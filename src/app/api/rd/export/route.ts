@@ -4,14 +4,14 @@ import { buildXlsx, type XlsxCell } from '@/lib/hr/xlsx'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('rd')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 // 所有配方一起匯出（.xlsx）：每個配方一段（表頭＋原料＋合計）。
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const [{ data: recipes }, { data: items }] = await Promise.all([
     supabase.from('rd_recipes').select('id, name, cup_size, total_export, total_purchase, unit_cost_export, unit_cost_purchase, unit_label').eq('owner_id', user.id).order('name'),
     supabase.from('rd_recipe_items').select('recipe_id, sort, material_name, unit, qty, price_export, price_purchase, amount_export, amount_purchase').eq('owner_id', user.id).order('sort'),

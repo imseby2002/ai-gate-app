@@ -4,8 +4,8 @@ import { buildXlsx, vnUpperAscii, type XlsxCell } from '@/lib/hr/xlsx'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const STAFF_LABEL: Record<string, string> = { fulltime: '正職', hourly: '兼職工讀' }
@@ -16,8 +16,8 @@ const INS_STATUS_LABEL: Record<string, string> = { none: '未投保', pending: '
 // 2. mode=d02lt: 對接 VNPT/Viettel-BHXH 之 Mẫu D02-LT (新增/調級/退保)
 // 3. mode=tk1ts: Mẫu TK1-TS (無舊社保編號之首度參保申報清冊)
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const sp = new URL(req.url).searchParams
   const mode = sp.get('mode') || 'd02lt'

@@ -4,15 +4,15 @@ import { buildXlsx, vnUpperAscii, type XlsxCell } from '@/lib/hr/xlsx'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 // 產出 TPBank 企業網銀薪資檔 (Chuyển tiền chi lương - Tải lên tệp)
 // 官方標準欄位：STT, Số tài khoản, Tên người thụ hưởng, Số tiền, Nội dung chuyển tiền
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const sp = new URL(req.url).searchParams
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()

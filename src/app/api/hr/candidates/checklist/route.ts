@@ -5,7 +5,7 @@ import { APPLY_BUCKET, DOC_TYPE_SET } from '@/lib/hr/apply'
 // 取得某應徵者的：上傳掃描檔（簽章URL）＋紙本繳交勾選狀態
 export async function GET(req: NextRequest) {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
 
   const candidateId = new URL(req.url).searchParams.get('candidate_id')
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 // 人事勾選紙本繳交狀態。body: { candidate_id, doc_key, original_received?, copy_received?, note? }
 export async function PATCH(req: NextRequest) {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
 
   const body = await req.json().catch(() => ({}))

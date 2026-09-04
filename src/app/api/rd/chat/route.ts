@@ -9,8 +9,8 @@ export const maxDuration = 60
 
 async function getAdminUser() {
   const ctx = await getUnitContext('rd')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 const s = (v: unknown) => String(v ?? '').trim()
 type SB = Awaited<ReturnType<typeof createClient>>
@@ -41,8 +41,8 @@ async function buildContext(supabase: SB, ownerId: string): Promise<string> {
 
 // 研發討論AI。body: { chat_id?, message, mode(discuss/guide), suggest(bool) }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
   const b = await req.json().catch(() => ({}))
   const message = s(b.message)

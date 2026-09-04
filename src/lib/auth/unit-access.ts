@@ -8,13 +8,15 @@ type Admin = ReturnType<typeof createAdminClient>
 
 export interface UnitContext {
   ok: boolean
+  status: 200 | 401 | 403  // 200＝通過；401＝未登入；403＝已登入但無權限
   userId: string
   ownerId: string       // 資料歸屬帳號（公司 owner；管理者＝自己）
   isAdmin: boolean
   admin: Admin          // service-role client
 }
 
-const DENY: UnitContext = { ok: false, userId: '', ownerId: '', isAdmin: false, admin: null as unknown as Admin }
+const UNAUTHENTICATED: UnitContext = { ok: false, status: 401, userId: '', ownerId: '', isAdmin: false, admin: null as unknown as Admin }
+const FORBIDDEN: UnitContext = { ok: false, status: 403, userId: '', ownerId: '', isAdmin: false, admin: null as unknown as Admin }
 
 // 解析公司 owner 的帳號 id
 async function resolveCompanyOwner(admin: Admin, companyId: string | null): Promise<string | null> {
@@ -28,7 +30,7 @@ async function resolveCompanyOwner(admin: Admin, companyId: string | null): Prom
 export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return DENY
+  if (!user) return UNAUTHENTICATED
 
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('user_type, units, company_id').eq('id', user.id).single()
@@ -50,7 +52,7 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
 
   const units = profile?.units ?? []
   const hasUnit = unitKeys.some(k => units.includes(k))
-  if (!isSuperAdmin && !isCompanyAdmin && !hasUnit) return DENY
+  if (!isSuperAdmin && !isCompanyAdmin && !hasUnit) return FORBIDDEN
 
   // 管理者／owner：資料在自己名下；IT 或一般成員：解析公司 owner
   let ownerId = user.id
@@ -60,7 +62,7 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
       ownerId = owner
     }
   }
-  return { ok: true, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin }
+  return { ok: true, status: 200, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin }
 }
 
 // 驗證單位存取。unitKey 例：'hr' / 'finance' / 'rd' / 'store' / 'affairs' / 'audit'

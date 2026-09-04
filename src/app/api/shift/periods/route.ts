@@ -5,8 +5,8 @@ import { sanitizeSlots } from '@/lib/shift/util'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -14,8 +14,8 @@ const dateOrNull = (v: unknown) => { const t = s(v); return /^\d{4}-\d{2}-\d{2}$
 
 // 某門市的排班期清單。?store= 必填
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const store = s(new URL(req.url).searchParams.get('store'))
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
   const { data, error } = await supabase.from('shift_periods')
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
 // 建立排班期，並為該門市在職員工各產生一組填報連結。
 // body: { store, title?, start_date, end_date, slots? }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const store = s(b.store)
   const start_date = dateOrNull(b.start_date)
@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
 
 // 刪除排班期（連同 token 與可上班紀錄，FK on delete cascade）。body: { id }
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await supabase.from('shift_periods').delete().eq('id', s(id)).eq('owner_id', user.id)
