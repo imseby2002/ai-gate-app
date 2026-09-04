@@ -159,41 +159,48 @@ function DashboardTab() {
 
 interface Report { id: string; kind: string; report_date: string; title: string; content: string; channels: string; created_at: string }
 
+const REPORT_KIND_LABEL: Record<string, string> = { daily: '每日快報', weekly: '每週彙整', monthly: '月度報告' }
+
 function ReportsTab() {
+  const [kind, setKind] = useState<'daily' | 'weekly'>('daily')
   const [items, setItems] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [gen, setGen] = useState(false)
   const [msg, setMsg] = useState('')
 
-  async function load() {
+  async function load(k: string) {
     setLoading(true)
-    const r = await fetch('/api/gm/reports?kind=daily')
+    const r = await fetch('/api/gm/reports?kind=' + k)
     const j = await r.json().catch(() => ({}))
     setItems(j.items ?? [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(kind) }, [kind])
 
   async function generate() {
     setGen(true); setMsg('')
-    const r = await fetch('/api/gm/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'daily' }) })
+    const r = await fetch('/api/gm/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }) })
     const j = await r.json().catch(() => ({}))
     setGen(false)
     if (!r.ok) { setMsg(j.error || '產生失敗'); return }
     setMsg(`已產生並推播：${(j.channels ?? []).join('、') || '站內'}`)
-    load()
+    load(kind)
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <p className="text-sm text-muted-foreground">每日 AI 經營快報，推播至總經理（站內／Telegram／Email）。管道於外務設定的「總經理室」欄位設定。</p>
-        <Button size="sm" className="ml-auto gap-1.5" onClick={generate} disabled={gen}>{gen ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}立即產生今日快報</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={kind} onChange={e => setKind(e.target.value as 'daily' | 'weekly')} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+          <option value="daily">每日快報</option>
+          <option value="weekly">每週彙整</option>
+        </select>
+        <p className="text-sm text-muted-foreground flex-1 min-w-[12rem]">AI 經營報告，推播至總經理（站內／Telegram／Email）。管道於外務設定的「總經理室」欄位設定。</p>
+        <Button size="sm" className="gap-1.5" onClick={generate} disabled={gen}>{gen ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}立即產生{REPORT_KIND_LABEL[kind]}</Button>
       </div>
       {msg && <p className="text-sm text-emerald-600">{msg}</p>}
 
       {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        : items.length === 0 ? <div className="text-center py-16 text-muted-foreground text-sm">尚無快報。每日 08:00（台北）自動產生，或按上方按鈕立即產生。</div>
+        : items.length === 0 ? <div className="text-center py-16 text-muted-foreground text-sm">尚無報告。每日 08:00／每週一 08:00（台北）自動產生，或按上方按鈕立即產生。</div>
         : (
           <div className="space-y-3">
             {items.map(r => (

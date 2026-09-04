@@ -68,6 +68,10 @@
     {
       "path": "/api/cron/gm-daily",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/gm-weekly",
+      "schedule": "0 1 * * 1"
     }
   ]
 }
