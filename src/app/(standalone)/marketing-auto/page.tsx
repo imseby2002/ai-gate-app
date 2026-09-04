@@ -252,10 +252,10 @@ function Unit1Collect({
                   <span className="text-xl leading-none">{ct.emoji}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-semibold">{t(`ct.${ct.id}.label`)}</div>
-                    <div className="text-[11px] text-gray-400">{t(`ct.${ct.id}.desc`)}</div>
+                    <div className="text-[11px] text-muted-foreground/70">{t(`ct.${ct.id}.desc`)}</div>
                   </div>
                   <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                    selected ? 'border-transparent text-white' : 'border-gray-300'
+                    selected ? 'border-transparent text-white' : 'border-border'
                   }`} style={selected ? { background: 'var(--primary)' } : {}}>
                     {selected && <span className="text-[10px] font-bold">✓</span>}
                   </div>
@@ -339,14 +339,14 @@ function Unit1Collect({
       {/* Settings row */}
       <div className="flex gap-4 flex-wrap">
         <div>
-          <label className="block text-xs font-medium mb-1.5 text-gray-500">{t('u1.perTypeCount')}</label>
+          <label className="block text-xs font-medium mb-1.5 text-muted-foreground">{t('u1.perTypeCount')}</label>
           <select value={limit} onChange={e => setLimit(Number(e.target.value))}
             className="h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
             {[5, 10, 15, 20, 30].map(n => <option key={n} value={n}>{t('u1.countUnit', { n })}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium mb-1.5 text-gray-500">{t('u1.language')}</label>
+          <label className="block text-xs font-medium mb-1.5 text-muted-foreground">{t('u1.language')}</label>
           <select value={language} onChange={e => setLanguage(e.target.value)}
             className="h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
             <option value="zh-TW">繁體中文</option>
@@ -372,24 +372,24 @@ function Unit1Collect({
       {result && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 border-b pb-2">
-            <span className="text-sm font-semibold text-gray-800">{t('u1.resultTitle')}</span>
+            <span className="text-sm font-semibold text-foreground">{t('u1.resultTitle')}</span>
             <div className="flex gap-1">
               {(['summary', 'raw'] as const).map(tb => (
                 <button key={tb} onClick={() => setTab(tb)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    tab === tb ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    tab === tb ? 'bg-foreground text-background' : 'bg-muted/70 text-muted-foreground hover:bg-muted'
                   }`}>
                   {tb === 'summary' ? t('u1.tabSummary') : t('u1.tabRaw')}
                 </button>
               ))}
             </div>
             <button onClick={run} disabled={running}
-              className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
+              className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-muted-foreground transition-colors">
               <RefreshCw className="h-3.5 w-3.5" /> {t('u1.recollect')}
             </button>
           </div>
-          <div className="p-4 rounded-xl bg-gray-50 border max-h-[520px] overflow-y-auto">
-            <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+          <div className="p-4 rounded-xl bg-muted/50 border max-h-[520px] overflow-y-auto">
+            <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">
               {tab === 'summary' ? result.summary : result.raw}
             </pre>
           </div>
@@ -470,11 +470,11 @@ function FileUploadZone({
       <label className="block text-sm font-medium mb-2">{label}</label>
       <div
         onClick={() => inputRef.current?.click()}
-        className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+        className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
       >
-        <Upload className="h-5 w-5 text-gray-300 mx-auto mb-1" />
-        <p className="text-xs text-gray-500">{t('u2.clickUpload')}</p>
-        <p className="text-[10px] text-gray-400 mt-0.5">{accept.replace(/,/g, ' / ')}</p>
+        <Upload className="h-5 w-5 text-muted-foreground/70 mx-auto mb-1" />
+        <p className="text-xs text-muted-foreground">{t('u2.clickUpload')}</p>
+        <p className="text-[10px] text-muted-foreground/70 mt-0.5">{accept.replace(/,/g, ' / ')}</p>
       </div>
       <input
         ref={inputRef} type="file" multiple className="hidden" accept={accept}
@@ -483,17 +483,17 @@ function FileUploadZone({
       {catFiles.length > 0 && (
         <div className="mt-2 space-y-1.5">
           {catFiles.map(f => (
-            <div key={f.url} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border">
+            <div key={f.url} className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg border">
               {f.mimeType.startsWith('image/') ? (
                 <img src={f.url} alt={f.name} className="h-8 w-8 object-cover rounded flex-shrink-0" />
               ) : (
-                <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <FileText className="h-5 w-5 text-muted-foreground/70 flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium truncate">{f.name}</div>
-                <div className="text-[10px] text-gray-400">{f.sizeKb} KB {f.textContent ? t('u2.textExtracted') : ''}</div>
+                <div className="text-[10px] text-muted-foreground/70">{f.sizeKb} KB {f.textContent ? t('u2.textExtracted') : ''}</div>
               </div>
-              <button type="button" onClick={() => onRemove(f.url)} className="text-gray-300 hover:text-red-400 transition-colors">
+              <button type="button" onClick={() => onRemove(f.url)} className="text-muted-foreground/70 hover:text-red-400 transition-colors">
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -501,7 +501,7 @@ function FileUploadZone({
         </div>
       )}
       {uploading && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/70">
           <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('u2.uploading')}
         </div>
       )}
@@ -594,7 +594,7 @@ function Unit2CompanyData({
     <div className="space-y-8">
       {/* Basic Info */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.basicInfo')}</h3>
+        <h3 className="text-sm font-bold text-foreground mb-4 pb-2 border-b">{t('u2.basicInfo')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {field('companyName', t('u2.companyName'), t('u2.companyNamePlaceholder'))}
           <div>
@@ -624,7 +624,7 @@ function Unit2CompanyData({
 
       {/* Business Description */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.bizDesc')}</h3>
+        <h3 className="text-sm font-bold text-foreground mb-4 pb-2 border-b">{t('u2.bizDesc')}</h3>
         <div className="space-y-4">
           {field('description', t('u2.intro'), t('u2.introPlaceholder'), true)}
           {field('products', t('u2.products'), t('u2.productsPlaceholder'), true)}
@@ -635,7 +635,7 @@ function Unit2CompanyData({
 
       {/* Brand */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.brandSettings')}</h3>
+        <h3 className="text-sm font-bold text-foreground mb-4 pb-2 border-b">{t('u2.brandSettings')}</h3>
         <div>
           <label className="block text-sm font-medium mb-2">{t('u2.brandTone')}</label>
           <div className="flex flex-wrap gap-2">
@@ -655,35 +655,35 @@ function Unit2CompanyData({
       {/* Branches */}
       <section>
         <div className="flex items-center justify-between pb-2 border-b mb-4">
-          <h3 className="text-sm font-bold text-gray-700">{t('u2.branches')}</h3>
+          <h3 className="text-sm font-bold text-foreground">{t('u2.branches')}</h3>
           <button type="button"
             onClick={() => { setEditingBranch(emptyBranch()); setShowBranchForm(true) }}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-muted/50 transition-colors">
             <Plus className="h-3.5 w-3.5" />{t('u2.addBranch')}
           </button>
         </div>
 
         {branches.length === 0 && !showBranchForm && (
-          <p className="text-xs text-gray-400 py-4 text-center">{t('u2.noBranches')}</p>
+          <p className="text-xs text-muted-foreground/70 py-4 text-center">{t('u2.noBranches')}</p>
         )}
 
         <div className="space-y-2">
           {branches.map(b => (
-            <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl border bg-gray-50">
-              <Map className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+            <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl border bg-muted/50">
+              <Map className="h-4 w-4 text-muted-foreground/70 mt-0.5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-800">{b.name}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{b.address}</div>
-                {b.phone && <div className="text-xs text-gray-400">{b.phone}</div>}
-                {b.notes && <div className="text-xs text-gray-400 italic">{b.notes}</div>}
+                <div className="text-sm font-medium text-foreground">{b.name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{b.address}</div>
+                {b.phone && <div className="text-xs text-muted-foreground/70">{b.phone}</div>}
+                {b.notes && <div className="text-xs text-muted-foreground/70 italic">{b.notes}</div>}
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 <button type="button" onClick={() => { setEditingBranch(b); setShowBranchForm(true) }}
-                  className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors text-gray-400 hover:text-gray-700">
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground/70 hover:text-foreground">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <button type="button" onClick={() => deleteBranch(b.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-gray-400 hover:text-red-500">
+                  className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground/70 hover:text-red-500">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -749,7 +749,7 @@ function Unit2CompanyData({
               </button>
               <button type="button"
                 onClick={() => { setShowBranchForm(false); setEditingBranch(null) }}
-                className="px-4 py-2 rounded-lg text-sm border hover:bg-gray-50 transition-colors">
+                className="px-4 py-2 rounded-lg text-sm border hover:bg-muted/50 transition-colors">
                 {t('u2.cancel')}
               </button>
             </div>
@@ -757,7 +757,7 @@ function Unit2CompanyData({
         )}
 
         {branches.length > 0 && (
-          <p className="text-xs text-gray-400 mt-3">
+          <p className="text-xs text-muted-foreground/70 mt-3">
             {t('u2.branchCountHint', { count: branches.length })}
           </p>
         )}
@@ -765,7 +765,7 @@ function Unit2CompanyData({
 
       {/* Files */}
       <section>
-        <h3 className="text-sm font-bold text-gray-700 mb-4 pb-2 border-b">{t('u2.materials')}</h3>
+        <h3 className="text-sm font-bold text-foreground mb-4 pb-2 border-b">{t('u2.materials')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <FileUploadZone category="logo" label={t('u2.matLogo')}
             accept=".jpg,.jpeg,.png,.svg,.webp" files={files} uploading={uploading}
@@ -780,7 +780,7 @@ function Unit2CompanyData({
             accept=".xlsx,.xls,.csv,.docx,.doc,.txt" files={files} uploading={uploading}
             onUpload={handleUpload} onRemove={handleRemove} />
         </div>
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-muted-foreground/70 mt-3">
           {t('u2.materialsHint')}
         </p>
         {uploadError && (
@@ -802,8 +802,8 @@ function Unit2CompanyData({
 
       {/* Stats preview */}
       {(form.companyName || files.length > 0 || branches.length > 0) && (
-        <div className="p-4 rounded-xl bg-gray-50 border">
-          <div className="text-xs font-medium text-gray-500 mb-3">{t('u2.overview')}</div>
+        <div className="p-4 rounded-xl bg-muted/50 border">
+          <div className="text-xs font-medium text-muted-foreground mb-3">{t('u2.overview')}</div>
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: t('u2.companyNameShort'), value: form.companyName || '—' },
@@ -816,8 +816,8 @@ function Unit2CompanyData({
               { label: t('u2.textMaterials'), value: t('u2.nExtracted', { n: files.filter(f => f.textContent).length }) },
             ].map(s => (
               <div key={s.label} className="text-center">
-                <div className="text-xs font-bold text-gray-800 truncate">{s.value}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">{s.label}</div>
+                <div className="text-xs font-bold text-foreground truncate">{s.value}</div>
+                <div className="text-[10px] text-muted-foreground/70 mt-0.5">{s.label}</div>
               </div>
             ))}
           </div>
@@ -969,22 +969,22 @@ function Unit3Analyze({
     <div className="space-y-6">
       {/* Data source status */}
       <div className="flex gap-3">
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${hasUnit1 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${hasUnit1 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-muted/50 border-border text-muted-foreground/70'}`}>
           {hasUnit1 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
           {t('u3.unit1')} {hasUnit1 ? t('u3.loaded') : t('u3.notRun')}
         </div>
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${hasUnit2 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${hasUnit2 ? 'bg-green-50 border-green-200 text-green-700' : 'bg-muted/50 border-border text-muted-foreground/70'}`}>
           {hasUnit2 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
           {t('u3.unit2')} {hasUnit2 ? `(${unit2Data?.companyName})` : t('u3.notFilled')}
         </div>
       </div>
 
       {/* File upload for extra context */}
-      <div className="p-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 space-y-3">
+      <div className="p-4 rounded-xl border-2 border-dashed border-border bg-muted/50 space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold">{t('u3.extraTitle')}</div>
-            <div className="text-xs text-gray-400 mt-0.5">{t('u3.extraHint')}</div>
+            <div className="text-xs text-muted-foreground/70 mt-0.5">{t('u3.extraHint')}</div>
           </div>
           <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white cursor-pointer transition-opacity ${uploadingFile ? 'opacity-50 pointer-events-none' : ''}`}
             style={{ background: 'var(--primary)' }}>
@@ -1000,9 +1000,9 @@ function Unit3Analyze({
           <div className="space-y-1.5">
             {uploadedFiles.map((f, i) => (
               <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border text-xs">
-                <span className="text-gray-700 truncate max-w-[80%]">{f.name}</span>
+                <span className="text-foreground truncate max-w-[80%]">{f.name}</span>
                 <button type="button" onClick={() => setUploadedFiles(prev => prev.filter((_, j) => j !== i))}
-                  className="text-gray-400 hover:text-red-500 ml-2 flex-shrink-0">✕</button>
+                  className="text-muted-foreground/70 hover:text-red-500 ml-2 flex-shrink-0">✕</button>
               </div>
             ))}
           </div>
@@ -1021,13 +1021,13 @@ function Unit3Analyze({
                 style={selected
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
                   : { borderColor: '#e5e7eb' }}>
-                <div className={`w-4 h-4 rounded border-2 mt-0.5 flex-shrink-0 flex items-center justify-center ${selected ? 'border-0' : 'border-gray-300'}`}
+                <div className={`w-4 h-4 rounded border-2 mt-0.5 flex-shrink-0 flex items-center justify-center ${selected ? 'border-0' : 'border-border'}`}
                   style={selected ? { background: 'var(--primary)' } : {}}>
                   {selected && <CheckCircle2 className="h-4 w-4 text-white" />}
                 </div>
                 <div>
                   <div className="text-sm font-medium">{t(`u3.type.${at.id}.label`)}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{t(`u3.type.${at.id}.desc`)}</div>
+                  <div className="text-xs text-muted-foreground/70 mt-0.5">{t(`u3.type.${at.id}.desc`)}</div>
                 </div>
               </button>
             )
@@ -1059,9 +1059,9 @@ function Unit3Analyze({
                 { label: t('u3.mAudience'),    value: result.metrics.audience,             color: 'text-purple-600' },
                 { label: t('u3.mScore'),       value: `${result.metrics.score}/100`,       color: 'text-amber-600' },
               ].map(m => (
-                <div key={m.label} className="p-3 rounded-xl bg-gray-50 text-center border">
+                <div key={m.label} className="p-3 rounded-xl bg-muted/50 text-center border">
                   <div className={`text-lg font-bold ${m.color}`}>{m.value}</div>
-                  <div className="text-[10px] text-gray-400 mt-1">{m.label}</div>
+                  <div className="text-[10px] text-muted-foreground/70 mt-1">{m.label}</div>
                 </div>
               ))}
             </div>
@@ -1073,7 +1073,7 @@ function Unit3Analyze({
               {result.types.map(ty => (
                 <button key={ty} onClick={() => setActiveTab(ty)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    activeTab === ty ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    activeTab === ty ? 'bg-foreground text-background' : 'bg-muted/70 text-muted-foreground hover:bg-muted'
                   }`}>
                   {t.has(`u3.type.${ty}.label`) ? t(`u3.type.${ty}.label`) : ty}
                 </button>
@@ -1083,17 +1083,17 @@ function Unit3Analyze({
 
           {/* Content */}
           {activeTab && result.results?.[activeTab] && (
-            <div className="p-5 rounded-xl bg-gray-50 border max-h-[550px] overflow-y-auto">
+            <div className="p-5 rounded-xl bg-muted/50 border max-h-[550px] overflow-y-auto">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-gray-500">
+                <span className="text-xs font-semibold text-muted-foreground">
                   {t.has(`u3.type.${activeTab}.label`) ? t(`u3.type.${activeTab}.label`) : activeTab} — Gemini 1.5 Flash
                 </span>
                 <button onClick={run} disabled={running}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                  className="flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-muted-foreground">
                   <RefreshCw className="h-3.5 w-3.5" /> {t('u3.reanalyze')}
                 </button>
               </div>
-              <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">
+              <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed">
                 {result.results[activeTab]}
               </pre>
             </div>
@@ -1105,13 +1105,13 @@ function Unit3Analyze({
       <div className="border-t pt-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
                 <Zap className="h-3 w-3 text-amber-600" />
               </span>
               {t('u3.simTitle')}
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5 ml-7">
+            <p className="text-xs text-muted-foreground/70 mt-0.5 ml-7">
               {t('u3.simHint')}
             </p>
           </div>
@@ -1319,7 +1319,7 @@ function Unit4Copy({
           { label: t('u4.ctxAnalysis'), ok: !!unit3Data?.results },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
-            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-muted/50 border-border text-muted-foreground/70'
           }`}>
             {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
             {s.label}
@@ -1332,7 +1332,7 @@ function Unit4Copy({
         <label className="block text-sm font-semibold mb-3">{t('u4.selectTypes')}</label>
         {groups.map(g => (
           <div key={g} className="mb-3">
-            <div className="text-xs font-medium text-gray-400 mb-1.5">{t(`u4.group.${g}`)}</div>
+            <div className="text-xs font-medium text-muted-foreground/70 mb-1.5">{t(`u4.group.${g}`)}</div>
             <div className="flex flex-wrap gap-2">
               {COPY_TYPE_DEFS.filter(d => d.group === g).map(d => {
                 const sel = selectedTypes.includes(d.id)
@@ -1389,7 +1389,7 @@ function Unit4Copy({
       <div>
         <label className="block text-sm font-semibold mb-1.5">
           {t('u4.userRules')}
-          <span className="ml-2 text-xs font-normal text-gray-400">{t('u4.userRulesHint')}</span>
+          <span className="ml-2 text-xs font-normal text-muted-foreground/70">{t('u4.userRulesHint')}</span>
         </label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
@@ -1416,7 +1416,7 @@ function Unit4Copy({
             {result.types?.map(ty => (
               <button key={ty} onClick={() => setActiveTab(ty)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeTab === ty ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  activeTab === ty ? 'bg-foreground text-background' : 'bg-muted/70 text-muted-foreground hover:bg-muted'
                 }`}>
                 {t.has(`u4.copy.${ty}`) ? t(`u4.copy.${ty}`) : ty}
               </button>
@@ -1427,11 +1427,11 @@ function Unit4Copy({
           {activeTab && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-muted-foreground/70">
                   {t.has(`u4.copy.${activeTab}`) ? t(`u4.copy.${activeTab}`) : activeTab}{t('u4.editableHint')}
                 </span>
                 <button onClick={() => run()} disabled={running}
-                  className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+                  className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-muted-foreground">
                   <RefreshCw className="h-3.5 w-3.5" /> {t('u4.regenerate')}
                 </button>
               </div>
@@ -1589,7 +1589,7 @@ function Unit5ImageScript({
           { label: t('u5.ctxCopy'), ok: hasUnit4 },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
-            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-muted/50 border-border text-muted-foreground/70'
           }`}>
             {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
             {s.label}
@@ -1636,7 +1636,7 @@ function Unit5ImageScript({
       <div>
         <label className="block text-sm font-semibold mb-1.5">
           {t('u5.specialRules')}
-          <span className="ml-2 text-xs font-normal text-gray-400">{t('u5.specialRulesHint')}</span>
+          <span className="ml-2 text-xs font-normal text-muted-foreground/70">{t('u5.specialRulesHint')}</span>
         </label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
@@ -1644,13 +1644,13 @@ function Unit5ImageScript({
       </div>
 
       {/* Drive reference image */}
-      <div className="p-4 rounded-xl border border-dashed border-gray-300 space-y-3">
+      <div className="p-4 rounded-xl border border-dashed border-border space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold">{t('u5.refImage')}</label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={useRefImage} onChange={e => setUseRefImage(e.target.checked)}
               className="w-4 h-4 rounded accent-blue-600" />
-            <span className="text-xs text-gray-600">{t('u5.enable')}</span>
+            <span className="text-xs text-muted-foreground">{t('u5.enable')}</span>
           </label>
         </div>
         {useRefImage && (
@@ -1687,25 +1687,25 @@ function Unit5ImageScript({
             {result.scripts.map(s => (
               <button key={s.id} onClick={() => setActiveScript(s.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeScript === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  activeScript === s.id ? 'bg-foreground text-background' : 'bg-muted/70 text-muted-foreground hover:bg-muted'
                 }`}>
                 {t('u5.imageN', { n: s.id })}
               </button>
             ))}
             <button onClick={() => run()} disabled={running}
-              className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-muted-foreground">
               <RefreshCw className="h-3.5 w-3.5" /> {t('u4.regenerate')}
             </button>
           </div>
 
           {/* Active script content */}
           {result.scripts.find(s => s.id === activeScript) && (
-            <div className="p-5 rounded-xl bg-gray-50 border">
+            <div className="p-5 rounded-xl bg-muted/50 border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-gray-500">
+                <span className="text-xs font-semibold text-muted-foreground">
                   {t('u5.scriptTitle', { n: activeScript })}
                 </span>
-                <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
+                <span className="text-[10px] text-muted-foreground/70 bg-white border rounded-full px-2 py-0.5">
                   {t('u5.totalImages', { n: result.scripts.length })}
                 </span>
               </div>
@@ -1714,14 +1714,14 @@ function Unit5ImageScript({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={drivePickedImage.dataUrl} alt={drivePickedImage.name}
                     className="w-24 h-24 object-cover rounded-lg border shrink-0" />
-                  <div className="text-xs text-gray-500">
-                    <div className="font-medium text-gray-700 mb-0.5">{t('u5.refImageLabel')}</div>
+                  <div className="text-xs text-muted-foreground">
+                    <div className="font-medium text-foreground mb-0.5">{t('u5.refImageLabel')}</div>
                     <div className="truncate">{drivePickedImage.name}</div>
-                    <div className="text-gray-400 mt-1">{t('u5.refGenerated')}</div>
+                    <div className="text-muted-foreground/70 mt-1">{t('u5.refGenerated')}</div>
                   </div>
                 </div>
               )}
-              <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[500px] overflow-y-auto">
+              <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed max-h-[500px] overflow-y-auto">
                 {result.scripts.find(s => s.id === activeScript)?.content}
               </pre>
             </div>
@@ -1974,8 +1974,8 @@ function Unit6ImageGenerate({
                   : { background: '#f3f4f6', color: '#6b7280' }}>
                 {t(`u6.model.${m.id}.badge`)}
               </span>
-              <span className="text-sm font-bold text-gray-800 pr-8">{m.name}</span>
-              <span className="text-[10px] text-gray-400 mt-1 leading-snug">{t(`u6.model.${m.id}.desc`)}</span>
+              <span className="text-sm font-bold text-foreground pr-8">{m.name}</span>
+              <span className="text-[10px] text-muted-foreground/70 mt-1 leading-snug">{t(`u6.model.${m.id}.desc`)}</span>
               <span className="text-xs font-semibold mt-2" style={{ color: 'var(--primary)' }}>{m.cost}{t('u6.costUnit')}</span>
             </button>
           ))}
@@ -1983,12 +1983,12 @@ function Unit6ImageGenerate({
       </div>
 
       {/* Image settings */}
-      <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">{t('u6.imageSettings')}</div>
+      <div className="p-4 rounded-xl bg-muted/50 border space-y-4">
+        <div className="text-xs font-semibold text-muted-foreground">{t('u6.imageSettings')}</div>
         <div className="flex flex-wrap gap-6">
           {/* Size */}
           <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">{t('u6.sizeRatio')}</div>
+            <div className="text-xs font-medium text-muted-foreground mb-2">{t('u6.sizeRatio')}</div>
             <div className="flex gap-2">
               {SIZE_OPTIONS.map(opt => (
                 <button key={opt.value} onClick={() => setSize(opt.value)}
@@ -1997,7 +1997,7 @@ function Unit6ImageGenerate({
                     ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                     : { background: 'white' }}>
                   <span className="font-medium">{t(`u6.size.${opt.value}`)}</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
+                  <span className="text-[10px] text-muted-foreground/70 mt-0.5">{opt.hint}</span>
                 </button>
               ))}
             </div>
@@ -2006,7 +2006,7 @@ function Unit6ImageGenerate({
           {model === 'dalle3' && (
             <>
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-2">{t('u6.quality')}</div>
+                <div className="text-xs font-medium text-muted-foreground mb-2">{t('u6.quality')}</div>
                 <div className="flex gap-2">
                   {(['standard', 'hd'] as const).map(q => (
                     <button key={q} onClick={() => setQuality(q)}
@@ -2020,7 +2020,7 @@ function Unit6ImageGenerate({
                 </div>
               </div>
               <div>
-                <div className="text-xs font-medium text-gray-500 mb-2">{t('u6.styleLabel')}</div>
+                <div className="text-xs font-medium text-muted-foreground mb-2">{t('u6.styleLabel')}</div>
                 <div className="flex gap-2">
                   {(['vivid', 'natural'] as const).map(st => (
                     <button key={st} onClick={() => setStyle(st)}
@@ -2074,7 +2074,7 @@ function Unit6ImageGenerate({
       {/* Scripts from Unit 5 */}
       {hasUnit5 ? (
         <div className="space-y-4">
-          <div className="text-sm font-semibold text-gray-700">
+          <div className="text-sm font-semibold text-foreground">
             {t('u6.fromScripts', { n: scripts.length })}
           </div>
           {scripts.map(s => {
@@ -2084,9 +2084,9 @@ function Unit6ImageGenerate({
             const modelLabel = IMAGE_MODELS.find(m => m.id === img?.model)?.name ?? img?.model
             return (
               <div key={s.id} className="border rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-700">{t('u5.imageN', { n: s.id })}</span>
+                <div className="px-4 py-3 bg-muted/50 border-b flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
+                  <span className="text-sm font-medium text-foreground">{t('u5.imageN', { n: s.id })}</span>
                   {img && (
                     <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
                       {t('u6.generated')} · {modelLabel}
@@ -2095,8 +2095,8 @@ function Unit6ImageGenerate({
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">
-                      {t('u6.aiPrompt')} <span className="text-gray-400 font-normal">{t('u6.editable')}</span>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      {t('u6.aiPrompt')} <span className="text-muted-foreground/70 font-normal">{t('u6.editable')}</span>
                     </label>
                     <textarea
                       value={prompts[s.id] ?? ''}
@@ -2123,13 +2123,13 @@ function Unit6ImageGenerate({
                         : <><Sparkles className="h-3.5 w-3.5" />{img ? t('u4.regenerate') : t('u6.genWithModel', { model: modelInfo.name })}</>}
                     </button>
                     {img && (
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[10px] text-muted-foreground/70">
                         {img.size} · {modelInfo.cost}{t('u6.costUnit')} · {new Date(img.generatedAt).toLocaleTimeString(locale)}
                       </span>
                     )}
                   </div>
                   {img && (
-                    <div className="relative rounded-xl overflow-hidden border bg-gray-50">
+                    <div className="relative rounded-xl overflow-hidden border bg-muted/50">
                       <img src={img.url} alt={t('u5.imageN', { n: s.id })} className="w-full object-contain max-h-96" />
                       <div className="absolute top-2 right-2 flex gap-1.5">
                         <a href={img.url} download={`img-${s.id}.png`} target="_blank" rel="noreferrer"
@@ -2142,9 +2142,9 @@ function Unit6ImageGenerate({
                         </button>
                       </div>
                       {img.revisedPrompt && img.revisedPrompt !== img.prompt && (
-                        <div className="px-3 py-2 bg-gray-50 border-t">
-                          <div className="text-[10px] text-gray-500 font-medium mb-0.5">{t('u6.revisedPrompt')}</div>
-                          <div className="text-[10px] text-gray-400 leading-relaxed line-clamp-2">{img.revisedPrompt}</div>
+                        <div className="px-3 py-2 bg-muted/50 border-t">
+                          <div className="text-[10px] text-muted-foreground font-medium mb-0.5">{t('u6.revisedPrompt')}</div>
+                          <div className="text-[10px] text-muted-foreground/70 leading-relaxed line-clamp-2">{img.revisedPrompt}</div>
                         </div>
                       )}
                     </div>
@@ -2162,7 +2162,7 @@ function Unit6ImageGenerate({
 
       {/* Manual prompt */}
       <div className="border rounded-xl p-4 space-y-3">
-        <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <div className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Wand2 className="h-4 w-4" style={{ color: 'var(--primary)' }} />
           {t('u6.manualPrompt')}
         </div>
@@ -2372,7 +2372,7 @@ function Unit7VideoScript({
           { label: t('u7.ctxImageScript'), ok: !!(unit5Data?.scripts?.length) },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
-            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-muted/50 border-border text-muted-foreground/70'
           }`}>
             {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
             {s.label}
@@ -2407,7 +2407,7 @@ function Unit7VideoScript({
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                 : { background: 'white' }}>
               <span className="font-semibold">{t('u7.durSec', { s: opt.value })}</span>
-              <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
+              <span className="text-[10px] text-muted-foreground/70 mt-0.5">{opt.hint}</span>
             </button>
           ))}
         </div>
@@ -2425,13 +2425,13 @@ function Unit7VideoScript({
                 style={sel
                   ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
                   : { borderColor: '#e5e7eb' }}>
-                <div className={`w-4 h-4 rounded border-2 mt-0.5 flex-shrink-0 flex items-center justify-center ${sel ? 'border-0' : 'border-gray-300'}`}
+                <div className={`w-4 h-4 rounded border-2 mt-0.5 flex-shrink-0 flex items-center justify-center ${sel ? 'border-0' : 'border-border'}`}
                   style={sel ? { background: 'var(--primary)' } : {}}>
                   {sel && <CheckCircle2 className="h-4 w-4 text-white" />}
                 </div>
                 <div>
                   <div className="text-xs font-medium">{t(`u7.vtype.${vt.id}.label`)}</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">{t(`u7.vtype.${vt.id}.desc`)}</div>
+                  <div className="text-[10px] text-muted-foreground/70 mt-0.5">{t(`u7.vtype.${vt.id}.desc`)}</div>
                 </div>
               </button>
             )
@@ -2536,7 +2536,7 @@ function Unit7VideoScript({
       <div>
         <label className="block text-sm font-semibold mb-1.5">
           {t('u5.specialRules')}
-          <span className="ml-2 text-xs font-normal text-gray-400">{t('u7.optional')}</span>
+          <span className="ml-2 text-xs font-normal text-muted-foreground/70">{t('u7.optional')}</span>
         </label>
         <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
@@ -2573,29 +2573,29 @@ function Unit7VideoScript({
             {result.scripts.map(s => (
               <button key={s.id} onClick={() => setActiveScript(s.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  activeScript === s.id ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  activeScript === s.id ? 'bg-foreground text-background' : 'bg-muted/70 text-muted-foreground hover:bg-muted'
                 }`}>
                 {t('u7.videoN', { n: s.id })}
               </button>
             ))}
             <button onClick={() => run()} disabled={running}
-              className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/70 hover:text-muted-foreground">
               <RefreshCw className="h-3.5 w-3.5" /> {t('u4.regenerate')}
             </button>
           </div>
 
           {/* Active script */}
           {result.scripts.find(s => s.id === activeScript) && (
-            <div className="p-5 rounded-xl bg-gray-50 border">
+            <div className="p-5 rounded-xl bg-muted/50 border">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-gray-500">
+                <span className="text-xs font-semibold text-muted-foreground">
                   {t('u7.scriptTitle', { n: activeScript, dur: result.duration ?? '' })}
                 </span>
-                <span className="text-[10px] text-gray-400 bg-white border rounded-full px-2 py-0.5">
+                <span className="text-[10px] text-muted-foreground/70 bg-white border rounded-full px-2 py-0.5">
                   {t('u7.totalVideos', { n: result.scripts.length })}
                 </span>
               </div>
-              <pre className="text-xs text-gray-700 whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto">
+              <pre className="text-xs text-foreground whitespace-pre-wrap font-sans leading-relaxed max-h-[600px] overflow-y-auto">
                 {result.scripts.find(s => s.id === activeScript)?.content}
               </pre>
             </div>
@@ -2885,12 +2885,12 @@ function Unit8VideoGenerate({
               style={duration === card.duration
                 ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 8%, transparent)' }
                 : { borderColor: '#e5e7eb', background: 'white' }}>
-              <span className="text-base font-bold text-gray-800">{t('u7.durSec', { s: card.duration })}</span>
+              <span className="text-base font-bold text-foreground">{t('u7.durSec', { s: card.duration })}</span>
               <span className="text-[11px] font-semibold mt-1"
                 style={{ color: duration === card.duration ? 'var(--primary)' : '#6b7280' }}>
                 {card.provider}
               </span>
-              <span className="text-[10px] text-gray-400 mt-0.5">{t(`u8.durHint.${card.duration}`)}</span>
+              <span className="text-[10px] text-muted-foreground/70 mt-0.5">{t(`u8.durHint.${card.duration}`)}</span>
             </button>
           ))}
         </div>
@@ -2920,21 +2920,21 @@ function Unit8VideoGenerate({
             <ImageIcon className="h-3.5 w-3.5" />
             {t('u8.img2video')}
           </button>
-          <span className="text-[10px] text-gray-400">{t('u8.img2videoHint')}</span>
+          <span className="text-[10px] text-muted-foreground/70">{t('u8.img2videoHint')}</span>
         </div>
 
-        <div className="mt-2 text-[10px] text-gray-400">
-          {t('u8.currentModel')}<span className="font-semibold text-gray-600">{modelLabel(model)}</span>
+        <div className="mt-2 text-[10px] text-muted-foreground/70">
+          {t('u8.currentModel')}<span className="font-semibold text-muted-foreground">{modelLabel(model)}</span>
         </div>
       </div>
 
       {/* Settings */}
-      <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">{t('u8.videoSettings')}</div>
+      <div className="p-4 rounded-xl bg-muted/50 border space-y-4">
+        <div className="text-xs font-semibold text-muted-foreground">{t('u8.videoSettings')}</div>
         <div className="flex flex-wrap gap-6">
           {/* Aspect ratio */}
           <div>
-            <div className="text-xs font-medium text-gray-500 mb-2">{t('u8.aspectRatio')}</div>
+            <div className="text-xs font-medium text-muted-foreground mb-2">{t('u8.aspectRatio')}</div>
             <div className="flex gap-2">
               {VIDEO_ASPECT_OPTIONS.map(opt => (
                 <button key={opt.value} onClick={() => setAspectRatio(opt.value)}
@@ -2943,7 +2943,7 @@ function Unit8VideoGenerate({
                     ? { borderColor: 'var(--primary)', background: 'color-mix(in oklch, var(--primary) 10%, transparent)', color: 'var(--primary)' }
                     : { background: 'white' }}>
                   <span className="font-medium">{t(`u8.aspect.${opt.value}`)}</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">{opt.hint}</span>
+                  <span className="text-[10px] text-muted-foreground/70 mt-0.5">{opt.hint}</span>
                 </button>
               ))}
             </div>
@@ -3011,7 +3011,7 @@ function Unit8VideoGenerate({
       {/* From Unit 7 scripts */}
       {hasUnit7 ? (
         <div className="space-y-4">
-          <div className="text-sm font-semibold text-gray-700">{t('u8.fromScripts', { n: scripts.length })}</div>
+          <div className="text-sm font-semibold text-foreground">{t('u8.fromScripts', { n: scripts.length })}</div>
           {scripts.map(s => {
             const job = jobs[s.id]
             const vid = videos.find(v => v.scriptId === s.id)
@@ -3019,16 +3019,16 @@ function Unit8VideoGenerate({
             const isFailed = job?.status === 'failed'
             return (
               <div key={s.id} className="border rounded-xl overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
-                  <Film className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-700">{t('u7.videoN', { n: s.id })}</span>
+                <div className="px-4 py-3 bg-muted/50 border-b flex items-center gap-2">
+                  <Film className="h-4 w-4 text-muted-foreground/70 flex-shrink-0" />
+                  <span className="text-sm font-medium text-foreground">{t('u7.videoN', { n: s.id })}</span>
                   {vid && <span className="ml-auto text-[10px] text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">{t('u6.generated')}</span>}
                   {isProcessing && <span className="ml-auto text-[10px] text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 flex items-center gap-1"><Loader2 className="h-2.5 w-2.5 animate-spin" />{t('u8.processing')}</span>}
                   {isFailed && <span className="ml-auto text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">{t('u8.failed')}</span>}
                 </div>
                 <div className="p-4 space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u8.videoPrompt')} <span className="text-gray-400 font-normal">{t('u6.editable')}</span></label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">{t('u8.videoPrompt')} <span className="text-muted-foreground/70 font-normal">{t('u6.editable')}</span></label>
                     <textarea value={prompts[s.id] ?? ''} onChange={e => {
                         setUserEditedPrompts(prev => new Set(prev).add(s.id))
                         setPrompts(prev => ({ ...prev, [s.id]: e.target.value }))
@@ -3051,13 +3051,13 @@ function Unit8VideoGenerate({
                   {vid && (
                     <div className="rounded-xl overflow-hidden border bg-black">
                       <video src={vid.url} controls className="w-full max-h-72" />
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
-                        <span className="text-[10px] text-gray-400 flex-1">{modelLabel(vid.model)} · {new Date(vid.generatedAt).toLocaleString(locale)}</span>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-t">
+                        <span className="text-[10px] text-muted-foreground/70 flex-1">{modelLabel(vid.model)} · {new Date(vid.generatedAt).toLocaleString(locale)}</span>
                         <a href={vid.url} download={`video-${s.id}.mp4`} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-foreground text-[10px] hover:bg-muted">
                           <Download className="h-3 w-3" /> {t('u6.download')}
                         </a>
-                        <button onClick={() => removeVideo(vid.url)} className="p-1 rounded-lg text-gray-400 hover:text-red-400">
+                        <button onClick={() => removeVideo(vid.url)} className="p-1 rounded-lg text-muted-foreground/70 hover:text-red-400">
                           <X className="h-3 w-3" />
                         </button>
                       </div>
@@ -3076,7 +3076,7 @@ function Unit8VideoGenerate({
 
       {/* Manual prompt */}
       <div className="border rounded-xl p-4 space-y-3">
-        <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+        <div className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Wand2 className="h-4 w-4" style={{ color: 'var(--primary)' }} />
           {t('u6.manualPrompt')}
         </div>
@@ -3100,15 +3100,15 @@ function Unit8VideoGenerate({
           return manualVid ? (
             <div className="rounded-xl overflow-hidden border bg-black mt-3">
               <video src={manualVid.url} controls autoPlay className="w-full max-h-72" />
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-t">
-                <span className="text-[10px] text-gray-400 flex-1">
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-t">
+                <span className="text-[10px] text-muted-foreground/70 flex-1">
                   {modelLabel(manualVid.model)} · {new Date(manualVid.generatedAt).toLocaleString(locale)}
                 </span>
                 <a href={manualVid.url} download="video.mp4" target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-[10px] hover:bg-gray-300">
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted text-foreground text-[10px] hover:bg-muted">
                   <Download className="h-3 w-3" /> {t('u6.download')}
                 </a>
-                <button onClick={() => removeVideo(manualVid.url)} className="p-1 rounded-lg text-gray-400 hover:text-red-400">
+                <button onClick={() => removeVideo(manualVid.url)} className="p-1 rounded-lg text-muted-foreground/70 hover:text-red-400">
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -3251,14 +3251,14 @@ function Unit9Upload({
           { label: t('u9.copy'), ok: Object.keys(copyResults).length > 0 },
         ].map(s => (
           <div key={s.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs ${
-            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+            s.ok ? 'bg-green-50 border-green-200 text-green-700' : 'bg-muted/50 border-border text-muted-foreground/70'
           }`}>
             {s.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
             {s.label} {s.ok ? t('u9.ready') : t('u9.notGenerated')}
           </div>
         ))}
         <a href="/marketing-auto/platforms" target="_blank"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs bg-muted/50 border-border text-muted-foreground hover:bg-muted/70 transition-colors">
           <Settings className="h-3.5 w-3.5" /> {t('u9.platformSettings')}
         </a>
       </div>
@@ -3321,7 +3321,7 @@ function Unit9Upload({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">{t('u9.noImages')}</p>
+            <p className="text-xs text-muted-foreground/70">{t('u9.noImages')}</p>
           )}
         </div>
       )}
@@ -3346,7 +3346,7 @@ function Unit9Upload({
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">{t('u9.noVideos')}</p>
+            <p className="text-xs text-muted-foreground/70">{t('u9.noVideos')}</p>
           )}
         </div>
       )}
@@ -3356,7 +3356,7 @@ function Unit9Upload({
         <label className="block text-sm font-semibold mb-1.5">
           {t('u9.postCopy')}
           {Object.keys(copyResults).length > 0 && (
-            <span className="ml-2 text-xs font-normal text-gray-400">{t('u9.quickLoad')}</span>
+            <span className="ml-2 text-xs font-normal text-muted-foreground/70">{t('u9.quickLoad')}</span>
           )}
           {Object.entries(copyResults).slice(0, 4).map(([k, v]) => {
             const labels: Record<string, string> = {
@@ -3366,7 +3366,7 @@ function Unit9Upload({
             }
             return (
               <button key={k} onClick={() => setCopyText(v as string)}
-                className="ml-1 text-xs px-2 py-0.5 rounded-full border hover:bg-gray-100 transition-colors"
+                className="ml-1 text-xs px-2 py-0.5 rounded-full border hover:bg-muted/70 transition-colors"
                 style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
                 {labels[k] ?? k}
               </button>
@@ -3376,7 +3376,7 @@ function Unit9Upload({
         <textarea value={copyText} onChange={e => setCopyText(e.target.value)} rows={6}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
           placeholder={t('u9.copyPlaceholder')} />
-        <div className="text-[10px] text-gray-400 mt-1">{t('u9.charCount', { n: copyText.length })}</div>
+        <div className="text-[10px] text-muted-foreground/70 mt-1">{t('u9.charCount', { n: copyText.length })}</div>
       </div>
 
       {error && (
@@ -3396,7 +3396,7 @@ function Unit9Upload({
       {/* Results */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <div className="text-sm font-semibold text-gray-700">{t('u9.uploadResult')}</div>
+          <div className="text-sm font-semibold text-foreground">{t('u9.uploadResult')}</div>
           <div className="space-y-2">
             {results.map(r => (
               <div key={r.platform}
@@ -3423,7 +3423,7 @@ function Unit9Upload({
               </div>
             ))}
           </div>
-          <div className="text-[10px] text-gray-400">
+          <div className="text-[10px] text-muted-foreground/70">
             {t('u9.successCount', { ok: results.filter(r => r.ok).length, total: results.length })} · {savedData?.lastUpload?.uploadedAt ? new Date(savedData.lastUpload.uploadedAt).toLocaleString(locale) : ''}
           </div>
         </div>
@@ -3746,7 +3746,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab
                 ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}>
             {label}
           </button>
@@ -3763,7 +3763,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           </div>
 
           {/* 寄件人統一由系統設定，客戶無需填寫 */}
-          <div className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5 leading-relaxed">
+          <div className="text-xs text-muted-foreground bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5 leading-relaxed">
             {t('u10.systemManaged')}
           </div>
 
@@ -3772,7 +3772,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">{t('u10.step1Title')}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">{t('u10.step1Hint')}</div>
+                <div className="text-[10px] text-muted-foreground/70 mt-0.5">{t('u10.step1Hint')}</div>
               </div>
               {(unit4Data?.results?.email_subject || unit4Data?.results?.email_body) && (
                 <button
@@ -3789,9 +3789,9 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             </div>
 
             {emailTemplates.map((tpl, idx) => (
-              <div key={tpl.id} className="border rounded-xl p-4 space-y-3 bg-gray-50">
+              <div key={tpl.id} className="border rounded-xl p-4 space-y-3 bg-muted/50">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-400 w-5">{idx + 1}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/70 w-5">{idx + 1}</span>
                   <input
                     value={tpl.name}
                     onChange={e => updateEmailTemplate(tpl.id, { name: e.target.value })}
@@ -3811,13 +3811,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   )}
                   {emailTemplates.length > 1 && (
                     <button onClick={() => removeEmailTemplate(tpl.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground/70 hover:text-red-500">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.emailSubject')}</label>
+                  <label className="block text-[10px] font-medium text-muted-foreground mb-1">{t('u10.emailSubject')}</label>
                   <input
                     value={tpl.subject}
                     onChange={e => updateEmailTemplate(tpl.id, { subject: e.target.value })}
@@ -3826,7 +3826,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.emailBody')}</label>
+                  <label className="block text-[10px] font-medium text-muted-foreground mb-1">{t('u10.emailBody')}</label>
                   <textarea
                     value={tpl.body}
                     onChange={e => updateEmailTemplate(tpl.id, { body: e.target.value })}
@@ -3838,7 +3838,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               </div>
             ))}
             <button onClick={addEmailTemplate}
-              className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+              className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 justify-center">
               <Plus className="h-3.5 w-3.5" />{t('u10.addTemplate')}
             </button>
           </div>
@@ -3847,13 +3847,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           <div className="space-y-3">
             <div>
               <div className="text-sm font-semibold">{t('u10.step2Title')}</div>
-              <div className="text-[10px] text-gray-400 mt-0.5">{t('u10.step2Hint')}</div>
+              <div className="text-[10px] text-muted-foreground/70 mt-0.5">{t('u10.step2Hint')}</div>
             </div>
 
             {emailRules.map((rule, idx) => (
-              <div key={rule.id} className="border rounded-xl p-4 space-y-3 bg-gray-50">
+              <div key={rule.id} className="border rounded-xl p-4 space-y-3 bg-muted/50">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-400 w-5">{idx + 1}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/70 w-5">{idx + 1}</span>
                   <input
                     value={rule.name}
                     onChange={e => updateEmailRule(rule.id, { name: e.target.value })}
@@ -3862,13 +3862,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   />
                   {emailRules.length > 1 && (
                     <button onClick={() => removeEmailRule(rule.id)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                      className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground/70 hover:text-red-500">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.aiBasis')}</label>
+                  <label className="block text-[10px] font-medium text-muted-foreground mb-1">{t('u10.aiBasis')}</label>
                   <input
                     value={rule.desc}
                     onChange={e => updateEmailRule(rule.id, { desc: e.target.value })}
@@ -3877,7 +3877,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('u10.applyTemplate')}</label>
+                  <label className="block text-[10px] font-medium text-muted-foreground mb-1">{t('u10.applyTemplate')}</label>
                   <select
                     value={rule.templateId}
                     onChange={e => updateEmailRule(rule.id, { templateId: e.target.value })}
@@ -3889,14 +3889,14 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
                   </select>
                 </div>
                 {emailRecipients.length > 0 && (
-                  <div className="text-[10px] text-gray-400">
+                  <div className="text-[10px] text-muted-foreground/70">
                     {t('u10.classifiedHere', { n: emailRecipients.filter(r => r.group === rule.name).length })}
                   </div>
                 )}
               </div>
             ))}
             <button onClick={addEmailRule}
-              className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+              className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-muted-foreground hover:bg-muted/50 justify-center">
               <Plus className="h-3.5 w-3.5" />{t('u10.addRule')}
             </button>
           </div>
@@ -3906,10 +3906,10 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold">{t('u10.step3Title')}</div>
-                <div className="text-[10px] text-gray-400 mt-0.5">{t('u10.step3Hint')}</div>
+                <div className="text-[10px] text-muted-foreground/70 mt-0.5">{t('u10.step3Hint')}</div>
               </div>
               <button onClick={classifyEmails} disabled={classifying || emailRecipients.length === 0}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-muted/50 disabled:opacity-50"
                 style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
                 {classifying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
                 {classifying ? t('u10.classifying') : t('u10.autoClassify')}
@@ -3918,7 +3918,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <textarea value={emailInput} onChange={e => handleEmailInput(e.target.value)} rows={5}
               className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
               placeholder={'user@example.com\nvip@company.com\nlead@factory.com'} />
-            <p className="text-[10px] text-gray-400">{t('u10.recognizedEmails', { n: emailRecipients.length })}</p>
+            <p className="text-[10px] text-muted-foreground/70">{t('u10.recognizedEmails', { n: emailRecipients.length })}</p>
           </div>
 
           {/* Parsed preview */}
@@ -3926,7 +3926,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="max-h-40 overflow-y-auto space-y-1 border rounded-xl p-2">
               {emailRecipients.map((r, i) => (
                 <div key={i} className="flex items-center gap-2 px-2 py-1 rounded-lg text-xs">
-                  <span className="font-mono flex-1 text-gray-700">{r.email}</span>
+                  <span className="font-mono flex-1 text-foreground">{r.email}</span>
                   <select
                     value={r.group}
                     onChange={e => setEmailRecipients(prev => prev.map((x, j) => j === i ? { ...x, group: e.target.value } : x))}
@@ -3957,7 +3957,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           {emailResults.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700">{t('u10.sendResult')}</span>
+                <span className="text-sm font-semibold text-foreground">{t('u10.sendResult')}</span>
                 <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
                   {t('u10.successN', { ok: emailResults.filter(r => r.ok).length, total: emailResults.length })}
                 </span>
@@ -3995,31 +3995,31 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
 
       {/* Provider info bar */}
       <div className="flex gap-3 flex-wrap">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs font-medium text-gray-600">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border text-xs font-medium text-muted-foreground">
           <Volume2 className="h-3.5 w-3.5" /> {t('u10.ttsProvider')}
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs font-medium text-gray-600">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border text-xs font-medium text-muted-foreground">
           <PhoneCall className="h-3.5 w-3.5" /> {t('u10.callProvider')}
         </div>
         {/* VBEE locked */}
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs text-gray-300 line-through cursor-not-allowed select-none">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border text-xs text-muted-foreground/70 line-through cursor-not-allowed select-none">
           🇻🇳 {t('u10.vbeeLocked')}
         </div>
       </div>
 
       {/* ElevenLabs + Bird settings */}
-      <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">{t('u10.voiceDialSettings')}</div>
+      <div className="p-4 rounded-xl bg-muted/50 border space-y-4">
+        <div className="text-xs font-semibold text-muted-foreground">{t('u10.voiceDialSettings')}</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u10.elevenVoice')}</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">{t('u10.elevenVoice')}</label>
             <select value={voiceId} onChange={e => setVoiceId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
               {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.name} — {t(`u10.voice.${v.descKey}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u10.birdCallerId')}</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">{t('u10.birdCallerId')}</label>
             <input value={birdCallerId} onChange={e => setBirdCallerId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
               placeholder="+886xxxxxxxxx / +84xxxxxxxxx" />
@@ -4037,7 +4037,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               <option key={l}>{l}</option>)}
           </select>
           <button onClick={generateScript} disabled={generatingScript}
-            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50 ml-auto"
+            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-colors hover:bg-muted/50 disabled:opacity-50 ml-auto"
             style={{ color: 'var(--primary)', borderColor: 'var(--primary)' }}>
             {generatingScript ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             {generatingScript ? t('u10.aiGenerating') : t('u10.aiGenerate')}
@@ -4046,13 +4046,13 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         <textarea value={script} onChange={e => setScript(e.target.value)} rows={8}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none"
           placeholder={t('u10.scriptPlaceholder')} />
-        <div className="text-[10px] text-gray-400 mt-1">{t('u10.scriptCount', { n: script.length })}</div>
+        <div className="text-[10px] text-muted-foreground/70 mt-1">{t('u10.scriptCount', { n: script.length })}</div>
       </div>
 
       {/* TTS Preview */}
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={preview} disabled={previewLoading || !script.trim()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors">
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 hover:bg-muted/50 transition-colors">
           {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
           {previewLoading ? t('u10.genVoice') : t('u10.previewVoice')}
         </button>
@@ -4064,12 +4064,12 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       <div>
         <label className="block text-sm font-semibold mb-1.5">
           {t('u10.phoneList')}
-          <span className="ml-2 text-xs font-normal text-gray-400">{t('u10.recognizedPhones', { n: phones.length })}</span>
+          <span className="ml-2 text-xs font-normal text-muted-foreground/70">{t('u10.recognizedPhones', { n: phones.length })}</span>
         </label>
         <textarea value={phoneInput} onChange={e => handlePhoneInput(e.target.value)} rows={5}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
           placeholder={'+886912345678\n+84901234567\n+1234567890'} />
-        <p className="text-[10px] text-gray-400 mt-1">{t('u10.phoneHint')}</p>
+        <p className="text-[10px] text-muted-foreground/70 mt-1">{t('u10.phoneHint')}</p>
       </div>
 
       {callError && (
@@ -4090,7 +4090,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       {results.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700">{t('u10.callResult')}</span>
+            <span className="text-sm font-semibold text-foreground">{t('u10.callResult')}</span>
             <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
               {t('u10.successN', { ok: results.filter(r => r.ok).length, total: results.length })}
             </span>
@@ -4107,7 +4107,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             ))}
           </div>
           {savedData?.lastBatch && (
-            <div className="text-[10px] text-gray-400">
+            <div className="text-[10px] text-muted-foreground/70">
               {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs + Bird
             </div>
           )}
@@ -4345,16 +4345,16 @@ function Unit11AvatarMarketing({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-base font-bold text-foreground flex items-center gap-2">
             <Mic className="h-4 w-4" style={{ color: 'var(--primary)' }} />
             {t('u11.title')}
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">{t('u11.subtitle')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('u11.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border rounded-lg px-3 py-2">
           <span className="font-medium text-indigo-600">HeyGen</span>
           <span>{t('u11.aiAvatarVideo')}</span>
-          <span className="text-gray-300">·</span>
+          <span className="text-muted-foreground/70">·</span>
           <span>{t('u11.autoSave')}</span>
         </div>
       </div>
@@ -4384,24 +4384,24 @@ function Unit11AvatarMarketing({
             {/* Avatar selector */}
             <div className="border rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-sm text-gray-700">{t('u11.selectAvatar')}</span>
-                <span className="text-xs text-gray-400">{t('u11.nAvailable', { n: avatars.length })}</span>
+                <span className="font-medium text-sm text-foreground">{t('u11.selectAvatar')}</span>
+                <span className="text-xs text-muted-foreground/70">{t('u11.nAvailable', { n: avatars.length })}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                 {avatars.map(av => (
                   <button key={av.id} onClick={() => setSelectedAvatar(av)}
                     className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
-                      selectedAvatar?.id === av.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
+                      selectedAvatar?.id === av.id ? 'border-indigo-400 bg-indigo-50' : 'border-border hover:border-border'
                     }`}>
                     {av.preview
                       ? <img src={av.preview} alt={av.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                      : <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                          <Mic className="h-4 w-4 text-gray-400" />
+                      : <div className="w-10 h-10 rounded-lg bg-muted/70 flex items-center justify-center shrink-0">
+                          <Mic className="h-4 w-4 text-muted-foreground/70" />
                         </div>
                     }
                     <div className="min-w-0">
-                      <div className="text-xs font-medium text-gray-800 truncate">{av.name}</div>
-                      <div className="text-[10px] text-gray-400 capitalize">{av.gender}</div>
+                      <div className="text-xs font-medium text-foreground truncate">{av.name}</div>
+                      <div className="text-[10px] text-muted-foreground/70 capitalize">{av.gender}</div>
                     </div>
                     {selectedAvatar?.id === av.id && <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500 ml-auto shrink-0" />}
                   </button>
@@ -4412,8 +4412,8 @@ function Unit11AvatarMarketing({
             {/* Voice selector */}
             <div className="border rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-sm text-gray-700">{t('u11.selectVoice')}</span>
-                <span className="text-xs text-gray-400">{t('u11.nAvailable', { n: voices.length })}</span>
+                <span className="font-medium text-sm text-foreground">{t('u11.selectVoice')}</span>
+                <span className="text-xs text-muted-foreground/70">{t('u11.nAvailable', { n: voices.length })}</span>
               </div>
               <select value={selectedVoice?.id ?? ''}
                 onChange={e => setSelectedVoice(voices.find(v => v.id === e.target.value) ?? null)}
@@ -4432,32 +4432,32 @@ function Unit11AvatarMarketing({
 
             {/* Ratio & Background */}
             <div className="border rounded-xl p-4 space-y-3">
-              <span className="font-medium text-sm text-gray-700">{t('u11.formatBg')}</span>
+              <span className="font-medium text-sm text-foreground">{t('u11.formatBg')}</span>
               <div className="flex gap-2">
                 {AVATAR_RATIOS.map(r => (
                   <button key={r.value} onClick={() => setRatio(r.value)}
                     className={`flex-1 text-center py-2 px-2 rounded-lg border text-xs transition-all ${
-                      ratio === r.value ? 'border-indigo-400 bg-indigo-50 font-medium text-indigo-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                      ratio === r.value ? 'border-indigo-400 bg-indigo-50 font-medium text-indigo-700' : 'border-border text-muted-foreground hover:border-border'
                     }`}>
                     <div className="font-medium">{t(`u11.ratio.${r.value}`)}</div>
-                    <div className="text-[10px] text-gray-400">{t(`u11.ratioDesc.${r.descKey}`)}</div>
+                    <div className="text-[10px] text-muted-foreground/70">{t(`u11.ratioDesc.${r.descKey}`)}</div>
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-500">{t('u11.bgColor')}</span>
+                <span className="text-xs text-muted-foreground">{t('u11.bgColor')}</span>
                 {BG_PRESETS.map(b => (
                   <button key={b.value} onClick={() => { setBackground(b.value); setCustomBg('') }}
                     title={t(`u11.bg.${b.key}`)}
-                    className={`w-6 h-6 rounded-full border-2 transition-all ${background === b.value && !customBg ? 'border-indigo-400 scale-110' : 'border-gray-200'}`}
+                    className={`w-6 h-6 rounded-full border-2 transition-all ${background === b.value && !customBg ? 'border-indigo-400 scale-110' : 'border-border'}`}
                     style={{ background: b.value }} />
                 ))}
                 <input type="color" value={customBg || background}
                   onChange={e => setCustomBg(e.target.value)}
-                  className="w-6 h-6 rounded-full border border-gray-300 cursor-pointer"
+                  className="w-6 h-6 rounded-full border border-border cursor-pointer"
                   title={t('u11.customColor')} />
                 <div className="w-5 h-5 rounded border" style={{ background: bgFinal }} />
-                <span className="text-[10px] text-gray-400">{bgFinal}</span>
+                <span className="text-[10px] text-muted-foreground/70">{bgFinal}</span>
               </div>
             </div>
           </div>
@@ -4480,7 +4480,7 @@ function Unit11AvatarMarketing({
                     <CheckCircle2 className="h-3 w-3" />
                     {t('u11.fromUnit4', { n: unit4Data.results.anchor_script.length })}
                   </div>
-                  <div className="bg-white border border-indigo-100 rounded-lg px-3 py-2.5 text-sm text-gray-700 leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
+                  <div className="bg-white border border-indigo-100 rounded-lg px-3 py-2.5 text-sm text-foreground leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap">
                     {unit4Data.results.anchor_script}
                   </div>
                 </>
@@ -4514,12 +4514,12 @@ function Unit11AvatarMarketing({
       {videos.length > 0 && (
         <div className="border rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-sm text-gray-700">{t('u11.videoLog')}</span>
-            <span className="text-xs text-gray-400">{t('u11.nVideos', { n: videos.length })}</span>
+            <span className="font-medium text-sm text-foreground">{t('u11.videoLog')}</span>
+            <span className="text-xs text-muted-foreground/70">{t('u11.nVideos', { n: videos.length })}</span>
           </div>
           <div className="space-y-3">
             {videos.map(v => (
-              <div key={v.videoId} className="border rounded-lg p-3 space-y-2 bg-gray-50">
+              <div key={v.videoId} className="border rounded-lg p-3 space-y-2 bg-muted/50">
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-0.5 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -4530,14 +4530,14 @@ function Unit11AvatarMarketing({
                       }`}>
                         {v.status === 'completed' ? t('u11.stDone') : v.status === 'failed' ? t('u11.stFailed') : t('u11.stProcessing')}
                       </span>
-                      <span className="text-[10px] text-gray-500">{v.avatarName}</span>
-                      <span className="text-[10px] text-gray-400">·</span>
-                      <span className="text-[10px] text-gray-500">{v.voiceName}</span>
-                      <span className="text-[10px] text-gray-400">·</span>
-                      <span className="text-[10px] text-gray-500">{v.ratio}</span>
+                      <span className="text-[10px] text-muted-foreground">{v.avatarName}</span>
+                      <span className="text-[10px] text-muted-foreground/70">·</span>
+                      <span className="text-[10px] text-muted-foreground">{v.voiceName}</span>
+                      <span className="text-[10px] text-muted-foreground/70">·</span>
+                      <span className="text-[10px] text-muted-foreground">{v.ratio}</span>
                     </div>
-                    <p className="text-xs text-gray-600 truncate">{v.script}</p>
-                    <p className="text-[10px] text-gray-400">{new Date(v.createdAt).toLocaleString(locale)}</p>
+                    <p className="text-xs text-muted-foreground truncate">{v.script}</p>
+                    <p className="text-[10px] text-muted-foreground/70">{new Date(v.createdAt).toLocaleString(locale)}</p>
                   </div>
                   {v.status === 'processing' && <Loader2 className="h-4 w-4 animate-spin text-amber-500 shrink-0 mt-0.5" />}
                 </div>
@@ -4557,8 +4557,8 @@ function Unit11AvatarMarketing({
       )}
 
       {/* Env var hint */}
-      <div className="bg-gray-50 border rounded-xl p-3 text-xs text-gray-500 space-y-1">
-        <div className="font-medium text-gray-600">{t('u11.envHint')}</div>
+      <div className="bg-muted/50 border rounded-xl p-3 text-xs text-muted-foreground space-y-1">
+        <div className="font-medium text-muted-foreground">{t('u11.envHint')}</div>
         <div className="flex gap-2 flex-wrap">
           <code className="bg-indigo-100 px-1.5 py-0.5 rounded">HEYGEN_API_KEY</code>
         </div>
@@ -4578,8 +4578,8 @@ function ComingSoon({ unit }: { unit: UnitDef }) {
         style={{ background: 'color-mix(in oklch, var(--primary) 10%, transparent)' }}>
         <Icon className="h-8 w-8" style={{ color: 'var(--primary)' }} />
       </div>
-      <h3 className="text-lg font-bold text-gray-800 mb-1">{t(`unit.${unit.id}.name`)}</h3>
-      <p className="text-sm text-gray-500 mb-4">{t(`unit.${unit.id}.desc`)}</p>
+      <h3 className="text-lg font-bold text-foreground mb-1">{t(`unit.${unit.id}.name`)}</h3>
+      <p className="text-sm text-muted-foreground mb-4">{t(`unit.${unit.id}.desc`)}</p>
       <span className="px-4 py-1.5 rounded-full text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700">
         {t('comingSoon')}
       </span>
@@ -4838,28 +4838,28 @@ export default function MarketingAutoPage() {
     <div className="flex h-[calc(100vh-53px)] overflow-hidden">
 
       {/* Left nav */}
-      <aside className="w-56 shrink-0 border-r bg-gray-50 flex flex-col select-none">
+      <aside className="w-56 shrink-0 border-r bg-muted/50 flex flex-col select-none">
         {/* Campaign selector */}
         <div className="p-3 border-b space-y-2">
           <div className="relative" ref={dropRef}>
             <button onClick={() => setShowCampaigns(!showCampaigns)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border bg-white text-left hover:bg-gray-50 transition-colors">
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl border bg-white text-left hover:bg-muted/50 transition-colors">
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium text-gray-800 truncate">{campaignTitle}</div>
-                <div className="text-[10px] text-gray-400">{campaignId ? t('mp.saved') : t('mp.notCreated')}</div>
+                <div className="text-xs font-medium text-foreground truncate">{campaignTitle}</div>
+                <div className="text-[10px] text-muted-foreground/70">{campaignId ? t('mp.saved') : t('mp.notCreated')}</div>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" />
             </button>
 
             {showCampaigns && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg z-50 overflow-hidden max-h-60 overflow-y-auto">
                 <button onClick={() => { setCampaignId(null); setCampaignTitle(t('mp.untitled')); setUnitStatuses({}); setUnitData({}); setShowCampaigns(false) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 text-left border-b"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/50 text-left border-b"
                   style={{ color: 'var(--primary)' }}>
                   <Plus className="h-3.5 w-3.5" /> {t('mp.newProject')}
                 </button>
                 {campaigns.map(c => (
-                  <div key={c.id} className={`relative flex items-center group ${c.id === campaignId ? 'bg-gray-50 font-medium' : ''}`}>
+                  <div key={c.id} className={`relative flex items-center group ${c.id === campaignId ? 'bg-muted/50 font-medium' : ''}`}>
                     {/* rename inline */}
                     {renamingId === c.id ? (
                       <div className="flex-1 flex items-center gap-1 px-3 py-1.5">
@@ -4889,10 +4889,10 @@ export default function MarketingAutoPage() {
                       </div>
                     ) : (
                       <button onClick={() => loadCampaign(c.id)}
-                        className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-gray-50 text-left">
+                        className="flex-1 flex items-center gap-2 px-3 py-2.5 text-xs hover:bg-muted/50 text-left">
                         <div className="flex-1 min-w-0">
                           <div className="truncate">{c.title}</div>
-                          <div className="text-gray-400 text-[10px]">{new Date(c.updated_at).toLocaleDateString(locale)}</div>
+                          <div className="text-muted-foreground/70 text-[10px]">{new Date(c.updated_at).toLocaleDateString(locale)}</div>
                         </div>
                         {c.id === campaignId && <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />}
                       </button>
@@ -4902,14 +4902,14 @@ export default function MarketingAutoPage() {
                       <div className="relative flex-shrink-0 pr-1">
                         <button
                           onClick={e => { e.stopPropagation(); setCampaignMenu(campaignMenu === c.id ? null : c.id) }}
-                          className="p-1 rounded text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="p-1 rounded text-muted-foreground/70 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
                         </button>
                         {campaignMenu === c.id && (
                           <div className="absolute right-0 top-full mt-0.5 w-24 bg-white border rounded-lg shadow-lg z-50 overflow-hidden text-xs">
                             <button onClick={() => { setRenamingId(c.id); setRenameValue(c.title); setCampaignMenu(null) }}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left">
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 text-left">
                               <Pencil className="h-3 w-3" /> {t('mp.rename')}
                             </button>
                             <button onClick={async () => {
@@ -4927,7 +4927,7 @@ export default function MarketingAutoPage() {
                     )}
                   </div>
                 ))}
-                {campaigns.length === 0 && <div className="px-3 py-3 text-xs text-gray-400 text-center">{t('mp.noProjects')}</div>}
+                {campaigns.length === 0 && <div className="px-3 py-3 text-xs text-muted-foreground/70 text-center">{t('mp.noProjects')}</div>}
               </div>
             )}
           </div>
@@ -4968,7 +4968,7 @@ export default function MarketingAutoPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium truncate">{t(`unit.${unit.id}.name`)}</div>
-                  {!unit.implemented && <div className="text-[10px] text-gray-400">{t('mp.underConstruction')}</div>}
+                  {!unit.implemented && <div className="text-[10px] text-muted-foreground/70">{t('mp.underConstruction')}</div>}
                 </div>
                 {status === 'done'    && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />}
                 {status === 'running' && <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin flex-shrink-0" />}
@@ -4979,7 +4979,7 @@ export default function MarketingAutoPage() {
         </nav>
 
         <div className="p-3 border-t space-y-1">
-          <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase tracking-wide">{t('mp.otherTools')}</div>
+          <div className="text-[10px] font-semibold text-muted-foreground/70 px-2 py-1 uppercase tracking-wide">{t('mp.otherTools')}</div>
           <a href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
             className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
             <Zap className="h-3.5 w-3.5" /> {t('mp.automation')}
@@ -5010,7 +5010,7 @@ export default function MarketingAutoPage() {
             <Building2 className="h-3.5 w-3.5" /> {t('mp.companySettings')}
           </a>
           <a href="/marketing-auto/platforms"
-            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-muted-foreground hover:bg-muted/70 hover:text-foreground">
             <Settings className="h-3.5 w-3.5" /> {t('u12.platformSettings')}
           </a>
         </div>
@@ -5024,8 +5024,8 @@ export default function MarketingAutoPage() {
             <currentUnit.icon className="h-5 w-5" style={{ color: 'var(--primary)' }} />
           </div>
           <div>
-            <h1 className="font-bold text-base text-gray-900">{UNITS.find(u => u.id === activeUnit) ? `${currentUnit.id}. ` : ''}{t(`unit.${currentUnit.id}.name`)}</h1>
-            <p className="text-xs text-gray-400">{t(`unit.${currentUnit.id}.desc`)}</p>
+            <h1 className="font-bold text-base text-foreground">{UNITS.find(u => u.id === activeUnit) ? `${currentUnit.id}. ` : ''}{t(`unit.${currentUnit.id}.name`)}</h1>
+            <p className="text-xs text-muted-foreground/70">{t(`unit.${currentUnit.id}.desc`)}</p>
           </div>
           <div className="ml-auto">
             <StatusBadge status={unitStatuses[activeUnit] ?? 'idle'} />
