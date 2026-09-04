@@ -597,6 +597,8 @@ interface CsKnowledge {
   csForms: CsChatForm[]
   corrections: string
   notifyWebhooks: NotifyWebhook[]
+  contactPhone1: string
+  contactPhone2: string
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -620,36 +622,54 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let discountMaxPct = 0
   let discountGifts = ''
   let notifyWebhooks: NotifyWebhook[] = []
+  let contactPhone1 = ''
+  let contactPhone2 = ''
   const knowledgeParts: string[] = []
 
-  // Find first campaign that has unit_data[12] with content
+  // CS 設定（systemPrompt、付款資訊、訂房流程等）只採用「最新一筆有內容的 campaign」，
+  // 避免多筆 campaign 各自局部覆寫造成設定互相打架。
+  //
+  // 但知識庫內容（直接輸入知識、上傳的對話檔）改成合併「所有」campaign，不再只取
+  // 最新一筆就整批捨棄其他 campaign 的知識——真實案例：喬民宿同時有多筆 campaign
+  // 各自存了不同知識（一筆是完整的民宿 FAQ 對話檔，另一筆是後來新增的國旅補助活動
+  // 說明），舊寫法只認「最新更新的那一筆」，只要任何一筆 campaign 之後被其他操作
+  // （例如編輯自建表單、通知設定）順手更新一下 updated_at，就會整批換成另一筆
+  // campaign 的內容，原本在用的知識庫就整個消失、客人問到的資訊 AI 完全答不出來，
+  // 也不會有任何錯誤訊息可以察覺。
+  let settingsLoaded = false
   if (campaigns?.length) {
     for (const camp of campaigns) {
       const unit12 = (camp.unit_data as Record<string, unknown>)?.[12] as Record<string, unknown> | undefined
       if (!unit12) continue
 
-      if (unit12.systemPrompt) systemPrompt = String(unit12.systemPrompt)
-      if (unit12.escalationThreshold) escalationThreshold = unit12.escalationThreshold as 'medium' | 'high'
-      if (unit12.replyLanguage) replyLanguage = String(unit12.replyLanguage)
-      if (unit12.bookingFlowEnabled) bookingFlowEnabled = Boolean(unit12.bookingFlowEnabled)
-      if (unit12.paymentInfo) paymentInfo = String(unit12.paymentInfo)
-      if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
-      if (typeof unit12.discountMaxPct === 'number') discountMaxPct = unit12.discountMaxPct
-      if (unit12.discountGifts) discountGifts = String(unit12.discountGifts)
-      if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
+      const hasContent = !!(unit12.systemPrompt || unit12.knowledgeBase
+        || (Array.isArray(unit12.dialogueFiles) && unit12.dialogueFiles.length > 0))
 
-      // Direct text knowledge input
+      if (!settingsLoaded && hasContent) {
+        if (unit12.systemPrompt) systemPrompt = String(unit12.systemPrompt)
+        if (unit12.escalationThreshold) escalationThreshold = unit12.escalationThreshold as 'medium' | 'high'
+        if (unit12.replyLanguage) replyLanguage = String(unit12.replyLanguage)
+        if (unit12.bookingFlowEnabled) bookingFlowEnabled = Boolean(unit12.bookingFlowEnabled)
+        if (unit12.paymentInfo) paymentInfo = String(unit12.paymentInfo)
+        if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
+        if (typeof unit12.discountMaxPct === 'number') discountMaxPct = unit12.discountMaxPct
+        if (unit12.discountGifts) discountGifts = String(unit12.discountGifts)
+        if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
+        if (unit12.contactPhone1) contactPhone1 = String(unit12.contactPhone1)
+        if (unit12.contactPhone2) contactPhone2 = String(unit12.contactPhone2)
+        settingsLoaded = true
+      }
+
+      // Direct text knowledge input（合併全部 campaign）
       if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
 
-      // Dialogue files (CS-specific)
+      // Dialogue files（CS 專用，合併全部 campaign）
       const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>
       for (const f of dialogueFiles) {
         if (f.textContent) {
           knowledgeParts.push(`【知識庫｜${f.name}】\n${f.textContent}`)
         }
       }
-
-      if (systemPrompt || knowledgeParts.length > 0) break
     }
   }
 
@@ -747,6 +767,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     csForms,
     corrections,
     notifyWebhooks,
+    contactPhone1,
+    contactPhone2,
   }
 }
 
@@ -1731,6 +1753,12 @@ async function getAIReply(
       ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
       : ''
 
+    // 商家在工作台填寫的客服專用聯絡電話，優先於知識庫裡任何舊的/過期的電話號碼
+    // （知識庫文字檔常是商家自己上傳、事後忘了更新，號碼換了也不會同步）。
+    const contactPhoneSection = (knowledge.contactPhone1 || knowledge.contactPhone2)
+      ? `\n\n【客服專用聯絡電話——客人要真人客服電話/聯絡方式時，只能提供以下號碼，優先於知識庫或對話紀錄裡出現的任何電話號碼】\n${[knowledge.contactPhone1, knowledge.contactPhone2].filter(Boolean).join('\n')}`
+      : ''
+
     // Authoritative server-side quote. Prefer booking module (Plan A) so bot quotes
     // match online booking; fall back to json_pricing config when no property matches.
     let deterministicQuote = ''
@@ -1774,7 +1802,8 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
 - 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
-- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
+- 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
+- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
