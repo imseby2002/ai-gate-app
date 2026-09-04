@@ -34,6 +34,9 @@ export const UNIT_AREAS: UnitArea[] = [
   { key: 'gm', label: '總經理室', pages: [
     { href: '/gm', label: '經營儀表板' },
   ] },
+  { key: 'mkt', label: '行銷', pages: [
+    { href: '/mkt', label: '品牌・行銷' },
+  ] },
 ]
 
 // 共用（所有登入者都可見）
