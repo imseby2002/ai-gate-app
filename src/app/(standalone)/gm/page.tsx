@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Crown, AlertTriangle, TrendingUp, Wrench, FileWarning, Users, ShieldCheck } from 'lucide-react'
+import { Loader2, AlertCircle, Crown, AlertTriangle, TrendingUp, Wrench, FileWarning, Users, ShieldCheck, LayoutDashboard, FileText, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface StoreRow { code: string; name: string; revenue: number; gross_profit: number; store_profit: number; profit: number; gross_margin: number; net_margin: number }
@@ -24,43 +24,52 @@ const FLAG_CLASS: Record<string, string> = {
 }
 const FLAG_LABEL: Record<string, string> = { urgent: '緊急', warn: '注意', info: '提醒' }
 
-export default function GmPage() {
-  const [data, setData] = useState<Data | null>(null)
-  const [allowed, setAllowed] = useState<boolean | null>(null)
-  const [loading, setLoading] = useState(true)
+type Tab = 'dashboard' | 'reports'
 
-  useEffect(() => {
-    fetch('/api/gm/dashboard').then(async r => {
-      if (r.status === 403) { setAllowed(false); setLoading(false); return }
-      setAllowed(true)
-      setData(await r.json().catch(() => null))
-      setLoading(false)
-    })
-  }, [])
+export default function GmPage() {
+  const [allowed, setAllowed] = useState<boolean | null>(null)
+  const [tab, setTab] = useState<Tab>('dashboard')
+
+  useEffect(() => { fetch('/api/gm/dashboard').then(r => setAllowed(r.status !== 403)) }, [])
 
   if (allowed === false) return (
     <div className="flex h-full items-center justify-center p-8">
       <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">僅總經理室可使用</p></div>
     </div>
   )
-  if (loading || !data) return <div className="flex h-full items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-
-  const f = data.finance
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Crown className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">經營儀表板</h1>
-          <p className="text-sm text-muted-foreground">全公司彙整・異常紅旗{data.period ? `　損益期間 ${data.period}` : ''}</p>
+          <h1 className="text-2xl font-bold">總經理室</h1>
+          <p className="text-sm text-muted-foreground">全公司彙整・異常紅旗・AI 經營快報</p>
         </div>
         <div className="ml-auto"><Link href="/office"><Button variant="outline" size="sm">返回</Button></Link></div>
       </div>
 
-      {/* 紅旗異常 */}
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
+        {([['dashboard', '經營儀表板', <LayoutDashboard key="d" className="h-4 w-4" />], ['reports', '每日快報', <FileText key="r" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
+          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+        ))}
+      </div>
+
+      {tab === 'dashboard' ? <DashboardTab /> : <ReportsTab />}
+    </div>
+  )
+}
+
+function DashboardTab() {
+  const [data, setData] = useState<Data | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => { fetch('/api/gm/dashboard').then(async r => { if (r.ok) setData(await r.json().catch(() => null)); setLoading(false) }) }, [])
+  if (loading || !data) return <div className="flex justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+  const f = data.finance
+  return (
+    <div className="space-y-6">
       <section className="space-y-2">
-        <h2 className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4 text-amber-500" />需要注意（{data.flags.length}）</h2>
+        <h2 className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4 text-amber-500" />需要注意（{data.flags.length}）{data.period && <span className="text-xs font-normal text-muted-foreground">損益期間 {data.period}</span>}</h2>
         {data.flags.length === 0 ? <p className="text-sm text-muted-foreground">目前無異常。</p> : (
           <div className="space-y-1.5">
             {data.flags.map((fl, i) => (
@@ -74,7 +83,6 @@ export default function GmPage() {
         )}
       </section>
 
-      {/* KPI 卡片 */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Kpi icon={<TrendingUp className="h-4 w-4" />} label="本期營業額" value={f ? fmt(f.total.revenue) : '—'} sub={f ? `淨利 ${fmt(f.total.profit)}` : ''} />
         <Kpi icon={<Wrench className="h-4 w-4" />} label="進行中工單" value={String(data.repair.open)} sub={data.repair.overdue ? `逾期 ${data.repair.overdue}` : '無逾期'} />
@@ -82,7 +90,6 @@ export default function GmPage() {
         <Kpi icon={<Users className="h-4 w-4" />} label="在職人數" value={String(data.hr.active)} sub={`本月新進 ${data.hr.new_this_month}`} />
       </section>
 
-      {/* 各門市損益 */}
       {f && f.stores.length > 0 && (
         <section className="space-y-2">
           <h2 className="flex items-center gap-2 font-semibold"><TrendingUp className="h-4 w-4 text-primary" />各門市損益（{f.period}）</h2>
@@ -123,7 +130,6 @@ export default function GmPage() {
         </section>
       )}
 
-      {/* 外務文件到期 */}
       {data.affairs.expiring.length > 0 && (
         <section className="space-y-2">
           <h2 className="flex items-center gap-2 font-semibold"><FileWarning className="h-4 w-4 text-amber-500" />文件到期提醒</h2>
@@ -141,13 +147,66 @@ export default function GmPage() {
         </section>
       )}
 
-      {/* 其他部門摘要 */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
         <MiniStat icon={<Wrench className="h-4 w-4" />} label="設備保固將到期" value={data.repair.warranty_soon} />
         <MiniStat icon={<Users className="h-4 w-4" />} label="合約 60 天內到期" value={data.hr.contracts_expiring} />
         <MiniStat icon={<ShieldCheck className="h-4 w-4" />} label="稽核硬性規定" value={data.audit.active_rules} />
         <MiniStat icon={<FileWarning className="h-4 w-4" />} label="文件到期(全)" value={data.affairs.count} />
       </section>
+    </div>
+  )
+}
+
+interface Report { id: string; kind: string; report_date: string; title: string; content: string; channels: string; created_at: string }
+
+function ReportsTab() {
+  const [items, setItems] = useState<Report[]>([])
+  const [loading, setLoading] = useState(true)
+  const [gen, setGen] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  async function load() {
+    setLoading(true)
+    const r = await fetch('/api/gm/reports?kind=daily')
+    const j = await r.json().catch(() => ({}))
+    setItems(j.items ?? [])
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+
+  async function generate() {
+    setGen(true); setMsg('')
+    const r = await fetch('/api/gm/reports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'daily' }) })
+    const j = await r.json().catch(() => ({}))
+    setGen(false)
+    if (!r.ok) { setMsg(j.error || '產生失敗'); return }
+    setMsg(`已產生並推播：${(j.channels ?? []).join('、') || '站內'}`)
+    load()
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <p className="text-sm text-muted-foreground">每日 AI 經營快報，推播至總經理（站內／Telegram／Email）。管道於外務設定的「總經理室」欄位設定。</p>
+        <Button size="sm" className="ml-auto gap-1.5" onClick={generate} disabled={gen}>{gen ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}立即產生今日快報</Button>
+      </div>
+      {msg && <p className="text-sm text-emerald-600">{msg}</p>}
+
+      {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        : items.length === 0 ? <div className="text-center py-16 text-muted-foreground text-sm">尚無快報。每日 08:00（台北）自動產生，或按上方按鈕立即產生。</div>
+        : (
+          <div className="space-y-3">
+            {items.map(r => (
+              <div key={r.id} className="rounded-xl border bg-card p-4">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{r.title}</span>
+                  {r.channels && <span className="text-xs text-muted-foreground">推播：{r.channels}</span>}
+                </div>
+                <p className="mt-2 text-sm whitespace-pre-wrap">{r.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
     </div>
   )
 }
