@@ -175,12 +175,12 @@ function DocsTab() {
 
   const storeName = (code: string) => stores.find(s => s.code === code)?.name || code
 
-  // 即將到期看板（90天內）
+  // 即將到期看板（30天內）
   const upcoming = docs
     .filter(d => d.status === 'active')
     .map(d => {
       const exd = daysUntil(d.expiry_date)
-      const expiryDue = exd !== null && exd <= (d.remind_days_before || 90)
+      const expiryDue = exd !== null && exd <= (d.remind_days_before || 30)
       return { d, exd, expiryDue }
     })
     .filter(x => x.expiryDue)
@@ -189,7 +189,7 @@ function DocsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-9 rounded-lg border px-3 text-sm bg-white">
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-9 rounded-lg border px-3 text-sm bg-card">
           <option value="">全部類別</option>
           {TYPE_ORDER.map(t => <option key={t} value={t}>{TYPE_CONFIG[t]?.label ?? t}</option>)}
         </select>
@@ -197,7 +197,7 @@ function DocsTab() {
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
           </Button>
-          <Button size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setEditing({ doc_type: 'lease', remind_days_before: 90, remind_days_stage2: 30, remind_days_urgent: 15, pay_remind_days_before: 3, pay_remind_days_2: 1 })}>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ doc_type: 'lease', remind_days_before: 30, remind_days_stage2: 15, remind_days_urgent: 7, pay_remind_days_before: 3, pay_remind_days_2: 1 })}>
             <Plus className="h-4 w-4" />新增租約／證書
           </Button>
         </div>
@@ -230,11 +230,11 @@ function DocsTab() {
               <CalendarClock className="h-4 w-4 text-amber-600" />
               合約／證書即將到期追蹤（{upcoming.length} 筆）
             </div>
-            <span className="text-xs text-amber-700 font-normal">多階梯自動提醒（90天 / 30天 / 15天緊急）</span>
+            <span className="text-xs text-amber-700 font-normal">多階梯自動提醒（30天 / 15天 / 7天緊急）</span>
           </div>
           <div className="grid gap-1.5">
             {upcoming.slice(0, 8).map(({ d, exd }) => {
-              const isUrgent = exd !== null && exd <= (d.remind_days_urgent || 15)
+              const isUrgent = exd !== null && exd <= (d.remind_days_urgent || 7)
               const cfg = TYPE_CONFIG[d.doc_type] ?? TYPE_CONFIG.other
               return (
                 <div key={d.id} className="text-xs flex items-center gap-2 p-1.5 bg-white/80 rounded border border-amber-200">
@@ -262,7 +262,7 @@ function DocsTab() {
           {docs.map(d => {
             const exd = daysUntil(d.expiry_date)
             const cfg = TYPE_CONFIG[d.doc_type] ?? TYPE_CONFIG.other
-            const isUrgent = exd !== null && exd <= (d.remind_days_urgent || 15)
+            const isUrgent = exd !== null && exd <= (d.remind_days_urgent || 7)
             return (
               <Card key={d.id} className="p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between gap-3">
@@ -288,7 +288,7 @@ function DocsTab() {
                       {d.counterparty && <span><b>簽約方/房東：</b>{d.counterparty}</span>}
                       {d.effective_date && <span><b>起日：</b>{d.effective_date}</span>}
                       {d.expiry_date && (
-                        <span className={isUrgent ? 'text-red-600 font-bold' : exd !== null && exd <= (d.remind_days_before || 90) ? 'text-amber-600 font-medium' : ''}>
+                        <span className={isUrgent ? 'text-red-600 font-bold' : exd !== null && exd <= (d.remind_days_before || 30) ? 'text-amber-600 font-medium' : ''}>
                           <b>到期日：</b>{d.expiry_date}{exd !== null ? ` (${exd < 0 ? `逾期${-exd}天` : `剩${exd}天`})` : ''}
                         </span>
                       )}
@@ -397,9 +397,9 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         if (f.deposit) fd.append('deposit', String(f.deposit))
         if (f.monthly_rent) fd.append('monthly_rent', String(f.monthly_rent))
         fd.append('is_renewed', f.is_renewed ? 'true' : 'false')
-        fd.append('remind_days_before', String(f.remind_days_before ?? 90))
-        fd.append('remind_days_stage2', String(f.remind_days_stage2 ?? 30))
-        fd.append('remind_days_urgent', String(f.remind_days_urgent ?? 15))
+        fd.append('remind_days_before', String(f.remind_days_before ?? 30))
+        fd.append('remind_days_stage2', String(f.remind_days_stage2 ?? 15))
+        fd.append('remind_days_urgent', String(f.remind_days_urgent ?? 7))
         fd.append('pay_remind_days_before', String(f.pay_remind_days_before ?? 3))
         fd.append('pay_remind_days_2', String(f.pay_remind_days_2 ?? 1))
 
@@ -563,22 +563,22 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
               onClick={() => setShowAdvancedDays(!showAdvancedDays)}
               className="w-full flex items-center justify-between text-xs font-semibold text-slate-700 hover:text-indigo-600"
             >
-              <span>⚙️ 自訂個別提醒天數（預設：到期 90/30/15 天；繳費 3/1 天）</span>
+              <span>⚙️ 自訂個別提醒天數（預設：到期 30/15/7 天；繳費 3/1 天）</span>
               {showAdvancedDays ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {showAdvancedDays && (
               <div className="grid grid-cols-2 gap-2 pt-2 text-xs border-t">
                 <label className="space-y-1">
-                  <span className="text-gray-500">到期第 1 階通知外務（天）</span>
-                  <Input type="number" value={String(f.remind_days_before ?? 90)} onChange={e => set({ remind_days_before: Number(e.target.value) || 0 })} />
+                  <span className="text-gray-500">到期第 1 階通知外務／總務（天）</span>
+                  <Input type="number" value={String(f.remind_days_before ?? 30)} onChange={e => set({ remind_days_before: Number(e.target.value) || 0 })} />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-gray-500">到期第 2 階追蹤外務（天）</span>
-                  <Input type="number" value={String(f.remind_days_stage2 ?? 30)} onChange={e => set({ remind_days_stage2: Number(e.target.value) || 0 })} />
+                  <span className="text-gray-500">到期第 2 階追蹤外務／總務（天）</span>
+                  <Input type="number" value={String(f.remind_days_stage2 ?? 15)} onChange={e => set({ remind_days_stage2: Number(e.target.value) || 0 })} />
                 </label>
                 <label className="space-y-1">
                   <span className="text-gray-500">到期第 3 階緊急通報（天）</span>
-                  <Input type="number" value={String(f.remind_days_urgent ?? 15)} onChange={e => set({ remind_days_urgent: Number(e.target.value) || 0 })} />
+                  <Input type="number" value={String(f.remind_days_urgent ?? 7)} onChange={e => set({ remind_days_urgent: Number(e.target.value) || 0 })} />
                 </label>
                 {isLease && (
                   <>
@@ -672,10 +672,10 @@ function SettingsTab() {
   const set = (patch: Partial<AffairSettings>) => setCfg(c => c ? { ...c, ...patch } : c)
 
   const roles: [string, keyof AffairSettings, keyof AffairSettings, keyof AffairSettings, string][] = [
-    ['外務', 'external_telegram', 'external_email', 'external_zalo', '接收合約到期第 1 階（90天）與第 2 階（30天）洽談續約通知'],
-    ['總務', 'general_telegram', 'general_email', 'general_zalo', '接收證照與文件常態備忘通知'],
+    ['外務', 'external_telegram', 'external_email', 'external_zalo', '接收合約到期第 1 階（30天）與第 2 階（15天）洽談續約通知，及第 3 階緊急通報'],
+    ['總務', 'general_telegram', 'general_email', 'general_zalo', '與外務同步接收合約到期三階段通知（30天／15天／7天緊急）'],
     ['出納', 'cashier_telegram', 'cashier_email', 'cashier_zalo', '接收門市租約繳費前 3 天、前 1 天付款通知'],
-    ['總經理室', 'gm_telegram', 'gm_email', 'gm_zalo', '接收合約到期前半個月（15天）尚未更新合約之最高緊急通報'],
+    ['總經理室', 'gm_telegram', 'gm_email', 'gm_zalo', '接收合約到期前一週（7天）尚未更新合約之最高緊急通報'],
   ]
 
   return (
@@ -743,15 +743,15 @@ function SettingsTab() {
             <div className="grid grid-cols-3 gap-2">
               <label className="space-y-1">
                 <span className="text-gray-500">第 1 階 (洽談)</span>
-                <Input type="number" value={String(cfg.default_expiry_stage1_days ?? 90)} onChange={e => set({ default_expiry_stage1_days: Number(e.target.value) || 0 })} />
+                <Input type="number" value={String(cfg.default_expiry_stage1_days ?? 30)} onChange={e => set({ default_expiry_stage1_days: Number(e.target.value) || 0 })} />
               </label>
               <label className="space-y-1">
                 <span className="text-gray-500">第 2 階 (追蹤)</span>
-                <Input type="number" value={String(cfg.default_expiry_stage2_days ?? 30)} onChange={e => set({ default_expiry_stage2_days: Number(e.target.value) || 0 })} />
+                <Input type="number" value={String(cfg.default_expiry_stage2_days ?? 15)} onChange={e => set({ default_expiry_stage2_days: Number(e.target.value) || 0 })} />
               </label>
               <label className="space-y-1">
                 <span className="text-gray-500">第 3 階 (緊急)</span>
-                <Input type="number" value={String(cfg.default_expiry_urgent_days ?? 15)} onChange={e => set({ default_expiry_urgent_days: Number(e.target.value) || 0 })} />
+                <Input type="number" value={String(cfg.default_expiry_urgent_days ?? 7)} onChange={e => set({ default_expiry_urgent_days: Number(e.target.value) || 0 })} />
               </label>
             </div>
           </div>

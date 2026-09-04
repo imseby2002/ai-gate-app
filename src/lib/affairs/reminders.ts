@@ -1,5 +1,5 @@
 // 外務文件提醒核心：
-// 1. 到期三階通知：前 3 個月 (90天) 通知外務、前 1 個月 (30天) 通知外務、前半個月 (15天) 若未更新緊急通知外務＋總經理室。
+// 1. 到期三階通知：前 1 個月 (30天)、前半個月 (15天) 通知外務＋總務，前一週 (7天) 若未更新則緊急通知外務＋總務＋總經理室。
 // 2. 租約繳費雙階通知：前 3 天、前 1 天通知出納。
 // 3. 通知管道：Telegram、Email、ZALO 個人 (經由 Zalo OA 推播)。
 // 4. 天數可由後台設定更改，亦支援每份文件個別自訂。
@@ -105,9 +105,9 @@ export async function getAffairSettings(admin: Admin, ownerId: string): Promise<
     gm_telegram: String(s1?.gm_telegram || cred.gm_telegram || ''),
     gm_email: String(s1?.gm_email || cred.gm_email || ''),
     gm_zalo: String(s1?.gm_zalo || cred.gm_zalo || ''),
-    default_expiry_stage1_days: Number(s1?.default_expiry_stage1_days || cred.default_expiry_stage1_days) || 90,
-    default_expiry_stage2_days: Number(s1?.default_expiry_stage2_days || cred.default_expiry_stage2_days) || 30,
-    default_expiry_urgent_days: Number(s1?.default_expiry_urgent_days || cred.default_expiry_urgent_days) || 15,
+    default_expiry_stage1_days: Number(s1?.default_expiry_stage1_days || cred.default_expiry_stage1_days) || 30,
+    default_expiry_stage2_days: Number(s1?.default_expiry_stage2_days || cred.default_expiry_stage2_days) || 15,
+    default_expiry_urgent_days: Number(s1?.default_expiry_urgent_days || cred.default_expiry_urgent_days) || 7,
     default_pay_stage1_days: Number(s1?.default_pay_stage1_days || cred.default_pay_stage1_days) || 3,
     default_pay_stage2_days: Number(s1?.default_pay_stage2_days || cred.default_pay_stage2_days) || 1,
   }
@@ -153,19 +153,20 @@ export async function runAffairReminders(admin: Admin, ownerId?: string): Promis
     if (d.expiry_date) {
       const du = daysBetween(today, d.expiry_date)
       const isRenewed = Boolean(extra.is_renewed)
-      const stage1 = Number(d.remind_days_before) || st.default_expiry_stage1_days || 90
-      const stage2 = Number(extra.remind_days_stage2) || st.default_expiry_stage2_days || 30
-      const urgent = Number(extra.remind_days_urgent) || st.default_expiry_urgent_days || 15
+      const stage1 = Number(d.remind_days_before) || st.default_expiry_stage1_days || 30
+      const stage2 = Number(extra.remind_days_stage2) || st.default_expiry_stage2_days || 15
+      const urgent = Number(extra.remind_days_urgent) || st.default_expiry_urgent_days || 7
 
-      // 階段 3：後半個月 (<= urgent 天) 緊急通報（若尚未更新合約）
+      // 階段 3：前一週 (<= urgent 天) 緊急通報（若尚未更新合約）
       const kUrgent = `${d.id}|expiry_urgent|${d.expiry_date}`
       if (du <= urgent && !isRenewed && !sentKey.has(kUrgent)) {
         const title = `🚨【緊急通報】${label}即將到期且尚未更新：${d.title || '（未命名）'}`
         const when = du < 0 ? `已逾期 ${-du} 天` : `僅剩 ${du} 天到期`
-        const body = `${label}${where}${d.counterparty ? `・簽約方 ${d.counterparty}` : ''}\n到期日 ${d.expiry_date}（${when}），目前尚未完成更新或續約！\n請外務單位與總經理室立即緊急處理。`
+        const body = `${label}${where}${d.counterparty ? `・簽約方 ${d.counterparty}` : ''}\n到期日 ${d.expiry_date}（${when}），目前尚未完成更新或續約！\n請外務單位、總務與總經理室立即緊急處理。`
 
-        // 發送給 外務 ＋ 總經理室
+        // 發送給 外務 ＋ 總務 ＋ 總經理室
         await sendToRole(d.owner_id, { telegram: st.external_telegram, email: st.external_email, zalo: st.external_zalo }, title, body)
+        await sendToRole(d.owner_id, { telegram: st.general_telegram, email: st.general_email, zalo: st.general_zalo }, title, body)
         await sendToRole(d.owner_id, { telegram: st.gm_telegram, email: st.gm_email, zalo: st.gm_zalo }, title, body)
 
         await admin.from('hr_notifications').insert({ owner_id: d.owner_id, kind: 'affair_expiry_urgent', title, body })
@@ -173,28 +174,30 @@ export async function runAffairReminders(admin: Admin, ownerId?: string): Promis
         sentKey.add(kUrgent)
         expiry++
       }
-      // 階段 2：前 1 個月 (<= stage2 天且 > urgent 天) 追蹤通知
+      // 階段 2：前半個月 (<= stage2 天且 > urgent 天) 追蹤通知
       else if (du <= stage2 && du > urgent) {
         const kS2 = `${d.id}|expiry_s2|${d.expiry_date}`
         if (!sentKey.has(kS2)) {
-          const title = `📄 ${label}即將到期追蹤（前 1 個月）：${d.title || '（未命名）'}`
-          const body = `${label}${where}${d.counterparty ? `・簽約方 ${d.counterparty}` : ''}\n到期日 ${d.expiry_date}（剩餘 ${du} 天）。請外務單位再次確認續約進度。`
+          const title = `📄 ${label}即將到期追蹤（前半個月）：${d.title || '（未命名）'}`
+          const body = `${label}${where}${d.counterparty ? `・簽約方 ${d.counterparty}` : ''}\n到期日 ${d.expiry_date}（剩餘 ${du} 天）。請外務單位、總務再次確認續約進度。`
 
           await sendToRole(d.owner_id, { telegram: st.external_telegram, email: st.external_email, zalo: st.external_zalo }, title, body)
+          await sendToRole(d.owner_id, { telegram: st.general_telegram, email: st.general_email, zalo: st.general_zalo }, title, body)
           await admin.from('hr_notifications').insert({ owner_id: d.owner_id, kind: 'affair_expiry_s2', title, body })
           await admin.from('affair_reminder_log').insert({ owner_id: d.owner_id, document_id: d.id, kind: 'expiry_s2', due_date: d.expiry_date })
           sentKey.add(kS2)
           expiry++
         }
       }
-      // 階段 1：前 3 個月 (<= stage1 天且 > stage2 天) 首次提醒
+      // 階段 1：前 1 個月 (<= stage1 天且 > stage2 天) 首次提醒
       else if (du <= stage1 && du > stage2) {
         const kS1 = `${d.id}|expiry_s1|${d.expiry_date}`
         if (!sentKey.has(kS1)) {
-          const title = `📄 ${label}到期提醒（前 3 個月）：${d.title || '（未命名）'}`
-          const body = `${label}${where}${d.counterparty ? `・簽約方 ${d.counterparty}` : ''}\n到期日 ${d.expiry_date}（尚有 ${du} 天）。請外務單位洽談續約條件或尋覓新地點。`
+          const title = `📄 ${label}到期提醒（前 1 個月）：${d.title || '（未命名）'}`
+          const body = `${label}${where}${d.counterparty ? `・簽約方 ${d.counterparty}` : ''}\n到期日 ${d.expiry_date}（尚有 ${du} 天）。請外務單位、總務洽談續約條件或尋覓新地點。`
 
           await sendToRole(d.owner_id, { telegram: st.external_telegram, email: st.external_email, zalo: st.external_zalo }, title, body)
+          await sendToRole(d.owner_id, { telegram: st.general_telegram, email: st.general_email, zalo: st.general_zalo }, title, body)
           await admin.from('hr_notifications').insert({ owner_id: d.owner_id, kind: 'affair_expiry_s1', title, body })
           await admin.from('affair_reminder_log').insert({ owner_id: d.owner_id, document_id: d.id, kind: 'expiry_s1', due_date: d.expiry_date })
           sentKey.add(kS1)

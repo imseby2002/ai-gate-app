@@ -17,9 +17,9 @@ const TEXT_FIELDS = [
 ] as const
 
 const NUM_FIELDS = [
-  ['default_expiry_stage1_days', 90],
-  ['default_expiry_stage2_days', 30],
-  ['default_expiry_urgent_days', 15],
+  ['default_expiry_stage1_days', 30],
+  ['default_expiry_stage2_days', 15],
+  ['default_expiry_urgent_days', 7],
   ['default_pay_stage1_days', 3],
   ['default_pay_stage2_days', 1],
 ] as const
@@ -81,8 +81,8 @@ export async function PUT(req: NextRequest) {
       general_email: String(patch.general_email ?? ''),
       cashier_telegram: String(patch.cashier_telegram ?? ''),
       cashier_email: String(patch.cashier_email ?? ''),
-      default_remind_days: Number(patch.default_expiry_stage2_days) || 30,
-      default_pay_remind_days: Number(patch.default_pay_stage1_days) || 5,
+      default_remind_days: Number(patch.default_expiry_stage2_days) || 15,
+      default_pay_remind_days: Number(patch.default_pay_stage1_days) || 3,
     }
     const { error: fallbackErr } = await admin.from('affair_settings').upsert(basePatch, { onConflict: 'owner_id' })
     if (fallbackErr) {
