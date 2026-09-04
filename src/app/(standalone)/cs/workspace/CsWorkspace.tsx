@@ -6,7 +6,7 @@ import {
   BarChart3, Upload, Headphones, Plus, Loader2, CheckCircle2, RefreshCw, Star,
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
-  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck,
+  MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -203,6 +203,8 @@ interface Unit12Data {
   notifyWebhooks?: NotifyWebhook[]
   discountMaxPct?: number
   discountGifts?: string
+  contactPhone1?: string
+  contactPhone2?: string
 }
 
 const CS_PLATFORMS = [
@@ -460,6 +462,8 @@ function Unit12CustomerService({
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
   const [discountGifts, setDiscountGifts] = useState(savedData?.discountGifts ?? '')
+  const [contactPhone1, setContactPhone1] = useState(savedData?.contactPhone1 ?? '')
+  const [contactPhone2, setContactPhone2] = useState(savedData?.contactPhone2 ?? '')
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -482,6 +486,8 @@ function Unit12CustomerService({
     if (savedData.notifyWebhooks !== undefined) setNotifyWebhooks(savedData.notifyWebhooks)
     if (savedData.discountMaxPct !== undefined) setDiscountMaxPct(savedData.discountMaxPct)
     if (savedData.discountGifts !== undefined) setDiscountGifts(savedData.discountGifts)
+    if (savedData.contactPhone1 !== undefined) setContactPhone1(savedData.contactPhone1)
+    if (savedData.contactPhone2 !== undefined) setContactPhone2(savedData.contactPhone2)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -506,7 +512,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 })
       }
     } finally {
       setUploadingDialogue(false)
@@ -516,7 +522,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 })
   }
 
   // Test chat
@@ -1037,7 +1043,7 @@ function Unit12CustomerService({
   function saveSettings() {
     setSavingSettings(true)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -1135,7 +1141,7 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -2144,6 +2150,32 @@ function Unit12CustomerService({
               />
               <span className="text-sm text-gray-500">{t('u12.minutesAutoClose')}</span>
               {autoCloseMinutes > 0 && <span className="text-xs text-green-600">{t('u12.enabled')}</span>}
+            </div>
+          </div>
+
+          {/* ── 客服真人聯絡電話 ── */}
+          <div className="border rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-emerald-500" />
+              <span className="text-sm font-semibold text-gray-800">{t('u12.csContactPhone')}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">{t('u12.live')}</span>
+            </div>
+            <p className="text-xs text-gray-500">{t('u12.csContactPhoneDesc')}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="tel"
+                value={contactPhone1}
+                onChange={e => setContactPhone1(e.target.value)}
+                placeholder={t('u12.csContactPhonePh1')}
+                className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
+              <input
+                type="tel"
+                value={contactPhone2}
+                onChange={e => setContactPhone2(e.target.value)}
+                placeholder={t('u12.csContactPhonePh2')}
+                className="w-full text-sm border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              />
             </div>
           </div>
 
