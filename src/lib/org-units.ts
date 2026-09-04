@@ -31,6 +31,9 @@ export const UNIT_AREAS: UnitArea[] = [
   { key: 'repair', label: '維修', pages: [
     { href: '/repair', label: '設備・報修' },
   ] },
+  { key: 'gm', label: '總經理室', pages: [
+    { href: '/gm', label: '經營儀表板' },
+  ] },
 ]
 
 // 共用（所有登入者都可見）
