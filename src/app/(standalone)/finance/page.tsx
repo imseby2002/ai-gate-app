@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import { ZeroImportModal } from '@/components/finance/ZeroImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
 const ACCOUNT_IMPORT_COLUMNS: ImportColumn[] = [
@@ -223,6 +224,7 @@ function CashflowTab() {
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [showZeroImport, setShowZeroImport] = useState(false)
   const [editing, setEditing] = useState<Cashflow | null>(null)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -300,13 +302,20 @@ function CashflowTab() {
             </Button>
           ))}
         </div>
-        <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setShowImport(true)}>
+        <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setShowZeroImport(true)}>
+          <Upload className="h-4 w-4 text-primary" />從 Zero 匯入 (.mdb)
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
           <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
         </Button>
         <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
           <Plus className="h-4 w-4" />新增記錄
         </Button>
       </div>
+
+      {showZeroImport && (
+        <ZeroImportModal onClose={() => setShowZeroImport(false)} onDone={() => { load(); loadAccounts() }} />
+      )}
 
       {showImport && (
         <ExcelImportModal
