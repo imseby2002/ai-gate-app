@@ -246,7 +246,15 @@ const HUMAN_ESCALATION_RE = /人工客服|真人客服|轉人工|轉真人|要�
 // 誠實說不確定並建議聯繫客服，不會答錯，只是不會被錯誤攔截成一句罐頭回覆）。
 const REFUND_RE = /退款|退費|退貨|取消訂單|refund|cancel.*order/i
 const REFUND_ACTION_RE = /我要(退|取消)|幫我(退|取消)|申請退款|要求退款|請(幫我)?退款|退我|退錢給我|要取消(我的)?訂單|想取消(我的)?訂單|麻煩取消/i
-const REFUND_POLICY_RE = /政策|規定|規則|辦法|退款(方式|流程|條件)|取消(方式|流程|條件)|多久.{0,4}(前|之前)|幾天前|如何.{0,6}(取消|退)|怎麼.{0,6}(取消|退)/i
+// 真實案例：客人問「如天候因素船隻不能成行，請問可否退款？」——這是問「假設某種情況
+// 發生，退款政策是什麼」，不是真的要求退款，但原本的規則只認「政策/規定/退款方式」
+// 這類明確字眼，沒涵蓋「如果/若/萬一 + 某條件 + 可否/能否退款」這種很常見的假設性
+// 問法，導致被誤判成真的要退款、觸發永久轉真人；轉真人後沒有任何自動恢復機制，
+// 客人接下來好幾天的訊息全部石沉大海（見下方 hasOpenHandoff 的逾時安全閥修正）。
+// 新增「如果/若/萬一/假如 ... 退/取消」與「可否/能否/是否 ... 退」這類假設語氣，
+// 讓知識庫本來就寫好的退款政策（例如「若因風浪封島，會提早通知並全額退款」）能
+// 直接照常回答，不用轉真人。
+const REFUND_POLICY_RE = /政策|規定|規則|辦法|退款(方式|流程|條件)|取消(方式|流程|條件)|多久.{0,4}(前|之前)|幾天前|如何.{0,6}(取消|退)|怎麼.{0,6}(取消|退)|(如果|若|萬一|假如).{0,20}(退|取消)|可否.{0,4}退|能否.{0,4}退|是否.{0,4}(可退|能退|退款)/i
 // 免費層客訴偵測：AI 照常回覆，但額外通知老闆有升級空間
 const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 需要即時網路資訊（天氣、附近景點、路況等知識庫不會有的即時資料）僅 PRO+ 觸發搜尋分支
@@ -255,18 +263,29 @@ const COMPLAINT_RE = /投訴|抱怨|complaint/i
 // 伴手禮這類知識庫本來就不會有、但客人很常問的在地資訊。
 const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|特產|名產|伴手禮|美食|小吃|好吃|好玩|必吃|必買|必去|哪裡(買|吃|玩)|weather|nearby|traffic/i
 
+// 工單開超過這麼久還沒被員工處理（狀態一直沒變成 resolved/closed），視為員工可能
+// 漏看或這條規則誤觸發——真實案例：客人問「如天候因素船隻不能成行，請問可否退款？」
+// 這種假設性政策問題被誤判成真的要退款，轉真人後從此沒有任何人回應，客人接下來
+// 4 天、十幾則訊息全部石沉大海，也沒有任何自動恢復機制。超過這個時數就先讓 AI
+// 恢復回覆，避免客人永遠卡住；工單本身仍然維持 open，員工看到還是可以隨時真的接手。
+const HANDOFF_STALE_HOURS = 24
+
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
   try {
     const { data } = await getServiceClient()
       .from('cs_tickets')
-      .select('id')
+      .select('id, created_at')
       .eq('user_id', userId)
       .eq('from_id', customerId)
       .eq('intent', '人工客服請求')
       .in('status', ['open', 'in_progress'])
+      .order('created_at', { ascending: false })
       .limit(1)
-    return !!data?.length
+    const ticket = data?.[0]
+    if (!ticket) return false
+    const ageHours = (Date.now() - new Date(ticket.created_at as string).getTime()) / 3600_000
+    return ageHours < HANDOFF_STALE_HOURS
   } catch {
     return false  // fail open — never let a check error mute the bot for everyone
   }

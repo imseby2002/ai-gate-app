@@ -27,11 +27,16 @@ export async function GET(req: NextRequest) {
   const to = sp.get('to')
   const platform = sp.get('platform')
 
-  // 目前真人接管中的客戶（open 人工客服工單）
+  // 目前真人接管中的客戶（open 人工客服工單）——超過 24 小時沒處理的工單，
+  // AI 那邊（cs-webhook 的 hasOpenHandoff）已經會自動恢復回覆，這裡的「接管中」
+  // 標示要跟著同步，不然會顯示已接管、實際上 AI 早就在回了，員工誤以為有人在處理。
+  const HANDOFF_STALE_HOURS = 24
+  const staleCutoff = new Date(Date.now() - HANDOFF_STALE_HOURS * 3600_000).toISOString()
   const { data: openTickets } = await supabase
     .from('cs_tickets').select('from_id')
     .eq('user_id', ctx.ownerId).eq('intent', '人工客服請求')
     .in('status', ['open', 'in_progress'])
+    .gte('created_at', staleCutoff)
   const takeoverSet = new Set((openTickets ?? []).map(t => t.from_id))
 
   // ── 單一對話 thread ────────────────────────────────────────────────────────
