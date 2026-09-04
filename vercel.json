@@ -46,6 +46,10 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/cron/cs-customer-memory",
+      "schedule": "*/30 * * * *"
+    },
+    {
       "path": "/api/cron/cs-form-batch",
       "schedule": "*/15 * * * *"
     },

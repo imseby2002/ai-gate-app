@@ -16,9 +16,12 @@ interface Customer {
   message_count: number
   last_intent: string | null
   summary: string | null
+  facts: Record<string, string> | null
   last_message_at: string
   first_seen_at: string
 }
+
+const FACT_LABELS: Record<string, string> = { confirmedName: '訂房大名', orderNumber: '訂單號碼', phone: '手機號碼' }
 
 const STAGE_CLS: Record<string, string> = {
   new: 'bg-gray-100 text-gray-600',
@@ -123,6 +126,11 @@ export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
                         <td className="px-4 py-3">
                           <div className="font-medium">{r.name || r.from_id}</div>
                           <div className="text-[11px] text-muted-foreground">{r.platform}{r.summary ? ` · ${r.summary}` : ''}</div>
+                          {r.facts && Object.entries(r.facts).some(([, v]) => v) && (
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              {Object.entries(r.facts).filter(([, v]) => v).map(([k, v]) => `${FACT_LABELS[k] ?? k}：${v}`).join('　')}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3"><span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${stageCls(r.stage)}`}>{stageLabel(r.stage)}</span></td>
                         <td className="px-4 py-3 text-center tabular-nums">{r.price_ask_count}</td>
