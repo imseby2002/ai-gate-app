@@ -5,8 +5,8 @@ import { xlsToRows } from '@/lib/hr/xls'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const num = (v: unknown): number => {
@@ -20,8 +20,8 @@ const txt = (v: unknown) => String(v ?? '').trim()
 // 匯入配方（.xlsx / .xls）
 // 欄位匹配：配方名稱/成品名稱 | 備註 | 原料代碼/碼 | 原料名稱 | 每杯用量/用量
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const form = await req.formData().catch(() => null)
   const file = form?.get('file')

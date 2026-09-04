@@ -6,8 +6,8 @@ import { computeOrder, loadEffectiveSafety, notifyForeman, type CountRow } from 
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -20,8 +20,8 @@ async function storeNameOf(supabase: Awaited<ReturnType<typeof createClient>>, o
 
 // GET ?id= → 單張盤點（含訂貨計算＋緊急）；GET ?store= → 該門市盤點清單
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const sp = new URL(req.url).searchParams
   const id = s(sp.get('id'))
 
@@ -47,8 +47,8 @@ export async function GET(req: NextRequest) {
 // 建立盤點。body: { store, taken_on?, note?, items:[{material_code, material_name, unit, counted_qty}] }
 // → 計算訂貨（補到滿倉）＋緊急（≤安全量）；有緊急則通知領班。
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const store = s(b.store)
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await supabase.from('inv_stocktakes').delete().eq('id', id).eq('owner_id', user.id)

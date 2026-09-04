@@ -4,8 +4,8 @@ import { PNL_LINES } from '@/app/(standalone)/finance/pnl-schema'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 type LineRow = {
@@ -39,8 +39,8 @@ function sanitize(v: unknown, ownerId: string): LineRow[] {
 
 // GET /api/hr/pnl/schema — 回傳該使用者科目樹；首次為空則種入預設並建一個「A門市」
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   let { data: lines } = await supabase.from('pnl_lines')
     .select('code, zh, vi, section, kind, compute, sort, archived')
@@ -70,8 +70,8 @@ export async function GET() {
 
 // PUT /api/hr/pnl/schema — 覆寫整份科目樹：body { lines: [...] }
 export async function PUT(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json()
   const rows = sanitize(body?.lines, user.id)

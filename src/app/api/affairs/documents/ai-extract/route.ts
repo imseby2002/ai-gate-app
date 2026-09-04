@@ -17,7 +17,7 @@ function mediaTypeOf(name: string): string | null {
 
 export async function POST(req: NextRequest) {
   const ctx = await getUnitContext('affairs')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const form = await req.formData().catch(() => null)
   if (!form) return NextResponse.json({ error: '無效的 Form-Data' }, { status: 400 })

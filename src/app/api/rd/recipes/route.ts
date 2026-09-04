@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('rd')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -12,8 +12,8 @@ const num = (v: unknown) => { const n = Number(String(v ?? '').replace(/[,\s]/g,
 
 // 清單（?id= 取單一含明細）
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const id = s(new URL(req.url).searchParams.get('id'))
   if (id) {
     const { data: recipe } = await supabase.from('rd_recipes').select('*').eq('id', id).eq('owner_id', user.id).single()
@@ -29,8 +29,8 @@ export async function GET(req: NextRequest) {
 
 // 單一配方輸入／編輯。body: { id?, name, cup_size?, category?, note?, items:[{material_name,unit,qty,price_export,price_purchase}] }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const name = s(b.name)
   if (!name) return NextResponse.json({ error: '配方名稱必填' }, { status: 400 })
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await supabase.from('rd_recipes').delete().eq('id', id).eq('owner_id', user.id)

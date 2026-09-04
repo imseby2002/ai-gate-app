@@ -5,7 +5,7 @@ import { generateText } from 'ai'
 
 export const maxDuration = 60
 
-async function ctx() { const c = await getUnitContextAny(['audit', 'store']); return c.ok ? c : null }
+async function ctx() { return await getUnitContextAny(['audit', 'store']) }
 const s = (v: unknown) => String(v ?? '').trim()
 
 // 將客戶端傳來的分析結果壓成精簡文字，供 AI 參考（限制長度）
@@ -26,7 +26,7 @@ function analysisText(a: unknown): string {
 
 // 稽核 AI 對談。body: { chat_id?, store, message, analysis? }
 export async function POST(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
   const b = await req.json().catch(() => ({}))
   const message = s(b.message)

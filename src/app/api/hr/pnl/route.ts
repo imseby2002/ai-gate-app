@@ -3,15 +3,15 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 // GET /api/hr/pnl?period=YYYY-MM
 // 回傳：門市清單、該月所有格值、有資料的月份清單
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const period = req.nextUrl.searchParams.get('period') ?? ''
 
@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
 // PUT /api/hr/pnl  批次 upsert 格值
 // body: { period, source?, values: { store_id, line_code, amount }[] }
 export async function PUT(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json()
   const period: string = body?.period ?? ''

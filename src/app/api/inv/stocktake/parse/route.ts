@@ -4,8 +4,8 @@ import { readXlsx, type Cell } from '@/lib/inv/xlsxRead'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const txt = (v: Cell) => String(v ?? '').trim()
@@ -14,8 +14,8 @@ const num = (v: Cell) => { const n = Number(String(v ?? '').replace(/[,\s]/g, ''
 // 上傳已填盤點表（.xlsx）→ 解析為 [{material_code, material_name, unit, counted_qty}]。
 // 依標題列找欄位：碼/code、名稱/tên、單位/đvt、實盤/count。找不到則用固定欄序 0,1,2,4。
 export async function POST(req: NextRequest) {
-  const { user } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const form = await req.formData().catch(() => null)
   const file = form?.get('file')
   if (!(file instanceof File)) return NextResponse.json({ error: '缺少檔案' }, { status: 400 })

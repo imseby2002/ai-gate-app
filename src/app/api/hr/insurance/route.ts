@@ -5,8 +5,8 @@ import { notifyHR } from '@/lib/hr/notify'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 type Emp = {
@@ -50,8 +50,8 @@ async function build(supabase: Awaited<ReturnType<typeof createClient>>, ownerId
 
 // 預覽：當月每位員工的投保判定
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const sp = new URL(req.url).searchParams
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()
   const month = parseInt(sp.get('month') ?? '') || (new Date().getMonth() + 1)
@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
 
 // 重新彙整：把「需投保但尚未標記」者設為 insurance_required，並通知人事
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const body = await req.json().catch(() => ({}))
   const year = parseInt(body.year) || new Date().getFullYear()
   const month = parseInt(body.month) || (new Date().getMonth() + 1)

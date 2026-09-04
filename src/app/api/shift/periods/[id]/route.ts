@@ -6,15 +6,15 @@ type Ctx = { params: Promise<{ id: string }> }
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 const s = (v: unknown) => String(v ?? '').trim()
 
 // 排班期明細：期別、員工（含填報連結與是否已交）、日期、可上班彙整。
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await params
   const { data: period } = await supabase.from('shift_periods')
     .select('id, store, title, start_date, end_date, slots, status').eq('id', id).eq('owner_id', user.id).single()
@@ -33,8 +33,8 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 
 // 更新期別（標題／狀態）。body: { title?, status? }
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { id } = await params
   const b = await req.json().catch(() => ({}))
   const upd: Record<string, unknown> = { updated_at: new Date().toISOString() }

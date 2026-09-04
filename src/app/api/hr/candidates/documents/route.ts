@@ -5,14 +5,14 @@ import { APPLY_BUCKET } from '@/lib/hr/apply'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 // 後台檢視某應徵者的文件（含簽章 URL）
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const candidateId = new URL(req.url).searchParams.get('candidate_id')
   if (!candidateId) return NextResponse.json({ error: 'candidate_id required' }, { status: 400 })

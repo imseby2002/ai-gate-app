@@ -3,14 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['store', 'audit'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 // 列出所有 POS 成品（去重）＋目前對照的配方＋可選配方清單
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const [{ data: pos }, { data: map }, { data: recipes }] = await Promise.all([
     supabase.from('inv_pos_sales').select('product_code, product_name').eq('owner_id', user.id),
@@ -29,8 +29,8 @@ export async function GET() {
 
 // 設定單一成品對照。body: { product_code, product_name, recipe_id|null }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const body = await req.json().catch(() => ({}))
   const product_code = String(body.product_code ?? '').trim()
   if (!product_code) return NextResponse.json({ error: 'product_code required' }, { status: 400 })

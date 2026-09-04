@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -17,8 +17,8 @@ async function periodEditable(supabase: Awaited<ReturnType<typeof getAdminUser>>
 
 // 手動加一個指派。body: { period_id, employee_id, work_date, slot_code }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const period_id = s(b.period_id), employee_id = s(b.employee_id), slot_code = s(b.slot_code)
   const work_date = dateOrNull(b.work_date)
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
 
 // 移除一個指派。body: { period_id, employee_id, work_date, slot_code }
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const b = await req.json().catch(() => ({}))
   const period_id = s(b.period_id), employee_id = s(b.employee_id), slot_code = s(b.slot_code)
   const work_date = dateOrNull(b.work_date)

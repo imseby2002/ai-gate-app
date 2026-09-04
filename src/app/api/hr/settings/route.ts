@@ -3,22 +3,22 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: 200 as const }
 }
 
 const DEFAULTS = { insurance_mode: 'threshold', insurance_threshold: 5000000, insurance_currency: 'VND' }
 
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
   const { data } = await supabase.from('hr_settings').select('*').eq('owner_id', user.id).single()
   return NextResponse.json({ settings: data ?? { owner_id: user.id, ...DEFAULTS } })
 }
 
 export async function PUT(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json()
   const patch: Record<string, unknown> = { owner_id: user.id, updated_at: new Date().toISOString() }

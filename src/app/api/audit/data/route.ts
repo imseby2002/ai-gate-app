@@ -3,8 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // 稽核部門讀取四來源資料（皆歸屬公司 owner）。audit 或 store 單位、管理者可用。
 async function ctx() {
-  const c = await getUnitContextAny(['audit', 'store'])
-  return c.ok ? c : null
+  return await getUnitContextAny(['audit', 'store'])
 }
 const s = (v: unknown) => String(v ?? '').trim()
 const int = (v: unknown) => { const n = parseInt(String(v ?? '')); return Number.isFinite(n) ? n : 0 }
@@ -12,7 +11,7 @@ const int = (v: unknown) => { const n = parseInt(String(v ?? '')); return Number
 // ?kind=sales|balance|prices&store=&year=&month=
 export async function GET(req: NextRequest) {
   const c = await ctx()
-  if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const sp = new URL(req.url).searchParams
   const kind = s(sp.get('kind'))
   const store = s(sp.get('store'))
