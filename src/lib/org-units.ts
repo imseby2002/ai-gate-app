@@ -28,6 +28,9 @@ export const UNIT_AREAS: UnitArea[] = [
   { key: 'audit', label: '稽核', pages: [
     { href: '/audit', label: '原物料合理性' },
   ] },
+  { key: 'repair', label: '維修', pages: [
+    { href: '/repair', label: '設備・報修' },
+  ] },
 ]
 
 // 共用（所有登入者都可見）
