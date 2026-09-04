@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save } from 'lucide-react'
+import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save, Sparkles, Check, RotateCcw, CalendarPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
-type Tab = 'brand' | 'calendar'
+const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
+type Tab = 'brand' | 'generate' | 'calendar'
 
 export default function MktPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
@@ -34,12 +35,12 @@ export default function MktPage() {
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
+        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
           <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
 
-      {tab === 'brand' ? <BrandTab /> : <CalendarTab />}
+      {tab === 'brand' ? <BrandTab /> : tab === 'generate' ? <GenerateTab /> : <CalendarTab />}
     </div>
   )
 }
@@ -61,7 +62,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
     </label>
   )
 }
-const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
 
 function BrandTab() {
   const [b, setB] = useState<Brand | null>(null)
@@ -124,6 +124,175 @@ function BrandTab() {
           <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存品牌檔</Button>
           {msg && <span className="text-sm text-emerald-600">{msg}</span>}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────── 一鍵產出 ───────────────────────
+const GEN_CHANNELS: [string, string][] = [['fb', 'Facebook'], ['ig', 'Instagram'], ['tiktok', 'TikTok'], ['zalo', 'Zalo'], ['line', 'LINE']]
+const CONTENT_STATUS_LABEL: Record<string, string> = { review: '待審核', approved: '已核准', scheduled: '已排程', published: '已發布', rejected: '退回' }
+const CONTENT_STATUS_VARIANT: Record<string, 'warning' | 'success' | 'default' | 'secondary' | 'destructive'> = { review: 'warning', approved: 'success', scheduled: 'default', published: 'success', rejected: 'destructive' }
+interface ContentRow { id: string; topic: string; channels: string[]; status: string; created_at: string }
+interface ContentFull { id: string; topic: string; brief: string; channels: string[]; outputs: Record<string, any>; status: string; review_note: string }
+
+function GenerateTab() {
+  const [list, setList] = useState<ContentRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [topic, setTopic] = useState('')
+  const [brief, setBrief] = useState('')
+  const [channels, setChannels] = useState<string[]>(['fb', 'ig'])
+  const [generating, setGenerating] = useState(false)
+  const [err, setErr] = useState('')
+  const [detailId, setDetailId] = useState('')
+
+  const loadList = useCallback(async () => {
+    setLoading(true)
+    const r = await fetch('/api/mkt/content')
+    const j = await r.json().catch(() => ({}))
+    setList(j.items ?? [])
+    setLoading(false)
+  }, [])
+  useEffect(() => { loadList() }, [loadList])
+
+  async function generate() {
+    if (!topic.trim()) { setErr('主題必填'); return }
+    setGenerating(true); setErr('')
+    const r = await fetch('/api/mkt/content', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, brief, channels }) })
+    const j = await r.json().catch(() => ({})); setGenerating(false)
+    if (!r.ok) { setErr(j.error || '產出失敗'); return }
+    setTopic(''); setBrief('')
+    await loadList()
+    setDetailId(j.id)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card p-5 space-y-3">
+        <div className="flex items-center gap-2 font-semibold"><Sparkles className="h-4 w-4 text-primary" />一鍵產出整套內容</div>
+        <p className="text-xs text-muted-foreground">輸入主題／新品，AI 依品牌守則產出各平台文案＋短影片腳本＋圖片提示＋GEO 文章，進入「待審核」，核准後才發布。</p>
+        <Field label="主題／新品 *"><Input value={topic} onChange={e => setTopic(e.target.value)} placeholder="例：芋頭珍珠鮮奶新品上市" /></Field>
+        <Field label="補充說明" hint="賣點、活動、優惠等"><textarea rows={2} className={ta} value={brief} onChange={e => setBrief(e.target.value)} /></Field>
+        <div>
+          <div className="text-sm font-medium mb-1.5">產出平台</div>
+          <div className="flex flex-wrap gap-2">
+            {GEN_CHANNELS.map(([k, label]) => {
+              const on = channels.includes(k)
+              return (
+                <button key={k} type="button" onClick={() => setChannels(on ? channels.filter(x => x !== k) : [...channels, k])}
+                  className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${on ? 'bg-primary text-primary-foreground border-primary' : 'bg-transparent text-muted-foreground hover:border-primary/50'}`}>{label}</button>
+              )
+            })}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 pt-1">
+          <Button onClick={generate} disabled={generating} className="gap-1.5">{generating ? <><Loader2 className="h-4 w-4 animate-spin" />產出中（約 20–40 秒）</> : <><Sparkles className="h-4 w-4" />AI 產出整套</>}</Button>
+          {err && <span className="text-sm text-red-500">{err}</span>}
+        </div>
+      </div>
+
+      {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        : list.length === 0 ? <div className="text-center py-10 text-muted-foreground text-sm">尚無產出內容</div>
+        : (
+          <div className="space-y-2">
+            {list.map(i => (
+              <button key={i.id} onClick={() => setDetailId(i.id)} className="w-full text-left flex items-center gap-3 rounded-xl border bg-card px-4 py-3 hover:bg-muted/40 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{i.topic}</span>
+                    <Badge variant={CONTENT_STATUS_VARIANT[i.status] ?? 'secondary'} className="text-[10px] px-1.5 py-0">{CONTENT_STATUS_LABEL[i.status] ?? i.status}</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">{(i.channels ?? []).map(c => (GEN_CHANNELS.find(g => g[0] === c)?.[1] ?? c)).join('、')}　{i.created_at?.slice(0, 10)}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+      {detailId && <ContentDetail id={detailId} onClose={() => setDetailId('')} onChanged={loadList} />}
+    </div>
+  )
+}
+
+function ContentDetail({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const [item, setItem] = useState<ContentFull | null>(null)
+  const [outputs, setOutputs] = useState<Record<string, any>>({})
+  const [saving, setSaving] = useState('')
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => {
+    fetch('/api/mkt/content?id=' + id).then(async r => {
+      const j = await r.json().catch(() => ({}))
+      if (j.item) { setItem(j.item); setOutputs(j.item.outputs ?? {}) }
+    })
+  }, [id])
+
+  async function patch(body: Record<string, unknown>, tag: string) {
+    setSaving(tag); setMsg('')
+    const r = await fetch('/api/mkt/content', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, ...body }) })
+    setSaving('')
+    if (r.ok) { setMsg('已更新'); onChanged() } else setMsg('失敗')
+  }
+  async function addToCalendar() {
+    if (!item) return
+    setSaving('cal')
+    await fetch('/api/mkt/calendar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: item.topic, channel: item.channels?.[0] ?? 'other', status: 'scheduled', note: '由一鍵產出核准' }) })
+    setSaving(''); setMsg('已加入行事曆')
+  }
+
+  const setCh = (ch: string, field: string, v: string) => setOutputs(o => ({ ...o, [ch]: { ...(o[ch] ?? {}), [field]: v } }))
+  const setGeo = (field: string, v: string) => setOutputs(o => ({ ...o, geo_article: { ...(o.geo_article ?? {}), [field]: v } }))
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-2xl rounded-xl bg-card p-5 shadow-xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {!item ? <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div> : <>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-lg font-semibold">{item.topic}</h2>
+            <button onClick={onClose} className="p-1 rounded hover:bg-muted"><X className="h-5 w-5" /></button>
+          </div>
+          <div className="flex items-center gap-2 mb-4">
+            <Badge variant={CONTENT_STATUS_VARIANT[item.status] ?? 'secondary'} className="text-[10px] px-1.5 py-0">{CONTENT_STATUS_LABEL[item.status] ?? item.status}</Badge>
+            <span className="text-xs text-muted-foreground">審核後再發布</span>
+          </div>
+
+          {outputs._raw ? (
+            <textarea rows={16} className={ta} value={outputs._raw} onChange={e => setOutputs({ _raw: e.target.value })} />
+          ) : (
+            <div className="space-y-4">
+              {(item.channels ?? []).filter(c => outputs[c]).map(c => (
+                <div key={c} className="space-y-1.5">
+                  <div className="text-sm font-semibold">{GEN_CHANNELS.find(g => g[0] === c)?.[1] ?? c}</div>
+                  <textarea rows={4} className={ta} value={outputs[c]?.copy ?? ''} onChange={e => setCh(c, 'copy', e.target.value)} />
+                  <Input value={Array.isArray(outputs[c]?.hashtags) ? outputs[c].hashtags.join(' ') : (outputs[c]?.hashtags ?? '')}
+                    onChange={e => setOutputs(o => ({ ...o, [c]: { ...(o[c] ?? {}), hashtags: e.target.value.split(/\s+/).filter(Boolean) } }))}
+                    placeholder="hashtags" />
+                </div>
+              ))}
+              {outputs.video_script !== undefined && (
+                <div className="space-y-1.5"><div className="text-sm font-semibold">短影片腳本</div>
+                  <textarea rows={5} className={ta} value={outputs.video_script ?? ''} onChange={e => setOutputs(o => ({ ...o, video_script: e.target.value }))} /></div>
+              )}
+              {outputs.image_prompt !== undefined && (
+                <div className="space-y-1.5"><div className="text-sm font-semibold">圖片提示（生圖用）</div>
+                  <textarea rows={2} className={ta} value={outputs.image_prompt ?? ''} onChange={e => setOutputs(o => ({ ...o, image_prompt: e.target.value }))} /></div>
+              )}
+              {outputs.geo_article !== undefined && (
+                <div className="space-y-1.5"><div className="text-sm font-semibold">GEO 文章</div>
+                  <Input value={outputs.geo_article?.title ?? ''} onChange={e => setGeo('title', e.target.value)} placeholder="標題" />
+                  <textarea rows={8} className={ta} value={outputs.geo_article?.body ?? ''} onChange={e => setGeo('body', e.target.value)} /></div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => patch({ outputs }, 'save')} disabled={!!saving} className="gap-1.5">{saving === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存修改</Button>
+            <Button size="sm" onClick={() => patch({ status: 'approved' }, 'ap')} disabled={!!saving} className="gap-1.5"><Check className="h-4 w-4" />核准</Button>
+            <Button variant="outline" size="sm" onClick={() => patch({ status: 'rejected' }, 'rj')} disabled={!!saving} className="gap-1.5"><RotateCcw className="h-4 w-4" />退回</Button>
+            <Button variant="outline" size="sm" onClick={addToCalendar} disabled={!!saving} className="gap-1.5"><CalendarPlus className="h-4 w-4" />加入行事曆</Button>
+            {msg && <span className="text-sm text-emerald-600">{msg}</span>}
+          </div>
+        </>}
       </div>
     </div>
   )
