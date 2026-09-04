@@ -82,6 +82,7 @@ type CsCustomerRow = {
   price_ask_count: number
   message_count: number
   discount_offered_at: string | null
+  facts: Record<string, string> | null
 }
 
 // 偵測猶豫關鍵字
@@ -94,6 +95,15 @@ function buildSellSection(cust: CsCustomerRow | null, convoPriceAsks: number, is
   // 客戶記憶：永遠保留（不影響話術）
   if (cust?.name) lines.push(`\n\n客戶稱呼：${cust.name}，請自然稱呼對方。`)
   if (cust?.summary) lines.push(`回頭客背景：「${cust.summary}」，勿重問已知資訊。`)
+  // 已核對過的身分事實（訂單號碼/電話/訂房大名）——真實案例：客人已經在對話中提供
+  // 過並且查詢成功核對過這些資訊，隔一陣子或換一則訊息再問，AI 完全不記得又重新
+  // 要求客人提供一次，客人會覺得完全沒被記住。這裡不是要 AI 跳過查詢直接洩漏密碼，
+  // 而是讓 AI 知道「這些身分資訊已經跟客人核對過」，不用再重複詢問或請客人重打一次。
+  const factLabels: Record<string, string> = { confirmedName: '訂房大名', orderNumber: '訂單號碼', phone: '手機號碼' }
+  const factEntries = Object.entries(cust?.facts ?? {}).filter(([, v]) => v)
+  if (factEntries.length) {
+    lines.push(`\n\n【客人已核對過的身分資訊——不用再詢問或請客人重新提供，需要查詢資料時可直接使用】\n${factEntries.map(([k, v]) => `${factLabels[k] ?? k}：${v}`).join('\n')}`)
+  }
 
   // 偵測猶豫：關鍵字 OR 第 2 次以上問價 OR 已在 negotiating 階段
   const isHesitating = HESITATION_RE.test(currentMessage) || convoPriceAsks >= 2 || cust?.stage === 'negotiating'
@@ -530,7 +540,7 @@ async function replyToCustomer(
   try {
     const { data } = await getServiceClient()
       .from('cs_customers')
-      .select('name, summary, stage, price_ask_count, message_count, discount_offered_at')
+      .select('name, summary, stage, price_ask_count, message_count, discount_offered_at, facts')
       .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', knowledge.industry)
       .single()
     cust = (data as CsCustomerRow | null) ?? null
@@ -820,10 +830,17 @@ const BOOKING_INTENT_RE = /訂單|訂房|預訂|預定|入住|訂位|reservation
 // 姓名去查訂單，查無資料後 AI 講出「查無訂單編號為『OK』的資料」這種文不對題的回覆）
 const NON_NAME_ACK_RE = /^(ok+|okay|k|kk|好|好的|好喔|好啊|嗯|嗯嗯|收到|了解|明白|知道了|謝謝|謝了|感謝|thanks?|thank\s*you|yes|yep|yeah|no|不用|不是|是的|是|對|對的|沒問題|可以|沒事|辛苦了)$/i
 
-// ── 訂單號碼／手機號碼／訂房姓名三種方式都查無資料 → 真的建立工單通知專員 ──
-// 之前的修法只讓 AI 引導客人「換個方式再查一次」，但客人如果三種方式都試過仍然
-// 查無資料，代表這真的需要人工協助（可能是系統資料沒建好），這時才真的建立工單
-// 通知專員，不能讓客人一直被要求換方式、卻永遠等不到真人回覆。
+// ── 訂單號碼／手機號碼／訂房姓名任兩種方式都查無資料 → 真的建立工單通知專員 ──
+// 之前的修法只讓 AI 引導客人「換個方式再查一次」，但客人如果換了方式仍然查無資料，
+// 代表這真的需要人工協助（可能是系統資料沒建好），這時才真的建立工單通知專員，
+// 不能讓客人一直被要求換方式、卻永遠等不到真人回覆。
+// 真實案例：客人先給了電話（查無資料），後來又給了訂房平台訂單編號（也查無資料），
+// 但因為他從沒有單獨傳過一則「只有姓名」的訊息（一直是「平台 XXX / 姓名 XXX」這種
+// 複合格式），原本要求「訂單、電話、姓名三種都要各自失敗過一次」才建工單的條件永遠
+// 湊不齊 name 這一種，導致系統無限迴圈地要求客人「換個方式再查一次」——甚至還會
+// 要求客人重新提供「剛剛已經給過、已經查無資料」的同一組電話，讓客人以為 AI 完全沒
+// 记住前面講過的話。改成只要有任兩種不同方式都失敗過，就視為已經充分嘗試、真的建
+// 工單，不必湊滿三種。
 type LookupKind = 'order' | 'phone' | 'name'
 
 function classifyLookupKind(text: string, recentText: string): LookupKind | null {
@@ -872,6 +889,29 @@ async function createExhaustedLookupTicket(
       priority: 'high', intent: '查無資料人工協助',
     })
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry }, `🔔 客人訂單號碼/手機號碼/訂房姓名皆查無資料：\n\n${lastMessage.slice(0, 300)}`)
+  } catch { /* 不中斷主流程 */ }
+}
+
+// 客人身分事實（訂單號碼/電話/訂房大名）在「查詢成功比對到訂單」的當下直接記住，
+// 供之後對話（甚至是之後開的新對話）直接引用，不用每次都重新要求客人提供已經核對
+// 過的資訊——真實案例：客人已核對過的姓名/電話，換一則訊息或隔一段時間再問，AI
+// 又從頭問一次，客人會覺得完全沒被記住。fire-and-forget，不影響主流程。
+async function saveConfirmedFacts(
+  userId: string, platform: string, customerId: string, industry: string,
+  facts: Record<string, string>,
+): Promise<void> {
+  try {
+    const sb = getServiceClient()
+    const { data: existing } = await sb
+      .from('cs_customers')
+      .select('facts')
+      .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry)
+      .maybeSingle()
+    const merged = { ...(existing?.facts as Record<string, string> | null ?? {}), ...facts }
+    await sb.from('cs_customers').upsert({
+      user_id: userId, platform, from_id: customerId, industry, facts: merged,
+      last_message_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,platform,from_id,industry' })
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -1618,6 +1658,7 @@ async function getAIReply(
           const byName = await queryBookingByGuestName(getServiceClient(), userId, confirmedName, google('gemini-3.1-flash-lite'), confirmedName)
           if (byName) {
             currentLookupFailed = byName.includes('查無')
+            if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName })
             externalDataSection = `\n\n${byName}${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
@@ -1636,6 +1677,7 @@ async function getAIReply(
             // 「查無資料、禁止捏造」，絕對不能讓 AI 在沒有任何資料時自己編一組密碼給客人。
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, orderNum)
             currentLookupFailed = !bnbResult
+            if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { orderNumber: orderNum })
             const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
@@ -1659,6 +1701,7 @@ async function getAIReply(
           const byPhone = await queryBookingByPhone(getServiceClient(), userId, phone)
           if (byPhone) {
             currentLookupFailed = byPhone.includes('查無')
+            if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { phone })
             externalDataSection = `\n\n${byPhone}${externalDataSection}`
           }
         } catch { /* 不中斷主流程 */ }
@@ -1674,6 +1717,7 @@ async function getAIReply(
           if (!passwordFromDatasource) {
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, altOrderNum)
             currentLookupFailed = !bnbResult
+            if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { orderNumber: altOrderNum })
             const bnb = bnbResult ?? `【入住資訊查詢結果】\n查無訂單「${altOrderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
             externalDataSection = `\n\n${bnb}${externalDataSection}`
           } else {
@@ -1700,6 +1744,7 @@ async function getAIReply(
               const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
               if (byName) {
                 currentLookupFailed = byName.includes('查無')
+                if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: message.trim() })
                 externalDataSection = `\n\n${byName}${externalDataSection}`
               }
             } catch { /* 不中斷主流程 */ }
@@ -1737,14 +1782,15 @@ async function getAIReply(
         } catch { /* 不中斷主流程 */ }
       }
 
-      // 訂單號碼／手機號碼／訂房姓名三種方式都查無資料 → 這是真的需要人工協助，
-      // 真的建立工單通知專員，不再只是叫客人換方式查詢卻永遠沒有真人介入。
+      // 訂單號碼／手機號碼／訂房姓名任兩種方式都查無資料 → 這是真的需要人工協助，
+      // 真的建立工單通知專員，不再只是叫客人換方式查詢卻永遠沒有真人介入（見上方
+      // LookupKind 註解：不再要求湊滿三種，兩種不同方式都失敗就足以判定）。
       if (currentLookupKind && currentLookupFailed) {
         const failedKinds = priorFailedLookupKinds(history)
         failedKinds.add(currentLookupKind)
-        if (failedKinds.has('order') && failedKinds.has('phone') && failedKinds.has('name')) {
+        if (failedKinds.size >= 2) {
           await createExhaustedLookupTicket(userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
-          externalDataSection += `\n\n【系統提示——最高優先，覆蓋上方「引導客人換方式查詢」的指示】客人已經依序嘗試訂單號碼、手機號碼、訂房姓名三種識別方式，系統查詢都查無資料，這次系統已經真的建立工單通知專員。現在可以且應該告訴客人「已經為您建立工單，專員會盡快協助核對資料並與您聯繫」，不用再要求客人換方式查詢。`
+          externalDataSection += `\n\n【系統提示——最高優先，覆蓋上方「引導客人換方式查詢」的指示】客人已經嘗試過不同的識別方式（訂單號碼／手機號碼／訂房姓名），系統查詢都查無資料，這次系統已經真的建立工單通知專員。現在可以且應該告訴客人「已經為您建立工單，專員會盡快協助核對資料並與您聯繫」，不用再要求客人換方式查詢，也不要再重複索取客人剛才已經提供過的同一組資訊。`
         }
       }
     }
