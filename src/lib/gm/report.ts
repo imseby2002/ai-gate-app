@@ -41,13 +41,19 @@ async function summarize(snap: GmSnapshot, kind: string, dateLabel: string): Pro
     // 無 AI 金鑰時退回結構化文字，仍可推播
     return `${KIND_LABEL[kind] ?? kind}（${dateLabel}）\n\n${body}`
   }
-  const system = `你是連鎖飲料公司的總經理特助，負責把各部門資料彙整成給總經理看的${KIND_LABEL[kind] ?? '經營'}摘要。
+  // 依報告類型調整深度：每日精簡、每週/月度較完整並含建議
+  const depth = kind === 'daily'
+    ? '請用繁體中文、條列、精煉，控制在 400 字內。'
+    : kind === 'weekly'
+      ? '請用繁體中文，分「一、需總經理決策事項」「二、各部門重點（財務營運／維修／外務法遵／人事／稽核）」「三、建議行動」三段，控制在 800 字內。'
+      : '請用繁體中文，做完整月度經營回顧，分「一、經營總結」「二、需總經理決策事項」「三、各部門重點」「四、下月建議」四段，控制在 1200 字內。'
+  const system = `你是連鎖飲料公司的總經理特助，負責把各部門資料彙整成給總經理看的${KIND_LABEL[kind] ?? '經營'}。
 原則：exception-first——先講需要總經理注意/決策的異常（虧損門市、逾期工單、文件逾期等），再給關鍵數字重點；正常項目簡述即可。
-請用繁體中文、條列、精煉，控制在 400 字內，語氣務實。不要編造資料裡沒有的數字。`
+${depth} 語氣務實，不要編造資料裡沒有的數字。`
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const res = await generateText({
-    model: anthropic('claude-sonnet-4-5'), system, maxOutputTokens: 1200,
-    messages: [{ role: 'user', content: `以下是 ${dateLabel} 的彙整資料，請產出摘要：\n\n${body}` }],
+    model: anthropic('claude-sonnet-4-5'), system, maxOutputTokens: kind === 'daily' ? 1200 : 2500,
+    messages: [{ role: 'user', content: `以下是 ${dateLabel} 的彙整資料，請產出${KIND_LABEL[kind] ?? '摘要'}：\n\n${body}` }],
   })
   return res.text.trim()
 }
