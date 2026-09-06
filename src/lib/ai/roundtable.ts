@@ -316,11 +316,10 @@ export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
 ]
 
 export const MODERATOR_MODELS = [
-  { id: 'anthropic/claude-opus-4-8', name: 'Claude 3.7 Opus (Anthropic)', shortName: 'Claude 3.7 Opus', badge: '頂級旗艦 · 商業白皮書首選' },
-  { id: 'openai/gpt-5', name: 'GPT-4o / o1 (OpenAI)', shortName: 'GPT-4o / o1', badge: '深度推理與數理邏輯' },
-  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文與跨文檔' },
-  { id: 'deepseek/deepseek-r1', name: 'DeepSeek-R1', shortName: 'DeepSeek-R1', badge: '博弈思維鏈與極限壓力測試' },
-  { id: 'anthropic/claude-sonnet-4-6', name: 'Claude 3.7 Sonnet (Anthropic)', shortName: 'Claude 3.7 Sonnet', badge: '高速敏捷分析' },
+  { id: 'anthropic/claude-opus-4-8', name: 'Claude 3.7 Opus (Anthropic)', shortName: 'Claude 3.7 Opus', badge: '頂級旗艦 · 商業白皮書首選 (預設)' },
+  { id: 'anthropic/claude-fable-5-1', name: 'Claude Fable 5.1 (Anthropic)', shortName: 'Claude Fable 5.1', badge: '全新世代 · 深度研究與高階裁斷' },
+  { id: 'openai/gpt-6-astra', name: 'OpenAI Astra (GPT-6)', shortName: 'OpenAI Astra', badge: '遞歸深度推理 · 數理精算與博弈' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文 · 跨文檔精確對齊' },
 ]
 
 export type VerbosityMode = 'concise_150' | 'standard_300' | 'detailed_500' | 'unlimited'
@@ -395,12 +394,15 @@ export const VERBOSITY_OPTIONS: VerbosityOption[] = [
 export function formatModelDisplayName(model?: string): string {
   if (!model) return ''
   const m = model.toLowerCase()
+  if (m.includes('fable')) return 'Claude Fable 5.1'
+  if (m.includes('astra')) return 'OpenAI Astra (GPT-6)'
   if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude 3.7 Opus'
   if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude 3.7 Sonnet'
   if (m.includes('claude-3-5-sonnet') || m.includes('claude-3.5-sonnet')) return 'Claude 3.5 Sonnet'
   if (m.includes('gpt-5') || m.includes('gpt-4o')) return 'GPT-4o (OpenAI)'
   if (m.includes('o1')) return 'o1 (OpenAI)'
   if (m.includes('o3-mini')) return 'o3-mini (OpenAI)'
+  if (m.includes('gemini-3.8-flash') || m.includes('gemini-3.8')) return 'Gemini 3.8 Flash'
   if (m.includes('gemini-2.5-pro') || m.includes('gemini-pro')) return 'Gemini 2.5 Pro'
   if (m.includes('gemini-2.5-flash') || m.includes('gemini-flash')) return 'Gemini 2.5 Flash'
   if (m.includes('deepseek-r1') || m.includes('deepseek')) return 'DeepSeek-R1'
@@ -455,12 +457,14 @@ function resolveModel(id: string): LanguageModel | string {
         apiKey: process.env.OPENROUTER_API_KEY,
         baseURL: 'https://openrouter.ai/api/v1',
       })
-      const orModel =
-        rawModel === 'claude-sonnet-4-6' || rawModel === 'claude-3-7-sonnet-20250219'
-          ? 'anthropic/claude-sonnet-4.6'
-          : rawModel === 'claude-opus-4-8' || rawModel === 'claude-3-opus-20240229'
-            ? 'anthropic/claude-opus-4.8'
-            : `anthropic/${rawModel}`
+      let orModel = `anthropic/${rawModel}`
+      if (rawModel === 'claude-sonnet-4-6' || rawModel === 'claude-3-7-sonnet-20250219') {
+        orModel = 'anthropic/claude-sonnet-4.6'
+      } else if (rawModel === 'claude-opus-4-8' || rawModel === 'claude-3-opus-20240229') {
+        orModel = 'anthropic/claude-opus-4.8'
+      } else if (rawModel.includes('fable')) {
+        orModel = 'anthropic/claude-fable-5.1'
+      }
       return openrouter.chat(orModel)
     }
 
@@ -472,7 +476,9 @@ function resolveModel(id: string): LanguageModel | string {
           ? 'claude-3-7-sonnet-20250219'
           : rawModel === 'claude-opus-4-8'
             ? 'claude-3-opus-20240229'
-            : rawModel
+            : rawModel.includes('fable')
+              ? 'claude-fable-5-1'
+              : rawModel
       return createAnthropic({ apiKey: key })(model)
     }
 
@@ -485,7 +491,11 @@ function resolveModel(id: string): LanguageModel | string {
     }
   }
   if (provider === 'openai') {
-    return createOpenAI({ apiKey: process.env.OPENAI_API_KEY! }).chat(rawModel)
+    const key = process.env.OPENAI_API_KEY!
+    if (rawModel.includes('astra')) {
+      return createOpenAI({ apiKey: key }).chat('gpt-6-astra')
+    }
+    return createOpenAI({ apiKey: key }).chat(rawModel)
   }
   if (provider === 'google') {
     return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })(rawModel)
@@ -494,7 +504,7 @@ function resolveModel(id: string): LanguageModel | string {
 }
 
 function isReasoningModel(model: string): boolean {
-  return /^(openai\/)?(o\d+|gpt-5)/i.test(model)
+  return /^(openai\/)?(o\d+|gpt-5|gpt-6|astra)/i.test(model)
 }
 
 function getGoogleThinkingBudget(model: string): number {
