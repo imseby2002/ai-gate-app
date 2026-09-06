@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin } from 'lucide-react'
+import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-type Tab = 'brand' | 'generate' | 'offline' | 'calendar'
+type Tab = 'brand' | 'generate' | 'offline' | 'delivery' | 'calendar'
 
 export default function MktPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
@@ -35,12 +35,12 @@ export default function MktPage() {
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
+        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
           <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
 
-      {tab === 'brand' ? <BrandTab /> : tab === 'generate' ? <GenerateTab /> : tab === 'offline' ? <OfflineTab /> : <CalendarTab />}
+      {tab === 'brand' ? <BrandTab /> : tab === 'generate' ? <GenerateTab /> : tab === 'offline' ? <OfflineTab /> : tab === 'delivery' ? <DeliveryTab /> : <CalendarTab />}
     </div>
   )
 }
@@ -417,6 +417,142 @@ function OfflineTab() {
               <Field label="結束日"><Input type="date" value={editing.end_date ?? ''} onChange={e => setEditing({ ...editing, end_date: e.target.value })} /></Field>
               <Field label="預算／費用"><Input type="number" value={String(editing.budget ?? 0)} onChange={e => setEditing({ ...editing, budget: Number(e.target.value) || 0 })} /></Field>
               <Field label="照片連結" hint="上架/存證"><Input value={editing.photo_url ?? ''} onChange={e => setEditing({ ...editing, photo_url: e.target.value })} placeholder="https://" /></Field>
+              <div className="col-span-2"><Field label="備註"><textarea rows={2} className={ta} value={editing.note ?? ''} onChange={e => setEditing({ ...editing, note: e.target.value })} /></Field></div>
+            </div>
+            {err && <p className="mt-3 text-sm text-red-500">{err}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditing(null)}>取消</Button>
+              <Button onClick={save} disabled={saving} className="gap-1.5">{saving && <Loader2 className="h-4 w-4 animate-spin" />}儲存</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────── 外送平台 ───────────────────────
+const DELIVERY_PLATFORM: [string, string][] = [['grab', 'GrabFood'], ['shopee', 'ShopeeFood'], ['baemin', 'Baemin'], ['other', '其他']]
+const DELIVERY_PLATFORM_LABEL: Record<string, string> = Object.fromEntries(DELIVERY_PLATFORM)
+const DELIVERY_STATUS_LABEL: Record<string, string> = { online: '上架中', offline: '已下架', pending: '待上架', suspended: '停權' }
+const DELIVERY_STATUS_VARIANT: Record<string, 'success' | 'secondary' | 'warning' | 'destructive'> = { online: 'success', offline: 'secondary', pending: 'warning', suspended: 'destructive' }
+interface Delivery {
+  id: string; platform: string; store: string; status: string; url: string
+  commission_rate: number; rating: number; ranking: number | null; period: string
+  monthly_orders: number; monthly_revenue: number; promo: string; note: string
+}
+const blankDelivery = (platform: string): Partial<Delivery> => ({ platform: platform || 'grab', store: '', status: 'online', url: '', commission_rate: 0, rating: 0, ranking: null, period: '', monthly_orders: 0, monthly_revenue: 0, promo: '', note: '' })
+
+function DeliveryTab() {
+  const [platform, setPlatform] = useState('')
+  const [items, setItems] = useState<Delivery[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<Partial<Delivery> | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const sp = new URLSearchParams(); if (platform) sp.set('platform', platform)
+    const r = await fetch('/api/mkt/delivery?' + sp.toString())
+    const j = await r.json().catch(() => ({}))
+    setItems(j.items ?? [])
+    setLoading(false)
+  }, [platform])
+  useEffect(() => { load() }, [load])
+
+  async function save() {
+    if (!editing) return
+    if (!String(editing.store ?? '').trim()) { setErr('門市必填'); return }
+    setSaving(true); setErr('')
+    const method = editing.id ? 'PATCH' : 'POST'
+    const r = await fetch('/api/mkt/delivery', { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
+    const j = await r.json().catch(() => ({})); setSaving(false)
+    if (!r.ok) { setErr(j.error || '儲存失敗'); return }
+    setEditing(null); load()
+  }
+  async function del(id: string) {
+    if (!confirm('確定刪除？')) return
+    await fetch('/api/mkt/delivery', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    load()
+  }
+
+  const online = items.filter(i => i.status === 'online').length
+  const totalOrders = items.reduce((t, i) => t + (i.monthly_orders || 0), 0)
+  const totalRevenue = items.reduce((t, i) => t + (i.monthly_revenue || 0), 0)
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">上架中</div><div className="mt-1 text-xl font-bold">{online}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">當月訂單</div><div className="mt-1 text-xl font-bold">{fmtNum(totalOrders)}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">當月營業額</div><div className="mt-1 text-xl font-bold">{fmtNum(totalRevenue)}</div></div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={platform} onChange={e => setPlatform(e.target.value)} className={selCls}>
+          <option value="">全部平台</option>
+          {DELIVERY_PLATFORM.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setErr(''); setEditing(blankDelivery(platform || 'grab')) }}><Plus className="h-4 w-4" />新增上架</Button>
+      </div>
+
+      {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        : items.length === 0 ? <div className="text-center py-16 text-muted-foreground text-sm">尚無外送平台上架資料</div>
+        : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {items.map(i => (
+              <div key={i.id} className="rounded-xl border bg-card p-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{DELIVERY_PLATFORM_LABEL[i.platform] ?? i.platform}</Badge>
+                  <Badge variant={DELIVERY_STATUS_VARIANT[i.status] ?? 'secondary'} className="text-[10px] px-1.5 py-0">{DELIVERY_STATUS_LABEL[i.status] ?? i.status}</Badge>
+                  <span className="font-medium">{i.store}</span>
+                  {i.url && <a href={i.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground"><ExternalLink className="h-3.5 w-3.5" /></a>}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
+                  {i.rating > 0 && <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 text-amber-500" />{i.rating}{i.ranking ? `　排名 #${i.ranking}` : ''}</span>}
+                  {i.commission_rate > 0 && <span className="text-muted-foreground">佣金 {i.commission_rate}%</span>}
+                  {i.monthly_orders > 0 && <span className="text-muted-foreground">訂單 {fmtNum(i.monthly_orders)}</span>}
+                  {i.monthly_revenue > 0 && <span className="text-muted-foreground">營業額 {fmtNum(i.monthly_revenue)}</span>}
+                </div>
+                {i.promo && <p className="mt-1 text-sm text-emerald-600">活動：{i.promo}</p>}
+                {i.note && <p className="mt-1 text-sm text-muted-foreground">{i.note}</p>}
+                <div className="mt-2 flex justify-end gap-1">
+                  <button onClick={() => { setErr(''); setEditing({ ...i }) }} className="p-1.5 rounded hover:bg-muted text-muted-foreground"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => del(i.id)} className="p-1.5 rounded hover:bg-muted text-red-500"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
+          <div className="w-full max-w-lg rounded-xl bg-card p-5 shadow-xl max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">{editing.id ? '編輯' : '新增'}外送上架</h2>
+              <button onClick={() => setEditing(null)} className="p-1 rounded hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="平台">
+                <select value={editing.platform ?? 'grab'} onChange={e => setEditing({ ...editing, platform: e.target.value })} className={`w-full ${selCls}`}>
+                  {DELIVERY_PLATFORM.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="狀態">
+                <select value={editing.status ?? 'online'} onChange={e => setEditing({ ...editing, status: e.target.value })} className={`w-full ${selCls}`}>
+                  {Object.entries(DELIVERY_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="門市 *"><Input value={editing.store ?? ''} onChange={e => setEditing({ ...editing, store: e.target.value })} /></Field>
+              <Field label="店家連結"><Input value={editing.url ?? ''} onChange={e => setEditing({ ...editing, url: e.target.value })} placeholder="https://" /></Field>
+              <Field label="佣金率 %"><Input type="number" value={String(editing.commission_rate ?? 0)} onChange={e => setEditing({ ...editing, commission_rate: Number(e.target.value) || 0 })} /></Field>
+              <Field label="評分"><Input type="number" value={String(editing.rating ?? 0)} onChange={e => setEditing({ ...editing, rating: Number(e.target.value) || 0 })} /></Field>
+              <Field label="分類排名"><Input type="number" value={editing.ranking == null ? '' : String(editing.ranking)} onChange={e => setEditing({ ...editing, ranking: e.target.value === '' ? null : Number(e.target.value) })} /></Field>
+              <Field label="指標月份"><Input value={editing.period ?? ''} onChange={e => setEditing({ ...editing, period: e.target.value })} placeholder="2026-09" /></Field>
+              <Field label="當月訂單數"><Input type="number" value={String(editing.monthly_orders ?? 0)} onChange={e => setEditing({ ...editing, monthly_orders: Number(e.target.value) || 0 })} /></Field>
+              <Field label="當月營業額"><Input type="number" value={String(editing.monthly_revenue ?? 0)} onChange={e => setEditing({ ...editing, monthly_revenue: Number(e.target.value) || 0 })} /></Field>
+              <div className="col-span-2"><Field label="進行中活動"><Input value={editing.promo ?? ''} onChange={e => setEditing({ ...editing, promo: e.target.value })} placeholder="例：滿 100k 折 20k" /></Field></div>
               <div className="col-span-2"><Field label="備註"><textarea rows={2} className={ta} value={editing.note ?? ''} onChange={e => setEditing({ ...editing, note: e.target.value })} /></Field></div>
             </div>
             {err && <p className="mt-3 text-sm text-red-500">{err}</p>}
