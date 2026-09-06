@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink } from 'lucide-react'
+import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink, BarChart3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-type Tab = 'brand' | 'generate' | 'offline' | 'delivery' | 'calendar'
+type Tab = 'brand' | 'generate' | 'offline' | 'delivery' | 'analytics' | 'calendar'
 
 export default function MktPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
@@ -35,12 +35,12 @@ export default function MktPage() {
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
+        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['analytics', '成效分析', <BarChart3 key="a" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
           <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
 
-      {tab === 'brand' ? <BrandTab /> : tab === 'generate' ? <GenerateTab /> : tab === 'offline' ? <OfflineTab /> : tab === 'delivery' ? <DeliveryTab /> : <CalendarTab />}
+      {tab === 'brand' ? <BrandTab /> : tab === 'generate' ? <GenerateTab /> : tab === 'offline' ? <OfflineTab /> : tab === 'delivery' ? <DeliveryTab /> : tab === 'analytics' ? <AnalyticsTab /> : <CalendarTab />}
     </div>
   )
 }
@@ -563,6 +563,92 @@ function DeliveryTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─────────────────────── 成效分析 ───────────────────────
+interface MktSnap {
+  delivery: { byPlatform: { platform: string; orders: number; revenue: number; count: number; online: number }[]; totalOrders: number; totalRevenue: number }
+  offline: { spend: number; active: number; byType: { type: string; count: number; spend: number }[] }
+  content: { total: number; review: number; published: number }
+  pnl: { period: string; revenue: number; advertising: number } | null
+  spend_total: number; delivery_share: number | null
+}
+
+function AnalyticsTab() {
+  const [snap, setSnap] = useState<MktSnap | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [report, setReport] = useState('')
+  const [gen, setGen] = useState('')
+
+  useEffect(() => { fetch('/api/mkt/analytics').then(async r => { if (r.ok) setSnap(await r.json().catch(() => null)); setLoading(false) }) }, [])
+
+  async function genReport(kind: 'weekly' | 'monthly') {
+    setGen(kind); setReport('')
+    const r = await fetch('/api/mkt/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }) })
+    const j = await r.json().catch(() => ({})); setGen('')
+    setReport(j.report || j.error || '產生失敗')
+  }
+
+  if (loading || !snap) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">外送當月營收</div><div className="mt-1 text-xl font-bold">{fmtNum(snap.delivery.totalRevenue)}</div><div className="text-xs text-muted-foreground">訂單 {fmtNum(snap.delivery.totalOrders)}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">行銷總支出</div><div className="mt-1 text-xl font-bold">{fmtNum(snap.spend_total)}</div><div className="text-xs text-muted-foreground">實體 {fmtNum(snap.offline.spend)}＋廣告 {fmtNum(snap.pnl?.advertising ?? 0)}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">外送佔營業額</div><div className="mt-1 text-xl font-bold">{snap.delivery_share != null ? (snap.delivery_share * 100).toFixed(1) + '%' : '—'}</div><div className="text-xs text-muted-foreground">{snap.pnl ? `損益 ${snap.pnl.period}` : '無損益資料'}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">內容產出</div><div className="mt-1 text-xl font-bold">{snap.content.total}</div><div className="text-xs text-muted-foreground">待審 {snap.content.review}・已發布 {snap.content.published}</div></div>
+      </div>
+
+      {snap.delivery.byPlatform.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-sm">外送平台成效</h2>
+          <div className="overflow-x-auto rounded-xl border bg-card">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b bg-muted/50 text-left text-muted-foreground"><th className="px-3 py-2 font-medium">平台</th><th className="px-3 py-2 font-medium text-right">上架</th><th className="px-3 py-2 font-medium text-right">訂單</th><th className="px-3 py-2 font-medium text-right">營收</th></tr></thead>
+              <tbody>
+                {snap.delivery.byPlatform.map(p => (
+                  <tr key={p.platform} className="border-b last:border-0">
+                    <td className="px-3 py-2 font-medium">{DELIVERY_PLATFORM_LABEL[p.platform] ?? p.platform}</td>
+                    <td className="px-3 py-2 text-right">{p.online}/{p.count}</td>
+                    <td className="px-3 py-2 text-right">{fmtNum(p.orders)}</td>
+                    <td className="px-3 py-2 text-right">{fmtNum(p.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {snap.offline.byType.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-sm">實體行銷支出</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {snap.offline.byType.map(t => (
+              <div key={t.type} className="rounded-lg border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">{OFFLINE_TYPE_LABEL[t.type] ?? t.type}</div>
+                <div className="mt-0.5 font-semibold">{fmtNum(t.spend)}</div>
+                <div className="text-xs text-muted-foreground">{t.count} 項</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-sm">AI 行銷報告</h2>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => genReport('weekly')} disabled={!!gen}>{gen === 'weekly' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}週報</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => genReport('monthly')} disabled={!!gen}>{gen === 'monthly' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}月報</Button>
+          </div>
+        </div>
+        {report ? <div className="rounded-xl border bg-card p-4 text-sm whitespace-pre-wrap">{report}</div>
+          : <p className="text-sm text-muted-foreground">按「週報／月報」由 AI 依上述資料產出行銷分析與建議行動。</p>}
+      </section>
     </div>
   )
 }
