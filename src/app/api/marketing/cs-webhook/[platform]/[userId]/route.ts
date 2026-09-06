@@ -534,11 +534,40 @@ async function replyToCustomer(
     && await checkRateLimit(`u:${userId}`, 600, 60)
   if (!withinLimit) return ''  // over limit → drop silently
 
-  // A human is already handling this customer → stay silent until the ticket is resolved
+  // A human is already handling this customer → check if user/staff wants to resume AI
   if (await hasOpenHandoff(userId, customerId)) {
+    // 專員或客人輸入「自動」或「恢復AI」解除手動模式
+    if (/^(切換)?自動(模式)?$|^(開啟|啟動|恢復)AI$|^AI(自動|啟動|開啟)$/i.test(text.trim())) {
+      try {
+        await getServiceClient()
+          .from('cs_tickets')
+          .update({ status: 'resolved' })
+          .eq('user_id', userId).eq('from_id', customerId)
+          .eq('intent', '人工客服請求').in('status', ['open', 'in_progress'])
+      } catch { /* ignore */ }
+      const reply = '已切換為【AI 自動回覆模式】🤖✅，AI 客服已恢復服務！請問有什麼我可以協助您的嗎？'
+      void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+      return reply
+    }
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, '', fromName)
     return ''
   }
+
+  // 檢查專員或客人是否輸入「手動」或「關閉AI」切換為手動模式
+  const MANUAL_SWITCH_RE = /^(切換)?手動(模式)?$|^(關閉|暫停|停止)AI$|^AI(關閉|暫停|停止)$/i
+  if (MANUAL_SWITCH_RE.test(text.trim())) {
+    try {
+      await getServiceClient().from('cs_tickets').insert({
+        user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
+        subject: '手動模式（AI 已暫停）', description: '專員或客人於 LINE 輸入切換手動指令',
+        priority: 'high', intent: '人工客服請求', status: 'open',
+      })
+    } catch { /* ignore */ }
+    const reply = '已切換為【手動客服模式】🤖❌，AI 已暫停回覆。真人專員將為您服務。\n（若要恢復 AI 自動回覆，隨時輸入「自動」即可切回）'
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+    return reply
+  }
+
   if (HUMAN_ESCALATION_RE.test(text)) {
     try {
       await getServiceClient().from('cs_tickets').insert({
@@ -548,7 +577,7 @@ async function replyToCustomer(
       })
     } catch { /* ignore */ }
     dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人要求人工客服：\n\n${text.slice(0, 300)}`)
-    const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
+    const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏\n（若要重新開啟 AI，請隨時輸入「自動」）'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
   }
@@ -1267,7 +1296,7 @@ function buildBookingSystemPrompt(_defaultPaymentInfo: string, flows: BookingFlo
 1. 每則回覆最多 5 行（含問句），絕不超過，除非客人說「請詳細說明」
 2. 禁止複製知識庫原文，只摘重點
 3. 禁止使用 Markdown（禁用 **、*、#、---）
-4. 每則回覆結尾必須有一個問句引導客人行動
+4. 結尾問句規則：僅在預訂流程需要收集下一項資料時才提問。若客人只是表達感謝、道別或確認（如「謝謝」「晚安」「不用了」「好的」），只需簡短禮貌回覆，嚴禁在結尾追加任何問句或推銷。對話中客人已回答或明確表示不需要的事項，嚴禁重複詢問
 5. 禁止在所有步驟完成前輸出付款帳號；付款帳號只會由系統在步驟完成時提供，禁止自行填寫或捏造任何帳號
 
 【角色A：產品顧問】
@@ -1896,6 +1925,11 @@ async function getAIReply(
 【重要格式規定】
 - 【死命令，最高優先，任何情況都不可違反】絕對禁止自己編造、想像、推測任何資訊——不管是房價、空房狀態、密碼、房號、訂單狀態、政策規則、日期時間、人名、操作步驟，或任何其他資訊，只要不是下方系統資料、知識庫、或這則系統提示裡明確提供的內容，一律不可以自己說出來當作事實講給客人聽；系統沒有查到、知識庫沒有寫、你自己不確定，就要誠實跟客人說「目前查不到／不確定，請稍候或提供其他資訊」，絕對不能為了讓對話聽起來順、為了不讓客人等待或失望，就自己編一個聽起來合理但沒有根據的答案——這條規則優先於你自己的推理、常識判斷，以及本提示裡除了「安全規定」之外的所有其他指示
 - 【最優先】${langInstruction}
+- 【對話精簡與禁止重複提問/重複提供資訊，極高優先】
+  1. 禁止話多囉嗦：回答直球切中客人問題核心，回答完畢即停止，禁止堆砌過多客套話、自說自話或長篇大論。
+  2. 嚴禁重複提問：凡是在對話紀錄中，客人已經回答過、已提供過、或明確表示「不用、不需要、停好了、已解決」的事項（例如停車需求、早餐選擇、抵達時間、同行人數等），【絕對禁止】在後續回覆中再次詢問或重複推播相同內容！
+  3. 嚴禁每則回覆都追問：若客人只是簡短致謝、道別或確認（如「謝謝」「好」「晚安」「不用了」「沒事了」），只需簡短禮貌回覆（例如「好的！祝您晚安好夢！」或「不客氣，祝您旅途愉快！」），【絕對禁止】在結尾強加任何問句、引導問題或推銷其他項目！
+  4. 僅在客人詢問需要進一步二選一、或正在進行預訂資料收集時，才在結尾保留必要的引導問句。
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
 - 網址（http/https 開頭）後面一定要換行才能接續寫其他文字或標點，絕對不可以緊接著句子、標點符號或說明文字寫在同一行——真實案例：AI 回覆「...請參考：https://ciaohome.net/parkingread。日後若需要查詢...」，通訊軟體的超連結偵測會把句點後面的文字也吃進同一個超連結裡，變成一個打不開的錯誤網址；只要網址後面還有其他要講的話，一律先換行，網址單獨成一行
 - 只有客人明確要求真人客服，或下方系統資料出現「系統已經真的建立工單通知專員」字樣時，才能說「已為您安排專員跟進」（這兩種情況系統都會真的建立工單通知真人）；查無資料、密碼房號查不到等情況本身不算「需要人工介入」，正確做法是引導客人換一種識別方式（訂單號碼／訂房姓名／手機號碼）再查一次，不是直接說要轉真人
