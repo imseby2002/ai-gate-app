@@ -483,6 +483,38 @@ async function maybeCreatePaymentProofTicket(
   } catch { /* 不中斷主流程 */ }
 }
 
+// 開發票/收據需要人工實際處理（列印、放置指定房間、報稅登錄），AI 只能負責收集
+// 抬頭與統一編號後轉交，絕對不能自己說「已經幫您開立」或編造發票資訊——真實案例：
+// 知識庫本來就有「請提供抬頭與統一編號」的問答，但客人回覆抬頭與統編後，系統完全
+// 沒有任何機制通知專員，資訊石沉大海，發票永遠開不出來，也沒人知道要放哪個房間。
+const INVOICE_ASK_RE = /抬頭|統一編號|統編/
+const TAX_ID_RE = /(?<!\d)\d{8}(?!\d)/
+
+async function maybeCreateInvoiceTicket(
+  userId: string, platform: string, customerId: string, industry: string,
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], fromName?: string,
+): Promise<void> {
+  try {
+    const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
+    if (!INVOICE_ASK_RE.test(lastAssistant) || !TAX_ID_RE.test(text)) return
+    const { data: existing } = await getServiceClient()
+      .from('cs_tickets')
+      .select('id')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .eq('intent', '發票開立待處理')
+      .in('status', ['open', 'in_progress'])
+      .limit(1)
+    if (existing?.length) return
+    await getServiceClient().from('cs_tickets').insert({
+      user_id: userId, industry, platform, from_id: customerId,
+      subject: '客人提供發票抬頭/統一編號，需人工開立發票',
+      description: `客人回報發票資訊：「${text.trim()}」，請專員協助實際開立發票（若客人訂了多間房，也請確認發票/收據要放在哪個房間）。`,
+      priority: 'medium', intent: '發票開立待處理',
+    })
+    dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 客人提供發票資訊，需人工開立發票：\n\n${text.slice(0, 300)}`)
+  } catch { /* 不中斷主流程 */ }
+}
+
 // Build the next history array; only record the assistant turn when the bot actually replied
 function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMsg[] {
   const h: HistoryMsg[] = [...history, { role: 'user', content: text }]
@@ -577,6 +609,8 @@ async function replyToCustomer(
   }
   // 客人提供匯款末五碼 → 不論訂房走的是哪套流程，都直接建工單通知管家核對
   void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+  // 客人回覆發票抬頭/統一編號 → 直接建工單通知專員實際開立發票，不能只靠 AI 口頭收下
+  void maybeCreateInvoiceTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
 
   try {
     let stage = cust?.stage ?? 'new'
@@ -1878,6 +1912,7 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
+- 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
 - 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
