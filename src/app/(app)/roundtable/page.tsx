@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Maximize2,
   Minimize2,
+  GraduationCap,
 } from 'lucide-react'
 import { ExpertSelector } from '@/components/experts/ExpertSelector'
 import { cn } from '@/lib/utils/cn'
@@ -86,10 +87,35 @@ export const ROLE_PRESETS = [
       { name: '做空機構 (Short Seller)', stance: '深度質疑財報漏洞與商業死角', philosophy: '假設一切都在撒謊。以最嚴苛的審計與偵探視角，尋找財報美化與商業模式漏洞。', attackTriggers: '抓取隱瞞的負債與庫存積壓、拆穿過度美化的成長神話。' },
     ],
   },
+  {
+    label: '🎓 大學教授與學術智庫 (理論真理 vs 實證產學 vs 倫理治理)',
+    description: '大學校務治理、科研立項與課堂深度思辨',
+    seats: [
+      {
+        name: '理論真理派 (教授A)',
+        stance: '學術基石 · 理論真理 (Epistemic Truth)',
+        philosophy: '大學是追求真理與原創思想的殿堂。沒有深刻的理論根基與獨立批判思維，任何熱門技術或政策都只是泡沫。',
+        attackTriggers: '砲轟他人迎合市場短視近利、出賣學術靈魂；抨擊行政官僚指標主義扼殺純粹思想原創性。',
+      },
+      {
+        name: '實證創新派 (教授B)',
+        stance: '經世致用 · 實證創新 (Pragmatic Utility)',
+        philosophy: '學術必須解決真實世界難題。無法落地驗證、不能讓學生在就業市場脫穎而出的理論，只是象牙塔裡的自我陶醉。',
+        attackTriggers: '砲轟他人自命清高、不知民間疾苦的玄學空談；痛批學校行政流程拖沓喪失時代先機。',
+      },
+      {
+        name: '倫理治理派 (教授C)',
+        stance: '倫理法治 · 永續治理 (Institutional Governance)',
+        philosophy: '守住底線才能長青。再崇高的理想或突破，一旦觸犯學術倫理紅線、違反法規或導致少子化退場破產，一切歸零。',
+        attackTriggers: '抨擊他人忽視少子化生源雪崩與財務現實；痛批為求速度踐踏倫理規範，導致百年校譽毀於一旦。',
+      },
+    ],
+  },
 ]
 
 const DOMAIN_OPTIONS: { id: RoundtableDomain; label: string; icon: typeof TrendingUp }[] = [
   { id: 'auto', label: '智慧自動', icon: Sparkles },
+  { id: 'academic', label: '大學學術', icon: GraduationCap },
   { id: 'finance', label: '投資金融', icon: TrendingUp },
   { id: 'marketing', label: '行銷增長', icon: Target },
   { id: 'tech', label: '技術架構', icon: Code },

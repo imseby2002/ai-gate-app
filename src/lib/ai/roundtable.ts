@@ -28,7 +28,7 @@ import { loadExpertContext } from '@/lib/experts/loader'
 
 // ── 領域與哲學學派定義 ────────────────────────────────────────────────────────
 
-export type RoundtableDomain = 'auto' | 'finance' | 'marketing' | 'tech' | 'hr'
+export type RoundtableDomain = 'auto' | 'academic' | 'finance' | 'marketing' | 'tech' | 'hr'
 
 export interface DomainStance {
   name: string // 員工A, 員工B, 員工C
@@ -47,6 +47,39 @@ export interface DomainPreset {
 }
 
 export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
+  academic: {
+    id: 'academic',
+    label: '大學學術',
+    icon: 'GraduationCap',
+    description: '理論本質、經世致用、產學落地與學術倫理治理',
+    dataChecklist: `
+針對討論的學術/高教/研究議題，強制查核並列出客觀指標矩陣：
+1. 學術基石與現狀：國際權威文獻/頂級期刊 (SCI/SSCI) 共識、核心理論奠基人與主流學派爭點。
+2. 實證與產業數據：該領域現有全球研發投資額、專利轉化率、畢業生就業起薪與業界實際採納率。
+3. 倫理與法規邊界：相關學術誠信守則、教育部/評鑑機構法規、AI/智財版權爭端、研究受試者倫理標準。
+4. 國內外標竿案例：全球前 50 大學（如哈佛、MIT、史丹佛、牛津）或國內領先大學目前的實際政策與處置作法。
+*(鐵律：無公開數據強制標記 N/A，嚴禁編造)*`,
+    stances: [
+      {
+        name: '員工A',
+        title: '學術基石 · 理論真理派 (Academic Rigor & Epistemic Truth)',
+        philosophy: '大學是追求真理與原創思想的殿堂。沒有深刻的理論根基與獨立批判思維，任何熱門技術或政策都只是泡沫。',
+        attackTriggers: '砲轟他人迎合市場短視近利、出賣學術靈魂；抨擊行政官僚指標主義扼殺純粹思想原創性。',
+      },
+      {
+        name: '員工B',
+        title: '經世致用 · 實證創新派 (Empirical & Pragmatic Utility)',
+        philosophy: '學術必須解決真實世界難題。無法落地驗證、不能讓學生在就業市場脫穎而出的理論，只是象牙塔裡的自我陶醉。',
+        attackTriggers: '砲轟他人自命清高、不知民間疾苦的玄學空談；痛批學校行政流程拖沓喪失時代先機。',
+      },
+      {
+        name: '員工C',
+        title: '倫理法治 · 永續治理派 (Ethical & Institutional Governance)',
+        philosophy: '守住底線才能長青。再崇高的理想或突破，一旦觸犯學術倫理紅線、違反法規或導致少子化退場破產，一切歸零。',
+        attackTriggers: '抨擊他人忽視少子化生源雪崩與財務現實；痛批為求速度踐踏倫理規範，導致百年校譽毀於一旦。',
+      },
+    ],
+  },
   finance: {
     id: 'finance',
     label: '投資金融',
@@ -234,7 +267,7 @@ export const DEFAULT_SEATS: Seat[] = [
   { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
 
-export type SynthesisStyle = 'default' | 'risk' | 'growth' | 'consulting'
+export type SynthesisStyle = 'default' | 'academic' | 'risk' | 'growth' | 'consulting'
 
 export interface SynthesisStyleOption {
   id: SynthesisStyle
@@ -251,6 +284,13 @@ export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
     shortLabel: '標準中立幕僚長',
     description: '不偏不倚，客觀評估各方得失，給出推薦的主路徑與 Plan B 備案。',
     instruction: '以董事會首席幕僚長的中立超然視角，不偏袒任何一方，客觀檢驗各學派論據漏洞，權衡整體風險與回報，給予明確的第一順位推薦路徑與 Plan B 備選路線。',
+  },
+  {
+    id: 'academic',
+    label: '🎓 講座教授 / 學術審議會主席（理論真理・實證產學・倫理永續）',
+    shortLabel: '學術審議會主席',
+    description: '以博大超然的學術視野，兼顧理論真理、產學實效與校務倫理底線。',
+    instruction: '以特聘終身講座教授兼大學學術審議會主席的超然視野進行收斂。不偏廢任何一端：融會「基礎理論之求真深度」、「產學就業之經世致用」與「學術倫理與校務生存之制度底線」，出具一份具備思想深度、數據證據與合規路徑的大學戰略決策白皮書。',
   },
   {
     id: 'risk',
@@ -507,6 +547,15 @@ export function detectDomain(instruction: string, specifiedDomain?: RoundtableDo
     text.includes('團隊') || text.includes('管理') || text.includes('主管')
   ) {
     return 'hr'
+  }
+  if (
+    text.includes('大學') || text.includes('教授') || text.includes('學校') || text.includes('學術') ||
+    text.includes('論文') || text.includes('高教') || text.includes('少子化') || text.includes('系所') ||
+    text.includes('學生') || text.includes('課程') || text.includes('教學') || text.includes('產學') ||
+    text.includes('通識') || text.includes('期刊') || text.includes('研究計畫') || text.includes('教育部') ||
+    text.includes('校務') || text.includes('學位') || text.includes('退場') || text.includes('學院')
+  ) {
+    return 'academic'
   }
   return 'auto'
 }
