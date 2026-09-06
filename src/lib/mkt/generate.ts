@@ -2,6 +2,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getSkillKnowledge } from '@/lib/skills/knowledge'
 
 type Admin = ReturnType<typeof createAdminClient>
 export const MKT_MODEL = 'claude-sonnet-4-5'
@@ -45,7 +46,10 @@ ${brandBlock(brand as Record<string, unknown> | null)}
 - 每個平台依其特性調整（FB 稍長可說故事；IG 精簡＋主題標籤；TikTok 給口語腳本與分鏡；Zalo／LINE 親切促購）。
 - 文案要具體、有記憶點、含明確行動呼籲（CTA），不要空泛。
 - hashtags 給 5–10 個、貼近該市場。
-- 只能輸出 JSON，不要任何解釋或 markdown 圍欄。`
+- 只能輸出 JSON，不要任何解釋或 markdown 圍欄。
+
+${getSkillKnowledge('viral-video-copywriting')}
+（撰寫 video_script 短影片腳本時，務必套用上述短影音爆款方法論：黃金前 3 秒 Hook、完播與互動設計、POV 或敘事框架、不像廣告的 CTA，並具體到可直接拍攝。）`
 
   const shape = `{
 ${chList.map(c => `  "${c}": { "copy": "貼文文案", "hashtags": ["..."] }`).join(',\n')}${chList.length ? ',' : ''}
