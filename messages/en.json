@@ -1464,7 +1464,8 @@
       "expert": "Expert Mode",
       "prospect": "Prospect Marketing",
       "plan": "Subscription",
-      "experts": "Custom Experts"
+      "experts": "Custom Experts",
+      "logbook": "Production Log"
     },
     "studio": {
       "title": "AI Visual Studio",
