@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Crown, AlertTriangle, TrendingUp, Wrench, FileWarning, Users, ShieldCheck, LayoutDashboard, FileText, Send } from 'lucide-react'
+import { Loader2, AlertCircle, Crown, AlertTriangle, TrendingUp, Wrench, FileWarning, Users, ShieldCheck, LayoutDashboard, FileText, Send, Megaphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface StoreRow { code: string; name: string; revenue: number; gross_profit: number; store_profit: number; profit: number; gross_margin: number; net_margin: number }
@@ -14,6 +14,7 @@ interface Data {
   affairs: { expiring: { title: string; doc_type: string; expiry_date: string; days: number }[]; count: number }
   hr: { active: number; new_this_month: number; contracts_expiring: number }
   audit: { active_rules: number }
+  marketing: { delivery_revenue: number; delivery_orders: number; content_review: number; offline_active: number }
   flags: Flag[]
 }
 
@@ -88,6 +89,7 @@ function DashboardTab() {
         <Kpi icon={<Wrench className="h-4 w-4" />} label="進行中工單" value={String(data.repair.open)} sub={data.repair.overdue ? `逾期 ${data.repair.overdue}` : '無逾期'} />
         <Kpi icon={<FileWarning className="h-4 w-4" />} label="文件將到期" value={String(data.affairs.count)} sub="30 天內" />
         <Kpi icon={<Users className="h-4 w-4" />} label="在職人數" value={String(data.hr.active)} sub={`本月新進 ${data.hr.new_this_month}`} />
+        <Kpi icon={<Megaphone className="h-4 w-4" />} label="外送當月營收" value={fmt(data.marketing.delivery_revenue)} sub={`訂單 ${fmt(data.marketing.delivery_orders)}`} />
       </section>
 
       {f && f.stores.length > 0 && (
@@ -151,7 +153,7 @@ function DashboardTab() {
         <MiniStat icon={<Wrench className="h-4 w-4" />} label="設備保固將到期" value={data.repair.warranty_soon} />
         <MiniStat icon={<Users className="h-4 w-4" />} label="合約 60 天內到期" value={data.hr.contracts_expiring} />
         <MiniStat icon={<ShieldCheck className="h-4 w-4" />} label="稽核硬性規定" value={data.audit.active_rules} />
-        <MiniStat icon={<FileWarning className="h-4 w-4" />} label="文件到期(全)" value={data.affairs.count} />
+        <MiniStat icon={<Megaphone className="h-4 w-4" />} label="行銷內容待審核" value={data.marketing.content_review} />
       </section>
     </div>
   )
