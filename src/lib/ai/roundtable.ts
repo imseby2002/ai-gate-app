@@ -283,6 +283,75 @@ export const MODERATOR_MODELS = [
   { id: 'anthropic/claude-sonnet-4-6', name: 'Claude 3.7 Sonnet (Anthropic)', shortName: 'Claude 3.7 Sonnet', badge: '高速敏捷分析' },
 ]
 
+export type VerbosityMode = 'concise_150' | 'standard_300' | 'detailed_500' | 'unlimited'
+
+export interface VerbosityOption {
+  id: VerbosityMode
+  label: string
+  shortLabel: string
+  targetWords: string
+  description: string
+  instruction: string
+  maxOutputTokens: number
+}
+
+export const VERBOSITY_OPTIONS: VerbosityOption[] = [
+  {
+    id: 'concise_150',
+    label: '⚡ 極簡電梯版 (約 150 字)',
+    shortLabel: '極簡電梯版',
+    targetWords: '約 150 字 / 席',
+    description: '極速瀏覽、秒抓態度與核心衝突。',
+    instruction:
+      `【嚴格篇幅限制：極簡電梯簡報，總字數嚴格控制在 150 字以內】\n` +
+      `強制輸出三段格式，嚴禁任何開場白、寒暄與官僚套話：\n` +
+      `1. 【核心定調】：30字以內，直接亮出底牌立場。\n` +
+      `2. 【核心論據】：條列 2 點，每點不超過 30 字，純硬數據或因果邏輯。\n` +
+      `3. 【死穴質疑】：40字以內，直戳對手致命傷或自身不妥協底線。`,
+    maxOutputTokens: 600,
+  },
+  {
+    id: 'standard_300',
+    label: '🎯 標準精華版 (約 300 字)',
+    shortLabel: '標準精華版',
+    targetWords: '約 300 字 / 席',
+    description: '日常高階決策，速度與深度最佳平衡。',
+    instruction:
+      `【篇幅限制：標準商務精華，總字數控制在 250 ~ 350 字左右】\n` +
+      `高度結構化呈現，零寒暄客套：\n` +
+      `1. 【戰略主張】：40字以內明確主張。\n` +
+      `2. 【三大支撐事實/推導】：條列 3 點，每點約 40~50 字，具備具體事實或傳導機制。\n` +
+      `3. 【代價與底線】：50字以內，直言採納本方案的真實代價與風險監控指標。`,
+    maxOutputTokens: 1200,
+  },
+  {
+    id: 'detailed_500',
+    label: '📊 深化研析版 (約 500 字)',
+    shortLabel: '深化研析版',
+    targetWords: '約 500 字 / 席',
+    description: '包含前因後果、邊界假設、預算/資源推估與競品反應。',
+    instruction:
+      `【篇幅限制：深化研析，總字數控制在 450 ~ 550 字左右】\n` +
+      `深入拆解方案前因後果，嚴禁空洞贅語：\n` +
+      `* 包含：假設前提、推導邏輯鏈、邊界敏感度、具體資源配置與競品可能應對策略。\n` +
+      `* 全程採用 Markdown 標題與項目符號分層條列。`,
+    maxOutputTokens: 2048,
+  },
+  {
+    id: 'unlimited',
+    label: '📜 不限字數深度版 (完整說明)',
+    shortLabel: '不限字數深度版',
+    targetWords: '不限字數 (完整說明)',
+    description: '重大投資立項、董事會白皮書，全面展開推導，嚴格反廢話。',
+    instruction:
+      `【篇幅不設字數上限，重在推論深度，但嚴格啟動三大「反廢話」軍規】：\n` +
+      `1. 【零寒暄開場禁令】：第 1 個字直插核心論點，嚴禁「各位同仁好」、「這是一個好問題」等任何官僚套話。\n` +
+      `2. 【MECE 模組化分層條列】：禁止大段落冗長文字堆疊，所有說明強制使用二級/三級標題與項目符號（Bullet points）清晰拆解。\n` +
+      `3. 【嚴格因果鏈檢驗】：每項主張必須符合「核心主張 -> 底層機制/數據佐證 -> 邊界代價」，嚴禁使用缺乏依據的空洞形容詞（如「大幅度」、「顯著提升」），必須說透為什麼與代價。`,
+    maxOutputTokens: 4096,
+  },
+]
+
 export function formatModelDisplayName(model?: string): string {
   if (!model) return ''
   const m = model.toLowerCase()
@@ -705,8 +774,10 @@ export async function executeRound1(
   domainPreset: DomainPreset,
   emit: (e: RoundtableEvent) => void,
   expertContextMap: Map<string, string>,
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
   emit({ type: 'phase', phase: 'discuss', label: '第一輪 · 獨立研議 (平行進行)' })
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
 
   const results = await Promise.all(
     seats.map(async (seat, idx) => {
@@ -717,14 +788,15 @@ export async function executeRound1(
         `你的核心戰略學派與觀點立場：【${stance.title}】。\n` +
         `你的底層信仰與立論依據：${stance.philosophy}\n` +
         `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
-        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+        `\n${verbosityOption.instruction}`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
         `請完全依據你代表的【${seat.name}】（${stance.title}）戰略立場與客觀事實簡報，提出你最犀利、最具深度、有數據支撐的觀點。\n` +
-        `直奔核心，嚴禁重複背景介紹與客套寒暄。字數不限，重在推論深度。`
+        `直奔核心，嚴禁重複背景介紹與客套寒暄。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-      let content = await speak(seat, system, userPrompt, 1, emit, 4096, expertCtx, stance.title)
+      let content = await speak(seat, system, userPrompt, 1, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R1, generating emergency stance view`)
         content = `【學派基本立場：${stance.title}】\n本席位秉持「${stance.philosophy}」之核心哲學，強烈關注「${stance.attackTriggers}」。在本次議題中，我方堅持以此維度嚴格審視各項方案代價。`
@@ -746,8 +818,10 @@ export async function executeRound2(
   domainPreset: DomainPreset,
   emit: (e: RoundtableEvent) => void,
   expertContextMap: Map<string, string>,
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
   emit({ type: 'phase', phase: 'rebut', label: '第二輪 · 針鋒相對 (平行進行)' })
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
   const transcript1 = formatStatements(round1Statements)
 
   const results = await Promise.all(
@@ -763,14 +837,15 @@ export async function executeRound2(
         `1. 請仔細檢驗其他合夥人在第一輪發言中的邏輯盲點、過度樂觀的虛假假設或漏洞。\n` +
         `2. 查核對方引用的事實或數據是否有誤。\n` +
         `3. 捍衛並補強自身立場，針對根本性分歧正面開火。\n\n` +
-        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+        `\n${verbosityOption.instruction}`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
         `【第一輪全體發言】：\n${transcript1}\n\n` +
-        `請直接對其他合夥人的推論開砲，補強你自己立場。只談新增反駁與修正，嚴禁重複第一輪已說過的內容。`
+        `請直接對其他合夥人的推論開砲，補強你自己立場。只談新增反駁與修正，嚴禁重複第一輪已說過的內容。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-      let content = await speak(seat, system, userPrompt, 2, emit, 4096, expertCtx, stance.title)
+      let content = await speak(seat, system, userPrompt, 2, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R2, generating emergency stance view`)
         content = `【學派本輪深化：${stance.title}】\n針對同僚所提出的論據，我方重申：任何未考慮「${stance.attackTriggers}」的方案都具有重大致命傷，呼籲老闆切勿輕信過度樂觀之假設。`
@@ -797,9 +872,11 @@ export async function executeBossStep(
   domainPreset: DomainPreset,
   emit: (e: RoundtableEvent) => void,
   expertContextMap: Map<string, string>,
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
   emit({ type: 'boss-instruction', round: currentRound, content: bossGuidance, targetSeat: targetSeatName })
 
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
   const priorTranscript = formatStatements(allPriorStatements)
   const results: Statement[] = []
 
@@ -816,18 +893,20 @@ export async function executeBossStep(
       `你是資深合夥人【${targetSeat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
       `老闆現在親自點名你回答問題。\n` +
       `請針對老闆的最新指示，依據你的戰略學派與客觀數據，正面且深入作答。\n\n` +
-      ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+      ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+      `\n${verbosityOption.instruction}`
 
     const userPrompt =
       `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
       `【先前的會議發言紀錄】：\n${priorTranscript}\n\n` +
-      `【👑 老闆對你的直接指示/提問】：\n${bossGuidance}`
+      `【👑 老闆對你的直接指示/提問】：\n${bossGuidance}\n\n` +
+      `遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-    const content = await speak(targetSeat, system, userPrompt, currentRound, emit, 4096, expertCtx, stance.title)
+    const content = await speak(targetSeat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
     const firstReply: Statement = { round: currentRound, name: targetSeat.name, role: targetSeat.role, stance: stance.title, content }
     results.push(firstReply)
 
-    // 若開啟互相質詢 (crossExamine)，其他合夥人針對此發言反駁
+    // 若開啟同儕反駁 (crossExamine)，其他合夥人針對此發言質詢
     if (crossExamine) {
       const otherSeats = seats.filter(s => s.name !== targetSeatName)
       emit({ type: 'phase', phase: 'rebut', label: `第 ${currentRound} 輪 · 同儕反駁 (${targetSeat.name}的回答)` })
@@ -840,21 +919,22 @@ export async function executeBossStep(
           const crossSystem =
             `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${otherStance.title}】。\n` +
             `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】的回答提出反駁、質疑或補充。\n\n` +
-            ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+            ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+            `\n${verbosityOption.instruction}`
           const crossPrompt =
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
             `【👑 老闆的指示】：\n${bossGuidance}\n\n` +
             `【${targetSeat.name} 的最新回答】：\n${content}\n\n` +
-            `請從你的學派立場無情檢視其邏輯漏洞。`
+            `請從你的學派立場無情檢視其邏輯漏洞，指出死穴。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          const crossContent = await speak(seat, crossSystem, crossPrompt, currentRound, emit, 4096, otherExpert, otherStance.title)
-          return { round: currentRound, name: seat.name, role: seat.role, stance: otherStance.title, content: crossContent }
+          const crossContent = await speak(seat, crossSystem, crossPrompt, currentRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
+          return { round: currentRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (反駁)`, content: crossContent }
         })
       )
       results.push(...crossResults)
     }
   } else {
-    // 全體深化：全體合夥人帶著老闆的最新指示，平行發言
+    // 拍子 1：全體深化 —— 全體合夥人帶著老闆的最新指示，平行發言
     emit({ type: 'phase', phase: 'discuss', label: `第 ${currentRound} 輪 · 全員深化研議 (平行進行)` })
 
     const allResults = await Promise.all(
@@ -865,18 +945,50 @@ export async function executeBossStep(
           `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
           `老闆剛剛介入了會議並給予了最新的戰略指示。\n` +
           `請針對老闆的最新導向，依據你的戰略學派進一步深化你的方案，並回應先前的爭議焦點。\n\n` +
-          ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+          ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+          `\n${verbosityOption.instruction}`
         const userPrompt =
           `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
           `【先前的會議發言紀錄】：\n${priorTranscript}\n\n` +
           `【👑 老闆的最新裁示/方向指引】：\n${bossGuidance}\n\n` +
-          `請深入推進方案，直擊痛點。`
+          `請深入推進方案，直擊痛點。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-        const content = await speak(seat, system, userPrompt, currentRound, emit, 4096, expertCtx, stance.title)
+        const content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
         return { round: currentRound, name: seat.name, role: seat.role, stance: stance.title, content }
       })
     )
     results.push(...allResults)
+
+    // 拍子 2：同儕互評挑刺 —— 針對彼此剛交出的新深化方案，無情挑刺、刺刀見紅
+    if (crossExamine !== false) {
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${currentRound} 輪 · 針對新方案互評挑刺 (平行進行)` })
+      const roundTranscript = formatStatements(allResults)
+
+      const rebuttalResults = await Promise.all(
+        seats.map(async (seat, idx) => {
+          const stance = resolveSeatStance(seat, idx, domainPreset)
+          const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
+          const system =
+            `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
+            `你的底層信仰與立論依據：${stance.philosophy}\n` +
+            `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
+            `【本輪核心任務】：針對其他合夥人剛才交出的深化方案，無情挑刺、刺刀見紅！\n` +
+            `1. 仔細檢驗其他人在老闆最新指示下，是否提出了不切實際的假設、是否在偷換概念或存在隱性風險。\n` +
+            `2. 正面開火反駁，指出對手方案的死穴，並捍衛我方方案的不可替代性。\n\n` +
+            ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+            `\n${verbosityOption.instruction}`
+          const userPrompt =
+            `【👑 老闆的最新裁示】：\n${bossGuidance}\n\n` +
+            `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
+            `【本輪各合夥人最新深化方案】：\n${roundTranscript}\n\n` +
+            `請直接點名其他合夥人，對其剛剛提出的新論點進行毫不留情之猛烈批判與反駁！遵守篇幅要求（${verbosityOption.targetWords}）。`
+
+          const content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
+          return { round: currentRound, name: seat.name, role: seat.role, stance: `${stance.title} (互評挑刺)`, content }
+        })
+      )
+      results.push(...rebuttalResults)
+    }
   }
 
   return results
@@ -891,18 +1003,29 @@ export async function executeSynthesize(
   moderator: Seat,
   emit: (e: RoundtableEvent) => void,
   synthesisStyle: SynthesisStyle = 'default',
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<string> {
   const styleConfig = SYNTHESIS_STYLES.find(s => s.id === synthesisStyle) ?? SYNTHESIS_STYLES[0]
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
+
   emit({
     type: 'phase',
     phase: 'synthesize',
     label: `最終收斂 · 首席幕僚長出具報告 (${formatModelDisplayName(moderator.model)})`,
   })
 
+  const lengthGuide =
+    verbosity === 'concise_150'
+      ? '【篇幅要求：高層極速 Memo，全文約 400~600 字，精準提煉勝負判定與唯一優先行動。】'
+      : verbosity === 'unlimited'
+        ? '【篇幅要求：高層決策白皮書，不設字數上限，全面詳盡推導，但嚴格條列清晰、無任何贅語廢話。】'
+        : '【篇幅要求：標準商務白皮書，結構完整、資訊密度極高、無客套空話。】'
+
   const moderatorSystem =
     `你是董事會【首席幕僚長】，代表職責：${moderator.role}。\n` +
     `全體資深合夥人已針對老闆的指令展開激烈辯論，現在請把全體研議收斂成一份結構完整、可直接落地的最高決策報告。\n\n` +
     `【本次收斂風格指導原則】：\n${styleConfig.instruction}\n\n` +
+    `${lengthGuide}\n\n` +
     `報告必須包含以下結構：\n` +
     `1. 💡 30 秒高層結論 (讓老闆在 30 秒內看懂最核心定論與推薦路徑)\n` +
     `2. 📊 客觀事實與關鍵指標矩陣摘要 (引用 Fact Sheet 數據)\n` +
@@ -918,7 +1041,8 @@ export async function executeSynthesize(
     `【會議全程研議紀錄】：\n${fullDebate}\n\n` +
     `請以首席幕僚長之最高視野綜觀全場，出具交付老闆的最終結構化決策報告。`
 
-  const report = await speak(moderator, moderatorSystem, userPrompt, 99, emit, 8192)
+  const maxSynthesizeTokens = verbosity === 'concise_150' ? 2048 : 8192
+  const report = await speak(moderator, moderatorSystem, userPrompt, 99, emit, maxSynthesizeTokens)
   emit({ type: 'report', content: report })
   return report
 }
@@ -934,6 +1058,7 @@ export interface RoundtableConfig {
   interactive?: boolean // 若為 true，跑完第 2 輪後即暫停並拋出 waiting_boss
   uploadedFilesContext?: string
   synthesisStyle?: SynthesisStyle
+  verbosity?: VerbosityMode
 }
 
 export async function runRoundtable(
@@ -946,6 +1071,7 @@ export async function runRoundtable(
   const seats = config.seats?.length ? config.seats : DEFAULT_SEATS
   const moderator = config.moderator ?? DEFAULT_MODERATOR
   const boss = config.bossInstruction.trim()
+  const verbosity = config.verbosity ?? 'standard_300'
 
   const broadcastStances = seats.map((s, idx) => {
     const st = resolveSeatStance(s, idx, preset)
@@ -975,12 +1101,12 @@ export async function runRoundtable(
   const factBriefing = await fetchFactBriefing(boss, domain, emit, config.uploadedFilesContext)
 
   // ── 階段 1：第一輪獨立發言 (⚡ 平行併發) ────────────────────────────────────
-  const round1 = await executeRound1(boss, factBriefing, seats, preset, emit, expertContextMap)
+  const round1 = await executeRound1(boss, factBriefing, seats, preset, emit, expertContextMap, verbosity)
 
   // ── 階段 2：第二輪互評挑刺 (⚡ 平行併發) ────────────────────────────────────
   let allStatements = [...round1]
   if (config.rebuttal !== false) {
-    const round2 = await executeRound2(boss, factBriefing, round1, seats, preset, emit, expertContextMap)
+    const round2 = await executeRound2(boss, factBriefing, round1, seats, preset, emit, expertContextMap, verbosity)
     allStatements.push(...round2)
   }
 
@@ -991,6 +1117,6 @@ export async function runRoundtable(
   }
 
   // ── 階段 3：最終收斂報告 ───────────────────────────────────────────────────
-  const report = await executeSynthesize(boss, factBriefing, allStatements, moderator, emit, config.synthesisStyle)
+  const report = await executeSynthesize(boss, factBriefing, allStatements, moderator, emit, config.synthesisStyle, verbosity)
   return report
 }

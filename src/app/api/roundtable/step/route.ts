@@ -10,6 +10,8 @@ import {
   type RoundtableEvent,
   type RoundtableDomain,
   type Statement,
+  type SynthesisStyle,
+  type VerbosityMode,
 } from '@/lib/ai/roundtable'
 import { loadExpertContext } from '@/lib/experts/loader'
 
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest) {
     crossExamine = true,
     moderatorModel,
     synthesisStyle = 'default',
+    verbosity = 'standard_300',
   } = body as {
     sessionId: string
     action: 'continue_all' | 'call_on' | 'synthesize'
@@ -40,6 +43,7 @@ export async function POST(req: NextRequest) {
     crossExamine?: boolean
     moderatorModel?: string
     synthesisStyle?: SynthesisStyle
+    verbosity?: VerbosityMode
   }
 
   if (!sessionId) {
@@ -112,6 +116,7 @@ export async function POST(req: NextRequest) {
             moderatorToUse,
             emit,
             synthesisStyle,
+            verbosity,
           )
           finalReport = report
         } else {
@@ -129,6 +134,7 @@ export async function POST(req: NextRequest) {
             preset,
             emit,
             expertContextMap,
+            verbosity,
           )
           newStatements.push(...stepStatements)
           // 完成本輪後，再次暫停等待老闆後續指令

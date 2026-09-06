@@ -28,10 +28,12 @@ import {
   DEFAULT_MODERATOR,
   MODERATOR_MODELS,
   SYNTHESIS_STYLES,
+  VERBOSITY_OPTIONS,
   formatModelDisplayName,
   DOMAIN_PRESETS,
   type RoundtableDomain,
   type SynthesisStyle,
+  type VerbosityMode,
 } from '@/lib/ai/roundtable'
 
 interface SeatBlock {
@@ -162,6 +164,8 @@ export default function RoundtablePage() {
   // 首席幕僚長（總結者）設定
   const [moderatorModel, setModeratorModel] = useState<string>(DEFAULT_MODERATOR.model)
   const [synthesisStyle, setSynthesisStyle] = useState<SynthesisStyle>('default')
+  // 研議篇幅檔位設定
+  const [verbosity, setVerbosity] = useState<VerbosityMode>('standard_300')
 
   // 歷史紀錄
   const [history, setHistory] = useState<SessionSummary[]>([])
@@ -301,6 +305,7 @@ export default function RoundtablePage() {
             role: DEFAULT_MODERATOR.role,
           },
           synthesisStyle,
+          verbosity,
         }),
         signal: ctrl.signal,
       })
@@ -363,6 +368,7 @@ export default function RoundtablePage() {
           crossExamine,
           moderatorModel,
           synthesisStyle,
+          verbosity,
         }),
         signal: ctrl.signal,
       })
@@ -788,6 +794,36 @@ export default function RoundtablePage() {
             )}
           </div>
 
+          {/* 發言篇幅檔位切換 (選項2：四檔字數切換) */}
+          <div className="flex items-center justify-between flex-wrap gap-2 p-2.5 rounded-lg border bg-muted/20 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-muted-foreground flex items-center gap-1.5">
+                📏 研議篇幅檔位：
+              </span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {VERBOSITY_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setVerbosity(opt.id)}
+                    className={cn(
+                      'px-2.5 py-1 rounded-md text-xs font-medium transition-all border',
+                      verbosity === opt.id
+                        ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
+                        : 'bg-background hover:bg-muted text-muted-foreground border-border'
+                    )}
+                    title={opt.description}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span className="text-[11px] text-muted-foreground font-mono">
+              {VERBOSITY_OPTIONS.find(v => v.id === verbosity)?.targetWords}
+            </span>
+          </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button onClick={start} disabled={running || !instruction.trim()}>
@@ -938,7 +974,7 @@ export default function RoundtablePage() {
                   全體深入討論
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  輸入新指示，三位合夥人帶著導向進行下一輪平行攻防
+                  輸入新指示，三位合夥人帶著導向進行深化研議，隨後自動展開同儕互評挑刺
                 </p>
               </button>
 
@@ -1073,7 +1109,28 @@ export default function RoundtablePage() {
                   }
                   rows={2}
                 />
-                <div className="flex justify-end gap-2">
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-border/40">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-semibold text-muted-foreground">下一輪篇幅：</span>
+                    <div className="flex items-center gap-1">
+                      {VERBOSITY_OPTIONS.map(opt => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setVerbosity(opt.id)}
+                          className={cn(
+                            'px-2 py-0.5 rounded text-[11px] font-medium border transition-colors',
+                            verbosity === opt.id
+                              ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                              : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                          )}
+                          title={opt.description}
+                        >
+                          {opt.shortLabel}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <Button
                     onClick={() => submitBossStep()}
                     disabled={!bossInput.trim() || running}
