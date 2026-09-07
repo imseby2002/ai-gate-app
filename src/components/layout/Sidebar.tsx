@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2,
+  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2, Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,7 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { labelKey: 'dashboard',   href: '/apps',           icon: LayoutDashboard, module: null },
+  { labelKey: 'roundtable',  label: '智慧圓桌',        href: '/roundtable',     icon: Users,           module: 'chat' },
   { labelKey: 'assistants',  href: '/assistants',     icon: Bot,             module: 'chat' },
   { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat' },
   { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat' },

@@ -79,6 +79,7 @@
     "newChat": "Cuộc trò chuyện mới",
     "work": "Không gian làm việc",
     "dashboard": "Trang chủ",
+    "roundtable": "Hội nghị bàn tròn AI",
     "assistants": "Trợ lý AI",
     "imageGen": "Tạo ảnh",
     "videoGen": "Tạo video",
@@ -131,6 +132,10 @@
       "chat": {
         "label": "AI Chat",
         "desc": "Trò chuyện, tạo ảnh, tạo video, trợ lý RAG"
+      },
+      "roundtable": {
+        "label": "Hội nghị bàn tròn AI",
+        "desc": "Hội nghị chuyên gia AI đa mô hình & đa vai trò, phản biện và tổng hợp tự động"
       },
       "marketing": {
         "label": "Marketing Tự Động",

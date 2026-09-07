@@ -8,6 +8,15 @@ export const MODULES = [
     color: 'from-blue-500 to-indigo-600',
   },
   {
+    id: 'roundtable',
+    label: '智慧圓桌',
+    desc: '多模型與多角色 AI 專家會議、論述與自動總結',
+    href: '/roundtable',
+    emoji: '🏛️',
+    color: 'from-amber-500 to-orange-600',
+    standalone: true,
+  },
+  {
     id: 'marketing',
     label: '行銷自動化',
     desc: '內容生成、圖片影片、流程自動化',

@@ -34,6 +34,7 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
 
   const enabledModules: string[] = profile?.enabled_modules ?? MODULES.map(m => m.id)
   const isAdmin = profile?.user_type === 'admin'
+  const isEmployee = profile?.user_type === 'employee'
 
   // 子域 scope：chat.im-tourist.com 等子域只屬於單一系統，主頁僅顯示該系統模組（與左側選單一致）
   const host = (await headers()).get('host')?.split(':')[0].toLowerCase() ?? ''
@@ -41,13 +42,13 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
   const scope = SUBDOMAIN_SYSTEM[sub]
 
   // 潛在客戶已歸類至行銷中心，不在選單格單獨顯示（權限模組仍保留於 MODULES）
-  // 非管理者：帶子域 scope 時只顯示該系統模組，否則只顯示有權限的模組；管理者顯示全部
+  // 內部員工（employee / admin）享有完整系統功能；付費外部用戶依 enabled_modules 判斷
   const visibleModules = MODULES.filter(m => {
     if (m.id === 'leads') return false
     // 子域（booking/cs/work…）：一律只顯示該系統模組，管理者也不例外，
     // 避免 booking.im-tourist.com/apps 顯示成與 www 相同的全模組總選單。
     if (scope) return m.id === scope
-    if (isAdmin) return true
+    if (isAdmin || isEmployee) return true
     return enabledModules.includes(m.id)
   })
 
@@ -156,11 +157,11 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
         <div>
           <div className="flex items-center justify-between mb-4 px-0.5">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('modulesTitle')}</h2>
-            <span className="text-xs text-muted-foreground">{t('modulesAvailable', { count: visibleModules.filter(m => isAdmin || enabledModules.includes(m.id)).length, total: visibleModules.length })}</span>
+            <span className="text-xs text-muted-foreground">{t('modulesAvailable', { count: visibleModules.filter(m => isAdmin || isEmployee || enabledModules.includes(m.id)).length, total: visibleModules.length })}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {visibleModules.map(mod => {
-              const accessible = isAdmin || enabledModules.includes(mod.id)
+              const accessible = isAdmin || isEmployee || enabledModules.includes(mod.id)
               return (
                 <div
                   key={mod.id}

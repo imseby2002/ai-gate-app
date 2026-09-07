@@ -79,6 +79,7 @@
     "newChat": "New Chat",
     "work": "Work",
     "dashboard": "Dashboard",
+    "roundtable": "Smart Roundtable",
     "assistants": "AI Assistants",
     "imageGen": "Image Gen",
     "videoGen": "Video Gen",
@@ -131,6 +132,10 @@
       "chat": {
         "label": "AI Chat",
         "desc": "Text chat, image gen, video gen, RAG assistant"
+      },
+      "roundtable": {
+        "label": "Smart Roundtable",
+        "desc": "Multi-model & multi-role AI expert discussion and auto-synthesis"
       },
       "marketing": {
         "label": "Marketing Auto",

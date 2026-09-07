@@ -79,6 +79,7 @@
     "newChat": "新對話",
     "work": "工作區",
     "dashboard": "儀表板",
+    "roundtable": "智慧圓桌",
     "assistants": "AI 助理",
     "imageGen": "圖片生成",
     "videoGen": "影片生成",
@@ -131,6 +132,10 @@
       "chat": {
         "label": "AI 對話",
         "desc": "文字對話、畫圖、影片生成、RAG 助理"
+      },
+      "roundtable": {
+        "label": "智慧圓桌",
+        "desc": "多模型與多角色 AI 專家會議、交叉論述與自動總結"
       },
       "marketing": {
         "label": "行銷自動化",
