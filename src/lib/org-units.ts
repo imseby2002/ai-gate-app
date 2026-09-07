@@ -38,7 +38,10 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/gm', label: '經營儀表板' },
   ] },
   { key: 'mkt', label: '行銷', pages: [
-    { href: '/mkt', label: '品牌・行銷' },
+    { href: '/marketing', label: '行銷中心（全功能）' },
+    { href: '/marketing/brand', label: '品牌資料' },
+    { href: '/marketing/offline', label: '實體行銷' },
+    { href: '/marketing/logbook', label: '製作日誌' },
   ] },
 ]
 
