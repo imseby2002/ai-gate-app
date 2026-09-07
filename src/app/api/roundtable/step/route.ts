@@ -137,8 +137,9 @@ export async function POST(req: NextRequest) {
             verbosity,
           )
           newStatements.push(...stepStatements)
-          // 完成本輪後，再次暫停等待老闆後續指令
-          emit({ type: 'waiting_boss', round: nextRound })
+          // 完成本組輪次（論述輪 + 互評輪）後，取得最大結束輪次，再次暫停等待老闆後續指令
+          const endRound = stepStatements.reduce((max, item) => Math.max(max, item.round ?? nextRound), nextRound)
+          emit({ type: 'waiting_boss', round: endRound })
           isWaitingBoss = true
         }
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))

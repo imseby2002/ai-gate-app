@@ -850,7 +850,10 @@ export function resolveSeatStance(seat: Seat, idx: number, domainPreset: DomainP
 
 export function formatStatements(statements: Statement[]): string {
   return statements
-    .map(s => `### ${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`)
+    .map(s => {
+      const roundLabel = s.round ? `[第 ${s.round} 輪] ` : ''
+      return `### ${roundLabel}${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`
+    })
     .join('\n\n')
 }
 
@@ -965,14 +968,24 @@ export async function executeBossStep(
   expertContextMap: Map<string, string>,
   verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
+  const rebutRound = currentRound + 1
   emit({ type: 'boss-instruction', round: currentRound, content: bossGuidance, targetSeat: targetSeatName })
 
   const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
   const priorTranscript = formatStatements(allPriorStatements)
   const results: Statement[] = []
 
+  // 記錄老闆的介入指令
+  results.push({
+    round: currentRound,
+    name: '老闆指令',
+    role: '董事會主席 / 老闆',
+    stance: action === 'call_on' ? `點名 ${targetSeatName}` : '全體深化',
+    content: bossGuidance,
+  })
+
   if (action === 'call_on' && targetSeatName) {
-    // 點名單挑：指定該席位獨立發言
+    // 點名單挑：指定該席位在 currentRound 獨立發言
     const targetSeat = seats.find(s => s.name === targetSeatName) ?? seats[0]
     const seatIdx = Math.max(0, seats.indexOf(targetSeat))
     const stance = resolveSeatStance(targetSeat, seatIdx, domainPreset)
@@ -1001,10 +1014,10 @@ export async function executeBossStep(
     const firstReply: Statement = { round: currentRound, name: targetSeat.name, role: targetSeat.role, stance: stance.title, content }
     results.push(firstReply)
 
-    // 若開啟同儕反駁 (crossExamine)，其他合夥人針對此發言質詢
+    // 若開啟同儕反駁 (crossExamine)，其他合夥人在第 rebutRound (currentRound + 1) 質詢
     if (crossExamine) {
       const otherSeats = seats.filter(s => s.name !== targetSeatName)
-      emit({ type: 'phase', phase: 'rebut', label: `第 ${currentRound} 輪 · 同儕反駁 (${targetSeat.name}的回答)` })
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 同儕質詢反駁 (${targetSeat.name}的回答)` })
 
       const crossResults = await Promise.all(
         otherSeats.map(async (seat) => {
@@ -1013,28 +1026,28 @@ export async function executeBossStep(
           const otherExpert = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
           const crossSystem =
             `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${otherStance.title}】。\n` +
-            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】的回答提出反駁、質疑或補充。\n\n` +
+            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】在第 ${currentRound} 輪的回答提出反駁、質疑或補充。\n\n` +
             ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
             `\n${verbosityOption.instruction}`
           const crossPrompt =
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
             `【👑 老闆的指示】：\n${bossGuidance}\n\n` +
-            `【${targetSeat.name} 的最新回答】：\n${content}\n\n` +
+            `【${targetSeat.name} 在第 ${currentRound} 輪的最新回答】：\n${content}\n\n` +
             `請從你的學派立場無情檢視其邏輯漏洞，指出死穴。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          let crossContent = await speak(seat, crossSystem, crossPrompt, currentRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
+          let crossContent = await speak(seat, crossSystem, crossPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
           if (!crossContent || crossContent.trim().length === 0) {
             crossContent = `【質詢挑刺：${otherStance.title}】\n我方必須指出：剛才提出的方案仍忽視了「${otherStance.attackTriggers}」之根本風險，缺乏扎實的數據支撐。`
-            emit({ type: 'delta', round: currentRound, name: seat.name, content: crossContent })
+            emit({ type: 'delta', round: rebutRound, name: seat.name, content: crossContent })
           }
-          return { round: currentRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (反駁)`, content: crossContent }
+          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (反駁)`, content: crossContent }
         })
       )
       results.push(...crossResults)
     }
   } else {
-    // 拍子 1：全體深化 —— 全體合夥人帶著老闆的最新指示，平行發言
-    emit({ type: 'phase', phase: 'discuss', label: `第 ${currentRound} 輪 · 全員深化研議 (平行進行)` })
+    // 拍子 1：全體深化論述 —— 全體合夥人帶著老闆最新指示，平行發言 (第 currentRound 輪)
+    emit({ type: 'phase', phase: 'discuss', label: `第 ${currentRound} 輪 · 全員深化論述 (平行進行)` })
 
     const allResults = await Promise.all(
       seats.map(async (seat, idx) => {
@@ -1043,7 +1056,7 @@ export async function executeBossStep(
         const system =
           `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
           `老闆剛剛介入了會議並給予了最新的戰略指示。\n` +
-          `請針對老闆的最新導向，依據你的戰略學派進一步深化你的方案，並回應先前的爭議焦點。\n\n` +
+          `請針對老闆的最新導向，依據你的戰略學派進一步深化推進你的方案，並回應先前的爭議焦點。\n\n` +
           ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
           `\n${verbosityOption.instruction}`
         const userPrompt =
@@ -1062,9 +1075,9 @@ export async function executeBossStep(
     )
     results.push(...allResults)
 
-    // 拍子 2：同儕互評挑刺 —— 針對彼此剛交出的新深化方案，無情挑刺、刺刀見紅
+    // 拍子 2：同儕互評挑刺 —— 針對彼此在第 currentRound 輪剛交出的新深化方案，無情挑刺、刺刀見紅 (第 rebutRound 輪)
     if (crossExamine !== false) {
-      emit({ type: 'phase', phase: 'rebut', label: `第 ${currentRound} 輪 · 針對新方案互評挑刺 (平行進行)` })
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 針對新方案互評挑刺 (平行進行)` })
       const roundTranscript = formatStatements(allResults)
 
       const rebuttalResults = await Promise.all(
@@ -1075,7 +1088,7 @@ export async function executeBossStep(
             `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
             `你的底層信仰與立論依據：${stance.philosophy}\n` +
             `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
-            `【本輪核心任務】：針對其他合夥人剛才交出的深化方案，無情挑刺、刺刀見紅！\n` +
+            `【本輪核心任務】：針對其他合夥人在第 ${currentRound} 輪剛交出的深化方案，無情挑刺、刺刀見紅！\n` +
             `1. 仔細檢驗其他人在老闆最新指示下，是否提出了不切實際的假設、是否在偷換概念或存在隱性風險。\n` +
             `2. 正面開火反駁，指出對手方案的死穴，並捍衛我方方案的不可替代性。\n\n` +
             ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
@@ -1083,15 +1096,15 @@ export async function executeBossStep(
           const userPrompt =
             `【👑 老闆的最新裁示】：\n${bossGuidance}\n\n` +
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
-            `【本輪各合夥人最新深化方案】：\n${roundTranscript}\n\n` +
-            `請直接點名其他合夥人，對其剛剛提出的新論點進行毫不留情之猛烈批判與反駁！遵守篇幅要求（${verbosityOption.targetWords}）。`
+            `【第 ${currentRound} 輪各合夥人最新深化方案】：\n${roundTranscript}\n\n` +
+            `請直接點名其他合夥人，對其剛剛在第 ${currentRound} 輪提出的新論點進行毫不留情之猛烈批判與反駁！遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          let content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
+          let content = await speak(seat, system, userPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
           if (!content || content.trim().length === 0) {
             content = `【互評挑刺：${stance.title}】\n綜觀同僚的新版方案，依然存在嚴重盲點，未嚴格防範「${stance.attackTriggers}」，切忌盲目樂觀。`
-            emit({ type: 'delta', round: currentRound, name: seat.name, content })
+            emit({ type: 'delta', round: rebutRound, name: seat.name, content })
           }
-          return { round: currentRound, name: seat.name, role: seat.role, stance: `${stance.title} (互評挑刺)`, content }
+          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${stance.title} (互評挑刺)`, content }
         })
       )
       results.push(...rebuttalResults)

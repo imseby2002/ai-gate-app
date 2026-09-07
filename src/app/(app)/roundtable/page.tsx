@@ -467,6 +467,19 @@ export default function RoundtablePage() {
               return next
             })
           }
+        } else if (e.type === 'boss-instruction') {
+          setBlocks(prev => {
+            if (prev.some(b => b.round === e.round && b.name === '老闆指令')) return prev
+            return [
+              ...prev,
+              {
+                round: e.round,
+                name: '老闆指令',
+                stance: e.targetSeat ? `點名 ${e.targetSeat}` : '全體深化',
+                content: e.content,
+              },
+            ]
+          })
         } else if (e.type === 'waiting_boss') {
           setWaitingBoss(true)
           setPhase('⏸️ 會議暫停 · 等待老闆裁示')
@@ -496,6 +509,9 @@ export default function RoundtablePage() {
 
   // 計算輪次列表 (過濾出所有大於 0 的輪次)
   const roundNumbers = [...new Set(blocks.map(b => b.round))].sort((a, b) => a - b)
+  const completedRound = blocks.reduce((max, b) => Math.max(max, b.round), 2)
+  const nextDiscussRound = completedRound + 1
+  const nextRebutRound = completedRound + 2
 
   return (
     <div className="h-full overflow-y-auto">
@@ -933,8 +949,32 @@ export default function RoundtablePage() {
 
               {/* 本輪各合夥人發言 (多卡片平行並列/縱向) */}
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-muted-foreground">
-                  {roundNum === 1 ? '第一輪 · 獨立研議 (平行)' : roundNum === 2 ? '第二輪 · 針鋒相對 (互評)' : `第 ${roundNum} 輪 · 深化研議`}
+                <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  {roundNum === 1 ? (
+                    <>
+                      <span className="text-primary font-bold">第一輪</span>
+                      <span>·</span>
+                      <span>獨立研議 (論述輪 · 平行)</span>
+                    </>
+                  ) : roundNum === 2 ? (
+                    <>
+                      <span className="text-amber-500 font-bold">第二輪</span>
+                      <span>·</span>
+                      <span>針鋒相對 (互評挑刺輪 · 平行)</span>
+                    </>
+                  ) : roundNum % 2 === 1 ? (
+                    <>
+                      <span className="text-primary font-bold">第 {roundNum} 輪</span>
+                      <span>·</span>
+                      <span>深化論述 (針對老闆最新指示)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-amber-500 font-bold">第 {roundNum} 輪</span>
+                      <span>·</span>
+                      <span>針鋒相對 (針對新方案互評挑刺)</span>
+                    </>
+                  )}
                 </h2>
               </div>
 
@@ -980,7 +1020,7 @@ export default function RoundtablePage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Badge className="bg-primary px-2.5 py-1 text-xs">🎛️ 老闆指揮台</Badge>
-                <span className="text-sm font-medium">第二輪攻防已完成，請下達下一步裁決：</span>
+                <span className="text-sm font-medium">第 {completedRound} 輪攻防已完成，請下達下一步裁決：</span>
               </div>
             </div>
 
@@ -997,10 +1037,10 @@ export default function RoundtablePage() {
               >
                 <p className="text-xs font-semibold flex items-center gap-1.5">
                   <Send className="h-3.5 w-3.5 text-primary" />
-                  全體深入討論
+                  全體深入討論 (論述輪 + 互評輪)
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  輸入新指示，三位合夥人帶著導向進行深化研議，隨後自動展開同儕互評挑刺
+                  輸入新指示，三位合夥人將先展開【第 {nextDiscussRound} 輪深化論述】，隨後自動進入【第 {nextRebutRound} 輪針鋒相對互評】
                 </p>
               </button>
 
@@ -1018,7 +1058,7 @@ export default function RoundtablePage() {
                   點名單獨發言
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  點名某位合夥人針對特定疑點單挑作答，隨後同儕反駁
+                  點名某位合夥人在【第 {nextDiscussRound} 輪】單挑作答，隨後其他合夥人在【第 {nextRebutRound} 輪】展開質詢反駁
                 </p>
               </button>
 
