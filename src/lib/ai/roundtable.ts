@@ -320,6 +320,8 @@ export const MODERATOR_MODELS = [
   { id: 'anthropic/claude-fable-5-1', name: 'Claude Fable 5.1 (Anthropic)', shortName: 'Claude Fable 5.1', badge: '全新世代 · 深度研究與高階裁斷' },
   { id: 'openai/gpt-6-astra', name: 'OpenAI Astra (GPT-6)', shortName: 'OpenAI Astra', badge: '遞歸深度推理 · 數理精算與博弈' },
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文 · 跨文檔精確對齊' },
+  { id: 'cliproxy/gemini-2.5-pro', name: 'Gemini 2.5 Pro (CLIProxy 免費代理)', shortName: 'CLIProxy Gemini Pro', badge: '⚡ 零成本 · 免費代理高速推理' },
+  { id: 'freellm/auto', name: 'FreeLLM Auto (免費代理平台)', shortName: 'FreeLLM Auto', badge: '⚡ 零成本 · 多平台備援路由' },
 ]
 
 export type VerbosityMode = 'concise_150' | 'standard_300' | 'detailed_500' | 'unlimited'
@@ -394,6 +396,12 @@ export const VERBOSITY_OPTIONS: VerbosityOption[] = [
 export function formatModelDisplayName(model?: string): string {
   if (!model) return ''
   const m = model.toLowerCase()
+  if (m.startsWith('cliproxy/')) {
+    return `CLIProxy · ${model.slice('cliproxy/'.length)}`
+  }
+  if (m.startsWith('freellm/')) {
+    return `FreeLLM · ${model.slice('freellm/'.length)}`
+  }
   if (m.includes('fable')) return 'Claude Fable 5.1'
   if (m.includes('astra')) return 'OpenAI Astra (GPT-6)'
   if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude 3.7 Opus'
@@ -513,6 +521,52 @@ function resolveModel(id: string): LanguageModel | string {
       return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash')
     }
   }
+  if (provider === 'cliproxy') {
+    const baseURL = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
+    const apiKey = process.env.CLI_PROXY_API_KEY ?? 'no-key'
+    if (baseURL) {
+      return createOpenAI({ apiKey, baseURL }).chat(rawModel)
+    }
+  }
+
+  if (provider === 'freellm') {
+    const rawUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+    const baseURL = rawUrl ? (rawUrl.replace(/\/+$/, '').endsWith('/v1') ? rawUrl.replace(/\/+$/, '') : `${rawUrl.replace(/\/+$/, '')}/v1`) : rawUrl
+    const apiKey = process.env.FREE_LLM_API_KEY ?? 'no-key'
+    if (baseURL) {
+      return createOpenAI({ apiKey, baseURL }).chat(rawModel)
+    }
+  }
+
+  if (provider === 'deepseek') {
+    const key = process.env.DEEPSEEK_API_KEY?.trim()
+    if (key) {
+      return createOpenAI({ apiKey: key, baseURL: 'https://api.deepseek.com' }).chat(rawModel)
+    }
+    if (process.env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      }).chat(`deepseek/${rawModel}`)
+    }
+  }
+
+  if (provider === 'groq') {
+    const key = process.env.GROQ_API_KEY?.trim()
+    if (key) {
+      return createOpenAI({ apiKey: key, baseURL: 'https://api.groq.com/openai/v1' }).chat(rawModel)
+    }
+  }
+
+  if (provider === 'openrouter') {
+    if (process.env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      }).chat(rawModel)
+    }
+  }
+
   if (provider === 'google') {
     return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })(rawModel)
   }

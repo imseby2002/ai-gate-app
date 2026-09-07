@@ -5,6 +5,7 @@ import {
   cleanModelId,
   getModelDisplayName,
   calculateModelCosts,
+  estimateTextTokens,
   CHANNEL_CONFIG,
   type SourceChannel,
 } from '@/lib/ai/token-cost-tracker'
@@ -38,38 +39,15 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const daysParam = searchParams.get('days') ?? 'all'
   const filterChannel = searchParams.get('channel') ?? 'all'
+  const filterService = searchParams.get('service') ?? 'all' // 'all' | 'roundtable' | 'chat'
 
   let startDateStr: string | null = null
+  let startTimestamp: number | null = null
   if (daysParam !== 'all') {
     const days = parseInt(daysParam, 10) || 30
-    startDateStr = new Date(Date.now() - days * 86400000).toISOString().split('T')[0]
+    startTimestamp = Date.now() - days * 86400000
+    startDateStr = new Date(startTimestamp).toISOString().split('T')[0]
   }
-
-  // 1. Fetch usage_daily
-  let dailyQuery = supabase!
-    .from('usage_daily')
-    .select('date, model_id, total_cost_usd, message_count, input_tokens, output_tokens')
-    .order('date', { ascending: true })
-
-  if (startDateStr) {
-    dailyQuery = dailyQuery.gte('date', startDateStr)
-  }
-
-  const { data: dailyRows } = await dailyQuery
-
-  // 2. Fetch messages to get recent granular / metadata records (including finish_reason source tags)
-  let msgQuery = supabase!
-    .from('messages')
-    .select('created_at, model_id, input_tokens, output_tokens, cost_usd, finish_reason')
-    .eq('role', 'assistant')
-    .not('model_id', 'is', null)
-    .order('created_at', { ascending: true })
-
-  if (startDateStr) {
-    msgQuery = msgQuery.gte('created_at', `${startDateStr}T00:00:00.000Z`)
-  }
-
-  const { data: messageRows } = await msgQuery
 
   // Structure for per-(model, channel) aggregates
   interface ModelStat {
@@ -77,6 +55,7 @@ export async function GET(req: NextRequest) {
     display_name: string
     source_channel: SourceChannel
     channel_label: string
+    service_module: 'all' | 'roundtable' | 'chat'
     is_free: boolean
     requests: number
     input_tokens: number
@@ -104,10 +83,14 @@ export async function GET(req: NextRequest) {
     label: string
     sub_label: string
   }> = {
-    cliproxy: { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: true, label: CHANNEL_CONFIG.cliproxy.label, sub_label: CHANNEL_CONFIG.cliproxy.subLabel },
-    freellm:  { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: true, label: CHANNEL_CONFIG.freellm.label, sub_label: CHANNEL_CONFIG.freellm.subLabel },
-    groq:     { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: true, label: CHANNEL_CONFIG.groq.label, sub_label: CHANNEL_CONFIG.groq.subLabel },
-    direct:   { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: false, label: CHANNEL_CONFIG.direct.label, sub_label: CHANNEL_CONFIG.direct.subLabel },
+    cliproxy:   { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: true,  label: CHANNEL_CONFIG.cliproxy.label,   sub_label: CHANNEL_CONFIG.cliproxy.subLabel },
+    freellm:    { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: true,  label: CHANNEL_CONFIG.freellm.label,    sub_label: CHANNEL_CONFIG.freellm.subLabel },
+    groq:       { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: true,  label: CHANNEL_CONFIG.groq.label,       sub_label: CHANNEL_CONFIG.groq.subLabel },
+    google:     { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: false, label: CHANNEL_CONFIG.google.label,     sub_label: CHANNEL_CONFIG.google.subLabel },
+    anthropic:  { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: false, label: CHANNEL_CONFIG.anthropic.label,  sub_label: CHANNEL_CONFIG.anthropic.subLabel },
+    openai:     { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: false, label: CHANNEL_CONFIG.openai.label,     sub_label: CHANNEL_CONFIG.openai.subLabel },
+    deepseek:   { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: false, label: CHANNEL_CONFIG.deepseek.label,   sub_label: CHANNEL_CONFIG.deepseek.subLabel },
+    openrouter: { requests: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, cost_usd: 0, cost_twd: 0, saved_usd: 0, saved_twd: 0, is_free: false, label: CHANNEL_CONFIG.openrouter.label, sub_label: CHANNEL_CONFIG.openrouter.subLabel },
   }
 
   // Daily timeline tracking
@@ -126,156 +109,271 @@ export async function GET(req: NextRequest) {
     requests: number
   }>()
 
-  // Process usage_daily (primary source for historical aggregates)
-  for (const row of dailyRows ?? []) {
-    const rawModel = row.model_id ?? ''
-    const channel = detectSourceChannel(rawModel)
-    const cleanId = cleanModelId(rawModel)
-    const key = `${channel}:${cleanId}`
+  let totalRoundtableTokens = 0
+  let totalRoundtableCostUsd = 0
+  let totalRoundtableRequests = 0
+  let totalChatTokens = 0
+  let totalChatCostUsd = 0
+  let totalChatRequests = 0
 
-    const inTokens = row.input_tokens ?? 0
-    const outTokens = row.output_tokens ?? 0
-    const reqCount = row.message_count ?? 0
-    const dbCost = row.total_cost_usd ?? 0
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1. 處理「AI 智慧圓桌會議 (Roundtable)」所有會話與發言
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (filterService === 'all' || filterService === 'roundtable') {
+    let rtQuery = supabase!
+      .from('roundtable_sessions')
+      .select('id, created_at, instruction, domain, fact_briefing, seats, transcript, report')
+      .order('created_at', { ascending: true })
 
-    const costs = calculateModelCosts(rawModel, inTokens, outTokens, channel)
-    // If DB has a recorded cost for direct, use it, otherwise use calculated
-    const finalCostUsd = channel === 'direct' ? (dbCost > 0 ? dbCost : costs.actualCostUsd) : 0
-    const finalCostTwd = finalCostUsd * 32.0
-
-    const entry = modelMap.get(key) ?? {
-      model_id: cleanId,
-      display_name: getModelDisplayName(rawModel, channel),
-      source_channel: channel,
-      channel_label: CHANNEL_CONFIG[channel].label,
-      is_free: CHANNEL_CONFIG[channel].isFree,
-      requests: 0,
-      input_tokens: 0,
-      output_tokens: 0,
-      total_tokens: 0,
-      cost_usd: 0,
-      cost_twd: 0,
-      saved_usd: 0,
-      saved_twd: 0,
+    if (startDateStr) {
+      rtQuery = rtQuery.gte('created_at', `${startDateStr}T00:00:00.000Z`)
     }
 
-    entry.requests += reqCount
-    entry.input_tokens += inTokens
-    entry.output_tokens += outTokens
-    entry.total_tokens += (inTokens + outTokens)
-    entry.cost_usd += finalCostUsd
-    entry.cost_twd += finalCostTwd
-    entry.saved_usd += costs.savedCostUsd
-    entry.saved_twd += costs.savedCostTwd
-    modelMap.set(key, entry)
+    const { data: rtSessions } = await rtQuery
 
-    // Add to channel totals
-    channelTotals[channel].requests += reqCount
-    channelTotals[channel].input_tokens += inTokens
-    channelTotals[channel].output_tokens += outTokens
-    channelTotals[channel].total_tokens += (inTokens + outTokens)
-    channelTotals[channel].cost_usd += finalCostUsd
-    channelTotals[channel].cost_twd += finalCostTwd
-    channelTotals[channel].saved_usd += costs.savedCostUsd
-    channelTotals[channel].saved_twd += costs.savedCostTwd
+    for (const session of rtSessions ?? []) {
+      const dateStr = session.created_at ? session.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
 
-    // Day map
-    const day = dayMap.get(row.date) ?? {
-      date: row.date,
-      cost_usd: 0,
-      cliproxy_tokens: 0,
-      cliproxy_requests: 0,
-      freellm_tokens: 0,
-      freellm_requests: 0,
-      groq_tokens: 0,
-      groq_requests: 0,
-      direct_tokens: 0,
-      direct_requests: 0,
-      total_tokens: 0,
-      requests: 0,
-    }
+      const defaultSeats = session.seats || [
+        { name: '員工A', model: 'anthropic/claude-sonnet-4-6' },
+        { name: '員工B', model: 'openai/gpt-5' },
+        { name: '員工C', model: 'google/gemini-2.5-pro' },
+      ]
+      const seatMap = Object.fromEntries(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        defaultSeats.map((st: any) => [st.name, st.model])
+      )
 
-    day.cost_usd += finalCostUsd
-    day.total_tokens += (inTokens + outTokens)
-    day.requests += reqCount
+      const addEntry = (rawModel: string, inTokens: number, outTokens: number) => {
+        const channel = detectSourceChannel(rawModel)
+        const cleanId = cleanModelId(rawModel)
+        const key = `${channel}:${cleanId}`
 
-    if (channel === 'cliproxy') {
-      day.cliproxy_tokens += (inTokens + outTokens)
-      day.cliproxy_requests += reqCount
-    } else if (channel === 'freellm') {
-      day.freellm_tokens += (inTokens + outTokens)
-      day.freellm_requests += reqCount
-    } else if (channel === 'groq') {
-      day.groq_tokens += (inTokens + outTokens)
-      day.groq_requests += reqCount
-    } else {
-      day.direct_tokens += (inTokens + outTokens)
-      day.direct_requests += reqCount
-    }
+        const costs = calculateModelCosts(rawModel, inTokens, outTokens, channel)
+        const costUsd = costs.actualCostUsd
+        const costTwd = costs.actualCostTwd
 
-    dayMap.set(row.date, day)
-  }
+        totalRoundtableTokens += (inTokens + outTokens)
+        totalRoundtableCostUsd += costUsd
+        totalRoundtableRequests += 1
 
-  // Cross-check recent messages for any proxy calls that may not be in usage_daily yet
-  // (e.g. If finish_reason contains proxy metadata)
-  for (const msg of messageRows ?? []) {
-    let msgChannel: SourceChannel | null = null
-    let msgCleanModel = cleanModelId(msg.model_id ?? '')
-    let savedUsd = 0
-
-    if (msg.finish_reason && msg.finish_reason.startsWith('{')) {
-      try {
-        const meta = JSON.parse(msg.finish_reason)
-        if (meta.source === 'cli-proxy' || meta.source === 'cliproxy') msgChannel = 'cliproxy'
-        if (meta.source === 'free-llm' || meta.source === 'freellm') msgChannel = 'freellm'
-        if (meta.model) msgCleanModel = cleanModelId(meta.model)
-        if (meta.savedUsd) savedUsd = Number(meta.savedUsd) || 0
-      } catch {
-        // ignore parse error
-      }
-    }
-
-    if (!msgChannel && msg.model_id) {
-      msgChannel = detectSourceChannel(msg.model_id)
-    }
-
-    // If this message belongs to cliproxy or freellm and isn't captured in dailyRows
-    if (msgChannel && (msgChannel === 'cliproxy' || msgChannel === 'freellm')) {
-      const key = `${msgChannel}:${msgCleanModel}`
-      const existing = modelMap.get(key)
-      if (!existing) {
-        const inTokens = msg.input_tokens ?? 0
-        const outTokens = msg.output_tokens ?? 0
-        const costs = calculateModelCosts(msgCleanModel, inTokens, outTokens, msgChannel)
-        const sUsd = savedUsd > 0 ? savedUsd : costs.savedCostUsd
-
-        modelMap.set(key, {
-          model_id: msgCleanModel,
-          display_name: getModelDisplayName(msgCleanModel, msgChannel),
-          source_channel: msgChannel,
-          channel_label: CHANNEL_CONFIG[msgChannel].label,
-          is_free: true,
-          requests: 1,
-          input_tokens: inTokens,
-          output_tokens: outTokens,
-          total_tokens: inTokens + outTokens,
+        const entry = modelMap.get(key) ?? {
+          model_id: cleanId,
+          display_name: getModelDisplayName(rawModel, channel),
+          source_channel: channel,
+          channel_label: CHANNEL_CONFIG[channel]?.label ?? channel,
+          service_module: 'roundtable',
+          is_free: CHANNEL_CONFIG[channel]?.isFree ?? false,
+          requests: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          total_tokens: 0,
           cost_usd: 0,
           cost_twd: 0,
-          saved_usd: sUsd,
-          saved_twd: sUsd * 32.0,
-        })
+          saved_usd: 0,
+          saved_twd: 0,
+        }
 
-        channelTotals[msgChannel].requests += 1
-        channelTotals[msgChannel].input_tokens += inTokens
-        channelTotals[msgChannel].output_tokens += outTokens
-        channelTotals[msgChannel].total_tokens += (inTokens + outTokens)
-        channelTotals[msgChannel].saved_usd += sUsd
-        channelTotals[msgChannel].saved_twd += sUsd * 32.0
+        entry.requests += 1
+        entry.input_tokens += inTokens
+        entry.output_tokens += outTokens
+        entry.total_tokens += (inTokens + outTokens)
+        entry.cost_usd += costUsd
+        entry.cost_twd += costTwd
+        entry.saved_usd += costs.savedCostUsd
+        entry.saved_twd += costs.savedCostTwd
+        modelMap.set(key, entry)
+
+        if (channelTotals[channel]) {
+          channelTotals[channel].requests += 1
+          channelTotals[channel].input_tokens += inTokens
+          channelTotals[channel].output_tokens += outTokens
+          channelTotals[channel].total_tokens += (inTokens + outTokens)
+          channelTotals[channel].cost_usd += costUsd
+          channelTotals[channel].cost_twd += costTwd
+          channelTotals[channel].saved_usd += costs.savedCostUsd
+          channelTotals[channel].saved_twd += costs.savedCostTwd
+        }
+
+        // Timeline
+        const day = dayMap.get(dateStr) ?? {
+          date: dateStr,
+          cost_usd: 0,
+          cliproxy_tokens: 0,
+          cliproxy_requests: 0,
+          freellm_tokens: 0,
+          freellm_requests: 0,
+          groq_tokens: 0,
+          groq_requests: 0,
+          direct_tokens: 0,
+          direct_requests: 0,
+          total_tokens: 0,
+          requests: 0,
+        }
+
+        day.cost_usd += costUsd
+        day.total_tokens += (inTokens + outTokens)
+        day.requests += 1
+
+        if (channel === 'cliproxy') {
+          day.cliproxy_tokens += (inTokens + outTokens)
+          day.cliproxy_requests += 1
+        } else if (channel === 'freellm') {
+          day.freellm_tokens += (inTokens + outTokens)
+          day.freellm_requests += 1
+        } else if (channel === 'groq') {
+          day.groq_tokens += (inTokens + outTokens)
+          day.groq_requests += 1
+        } else {
+          day.direct_tokens += (inTokens + outTokens)
+          day.direct_requests += 1
+        }
+
+        dayMap.set(dateStr, day)
+      }
+
+      // 1. Fact briefing (資料專員 - Gemini 2.5 Flash)
+      if (session.fact_briefing) {
+        const inTokens = estimateTextTokens(session.instruction) + 2500
+        const outTokens = estimateTextTokens(session.fact_briefing)
+        addEntry('google/gemini-2.5-flash', inTokens, outTokens)
+      }
+
+      // 2. Transcript rounds (各合夥人發言)
+      let contextSoFar = (session.instruction || '') + '\n' + (session.fact_briefing || '')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const t of (session.transcript || []) as any[]) {
+        if (t.name === '資料專員' || t.name === '老闆指令' || !t.content) continue
+        const rawModel = seatMap[t.name] || (
+          t.name === '員工A' ? 'anthropic/claude-sonnet-4-6' :
+          t.name === '員工B' ? 'openai/gpt-5' :
+          'google/gemini-2.5-pro'
+        )
+        const inTokens = estimateTextTokens(contextSoFar) + 800
+        const outTokens = estimateTextTokens(t.content)
+        contextSoFar += '\n' + t.content
+        addEntry(rawModel, inTokens, outTokens)
+      }
+
+      // 3. Final synthesis report (首席幕僚長 - Claude Opus 4.8 / 3.7)
+      if (session.report) {
+        const inTokens = estimateTextTokens(contextSoFar) + 1200
+        const outTokens = estimateTextTokens(session.report)
+        addEntry('anthropic/claude-opus-4-8', inTokens, outTokens)
       }
     }
   }
 
-  // Prepopulate standard models so the admin sees the full capability matrix even before first call
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2. 處理「智慧對話 (Chat)」使用量 (usage_daily & messages)
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (filterService === 'all' || filterService === 'chat') {
+    let dailyQuery = supabase!
+      .from('usage_daily')
+      .select('date, model_id, total_cost_usd, message_count, input_tokens, output_tokens')
+      .order('date', { ascending: true })
+
+    if (startDateStr) {
+      dailyQuery = dailyQuery.gte('date', startDateStr)
+    }
+
+    const { data: dailyRows } = await dailyQuery
+
+    for (const row of dailyRows ?? []) {
+      const rawModel = row.model_id ?? ''
+      const channel = detectSourceChannel(rawModel)
+      const cleanId = cleanModelId(rawModel)
+      const key = `${channel}:${cleanId}`
+
+      const inTokens = row.input_tokens ?? 0
+      const outTokens = row.output_tokens ?? 0
+      const reqCount = row.message_count ?? 0
+      const dbCost = row.total_cost_usd ?? 0
+
+      const costs = calculateModelCosts(rawModel, inTokens, outTokens, channel)
+      const finalCostUsd = costs.isFree ? 0 : (dbCost > 0 ? dbCost : costs.actualCostUsd)
+      const finalCostTwd = finalCostUsd * 32.0
+
+      totalChatTokens += (inTokens + outTokens)
+      totalChatCostUsd += finalCostUsd
+      totalChatRequests += reqCount
+
+      const entry = modelMap.get(key) ?? {
+        model_id: cleanId,
+        display_name: getModelDisplayName(rawModel, channel),
+        source_channel: channel,
+        channel_label: CHANNEL_CONFIG[channel]?.label ?? channel,
+        service_module: 'chat',
+        is_free: CHANNEL_CONFIG[channel]?.isFree ?? false,
+        requests: 0,
+        input_tokens: 0,
+        output_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+        cost_twd: 0,
+        saved_usd: 0,
+        saved_twd: 0,
+      }
+
+      entry.requests += reqCount
+      entry.input_tokens += inTokens
+      entry.output_tokens += outTokens
+      entry.total_tokens += (inTokens + outTokens)
+      entry.cost_usd += finalCostUsd
+      entry.cost_twd += finalCostTwd
+      entry.saved_usd += costs.savedCostUsd
+      entry.saved_twd += costs.savedCostTwd
+      modelMap.set(key, entry)
+
+      if (channelTotals[channel]) {
+        channelTotals[channel].requests += reqCount
+        channelTotals[channel].input_tokens += inTokens
+        channelTotals[channel].output_tokens += outTokens
+        channelTotals[channel].total_tokens += (inTokens + outTokens)
+        channelTotals[channel].cost_usd += finalCostUsd
+        channelTotals[channel].cost_twd += finalCostTwd
+        channelTotals[channel].saved_usd += costs.savedCostUsd
+        channelTotals[channel].saved_twd += costs.savedCostTwd
+      }
+
+      const day = dayMap.get(row.date) ?? {
+        date: row.date,
+        cost_usd: 0,
+        cliproxy_tokens: 0,
+        cliproxy_requests: 0,
+        freellm_tokens: 0,
+        freellm_requests: 0,
+        groq_tokens: 0,
+        groq_requests: 0,
+        direct_tokens: 0,
+        direct_requests: 0,
+        total_tokens: 0,
+        requests: 0,
+      }
+
+      day.cost_usd += finalCostUsd
+      day.total_tokens += (inTokens + outTokens)
+      day.requests += reqCount
+
+      if (channel === 'cliproxy') {
+        day.cliproxy_tokens += (inTokens + outTokens)
+        day.cliproxy_requests += reqCount
+      } else if (channel === 'freellm') {
+        day.freellm_tokens += (inTokens + outTokens)
+        day.freellm_requests += reqCount
+      } else if (channel === 'groq') {
+        day.groq_tokens += (inTokens + outTokens)
+        day.groq_requests += reqCount
+      } else {
+        day.direct_tokens += (inTokens + outTokens)
+        day.direct_requests += reqCount
+      }
+
+      dayMap.set(row.date, day)
+    }
+  }
+
+  // Prepopulate standard proxy models so the matrix displays them with $0.00 even if not yet triggered
   const standardShowcase: Array<{ model_id: string; channel: SourceChannel }> = [
     { model_id: 'gemini-3-flash', channel: 'cliproxy' },
     { model_id: 'kimi-k2.5', channel: 'cliproxy' },
@@ -293,7 +391,8 @@ export async function GET(req: NextRequest) {
         model_id: item.model_id,
         display_name: getModelDisplayName(item.model_id, item.channel),
         source_channel: item.channel,
-        channel_label: CHANNEL_CONFIG[item.channel].label,
+        channel_label: CHANNEL_CONFIG[item.channel]?.label ?? item.channel,
+        service_module: 'all',
         is_free: true,
         requests: 0,
         input_tokens: 0,
@@ -307,23 +406,21 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Convert map to sorted list
+  // Convert to array and filter
   let allModels = Array.from(modelMap.values())
 
-  // Apply channel filter if specified
   if (filterChannel !== 'all') {
     allModels = allModels.filter(m => m.source_channel === filterChannel)
   }
 
-  // Sort: active models with requests/cost first, then by requests descending
   allModels.sort((a, b) => {
     if (a.requests > 0 && b.requests === 0) return -1
     if (a.requests === 0 && b.requests > 0) return 1
     if (b.cost_usd !== a.cost_usd) return b.cost_usd - a.cost_usd
-    return b.requests - a.requests
+    return b.total_tokens - a.total_tokens
   })
 
-  // Global summary metrics
+  // Global totals
   const totalCostUsd = Object.values(channelTotals).reduce((s, c) => s + c.cost_usd, 0)
   const totalCostTwd = totalCostUsd * 32.0
   const totalSavedUsd = channelTotals.cliproxy.saved_usd + channelTotals.freellm.saved_usd
@@ -336,7 +433,6 @@ export async function GET(req: NextRequest) {
   const freeRequests = channelTotals.cliproxy.requests + channelTotals.freellm.requests + channelTotals.groq.requests
   const freeRatio = totalRequests > 0 ? Number(((freeRequests / totalRequests) * 100).toFixed(1)) : 0
 
-  // Calculate percentages on each model item
   const byModelAndSource = allModels.map(m => ({
     ...m,
     cost_share_pct: totalCostUsd > 0 ? Number(((m.cost_usd / totalCostUsd) * 100).toFixed(1)) : 0,
@@ -347,9 +443,9 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     summary: {
-      totalCostUsd: Number(totalCostUsd.toFixed(6)),
+      totalCostUsd: Number(totalCostUsd.toFixed(4)),
       totalCostTwd: Number(totalCostTwd.toFixed(2)),
-      totalSavedUsd: Number(totalSavedUsd.toFixed(6)),
+      totalSavedUsd: Number(totalSavedUsd.toFixed(4)),
       totalSavedTwd: Number(totalSavedTwd.toFixed(2)),
       totalTokens,
       totalInputTokens,
@@ -357,6 +453,12 @@ export async function GET(req: NextRequest) {
       totalRequests,
       freeRequests,
       freeRatio,
+      roundtableTokens: totalRoundtableTokens,
+      roundtableCostUsd: Number(totalRoundtableCostUsd.toFixed(4)),
+      roundtableRequests: totalRoundtableRequests,
+      chatTokens: totalChatTokens,
+      chatCostUsd: Number(totalChatCostUsd.toFixed(4)),
+      chatRequests: totalChatRequests,
     },
     channels: channelTotals,
     byModelAndSource,

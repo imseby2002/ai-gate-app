@@ -54,12 +54,53 @@ interface SessionSummary {
 
 export interface CustomSeatConfig {
   name: string
+  model?: string
   stance: string
   philosophy: string
   attackTriggers: string
 }
 
+export const AVAILABLE_SEAT_MODELS = [
+  { id: 'anthropic/claude-sonnet-4-6', label: 'Claude 3.7 Sonnet (Anthropic 原廠)' },
+  { id: 'openai/gpt-4o', label: 'GPT-4o (OpenAI 原廠)' },
+  { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro (Google 原廠)' },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash (Google 原廠)' },
+  { id: 'deepseek/deepseek-chat', label: 'DeepSeek V3 (DeepSeek 原廠)' },
+  { id: 'cliproxy/gemini-2.5-flash', label: '⚡ CLIProxy · Gemini 2.5 Flash (免費代理)' },
+  { id: 'cliproxy/gemini-2.5-pro', label: '⚡ CLIProxy · Gemini 2.5 Pro (免費代理)' },
+  { id: 'cliproxy/claude-sonnet-4-6', label: '⚡ CLIProxy · Claude Sonnet (免費代理)' },
+  { id: 'freellm/llama-3.3-70b', label: '⚡ FreeLLM · Llama 3.3 70B (免費代理)' },
+  { id: 'freellm/auto', label: '⚡ FreeLLM · Auto 自動多平台備援 (免費代理)' },
+]
+
 export const ROLE_PRESETS = [
+  {
+    label: '💎 免費代理智囊團 (CLIProxy + FreeLLM 零成本)',
+    description: '使用 CLIProxy (Gemini) 與 FreeLLM (Llama) 免費模型激辯',
+    seats: [
+      {
+        name: '開源架構 (FreeLLM)',
+        model: 'freellm/llama-3.3-70b',
+        stance: '開源生態與工程落實',
+        philosophy: '以全球頂尖開源大模型思維，重視開放架構、性價比與工程可行性。',
+        attackTriggers: '抨擊閉源壟斷與高昂授權成本、痛批華而不實的商業噱頭。',
+      },
+      {
+        name: '敏捷先鋒 (CLIProxy)',
+        model: 'cliproxy/gemini-2.5-flash',
+        stance: '極速破局與產品迭代',
+        philosophy: '天下武功唯快不破。搶先驗證 MVP 與市場反饋，拒絕沉睡在過度完美的分析中。',
+        attackTriggers: '砲轟過度保守分析癱瘓決策、質疑錯失關鍵市場先機。',
+      },
+      {
+        name: '審計風控 (CLIProxy)',
+        model: 'cliproxy/gemini-2.5-pro',
+        stance: '極限風控與邊界審計',
+        philosophy: '以極致嚴謹的長上下文推理，穿透隱藏風險與數據漏洞，守護資產安全。',
+        attackTriggers: '質疑未經壓力測試的樂觀預期、砲轟缺乏數據支撐的冒進。',
+      },
+    ],
+  },
   {
     label: '🏦 頂級投行激辯 (大摩 vs 先鋒 vs 小摩)',
     description: '華爾街主流機構視角碰撞',
@@ -155,9 +196,9 @@ export default function RoundtablePage() {
   // 自訂角色觀點設定
   const [showRoleConfig, setShowRoleConfig] = useState(false)
   const [customSeats, setCustomSeats] = useState<CustomSeatConfig[]>([
-    { name: '員工A', stance: '', philosophy: '', attackTriggers: '' },
-    { name: '員工B', stance: '', philosophy: '', attackTriggers: '' },
-    { name: '員工C', stance: '', philosophy: '', attackTriggers: '' },
+    { name: '員工A', model: DEFAULT_SEATS[0].model, stance: '', philosophy: '', attackTriggers: '' },
+    { name: '員工B', model: DEFAULT_SEATS[1].model, stance: '', philosophy: '', attackTriggers: '' },
+    { name: '員工C', model: DEFAULT_SEATS[2].model, stance: '', philosophy: '', attackTriggers: '' },
   ])
 
   const isAnySeatCustomized = customSeats.some(
@@ -173,16 +214,22 @@ export default function RoundtablePage() {
   }
 
   const applyPreset = (preset: typeof ROLE_PRESETS[0]) => {
-    setCustomSeats(preset.seats.map(s => ({ ...s })))
+    setCustomSeats(preset.seats.map((s, idx) => ({
+      name: s.name,
+      model: (s as { model?: string }).model ?? DEFAULT_SEATS[idx].model,
+      stance: s.stance,
+      philosophy: s.philosophy,
+      attackTriggers: s.attackTriggers,
+    })))
     setTargetSeat(preset.seats[0].name)
     setShowRoleConfig(true)
   }
 
   const resetCustomSeats = () => {
     setCustomSeats([
-      { name: '員工A', stance: '', philosophy: '', attackTriggers: '' },
-      { name: '員工B', stance: '', philosophy: '', attackTriggers: '' },
-      { name: '員工C', stance: '', philosophy: '', attackTriggers: '' },
+      { name: '員工A', model: DEFAULT_SEATS[0].model, stance: '', philosophy: '', attackTriggers: '' },
+      { name: '員工B', model: DEFAULT_SEATS[1].model, stance: '', philosophy: '', attackTriggers: '' },
+      { name: '員工C', model: DEFAULT_SEATS[2].model, stance: '', philosophy: '', attackTriggers: '' },
     ])
     setTargetSeat('員工A')
   }
@@ -242,8 +289,9 @@ export default function RoundtablePage() {
       setFactBriefing(session.fact_briefing ?? '')
       if (session.seats?.length) {
         setCustomSeats(
-          session.seats.map((s: { name?: string; stance?: string; customPhilosophy?: string; customAttackTriggers?: string }, i: number) => ({
+          session.seats.map((s: { name?: string; model?: string; stance?: string; customPhilosophy?: string; customAttackTriggers?: string }, i: number) => ({
             name: s.name || DEFAULT_SEAT_NAMES[i],
+            model: s.model || DEFAULT_SEATS[i].model,
             stance: s.stance || '',
             philosophy: s.customPhilosophy || '',
             attackTriggers: s.customAttackTriggers || '',
@@ -306,7 +354,7 @@ export default function RoundtablePage() {
       const defaultSeat = DEFAULT_SEATS[i]
       return {
         name: cs.name.trim() || defaultSeat.name,
-        model: defaultSeat.model,
+        model: cs.model || defaultSeat.model,
         role: defaultSeat.role,
         stance: cs.stance.trim() || undefined,
         customPhilosophy: cs.philosophy.trim() || undefined,
@@ -704,8 +752,23 @@ export default function RoundtablePage() {
                           席位 {i === 0 ? 'A' : i === 1 ? 'B' : 'C'}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground font-mono">
-                          {formatModelDisplayName(DEFAULT_SEATS[i].model)}
+                          {formatModelDisplayName(seat.model || DEFAULT_SEATS[i].model)}
                         </span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">驅動模型</label>
+                        <select
+                          value={seat.model || DEFAULT_SEATS[i].model}
+                          onChange={e => updateCustomSeat(i, 'model', e.target.value)}
+                          className="w-full text-xs px-2 py-1.5 border rounded-md bg-background focus:outline-hidden focus:ring-1 focus:ring-ring font-medium"
+                        >
+                          {AVAILABLE_SEAT_MODELS.map(m => (
+                            <option key={m.id} value={m.id}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="space-y-1">
