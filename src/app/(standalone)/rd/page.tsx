@@ -5,12 +5,12 @@ import Link from 'next/link'
 import {
   FlaskConical, Upload, Loader2, AlertCircle, Building2, Store,
   Plus, Trash2, Edit3, Search, FileSpreadsheet, X, CheckCircle2,
-  Package, BookOpen, Link2, Scale, TrendingUp, DollarSign, ChevronDown, ChevronUp, Info
+  Package, BookOpen, Link2, Scale, TrendingUp, DollarSign, ChevronDown, ChevronUp, Info,
+  Wrench, Coffee, ShoppingBag, Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
 const fmt1 = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('zh-TW')
@@ -19,16 +19,20 @@ interface Material {
   code: string
   name: string
   unit: string
-  purchase_price?: number
-  export_price?: number
+  category?: string
+  purchase_price?: number // 工廠進貨價
+  export_price?: number   // 賣給直營門市價格 (配方門市成本)
+  dealer_price?: number   // 賣給經銷商或非直營門市價格
 }
 
 interface MaterialPrice {
   material_code: string
   material_name: string
   unit: string
-  export_price: number
-  purchase_price: number
+  category?: string
+  purchase_price: number // 工廠進貨價
+  export_price: number   // 賣給直營門市價格 (配方門市成本)
+  dealer_price: number   // 賣給經銷商或非直營門市價格
   updated_at: string
 }
 
@@ -38,10 +42,15 @@ interface RecipeItem {
   material_name: string
   qty_per_cup: number
   unit?: string
-  purchase_price?: number
-  export_price?: number
-  item_cost?: number
-  item_export?: number
+  category?: string
+  purchase_price?: number // 工廠進貨價
+  export_price?: number   // 賣給直營門市價格 (門市配方成本)
+  dealer_price?: number   // 賣給經銷商或非直營門市價格
+  store_cost?: number     // 門市成本 = 用量 × 直營門市價
+  factory_cost?: number   // 工廠成本 = 用量 × 工廠進貨價
+  dealer_cost?: number    // 經銷成本 = 用量 × 經銷價
+  item_cost?: number      // 相容欄位 (門市成本)
+  item_export?: number    // 相容欄位
 }
 
 interface Recipe {
@@ -49,8 +58,11 @@ interface Recipe {
   name: string
   note: string
   created_at: string
-  total_cost?: number
-  total_export?: number
+  store_cost?: number     // 門市每杯總成本
+  factory_cost?: number   // 工廠每杯總成本
+  dealer_cost?: number    // 經銷每杯總成本
+  factory_margin?: number // 工廠每杯毛利
+  total_cost?: number     // 相容欄位
   items: RecipeItem[]
 }
 
@@ -157,7 +169,7 @@ export default function RdPage() {
     setUploading(false)
   }
 
-  // 匯入原料標準價（中央維護，非每月、非門市）
+  // 匯入原料/設備/道具/耗材 標準定價（中央維護）
   const handleUploadPrice = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -170,7 +182,7 @@ export default function RdPage() {
       const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
       const d = await res.json()
       if (res.ok) {
-        setMsg({ text: `原料標準價匯入 ${d.imported} 筆！配方成本已自動重算更新。`, type: 'success' })
+        setMsg({ text: `三層標準價匯入 ${d.imported} 筆！配方門市成本已自動重算更新。`, type: 'success' })
         loadData()
       } else {
         setMsg({ text: d.error ?? '匯入失敗', type: 'error' })
@@ -194,7 +206,7 @@ export default function RdPage() {
       })
       if (res.ok) {
         setEditing(null)
-        setMsg({ text: editing.id ? '配方與成本修改成功！' : '新配方建立成功！', type: 'success' })
+        setMsg({ text: editing.id ? '配方與門市成本修改成功！' : '新配方建立成功！', type: 'success' })
         loadData()
       } else {
         const d = await res.json().catch(() => ({}))
@@ -225,7 +237,7 @@ export default function RdPage() {
 
   // 彈出視窗：新增/修改原料
   const addItem = () =>
-    setEditing(e => (e ? { ...e, items: [...e.items, { material_code: '', material_name: '', qty_per_cup: 0, unit: '', purchase_price: 0, export_price: 0 }] } : e))
+    setEditing(e => (e ? { ...e, items: [...e.items, { material_code: '', material_name: '', qty_per_cup: 0, unit: '', export_price: 0, purchase_price: 0, dealer_price: 0 }] } : e))
 
   const setItem = (i: number, patch: Partial<RecipeItem>) =>
     setEditing(e => {
@@ -242,8 +254,10 @@ export default function RdPage() {
       material_code: code,
       material_name: m?.name ?? pr?.material_name ?? code,
       unit: m?.unit || pr?.unit || '',
-      purchase_price: pr?.purchase_price ?? m?.purchase_price ?? 0,
-      export_price: pr?.export_price ?? m?.export_price ?? 0,
+      category: m?.category || pr?.category || '原料',
+      export_price: pr?.export_price ?? m?.export_price ?? 0,     // 賣給直營門市價格 (門市成本)
+      purchase_price: pr?.purchase_price ?? m?.purchase_price ?? 0, // 工廠進貨價
+      dealer_price: pr?.dealer_price ?? m?.dealer_price ?? 0,     // 經銷商價格
     })
   }
 
@@ -272,14 +286,20 @@ export default function RdPage() {
   })
 
   const TABS: { id: RdTab; label: string; icon: ReactNode }[] = [
-    { id: 'recipes', label: '配方與成本試算', icon: <BookOpen className="h-4 w-4" /> },
-    { id: 'prices', label: '原料成本庫 (標準進價)', icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'recipes', label: '配方與門市成本試算', icon: <BookOpen className="h-4 w-4" /> },
+    { id: 'prices', label: '原物料・設備・道具・耗材 定價庫', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'mapping', label: 'POS 成品對照', icon: <Link2 className="h-4 w-4" /> },
     { id: 'variance', label: '使用量檢驗 (差異分析)', icon: <Scale className="h-4 w-4" /> },
   ]
 
-  // 計算當前編輯中配方的每杯原料總成本
-  const currentTotalCost = editing?.items.reduce((sum, it) => {
+  // 計算當前編輯中配方的每杯門市成本（以賣給直營門市價格計算）與工廠成本（以工廠進貨價計算）
+  const currentStoreCost = editing?.items.reduce((sum, it) => {
+    const qty = Number(it.qty_per_cup) || 0
+    const price = Number(it.export_price) || 0
+    return sum + (qty * price)
+  }, 0) ?? 0
+
+  const currentFactoryCost = editing?.items.reduce((sum, it) => {
     const qty = Number(it.qty_per_cup) || 0
     const price = Number(it.purchase_price) || 0
     return sum + (qty * price)
@@ -296,9 +316,9 @@ export default function RdPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight">研發配方與成本中心 (R&D)</h1>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">配方與成本一體化</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">三層定價體系</span>
             </div>
-            <p className="text-sm text-muted-foreground">配方設計、原料進價成本試算、POS成品串接、原料使用量正常檢驗</p>
+            <p className="text-sm text-muted-foreground">配方設計、門市原料成本（以賣給直營門市價計算）、工廠進貨成本與經銷批發價試算</p>
           </div>
         </div>
 
@@ -366,15 +386,17 @@ export default function RdPage() {
         </div>
       )}
 
-      {/* 原料成本來源說明 Banner */}
-      <div className="bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-800/40 rounded-xl p-3.5 flex items-start gap-3">
+      {/* 價格體系說明 Banner */}
+      <div className="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-800/40 rounded-xl p-3.5 flex items-start gap-3">
         <Info className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-purple-950 dark:text-purple-200 space-y-0.5 leading-relaxed">
-          <p className="font-semibold">配方與配方成本已整合一體化：</p>
-          <p>
-            「配方」與「配方成本」為同一實體。原料進貨成本（ĐGN）由全公司<b>「原料成本庫 (GIÁ XUẤT CHUẨN)」</b>自動抓取，
-            每道配方會依原料用量與進價自動計算每杯成本與售額；新增或編輯配方時，亦可手動維護單價並自動更新成本庫。
-          </p>
+        <div className="text-xs text-purple-950 dark:text-purple-200 space-y-1 leading-relaxed">
+          <p className="font-semibold">三層價格與品項管理規則：</p>
+          <ul className="list-disc list-inside space-y-0.5 text-purple-900/90 dark:text-purple-200/90">
+            <li><b>賣給直營門市價格（ĐGX CH）</b>：<b>配方表使用這個價格作為門市飲品成本！</b></li>
+            <li><b>工廠進貨價（ĐGN）</b>：工廠/總部的原物料採購進價。兩者相減即為工廠出貨給直營門市的毛利。</li>
+            <li><b>賣給經銷商或非直營門市價格（ĐGX Đại lý）</b>：加盟店、經銷通路之出貨價格。</li>
+            <li>涵蓋四大品類：<b>原料、設備、道具、耗材</b>，皆由此統一維護。</li>
+          </ul>
         </div>
       </div>
 
@@ -418,9 +440,9 @@ export default function RdPage() {
                 <DollarSign className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">原料成本庫建檔</p>
+                <p className="text-xs text-muted-foreground font-medium">定價庫已建檔品項</p>
                 <p className="text-2xl font-bold">
-                  {prices.length} <span className="text-xs font-normal text-muted-foreground">項標準價</span>
+                  {prices.length} <span className="text-xs font-normal text-muted-foreground">項（原料/設備/道具/耗材）</span>
                 </p>
               </div>
             </Card>
@@ -428,7 +450,7 @@ export default function RdPage() {
             <Card className="p-4 flex items-center justify-between gap-2">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-medium">快速操作</p>
-                <p className="text-xs text-gray-500">支援匯入配方表與原料進價標準檔</p>
+                <p className="text-xs text-gray-500">支援匯入配方表與三層定價標準檔</p>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button
@@ -452,14 +474,14 @@ export default function RdPage() {
                   className="gap-1.5 text-xs"
                   disabled={uploading}
                   onClick={() => priceRef.current?.click()}
-                  title="匯入原料標準進價表 (GIÁ XUẤT CHUẨN)"
+                  title="匯入中央廚房標準價表 (GIÁ XUẤT CHUẨN)"
                 >
                   {uploading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <FileSpreadsheet className="h-3.5 w-3.5 text-amber-600" />
                   )}
-                  匯入進價
+                  匯入定價
                 </Button>
                 <Button
                   size="sm"
@@ -524,6 +546,10 @@ export default function RdPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredRecipes.map(r => {
                 const isExpanded = expandedRecipes.has(r.id)
+                const storeCost = r.store_cost ?? r.total_cost ?? 0
+                const factoryCost = r.factory_cost ?? 0
+                const factoryMargin = r.factory_margin ?? (storeCost - factoryCost)
+
                 return (
                   <Card
                     key={r.id}
@@ -566,19 +592,28 @@ export default function RdPage() {
                         </div>
                       </div>
 
-                      {/* 成本試算核心指標 */}
-                      <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40">
+                      {/* 成本試算核心指標：依賣給直營門市價格計算門市成本 */}
+                      <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40">
                         <div>
-                          <span className="text-[11px] text-muted-foreground block font-medium">每杯原料總成本 (進額)</span>
-                          <span className="text-base font-bold text-purple-700 dark:text-purple-300">
-                            {fmt(r.total_cost || 0)} <span className="text-xs font-normal">₫</span>
+                          <span className="text-[10px] text-purple-700 dark:text-purple-300 block font-bold">直營門市成本 (每杯)</span>
+                          <span className="text-sm font-extrabold text-purple-700 dark:text-purple-300">
+                            {fmt(storeCost)} <span className="text-[10px] font-normal">₫</span>
                           </span>
+                          <span className="text-[9px] text-muted-foreground block">直營門市出貨價</span>
                         </div>
                         <div>
-                          <span className="text-[11px] text-muted-foreground block font-medium">標準出庫售額 (出額)</span>
-                          <span className="text-base font-bold text-foreground">
-                            {fmt(r.total_export || 0)} <span className="text-xs font-normal">₫</span>
+                          <span className="text-[10px] text-muted-foreground block font-medium">工廠進貨成本 (每杯)</span>
+                          <span className="text-sm font-bold text-foreground">
+                            {fmt(factoryCost)} <span className="text-[10px] font-normal">₫</span>
                           </span>
+                          <span className="text-[9px] text-muted-foreground block">工廠進貨底價</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-emerald-700 dark:text-emerald-300 block font-bold">工廠出貨毛利 (每杯)</span>
+                          <span className={`text-sm font-bold ${factoryMargin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
+                            {fmt(factoryMargin)} <span className="text-[10px] font-normal">₫</span>
+                          </span>
+                          <span className="text-[9px] text-muted-foreground block">門市價 − 工廠價</span>
                         </div>
                       </div>
 
@@ -586,14 +621,14 @@ export default function RdPage() {
                       <div className="pt-2 border-t space-y-2">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                            <Package className="h-3.5 w-3.5" /> 原料成分（{r.items.length} 種原料）：
+                            <Package className="h-3.5 w-3.5" /> 原料構成（{r.items.length} 項）：
                           </p>
                           {r.items.length > 0 && (
                             <button
                               onClick={() => toggleExpand(r.id)}
                               className="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5"
                             >
-                              {isExpanded ? <>收合明細 <ChevronUp className="h-3 w-3" /></> : <>成本明細 <ChevronDown className="h-3 w-3" /></>}
+                              {isExpanded ? <>收合明細 <ChevronUp className="h-3 w-3" /></> : <>完整成本明細 <ChevronDown className="h-3 w-3" /></>}
                             </button>
                           )}
                         </div>
@@ -602,14 +637,16 @@ export default function RdPage() {
                           <p className="text-xs text-amber-500 italic py-1">（未設定原料成分）</p>
                         ) : isExpanded ? (
                           /* 展開的 BOM 成本計算表格 */
-                          <div className="overflow-x-auto rounded-lg border bg-background text-xs">
+                          <div className="overflow-x-auto rounded-lg border bg-background text-[11px]">
                             <table className="w-full">
                               <thead>
                                 <tr className="border-b bg-muted/40 text-muted-foreground">
-                                  <th className="py-1.5 px-2 text-left">原料</th>
+                                  <th className="py-1.5 px-2 text-left">原料名稱</th>
                                   <th className="px-2 text-right">用量</th>
-                                  <th className="px-2 text-right">進價</th>
-                                  <th className="px-2 text-right">成本小計</th>
+                                  <th className="px-2 text-right">直營門市價</th>
+                                  <th className="px-2 text-right">門市每杯成本</th>
+                                  <th className="px-2 text-right">工廠進價</th>
+                                  <th className="px-2 text-right">經銷商價</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y">
@@ -620,10 +657,14 @@ export default function RdPage() {
                                       {it.unit ? <span className="text-muted-foreground text-[10px] ml-1">({it.unit})</span> : ''}
                                     </td>
                                     <td className="px-2 text-right tabular-nums">{fmt1(it.qty_per_cup)}</td>
-                                    <td className="px-2 text-right tabular-nums text-muted-foreground">{fmt(it.purchase_price || 0)}</td>
-                                    <td className="px-2 text-right tabular-nums font-semibold text-purple-600 dark:text-purple-400">
-                                      {fmt(it.item_cost || 0)}
+                                    <td className="px-2 text-right tabular-nums font-semibold text-purple-700 dark:text-purple-300">
+                                      {fmt(it.export_price || 0)}
                                     </td>
+                                    <td className="px-2 text-right tabular-nums font-bold text-purple-700 dark:text-purple-300">
+                                      {fmt(it.store_cost ?? it.item_cost ?? 0)}
+                                    </td>
+                                    <td className="px-2 text-right tabular-nums text-muted-foreground">{fmt(it.purchase_price || 0)}</td>
+                                    <td className="px-2 text-right tabular-nums text-muted-foreground">{fmt(it.dealer_price || 0)}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -659,7 +700,7 @@ export default function RdPage() {
         </div>
       )}
 
-      {/* 原料成本庫 (標準進價) TAB */}
+      {/* 原物料・設備・道具・耗材 定價庫 TAB */}
       {tab === 'prices' && (
         <PricesSection
           prices={prices}
@@ -681,14 +722,14 @@ export default function RdPage() {
           onClick={() => setEditing(null)}
         >
           <div
-            className="bg-card text-card-foreground border rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl"
+            className="bg-card text-card-foreground border rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <div className="flex items-center gap-2">
                 <FlaskConical className="h-5 w-5 text-purple-600" />
-                <h3 className="font-bold text-lg">{editing.id ? '修改配方與成本' : '新增研發配方（含成本計算）'}</h3>
+                <h3 className="font-bold text-lg">{editing.id ? '修改研發配方與成本' : '新增研發配方（含門市成本試算）'}</h3>
               </div>
               <button
                 onClick={() => setEditing(null)}
@@ -725,10 +766,10 @@ export default function RdPage() {
                   <div>
                     <span className="text-sm font-bold flex items-center gap-1.5">
                       <Package className="h-4 w-4 text-purple-600" />
-                      配方原料與成本構成
+                      原料成分與三層成本試算
                     </span>
                     <span className="text-[11px] text-muted-foreground">
-                      選擇原料自動帶入成本庫進價；每杯成本 = 用量 × 進價
+                      選擇原料自動帶出直營門市出貨價與工廠進價；<b>門市成本＝用量 × 賣給直營門市價</b>
                     </span>
                   </div>
                   <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={addItem}>
@@ -743,7 +784,7 @@ export default function RdPage() {
                 ) : (
                   <div className="space-y-2">
                     {editing.items.map((it, i) => {
-                      const lineCost = (Number(it.qty_per_cup) || 0) * (Number(it.purchase_price) || 0)
+                      const lineStoreCost = (Number(it.qty_per_cup) || 0) * (Number(it.export_price) || 0)
                       return (
                         <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-accent/30 p-2.5 rounded-lg border text-xs">
                           {/* 選擇原料 */}
@@ -757,7 +798,7 @@ export default function RdPage() {
                                 <option value="">選擇原料...</option>
                                 {materials.map(m => (
                                   <option key={m.code} value={m.code}>
-                                    {m.name || m.code} {m.unit ? `(${m.unit})` : ''} {m.purchase_price ? `[進價:${fmt(m.purchase_price)}]` : ''}
+                                    {m.name || m.code} {m.unit ? `(${m.unit})` : ''} [直營門市價:{fmt(m.export_price || 0)} | 工廠進價:{fmt(m.purchase_price || 0)}]
                                   </option>
                                 ))}
                               </select>
@@ -774,44 +815,57 @@ export default function RdPage() {
                           </div>
 
                           {/* 單位 */}
-                          <div className="w-16 shrink-0">
+                          <div className="w-14 shrink-0">
                             <Input
                               value={it.unit || ''}
                               onChange={e => setItem(i, { unit: e.target.value })}
                               placeholder="單位"
-                              className="h-8 text-xs"
+                              className="h-8 text-xs text-center"
                             />
                           </div>
 
                           {/* 每杯用量 */}
-                          <div className="w-24 shrink-0">
+                          <div className="w-20 shrink-0">
                             <Input
                               type="number"
                               step="any"
                               value={it.qty_per_cup || ''}
                               onChange={e => setItem(i, { qty_per_cup: Number(e.target.value) || 0 })}
-                              placeholder="每杯用量"
+                              placeholder="用量"
                               className="h-8 text-xs"
-                              title="每杯標準消耗用量"
+                              title="每杯用量"
                             />
                           </div>
 
-                          {/* 進貨單價 */}
+                          {/* 賣給直營門市價格 (門市成本單價) */}
+                          <div className="w-24 shrink-0">
+                            <Input
+                              type="number"
+                              step="any"
+                              value={it.export_price ?? ''}
+                              onChange={e => setItem(i, { export_price: Number(e.target.value) || 0 })}
+                              placeholder="直營門市價"
+                              className="h-8 text-xs font-semibold text-purple-700 dark:text-purple-300"
+                              title="賣給直營門市價格（計算門市每杯成本）"
+                            />
+                          </div>
+
+                          {/* 工廠進貨價 */}
                           <div className="w-24 shrink-0">
                             <Input
                               type="number"
                               step="any"
                               value={it.purchase_price ?? ''}
                               onChange={e => setItem(i, { purchase_price: Number(e.target.value) || 0 })}
-                              placeholder="進貨單價"
-                              className="h-8 text-xs"
-                              title="原料進價單價（自動由成本庫帶入，亦可自訂）"
+                              placeholder="工廠進價"
+                              className="h-8 text-xs text-muted-foreground"
+                              title="工廠採購進價（工廠進貨成本）"
                             />
                           </div>
 
-                          {/* 小計成本 */}
-                          <div className="w-20 shrink-0 text-right tabular-nums font-semibold text-purple-700 dark:text-purple-300">
-                            {fmt(lineCost)} ₫
+                          {/* 門市成本小計 */}
+                          <div className="w-20 shrink-0 text-right tabular-nums font-bold text-purple-700 dark:text-purple-300">
+                            {fmt(lineStoreCost)} ₫
                           </div>
 
                           {/* 刪除列 */}
@@ -832,12 +886,26 @@ export default function RdPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/20">
-              <div className="text-xs">
-                <span className="text-muted-foreground">預估每杯原料總成本：</span>
-                <span className="text-base font-bold text-purple-600 dark:text-purple-400 ml-1">
-                  {fmt(currentTotalCost)} ₫
-                </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t bg-muted/20">
+              <div className="flex items-center gap-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground">直營門市每杯成本：</span>
+                  <span className="text-base font-extrabold text-purple-700 dark:text-purple-400 ml-1">
+                    {fmt(currentStoreCost)} ₫
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">工廠每杯進價：</span>
+                  <span className="text-sm font-semibold text-foreground ml-1">
+                    {fmt(currentFactoryCost)} ₫
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">工廠毛利：</span>
+                  <span className={`text-sm font-semibold ml-1 ${currentStoreCost >= currentFactoryCost ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {fmt(currentStoreCost - currentFactoryCost)} ₫
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
@@ -861,7 +929,7 @@ export default function RdPage() {
   )
 }
 
-// ── 子組件：原料成本庫 (標準進價) ──
+// ── 子組件：原料・設備・道具・耗材 定價庫 ──
 function PricesSection({
   prices,
   uploading,
@@ -872,12 +940,24 @@ function PricesSection({
   onUploadClick: () => void
 }) {
   const [q, setQ] = useState('')
-  const filtered = prices.filter(
-    p =>
+  const [categoryFilter, setCategoryFilter] = useState<'all' | '原料' | '設備' | '道具' | '耗材'>('all')
+
+  const filtered = prices.filter(p => {
+    const matchQ =
       !q.trim() ||
       p.material_code.toLowerCase().includes(q.toLowerCase()) ||
       p.material_name.toLowerCase().includes(q.toLowerCase())
-  )
+    const matchCat = categoryFilter === 'all' || (p.category || '原料') === categoryFilter
+    return matchQ && matchCat
+  })
+
+  const CATEGORIES = [
+    { id: 'all', label: '全製品項', icon: Layers },
+    { id: '原料', label: '原料 (飲品配方)', icon: Coffee },
+    { id: '設備', label: '設備機器', icon: Wrench },
+    { id: '道具', label: '吧台道具器具', icon: Package },
+    { id: '耗材', label: '包裝耗材', icon: ShoppingBag },
+  ] as const
 
   return (
     <Card className="p-5 space-y-4">
@@ -885,10 +965,10 @@ function PricesSection({
         <div>
           <h3 className="font-bold text-lg flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-emerald-600" />
-            原料成本庫 (標準進價維護)
+            原物料・設備・道具・耗材 三層定價庫
           </h3>
           <p className="text-xs text-muted-foreground">
-            此庫維護全公司原料的進貨單價（ĐGN）與標準出庫價（ĐGX）。研發配方中心與門市損耗分析皆由本庫即時抓取成本。
+            維護全公司各品項的「工廠進貨價」、「賣給直營門市價格（配方門市成本）」與「賣給經銷商或非直營門市價格」。
           </p>
         </div>
 
@@ -905,9 +985,31 @@ function PricesSection({
             ) : (
               <Upload className="h-3.5 w-3.5 text-amber-600" />
             )}
-            匯入標準進價表 (.xlsx)
+            匯入三層標準定價表 (.xlsx)
           </Button>
         </div>
+      </div>
+
+      {/* 分類篩選 Tab 按鈕 */}
+      <div className="flex flex-wrap items-center gap-2">
+        {CATEGORIES.map(c => {
+          const Icon = c.icon
+          const count = c.id === 'all' ? prices.length : prices.filter(p => (p.category || '原料') === c.id).length
+          return (
+            <button
+              key={c.id}
+              onClick={() => setCategoryFilter(c.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                categoryFilter === c.id
+                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                  : 'bg-background hover:bg-muted text-muted-foreground'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {c.label} ({count})
+            </button>
+          )
+        })}
       </div>
 
       <div className="flex items-center gap-3">
@@ -916,20 +1018,20 @@ function PricesSection({
           <Input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="搜尋原料代碼、原料名稱..."
+            placeholder="搜尋品項代碼、名稱..."
             className="pl-9 h-9 text-xs"
           />
         </div>
         <span className="text-xs text-muted-foreground shrink-0">
-          共 {filtered.length} 項原料標準價
+          共 {filtered.length} 項品類定價
         </span>
       </div>
 
       {prices.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm space-y-2">
-          <p>原料成本庫尚無標準價資料</p>
+          <p>定價庫尚無標準價資料</p>
           <p className="text-xs text-gray-400">
-            點擊上方「匯入標準進價表 (.xlsx)」上傳中央廚房進價表（GIÁ XUẤT CHUẨN），系統將自動建立成本庫。
+            點擊上方「匯入三層標準定價表 (.xlsx)」上傳中央廚房進價／售價表（GIÁ XUẤT CHUẨN），系統將自動建立定價庫。
           </p>
         </div>
       ) : (
@@ -937,25 +1039,37 @@ function PricesSection({
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b bg-muted/40 text-muted-foreground text-left">
-                <th className="py-2 px-3 font-semibold">原料代碼</th>
-                <th className="px-3 font-semibold">原料名稱</th>
+                <th className="py-2 px-3 font-semibold">品類</th>
+                <th className="px-3 font-semibold">品項代碼</th>
+                <th className="px-3 font-semibold">品項名稱</th>
                 <th className="px-3 font-semibold">單位</th>
-                <th className="px-3 text-right font-semibold">進貨單價 (成本 ĐGN)</th>
-                <th className="px-3 text-right font-semibold">標準出庫價 (ĐGX)</th>
-                <th className="px-3 text-right font-semibold">更新時間</th>
+                <th className="px-3 text-right font-semibold">工廠進貨價 (ĐGN)</th>
+                <th className="px-3 text-right font-semibold text-purple-700 dark:text-purple-300">
+                  賣給直營門市價 (門市配方成本)
+                </th>
+                <th className="px-3 text-right font-semibold">賣給經銷商/非直營門市價</th>
+                <th className="px-3 text-right font-semibold">最後更新</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filtered.map(p => (
                 <tr key={p.material_code} className="hover:bg-muted/20">
-                  <td className="py-2 px-3 font-mono font-medium text-foreground">{p.material_code}</td>
+                  <td className="py-2 px-3">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border">
+                      {p.category || '原料'}
+                    </span>
+                  </td>
+                  <td className="px-3 font-mono font-medium text-foreground">{p.material_code}</td>
                   <td className="px-3 font-medium">{p.material_name}</td>
                   <td className="px-3 text-muted-foreground">{p.unit}</td>
-                  <td className="px-3 text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                  <td className="px-3 text-right tabular-nums text-foreground">
                     {fmt(p.purchase_price)} ₫
                   </td>
-                  <td className="px-3 text-right tabular-nums text-foreground">
+                  <td className="px-3 text-right tabular-nums font-bold text-purple-700 dark:text-purple-300">
                     {fmt(p.export_price)} ₫
+                  </td>
+                  <td className="px-3 text-right tabular-nums text-foreground">
+                    {fmt(p.dealer_price || 0)} ₫
                   </td>
                   <td className="px-3 text-right text-muted-foreground/70">
                     {new Date(p.updated_at || Date.now()).toLocaleDateString('zh-TW')}
