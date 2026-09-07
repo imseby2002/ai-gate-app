@@ -336,16 +336,20 @@ export default function RoundtablePage() {
         )
         setTargetSeat(session.seats[0]?.name || DEFAULT_SEAT_NAMES[0])
       }
+      const transcriptList = (session.transcript ?? []) as Array<{ round: number; name: string; content: string; stance?: string }>
+      const moderatorBlock = transcriptList.find(t => t.name === '首席幕僚長' || t.round === 99)
       setBlocks(
-        (session.transcript ?? []).map((t: { round: number; name: string; content: string; stance?: string }) => ({
-          round: t.round,
-          name: t.name,
-          model: seatModelByName.get(t.name),
-          stance: t.stance,
-          content: t.content,
-        }))
+        transcriptList
+          .filter(t => t.name !== '首席幕僚長' && t.round !== 99)
+          .map(t => ({
+            round: t.round,
+            name: t.name,
+            model: seatModelByName.get(t.name),
+            stance: t.stance,
+            content: t.content,
+          }))
       )
-      setReport(session.report ?? '')
+      setReport(session.report || moderatorBlock?.content || '')
       setPreviousReport('')
       setPhase('')
       setSessionId(session.id)
@@ -557,19 +561,35 @@ export default function RoundtablePage() {
         } else if (e.type === 'briefing-end') {
           setFactBriefing(e.content)
         } else if (e.type === 'seat-start') {
-          setBlocks(prev => [
-            ...prev,
-            { round: e.round, name: e.name, model: e.model, stance: e.stance, content: '' },
-          ])
+          if (e.name === '首席幕僚長' || e.round === 99) {
+            // 幕僚長總結：直接開啟全寬決策報告卡片串流，絕不擠入 A 席位欄位
+            setReport('')
+            setPreviousReport('')
+            setPhase('👑 首席幕僚長正在出具高層決策報告…')
+          } else {
+            setBlocks(prev => [
+              ...prev,
+              { round: e.round, name: e.name, model: e.model, stance: e.stance, content: '' },
+            ])
+          }
         } else if (e.type === 'delta') {
-          setBlocks(prev => {
-            const next = [...prev]
-            const idx = next.findLastIndex(b => b.round === e.round && b.name === e.name)
-            if (idx >= 0) next[idx] = { ...next[idx], content: next[idx].content + e.content }
-            return next
-          })
+          if (e.name === '首席幕僚長' || e.round === 99) {
+            // 幕僚長總結：內容直接即時串流至全寬決策報告中
+            setReport(prev => prev + e.content)
+          } else {
+            setBlocks(prev => {
+              const next = [...prev]
+              const idx = next.findLastIndex(b => b.round === e.round && b.name === e.name)
+              if (idx >= 0) next[idx] = { ...next[idx], content: next[idx].content + e.content }
+              return next
+            })
+          }
         } else if (e.type === 'seat-end') {
-          if (e.error) {
+          if (e.name === '首席幕僚長' || e.round === 99) {
+            if (e.error) {
+              setReport(prev => (prev ? `${prev}\n⚠️ 幕僚長總結失敗：${e.error}` : `⚠️ 幕僚長總結失敗：${e.error}`))
+            }
+          } else if (e.error) {
             setBlocks(prev => {
               const next = [...prev]
               const idx = next.findLastIndex(b => (e.round ? b.round === e.round : true) && b.name === e.name)
@@ -618,9 +638,11 @@ export default function RoundtablePage() {
     setRunning(false)
   }
 
-  // 計算輪次列表 (過濾出所有大於 0 的輪次)
-  const roundNumbers = [...new Set(blocks.map(b => b.round))].sort((a, b) => a - b)
-  const completedRound = blocks.reduce((max, b) => Math.max(max, Number(b.round) || 1), 2)
+  // 計算輪次列表 (過濾出所有大於 0 的輪次，且排除幕僚長專屬輪次 99 與非標準席位發言)
+  const roundNumbers = [...new Set(blocks.filter(b => b.round !== 99 && b.name !== '首席幕僚長').map(b => b.round))].sort((a, b) => a - b)
+  const completedRound = blocks
+    .filter(b => b.round !== 99 && b.name !== '首席幕僚長')
+    .reduce((max, b) => Math.max(max, Number(b.round) || 1), 2)
   const nextDiscussRound = completedRound + 1
   const nextRebutRound = completedRound + 2
 
@@ -629,7 +651,7 @@ export default function RoundtablePage() {
       <div
         className={cn(
           "mx-auto space-y-6 transition-all duration-300 ease-in-out",
-          isWideView && (blocks.length > 0 || running)
+          isWideView && (blocks.length > 0 || running || report)
             ? "max-w-[1800px] w-full px-4 md:px-8 py-6"
             : "max-w-4xl px-4 md:px-6 py-6"
         )}
@@ -1086,7 +1108,7 @@ export default function RoundtablePage() {
         {roundNumbers.map(roundNum => {
           const items = blocks.filter(b => b.round === roundNum)
           const bossMsg = items.find(b => b.name === '老闆指令')
-          const seatItems = items.filter(b => b.name !== '老闆指令')
+          const seatItems = items.filter(b => b.name !== '老闆指令' && b.name !== '首席幕僚長' && b.round !== 99)
 
           return (
             <div key={roundNum} className="space-y-3">
@@ -1132,7 +1154,14 @@ export default function RoundtablePage() {
                 </h2>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className={cn(
+                "grid gap-4",
+                seatItems.length === 1
+                  ? "grid-cols-1"
+                  : seatItems.length === 2
+                    ? "grid-cols-1 md:grid-cols-2"
+                    : "grid-cols-1 md:grid-cols-3"
+              )}>
                 {seatItems.map((b, i) => (
                   <Card key={`${roundNum}-${b.name}-${i}`} className="p-5 space-y-3 flex flex-col justify-between border shadow-sm hover:shadow-md transition-shadow bg-card/95">
                     <div>
@@ -1198,8 +1227,8 @@ export default function RoundtablePage() {
         )}
 
         {/* 最終收斂決策報告 */}
-        {report && (
-          <Card className="space-y-3 border-2 border-emerald-500 p-6 shadow-md bg-emerald-50/10 animate-in fade-in">
+        {(report || (running && (phase.includes('首席幕僚長') || phase.includes('出具') || phase.includes('收斂')))) && (
+          <Card className="space-y-3 border-2 border-emerald-500 p-6 shadow-md bg-emerald-50/10 animate-in fade-in w-full">
             <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
@@ -1214,12 +1243,24 @@ export default function RoundtablePage() {
                   </Badge>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground font-medium">
-                全場分歧收斂完畢 · 交付高層裁決
+              <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+                {running ? (
+                  <>
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span>首席幕僚長起草報告中…</span>
+                  </>
+                ) : (
+                  '全場分歧收斂完畢 · 交付高層裁決'
+                )}
               </span>
             </div>
             <div className="whitespace-pre-wrap text-sm leading-relaxed prose dark:prose-invert max-w-none">
-              {report}
+              {report || (
+                <div className="py-8 text-center text-muted-foreground space-y-2">
+                  <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                  <p className="text-xs animate-pulse">首席幕僚長正在綜觀全場攻防與分歧，撰寫全景決策白皮書中…</p>
+                </div>
+              )}
             </div>
           </Card>
         )}
