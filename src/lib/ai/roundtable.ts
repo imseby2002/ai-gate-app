@@ -263,7 +263,7 @@ export interface Seat {
 
 export const DEFAULT_SEATS: Seat[] = [
   { name: '員工A', model: 'anthropic/claude-sonnet-4-6', role: '資深管理合夥人' },
-  { name: '員工B', model: 'openai/gpt-5',                role: '資深管理合夥人' },
+  { name: '員工B', model: 'openai/gpt-4o',                role: '資深管理合夥人' },
   { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
 
@@ -491,11 +491,27 @@ function resolveModel(id: string): LanguageModel | string {
     }
   }
   if (provider === 'openai') {
-    const key = process.env.OPENAI_API_KEY!
-    if (rawModel.includes('astra')) {
-      return createOpenAI({ apiKey: key }).chat('gpt-6-astra')
+    // 模型別名歸一化：將不存在於 OpenAI 官方 API 的別名（如 gpt-5、astra）映射至真實穩定的旗艦模型
+    let realModel = rawModel
+    if (rawModel === 'gpt-5' || rawModel.startsWith('gpt-5')) {
+      realModel = 'gpt-4o'
+    } else if (rawModel.includes('astra') || rawModel.includes('gpt-6')) {
+      realModel = 'gpt-4o'
     }
-    return createOpenAI({ apiKey: key }).chat(rawModel)
+
+    const key = process.env.OPENAI_API_KEY?.trim()
+    if (key) {
+      return createOpenAI({ apiKey: key }).chat(realModel)
+    }
+    if (process.env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      }).chat(`openai/${realModel}`)
+    }
+    if (process.env.GOOGLE_AI_API_KEY) {
+      return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash')
+    }
   }
   if (provider === 'google') {
     return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })(rawModel)
@@ -504,7 +520,8 @@ function resolveModel(id: string): LanguageModel | string {
 }
 
 function isReasoningModel(model: string): boolean {
-  return /^(openai\/)?(o\d+|gpt-5|gpt-6|astra)/i.test(model)
+  // 僅針對 OpenAI 真正支援 reasoningEffort 的 o-series 推理模型 (o1, o3, o3-mini)，嚴禁對 gpt-* 系列傳入該參數
+  return /^(openai\/)?(o1|o3|o\d+)/i.test(model) && !/gpt/i.test(model)
 }
 
 function getGoogleThinkingBudget(model: string): number {
@@ -740,19 +757,32 @@ async function speak(
       let fallbackSuccess = false
       const fallbackCandidates: { name: string; model: LanguageModel }[] = []
 
-      if (process.env.OPENAI_API_KEY && !seat.model.startsWith('openai/')) {
+      // 1. 若當前失敗席位不是 GPT-4o，優先嘗試直連 GPT-4o
+      if (process.env.OPENAI_API_KEY && seat.model !== 'openai/gpt-4o') {
         fallbackCandidates.push({
           name: 'openai/gpt-4o',
           model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o'),
         })
       }
+      // 2. 若當前失敗席位不是 Google，嘗試 Gemini 2.5 Flash
       if (process.env.GOOGLE_AI_API_KEY && !seat.model.startsWith('google/')) {
         fallbackCandidates.push({
           name: 'google/gemini-2.5-flash',
           model: createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash'),
         })
       }
-      if (process.env.OPENAI_API_KEY && seat.model.startsWith('google/')) {
+      // 3. 支援 OpenRouter 跨模型備援
+      if (process.env.OPENROUTER_API_KEY && !seat.model.startsWith('anthropic/')) {
+        fallbackCandidates.push({
+          name: 'openrouter/claude-sonnet-4.6',
+          model: createOpenAI({
+            apiKey: process.env.OPENROUTER_API_KEY,
+            baseURL: 'https://openrouter.ai/api/v1',
+          }).chat('anthropic/claude-sonnet-4.6'),
+        })
+      }
+      // 4. 若為 Google 席位失敗，且尚未加入 GPT-4o
+      if (process.env.OPENAI_API_KEY && seat.model.startsWith('google/') && !fallbackCandidates.some(c => c.name === 'openai/gpt-4o')) {
         fallbackCandidates.push({
           name: 'openai/gpt-4o',
           model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o'),
@@ -859,6 +889,7 @@ export async function executeRound1(
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R1, generating emergency stance view`)
         content = `【學派基本立場：${stance.title}】\n本席位秉持「${stance.philosophy}」之核心哲學，強烈關注「${stance.attackTriggers}」。在本次議題中，我方堅持以此維度嚴格審視各項方案代價。`
+        emit({ type: 'delta', round: 1, name: seat.name, content })
       }
       return { round: 1, name: seat.name, role: seat.role, stance: stance.title, content }
     })
@@ -908,6 +939,7 @@ export async function executeRound2(
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R2, generating emergency stance view`)
         content = `【學派本輪深化：${stance.title}】\n針對同僚所提出的論據，我方重申：任何未考慮「${stance.attackTriggers}」的方案都具有重大致命傷，呼籲老闆切勿輕信過度樂觀之假設。`
+        emit({ type: 'delta', round: 2, name: seat.name, content })
       }
       return { round: 2, name: seat.name, role: seat.role, stance: stance.title, content }
     })
@@ -961,7 +993,11 @@ export async function executeBossStep(
       `【👑 老闆對你的直接指示/提問】：\n${bossGuidance}\n\n` +
       `遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-    const content = await speak(targetSeat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
+    let content = await speak(targetSeat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
+    if (!content || content.trim().length === 0) {
+      content = `【學派應對裁示：${stance.title}】\n遵照老闆最新裁示，我方堅持以「${stance.philosophy}」之核心準則貫徹落實，並嚴密防範「${stance.attackTriggers}」。`
+      emit({ type: 'delta', round: currentRound, name: targetSeat.name, content })
+    }
     const firstReply: Statement = { round: currentRound, name: targetSeat.name, role: targetSeat.role, stance: stance.title, content }
     results.push(firstReply)
 
@@ -986,7 +1022,11 @@ export async function executeBossStep(
             `【${targetSeat.name} 的最新回答】：\n${content}\n\n` +
             `請從你的學派立場無情檢視其邏輯漏洞，指出死穴。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          const crossContent = await speak(seat, crossSystem, crossPrompt, currentRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
+          let crossContent = await speak(seat, crossSystem, crossPrompt, currentRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
+          if (!crossContent || crossContent.trim().length === 0) {
+            crossContent = `【質詢挑刺：${otherStance.title}】\n我方必須指出：剛才提出的方案仍忽視了「${otherStance.attackTriggers}」之根本風險，缺乏扎實的數據支撐。`
+            emit({ type: 'delta', round: currentRound, name: seat.name, content: crossContent })
+          }
           return { round: currentRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (反駁)`, content: crossContent }
         })
       )
@@ -1012,7 +1052,11 @@ export async function executeBossStep(
           `【👑 老闆的最新裁示/方向指引】：\n${bossGuidance}\n\n` +
           `請深入推進方案，直擊痛點。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-        const content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
+        let content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
+        if (!content || content.trim().length === 0) {
+          content = `【學派深化觀點：${stance.title}】\n遵照老闆最新裁示，我方進一步將「${stance.philosophy}」之核心準則貫徹於推演中。`
+          emit({ type: 'delta', round: currentRound, name: seat.name, content })
+        }
         return { round: currentRound, name: seat.name, role: seat.role, stance: stance.title, content }
       })
     )
@@ -1042,7 +1086,11 @@ export async function executeBossStep(
             `【本輪各合夥人最新深化方案】：\n${roundTranscript}\n\n` +
             `請直接點名其他合夥人，對其剛剛提出的新論點進行毫不留情之猛烈批判與反駁！遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          const content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
+          let content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
+          if (!content || content.trim().length === 0) {
+            content = `【互評挑刺：${stance.title}】\n綜觀同僚的新版方案，依然存在嚴重盲點，未嚴格防範「${stance.attackTriggers}」，切忌盲目樂觀。`
+            emit({ type: 'delta', round: currentRound, name: seat.name, content })
+          }
           return { round: currentRound, name: seat.name, role: seat.role, stance: `${stance.title} (互評挑刺)`, content }
         })
       )
