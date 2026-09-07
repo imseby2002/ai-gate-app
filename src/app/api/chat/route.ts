@@ -1,4 +1,4 @@
-﻿import { NextRequest } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { detectIntent, resolveModel, getProviderFromModel, calculateCost, isImageModel, isVideoModel, INTENT_CHAIN } from '@/lib/ai/router'
 import { buildSystemPrompt, formatMessagesForContext } from '@/lib/ai/context-builder'
@@ -10,6 +10,7 @@ import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
 import { streamByChain } from '@/lib/ai/proxy-fallback'
+import { calculateModelCosts, detectSourceChannel, type SourceChannel } from '@/lib/ai/token-cost-tracker'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -174,6 +175,7 @@ export async function POST(req: NextRequest) {
     let streamResult
     // Actual model used for cost tracking (fallback chain may pick a different one)
     let effectiveModelId = modelId
+    let effectiveChannel: SourceChannel = 'direct'
 
     const chatParams = {
       modelId,
@@ -195,24 +197,32 @@ export async function POST(req: NextRequest) {
       streamResult = fallback.stream
       // Free proxy models cost 0 (unknown ids fall through calculateCost → 0)
       effectiveModelId = fallback.usedVia === 'direct' ? fallback.usedModel : `proxy:${fallback.usedModel}`
+      effectiveChannel = detectSourceChannel(effectiveModelId, fallback.usedVia)
     } else if (provider === 'google' || intent === 'vision') {
       // Vision or Google → direct Gemini (multimodal needs native support)
       // 有圖片時優先於其他 provider，避免圖片被丟棄
       streamResult = await streamGemini({ ...chatParams, imageBase64 })
+      effectiveChannel = 'direct'
     } else if (provider === 'perplexity') {
       // Legal/web search → always direct Perplexity (needs real web)
       streamResult = await streamPerplexity(chatParams)
+      effectiveChannel = 'direct'
     } else if (provider === 'deepseek') {
       streamResult = await streamDeepSeek(chatParams)
+      effectiveChannel = 'direct'
     } else if (provider === 'anthropic') {
       streamResult = await streamClaude(chatParams)
+      effectiveChannel = 'direct'
     } else if (provider === 'openrouter') {
       streamResult = await streamOpenRouter(chatParams)
+      effectiveChannel = 'direct'
     } else if (provider === 'groq') {
       streamResult = await streamGroq(chatParams)
+      effectiveChannel = 'groq'
     } else {
       // Final fallback: DeepSeek direct
       streamResult = await streamDeepSeek({ ...chatParams, modelId: 'deepseek-chat' })
+      effectiveChannel = 'direct'
     }
 
     // Build streaming response + track usage after completion
@@ -244,11 +254,24 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          const costUsd = calculateCost(effectiveModelId, inputTokens, outputTokens)
+          const { actualCostUsd, savedCostUsd, isFree } = calculateModelCosts(
+            effectiveModelId,
+            inputTokens,
+            outputTokens,
+            effectiveChannel
+          )
+          const costUsd = isFree ? 0 : (actualCostUsd > 0 ? actualCostUsd : calculateCost(effectiveModelId, inputTokens, outputTokens))
           const latencyMs = Date.now() - startTime
 
-          // Save assistant message
-          await supabase.from('messages').insert({
+          const finishReasonMeta = JSON.stringify({
+            source: effectiveChannel,
+            model: effectiveModelId,
+            savedUsd: savedCostUsd,
+            isFree,
+          })
+
+          // Save assistant message with graceful fallback for foreign key constraints
+          const { error: insertErr } = await supabase.from('messages').insert({
             conversation_id: activeConversationId,
             user_id: user.id,
             role: 'assistant',
@@ -258,7 +281,24 @@ export async function POST(req: NextRequest) {
             output_tokens: outputTokens,
             cost_usd: costUsd,
             latency_ms: latencyMs,
+            finish_reason: finishReasonMeta,
           })
+
+          if (insertErr && (insertErr.code === '23503' || insertErr.message?.includes('foreign key'))) {
+            // Foreign key fallback if effectiveModelId isn't yet registered in ai_models table
+            await supabase.from('messages').insert({
+              conversation_id: activeConversationId,
+              user_id: user.id,
+              role: 'assistant',
+              content: fullContent,
+              model_id: null,
+              input_tokens: inputTokens,
+              output_tokens: outputTokens,
+              cost_usd: costUsd,
+              latency_ms: latencyMs,
+              finish_reason: finishReasonMeta,
+            })
+          }
 
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({

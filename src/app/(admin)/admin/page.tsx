@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
-import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus, Building2 } from 'lucide-react'
+import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus, Building2, Sparkles } from 'lucide-react'
 import NextLink from 'next/link'
 
 export default async function AdminDashboardPage() {
@@ -49,7 +49,7 @@ export default async function AdminDashboardPage() {
     { href: '/admin/companies', label: '公司管理',   desc: '建置獨立公司實體、指派負責人與納入成員', icon: Building2 },
     { href: '/admin/users',    label: '用戶管理',   desc: '管理用戶帳號、類型與模組權限', icon: Users },
     { href: '/admin/models',   label: '模型設定',   desc: '管理 AI 模型與計費配置', icon: Activity },
-    { href: '/admin/usage',    label: '平台用量',   desc: '查看全平台 API 用量明細', icon: DollarSign },
+    { href: '/admin/usage',    label: '用量與成本分析', desc: '全模型 Token 計算、FreeLLM / CLIProxy 免費代理效益與商業費用', icon: DollarSign },
     { href: '/admin/feedback', label: '使用者回饋', desc: '審查回饋、觸發 AI 生成分支', icon: MessageSquarePlus },
   ]
 
@@ -82,6 +82,31 @@ export default async function AdminDashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Free Proxy Highlight Banner */}
+        <NextLink href="/admin/usage" className="block group">
+          <div className="bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 hover:border-emerald-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-foreground">AI Token 使用量與成本核算中心</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    FreeLLM & CLIProxy 雙免費代理
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  查看各模型使用來源、CLIProxy 與 FreeLLM 個別調用次數、Token 消耗及替公司省下的商業 API 費用
+                </p>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:underline self-end sm:self-center shrink-0">
+              進入分析中心 →
+            </div>
+          </div>
+        </NextLink>
 
         {/* Quick Links */}
         <div>
