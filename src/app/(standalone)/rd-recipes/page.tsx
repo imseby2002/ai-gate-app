@@ -61,7 +61,19 @@ export default function RdRecipesPage() {
           <h1 className="text-2xl font-bold">研發配方（成本）</h1>
           <p className="text-sm text-gray-500">單一配方輸入或配方表上傳，所有配方一起匯出</p>
         </div>
-        <div className="ml-auto"><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />配方中心</Button></Link></div>
+        <div className="ml-auto"><Link href="/rd"><Button variant="outline" size="sm" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />配方與成本中心</Button></Link></div>
+      </div>
+
+      <div className="bg-purple-50/80 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-800/40 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="text-purple-900 dark:text-purple-200">
+          <span className="font-bold">配方與配方成本已全面合一：</span>
+          研發中心已將配方設計、原料進價抓取、每杯成本計算與 POS 成品對照合而為一。
+        </div>
+        <Link href="/rd" className="shrink-0">
+          <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7">
+            前往配方與成本中心
+          </Button>
+        </Link>
       </div>
 
       {sel ? <RecipeDetail id={sel} onBack={() => setSel(null)} onChanged={reload} />

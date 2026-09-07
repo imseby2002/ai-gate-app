@@ -70,11 +70,18 @@ export default function OfficePage() {
               依單位進入各自的系統{canManage ? '，管理者可見全部單位並指派人員權限。' : '。'}
             </p>
             {COMMON_PAGES.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium mr-1">全公司共用：</span>
                 {COMMON_PAGES.map(p => (
                   <Link key={p.href} href={p.href}>
-                    <Button variant="outline" size="sm" className="gap-1.5 rounded-full bg-card/60 backdrop-blur">
-                      {p.label}<ArrowUpRight className="h-3.5 w-3.5 opacity-60" />
+                    <Button
+                      variant={p.href === '/units' ? 'default' : 'outline'}
+                      size="sm"
+                      className={`gap-1.5 rounded-full ${p.href === '/units' ? 'shadow-sm font-medium' : 'bg-card/60 backdrop-blur'}`}
+                    >
+                      {p.href === '/units' && <Building2 className="h-3.5 w-3.5" />}
+                      {p.label}
+                      <ArrowUpRight className="h-3.5 w-3.5 opacity-60" />
                     </Button>
                   </Link>
                 ))}

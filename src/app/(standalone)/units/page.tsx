@@ -57,7 +57,7 @@ export default function UnitsPage() {
 
   if (isAdmin === false) return (
     <div className="flex h-full items-center justify-center p-8">
-      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">僅出納總務單位可使用單位資料</p></div>
+      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">請先登入或確認公司成員權限以使用單位資料</p></div>
     </div>
   )
   const selected = units.find(u => u.id === sel) ?? null
@@ -72,10 +72,15 @@ export default function UnitsPage() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Building2 className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">單位資料</h1>
-          <p className="text-sm text-gray-500">門市／辦公室／工廠／各部門的基本資料與基本時薪</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">單位資料</h1>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">全公司架構</span>
+          </div>
+          <p className="text-sm text-gray-500">全公司營運據點與部門架構（門市／辦公室／工廠／央廚／各部門基本資料與基本時薪）</p>
         </div>
-        <div className="ml-auto"><Link href="/finance"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />財務</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2">
+          <Link href="/office"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />公司入口</Button></Link>
+        </div>
       </div>
 
       {showImport && (

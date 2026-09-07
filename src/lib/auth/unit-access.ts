@@ -67,3 +67,37 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
 export async function getUnitContext(unitKey: string): Promise<UnitContext> {
   return getUnitContextAny([unitKey])
 }
+
+// 全公司全域資源存取（單位資料、組織架構等屬於全公司整個，非特定部門專屬，任何登入成員皆可使用）
+export async function getCompanyContext(): Promise<UnitContext> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return DENY
+
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id').eq('id', user.id).single()
+  const isSuperAdmin = profile?.user_type === 'admin'
+
+  let isCompanyAdmin = false
+  if (profile?.company_id) {
+    const { data: m } = await admin.from('company_members')
+      .select('role')
+      .eq('company_id', profile.company_id)
+      .eq('member_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (m?.role === 'owner' || m?.role === 'admin') {
+      isCompanyAdmin = true
+    }
+  }
+
+  let ownerId = user.id
+  if (!isSuperAdmin) {
+    const owner = await resolveCompanyOwner(admin, profile?.company_id ?? null)
+    if (owner) {
+      ownerId = owner
+    }
+  }
+  return { ok: true, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin }
+}
+

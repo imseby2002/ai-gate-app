@@ -12,10 +12,10 @@ export const UNIT_AREAS: UnitArea[] = [
   ] },
   { key: 'finance', label: '出納・總務・會計', pages: [
     { href: '/finance', label: '出納總務' }, { href: '/store-expenses', label: '門市費用' },
-    { href: '/vendors', label: '廠商資料' }, { href: '/units', label: '單位資料' },
+    { href: '/vendors', label: '廠商資料' },
   ] },
   { key: 'rd', label: '研發', pages: [
-    { href: '/rd', label: '配方中心' }, { href: '/rd-recipes', label: '配方成本' },
+    { href: '/rd', label: '配方與成本' },
     { href: '/rd-ai', label: '研發討論AI' }, { href: '/rd-logs', label: '研發日誌' },
   ] },
   { key: 'store', label: '門市營運', pages: [
@@ -39,9 +39,9 @@ export const UNIT_AREAS: UnitArea[] = [
   ] },
 ]
 
-// 共用（所有登入者都可見）
+// 共用／全公司層級（屬於公司整個，所有登入同仁皆可見，單位資料置頂）
 export const COMMON_PAGES: UnitPage[] = [
-  { href: '/work', label: '任務' }, { href: '/meeting', label: '會議紀錄' },
+  { href: '/units', label: '單位資料' }, { href: '/work', label: '任務' }, { href: '/meeting', label: '會議紀錄' },
 ]
 
 export const UNIT_LABEL: Record<string, string> = Object.fromEntries(UNIT_AREAS.map(a => [a.key, a.label]))
