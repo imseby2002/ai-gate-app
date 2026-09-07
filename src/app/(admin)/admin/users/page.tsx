@@ -13,7 +13,7 @@ export default async function AdminUsersPage() {
   ] = await Promise.all([
     supabase.from('profiles').select('*, subscriptions(plan_id, status)').order('created_at', { ascending: false }),
     supabase.from('usage_daily').select('user_id, total_cost_usd, message_count').gte('date', new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]),
-    supabase.from('employee_whitelist').select('id, email, note, added_at').order('added_at', { ascending: false }),
+    supabase.from('employee_whitelist').select('id, email, note, company_id, added_at, companies(id, name)').order('added_at', { ascending: false }),
     supabase.from('companies').select('id, name').order('name', { ascending: true }),
   ])
 
@@ -41,7 +41,11 @@ export default async function AdminUsersPage() {
         <p className="text-gray-500 text-sm mt-1">共 {users?.length ?? 0} 位用戶</p>
       </div>
 
-      <EmployeeWhitelistManager entries={whitelist ?? []} />
+      <EmployeeWhitelistManager
+        entries={whitelist ?? []}
+        companies={companies ?? []}
+        mode="admin"
+      />
 
       <UserManagementTable users={usersWithUsage} companies={companies ?? []} />
     </div>
