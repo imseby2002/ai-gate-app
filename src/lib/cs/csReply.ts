@@ -206,20 +206,22 @@ export async function generateCsReplyL3(
     // 連線目前故障中（非帳號額度問題，是路由服務自己存的 GitHub 連線設定壞了），改用原生
     // 支援看圖的 Llama 4 Scout。GPT-4o 那條路線修好後可用 FREE_LLM_L3_MODEL 切回去。
     const l3FreeLlmModel = process.env.FREE_LLM_L3_MODEL ?? 'meta-llama/llama-4-scout-17b-16e-instruct'
-    for (const entry of freeChain('gemini-3-flash', l3FreeLlmModel)) {
+    for (const entry of freeChain('gemini-2.5-flash', l3FreeLlmModel)) {
       const text = await tryOpenAiCompat(entry, system, messages)
       if (text) return { reply: text, provider: entry.label }
     }
   }
 
-  // 2) 直連 gemini-3-flash：一般文字的保底，圖片訊息的唯一路徑（原生多模態，最可靠）
+  // 2) 直連 Gemini 多模態（原生多模態，最可靠；gemini-2.5-flash 為主力，gemini-3.1-flash-lite 備援）
   const geminiKey = process.env.GOOGLE_AI_API_KEY
   if (geminiKey) {
-    try {
-      const model = createGoogleGenerativeAI({ apiKey: geminiKey })('gemini-3-flash')
-      const { text } = await generateText({ model, system, messages })
-      if (text) return { reply: text, provider: 'Gemini-3-Flash' }
-    } catch { /* fall through */ }
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+    for (const modelId of ['gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.6-flash']) {
+      try {
+        const { text } = await generateText({ model: google(modelId), system, messages })
+        if (text) return { reply: text, provider: `Google-${modelId}` }
+      } catch { /* try next */ }
+    }
   }
 
   return null

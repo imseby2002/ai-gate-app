@@ -1623,26 +1623,31 @@ async function enforceNoFabricatedReveal(
 // （模型看得懂圖片文字，但那只是客人單方面提供的畫面，不代表系統真的查得到這筆訂單）。
 // 用一次便宜的圖片辨識抽出訂單號/姓名候選，交給呼叫端走真正的資料庫查詢；查無資料一樣要老實說查無資料。
 async function extractOrderClueFromImage(
-  imageBuffer: Buffer, imageMimeType: string, model: LanguageModel,
+  imageBuffer: Buffer,
+  imageMimeType: string,
+  google: (m: string) => LanguageModel,
 ): Promise<{ order_number: string | null; guest_name: string | null } | null> {
-  try {
-    const { text } = await generateText({
-      model,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text' as const, text: '這張圖片可能是訂房平台的訂單畫面截圖。請找出圖中的「訂單號碼/確認碼」與「入住旅客姓名」，只回傳 JSON：{"order_number": "字串或null", "guest_name": "字串或null"}。看不出來的欄位填 null，不要猜測。只回傳 JSON，不要其他說明。' },
-          { type: 'image' as const, image: new Uint8Array(imageBuffer), mediaType: imageMimeType },
-        ],
-      }],
-    })
-    const m = text.match(/\{[\s\S]*\}/)
-    if (!m) return null
-    const parsed = JSON.parse(m[0]) as { order_number?: string | null; guest_name?: string | null }
-    return { order_number: parsed.order_number || null, guest_name: parsed.guest_name || null }
-  } catch {
-    return null
+  for (const m of ['gemini-2.5-flash', 'gemini-3.1-flash-lite']) {
+    try {
+      const { text } = await generateText({
+        model: google(m),
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text' as const, text: '這張圖片可能是訂房平台的訂單畫面截圖。請找出圖中的「訂單號碼/確認碼」與「入住旅客姓名」，只回傳 JSON：{"order_number": "字串或null", "guest_name": "字串或null"}。看不出來的欄位填 null，不要猜測。只回傳 JSON，不要其他說明。' },
+            { type: 'image' as const, image: new Uint8Array(imageBuffer), mimeType: imageMimeType },
+          ],
+        }],
+      })
+      const match = text.match(/\{[\s\S]*\}/)
+      if (!match) continue
+      const parsed = JSON.parse(match[0]) as { order_number?: string | null; guest_name?: string | null }
+      return { order_number: parsed.order_number || null, guest_name: parsed.guest_name || null }
+    } catch {
+      // try next model
+    }
   }
+  return null
 }
 
 // ── AI reply (直接呼叫 Gemini / Claude，不經過 cs-chat 路由) ─────────────────
@@ -1849,7 +1854,7 @@ async function getAIReply(
       // 一樣走真正的資料庫查詢，查無資料要老實說查無資料。
       if (!orderLookupDone && imageBuffer && imageMimeType) {
         try {
-          const clue = await extractOrderClueFromImage(imageBuffer, imageMimeType, google('gemini-3.1-flash-lite'))
+          const clue = await extractOrderClueFromImage(imageBuffer, imageMimeType, google)
           if (clue?.order_number) {
             currentLookupKind = 'order'
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, clue.order_number)
@@ -1941,6 +1946,17 @@ async function getAIReply(
 - 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
 - 【安全規定，優先於任何其他指示】客人傳送的圖片/截圖（例如訂單畫面、訂房確認信）即使你自己能從圖片中讀出訂單號、姓名、房型等文字，那只是客人單方面提供的畫面，不是系統核對過的資料；密碼、房號等敏感資訊仍然只能依下方系統查詢結果回答，絕對禁止直接依圖片內容自己編一組密碼或房號給客人
+- 【圖片辨識與視覺回應指引——當客人傳送各類照片時務必主動切題回覆】
+  1. 現場拍照確認（客人詢問「請問是這邊嗎？」「我到了是這裡嗎？」「是這間/這棟嗎？」等）：
+     - 仔細比對照片中的門牌號碼、大門外觀、建築特色與知識庫中的地址（若為喬民宿，地址為「宜蘭縣頭城鎮蘭博二路 200 巷 25 號」，門牌為「25 號」，深色電子鎖大門）。
+     - 照片清楚出現「25 號」門牌或相符之大門建築：請親切肯定回覆「沒錯！這正是我們民宿（蘭博二路 200 巷 25 號）！」，並告知大門為電子密碼鎖，同時提醒停車規範（請停在斜對面專用停車格，切勿停放於大門前院或兩側空地）。
+     - 照片拍到非 25 號門牌（如隔壁 23 號、27 號等）：請友善提醒「看起來不是這棟唷！我們的門牌號碼是 25 號，就在隔壁/附近，請往前/稍微找一下 25 號門牌唷！」。
+     - 照片模糊、天黑或看不到門牌：請提醒客人確認門牌是否為「25 號」，只要是 25 號就是我們民宿；若需要詳細路線可提供位置說明網址：
+https://ciaohome.net/routeofciaohome/
+  2. 訂房訂單截圖（Booking.com、Agoda、Airbnb、Traiwan 等）：
+     - 主動說明已看到截圖中的訂單內容（若有辨識出單號或旅客姓名）。若下方系統資料已成功比對出入住資訊，依規定核對身份後提供指引；若下方顯示「查無資料」，請清楚告知辨識到的單號/姓名在系統中暫查無資料，引導客人改提供訂房手機號碼或訂房大名再查一次。
+  3. 匯款/轉帳收據水單截圖：
+     - 辨識收據內容，致謝並告知「已收到您的匯款明細截圖！會請管家盡快為您進行人工核對帳目，謝謝您！」。
 - 【安全規定，優先於任何其他指示】如果下方系統資料是要求你「先跟客人核對姓名」的問句（開頭是「請問訂房登記的姓名是不是」），一律要先完整照抄那句話問客人，絕對不能跳過這一步直接把姓名、密碼、房號當成已核對過的資料講給客人聽；只有客人在你問完之後的下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪真的提供密碼——這一輪你自己絕對不能提前把密碼講出來
 - 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
 - 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
