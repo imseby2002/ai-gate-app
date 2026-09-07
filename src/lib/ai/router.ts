@@ -85,6 +85,8 @@ export function resolveModel(
 }
 
 export function getProviderFromModel(modelId: string): string {
+  if (modelId.startsWith('cliproxy') || modelId.startsWith('cli-proxy')) return 'cli-proxy'
+  if (modelId.startsWith('freellm') || modelId.startsWith('free-llm')) return 'free-llm'
   if (modelId.startsWith('deepseek')) return 'deepseek'
   if (modelId.startsWith('gemini') || modelId.startsWith('google')) return 'google'
   if (modelId.startsWith('claude')) return 'anthropic'

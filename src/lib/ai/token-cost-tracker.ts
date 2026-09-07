@@ -104,13 +104,18 @@ export const CHANNEL_CONFIG: Record<SourceChannel, ChannelInfo> = {
 // Commercial rates for calculating money saved by using FreeLLM & CLIProxy (per 1k tokens)
 const COMMERCIAL_BENCHMARK_RATES: Record<string, { in: number; out: number }> = {
   'gemini-3-flash':             { in: 0.000075, out: 0.0003  },
+  'gemini-2.5-pro':             { in: 0.00125,  out: 0.005   },
+  'gemini-2.5-flash':           { in: 0.000075, out: 0.0003  },
   'gpt-5.4-mini':               { in: 0.00015,  out: 0.0006  },
   'gpt-5.5':                    { in: 0.0025,   out: 0.010   },
   'kimi-k2':                    { in: 0.0008,   out: 0.0016  },
   'kimi-k2.5':                  { in: 0.001,    out: 0.002   },
   'grok-3-mini':                { in: 0.0005,   out: 0.0015  },
-  'gemini-2.5-pro':             { in: 0.00125,  out: 0.005   },
+  'claude-haiku-4-5-20251001':  { in: 0.001,    out: 0.005   },
+  'claude-sonnet-4-6':          { in: 0.003,    out: 0.015   },
+  'deepseek-chat':              { in: 0.00014,  out: 0.00028 },
   'llama-3.3-70b':              { in: 0.0006,   out: 0.0018  },
+  'llama-3.1-8b-instant':       { in: 0.0001,   out: 0.0001  },
   'glm-4.7-flash':              { in: 0.0001,   out: 0.0001  },
   'qwen3-32b':                  { in: 0.0004,   out: 0.0012  },
   'auto':                       { in: 0.0005,   out: 0.0015  },
@@ -263,15 +268,26 @@ export function detectSourceChannel(rawModelId: string, explicitVia?: string): S
  */
 export function cleanModelId(rawModelId: string): string {
   let id = rawModelId || ''
-  if (id.startsWith('proxy:')) id = id.slice(6)
-  if (id.startsWith('cli-proxy:')) id = id.slice(10)
-  if (id.startsWith('free-llm:')) id = id.slice(9)
-  if (id.startsWith('cliproxy:')) id = id.slice(9)
-  if (id.startsWith('freellm:')) id = id.slice(8)
-  if (id.startsWith('anthropic/')) id = id.slice(10)
-  if (id.startsWith('openai/')) id = id.slice(7)
-  if (id.startsWith('google/')) id = id.slice(7)
-  if (id.startsWith('openrouter/')) id = id.slice(11)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const prefix of [
+      'proxy:',
+      'cli-proxy:',
+      'free-llm:',
+      'cliproxy:',
+      'freellm:',
+      'anthropic/',
+      'openai/',
+      'google/',
+      'openrouter/',
+    ]) {
+      if (id.startsWith(prefix)) {
+        id = id.slice(prefix.length)
+        changed = true
+      }
+    }
+  }
   return id
 }
 

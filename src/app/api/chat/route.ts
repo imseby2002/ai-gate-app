@@ -9,8 +9,10 @@ import { streamClaude } from '@/lib/ai/providers/claude'
 import { streamPerplexity } from '@/lib/ai/providers/perplexity'
 import { streamOpenRouter } from '@/lib/ai/providers/openrouter'
 import { streamGroq } from '@/lib/ai/providers/groq'
+import { streamCliProxy } from '@/lib/ai/providers/cli-proxy'
+import { streamFreeLlm } from '@/lib/ai/providers/free-llm'
 import { streamByChain } from '@/lib/ai/proxy-fallback'
-import { calculateModelCosts, detectSourceChannel, type SourceChannel } from '@/lib/ai/token-cost-tracker'
+import { calculateModelCosts, detectSourceChannel, cleanModelId, type SourceChannel } from '@/lib/ai/token-cost-tracker'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -195,9 +197,25 @@ export async function POST(req: NextRequest) {
         : undefined
       const fallback = await streamByChain(chainName, chatParams, imageInput)
       streamResult = fallback.stream
-      // Free proxy models cost 0 (unknown ids fall through calculateCost → 0)
-      effectiveModelId = fallback.usedVia === 'direct' ? fallback.usedModel : `proxy:${fallback.usedModel}`
+      const cId = cleanModelId(fallback.usedModel)
+      if (fallback.usedVia === 'cli-proxy') {
+        effectiveModelId = `cliproxy:${cId}`
+      } else if (fallback.usedVia === 'free-llm') {
+        effectiveModelId = `freellm:${cId}`
+      } else {
+        effectiveModelId = fallback.usedModel
+      }
       effectiveChannel = detectSourceChannel(effectiveModelId, fallback.usedVia)
+    } else if (provider === 'cli-proxy') {
+      const cId = cleanModelId(modelId)
+      streamResult = await streamCliProxy({ ...chatParams, modelId: cId })
+      effectiveModelId = `cliproxy:${cId}`
+      effectiveChannel = 'cliproxy'
+    } else if (provider === 'free-llm') {
+      const cId = cleanModelId(modelId)
+      streamResult = await streamFreeLlm({ ...chatParams, modelId: cId })
+      effectiveModelId = `freellm:${cId}`
+      effectiveChannel = 'freellm'
     } else if (provider === 'google' || intent === 'vision') {
       // Vision or Google → direct Gemini (multimodal needs native support)
       // 有圖片時優先於其他 provider，避免圖片被丟棄

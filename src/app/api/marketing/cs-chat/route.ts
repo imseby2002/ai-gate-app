@@ -9,6 +9,7 @@ import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
+import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -1233,6 +1234,77 @@ const systemPrompt = `${baseInstructions}
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,platform,from_id,industry' })
     } catch { /* 表可能尚未建立，略過追蹤 */ }
+  }
+
+  // ── Record AI Usage for CS Chat ──
+  try {
+    const inTokens = estimateTextTokens(message) + 150
+    const outTokens = estimateTextTokens(reply)
+    let modelId = 'groq-qwen3-32b'
+    let sourceChannel: 'cliproxy' | 'freellm' | 'groq' | 'google' = 'groq'
+
+    if (provider?.includes('CLIProxy')) {
+      modelId = 'cliproxy:gemini-3-flash'
+      sourceChannel = 'cliproxy'
+    } else if (provider?.includes('FreeLLM')) {
+      modelId = 'freellm:glm-4.7-flash'
+      sourceChannel = 'freellm'
+    } else if (provider?.includes('Gemini')) {
+      modelId = 'gemini-2.0-flash'
+      sourceChannel = 'google'
+    }
+
+    const costs = calculateModelCosts(modelId, inTokens, outTokens, sourceChannel)
+    const finishReasonMeta = JSON.stringify({
+      source: sourceChannel,
+      model: modelId,
+      savedUsd: costs.savedCostUsd,
+      isFree: costs.isFree,
+      service: 'cs',
+    })
+
+    await supabase.from('messages').insert({
+      user_id: user.id,
+      conversation_id: null,
+      role: 'assistant',
+      content: reply.slice(0, 500),
+      model_id: modelId,
+      input_tokens: inTokens,
+      output_tokens: outTokens,
+      cost_usd: costs.actualCostUsd,
+      latency_ms: latencyMs,
+      finish_reason: finishReasonMeta,
+    })
+
+    const today = new Date().toISOString().split('T')[0]
+    const { data: existingUd } = await supabase
+      .from('usage_daily')
+      .select('id, message_count, input_tokens, output_tokens, total_cost_usd')
+      .eq('user_id', user.id)
+      .eq('model_id', modelId)
+      .eq('date', today)
+      .maybeSingle()
+
+    if (existingUd) {
+      await supabase.from('usage_daily').update({
+        message_count: (existingUd.message_count || 0) + 1,
+        input_tokens: (existingUd.input_tokens || 0) + inTokens,
+        output_tokens: (existingUd.output_tokens || 0) + outTokens,
+        total_cost_usd: (existingUd.total_cost_usd || 0) + costs.actualCostUsd,
+      }).eq('id', existingUd.id)
+    } else {
+      await supabase.from('usage_daily').insert({
+        user_id: user.id,
+        model_id: modelId,
+        date: today,
+        message_count: 1,
+        input_tokens: inTokens,
+        output_tokens: outTokens,
+        total_cost_usd: costs.actualCostUsd,
+      })
+    }
+  } catch (usageErr) {
+    console.error('[cs-chat] usage recording error:', usageErr)
   }
 
   return NextResponse.json({ reply, intent, risk, provider, latencyMs, summary, images })

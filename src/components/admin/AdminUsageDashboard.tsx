@@ -150,17 +150,26 @@ export function AdminUsageDashboard({ initialData }: { initialData?: AdminUsageD
         const res = await fetch('/api/cli-proxy/test', { method: 'POST' })
         const json = await res.json()
         if (json.reply) {
-          setTestResult(`✅ CLIProxy 連線成功！回覆：${json.reply.slice(0, 40)}...`)
+          const tokenInfo = json.tokens ? ` (測試已記錄 ${json.tokens} Tokens，節省 \$${json.savedUsd ?? 0})` : ''
+          setTestResult(`✅ CLIProxy 連線成功！回覆：${json.reply.slice(0, 35)}...${tokenInfo}`)
         } else {
           setTestResult(`⚠️ CLIProxy 測試回傳：${json.error || '未回應'}`)
         }
       } else {
-        const res = await fetch('/api/cli-proxy/free-status')
+        const res = await fetch('/api/cli-proxy/free-status', { method: 'POST' })
         const json = await res.json()
-        if (json.ok) {
-          setTestResult(`✅ FreeLLM 連線正常！可用模型：${(json.models || []).slice(0, 3).join(', ')}`)
+        if (json.ok && json.reply) {
+          const tokenInfo = json.tokens ? ` (測試已記錄 ${json.tokens} Tokens，節省 \$${json.savedUsd ?? 0})` : ''
+          setTestResult(`✅ FreeLLM 連線成功！回覆：${json.reply.slice(0, 35)}...${tokenInfo}`)
         } else {
-          setTestResult(`⚠️ FreeLLM 測試回傳：${json.error || '連線未就緒'}`)
+          // Fallback to GET check
+          const fallbackRes = await fetch('/api/cli-proxy/free-status')
+          const fallbackJson = await fallbackRes.json()
+          if (fallbackJson.ok) {
+            setTestResult(`✅ FreeLLM 連線正常！可用模型：${(fallbackJson.models || []).slice(0, 3).join(', ')}`)
+          } else {
+            setTestResult(`⚠️ FreeLLM 測試回傳：${json.error || fallbackJson.error || '連線未就緒'}`)
+          }
         }
       }
       // Refresh usage stats

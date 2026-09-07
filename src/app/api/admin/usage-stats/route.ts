@@ -379,9 +379,11 @@ export async function GET(req: NextRequest) {
     { model_id: 'kimi-k2.5', channel: 'cliproxy' },
     { model_id: 'gpt-5.4-mini', channel: 'cliproxy' },
     { model_id: 'grok-3-mini', channel: 'cliproxy' },
+    { model_id: 'claude-haiku-4-5-20251001', channel: 'cliproxy' },
     { model_id: 'llama-3.3-70b', channel: 'freellm' },
     { model_id: 'glm-4.7-flash', channel: 'freellm' },
     { model_id: 'qwen3-32b', channel: 'freellm' },
+    { model_id: 'auto', channel: 'freellm' },
   ]
 
   for (const item of standardShowcase) {
