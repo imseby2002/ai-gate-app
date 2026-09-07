@@ -240,6 +240,10 @@ export default function RoundtablePage() {
   // 研議篇幅檔位設定
   const [verbosity, setVerbosity] = useState<VerbosityMode>('standard_300')
 
+  // 延續討論暫存的前次決策報告
+  const [previousReport, setPreviousReport] = useState('')
+  const [showPrevReport, setShowPrevReport] = useState(false)
+
   // 歷史紀錄
   const [history, setHistory] = useState<SessionSummary[]>([])
   const [showHistory, setShowHistory] = useState(false)
@@ -262,6 +266,15 @@ export default function RoundtablePage() {
 
   useEffect(() => {
     fetchHistory()
+    try {
+      const urlParams = new URLSearchParams(window.location.search)
+      const sessionFromUrl = urlParams.get('session')
+      if (sessionFromUrl) {
+        loadSession(sessionFromUrl)
+      }
+    } catch {
+      // ignore
+    }
   }, [])
 
   async function fetchHistory() {
@@ -270,6 +283,25 @@ export default function RoundtablePage() {
       if (!res.ok) return
       const data = await res.json()
       setHistory(data.sessions ?? [])
+    } catch {
+      // ignore
+    }
+  }
+
+  function startNewMeeting() {
+    setViewingId(null)
+    setSessionId(null)
+    setBlocks([])
+    setFactBriefing('')
+    setReport('')
+    setPreviousReport('')
+    setInstruction('')
+    setWaitingBoss(false)
+    setBossInput('')
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('session')
+      window.history.replaceState(null, '', url.toString())
     } catch {
       // ignore
     }
@@ -287,6 +319,11 @@ export default function RoundtablePage() {
       )
       setInstruction(session.instruction)
       setFactBriefing(session.fact_briefing ?? '')
+      if (session.domain) {
+        setDomain(session.domain)
+        const preset = DOMAIN_PRESETS[session.domain as RoundtableDomain] ?? DOMAIN_PRESETS.auto
+        setDetectedDomainLabel(preset.label)
+      }
       if (session.seats?.length) {
         setCustomSeats(
           session.seats.map((s: { name?: string; model?: string; stance?: string; customPhilosophy?: string; customAttackTriggers?: string }, i: number) => ({
@@ -297,6 +334,7 @@ export default function RoundtablePage() {
             attackTriggers: s.customAttackTriggers || '',
           }))
         )
+        setTargetSeat(session.seats[0]?.name || DEFAULT_SEAT_NAMES[0])
       }
       setBlocks(
         (session.transcript ?? []).map((t: { round: number; name: string; content: string; stance?: string }) => ({
@@ -308,14 +346,23 @@ export default function RoundtablePage() {
         }))
       )
       setReport(session.report ?? '')
+      setPreviousReport('')
       setPhase('')
       setSessionId(session.id)
       setViewingId(session.id)
-      setWaitingBoss(session.status === 'waiting_boss' && !session.report)
+      // 核心：任何過往紀錄載入後，老闆指揮台一律就緒，可隨時在下方接續同件事情討論！
+      setWaitingBoss(true)
       setShowHistory(false)
       // 載入紀錄時自動極大化
       toggleSidebar(true)
       setIsWideView(true)
+      try {
+        const url = new URL(window.location.href)
+        url.searchParams.set('session', session.id)
+        window.history.replaceState(null, '', url.toString())
+      } catch {
+        // ignore
+      }
     } finally {
       setLoadingSession(false)
     }
@@ -338,6 +385,7 @@ export default function RoundtablePage() {
     setBlocks([])
     setFactBriefing('')
     setReport('')
+    setPreviousReport('')
     setPhase('')
     setViewingId(null)
     setSessionId(null)
@@ -412,7 +460,7 @@ export default function RoundtablePage() {
 
     // 若是老闆發言，先在前端記錄一條老闆發言
     if (currentAction !== 'synthesize' && bossInput.trim()) {
-      const currentMaxRound = blocks.reduce((max, b) => Math.max(max, b.round), 2)
+      const currentMaxRound = blocks.reduce((max, b) => Math.max(max, Number(b.round) || 1), 2)
       setBlocks(prev => [
         ...prev,
         {
@@ -422,6 +470,11 @@ export default function RoundtablePage() {
           content: bossInput.trim(),
         },
       ])
+      // 若已有前次決策報告，暫存至 previousReport，讓畫面聚焦最新辯論
+      if (report) {
+        setPreviousReport(report)
+        setReport('')
+      }
     }
 
     const currentInput = bossInput.trim()
@@ -443,6 +496,15 @@ export default function RoundtablePage() {
           moderatorModel,
           synthesisStyle,
           verbosity,
+          seats: customSeats.map((cs, i) => ({
+            name: cs.name.trim() || DEFAULT_SEAT_NAMES[i],
+            model: cs.model || DEFAULT_SEATS[i].model,
+            role: DEFAULT_SEATS[i].role,
+            stance: cs.stance.trim() || undefined,
+            customPhilosophy: cs.philosophy.trim() || undefined,
+            customAttackTriggers: cs.attackTriggers.trim() || undefined,
+            expertId: seatExperts[i]?.[0] ?? null,
+          })),
         }),
         signal: ctrl.signal,
       })
@@ -533,7 +595,8 @@ export default function RoundtablePage() {
           setPhase('⏸️ 會議暫停 · 等待老闆裁示')
         } else if (e.type === 'report') {
           setReport(e.content)
-          setWaitingBoss(false)
+          setPreviousReport('')
+          setWaitingBoss(true) // 產出報告後，老闆指揮台依然常駐，方便隨時再追問深化！
         } else if (e.type === 'error') {
           if (e.name === 'system') {
             setReport(prev => (prev ? `${prev}\n⚠️ ${e.error}` : `⚠️ ${e.error}`))
@@ -557,7 +620,7 @@ export default function RoundtablePage() {
 
   // 計算輪次列表 (過濾出所有大於 0 的輪次)
   const roundNumbers = [...new Set(blocks.map(b => b.round))].sort((a, b) => a - b)
-  const completedRound = blocks.reduce((max, b) => Math.max(max, b.round), 2)
+  const completedRound = blocks.reduce((max, b) => Math.max(max, Number(b.round) || 1), 2)
   const nextDiscussRound = completedRound + 1
   const nextRebutRound = completedRound + 2
 
@@ -632,24 +695,38 @@ export default function RoundtablePage() {
 
         {/* 檢視歷史紀錄模式通知 */}
         {viewingId && (
-          <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            <span>正在檢視過往研議紀錄</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto py-1"
-              onClick={() => {
-                setViewingId(null)
-                setSessionId(null)
-                setBlocks([])
-                setFactBriefing('')
-                setReport('')
-                setInstruction('')
-                setWaitingBoss(false)
-              }}
-            >
-              開始新的會議
-            </Button>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm flex-wrap shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="outline" className="bg-background text-primary border-primary/40 font-semibold px-2.5 py-0.5">
+                📂 接續議題研議 · 第 {completedRound} 輪
+              </Badge>
+              <span className="text-xs sm:text-sm font-medium text-foreground">
+                正在延續「{instruction}」，可直接於下方【老闆指揮台】追加指示繼續推演
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs bg-background shadow-xs hover:bg-primary/10"
+                onClick={() => {
+                  const consoleEl = document.getElementById('boss-console')
+                  if (consoleEl) {
+                    consoleEl.scrollIntoView({ behavior: 'smooth' })
+                  }
+                }}
+              >
+                直達老闆指揮台 ↓
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                onClick={startNewMeeting}
+              >
+                開始新的會議
+              </Button>
+            </div>
           </div>
         )}
 
@@ -932,8 +1009,22 @@ export default function RoundtablePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button onClick={start} disabled={running || !instruction.trim()}>
-                {running ? '會議進行中…' : '召開圓桌會議'}
+                {running ? '會議進行中…' : (viewingId ? '以新議題開會' : '召開圓桌會議')}
               </Button>
+              {viewingId && !running && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const consoleEl = document.getElementById('boss-console')
+                    if (consoleEl) {
+                      consoleEl.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }}
+                  className="border-primary/40 text-primary hover:bg-primary/10"
+                >
+                  接續本議題研議 ↓
+                </Button>
+              )}
               {running && (
                 <Button variant="outline" onClick={stop}>
                   中斷停止
@@ -1077,14 +1168,81 @@ export default function RoundtablePage() {
           )
         })}
 
-        {/* 🎛️ 老闆動態指揮台 (Human-in-the-Loop Console) */}
-        {waitingBoss && !running && (
-          <Card className="border-2 border-primary bg-primary/5 p-5 space-y-4 shadow-lg animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-center justify-between">
+        {/* 前次幕僚長決策報告 (接續新一輪攻防時暫存) */}
+        {previousReport && (
+          <Card className="border border-emerald-500/30 bg-emerald-50/10 dark:bg-emerald-950/10 p-4 space-y-2.5 shadow-sm animate-in fade-in">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <Badge className="bg-primary px-2.5 py-1 text-xs">🎛️ 老闆指揮台</Badge>
-                <span className="text-sm font-medium">第 {completedRound} 輪攻防已完成，請下達下一步裁決：</span>
+                <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700 font-medium">
+                  📋 前次首席幕僚長決策報告（階段收斂）
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  目前正在進行新一輪深入推演，您可隨時參考前次報告
+                </span>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setShowPrevReport(v => !v)}
+              >
+                {showPrevReport ? '收合前次報告' : '展開檢視前次報告'}
+              </Button>
+            </div>
+            {showPrevReport && (
+              <div className="whitespace-pre-wrap text-sm leading-relaxed border-t pt-3 max-h-80 overflow-y-auto prose dark:prose-invert max-w-none text-muted-foreground">
+                {previousReport}
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* 最終收斂決策報告 */}
+        {report && (
+          <Card className="space-y-3 border-2 border-emerald-500 p-6 shadow-md bg-emerald-50/10 animate-in fade-in">
+            <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
+                  👑 董事會首席幕僚長 · 最終高層決策報告
+                </Badge>
+                <Badge variant="outline" className="text-xs font-mono bg-background text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 font-medium">
+                  主筆模型：{formatModelDisplayName(moderatorModel)}
+                </Badge>
+                {synthesisStyle !== 'default' && (
+                  <Badge variant="secondary" className="text-xs">
+                    {SYNTHESIS_STYLES.find(s => s.id === synthesisStyle)?.shortLabel}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground font-medium">
+                全場分歧收斂完畢 · 交付高層裁決
+              </span>
+            </div>
+            <div className="whitespace-pre-wrap text-sm leading-relaxed prose dark:prose-invert max-w-none">
+              {report}
+            </div>
+          </Card>
+        )}
+
+        {/* 🎛️ 老闆動態指揮台 (Human-in-the-Loop Console) - 永遠置於研議紀錄最下方，隨時接續同一議題討論 */}
+        {(waitingBoss || (sessionId && blocks.length > 0)) && !running && (
+          <Card id="boss-console" className="border-2 border-primary bg-primary/5 p-5 space-y-4 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-primary px-2.5 py-1 text-xs">
+                  {report ? '🎛️ 老闆指揮台（接續研議本議題）' : '🎛️ 老闆指揮台'}
+                </Badge>
+                <span className="text-sm font-medium">
+                  {report
+                    ? `本議題已完成第 ${completedRound} 輪攻防與決策報告，您可以隨時在下方追加指示繼續深化推演：`
+                    : `第 ${completedRound} 輪攻防已完成，請下達下一步裁決：`}
+                </span>
+              </div>
+              {viewingId && (
+                <Badge variant="outline" className="text-xs bg-background">
+                  議題延續中 · 無需從頭開始
+                </Badge>
+              )}
             </div>
 
             {/* 選擇行動類別 */}
@@ -1103,7 +1261,7 @@ export default function RoundtablePage() {
                   全體深入討論 (論述輪 + 互評輪)
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  輸入新指示，三位合夥人將先展開【第 {nextDiscussRound} 輪深化論述】，隨後自動進入【第 {nextRebutRound} 輪針鋒相對互評】
+                  輸入新指示，三位合夥人將針對老闆最新導向展開【第 {nextDiscussRound} 輪深化論述】，隨後自動進入【第 {nextRebutRound} 輪針鋒相對互評】
                 </p>
               </button>
 
@@ -1136,10 +1294,10 @@ export default function RoundtablePage() {
               >
                 <p className="text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  討論已足夠 · 呼叫首席幕僚長結會
+                  {report ? '重新收斂結會 · 更新決策報告' : '討論已足夠 · 呼叫首席幕僚長結會'}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  由首席幕僚長 ({formatModelDisplayName(moderatorModel)}) 綜觀全場分歧，出具最終決策報告
+                  由首席幕僚長 ({formatModelDisplayName(moderatorModel)}) 綜觀全場包含最新輪次在內的所有分歧，出具最終決策報告
                 </p>
               </button>
             </div>
@@ -1191,7 +1349,7 @@ export default function RoundtablePage() {
                     disabled={running}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 font-medium"
                   >
-                    🚀 確認結會，產出首席幕僚長決策白皮書
+                    {report ? '🚀 確認重新結會，產出最新首席幕僚長決策白皮書' : '🚀 確認結會，產出首席幕僚長決策白皮書'}
                   </Button>
                 </div>
               </div>
@@ -1270,33 +1428,6 @@ export default function RoundtablePage() {
                 </div>
               </div>
             )}
-          </Card>
-        )}
-
-        {/* 最終收斂決策報告 */}
-        {report && (
-          <Card className="space-y-3 border-2 border-emerald-500 p-6 shadow-md bg-emerald-50/10">
-            <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium">
-                  👑 董事會首席幕僚長 · 最終高層決策報告
-                </Badge>
-                <Badge variant="outline" className="text-xs font-mono bg-background text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 font-medium">
-                  主筆模型：{formatModelDisplayName(moderatorModel)}
-                </Badge>
-                {synthesisStyle !== 'default' && (
-                  <Badge variant="secondary" className="text-xs">
-                    {SYNTHESIS_STYLES.find(s => s.id === synthesisStyle)?.shortLabel}
-                  </Badge>
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground font-medium">
-                全場分歧收斂完畢 · 交付高層裁決
-              </span>
-            </div>
-            <div className="whitespace-pre-wrap text-sm leading-relaxed prose dark:prose-invert max-w-none">
-              {report}
-            </div>
           </Card>
         )}
       </div>
