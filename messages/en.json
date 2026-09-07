@@ -1471,7 +1471,8 @@
       "plan": "Subscription",
       "experts": "Custom Experts",
       "logbook": "Production Log",
-      "offline": "Field Marketing"
+      "offline": "Field Marketing",
+      "brand": "Brand"
     },
     "studio": {
       "title": "AI Visual Studio",
