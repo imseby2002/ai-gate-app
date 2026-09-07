@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { NotebookPen, Sparkles, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 
-interface LogItem { id: string; skill_id: string; skill_label: string; summary: string; status: string; credits: number; created_at: string }
+interface LogItem { id: string; staff: string; skill_id: string; skill_label: string; summary: string; status: string; credits: number; created_at: string }
 interface SkillAgg { label: string; count: number; credits: number }
-interface Data { items: LogItem[]; total: number; credits: number; bySkill: SkillAgg[]; days: number }
+interface StaffAgg { name: string; count: number; credits: number }
+interface Data { items: LogItem[]; total: number; credits: number; bySkill: SkillAgg[]; byStaff: StaffAgg[]; days: number }
 
 const DAYS = [7, 30, 90]
 const fmt = (n: number) => Math.round(n * 100) / 100
@@ -60,8 +61,22 @@ export default function LogbookPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border bg-white p-4"><div className="text-xs text-gray-500">製作次數</div><div className="mt-1 text-xl font-bold text-gray-900">{data.total}</div></div>
           <div className="rounded-xl border bg-white p-4"><div className="text-xs text-gray-500">花費點數</div><div className="mt-1 text-xl font-bold text-gray-900">{fmt(data.credits)}</div></div>
-          <div className="rounded-xl border bg-white p-4 col-span-2"><div className="text-xs text-gray-500">使用最多</div><div className="mt-1 text-sm font-medium text-gray-800 truncate">{data.bySkill[0] ? `${data.bySkill[0].label}（${data.bySkill[0].count} 次）` : '—'}</div></div>
+          <div className="rounded-xl border bg-white p-4"><div className="text-xs text-gray-500">參與同仁</div><div className="mt-1 text-xl font-bold text-gray-900">{data.byStaff.length}</div></div>
+          <div className="rounded-xl border bg-white p-4"><div className="text-xs text-gray-500">最活躍</div><div className="mt-1 text-sm font-medium text-gray-800 truncate">{data.byStaff[0] ? `${data.byStaff[0].name}（${data.byStaff[0].count}）` : '—'}</div></div>
         </div>
+
+        {data.byStaff.length > 0 && (
+          <div>
+            <div className="text-xs text-gray-500 mb-1.5">各同仁產能</div>
+            <div className="flex flex-wrap gap-2">
+              {data.byStaff.map(p => (
+                <span key={p.name} className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 text-indigo-700 px-3 py-1 text-xs font-medium">
+                  {p.name}<span className="text-indigo-400">×{p.count}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {data.bySkill.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -78,6 +93,7 @@ export default function LogbookPage() {
             : data.items.map(it => (
               <div key={it.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                 {it.status === 'success' ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> : <XCircle className="h-4 w-4 text-red-400 shrink-0" />}
+                <span className="text-indigo-600 shrink-0 w-20 truncate" title={it.staff}>{it.staff}</span>
                 <span className="font-medium text-gray-800 shrink-0">{it.skill_label}</span>
                 <span className="flex-1 truncate text-gray-500">{it.summary || '—'}</span>
                 {it.credits > 0 && <span className="text-xs text-gray-400 shrink-0">{fmt(it.credits)} 點</span>}
