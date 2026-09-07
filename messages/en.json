@@ -1470,7 +1470,8 @@
       "prospect": "Prospect Marketing",
       "plan": "Subscription",
       "experts": "Custom Experts",
-      "logbook": "Production Log"
+      "logbook": "Production Log",
+      "offline": "Field Marketing"
     },
     "studio": {
       "title": "AI Visual Studio",
