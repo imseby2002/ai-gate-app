@@ -16,7 +16,7 @@ const FEATURES = [
   { key: 'prospect', icon: Phone,      href: '/prospect-call',              color: 'from-teal-500 to-emerald-600' },
   { key: 'swot',     icon: BarChart3,  href: '/marketing-auto',             color: 'from-emerald-500 to-teal-600', secondary: true },
   { key: 'audience', icon: Target,     href: '/marketing-auto',             color: 'from-orange-500 to-amber-600', secondary: true },
-  { key: 'brand',    icon: Layers,     href: '/settings',                   color: 'from-slate-500 to-gray-600',   secondary: true },
+  { key: 'brand',    icon: Layers,     href: '/marketing/brand',            color: 'from-slate-500 to-gray-600',   secondary: true },
 ]
 
 export default async function MarketingPage() {

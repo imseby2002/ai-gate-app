@@ -1463,6 +1463,7 @@
     "enter": "Enter",
     "nav": {
       "auto": "Marketing Automation",
+      "pipeline": "Marketing Pipeline",
       "designer": "Product Designer",
       "studio": "AI Visual Studio",
       "geo": "GEO Content",
