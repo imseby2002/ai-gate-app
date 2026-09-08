@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { notifyHR } from '@/lib/hr/notify'
 
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['store', 'audit'])
+  const ctx = await getUnitContextAny(['store', 'audit', 'rd', 'finance'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }

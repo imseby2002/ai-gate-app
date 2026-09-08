@@ -4,7 +4,7 @@ import { readXlsx, type Cell } from '@/lib/inv/xlsxRead'
 import { xlsToRows } from '@/lib/hr/xls'
 
 async function getAdminUser() {
-  const ctx = await getUnitContextAny(['rd', 'store', 'audit'])
+  const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance'])
   if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }

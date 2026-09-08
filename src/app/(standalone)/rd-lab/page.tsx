@@ -192,10 +192,10 @@ export default function RdLabPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/rd-recipes">
+          <Link href="/rd">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" />
-              配方匯出/入
+              配方成本表
             </Button>
           </Link>
           <Link href="/rd-logs">

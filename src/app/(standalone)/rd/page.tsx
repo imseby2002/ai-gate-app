@@ -140,6 +140,15 @@ export default function RdPage() {
     loadData()
   }, [loadData])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab')
+      if (p === 'prices' || p === 'mapping' || p === 'variance' || p === 'recipes') {
+        setTab(p as RdTab)
+      }
+    }
+  }, [])
+
   // 匯入檔案 (.xlsx / .xls)
   const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -315,14 +324,24 @@ export default function RdPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">研發配方與成本中心 (R&D)</h1>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">三層定價體系</span>
+              <h1 className="text-2xl font-bold tracking-tight">配方成本表（研發配方與門市原料成本）</h1>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">門市出貨定價體系</span>
             </div>
-            <p className="text-sm text-muted-foreground">配方設計、門市原料成本（以賣給直營門市價計算）、工廠進貨成本與經銷批發價試算</p>
+            <p className="text-sm text-muted-foreground">配方設計、門市每杯成本（核心取自出納【賣給門市價格】）、工廠進價與經銷批發價試算</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/finance">
+            <Button variant="outline" size="sm" className="gap-1.5 text-emerald-700 dark:text-emerald-400">
+              <DollarSign className="h-4 w-4" />出納總務
+            </Button>
+          </Link>
+          <Link href="/rd-lab">
+            <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 dark:text-purple-400">
+              <FlaskConical className="h-4 w-4" />研發大腦 (Lab)
+            </Button>
+          </Link>
           <Link href="/rd-ai">
             <Button variant="outline" size="sm" className="gap-1.5">
               <FlaskConical className="h-4 w-4 text-indigo-600" />研發討論AI
@@ -390,12 +409,13 @@ export default function RdPage() {
       <div className="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-800/40 rounded-xl p-3.5 flex items-start gap-3">
         <Info className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
         <div className="text-xs text-purple-950 dark:text-purple-200 space-y-1 leading-relaxed">
-          <p className="font-semibold">三層價格與品項管理規則：</p>
+          <p className="font-semibold">配方成本與出納原料定價連動機制：</p>
           <ul className="list-disc list-inside space-y-0.5 text-purple-900/90 dark:text-purple-200/90">
-            <li><b>賣給直營門市價格（ĐGX CH）</b>：<b>配方表使用這個價格作為門市飲品成本！</b></li>
-            <li><b>工廠進貨價（ĐGN）</b>：工廠/總部的原物料採購進價。兩者相減即為工廠出貨給直營門市的毛利。</li>
+            <li><b>門市配方成本主要來源</b>：<b>主要來自【出納總務】設定之「賣給直營門市價格 (ĐGX CH)」</b>，每杯配方成本 ＝ 各原物料用量 × 出納門市出貨價。</li>
+            <li><b>工廠進貨價（ĐGN）</b>：工廠/總部的原物料採購成本。門市出貨價減去工廠進貨價即為工廠出貨給直營門市的毛利。</li>
             <li><b>賣給經銷商或非直營門市價格（ĐGX Đại lý）</b>：加盟店、經銷通路之出貨價格。</li>
-            <li>涵蓋四大品類：<b>原料、設備、道具、耗材</b>，皆由此統一維護。</li>
+            <li><b>出納人員可直接於本頁「原料價格」分頁或透過 Excel 匯入維護價表</b>，更新後所有研發配方之門市成本即時自動連動更新！</li>
+            <li>涵蓋四大品類：<b>原料、設備、道具、耗材</b>，出納與研發共享同一套物料標準價資料庫。</li>
           </ul>
         </div>
       </div>

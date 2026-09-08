@@ -464,6 +464,7 @@ ${offFacts || '（無實體活動紀錄）'}`
 
     // 將產出的 AI 報告寫入 mkt_logs 歸檔
     try {
+      const now = new Date().toISOString()
       await c.admin.from('mkt_logs').insert({
         owner_id: c.ownerId,
         user_id: c.userId,
