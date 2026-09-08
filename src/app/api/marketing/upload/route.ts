@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/marketing/upload
  * 上傳行銷素材至各大社群平台
  *
@@ -507,7 +507,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { platforms, imageUrls = [], videoUrl = '', copyText = '' } = await req.json()
+  const body = await req.json()
+  const platforms = body.platforms
+  const imageUrls: string[] = body.imageUrls ?? (Array.isArray(body.images) ? body.images.map((img: unknown) => typeof img === 'string' ? img : (img as { url?: string })?.url).filter(Boolean) : [])
+  const videoUrl: string = body.videoUrl ?? (Array.isArray(body.videos) ? (body.videos[0]?.url ?? (typeof body.videos[0] === 'string' ? body.videos[0] : '')) : (typeof body.video === 'string' ? body.video : '')) ?? ''
+  const copyText: string = (body.copyText ?? (Array.isArray(body.copies) ? body.copies.join('\n\n') : (typeof body.copies === 'string' ? body.copies : '')) ?? '').trim()
+
   if (!platforms?.length) return NextResponse.json({ error: 'platforms required' }, { status: 400 })
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
