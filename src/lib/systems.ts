@@ -17,7 +17,7 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
   cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
   marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
   leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
-  office:    { key: 'office',    label: '公司入口',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs', '/store-reports', '/store-inventory', '/shift', '/pos', '/affairs', '/audit', '/meeting', '/work', '/roundtable', '/mkt'] },
+  office:    { key: 'office',    label: '公司入口',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store-reports', '/store-inventory', '/shift', '/pos', '/affairs', '/audit', '/meeting', '/work', '/roundtable', '/mkt'] },
   resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume'] },
   agent:     { key: 'agent',     label: 'AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
 }
