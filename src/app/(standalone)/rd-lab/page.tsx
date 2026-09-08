@@ -195,7 +195,7 @@ export default function RdLabPage() {
           <Link href="/rd">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" />
-              配方成本表
+              配方
             </Button>
           </Link>
           <Link href="/rd-logs">

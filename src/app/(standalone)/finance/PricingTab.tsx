@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
-import Link from 'next/link'
 import {
   Package, Plus, Search, Upload, Download, Trash2, Edit3,
-  CheckCircle2, AlertCircle, Loader2, DollarSign, ArrowRight,
+  CheckCircle2, AlertCircle, Loader2, DollarSign,
   Info, X, Save, RefreshCw, Layers, Wrench, Coffee, ShoppingBag
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -215,7 +214,7 @@ export default function PricingTab() {
         <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
         <div className="text-xs space-y-1.5 leading-relaxed text-gray-800 dark:text-gray-200">
           <p className="font-bold text-sm text-emerald-900 dark:text-emerald-300">
-            出納物料三層定價管理 ＆ 研發配方成本連動規範：
+            物料三層定價管理規範（原料／設備／耗材／道具）：
           </p>
           <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
             <li>
@@ -225,7 +224,7 @@ export default function PricingTab() {
               <span className="font-bold text-purple-700 dark:text-purple-300">
                 賣給直營門市價格 (Đơn giá xuất CH)
               </span>
-              ：<b>研發部門【配方成本表】計算每杯飲品門市成本之直接數據源！</b>
+              ：<b>研發部門【配方】計算每杯飲品門市成本之直接數據源！</b>
               出納在此處更新門市售價，研發配方與門市點單成本即時自動同步重算。
             </li>
             <li>
@@ -332,13 +331,6 @@ export default function PricingTab() {
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
             匯入標準定價表 (.xlsx)
           </Button>
-
-          <Link href="/rd">
-            <Button size="sm" variant="outline" className="gap-1.5 text-xs h-8 text-purple-700 dark:text-purple-300">
-              <ArrowRight className="h-3.5 w-3.5" />
-              查看研發配方成本表
-            </Button>
-          </Link>
 
           <Button
             size="sm"
@@ -583,7 +575,7 @@ export default function PricingTab() {
                     <span className="absolute right-3 top-2 text-[11px] text-purple-500">₫</span>
                   </div>
                   <span className="text-[10px] text-purple-800 dark:text-purple-300 font-medium">
-                    研發部門【配方成本表】計算飲品每杯門市成本之直接單價，修改後將即時連動所有配方！
+                    研發部門【配方】計算飲品每杯門市成本之直接單價，修改後將即時連動所有配方！
                   </span>
                 </label>
 

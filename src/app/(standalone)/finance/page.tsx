@@ -990,7 +990,7 @@ export default function FinancePage() {
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
     { id: 'cashflow',  label: '出納帳務', icon: <Wallet className="h-4 w-4" /> },
     { id: 'accounts',  label: '帳戶管理', icon: <Landmark className="h-4 w-4" /> },
-    { id: 'pricing',   label: '物料門市定價 (原料/設備/耗材)', icon: <Package className="h-4 w-4 text-emerald-600" /> },
+    { id: 'pricing',   label: '物料定價', icon: <Package className="h-4 w-4 text-emerald-600" /> },
     { id: 'reports',   label: '財務報表', icon: <BarChart3 className="h-4 w-4" /> },
     { id: 'pnl',       label: '業績報表', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'import',    label: '資料匯入', icon: <Upload className="h-4 w-4" /> },
@@ -1017,14 +1017,9 @@ export default function FinancePage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">出納總務</h1>
-          <p className="text-sm text-gray-500">出納帳務、帳戶管理、物料三層門市定價（原料/設備/耗材）、財務報表</p>
+          <p className="text-sm text-gray-500">出納帳務、帳戶管理、物料定價（原料/設備/耗材）、財務報表</p>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <Link href="/rd">
-            <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 dark:text-purple-300">
-              <Package className="h-4 w-4" />配方成本表
-            </Button>
-          </Link>
           <Link href="/store-expenses">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Store className="h-4 w-4" />門市費用

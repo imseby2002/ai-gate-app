@@ -12,13 +12,12 @@ export const UNIT_AREAS: UnitArea[] = [
   ] },
   { key: 'finance', label: '出納・總務・會計', pages: [
     { href: '/finance', label: '出納總務' },
-    { href: '/finance?tab=pricing', label: '物料門市定價 (原料/設備/耗材)' },
-    { href: '/rd', label: '配方成本表' },
+    { href: '/finance?tab=pricing', label: '物料定價' },
     { href: '/store-expenses', label: '門市費用' },
     { href: '/vendors', label: '廠商資料' },
   ] },
   { key: 'rd', label: '研發', pages: [
-    { href: '/rd', label: '配方成本表' },
+    { href: '/rd', label: '配方' },
     { href: '/rd-lab', label: '研發大腦 (R&D Lab)' },
     { href: '/rd-ai', label: '研發討論AI' },
     { href: '/rd-logs', label: '研發日誌' },

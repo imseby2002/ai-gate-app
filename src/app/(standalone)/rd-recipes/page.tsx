@@ -6,11 +6,12 @@ import Link from 'next/link'
 import { FlaskConical, Loader2, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+
 export default function RdRecipesPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // 自動無縫導向至合一之「配方成本表」
+    // 自動無縫導向至合一之「配方」
     const timer = setTimeout(() => {
       router.replace('/rd')
     }, 100)
@@ -25,7 +26,7 @@ export default function RdRecipesPage() {
 
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          配方與成本已全面合一至【配方成本表】
+          已全面合一至【配方】
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
           研發配方設計、出納原料門市出貨價連動、每杯成本精算與進銷存已合而為一，系統正在為您跳轉...
@@ -36,7 +37,7 @@ export default function RdRecipesPage() {
         <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
         <Link href="/rd">
           <Button className="bg-purple-600 hover:bg-purple-700 text-white gap-2 text-sm">
-            立即前往配方成本表
+            立即前往配方
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>

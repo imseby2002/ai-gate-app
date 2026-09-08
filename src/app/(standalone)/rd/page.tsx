@@ -324,7 +324,7 @@ export default function RdPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">配方成本表（研發配方與門市原料成本）</h1>
+              <h1 className="text-2xl font-bold tracking-tight">配方</h1>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">門市出貨定價體系</span>
             </div>
             <p className="text-sm text-muted-foreground">配方設計、門市每杯成本（核心取自出納【賣給門市價格】）、工廠進價與經銷批發價試算</p>
