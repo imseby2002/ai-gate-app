@@ -42,6 +42,22 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </Link>
         )
       })}
+      <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide px-2">跨部門協作</span>
+        <Link
+          href="/mkt"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-pink-700 bg-pink-50 hover:bg-pink-100 transition-colors"
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          門市與產品資產庫 ↗
+        </Link>
+        <Link
+          href="/office"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+        >
+          公司入口 (OFFICE) ↗
+        </Link>
+      </div>
     </>
   )
 

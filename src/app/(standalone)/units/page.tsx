@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search, FileSpreadsheet } from 'lucide-react'
+import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search, FileSpreadsheet, Camera, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -79,6 +79,11 @@ export default function UnitsPage() {
           <p className="text-sm text-gray-500">全公司營運據點與部門架構（門市／辦公室／工廠／央廚／各部門基本資料與基本時薪）</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <Link href="/mkt">
+            <Button variant="outline" size="sm" className="gap-1.5 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800 bg-pink-50/50 dark:bg-pink-950/20">
+              <Camera className="h-4 w-4 text-pink-600" />門市圖文資產 ↗
+            </Button>
+          </Link>
           <Link href="/office"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />公司入口</Button></Link>
         </div>
       </div>
@@ -133,7 +138,20 @@ export default function UnitsPage() {
                     </div>
                     <div className="text-xs text-gray-400">{u.region ? `${u.region}・` : ''}{u.address || '（未填地址）'}</div>
                   </div>
-                  <span className="text-xs text-gray-400 shrink-0">時薪 {fmt(u.base_hourly_rate || defaultRate)}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-gray-400">時薪 {fmt(u.base_hourly_rate || defaultRate)}</span>
+                    {u.unit_type === 'store' && (
+                      <Link
+                        href="/mkt"
+                        onClick={e => e.stopPropagation()}
+                        className="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:text-pink-700 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/40 px-2 py-1 rounded-md flex items-center gap-1 border border-pink-200/60 dark:border-pink-800/40"
+                        title="前往行銷中心檢視/編輯此門市照片與行銷圖文"
+                      >
+                        <Camera className="h-3 w-3" />
+                        <span>行銷圖文</span>
+                      </Link>
+                    )}
+                  </div>
                 </Card>
               </button>
             ))}
@@ -197,7 +215,28 @@ function UnitDetail({ unit, defaultRate, onBack, onSaved }: { unit: Unit; defaul
           <label className="space-y-1"><span className="text-xs text-gray-500">水號</span><Input value={f.water_no} onChange={e => set({ water_no: e.target.value })} className="h-9" /></label>
           <label className="space-y-1"><span className="text-xs text-gray-500">地址</span><Input value={f.address} onChange={e => set({ address: e.target.value })} className="h-9" /></label>
         </div>
-        <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} />啟用</label>
+        <div className="flex items-center justify-between pt-1">
+          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} />啟用</label>
+        </div>
+
+        {/* 門市行銷圖文跨部門連動提示 */}
+        {f.unit_type === 'store' && (
+          <div className="p-3 bg-pink-50/70 dark:bg-pink-950/30 border border-pink-200/70 dark:border-pink-800/40 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+            <div className="flex items-center gap-2">
+              <Camera className="h-4 w-4 text-pink-600 shrink-0" />
+              <div>
+                <span className="font-semibold text-pink-950 dark:text-pink-200">門市行銷圖文與對外導航：</span>
+                <span className="text-muted-foreground ml-1">高畫質門面照片、環境氛圍圖、行銷特色簡介與 Google Maps 導航由行銷中心管理。</span>
+              </div>
+            </div>
+            <Link
+              href="/mkt"
+              className="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded bg-pink-600 text-white hover:bg-pink-700 transition-colors shrink-0 shadow-xs"
+            >
+              開啟門市行銷圖文 ↗
+            </Link>
+          </div>
+        )}
       </Card>
     </div>
   )

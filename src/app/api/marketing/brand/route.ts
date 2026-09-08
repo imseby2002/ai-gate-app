@@ -16,9 +16,10 @@ export async function PUT(req: NextRequest) {
   const colors = (b.colors && typeof b.colors === 'object') ? {
     primary: s(b.colors.primary), secondary: s(b.colors.secondary), accent: s(b.colors.accent),
   } : {}
+  const platforms = (b.platforms && typeof b.platforms === 'object') ? b.platforms : {}
   const { error } = await c.admin.from('mkt_brand').upsert({
     owner_id: c.ownerId,
-    name: s(b.name), slogan: s(b.slogan), tagline: s(b.tagline), colors,
+    name: s(b.name), slogan: s(b.slogan), tagline: s(b.tagline), colors, platforms,
     fonts: s(b.fonts), tone: s(b.tone), audience: s(b.audience),
     selling_points: s(b.selling_points), banned_words: s(b.banned_words),
     brand_story: s(b.brand_story), logo_url: s(b.logo_url),
