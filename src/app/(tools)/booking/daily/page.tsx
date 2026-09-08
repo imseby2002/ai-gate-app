@@ -121,6 +121,15 @@ interface CellProps {
 function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onStartEdit, onCommitEdit, onCancelEdit, onEditValChange, onTogglePaid, editingPlatform, onStartEditPlatform, onCommitPlatform, onCancelEditPlatform, onContinueStay }: CellProps) {
   const t = useTranslations('Booking')
 
+  // 房型名稱（固定顯示，不可手動修改以免對應錯誤）
+  if (col.key === 'room_name') {
+    return (
+      <div className="min-h-[32px] px-2 py-1 text-sm flex items-center font-medium text-gray-900 truncate" title={row.room_name}>
+        {row.room_name}
+      </div>
+    )
+  }
+
   // 尾款 = 訂房價格 - 訂金（即時計算，不可編輯）
   if (col.kind === 'balance') {
     const price = toNum(row.price_total)
@@ -289,12 +298,16 @@ export default function DailyPage() {
     if ((rows[0]?.gate_password ?? null) === newVal) return
     setRows(prev => prev.map(r => ({ ...r, gate_password: newVal })))
     try {
-      await fetch('/api/booking/daily', {
+      const res = await fetch('/api/booking/daily', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ forward: true, from_date: date, field: 'gate_password', value: newVal }),
       })
-    } catch { /* ignore */ }
+      const d = await res.json()
+      if (!res.ok && d?.error) alert(d.error)
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   function startEdit(id: string, field: EditableField, val: string | number | null) {
@@ -346,11 +359,13 @@ export default function DailyPage() {
       setRows(prev => prev.map(r => r.id === id ? { ...r, room_password: newVal as string | null } : r))
       setSaving(id)
       try {
-        await fetch('/api/booking/daily', {
+        const res = await fetch('/api/booking/daily', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ forward: true, from_date: date, field: 'room_password', value: newVal, room_name: original.room_name }),
         })
+        const d = await res.json()
+        if (!res.ok && d?.error) alert(d.error)
       } finally {
         setSaving(null)
       }
@@ -361,11 +376,19 @@ export default function DailyPage() {
     setRows(prev => prev.map(r => r.id === id ? { ...r, ...update } : r))
     setSaving(id)
     try {
-      await fetch('/api/booking/daily', {
+      const res = await fetch('/api/booking/daily', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...update }),
       })
+      const d = await res.json()
+      if (res.ok && d) {
+        setRows(prev => prev.map(r => r.id === id ? { ...r, ...d } : r))
+      } else if (d?.error) {
+        alert(d.error)
+      }
+    } catch (err) {
+      console.error(err)
     } finally {
       setSaving(null)
     }
@@ -379,11 +402,19 @@ export default function DailyPage() {
     setRows(prev => prev.map(r => r.id === id ? { ...r, platform: newVal } : r))
     setSaving(id)
     try {
-      await fetch('/api/booking/daily', {
+      const res = await fetch('/api/booking/daily', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, platform: newVal }),
       })
+      const d = await res.json()
+      if (res.ok && d) {
+        setRows(prev => prev.map(r => r.id === id ? { ...r, ...d } : r))
+      } else if (d?.error) {
+        alert(d.error)
+      }
+    } catch (err) {
+      console.error(err)
     } finally {
       setSaving(null)
     }
@@ -394,11 +425,19 @@ export default function DailyPage() {
     setRows(prev => prev.map(r => r.id === row.id ? { ...r, paid: newVal } : r))
     setSaving(row.id)
     try {
-      await fetch('/api/booking/daily', {
+      const res = await fetch('/api/booking/daily', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: row.id, paid: newVal }),
       })
+      const d = await res.json()
+      if (res.ok && d) {
+        setRows(prev => prev.map(r => r.id === row.id ? { ...r, ...d } : r))
+      } else if (d?.error) {
+        alert(d.error)
+      }
+    } catch (err) {
+      console.error(err)
     } finally {
       setSaving(null)
     }
@@ -416,11 +455,21 @@ export default function DailyPage() {
 
   async function deleteRow(id: string) {
     setRows(prev => prev.filter(r => r.id !== id))
-    await fetch('/api/booking/daily', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
+    try {
+      const res = await fetch('/api/booking/daily', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const d = await res.json()
+      if (!res.ok && d?.error) {
+        alert(d.error)
+        load()
+      }
+    } catch (err) {
+      console.error(err)
+      load()
+    }
   }
 
   const isToday = date === todayTW()
