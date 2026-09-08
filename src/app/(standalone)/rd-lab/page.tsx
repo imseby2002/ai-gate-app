@@ -6,7 +6,7 @@ import {
   FlaskConical, Layers, Scale, DollarSign, ShieldCheck, Sparkles,
   BookOpen, Plus, Trash2, Search, CheckCircle2, AlertTriangle,
   Loader2, Star, Compass, FileText,
-  Youtube, Globe, Check, Copy, Send, Coffee, Bot, TrendingUp, Info
+  Video, Globe, Check, Copy, Send, Coffee, Bot, TrendingUp, Info
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { calculateRecipe, type RecipeIngredientInput } from '@/lib/rd/formula-engine'
@@ -283,7 +283,7 @@ export default function RdLabPage() {
               : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
-          <Youtube className="h-4 w-4" />
+          <Video className="h-4 w-4" />
           外部研發知識庫 ({knowledge.length})
         </button>
 
@@ -888,7 +888,7 @@ export default function RdLabPage() {
             <div className="space-y-6">
               <form onSubmit={handleIngestKnowledge} className="p-5 bg-gradient-to-br from-purple-50/50 to-indigo-50/40 rounded-2xl border border-purple-200 space-y-3 shadow-sm">
                 <div className="flex items-center gap-2 font-bold text-sm text-purple-900">
-                  <Youtube className="h-4 w-4 text-red-600" />
+                  <Video className="h-4 w-4 text-red-600" />
                   外部研發知識學習器 (YouTube / 論文 / 專利 / 專家技術)
                 </div>
                 <p className="text-xs text-gray-500">

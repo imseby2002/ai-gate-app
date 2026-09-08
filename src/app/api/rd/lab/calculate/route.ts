@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { calculateRecipe } from '@/lib/rd/formula-engine'
 import { checkLegalCompliance } from '@/lib/rd/legal-engine'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()

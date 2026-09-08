@@ -463,18 +463,21 @@ ${offFacts || '（無實體活動紀錄）'}`
     const reportText = res.text.trim()
 
     // 將產出的 AI 報告寫入 mkt_logs 歸檔
-    const now = new Date().toISOString()
-    await c.admin.from('mkt_logs').insert({
-      owner_id: c.ownerId,
-      user_id: c.userId,
-      user_name: 'AI 行銷總監',
-      type: 'summary',
-      category: 'general',
-      title: `近 ${days} 天行銷營運與 AI 協作日誌報告`,
-      summary: reportText,
-      created_at: now,
-      updated_at: now,
-    }).catch(() => null)
+    try {
+      await c.admin.from('mkt_logs').insert({
+        owner_id: c.ownerId,
+        user_id: c.userId,
+        user_name: 'AI 行銷總監',
+        type: 'summary',
+        category: 'general',
+        title: `近 ${days} 天行銷營運與 AI 協作日誌報告`,
+        summary: reportText,
+        created_at: now,
+        updated_at: now,
+      })
+    } catch {
+      // ignore
+    }
 
     return NextResponse.json({ report: reportText, total: totalEvents })
   } catch (e) {

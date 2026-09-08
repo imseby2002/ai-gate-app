@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 
+export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 async function getAdminUser() {
