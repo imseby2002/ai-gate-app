@@ -64,7 +64,7 @@ export default function MktPage() {
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
-        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['analytics', '成效分析', <BarChart3 key="a" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
+        {([['brand', '品牌資料 (雙向同步)', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['analytics', '成效分析', <BarChart3 key="a" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
           <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
@@ -110,7 +110,7 @@ function BrandTab() {
     setSaving(true); setMsg('')
     const r = await fetch('/api/mkt/brand', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) })
     setSaving(false)
-    setMsg(r.ok ? '已儲存' : '儲存失敗')
+    setMsg(r.ok ? '✅ 已成功儲存！此處與行銷中心（marketing.im-tourist.com）資料已完全同步。' : '儲存失敗')
   }
 
   if (!b) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -118,7 +118,24 @@ function BrandTab() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">品牌守則會作為後續 AI 產出文案／圖／影片的依據，填得越完整，產出品質越一致。</p>
+      {/* 雙向同步提示列 */}
+      <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold text-indigo-950 dark:text-indigo-200">
+            品牌資料已與行銷中心（marketing.im-tourist.com/marketing/brand）實時雙向同步。
+          </span>
+          <span className="text-slate-500">任一邊修改儲存，兩邊皆會即時更新。</span>
+        </div>
+        <a
+          href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com/marketing/brand' : '/marketing/brand'}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
+        >
+          在行銷中心開啟此頁 ↗
+        </a>
+      </div>
 
       <div className="rounded-xl border bg-card p-5 space-y-4">
         <div className="grid sm:grid-cols-2 gap-4">
@@ -150,7 +167,7 @@ function BrandTab() {
         <Field label="禁用詞" hint="AI 產出時避免使用"><Input value={b.banned_words} onChange={e => setB({ ...b, banned_words: e.target.value })} placeholder="以逗號分隔" /></Field>
 
         <div className="flex items-center gap-3 pt-1">
-          <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存品牌檔</Button>
+          <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存品牌檔（雙向同步）</Button>
           {msg && <span className="text-sm text-emerald-600">{msg}</span>}
         </div>
       </div>

@@ -36,7 +36,7 @@ export default function MarketingBrandPage() {
     if (!b) return
     setSaving(true); setMsg('')
     const r = await fetch('/api/marketing/brand', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) })
-    setSaving(false); setMsg(r.ok ? '已儲存' : '儲存失敗')
+    setSaving(false); setMsg(r.ok ? '✅ 已成功儲存！兩處（行銷中心與 OFFICE 行銷部門）已即時同步更新。' : '儲存失敗')
   }
 
   if (forbidden) return <div className="flex h-full items-center justify-center p-8 text-sm text-gray-500">需開通行銷模組才能使用</div>
@@ -51,6 +51,17 @@ export default function MarketingBrandPage() {
           <h1 className="text-2xl font-bold text-gray-900">品牌資料</h1>
           <p className="text-sm text-gray-500">品牌守則作為 AI 產出文案／圖／影片的依據，填得越完整，產出越一致</p>
         </div>
+      </div>
+
+      {/* 雙向同步提示 */}
+      <div className="p-3 bg-indigo-50/70 border border-indigo-200/60 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold text-indigo-950">
+            全公司統一品牌中樞資料：與 OFFICE 辦公系統（office.im-tourist.com）實時雙向同步。
+          </span>
+        </div>
+        <span className="text-slate-500">任一邊設定即全站生效</span>
       </div>
 
       <div className="rounded-xl border bg-white p-5 space-y-4">

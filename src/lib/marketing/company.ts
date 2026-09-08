@@ -41,7 +41,7 @@ export async function marketingCompany(): Promise<MktCompany | null> {
       .select('member_id, role').eq('company_id', profile.company_id).eq('status', 'active')
     const rows = members ?? []
     const owner = rows.find(m => m.role === 'owner')?.member_id
-    if (!isSuperAdmin && owner) ownerId = owner
+    if (owner) ownerId = owner
     if (rows.length) memberIds = [...new Set(rows.map(m => m.member_id as string))]
   }
   return { admin, userId: user.id, ownerId, memberIds }
