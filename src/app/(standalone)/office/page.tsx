@@ -127,7 +127,7 @@ export default function OfficePage() {
                 </div>
                 <div className="px-2 pb-2">
                   {a.pages.map(p => {
-                    const isMktSub = typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') && (p.href === '/marketing' || p.href.startsWith('/marketing-') || p.href === '/prospect-call')
+                    const isMktSub = typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') && (p.href.startsWith('/marketing') || p.href === '/prospect-call')
                     const targetHref = isMktSub ? `https://marketing.im-tourist.com${p.href === '/marketing' ? '' : p.href}` : p.href
                     const isExternal = targetHref.startsWith('http')
                     return isExternal ? (

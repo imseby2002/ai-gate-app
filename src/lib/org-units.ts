@@ -33,6 +33,7 @@ export const UNIT_AREAS: UnitArea[] = [
   ] },
   { key: 'marketing', label: '行銷', pages: [
     { href: '/marketing', label: '行銷中心 (marketing.im-tourist.com)' },
+    { href: '/marketing/logbook', label: '行銷日誌' },
     { href: '/mkt', label: '門市實體行銷與外送平台' },
   ] },
   { key: 'repair', label: '維修', pages: [
