@@ -169,6 +169,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/admin') ||
       pathname.startsWith('/cli-proxy') ||
       pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/marketing') ||
+      pathname.startsWith('/mkt') ||
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
@@ -184,7 +186,7 @@ export async function middleware(request: NextRequest) {
     if (needsProfileCheck) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_type, enabled_modules')
+        .select('user_type, enabled_modules, units, company_id')
         .eq('id', user.id)
         .single()
 
@@ -204,29 +206,48 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // Module guard — 檢查 enabled_modules，admin 跳過
+      // Module guard — 檢查 enabled_modules 與單位權限 units，admin 與公司負責人/IT 跳過
       if (profile && !isAdmin) {
-        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
-        const ROUTE_MODULES: Record<string, string[]> = {
-          '/marketing-auto': ['marketing', 'cs'],
-          '/cs':             ['cs'],
-          '/prospect-call':  ['leads', 'marketing'],
-          '/resume':         ['resume'],
-          '/work':           ['work'],
-          '/pos':            ['work'],
-          '/hr':             ['hr'],
-          '/finance':        ['finance'],
-          '/agent':          ['agent'],
-          '/booking':        ['booking'],
+        let isCompanyAdmin = false
+        if (profile.company_id) {
+          const { data: m } = await supabase
+            .from('company_members')
+            .select('role')
+            .eq('company_id', profile.company_id)
+            .eq('member_id', user.id)
+            .eq('status', 'active')
+            .maybeSingle()
+          if (m?.role === 'owner' || m?.role === 'admin') {
+            isCompanyAdmin = true
+          }
         }
-        for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
-          if (pathname.startsWith(route)) {
-            const hasAccess = modules.some(m => enabled.includes(m))
-            if (!hasAccess) {
-              const url = request.nextUrl.clone()
-              url.pathname = '/apps'
-              url.search = '?blocked=' + modules[0]
-              return NextResponse.redirect(url)
+
+        if (!isCompanyAdmin) {
+          const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+          const units: string[] = profile.units ?? []
+          const ROUTE_MODULES: Record<string, string[]> = {
+            '/marketing':      ['marketing', 'mkt'],
+            '/mkt':            ['marketing', 'mkt'],
+            '/marketing-auto': ['marketing', 'cs', 'mkt'],
+            '/cs':             ['cs'],
+            '/prospect-call':  ['leads', 'marketing', 'mkt'],
+            '/resume':         ['resume'],
+            '/work':           ['work'],
+            '/pos':            ['work'],
+            '/hr':             ['hr'],
+            '/finance':        ['finance'],
+            '/agent':          ['agent'],
+            '/booking':        ['booking'],
+          }
+          for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
+            if (pathname.startsWith(route)) {
+              const hasAccess = modules.some(m => enabled.includes(m) || units.includes(m))
+              if (!hasAccess) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/apps'
+                url.search = '?blocked=' + modules[0]
+                return NextResponse.redirect(url)
+              }
             }
           }
         }

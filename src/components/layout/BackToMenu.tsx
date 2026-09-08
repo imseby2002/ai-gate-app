@@ -24,7 +24,7 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
       '/office', '/hr', '/personnel', '/finance', '/store-expenses',
       '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs',
       '/store-reports', '/store-inventory', '/shift', '/pos',
-      '/affairs', '/audit', '/meeting', '/work'
+      '/affairs', '/audit', '/meeting', '/work', '/mkt'
     ]
     if (OFFICE_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))) {
       setHref('/office')

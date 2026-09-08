@@ -11,12 +11,27 @@ export async function marketingCompany(): Promise<MktCompany | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type, is_active, enabled_modules, company_id').eq('id', user.id).single()
+  const { data: profile } = await admin.from('profiles').select('user_type, is_active, enabled_modules, units, company_id').eq('id', user.id).single()
   if (!profile || profile.is_active === false) return null
   const isSuperAdmin = profile.user_type === 'admin'
-  if (!isSuperAdmin) {
+  let isCompanyAdmin = false
+  if (profile.company_id) {
+    const { data: m } = await admin.from('company_members')
+      .select('role')
+      .eq('company_id', profile.company_id)
+      .eq('member_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (m?.role === 'owner' || m?.role === 'admin') {
+      isCompanyAdmin = true
+    }
+  }
+
+  if (!isSuperAdmin && !isCompanyAdmin) {
     const enabled: string[] = profile.enabled_modules ?? []
-    if (!enabled.includes('marketing')) return null
+    const units: string[] = profile.units ?? []
+    const hasMarketingAccess = enabled.includes('marketing') || units.includes('marketing') || units.includes('mkt')
+    if (!hasMarketingAccess) return null
   }
 
   let ownerId = user.id

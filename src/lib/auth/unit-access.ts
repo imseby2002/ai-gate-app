@@ -63,8 +63,11 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   return { ok: true, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin }
 }
 
-// 驗證單位存取。unitKey 例：'hr' / 'finance' / 'rd' / 'store' / 'affairs' / 'audit'
+// 驗證單位存取。unitKey 例：'hr' / 'finance' / 'rd' / 'store' / 'affairs' / 'audit' / 'marketing'
 export async function getUnitContext(unitKey: string): Promise<UnitContext> {
+  if (unitKey === 'marketing' || unitKey === 'mkt') {
+    return getUnitContextAny(['marketing', 'mkt'])
+  }
   return getUnitContextAny([unitKey])
 }
 

@@ -31,14 +31,18 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/audit-ai', label: '稽核討論AI' },
     { href: '/audit-logs', label: '稽核日誌' },
   ] },
+  { key: 'marketing', label: '行銷', pages: [
+    { href: '/marketing', label: '行銷中心 (marketing.im-tourist.com)' },
+    { href: '/marketing-auto', label: '行銷自動化' },
+    { href: '/marketing-pipeline', label: '行銷流水線' },
+    { href: '/prospect-call', label: '潛在客戶開發' },
+    { href: '/mkt', label: '品牌中樞與實體行銷' },
+  ] },
   { key: 'repair', label: '維修', pages: [
     { href: '/repair', label: '設備・報修' },
   ] },
   { key: 'gm', label: '總經理室', pages: [
     { href: '/gm', label: '經營儀表板' },
-  ] },
-  { key: 'mkt', label: '行銷', pages: [
-    { href: '/mkt', label: '品牌・行銷' },
   ] },
 ]
 
@@ -49,7 +53,12 @@ export const COMMON_PAGES: UnitPage[] = [
 
 export const UNIT_LABEL: Record<string, string> = Object.fromEntries(UNIT_AREAS.map(a => [a.key, a.label]))
 
-// 是否可存取某單位群（管理者全開）
+// 是否可存取某單位群（管理者全開；marketing 與 mkt 雙向相容）
 export function hasUnit(isAdmin: boolean, units: string[] | null | undefined, key: string): boolean {
-  return isAdmin || (units ?? []).includes(key)
+  if (isAdmin) return true
+  const list = units ?? []
+  if (key === 'marketing' || key === 'mkt') {
+    return list.includes('marketing') || list.includes('mkt')
+  }
+  return list.includes(key)
 }

@@ -31,10 +31,39 @@ export default function MktPage() {
           <h1 className="text-2xl font-bold">品牌・行銷</h1>
           <p className="text-sm text-muted-foreground">品牌中樞、內容行事曆</p>
         </div>
-        <div className="ml-auto"><Link href="/office"><Button variant="outline" size="sm">返回</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2">
+          <a
+            href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white hover:bg-pink-700 transition-colors shadow-sm"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            開啟行銷中心 (marketing.im-tourist.com) <ExternalLink className="h-3 w-3" />
+          </a>
+          <Link href="/office"><Button variant="outline" size="sm">返回公司入口</Button></Link>
+        </div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
+      {/* 提示連結卡片 */}
+      <div className="p-3.5 bg-gradient-to-r from-pink-50/80 via-purple-50/60 to-blue-50/60 dark:from-pink-950/30 dark:via-purple-950/20 dark:to-blue-950/20 border border-pink-200/70 dark:border-pink-800/40 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-pink-600 shrink-0" />
+          <span className="text-slate-700 dark:text-slate-200">
+            行銷部門專用子域名 <code className="font-mono bg-white dark:bg-black/30 px-1.5 py-0.5 rounded text-pink-600 font-bold">marketing.im-tourist.com</code>：包含行銷自動化、AI 視覺工坊、流水線與潛在客戶外呼開發。
+          </span>
+        </div>
+        <a
+          href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
+          target="_blank"
+          rel="noreferrer"
+          className="font-bold text-pink-700 dark:text-pink-300 hover:underline inline-flex items-center gap-1"
+        >
+          前往行銷中心 ↗
+        </a>
+      </div>
+
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
         {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['analytics', '成效分析', <BarChart3 key="a" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
           <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}

@@ -3,8 +3,8 @@
 import { useState, useEffect, type ComponentType } from 'react'
 import Link from 'next/link'
 import {
-  Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight,
-  Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid,
+  Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight, ExternalLink,
+  Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -23,14 +23,16 @@ interface UserRow { id: string; full_name: string | null; email: string | null; 
 
 // 各單位的圖示與主題色（class 為完整字串，讓 Tailwind 能靜態掃描）
 const UNIT_STYLE: Record<string, { icon: ComponentType<{ className?: string }>; chip: string; ring: string }> = {
-  hr:      { icon: Users,        chip: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',       ring: 'hover:border-blue-400/60' },
-  finance: { icon: Wallet,       chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', ring: 'hover:border-emerald-400/60' },
-  rd:      { icon: FlaskConical, chip: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',   ring: 'hover:border-violet-400/60' },
-  store:   { icon: Store,        chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',     ring: 'hover:border-amber-400/60' },
-  affairs: { icon: Briefcase,    chip: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',        ring: 'hover:border-cyan-400/60' },
-  audit:   { icon: ShieldCheck,  chip: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',        ring: 'hover:border-rose-400/60' },
-  repair:  { icon: Wrench,       chip: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',  ring: 'hover:border-orange-400/60' },
-  gm:      { icon: Crown,        chip: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',  ring: 'hover:border-indigo-400/60' },
+  hr:        { icon: Users,        chip: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',          ring: 'hover:border-blue-400/60' },
+  finance:   { icon: Wallet,       chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', ring: 'hover:border-emerald-400/60' },
+  rd:        { icon: FlaskConical, chip: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',      ring: 'hover:border-violet-400/60' },
+  store:     { icon: Store,        chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',        ring: 'hover:border-amber-400/60' },
+  affairs:   { icon: Briefcase,    chip: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',           ring: 'hover:border-cyan-400/60' },
+  audit:     { icon: ShieldCheck,  chip: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',           ring: 'hover:border-rose-400/60' },
+  repair:    { icon: Wrench,       chip: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',     ring: 'hover:border-orange-400/60' },
+  gm:        { icon: Crown,        chip: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',     ring: 'hover:border-indigo-400/60' },
+  marketing: { icon: Megaphone,    chip: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',           ring: 'hover:border-pink-400/60' },
+  mkt:       { icon: Megaphone,    chip: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',           ring: 'hover:border-pink-400/60' },
 }
 const fallbackStyle = { icon: LayoutGrid, chip: 'bg-primary/10 text-primary', ring: 'hover:border-primary/50' }
 
@@ -101,23 +103,47 @@ export default function OfficePage() {
           {visibleAreas.map(a => {
             const st = UNIT_STYLE[a.key] ?? fallbackStyle
             const Icon = st.icon
+            const isMarketing = a.key === 'marketing' || a.key === 'mkt'
             return (
               <Card key={a.key} className={`p-0 overflow-hidden transition-colors border ${st.ring}`}>
-                <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${st.chip}`}>
+                <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${st.chip}`}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="font-semibold">{a.label}</div>
-                  <span className="ml-auto text-xs text-muted-foreground">{a.pages.length}</span>
+                  {isMarketing ? (
+                    <a
+                      href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/50 text-pink-700 dark:text-pink-300 hover:bg-pink-200 transition-colors inline-flex items-center gap-1 shrink-0"
+                      title="開啟 marketing.im-tourist.com"
+                    >
+                      marketing.im-tourist.com <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  ) : (
+                    <span className="ml-auto text-xs text-muted-foreground">{a.pages.length}</span>
+                  )}
                 </div>
                 <div className="px-2 pb-2">
-                  {a.pages.map(p => (
-                    <Link key={p.href} href={p.href}
-                      className="group flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted transition-colors">
-                      <span className="flex-1 truncate">{p.label}</span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-                    </Link>
-                  ))}
+                  {a.pages.map(p => {
+                    const isMktSub = typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') && (p.href === '/marketing' || p.href.startsWith('/marketing-') || p.href === '/prospect-call')
+                    const targetHref = isMktSub ? `https://marketing.im-tourist.com${p.href === '/marketing' ? '' : p.href}` : p.href
+                    const isExternal = targetHref.startsWith('http')
+                    return isExternal ? (
+                      <a key={p.href} href={targetHref} target="_blank" rel="noreferrer"
+                        className="group flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted transition-colors">
+                        <span className="flex-1 truncate">{p.label}</span>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+                      </a>
+                    ) : (
+                      <Link key={p.href} href={p.href}
+                        className="group flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted transition-colors">
+                        <span className="flex-1 truncate">{p.label}</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+                      </Link>
+                    )
+                  })}
                 </div>
               </Card>
             )
@@ -150,7 +176,14 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
 
   const toggle = async (u: UserRow, key: string) => {
     const cur = u.units ?? []
-    const next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
+    const isMkt = key === 'marketing' || key === 'mkt'
+    let next: string[]
+    if (isMkt) {
+      const has = cur.includes('marketing') || cur.includes('mkt')
+      next = has ? cur.filter(x => x !== 'marketing' && x !== 'mkt') : [...cur, 'marketing', 'mkt']
+    } else {
+      next = cur.includes(key) ? cur.filter(x => x !== key) : [...cur, key]
+    }
     setUsers(prev => prev.map(x => x.id === u.id ? { ...x, units: next } : x))
     setSaving(u.id)
     await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: u.id, units: next }) })
@@ -196,15 +229,21 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
                     </div>
                     {u.email && <div className="text-[11px] text-muted-foreground">{u.email}</div>}
                   </td>
-                  {UNIT_AREAS.map(a => (
-                    <td key={a.key} className="px-2 text-center">
-                      <input type="checkbox"
-                        className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
-                        checked={u.user_type === 'admin' || (u.units ?? []).includes(a.key)}
-                        disabled={u.user_type === 'admin' && !isAdmin}
-                        onChange={() => toggle(u, a.key)} title={UNIT_LABEL[a.key]} />
-                    </td>
-                  ))}
+                  {UNIT_AREAS.map(a => {
+                    const isMkt = a.key === 'marketing' || a.key === 'mkt'
+                    const hasAccess = isMkt
+                      ? ((u.units ?? []).includes('marketing') || (u.units ?? []).includes('mkt'))
+                      : (u.units ?? []).includes(a.key)
+                    return (
+                      <td key={a.key} className="px-2 text-center">
+                        <input type="checkbox"
+                          className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
+                          checked={u.user_type === 'admin' || hasAccess}
+                          disabled={u.user_type === 'admin' && !isAdmin}
+                          onChange={() => toggle(u, a.key)} title={UNIT_LABEL[a.key]} />
+                      </td>
+                    )
+                  })}
                 </tr>))}</tbody>
             </table>
           </div>}

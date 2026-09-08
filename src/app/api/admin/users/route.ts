@@ -102,6 +102,18 @@ export async function PATCH(req: NextRequest) {
     Object.entries(updates).filter(([k]) => allowedFields.includes(k))
   )
 
+  // 當指派行銷單位 (marketing / mkt) 時，同步自動開啟 enabled_modules marketing
+  if (Array.isArray(updates.units)) {
+    const hasMarketing = updates.units.includes('marketing') || updates.units.includes('mkt')
+    if (hasMarketing) {
+      const { data: cur } = await supabase.from('profiles').select('enabled_modules').eq('id', userId).single()
+      const curMods: string[] = cur?.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+      if (!curMods.includes('marketing')) {
+        safeUpdates.enabled_modules = [...curMods, 'marketing']
+      }
+    }
+  }
+
   const { error } = await supabase
     .from('profiles')
     .update(safeUpdates)
