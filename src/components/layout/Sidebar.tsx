@@ -83,12 +83,12 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
     return () => window.removeEventListener('sidebar:collapse', handleCollapseEvent)
   }, [])
 
-  // 連結可見性：管理員看全部；非管理員若帶系統範圍（scope）只看該系統，否則依 enabled_modules
+  // 連結可見性：總管理員專屬工具 (adminOnly) 僅總管理員可見；常規模組依 enabled_modules 判斷
   const isVisible = (item: NavItem) => {
     if (item.alwaysShow) return true
     if (item.adminOnly) return isAdmin
-    if (isAdmin) return true
-    // module 為 null 代表不綁定任何系統的共用連結（選單、意見回饋），恆顯示
+    
+    // module 為 null 代表不綁定任何系統的共用連結（例如 dashboard, feedback），恆顯示
     if (scope) return item.module === null || item.module === scope
     return !item.module || mods.includes(item.module)
   }

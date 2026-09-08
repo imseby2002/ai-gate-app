@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -48,6 +48,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: { full_name: fullName, user_type: userType },
+        emailRedirectTo: `${window.location.origin}/callback`
       },
     })
 
@@ -55,7 +56,7 @@ export default function RegisterPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/apps')
+      router.push('/')
       router.refresh()
     }
   }

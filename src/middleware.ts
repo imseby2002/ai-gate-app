@@ -190,11 +190,12 @@ export async function middleware(request: NextRequest) {
 
       const isAdmin = profile?.user_type === 'admin'
 
-      // Admin/Owner guard — /admin、/cli-proxy、/dashboard 僅限總管理員
+      // Admin/Owner guard — /admin、/cli-proxy、/programing (FreeLLM)、/dashboard 僅限總管理員
       // 非管理者一律導向 /apps（功能選單），用 nextUrl 保留原始 host（含子域名）
       if (!isAdmin && (
         pathname.startsWith('/admin') ||
         pathname.startsWith('/cli-proxy') ||
+        pathname.startsWith('/programing') ||
         pathname.startsWith('/dashboard')
       )) {
         const url = request.nextUrl.clone()
