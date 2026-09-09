@@ -3,7 +3,7 @@
 import { useState, useEffect, type ComponentType } from 'react'
 import Link from 'next/link'
 import {
-  Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight, ExternalLink,
+  Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight, ArrowRight, ExternalLink,
   Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -105,47 +105,52 @@ export default function OfficePage() {
             const Icon = st.icon
             const isMarketing = a.key === 'marketing' || a.key === 'mkt'
             return (
-              <Card key={a.key} className={`p-0 overflow-hidden transition-colors border ${st.ring}`}>
-                <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${st.chip}`}>
-                    <Icon className="h-5 w-5" />
+              <Link
+                key={a.key}
+                href={a.homeHref}
+                className="group block focus:outline-none"
+              >
+                <Card className={`p-5 h-full flex flex-col justify-between transition-all duration-200 border hover:shadow-md hover:-translate-y-0.5 ${st.ring}`}>
+                  <div>
+                    {/* 頂部：圖示、部門名稱、功能數 */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover:scale-105 ${st.chip}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                            {a.label}
+                          </h3>
+                          <span className="text-[11px] text-muted-foreground font-medium">
+                            {a.pages.length} 項核心功能
+                          </span>
+                        </div>
+                      </div>
+
+                      {isMarketing && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 shrink-0">
+                          marketing
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 部門核心職責與範疇簡述 */}
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">
+                      {a.description}
+                    </p>
                   </div>
-                  <div className="font-semibold">{a.label}</div>
-                  {isMarketing ? (
-                    <a
-                      href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/50 text-pink-700 dark:text-pink-300 hover:bg-pink-200 transition-colors inline-flex items-center gap-1 shrink-0"
-                      title="開啟 marketing.im-tourist.com"
-                    >
-                      marketing.im-tourist.com <ExternalLink className="h-2.5 w-2.5" />
-                    </a>
-                  ) : (
-                    <span className="ml-auto text-xs text-muted-foreground">{a.pages.length}</span>
-                  )}
-                </div>
-                <div className="px-2 pb-2">
-                  {a.pages.map(p => {
-                    const isMktSub = typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') && (p.href.startsWith('/marketing') || p.href === '/prospect-call')
-                    const targetHref = isMktSub ? `https://marketing.im-tourist.com${p.href === '/marketing' ? '' : p.href}` : p.href
-                    const isExternal = targetHref.startsWith('http')
-                    return isExternal ? (
-                      <a key={p.href} href={targetHref} target="_blank" rel="noreferrer"
-                        className="group flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted transition-colors">
-                        <span className="flex-1 truncate">{p.label}</span>
-                        <ArrowUpRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-                      </a>
-                    ) : (
-                      <Link key={p.href} href={p.href}
-                        className="group flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted transition-colors">
-                        <span className="flex-1 truncate">{p.label}</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-                      </Link>
-                    )
-                  })}
-                </div>
-              </Card>
+
+                  {/* 底部按鈕：進入部門首頁 */}
+                  <div className="pt-3 border-t flex items-center justify-between text-xs font-semibold text-primary mt-2">
+                    <span className="group-hover:underline">進入{a.label}首頁</span>
+                    <div className="flex items-center gap-1 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
+                      <span className="text-[11px] font-normal">前往</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </div>
+                  </div>
+                </Card>
+              </Link>
             )
           })}
         </div>

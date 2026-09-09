@@ -22,9 +22,10 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     //    點「返回主選單」一律回到 /office，絕不跳到 /work！
     const OFFICE_PREFIXES = [
       '/office', '/hr', '/personnel', '/finance', '/store-expenses',
-      '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs',
-      '/store-reports', '/store-inventory', '/shift', '/pos',
-      '/affairs', '/audit', '/meeting', '/work', '/mkt'
+      '/vendors', '/units', '/rd', '/rd-lab', '/rd-recipes', '/rd-ai', '/rd-logs',
+      '/store', '/store-reports', '/store-inventory', '/store-bills', '/repair',
+      '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai',
+      '/audit-logs', '/meeting', '/work', '/mkt', '/gm'
     ]
     if (OFFICE_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))) {
       setHref('/office')
