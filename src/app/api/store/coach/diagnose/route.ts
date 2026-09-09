@@ -231,6 +231,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Query recent learned materials
+    let learnedMaterialsContext = ''
+    if (supabase) {
+      try {
+        const { data: mats } = await supabase
+          .from('store_learning_materials')
+          .select('title, dimension, key_takeaways, actionable_rules')
+          .eq('status', 'active')
+          .limit(6)
+        if (mats && mats.length > 0) {
+          learnedMaterialsContext = '\n【門市教練已學習之內部最新實務與指導手冊】：\n' +
+            mats.map((m: any) => `• [${m.dimension}] ${m.title}：\n  重點：${(m.key_takeaways || []).join('；')}\n  現場規則：${(m.actionable_rules || []).join('；')}`).join('\n')
+        }
+      } catch (matErr) {
+        console.warn('Learned materials context query fallback:', matErr)
+      }
+    }
+
     // Check LLM availability
     const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
     const hasGoogle = !!(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
@@ -251,6 +269,7 @@ export async function POST(req: NextRequest) {
 - 詳細描述：${problem_description}
 - 問題分類：${category}
 ${rdRecipe ? `- 研發標準參考：${JSON.stringify(rdRecipe)}` : ''}
+${learnedMaterialsContext}
 
 【10層診斷矩陣定義】：
 1. 產品配方 (Product & Recipe)：糖度 Brix、比例、茶湯鮮度

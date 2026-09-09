@@ -37,13 +37,18 @@ import {
   ArrowRight,
   ExternalLink,
   Flame,
-  Volume2
+  Volume2,
+  GraduationCap,
+  BookOpen,
+  FileText,
+  Plus,
+  Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { STORE_COACH_KNOWLEDGE } from '@/lib/store-coach/knowledge-base'
-import type { DiagnosisOutput, VisionAnalysisResult } from '@/lib/types/store-coach'
+import type { DiagnosisOutput, VisionAnalysisResult, StoreLearningMaterial } from '@/lib/types/store-coach'
 
-type TabType = 'diagnose' | 'workstations' | 'hygiene' | 'coaching' | 'vision' | 'marketing' | 'principles'
+type TabType = 'diagnose' | 'workstations' | 'hygiene' | 'coaching' | 'vision' | 'marketing' | 'principles' | 'learning'
 
 export default function StoreCoachPage() {
   const [activeTab, setActiveTab] = useState<TabType>('diagnose')
@@ -74,6 +79,37 @@ export default function StoreCoachPage() {
   const [visionResult, setVisionResult] = useState<VisionAnalysisResult | null>(null)
   const [customImageBase64, setCustomImageBase64] = useState<string | null>(null)
 
+  // Learning Materials State
+  const [learningMaterials, setLearningMaterials] = useState<StoreLearningMaterial[]>([])
+  const [learnTitle, setLearnTitle] = useState('')
+  const [learnType, setLearnType] = useState('sop_manual')
+  const [learnUrl, setLearnUrl] = useState('')
+  const [learnContent, setLearnContent] = useState('')
+  const [learnDimension, setLearnDimension] = useState('sop')
+  const [learnStoreCode, setLearnStoreCode] = useState('ALL')
+  const [isLearning, setIsLearning] = useState(false)
+  const [learnNotice, setLearnNotice] = useState('')
+  const [lastLearnedMaterial, setLastLearnedMaterial] = useState<StoreLearningMaterial | null>(null)
+  const [learnSearch, setLearnSearch] = useState('')
+  const [learnDimFilter, setLearnDimFilter] = useState('all')
+
+  // Coach Q&A based on learned data
+  const [coachQuery, setCoachQuery] = useState('')
+  const [coachAnswer, setCoachAnswer] = useState('')
+  const [isAskingCoach, setIsAskingCoach] = useState(false)
+
+  const fetchLearningMaterials = async () => {
+    try {
+      const res = await fetch('/api/store/coach/learn')
+      if (res.ok) {
+        const json = await res.json()
+        setLearningMaterials(json.materials || [])
+      }
+    } catch (err) {
+      console.warn('Failed to fetch learning materials:', err)
+    }
+  }
+
   // Copy helper
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
@@ -81,7 +117,7 @@ export default function StoreCoachPage() {
     setTimeout(() => setCopiedKey(null), 2000)
   }
 
-  // Load store coach base data
+  // Load store coach base data and learning materials
   useEffect(() => {
     async function fetchStoreCoachData() {
       try {
@@ -95,7 +131,76 @@ export default function StoreCoachPage() {
       }
     }
     fetchStoreCoachData()
+    fetchLearningMaterials()
   }, [])
+
+  // Handle Learning Ingestion
+  const handleIngestMaterial = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!learnTitle.trim() && !learnContent.trim()) {
+      alert('請輸入標題或內容')
+      return
+    }
+    setIsLearning(true)
+    setLearnNotice('')
+    try {
+      const res = await fetch('/api/store/coach/learn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: learnTitle,
+          source_type: learnType,
+          source_url: learnUrl,
+          raw_content: learnContent,
+          dimension: learnDimension,
+          store_code: learnStoreCode,
+        }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        setLastLearnedMaterial(json.material)
+        setLearnNotice('✅ 資料已成功萃取並融入門市營運教練 AI 大腦！')
+        setLearnTitle('')
+        setLearnUrl('')
+        setLearnContent('')
+        fetchLearningMaterials()
+      } else {
+        alert('資料餵入失敗，請稍後再試')
+      }
+    } catch (err) {
+      console.error('Learn ingestion error:', err)
+      alert('資料餵入發生錯誤')
+    } finally {
+      setIsLearning(false)
+    }
+  }
+
+  // Handle Ask Coach based on Learned Materials
+  const handleAskCoach = async () => {
+    if (!coachQuery.trim()) return
+    setIsAskingCoach(true)
+    setCoachAnswer('')
+    try {
+      const res = await fetch('/api/store/coach/learn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query_prompt: coachQuery,
+        }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        setCoachAnswer(json.answer)
+      } else {
+        alert('教練問答請求失敗')
+      }
+    } catch (err) {
+      console.error('Ask coach error:', err)
+      alert('教練問答發生錯誤')
+    } finally {
+      setIsAskingCoach(false)
+    }
+  }
 
   // Execute 10-Layer Diagnosis
   const handleRunDiagnosis = async () => {
@@ -377,6 +482,24 @@ export default function StoreCoachPage() {
           >
             <Award className="h-4 w-4 shrink-0" />
             <span>🏛️ 企業哲學與雙AI架構</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('learning')}
+            className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium cursor-pointer ${
+              activeTab === 'learning'
+                ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-600 hover:bg-white/90 border border-slate-200 dark:border-slate-700'
+            }`}
+          >
+            <GraduationCap className="h-4 w-4 shrink-0" />
+            <span>📚 資料餵入與主動學習</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+              activeTab === 'learning' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+            }`}>
+              {learningMaterials.length} 篇
+            </span>
           </button>
         </div>
 
@@ -1419,6 +1542,459 @@ export default function StoreCoachPage() {
                   研發 AI 與門市教練 AI 共享同一套 Feeling Tea 原料庫、配方 Brix 度數與食安標準。
                   當門市現場發生甜度偏高時，門市教練會自動向研發大腦索取標準糖度；當研發推出新飲品時，門市教練自動在工作站配置中預測瓶頸並更新 90 秒快閃清潔標準。
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 8: 📚 資料餵入與主動學習 (Data Learning & Knowledge Ingestion) */}
+        {activeTab === 'learning' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* 知識餵入輸入面板 */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-emerald-600" />
+                    門市營運知識餵入與自主學習中心 (Continuous Learning Engine)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    店長、督導、管理層可隨時餵入總部 SOP、巡檢改善單、客訴實務、同業標竿影片或主管指導筆記。教練 AI 自動萃取結構化規則，即刻融入 10 層診斷與現場話術。
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 大快速範本一鍵帶入 */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mb-4">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
+                  ⚡ 快速載入實務範本（點擊即帶入內容）：
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLearnTitle('【總部SOP】打烊保溫茶桶深度除垢與密封環消毒指引')
+                      setLearnType('sop_manual')
+                      setLearnDimension('hygiene')
+                      setLearnUrl('https://internal.feelingtea.com/sop/tea-urn-sanitation')
+                      setLearnContent(`保溫茶桶出水龍頭在長期使用後，喉管內部容易附著單寧酸茶垢與微細水垢，若未每日拆卸浸泡，會導致出茶帶有陳年茶酸味。\n標準打烊流程：\n1. 每日打烊前以 70°C 溫水沖泡食用級檸檬酸粉 (比例 1:50)，注入茶桶浸泡 20 分鐘。\n2. 拆卸出水龍頭矽膠密封環，置於 75% 食品級酒精浸泡碗中，嚴禁使用粗糙菜瓜布刷洗以防刮傷漏水。\n3. 隔日開早以 85°C 煮沸純水徹底循環沖洗兩次後，方可注入新鮮基底茶。`)
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    🧼 範本1：茶桶深度除垢 SOP
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLearnTitle('【督導現場實證】尖峰外送雙軌叫號防催單與防漏做策略')
+                      setLearnType('audit_report')
+                      setLearnDimension('workflow')
+                      setLearnUrl('https://internal.feelingtea.com/audit/rush-delivery-queue')
+                      setLearnContent(`台南旗艦店在外送平台促銷期間，外送員常聚集於取餐台前催單，造成現場散客感受壓迫，且調茶師常因外送多杯重疊而跳單漏料。\n改善對策實證：\n1. 設立獨立「外送待取區」於取餐櫃檯右側 1.5 公尺處，劃定藍色等待標線，與現場散客取餐動線物理隔離。\n2. 實施「雙標籤貼單制」：一張貼杯身、一張貼外帶袋口，調茶師做完由機動手核對雙標籤無誤後裝袋打結，杜絕漏放吸管與誤拿。\n3. 平台接單設定前置製作緩衝時間由 8 分鐘彈性調整為 12 分鐘。`)
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    ⏳ 範本2：外送尖峰雙軌防催單
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLearnTitle('【客訴應對案例】冰塊融化導致飲品口感變淡的換新與試飲挽回法')
+                      setLearnType('complaint_case')
+                      setLearnDimension('coaching')
+                      setLearnUrl('')
+                      setLearnContent(`顧客外帶一杯微冰四季春，在店內座位區待了 30 分鐘後向櫃台抱怨「茶喝起來很淡，像白開水一樣」。\n現場店長標準處置流程：\n1. 第一時間微笑接過飲料，同理顧客感受：「不好意思，四季春放久冰塊融化確實會把茶香沖淡！」\n2. 絕不爭辯「那是因為您放太久」，立即啟動 30 秒重調政策：「我立刻幫您用剛煮好的現泡茶湯，重做一杯微冰黃金比例！」\n3. 遞送新茶時雙手奉上，並贈送一張新品試飲卡：「這是我們今日現煮的高山四季春，趁冰度剛好時品嚐香氣最鮮美！」`)
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    🤝 範本3：冰融茶淡換新挽回法
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLearnTitle('【設備校準查核】蒸汽奶棒噴嘴與紅外線溫度槍每週校正指南')
+                      setLearnType('supervisor_guide')
+                      setLearnDimension('workstation')
+                      setLearnUrl('')
+                      setLearnContent(`熱飲奶泡綿密度與熱飲溫度是否精準 (標準 65°C)，直接影響鮮奶甜感與香氣。\n每週校準標準：\n1. 蒸奶棒使用專用通針清理四個氣孔，以牛奶除垢液浸泡 15 分鐘後排空蒸氣 3 次。\n2. 紅外線溫度槍與水銀標準溫度計同步測量 65°C 熱水，誤差超過 ±1.5°C 需更換電池或校正發射率。\n3. 測試打發 200ml 全脂鮮奶，細緻微氣泡綿密層厚度需達 1.5cm。`)
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-purple-50 hover:text-purple-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
+                  >
+                    🌡️ 範本4：蒸奶棒與溫度槍校準
+                  </button>
+                </div>
+              </div>
+
+              {/* 餵入表單 */}
+              <form onSubmit={handleIngestMaterial} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      資料標題 *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={learnTitle}
+                      onChange={e => setLearnTitle(e.target.value)}
+                      placeholder="例如：【打烊SOP】茶桶深度除垢標準"
+                      className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      資料來源類型
+                    </label>
+                    <select
+                      value={learnType}
+                      onChange={e => setLearnType(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="sop_manual">總部標準作業手冊 (SOP Manual)</option>
+                      <option value="audit_report">區督導巡檢改善報告 (Audit Report)</option>
+                      <option value="complaint_case">真實客訴處理案例 (Complaint Case)</option>
+                      <option value="supervisor_guide">門市指導員帶教手冊 (Supervisor Guide)</option>
+                      <option value="external_benchmark">同業標竿研究/文章 (Benchmark Article)</option>
+                      <option value="video_url">YouTube/教學影片 (Video Ingest)</option>
+                      <option value="owner_memo">經營者/總經理叮嚀 (Owner Memo)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      主要營運維度
+                    </label>
+                    <select
+                      value={learnDimension}
+                      onChange={e => setLearnDimension(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="sop">SOP 規則手冊 (SOP Rules)</option>
+                      <option value="workflow">流程節奏與交接 (Workflow)</option>
+                      <option value="workstation">工作站與設備維護 (Workstation)</option>
+                      <option value="movement">動線規劃與人體工學 (Movement)</option>
+                      <option value="hygiene">清潔衛生與食安 (Hygiene)</option>
+                      <option value="coaching">服務行為與教練話術 (Coaching)</option>
+                      <option value="problem_memory">智慧記憶與客訴對策 (Problem Memory)</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      參考網址 / 雲端檔案連結 (選填)
+                    </label>
+                    <input
+                      type="url"
+                      value={learnUrl}
+                      onChange={e => setLearnUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      適用門市
+                    </label>
+                    <select
+                      value={learnStoreCode}
+                      onChange={e => setLearnStoreCode(e.target.value)}
+                      className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="ALL">全部門市通用 (Global)</option>
+                      <option value="TNN-01">TNN-01 (台南旗艦店專用)</option>
+                      <option value="TPE-02">TPE-02 (台北信義門市專用)</option>
+                      <option value="KHH-03">KHH-03 (高雄巨蛋門市專用)</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      原始教材 / 條款規範 / 案例文字內容 *
+                    </label>
+                    <textarea
+                      rows={5}
+                      required
+                      value={learnContent}
+                      onChange={e => setLearnContent(e.target.value)}
+                      placeholder="在此貼上 SOP 文字、督導巡檢記錄、客訴對話、或是培訓教材內容..."
+                      className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2.5 text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
+                  <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-emerald-600" />
+                    <span>AI 會自動辨識實證等級 (A/B/C/D) 並萃取出「核心要點」與「現場可執行規則」</span>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isLearning}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-5 py-2 rounded-xl gap-2 shadow-md cursor-pointer"
+                  >
+                    {isLearning ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        AI 正在研讀並結構化營運規則...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4" />
+                        🚀 餵入教練大腦，立即萃取學習
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+
+              {/* 成功反饋訊息 */}
+              {learnNotice && (
+                <div className="mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2 animate-fadeIn">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>{learnNotice}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 最新學習成果卡片 (剛剛學會的知識) */}
+            {lastLearnedMaterial && (
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-white dark:from-slate-900 dark:via-emerald-950/20 dark:to-slate-900 border-2 border-emerald-500/50 shadow-sm animate-fadeIn">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-600 text-white flex items-center gap-1 shadow-xs">
+                      <Sparkles className="h-3 w-3" />
+                      教練大腦最新吸收知識
+                    </span>
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      實證等級：{lastLearnedMaterial.evidence_level} 級 (
+                      {lastLearnedMaterial.evidence_level === 'A' ? '總部正規SOP' : lastLearnedMaterial.evidence_level === 'B' ? '督導實證標準' : lastLearnedMaterial.evidence_level === 'C' ? '店長實戰經驗' : '同業標竿'})
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">維度：{lastLearnedMaterial.dimension}</span>
+                </div>
+
+                <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
+                  {lastLearnedMaterial.title}
+                </h4>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+                  {lastLearnedMaterial.ai_summary}
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-emerald-200 dark:border-emerald-900/40 text-xs">
+                  <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <strong className="text-emerald-800 dark:text-emerald-300 block mb-1">【AI 萃取核心要點】</strong>
+                    <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                      {lastLearnedMaterial.key_takeaways?.map((t, idx) => (
+                        <li key={idx}>• {t}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-teal-200 dark:border-teal-800">
+                    <strong className="text-teal-800 dark:text-teal-300 block mb-1">【現場落地行為規則】</strong>
+                    <ul className="space-y-1 text-slate-700 dark:text-slate-300">
+                      {lastLearnedMaterial.actionable_rules?.map((r, idx) => (
+                        <li key={idx}>✓ {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 互動驗證：向已研讀學習的教練現場發問 */}
+            <div className="bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white rounded-2xl p-5 border border-emerald-700/50 shadow-md">
+              <div className="mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 font-black">
+                    學習驗證 Live Q&A
+                  </span>
+                  <h3 className="text-sm sm:text-base font-bold text-white">
+                    向已研讀學習的門市教練現場發問
+                  </h3>
+                </div>
+                <p className="text-xs text-emerald-200 mt-0.5">
+                  測試教練 AI 是否已經深刻理解剛剛餵入的教材，並隨機提問現場情境對策。
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                <input
+                  type="text"
+                  value={coachQuery}
+                  onChange={e => setCoachQuery(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleAskCoach()
+                  }}
+                  placeholder="例如：如果客人外帶後過了半小時說茶變淡了，標準應對話術與動作是什麼？"
+                  className="grow text-xs rounded-xl border border-emerald-700/80 bg-slate-900/90 text-white px-3.5 py-2.5 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                />
+                <Button
+                  onClick={handleAskCoach}
+                  disabled={isAskingCoach}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-5 rounded-xl gap-1.5 shrink-0 cursor-pointer"
+                >
+                  {isAskingCoach ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      教練正在檢索已學習教材...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5" />
+                      提問測試
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* 快速提問標籤 */}
+              <div className="flex items-center gap-1.5 flex-wrap text-xs text-slate-300">
+                <span className="text-[11px] text-emerald-300 font-semibold">推薦提問：</span>
+                <button
+                  type="button"
+                  onClick={() => setCoachQuery('打烊保溫茶桶如何深度除垢？矽膠密封環可以用菜瓜布刷嗎？')}
+                  className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
+                >
+                  「茶桶除垢與矽膠環消毒」
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCoachQuery('尖峰時段外送員一直在吧檯前催單，我們該如何劃分動線和貼單防漏？')}
+                  className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
+                >
+                  「外送雙軌與防催單」
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCoachQuery('客人說冰塊融化茶變淡了，店長要怎麼教新夥伴親切應對並重做？')}
+                  className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
+                >
+                  「冰融茶淡的教練對話」
+                </button>
+              </div>
+
+              {/* 教練回答區 */}
+              {coachAnswer && (
+                <div className="mt-4 p-4 rounded-xl bg-black/40 border border-emerald-500/40 text-xs text-slate-200 space-y-2 animate-fadeIn leading-relaxed whitespace-pre-line">
+                  <div className="flex items-center justify-between text-emerald-300 font-bold mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="h-4 w-4" />
+                      門市營運教練 AI 依據已研讀教材之解答：
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(coachAnswer, 'coach_ans')}
+                      className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedKey === 'coach_ans' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      {copiedKey === 'coach_ans' ? '已複製' : '複製解答'}
+                    </button>
+                  </div>
+                  <div>{coachAnswer}</div>
+                </div>
+              )}
+            </div>
+
+            {/* 已研讀之營運知識庫 (Knowledge Material Repository) */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-emerald-600" />
+                    已研讀之門市營運知識庫 ({learningMaterials.length} 篇)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    以下為所有已注入大腦的教材，教練在執行 10 層全景診斷與巡檢時將全自動調閱引用。
+                  </p>
+                </div>
+
+                {/* 維度過濾 */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={learnDimFilter}
+                    onChange={e => setLearnDimFilter(e.target.value)}
+                    className="text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="all">全維度知識</option>
+                    <option value="sop">SOP 規範</option>
+                    <option value="workflow">流程動線</option>
+                    <option value="hygiene">清潔衛生</option>
+                    <option value="coaching">教練話術</option>
+                    <option value="workstation">工作站設備</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    value={learnSearch}
+                    onChange={e => setLearnSearch(e.target.value)}
+                    placeholder="搜尋已學知識關鍵字..."
+                    className="text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-slate-800 dark:text-slate-200 w-40 sm:w-48"
+                  />
+                </div>
+              </div>
+
+              {/* 知識卡片清單 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {learningMaterials
+                  .filter(m => {
+                    const matchDim = learnDimFilter === 'all' || m.dimension === learnDimFilter
+                    const matchSearch =
+                      !learnSearch ||
+                      m.title.toLowerCase().includes(learnSearch.toLowerCase()) ||
+                      m.raw_content.toLowerCase().includes(learnSearch.toLowerCase()) ||
+                      (m.ai_summary || '').toLowerCase().includes(learnSearch.toLowerCase())
+                    return matchDim && matchSearch
+                  })
+                  .map(mat => (
+                    <div
+                      key={mat.id}
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col justify-between text-xs space-y-2 hover:border-emerald-500/60 transition-colors"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            {mat.dimension.toUpperCase()}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
+                            實證 {mat.evidence_level || 'B'} 級
+                          </span>
+                        </div>
+
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm line-clamp-2">
+                          {mat.title}
+                        </h4>
+
+                        <p className="text-slate-600 dark:text-slate-300 mt-1 line-clamp-3 leading-relaxed">
+                          {mat.ai_summary || mat.raw_content}
+                        </p>
+
+                        {mat.key_takeaways && mat.key_takeaways.length > 0 && (
+                          <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-1">
+                            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 block">
+                              核心要點：
+                            </span>
+                            {mat.key_takeaways.slice(0, 2).map((k, idx) => (
+                              <div key={idx} className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-1">
+                                • {k}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>{mat.author_role || '營運指導員'}</span>
+                        <span>{new Date(mat.created_at || '').toLocaleDateString('zh-TW')}</span>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>

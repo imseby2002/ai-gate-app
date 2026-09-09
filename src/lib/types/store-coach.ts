@@ -311,3 +311,22 @@ export interface VisionAnalysisResult {
   praise_points?: string[]
   immediate_coaching_tip?: string
 }
+
+export interface StoreLearningMaterial {
+  id: string
+  store_code?: string
+  title: string
+  source_type: 'sop_manual' | 'audit_report' | 'complaint_case' | 'supervisor_guide' | 'external_benchmark' | 'video_url' | 'owner_memo' | string
+  source_url?: string
+  raw_content: string
+  ai_summary?: string
+  dimension: 'sop' | 'workflow' | 'workstation' | 'layout' | 'movement' | 'hygiene' | 'coaching' | 'problem_memory' | string
+  key_takeaways?: string[]
+  actionable_rules?: string[]
+  evidence_level?: 'A' | 'B' | 'C' | 'D' | string
+  status?: 'active' | 'archived' | 'reviewing' | string
+  author_role?: string
+  created_at?: string
+  updated_at?: string
+}
+

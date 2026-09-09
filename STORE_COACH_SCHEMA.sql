@@ -278,9 +278,31 @@ CREATE TABLE IF NOT EXISTS company_principles (
   created_at timestamptz DEFAULT now()
 );
 
+-- 16. 門市營運教練 AI 知識餵入與學習資料庫 (Store Learning Materials)
+CREATE TABLE IF NOT EXISTS store_learning_materials (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_code text DEFAULT 'ALL',
+  title text NOT NULL,
+  source_type text NOT NULL, -- 'sop_manual', 'audit_report', 'complaint_case', 'supervisor_guide', 'external_benchmark', 'video_url', 'owner_memo'
+  source_url text,
+  raw_content text NOT NULL,
+  ai_summary text,
+  dimension text NOT NULL, -- 'sop', 'workflow', 'workstation', 'layout', 'movement', 'hygiene', 'coaching', 'problem_memory'
+  key_takeaways jsonb DEFAULT '[]'::jsonb,
+  actionable_rules jsonb DEFAULT '[]'::jsonb,
+  evidence_level text DEFAULT 'B', -- 'A' (總部SOP), 'B' (督導實證), 'C' (店長經驗), 'D' (外部標竿)
+  status text DEFAULT 'active', -- 'active', 'archived', 'reviewing'
+  author_role text DEFAULT '門市督導/店長',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
 -- 索引優化
 CREATE INDEX IF NOT EXISTS idx_store_layouts_store ON store_layouts(store_id);
 CREATE INDEX IF NOT EXISTS idx_workstations_store ON workstations(store_id);
 CREATE INDEX IF NOT EXISTS idx_staff_movements_store ON staff_movements(store_id);
 CREATE INDEX IF NOT EXISTS idx_store_problems_store ON store_problems(store_id);
 CREATE INDEX IF NOT EXISTS idx_inspection_results_store ON inspection_results(store_id);
+CREATE INDEX IF NOT EXISTS idx_store_learning_store_code ON store_learning_materials(store_code);
+CREATE INDEX IF NOT EXISTS idx_store_learning_dimension ON store_learning_materials(dimension);
+
