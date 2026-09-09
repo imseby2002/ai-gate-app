@@ -94,6 +94,7 @@ function OrdersTab() {
   const [vendors, setVendors] = useState<Assignee[]>([])
   const [employees, setEmployees] = useState<Assignee[]>([])
   const [equip, setEquip] = useState<Equip[]>([])
+  const [storeOptions, setStoreOptions] = useState<{ code: string; name: string }[]>([])
   const [creating, setCreating] = useState<Record<string, string> | null>(null)
   const [managing, setManaging] = useState<Order | null>(null)
   const [saving, setSaving] = useState(false)
@@ -110,7 +111,7 @@ function OrdersTab() {
   }, [status])
   useEffect(() => { load() }, [load])
 
-  // 判斷是否可管理（派工）＋載入派工對象與設備清單
+  // 判斷是否可管理（派工）＋載入派工對象與設備清單、門市清單
   useEffect(() => {
     fetch('/api/repair/assignees').then(async r => {
       if (r.status === 403) { setCanManage(false); return }
@@ -120,6 +121,9 @@ function OrdersTab() {
     })
     fetch('/api/repair/equipment').then(async r => {
       if (r.ok) { const j = await r.json().catch(() => ({})); setEquip(j.items ?? []) }
+    })
+    fetch('/api/fin/stores').then(async r => {
+      if (r.ok) { const j = await r.json().catch(() => ({})); setStoreOptions(j.stores ?? []) }
     })
   }, [])
 
@@ -148,7 +152,10 @@ function OrdersTab() {
     load()
   }
 
-  const stores = Array.from(new Set(equip.map(e => e.store).filter(Boolean))).sort()
+  const stores = Array.from(new Set([
+    ...storeOptions.map(s => s.code),
+    ...equip.map(e => e.store)
+  ].filter(Boolean))).sort()
 
   return (
     <div className="space-y-4">
@@ -157,7 +164,9 @@ function OrdersTab() {
           <option value="">全部狀態</option>
           {Object.entries(OS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setErr(''); setCreating({ title: '', store: '', equipment_id: '', description: '', priority: 'normal' }) }}><Plus className="h-4 w-4" />報修</Button>
+        <Button size="sm" className="ml-auto gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setErr(''); setCreating({ title: '', store: '', equipment_id: '', description: '', priority: 'normal' }) }}>
+          <Plus className="h-4 w-4" />新增門市報修
+        </Button>
       </div>
 
       {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -200,16 +209,21 @@ function OrdersTab() {
       {creating && (
         <Modal title="報修" onClose={() => setCreating(null)} err={err} saving={saving} onSave={createReport}>
           <label className="col-span-2 text-sm">問題標題 *<Input value={creating.title} onChange={e => setCreating({ ...creating, title: e.target.value })} className="mt-1" /></label>
-          <label className="text-sm">門市
+          <label className="text-sm">門市 *
             <select value={creating.store} onChange={e => setCreating({ ...creating, store: e.target.value })} className={`mt-1 w-full ${selCls}`}>
-              <option value="">—</option>
-              {stores.map(s => <option key={s} value={s}>{s}</option>)}
+              <option value="">請選擇門市</option>
+              {stores.map(s => {
+                const opt = storeOptions.find(o => o.code === s)
+                return <option key={s} value={s}>[{s}] {opt?.name || s}</option>
+              })}
             </select>
           </label>
           <label className="text-sm">關聯設備
             <select value={creating.equipment_id} onChange={e => setCreating({ ...creating, equipment_id: e.target.value })} className={`mt-1 w-full ${selCls}`}>
-              <option value="">—（無/未登錄）</option>
-              {equip.map(e => <option key={e.id} value={e.id}>{e.name}{e.store ? `（${e.store}）` : ''}</option>)}
+              <option value="">—（無 / 自行描述）</option>
+              {equip.filter(e => !creating.store || e.store === creating.store || !e.store).map(e => (
+                <option key={e.id} value={e.id}>{e.name} {e.brand_model ? `(${e.brand_model})` : ''} {e.store ? `[${e.store}]` : ''}</option>
+              ))}
             </select>
           </label>
           <label className="text-sm">優先度

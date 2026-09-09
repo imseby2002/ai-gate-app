@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus, Ban, PackageMinus, ExternalLink } from 'lucide-react'
+import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus, Ban, PackageMinus, ExternalLink, Wrench, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -51,7 +51,11 @@ export default function StoreInventoryPage() {
           <h1 className="text-2xl font-bold">門市盤點・訂貨</h1>
           <p className="text-sm text-gray-500">每日盤點 → 補到滿倉自動產生訂貨表；低於安全量緊急通知領班</p>
         </div>
-        <div className="ml-auto"><Link href="/store-reports"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />門市報表</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <Link href="/store-reports"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />門市報表</Button></Link>
+          <Link href="/store-bills"><Button variant="outline" size="sm" className="gap-1.5"><Receipt className="h-4 w-4 text-emerald-600" />水電費用</Button></Link>
+          <Link href="/repair"><Button variant="outline" size="sm" className="gap-1.5"><Wrench className="h-4 w-4 text-amber-600" />門市報修</Button></Link>
+        </div>
       </div>
 
       <Card className="p-3">

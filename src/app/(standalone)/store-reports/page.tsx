@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList, Calendar } from 'lucide-react'
+import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList, Calendar, Wrench, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -79,20 +79,30 @@ export default function StoreReportsPage() {
           <h1 className="text-2xl font-bold">門市報表</h1>
           <p className="text-sm text-gray-500">業績、進銷存、配方與差異分析</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/store-inventory">
               <ClipboardList className="h-4 w-4 text-blue-600" />盤點・訂貨
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/store-bills">
+              <Receipt className="h-4 w-4 text-emerald-600" />水電費用
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/repair">
+              <Wrench className="h-4 w-4 text-amber-600" />門市報修
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/shift">
-              <Calendar className="h-4 w-4 text-emerald-600" />排班
+              <Calendar className="h-4 w-4 text-indigo-600" />排班
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/pos">
-              <Store className="h-4 w-4 text-amber-600" />門市點單
+              <Store className="h-4 w-4 text-orange-600" />門市點單
             </Link>
           </Button>
         </div>

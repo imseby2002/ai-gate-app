@@ -23,8 +23,12 @@ export const UNIT_AREAS: UnitArea[] = [
     { href: '/rd-logs', label: '研發日誌' },
   ] },
   { key: 'store', label: '門市營運', pages: [
-    { href: '/store-reports', label: '門市報表' }, { href: '/store-inventory', label: '盤點・訂貨' },
-    { href: '/shift', label: '排班' }, { href: '/pos', label: '門市點單' },
+    { href: '/store-reports', label: '門市報表' },
+    { href: '/store-inventory', label: '盤點・訂貨' },
+    { href: '/store-bills', label: '水電費用填報' },
+    { href: '/repair', label: '門市報修' },
+    { href: '/shift', label: '排班' },
+    { href: '/pos', label: '門市點單' },
   ] },
   { key: 'affairs', label: '外務', pages: [
     { href: '/affairs', label: '外務・證照' },

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck, FileSpreadsheet } from 'lucide-react'
+import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck, FileSpreadsheet, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -213,7 +213,7 @@ function VendorsTab() {
 // ── 月度費用格 ──
 interface GridStore { code: string; name: string; region: string }
 interface GridCat { code: string; name: string; entry_method: string; vendor_service: string }
-interface Bill { store_code: string; category_code: string; amount: number; source: string }
+interface Bill { store_code: string; category_code: string; amount: number; source: string; note?: string }
 
 const billKey = (s: string, c: string) => `${s}|${c}`
 
@@ -224,6 +224,7 @@ function BillsTab() {
   const [stores, setStores] = useState<GridStore[]>([])
   const [cats, setCats] = useState<GridCat[]>([])
   const [amounts, setAmounts] = useState<Record<string, number>>({}) // `${store}|${cat}` → amount
+  const [billDetails, setBillDetails] = useState<Record<string, Bill>>({})
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [importText, setImportText] = useState('')
@@ -240,8 +241,14 @@ function BillsTab() {
       if (d) {
         setStores(d.stores ?? []); setCats(d.categories ?? [])
         const m: Record<string, number> = {}
-        for (const b of (d.bills ?? []) as Bill[]) m[billKey(b.store_code, b.category_code)] = Number(b.amount) || 0
+        const dMap: Record<string, Bill> = {}
+        for (const b of (d.bills ?? []) as Bill[]) {
+          const k = billKey(b.store_code, b.category_code)
+          m[k] = Number(b.amount) || 0
+          dMap[k] = b
+        }
         setAmounts(m)
+        setBillDetails(dMap)
       }
       setLoading(false)
     })
@@ -279,6 +286,11 @@ function BillsTab() {
       <div className="flex items-center gap-2 flex-wrap">
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}</select>
         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}</select>
+        <Link href="/store-bills">
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+            <Store className="h-3.5 w-3.5" />門市水電費用填報端 ↗
+          </Button>
+        </Link>
         <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowImport(v => !v)}><Upload className="h-4 w-4" />水電匯入</Button>
         {msg && <span className="text-sm text-blue-600">{msg}</span>}
       </div>
@@ -302,14 +314,34 @@ function BillsTab() {
           <tbody>{stores.map(st => (
             <tr key={st.code} className="border-b last:border-0">
               <td className="py-1 pr-3 sticky left-0 bg-card"><span className="font-medium">{st.code}</span>{st.region && <span className="text-gray-400 text-xs ml-1">{st.region}</span>}</td>
-              {cats.map(c => (
-                <td key={c.code} className="px-1">
-                  <input type="number" value={amounts[billKey(st.code, c.code)] ?? ''}
-                    onChange={e => setAmounts(p => ({ ...p, [billKey(st.code, c.code)]: Number(e.target.value) || 0 }))}
-                    onBlur={e => saveCell(st.code, c.code, Number(e.target.value) || 0)}
-                    className="w-24 h-8 rounded border px-1.5 text-right tabular-nums" />
-                </td>
-              ))}
+              {cats.map(c => {
+                const k = billKey(st.code, c.code)
+                const bill = billDetails[k]
+                let receiptUrl = ''
+                try {
+                  const parsed = JSON.parse(bill?.note || '{}')
+                  if (parsed.receipt_url) receiptUrl = parsed.receipt_url
+                } catch {}
+
+                return (
+                  <td key={c.code} className="px-1 py-1">
+                    <div className="flex items-center gap-1 justify-end">
+                      <input type="number" value={amounts[k] ?? ''}
+                        onChange={e => setAmounts(p => ({ ...p, [k]: Number(e.target.value) || 0 }))}
+                        onBlur={e => saveCell(st.code, c.code, Number(e.target.value) || 0)}
+                        className="w-24 h-8 rounded border px-1.5 text-right tabular-nums text-xs" />
+                      {receiptUrl && (
+                        <a href={receiptUrl} target="_blank" rel="noreferrer" title="點擊檢視門市上傳之單據照片" className="text-amber-600 hover:text-amber-800 p-0.5 rounded hover:bg-amber-50 shrink-0">
+                          <ImageIcon className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                    {bill?.source === 'store_upload' && (
+                      <span className="block text-[10px] text-emerald-600 text-right pr-1">門市提報</span>
+                    )}
+                  </td>
+                )
+              })}
               <td className="px-2 text-right tabular-nums font-medium">{fmt(rowTotal(st.code))}</td>
             </tr>))}
             <tr className="border-t font-medium">
@@ -318,7 +350,7 @@ function BillsTab() {
               <td className="px-2 text-right tabular-nums">{fmt(stores.reduce((s, st) => s + rowTotal(st.code), 0))}</td>
             </tr>
           </tbody></table></div>}
-      <p className="text-xs text-gray-400">直接在格子輸入金額，離開欄位自動儲存。瓦斯/冰塊之後會由廠商填（階段 3）。</p>
+      <p className="text-xs text-gray-400">直接在格子輸入金額，離開欄位自動儲存。若門市已透過【水電費用填報】上傳單據，會顯示「門市提報」並可點擊圖示查看單據憑證。</p>
     </div>
   )
 }

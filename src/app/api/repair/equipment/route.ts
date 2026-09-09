@@ -1,6 +1,7 @@
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getUnitContext, getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 
+async function readCtx() { const c = await getUnitContextAny(['repair', 'store']); return c.ok ? c : null }
 async function ctx() { const c = await getUnitContext('repair'); return c.ok ? c : null }
 const s = (v: unknown) => String(v ?? '').trim()
 const d = (v: unknown) => { const t = s(v); return t || null }  // 日期：空字串轉 null
@@ -8,7 +9,7 @@ const STATUS = ['active', 'repairing', 'scrapped']
 
 // 設備清單。?store= 篩門市；?status= 篩狀態；warranty_days = 距保固到期天數（負值＝已過期）
 export async function GET(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await readCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const sp = new URL(req.url).searchParams
   const store = s(sp.get('store'))
   const status = s(sp.get('status'))
