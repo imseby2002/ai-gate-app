@@ -80,9 +80,10 @@ export const UNIT_AREAS: UnitArea[] = [
   {
     key: 'audit',
     label: '稽核',
-    homeHref: '/audit',
-    description: '原物料合理性・現場巡檢・AI稽核分析',
+    homeHref: '/audit-platform',
+    description: '企業稽核智慧平台・原物料推算引擎・Rule Engine 與 Copilot',
     pages: [
+      { href: '/audit-platform', label: '企業稽核智慧平台', description: '四來源推算引擎、加料排擠修正、Rule Engine 四級規則與 Audit Copilot' },
       { href: '/audit', label: '原物料合理性', description: 'POS 銷售與進銷存交叉比對、原物料合理用量與異常損耗' },
       { href: '/audit-inspection', label: '門市現場巡檢', description: '現場巡查檢核表、環境衛生、物料品質巡檢評分' },
       { href: '/audit-ai', label: '稽核討論AI', description: '稽核異常分析、問答與查核建議 AI' },

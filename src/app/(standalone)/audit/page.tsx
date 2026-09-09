@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardCheck, Loader2, AlertCircle, Upload, Store, ShoppingCart, Boxes, Tag, FlaskConical, Gauge, Bell, Settings, MessageSquare, Plus, Trash2, ScrollText, Send } from 'lucide-react'
+import { ClipboardCheck, Loader2, AlertCircle, Upload, Store, ShoppingCart, Boxes, Tag, FlaskConical, Gauge, Bell, Settings, MessageSquare, Plus, Trash2, ScrollText, Send, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -50,6 +50,12 @@ export default function AuditPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/audit-platform">
+            <Button size="sm" className="gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold">
+              <Scale className="h-3.5 w-3.5" />
+              企業稽核智慧平台
+            </Button>
+          </Link>
           <Link href="/audit-inspection">
             <Button size="sm" variant="outline" className="gap-1.5 text-xs text-primary border-primary/30">
               <ClipboardCheck className="h-3.5 w-3.5" />
