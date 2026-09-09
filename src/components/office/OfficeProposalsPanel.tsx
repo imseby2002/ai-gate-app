@@ -54,6 +54,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState('')
   const [currentUserStore, setCurrentUserStore] = useState('')
+  const [serverCanManage, setServerCanManage] = useState(false)
+  const isManager = canManage || serverCanManage
 
   // 篩選與搜尋
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'mine'>('all')
@@ -88,6 +90,9 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
       if (res.ok) {
         const d = await res.json()
         setProposals(d.proposals ?? [])
+        if (d.canManage !== undefined) {
+          setServerCanManage(Boolean(d.canManage))
+        }
         if (d.currentUser) {
           setCurrentUserId(d.currentUser.id || '')
           setCurrentUserStore(d.currentUser.store_code || '')
@@ -558,7 +563,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                 )}
 
                 {/* 老闆專屬審核操作工具列 */}
-                {canManage && (
+                {isManager && (
                   <div className="pt-2 border-t mt-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex-1 min-w-[200px] flex items-center gap-2">
                       <Input

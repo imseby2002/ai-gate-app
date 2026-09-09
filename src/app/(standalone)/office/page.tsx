@@ -84,9 +84,10 @@ export default function OfficePage() {
   if (!access) return <div className="flex h-full items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
 
   const canManage = access.canManage ?? access.isAdmin
-  const roleLabel = access.isAdmin ? '平台管理者' : access.companyRole === 'owner' ? '公司負責人' : access.isCompanyAdmin ? '公司 IT' : null
+  const isSuperAdmin = access.isAdmin
+  const roleLabel = access.isAdmin ? '平台總管理者' : access.companyRole === 'owner' ? '公司負責人' : access.isCompanyAdmin ? '公司 IT' : null
   const visibleAreas = UNIT_AREAS
-    .filter(a => hasUnit(canManage, access.units, a.key))
+    .filter(a => isSuperAdmin || hasUnit(canManage, access.units, a.key))
     .map(a => ({ ...a, pages: a.pages.filter(p => canManage || !p.adminOnly) }))
     .filter(a => a.pages.length > 0)
 

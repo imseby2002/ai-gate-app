@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isSuperAdminUser } from '@/lib/auth/admin-check'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,11 +56,11 @@ export async function GET(req: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, user_type, company_id, display_name, email, store_code')
+    .select('id, user_type, company_id, full_name, email, department')
     .eq('id', user.id)
     .single()
 
-  const isSuperAdmin = profile?.user_type === 'admin'
+  const isSuperAdmin = isSuperAdminUser(user, profile)
   let isCompanyAdmin = false
 
   if (profile?.company_id) {
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
   // 取得全部相關提案（依更新與建立時間排序）
   const { data: rows, error } = await admin
     .from('user_feedback')
-    .select('*, profiles(id, display_name, email, store_code)')
+    .select('*, profiles(id, full_name, email, department)')
     .in('type', ['problem', 'idea', 'bug', 'feature'])
     .order('created_at', { ascending: false })
 
@@ -95,12 +96,12 @@ export async function GET(req: NextRequest) {
       title: r.title,
       department: parsed.department,
       department_label: parsed.department_label,
-      store_code: parsed.store_code || r.profiles?.store_code || '',
+      store_code: parsed.store_code || (r.profiles as any)?.department || '',
       description: parsed.content,
       expected_solution: parsed.expected_solution,
       attachments: parsed.attachments || [],
-      author_name: parsed.author_name || r.profiles?.display_name || r.profiles?.email?.split('@')[0] || '同仁',
-      author_email: parsed.author_email || r.profiles?.email || '',
+      author_name: parsed.author_name || (r.profiles as any)?.full_name || (r.profiles as any)?.email?.split('@')[0] || '同仁',
+      author_email: parsed.author_email || (r.profiles as any)?.email || '',
       status: r.status || 'pending',
       admin_notes: r.admin_notes || '',
       ai_plan: r.ai_plan || '',
@@ -118,9 +119,10 @@ export async function GET(req: NextRequest) {
     canManage,
     currentUser: {
       id: user.id,
-      name: profile?.display_name || profile?.email?.split('@')[0] || '我',
-      email: profile?.email || '',
-      store_code: profile?.store_code || '',
+      name: profile?.full_name || profile?.email?.split('@')[0] || user.email?.split('@')[0] || '我',
+      email: profile?.email || user.email || '',
+      store_code: profile?.department || '',
+      canManage,
     }
   })
 }
@@ -193,11 +195,11 @@ export async function PATCH(req: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('id, user_type, company_id, display_name, email')
+    .select('id, user_type, company_id, full_name, email')
     .eq('id', user.id)
     .single()
 
-  const isSuperAdmin = profile?.user_type === 'admin'
+  const isSuperAdmin = isSuperAdminUser(user, profile)
   let isCompanyAdmin = false
 
   if (profile?.company_id) {
@@ -233,7 +235,7 @@ export async function PATCH(req: NextRequest) {
   const parsed = parsePayload(existing.description || '')
   if (status === 'approved') {
     parsed.approved_at = new Date().toISOString()
-    parsed.approved_by_name = profile?.display_name || profile?.email?.split('@')[0] || '負責人'
+    parsed.approved_by_name = profile?.full_name || profile?.email?.split('@')[0] || user.email?.split('@')[0] || '負責人'
   }
 
   // 若批准，自動產生 AI 重寫程式提示詞 (AI Task Specification)

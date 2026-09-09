@@ -190,7 +190,9 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single()
 
-      const isAdmin = profile?.user_type === 'admin'
+      const isAdmin = profile?.user_type === 'admin' ||
+        user.email?.toLowerCase() === 'imseby@gmail.com' ||
+        (process.env.ADMIN_EMAIL && user.email?.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase())
 
       // Admin/Owner guard — /admin、/cli-proxy、/programing (FreeLLM)、/dashboard 僅限總管理員
       // 非管理者一律導向 /apps（功能選單），用 nextUrl 保留原始 host（含子域名）

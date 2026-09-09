@@ -3,6 +3,7 @@
 // 通過後以 service-role client 針對 ownerId 查詢（權限已在程式層把關）。
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isSuperAdminUser } from '@/lib/auth/admin-check'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -32,8 +33,8 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   if (!user) return DENY
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id, store_code').eq('id', user.id).single()
-  const isSuperAdmin = profile?.user_type === 'admin'
+  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id, department').eq('id', user.id).single()
+  const isSuperAdmin = isSuperAdminUser(user, profile)
 
   // 檢查是否為公司負責人 (owner) 或公司 IT (admin)
   let isCompanyAdmin = false
@@ -63,7 +64,7 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   }
 
   // 門市代碼限制（管理者為 null 可跨店；門市人員綁定本店代碼）
-  const storeCode = (isSuperAdmin || isCompanyAdmin) ? null : (profile?.store_code ? String(profile.store_code).trim() : null)
+  const storeCode = (isSuperAdmin || isCompanyAdmin) ? null : (profile?.department ? String(profile.department).trim() : null)
 
   return { ok: true, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin, storeCode }
 }
@@ -83,8 +84,8 @@ export async function getCompanyContext(): Promise<UnitContext> {
   if (!user) return DENY
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id, store_code').eq('id', user.id).single()
-  const isSuperAdmin = profile?.user_type === 'admin'
+  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id, department').eq('id', user.id).single()
+  const isSuperAdmin = isSuperAdminUser(user, profile)
 
   let isCompanyAdmin = false
   if (profile?.company_id) {
@@ -107,7 +108,7 @@ export async function getCompanyContext(): Promise<UnitContext> {
     }
   }
 
-  const storeCode = (isSuperAdmin || isCompanyAdmin) ? null : (profile?.store_code ? String(profile.store_code).trim() : null)
+  const storeCode = (isSuperAdmin || isCompanyAdmin) ? null : (profile?.department ? String(profile.department).trim() : null)
 
   return { ok: true, userId: user.id, ownerId, isAdmin: isSuperAdmin || isCompanyAdmin, admin, storeCode }
 }

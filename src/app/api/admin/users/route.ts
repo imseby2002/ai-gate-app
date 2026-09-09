@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { isSuperAdminUser } from '@/lib/auth/admin-check'
 
 interface ManagementAuth {
   user: { id: string; email?: string }
@@ -21,7 +22,7 @@ async function getManagementAuth(): Promise<ManagementAuth | null> {
     .eq('id', user.id)
     .single()
 
-  const isSuperAdmin = profile?.user_type === 'admin'
+  const isSuperAdmin = isSuperAdminUser(user, profile)
   let isCompanyAdmin = false
   const companyId = profile?.company_id ?? null
 
@@ -66,7 +67,11 @@ export async function GET() {
   const { data, error } = await query
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ users: data })
+  const usersWithStore = (data ?? []).map(u => ({
+    ...u,
+    store_code: u.store_code || u.department || null,
+  }))
+  return NextResponse.json({ users: usersWithStore })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -114,19 +119,18 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  // 若更新 store_code，寫入 department 欄位保存
+  if (updates.store_code !== undefined) {
+    safeUpdates.department = updates.store_code ? String(updates.store_code).trim() : null
+  }
+  delete safeUpdates.store_code
+
   const { error } = await supabase
     .from('profiles')
     .update(safeUpdates)
     .eq('id', userId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  if (updates.store_code !== undefined) {
-    await supabase
-      .from('company_members')
-      .update({ store_code: safeUpdates.store_code || null })
-      .eq('member_id', userId)
-  }
 
   return NextResponse.json({ success: true })
 }
