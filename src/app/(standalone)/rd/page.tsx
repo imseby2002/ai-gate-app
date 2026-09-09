@@ -332,37 +332,19 @@ export default function RdPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/finance">
-            <Button variant="outline" size="sm" className="gap-1.5 text-emerald-700 dark:text-emerald-400">
-              <DollarSign className="h-4 w-4" />出納總務
-            </Button>
-          </Link>
           <Link href="/rd-lab">
             <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 dark:text-purple-400">
               <FlaskConical className="h-4 w-4" />研發大腦 (Lab)
             </Button>
           </Link>
           <Link href="/rd-ai">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FlaskConical className="h-4 w-4 text-indigo-600" />研發討論AI
+            <Button variant="outline" size="sm" className="gap-1.5 text-indigo-600 dark:text-indigo-400">
+              <FlaskConical className="h-4 w-4" />研發討論AI
             </Button>
           </Link>
-          <Link href="/office">
+          <Link href="/rd-logs">
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />
-              公司入口
-            </Button>
-          </Link>
-          <Link href="/store-reports">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Store className="h-4 w-4" />
-              門市報表
-            </Button>
-          </Link>
-          <Link href="/audit">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Scale className="h-4 w-4" />
-              原物料稽核
+              <BookOpen className="h-4 w-4" />研發日誌
             </Button>
           </Link>
         </div>

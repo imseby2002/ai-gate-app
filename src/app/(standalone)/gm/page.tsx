@@ -47,7 +47,6 @@ export default function GmPage() {
           <h1 className="text-2xl font-bold">總經理室</h1>
           <p className="text-sm text-muted-foreground">全公司彙整・異常紅旗・AI 經營快報</p>
         </div>
-        <div className="ml-auto"><Link href="/office"><Button variant="outline" size="sm">返回</Button></Link></div>
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">

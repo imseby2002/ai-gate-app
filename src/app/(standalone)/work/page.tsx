@@ -396,35 +396,6 @@ export default function WorkPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Link href="/office">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />公司入口
-            </Button>
-          </Link>
-          {canHr && (
-            <Link href="/hr">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Building2 className="h-4 w-4" />人事管理
-              </Button>
-            </Link>
-          )}
-          {canFinance && (
-            <Link href="/finance">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Wallet className="h-4 w-4" />出納總務
-              </Button>
-            </Link>
-          )}
-          <Link href="/rd">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FlaskConical className="h-4 w-4 text-purple-600 text-sm" />研發
-            </Button>
-          </Link>
-          <Link href="/pos">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <UtensilsCrossed className="h-4 w-4" />門市點單
-            </Button>
-          </Link>
           <Link href="/meeting">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Mic className="h-4 w-4" />{t('meetingNotes')}

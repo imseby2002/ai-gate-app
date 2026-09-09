@@ -6,7 +6,7 @@ import {
   Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil,
   X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink,
   BarChart3, Building2, UtensilsCrossed, Upload, Image as ImageIcon, Camera, Globe,
-  CheckCircle2, Search, Tag, Eye
+  CheckCircle2, Search, Tag, Eye, BookOpen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,7 +46,7 @@ export default function MktPage() {
             <Sparkles className="h-3.5 w-3.5" />
             開啟行銷中心 (marketing.im-tourist.com) <ExternalLink className="h-3 w-3" />
           </a>
-          <Link href="/office"><Button variant="outline" size="sm">返回公司入口</Button></Link>
+          <Link href="/marketing/logbook"><Button variant="outline" size="sm" className="gap-1.5"><BookOpen className="h-4 w-4" />行銷日誌</Button></Link>
         </div>
       </div>
 

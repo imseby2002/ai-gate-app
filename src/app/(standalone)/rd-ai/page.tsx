@@ -64,8 +64,9 @@ export default function RdAiPage() {
         <div><h1 className="text-xl font-bold">研發討論AI</h1></div>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowKnow(true)}><BookOpen className="h-4 w-4" />知識庫</Button>
-          <Link href="/rd-logs"><Button size="sm" variant="outline" className="gap-1.5"><ScrollText className="h-4 w-4" />日誌</Button></Link>
-          <Link href="/rd"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />配方中心</Button></Link>
+          <Link href="/rd-lab"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-indigo-600" />研發大腦</Button></Link>
+          <Link href="/rd"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />配方</Button></Link>
+          <Link href="/rd-logs"><Button size="sm" variant="outline" className="gap-1.5"><ScrollText className="h-4 w-4" />研發日誌</Button></Link>
         </div>
       </div>
 

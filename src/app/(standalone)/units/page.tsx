@@ -78,14 +78,6 @@ export default function UnitsPage() {
           </div>
           <p className="text-sm text-gray-500">全公司營運據點與部門架構（門市／辦公室／工廠／央廚／各部門基本資料與基本時薪）</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Link href="/mkt">
-            <Button variant="outline" size="sm" className="gap-1.5 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-800 bg-pink-50/50 dark:bg-pink-950/20">
-              <Camera className="h-4 w-4 text-pink-600" />門市圖文資產 ↗
-            </Button>
-          </Link>
-          <Link href="/office"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />公司入口</Button></Link>
-        </div>
       </div>
 
       {showImport && (

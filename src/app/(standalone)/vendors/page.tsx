@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Truck, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Building2, Link2, Search, FileSpreadsheet, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { Truck, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Building2, Link2, Search, FileSpreadsheet, TrendingDown, ChevronDown, ChevronUp, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -73,7 +73,10 @@ export default function VendorsPage() {
           <h1 className="text-2xl font-bold">廠商資料</h1>
           <p className="text-sm text-gray-500">基本資料、付款結帳、採購紀錄與填報連結</p>
         </div>
-        <div className="ml-auto"><Link href="/store-expenses"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />門市費用</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2">
+          <Link href="/finance"><Button variant="outline" size="sm" className="gap-1.5"><Wallet className="h-4 w-4" />出納總務</Button></Link>
+          <Link href="/store-expenses"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />門市費用</Button></Link>
+        </div>
       </div>
 
       {showImport && (

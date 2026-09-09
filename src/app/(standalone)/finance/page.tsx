@@ -1030,21 +1030,6 @@ export default function FinancePage() {
               <Truck className="h-4 w-4" />廠商資料
             </Button>
           </Link>
-          <Link href="/units">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />單位資料
-            </Button>
-          </Link>
-          <Link href="/affairs">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FileText className="h-4 w-4" />外務・證照
-            </Button>
-          </Link>
-          <Link href="/hr">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />人事管理
-            </Button>
-          </Link>
         </div>
       </div>
 

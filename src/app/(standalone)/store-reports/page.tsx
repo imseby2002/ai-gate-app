@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList } from 'lucide-react'
+import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -86,13 +86,13 @@ export default function StoreReportsPage() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link href="/rd">
-              <FlaskConical className="h-4 w-4 text-purple-600" />研發
+            <Link href="/shift">
+              <Calendar className="h-4 w-4 text-emerald-600" />排班
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
-            <Link href="/hr">
-              <Building2 className="h-4 w-4" />人事管理
+            <Link href="/pos">
+              <Store className="h-4 w-4 text-amber-600" />門市點單
             </Link>
           </Button>
         </div>
@@ -243,11 +243,7 @@ function RecipesTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-gray-500">每個成品用多少原料/杯。可至「研發」進行檔案匯入與完整設計。</p>
         <div className="flex items-center gap-2">
-          <Link href="/rd">
-            <Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />研發配方中心</Button>
-          </Link>
           <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', note: '', items: [] })}><Plus className="h-4 w-4" />新增配方</Button>
         </div>
       </div>
@@ -414,11 +410,6 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
         {totalLoss > 0 && <span className="text-sm text-red-500">估計金額損失 <b>{fmt(totalLoss)}</b></span>}
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setShowCfg(v => !v)}>交叉檢核設定</Button>
-          <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs">
-            <Link href="/rd">
-              <FlaskConical className="h-3.5 w-3.5 text-purple-600" />至研發調整配方
-            </Link>
-          </Button>
           <Button size="sm" variant="outline" className="gap-1.5 text-xs" disabled={notifying || overCount === 0} onClick={notify}>
             {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
           </Button>
@@ -498,7 +489,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
       {unmapped.length > 0 && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
           <span>有 {unmapped.length} 個成品尚未對照配方（不計入理論用量）：{unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、')}{unmapped.length > 8 ? '…' : ''}</span>
-          <Link href="/rd" className="text-purple-600 underline font-medium shrink-0">前往對照配方 →</Link>
+          <button onClick={() => setTab('mapping')} className="text-amber-800 underline font-medium shrink-0">前往成品對照 →</button>
         </div>
       )}
 

@@ -407,8 +407,7 @@ function RecipesTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-xs text-gray-500">配方來自研發單位（唯讀）。維護請至研發。</p>
-        <Link href="/rd" className="ml-auto"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4 text-purple-600" />配方</Button></Link>
+        <p className="text-xs text-gray-500">配方來自研發單位（唯讀）。維護請由研發同仁於研發系統進行。</p>
       </div>
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : rows.length === 0 ? <div className="text-center py-8 text-gray-400 text-sm">尚無配方資料。</div>
