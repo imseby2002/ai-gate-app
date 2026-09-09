@@ -128,6 +128,7 @@ export const COMMON_PAGES: UnitPage[] = [
   { href: '/office?tab=proposals', label: '💡 問題與想法' },
   { href: '/work', label: '任務' },
   { href: '/meeting', label: '會議紀錄' },
+  { href: '/legal', label: '法律合規 AI' },
 ]
 
 export const UNIT_LABEL: Record<string, string> = Object.fromEntries(UNIT_AREAS.map(a => [a.key, a.label]))

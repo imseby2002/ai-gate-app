@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight, ArrowRight, ExternalLink,
   Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
-  Lightbulb,
+  Lightbulb, Scale,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -132,6 +132,7 @@ export default function OfficePage() {
                         className={`gap-1.5 rounded-full ${isSelected ? 'bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm' : p.href === '/units' ? 'shadow-sm font-medium' : 'bg-card/60 backdrop-blur'}`}
                       >
                         {p.href === '/units' && <Building2 className="h-3.5 w-3.5" />}
+                        {p.href === '/legal' && <Scale className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />}
                         {p.label}
                         <ArrowUpRight className="h-3.5 w-3.5 opacity-60" />
                       </Button>
