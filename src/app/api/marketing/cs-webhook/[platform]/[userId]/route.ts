@@ -718,19 +718,25 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let contactPhone2 = ''
   const knowledgeParts: string[] = []
 
-  // CS 設定（systemPrompt、付款資訊、訂房流程等）只採用「最新一筆有內容的 campaign」，
-  // 避免多筆 campaign 各自局部覆寫造成設定互相打架。
-  //
-  // 但知識庫內容（直接輸入知識、上傳的對話檔）改成合併「所有」campaign，不再只取
-  // 最新一筆就整批捨棄其他 campaign 的知識——真實案例：喬民宿同時有多筆 campaign
-  // 各自存了不同知識（一筆是完整的民宿 FAQ 對話檔，另一筆是後來新增的國旅補助活動
-  // 說明），舊寫法只認「最新更新的那一筆」，只要任何一筆 campaign 之後被其他操作
-  // （例如編輯自建表單、通知設定）順手更新一下 updated_at，就會整批換成另一筆
-  // campaign 的內容，原本在用的知識庫就整個消失、客人問到的資訊 AI 完全答不出來，
-  // 也不會有任何錯誤訊息可以察覺。
+  // CS 設定（systemPrompt、付款資訊、訂房流程等）優先採用包含完整知識庫（knowledgeBase）
+  // 或設定最齊全的 campaign，避免多筆 campaign 各自局部覆寫或舊草稿蓋掉正式設定。
   let settingsLoaded = false
+  const directKnowledgeParts: string[] = []
+  const seenDirectKbs = new Set<string>()
+  const fileParts: string[] = []
+  const seenFiles = new Set<string>()
+
   if (campaigns?.length) {
-    for (const camp of campaigns) {
+    // 排序：優先選有填寫直接知識庫、且提示詞/檔案最齊全的 campaign 來套用主設定
+    const sortedForConfig = [...campaigns].sort((a, b) => {
+      const uA = ((a.unit_data as Record<string, unknown>)?.[12] || {}) as Record<string, unknown>
+      const uB = ((b.unit_data as Record<string, unknown>)?.[12] || {}) as Record<string, unknown>
+      const scoreA = (uA.knowledgeBase ? 10000 : 0) + (String(uA.systemPrompt || '').length) + ((Array.isArray(uA.dialogueFiles) ? uA.dialogueFiles.length : 0) * 100)
+      const scoreB = (uB.knowledgeBase ? 10000 : 0) + (String(uB.systemPrompt || '').length) + ((Array.isArray(uB.dialogueFiles) ? uB.dialogueFiles.length : 0) * 100)
+      return scoreB - scoreA
+    })
+
+    for (const camp of sortedForConfig) {
       const unit12 = (camp.unit_data as Record<string, unknown>)?.[12] as Record<string, unknown> | undefined
       if (!unit12) continue
 
@@ -752,14 +758,21 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         settingsLoaded = true
       }
 
-      // Direct text knowledge input（合併全部 campaign）
-      if (unit12.knowledgeBase) knowledgeParts.push(`【直接輸入知識】\n${String(unit12.knowledgeBase)}`)
+      // Direct text knowledge input（商家最高優先須知，去重排在最前方）
+      if (unit12.knowledgeBase) {
+        const kbStr = String(unit12.knowledgeBase).trim()
+        if (kbStr && !seenDirectKbs.has(kbStr)) {
+          seenDirectKbs.add(kbStr)
+          directKnowledgeParts.push(`【商家重點須知／直接輸入知識（最高優先回答依據）】\n${kbStr}`)
+        }
+      }
 
-      // Dialogue files（CS 專用，合併全部 campaign）
+      // Dialogue files（CS 專用，依檔名去重避免相同問答檔反覆佔滿 prompt 額度）
       const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>
       for (const f of dialogueFiles) {
-        if (f.textContent) {
-          knowledgeParts.push(`【知識庫｜${f.name}】\n${f.textContent}`)
+        if (f.textContent && !seenFiles.has(f.name)) {
+          seenFiles.add(f.name)
+          fileParts.push(`【知識庫文件｜${f.name}】\n${f.textContent}`)
         }
       }
     }
@@ -774,14 +787,13 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     .eq('enabled', true)
 
   const pricingConfigs: PricingConfig[] = []
+  const pricingLines: string[] = []
   if (pricingSources?.length) {
-    const pricingLines: string[] = []
     for (const src of pricingSources) {
       const cfg = src.config as Record<string, unknown>
       pricingConfigs.push(src.config as PricingConfig)
       pricingLines.push(`【定價資料：${src.name}】\n${JSON.stringify(cfg, null, 2)}`)
     }
-    if (pricingLines.length) knowledgeParts.push(pricingLines.join('\n\n'))
   }
 
   // 自建表單：只載入有設定觸發關鍵字、啟用中、且今天有開放的表單
@@ -823,6 +835,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   const industry = (industryRow?.industry as string) ?? 'homestay'
 
   // Load company data as fallback knowledge
+  const companyParts: string[] = []
   const { data: companyRow } = await supabase
     .from('company_data')
     .select('data')
@@ -834,19 +847,25 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     // Company FAQ files
     const files = (cd.files ?? []) as Array<{ name: string; textContent?: string }>
     for (const f of files) {
-      if (f.textContent) {
-        knowledgeParts.push(`【公司資料｜${f.name}】\n${f.textContent}`)
+      if (f.textContent && !seenFiles.has(f.name)) {
+        seenFiles.add(f.name)
+        companyParts.push(`【公司資料｜${f.name}】\n${f.textContent}`)
       }
     }
     // Company info text
     if (cd.companyInfo) {
-      knowledgeParts.push(`【公司簡介】\n${cd.companyInfo}`)
+      companyParts.push(`【公司簡介】\n${cd.companyInfo}`)
     }
   }
 
+  // 組合知識庫：直接輸入的重點須知/公告永遠放最頂端且不截斷；其他文件給予充裕的 35,000 字上限
+  const directText = directKnowledgeParts.join('\n\n')
+  const otherFilesText = [...fileParts, ...pricingLines, ...companyParts].join('\n\n').slice(0, 35000)
+  const combinedKnowledgeBase = [directText, otherFilesText].filter(Boolean).join('\n\n')
+
   return {
     systemPrompt,
-    knowledgeBase: knowledgeParts.join('\n\n').slice(0, 8000),
+    knowledgeBase: combinedKnowledgeBase,
     escalationThreshold,
     replyLanguage,
     bookingFlowEnabled,
