@@ -70,10 +70,11 @@ export const UNIT_AREAS: UnitArea[] = [
   },
   {
     key: 'affairs',
-    label: '外務',
-    homeHref: '/affairs',
-    description: '門市租約・營業執照・合約到期預警管理',
+    label: '外務・法規',
+    homeHref: '/legal',
+    description: '越南法律合規・各國進口規定・門市租約・營業執照',
     pages: [
+      { href: '/legal', label: '法律合規 AI (越南法律/進口/門市)', description: '越南法律公務文書、各國食品設備進口規定與開門市手續引導' },
       { href: '/affairs', label: '外務・證照', description: '門市房屋租約、各類營業證照、到期提醒與自動預警' },
     ],
   },

@@ -66,8 +66,16 @@ export const MODULES = [
     label: 'AI Agent',
     desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准',
     href: '/agent',
-    emoji: '🤖',
     color: 'from-slate-600 to-zinc-800',
+    standalone: true,
+  },
+  {
+    id: 'legal',
+    label: '法律合規 AI',
+    desc: '越南法律公務文書、各國進口規定與門市設立合規',
+    href: '/legal',
+    emoji: '⚖️',
+    color: 'from-amber-600 to-rose-600',
     standalone: true,
   },
 ] as const

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2, Users,
+  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2, Users, Scale,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -45,6 +45,7 @@ const TOOL_NAV: NavItem[] = [
   { labelKey: 'marketing',     href: '/marketing-auto',   icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
   { labelKey: 'booking',       href: '/booking',         icon: CalendarDays, module: 'booking' },
+  { labelKey: 'legal',         label: '法律合規',         href: '/legal',     icon: Scale,        module: null },
 ]
 
 // 僅總管理員可見的連結
