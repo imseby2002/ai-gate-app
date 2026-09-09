@@ -5,11 +5,13 @@ import Link from 'next/link'
 import {
   Building2, Loader2, ChevronRight, ShieldCheck, ArrowUpRight, ArrowRight, ExternalLink,
   Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
+  Lightbulb,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { UNIT_AREAS, COMMON_PAGES, UNIT_LABEL, hasUnit } from '@/lib/org-units'
+import { OfficeProposalsPanel } from '@/components/office/OfficeProposalsPanel'
 
 interface Access {
   isAdmin: boolean
@@ -38,11 +40,45 @@ const fallbackStyle = { icon: LayoutGrid, chip: 'bg-primary/10 text-primary', ri
 
 export default function OfficePage() {
   const [access, setAccess] = useState<Access | null>(null)
+  const [mainTab, setMainTab] = useState<'units' | 'proposals' | 'assign'>('units')
+  const [pendingCount, setPendingCount] = useState<number | null>(null)
+
+  const updateUrlTab = (tab: 'units' | 'proposals' | 'assign') => {
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      if (tab === 'units') {
+        url.searchParams.delete('tab')
+      } else {
+        url.searchParams.set('tab', tab)
+      }
+      window.history.replaceState({}, '', url.toString())
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab === 'proposals') setMainTab('proposals')
+      else if (tab === 'assign') setMainTab('assign')
+    }
+  }, [])
 
   useEffect(() => {
     fetch('/api/org/access')
       .then(r => r.ok ? r.json() : { isAdmin: false, canManage: false, units: [] })
       .then(setAccess)
+
+    // 取得待審提案數量，供標籤角標提示
+    fetch('/api/office/proposals')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d && Array.isArray(d.proposals)) {
+          const pending = d.proposals.filter((p: { status: string }) => p.status === 'pending').length
+          setPendingCount(pending)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   if (!access) return <div className="flex h-full items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -69,99 +105,190 @@ export default function OfficePage() {
               {roleLabel && <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />{roleLabel}</Badge>}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              依單位進入各自的系統{canManage ? '，管理者可見全部單位並指派人員權限。' : '。'}
+              依單位進入各自系統。每位同仁皆可提出系統問題與改進想法，經公司負責人批准後即時啟動程式改寫。
             </p>
             {COMMON_PAGES.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <span className="text-xs text-muted-foreground font-medium mr-1">全公司共用：</span>
-                {COMMON_PAGES.map(p => (
-                  <Link key={p.href} href={p.href}>
-                    <Button
-                      variant={p.href === '/units' ? 'default' : 'outline'}
-                      size="sm"
-                      className={`gap-1.5 rounded-full ${p.href === '/units' ? 'shadow-sm font-medium' : 'bg-card/60 backdrop-blur'}`}
+                {COMMON_PAGES.map(p => {
+                  const isProposals = p.href.includes('tab=proposals')
+                  const isSelected = isProposals && mainTab === 'proposals'
+                  return (
+                    <Link
+                      key={p.href}
+                      href={p.href}
+                      onClick={e => {
+                        if (isProposals) {
+                          e.preventDefault()
+                          setMainTab('proposals')
+                          updateUrlTab('proposals')
+                        }
+                      }}
                     >
-                      {p.href === '/units' && <Building2 className="h-3.5 w-3.5" />}
-                      {p.label}
-                      <ArrowUpRight className="h-3.5 w-3.5 opacity-60" />
-                    </Button>
-                  </Link>
-                ))}
+                      <Button
+                        variant={isSelected ? 'default' : p.href === '/units' ? 'default' : 'outline'}
+                        size="sm"
+                        className={`gap-1.5 rounded-full ${isSelected ? 'bg-amber-600 hover:bg-amber-700 text-white font-medium shadow-sm' : p.href === '/units' ? 'shadow-sm font-medium' : 'bg-card/60 backdrop-blur'}`}
+                      >
+                        {p.href === '/units' && <Building2 className="h-3.5 w-3.5" />}
+                        {p.label}
+                        <ArrowUpRight className="h-3.5 w-3.5 opacity-60" />
+                      </Button>
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* 各單位卡片 */}
-      {visibleAreas.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">
-          尚未指派任何單位，請聯繫公司負責人或 IT 管理員。
-        </Card>
+      {/* 導覽分頁標籤列 */}
+      <div className="flex items-center justify-between border-b pb-2 gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl">
+          <button
+            type="button"
+            onClick={() => { setMainTab('units'); updateUrlTab('units') }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              mainTab === 'units'
+                ? 'bg-background text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Building2 className="h-4 w-4 text-primary" />
+            部門系統入口
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMainTab('proposals'); updateUrlTab('proposals') }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              mainTab === 'proposals'
+                ? 'bg-background text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Lightbulb className="h-4 w-4 text-amber-500" />
+            問題與想法提案
+            {pendingCount !== null && pendingCount > 0 && (
+              <Badge className="ml-1 bg-amber-500 text-white hover:bg-amber-600 px-1.5 py-0 text-[10px] font-bold">
+                {pendingCount} 待審
+              </Badge>
+            )}
+          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => { setMainTab('assign'); updateUrlTab('assign') }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                mainTab === 'assign'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              成員與權限指派
+            </button>
+          )}
+        </div>
+
+        {mainTab === 'units' && (
+          <Button
+            size="sm"
+            onClick={() => { setMainTab('proposals'); updateUrlTab('proposals') }}
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold gap-1.5 shadow-sm"
+          >
+            <Lightbulb className="h-3.5 w-3.5" />
+            提出問題或想法
+          </Button>
+        )}
+      </div>
+
+      {/* Tab 內容切換 */}
+      {mainTab === 'proposals' ? (
+        <OfficeProposalsPanel canManage={canManage} />
+      ) : mainTab === 'assign' ? (
+        canManage && (
+          <AssignPanel
+            isAdmin={access.isAdmin}
+            isCompanyAdmin={access.isCompanyAdmin}
+            companyRole={access.companyRole}
+          />
+        )
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleAreas.map(a => {
-            const st = UNIT_STYLE[a.key] ?? fallbackStyle
-            const Icon = st.icon
-            const isMarketing = a.key === 'marketing' || a.key === 'mkt'
-            return (
-              <Link
-                key={a.key}
-                href={a.homeHref}
-                className="group block focus:outline-none"
-              >
-                <Card className={`p-5 h-full flex flex-col justify-between transition-all duration-200 border hover:shadow-md hover:-translate-y-0.5 ${st.ring}`}>
-                  <div>
-                    {/* 頂部：圖示、部門名稱、功能數 */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover:scale-105 ${st.chip}`}>
-                          <Icon className="h-5 w-5" />
+        <>
+          {/* 各單位卡片 */}
+          {visibleAreas.length === 0 ? (
+            <Card className="p-10 text-center text-sm text-muted-foreground">
+              尚未指派任何單位，請聯繫公司負責人或 IT 管理員。
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleAreas.map(a => {
+                const st = UNIT_STYLE[a.key] ?? fallbackStyle
+                const Icon = st.icon
+                const isMarketing = a.key === 'marketing' || a.key === 'mkt'
+                return (
+                  <Link
+                    key={a.key}
+                    href={a.homeHref}
+                    className="group block focus:outline-none"
+                  >
+                    <Card className={`p-5 h-full flex flex-col justify-between transition-all duration-200 border hover:shadow-md hover:-translate-y-0.5 ${st.ring}`}>
+                      <div>
+                        {/* 頂部：圖示、部門名稱、功能數 */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-xs transition-transform group-hover:scale-105 ${st.chip}`}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                                {a.label}
+                              </h3>
+                              <span className="text-[11px] text-muted-foreground font-medium">
+                                {a.pages.length} 項核心功能
+                              </span>
+                            </div>
+                          </div>
+
+                          {isMarketing && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 shrink-0">
+                              marketing
+                            </span>
+                          )}
                         </div>
-                        <div>
-                          <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                            {a.label}
-                          </h3>
-                          <span className="text-[11px] text-muted-foreground font-medium">
-                            {a.pages.length} 項核心功能
-                          </span>
-                        </div>
+
+                        {/* 部門核心職責與範疇簡述 */}
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">
+                          {a.description}
+                        </p>
                       </div>
 
-                      {isMarketing && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 shrink-0">
-                          marketing
-                        </span>
-                      )}
-                    </div>
+                      {/* 底部按鈕：進入部門首頁 */}
+                      <div className="pt-3 border-t flex items-center justify-between text-xs font-semibold text-primary mt-2">
+                        <span className="group-hover:underline">進入{a.label}首頁</span>
+                        <div className="flex items-center gap-1 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
+                          <span className="text-[11px] font-normal">前往</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
 
-                    {/* 部門核心職責與範疇簡述 */}
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">
-                      {a.description}
-                    </p>
-                  </div>
-
-                  {/* 底部按鈕：進入部門首頁 */}
-                  <div className="pt-3 border-t flex items-center justify-between text-xs font-semibold text-primary mt-2">
-                    <span className="group-hover:underline">進入{a.label}首頁</span>
-                    <div className="flex items-center gap-1 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
-                      <span className="text-[11px] font-normal">前往</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
-      )}
-
-      {canManage && (
-        <AssignPanel
-          isAdmin={access.isAdmin}
-          isCompanyAdmin={access.isCompanyAdmin}
-          companyRole={access.companyRole}
-        />
+          {canManage && (
+            <div className="mt-8">
+              <AssignPanel
+                isAdmin={access.isAdmin}
+                isCompanyAdmin={access.isCompanyAdmin}
+                companyRole={access.companyRole}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   )

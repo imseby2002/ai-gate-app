@@ -121,7 +121,10 @@ export const UNIT_AREAS: UnitArea[] = [
 
 // 共用／全公司層級（屬於公司整個，所有登入同仁皆可見，單位資料置頂）
 export const COMMON_PAGES: UnitPage[] = [
-  { href: '/units', label: '單位資料' }, { href: '/work', label: '任務' }, { href: '/meeting', label: '會議紀錄' },
+  { href: '/units', label: '單位資料' },
+  { href: '/office?tab=proposals', label: '💡 問題與想法' },
+  { href: '/work', label: '任務' },
+  { href: '/meeting', label: '會議紀錄' },
 ]
 
 export const UNIT_LABEL: Record<string, string> = Object.fromEntries(UNIT_AREAS.map(a => [a.key, a.label]))
