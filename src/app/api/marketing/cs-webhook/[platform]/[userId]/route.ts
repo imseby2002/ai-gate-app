@@ -726,6 +726,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   const fileParts: string[] = []
   const seenFiles = new Set<string>()
 
+  let filesLoaded = false
+
   if (campaigns?.length) {
     // 排序：優先選有填寫直接知識庫、且提示詞/檔案最齊全的 campaign 來套用主設定
     const sortedForConfig = [...campaigns].sort((a, b) => {
@@ -767,12 +769,17 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         }
       }
 
-      // Dialogue files（CS 專用，依檔名去重避免相同問答檔反覆佔滿 prompt 額度）
-      const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>
-      for (const f of dialogueFiles) {
-        if (f.textContent && !seenFiles.has(f.name)) {
-          seenFiles.add(f.name)
-          fileParts.push(`【知識庫文件｜${f.name}】\n${f.textContent}`)
+      // Dialogue files（CS 專用：以主專案的檔案清單為準，避免舊專案已刪除的檔案被挖出來）
+      if (!filesLoaded) {
+        const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>
+        if (dialogueFiles.length > 0) {
+          for (const f of dialogueFiles) {
+            if (f.textContent && !seenFiles.has(f.name)) {
+              seenFiles.add(f.name)
+              fileParts.push(`【知識庫文件｜${f.name}】\n${f.textContent}`)
+            }
+          }
+          filesLoaded = true
         }
       }
     }
