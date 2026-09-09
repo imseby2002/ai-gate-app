@@ -330,3 +330,19 @@ export interface StoreLearningMaterial {
   updated_at?: string
 }
 
+export interface CompanyRegulation {
+  id: string
+  code: string // e.g. 'REG-FOOD-01'
+  title: string
+  category: 'food_safety' | 'employee_conduct' | 'store_safety' | 'customer_crisis' | 'confidentiality' | 'labor_shift' | string
+  clause_content: string
+  violation_penalty?: string
+  manager_enforcement?: string
+  mandatory_level: 'strict' | 'standard' | 'guideline' | string
+  version?: string
+  status?: 'active' | 'archived' | string
+  created_at?: string
+  updated_at?: string
+}
+
+

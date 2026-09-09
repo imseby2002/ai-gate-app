@@ -249,6 +249,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Query corporate regulations context
+    const regList = STORE_COACH_KNOWLEDGE.companyRegulations || []
+    const companyRegulationsContext = '\n【Feeling Tea 公司官方正式規章與員工紅線守則】：\n' +
+      regList.map(r => `• [${r.code}] ${r.title} (${r.mandatory_level === 'strict' ? '嚴格紅線' : '常規規範'}): 條款: ${r.clause_content} | 罰則: ${r.violation_penalty}`).join('\n')
+
     // Check LLM availability
     const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
     const hasGoogle = !!(process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY)
@@ -270,6 +275,7 @@ export async function POST(req: NextRequest) {
 - 問題分類：${category}
 ${rdRecipe ? `- 研發標準參考：${JSON.stringify(rdRecipe)}` : ''}
 ${learnedMaterialsContext}
+${companyRegulationsContext}
 
 【10層診斷矩陣定義】：
 1. 產品配方 (Product & Recipe)：糖度 Brix、比例、茶湯鮮度

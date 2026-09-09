@@ -306,3 +306,24 @@ CREATE INDEX IF NOT EXISTS idx_inspection_results_store ON inspection_results(st
 CREATE INDEX IF NOT EXISTS idx_store_learning_store_code ON store_learning_materials(store_code);
 CREATE INDEX IF NOT EXISTS idx_store_learning_dimension ON store_learning_materials(dimension);
 
+-- 17. 公司管理規範與員工守則資料庫 (Company Regulations)
+CREATE TABLE IF NOT EXISTS company_regulations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL, -- e.g. REG-FOOD-01, REG-CONDUCT-02
+  title text NOT NULL,
+  category text NOT NULL, -- 'food_safety', 'employee_conduct', 'store_safety', 'customer_crisis', 'confidentiality', 'labor_shift'
+  clause_content text NOT NULL,
+  violation_penalty text, -- 違規處分 / 罰則
+  manager_enforcement text, -- 店長落實與查核指引
+  mandatory_level text DEFAULT 'strict', -- 'strict' (嚴格紅線), 'standard' (常規規範), 'guideline' (指導原則)
+  version text DEFAULT '2026.1',
+  status text DEFAULT 'active',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_company_regulations_code ON company_regulations(code);
+CREATE INDEX IF NOT EXISTS idx_company_regulations_category ON company_regulations(category);
+CREATE INDEX IF NOT EXISTS idx_company_regulations_level ON company_regulations(mandatory_level);
+
+

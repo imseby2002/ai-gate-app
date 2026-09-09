@@ -46,7 +46,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { STORE_COACH_KNOWLEDGE } from '@/lib/store-coach/knowledge-base'
-import type { DiagnosisOutput, VisionAnalysisResult, StoreLearningMaterial } from '@/lib/types/store-coach'
+import type { DiagnosisOutput, VisionAnalysisResult, StoreLearningMaterial, CompanyRegulation } from '@/lib/types/store-coach'
 
 type TabType = 'diagnose' | 'workstations' | 'hygiene' | 'coaching' | 'vision' | 'marketing' | 'principles' | 'learning'
 
@@ -110,6 +110,107 @@ export default function StoreCoachPage() {
     }
   }
 
+  // Company Regulations State
+  const [regulations, setRegulations] = useState<CompanyRegulation[]>(STORE_COACH_KNOWLEDGE.companyRegulations || [])
+  const [regTitle, setRegTitle] = useState('')
+  const [regCode, setRegCode] = useState('')
+  const [regCategory, setRegCategory] = useState('food_safety')
+  const [regClause, setRegClause] = useState('')
+  const [regPenalty, setRegPenalty] = useState('')
+  const [regEnforcement, setRegEnforcement] = useState('')
+  const [regLevel, setRegLevel] = useState('strict')
+  const [isSubmittingReg, setIsSubmittingReg] = useState(false)
+  const [regNotice, setRegNotice] = useState('')
+  const [regFilterCat, setRegFilterCat] = useState('all')
+
+  // Compliance AI Consultation
+  const [regQuery, setRegQuery] = useState('')
+  const [regAnswer, setRegAnswer] = useState('')
+  const [isAskingReg, setIsAskingReg] = useState(false)
+
+  const fetchRegulations = async () => {
+    try {
+      const res = await fetch('/api/store/coach/regulations')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.regulations && json.regulations.length > 0) {
+          setRegulations(json.regulations)
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch regulations:', err)
+    }
+  }
+
+  // Handle Transmit Regulation to Coach
+  const handleTransmitRegulation = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!regTitle.trim() || !regClause.trim()) {
+      alert('請填寫規範標題與具體條款內容')
+      return
+    }
+    setIsSubmittingReg(true)
+    setRegNotice('')
+    try {
+      const res = await fetch('/api/store/coach/regulations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: regTitle,
+          code: regCode,
+          category: regCategory,
+          clause_content: regClause,
+          violation_penalty: regPenalty,
+          manager_enforcement: regEnforcement,
+          mandatory_level: regLevel,
+        }),
+      })
+      if (res.ok) {
+        setRegNotice('✅ 公司規範已成功傳遞給 AI 教練大腦，並同步融入營運守則！')
+        setRegTitle('')
+        setRegCode('')
+        setRegClause('')
+        setRegPenalty('')
+        setRegEnforcement('')
+        fetchRegulations()
+      } else {
+        alert('規範傳遞失敗')
+      }
+    } catch (err) {
+      console.error('Transmit regulation error:', err)
+      alert('規範傳遞發生錯誤')
+    } finally {
+      setIsSubmittingReg(false)
+    }
+  }
+
+  // Handle Consult Compliance AI
+  const handleAskCompliance = async () => {
+    if (!regQuery.trim()) return
+    setIsAskingReg(true)
+    setRegAnswer('')
+    try {
+      const res = await fetch('/api/store/coach/regulations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query_prompt: regQuery,
+        }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        setRegAnswer(json.answer)
+      } else {
+        alert('規章諮詢請求失敗')
+      }
+    } catch (err) {
+      console.error('Compliance AI error:', err)
+      alert('規章諮詢發生錯誤')
+    } finally {
+      setIsAskingReg(false)
+    }
+  }
+
   // Copy helper
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
@@ -117,7 +218,7 @@ export default function StoreCoachPage() {
     setTimeout(() => setCopiedKey(null), 2000)
   }
 
-  // Load store coach base data and learning materials
+  // Load store coach base data, learning materials, and company regulations
   useEffect(() => {
     async function fetchStoreCoachData() {
       try {
@@ -132,6 +233,7 @@ export default function StoreCoachPage() {
     }
     fetchStoreCoachData()
     fetchLearningMaterials()
+    fetchRegulations()
   }, [])
 
   // Handle Learning Ingestion
@@ -1542,6 +1644,288 @@ export default function StoreCoachPage() {
                   研發 AI 與門市教練 AI 共享同一套 Feeling Tea 原料庫、配方 Brix 度數與食安標準。
                   當門市現場發生甜度偏高時，門市教練會自動向研發大腦索取標準糖度；當研發推出新飲品時，門市教練自動在工作站配置中預測瓶頸並更新 90 秒快閃清潔標準。
                 </p>
+              </div>
+            </div>
+
+            {/* 公司正式規章、紅線與員工守則 (Corporate Regulations & Compliance) */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-rose-600" />
+                      Feeling Tea 公司正式規章與門市管理規範 ({regulations.length} 條)
+                    </h3>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold border border-rose-200">
+                      嚴格紅線管制
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    已全數傳遞並融入門市營運教練 AI 大腦。教練在執行 10 層診斷與巡站話術時，會主動援引並捍衛公司規範。
+                  </p>
+                </div>
+              </div>
+
+              {/* 傳遞新規章表單 */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mb-5">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-2">
+                  📝 傳遞公司新規範 / 修改規章條款至 AI 教練大腦：
+                </span>
+                <form onSubmit={handleTransmitRegulation} className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        規範名稱 *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={regTitle}
+                        onChange={e => setRegTitle(e.target.value)}
+                        placeholder="例如：門市手機使用與社群發言規範"
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        條款編號 (選填)
+                      </label>
+                      <input
+                        type="text"
+                        value={regCode}
+                        onChange={e => setRegCode(e.target.value)}
+                        placeholder="REG-DISC-07"
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        規範類別
+                      </label>
+                      <select
+                        value={regCategory}
+                        onChange={e => setRegCategory(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      >
+                        <option value="food_safety">食安衛生法規 (Food Safety)</option>
+                        <option value="employee_conduct">員工紀律與誠信 (Conduct & Integrity)</option>
+                        <option value="store_safety">門市工安防護 (Safety & First Aid)</option>
+                        <option value="customer_crisis">客訴與公關危機 (Crisis Management)</option>
+                        <option value="confidentiality">營業秘密與配方保護 (Confidentiality)</option>
+                        <option value="labor_shift">勞動考勤與工時 (Labor & Shift)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        紅線等級
+                      </label>
+                      <select
+                        value={regLevel}
+                        onChange={e => setRegLevel(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      >
+                        <option value="strict">🔴 嚴格紅線 (零容忍/解僱)</option>
+                        <option value="standard">🟡 常規規範 (記點/扣減獎金)</option>
+                        <option value="guideline">🔵 指導原則 (口頭糾正/宣導)</option>
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-4">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        具體條款內容 *
+                      </label>
+                      <textarea
+                        rows={2}
+                        required
+                        value={regClause}
+                        onChange={e => setRegClause(e.target.value)}
+                        placeholder="詳細條文規定..."
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        違規罰則與處分程序
+                      </label>
+                      <input
+                        type="text"
+                        value={regPenalty}
+                        onChange={e => setRegPenalty(e.target.value)}
+                        placeholder="例如：首次記大過停職、賠償損失..."
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                        店長查核指引
+                      </label>
+                      <input
+                        type="text"
+                        value={regEnforcement}
+                        onChange={e => setRegEnforcement(e.target.value)}
+                        placeholder="例如：每日班前早會抽檢、每週核對計數器..."
+                        className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-slate-500">
+                      送出後 AI 教練大腦將即刻更新守則記憶
+                    </span>
+                    <Button
+                      type="submit"
+                      disabled={isSubmittingReg}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg gap-1.5 cursor-pointer"
+                    >
+                      {isSubmittingReg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                      傳遞規範至 AI 教練
+                    </Button>
+                  </div>
+                </form>
+
+                {regNotice && (
+                  <div className="mt-2.5 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span>{regNotice}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 規章合規諮詢 AI (Compliance Assistant Q&A) */}
+              <div className="p-4 rounded-xl bg-slate-900 text-white border border-slate-800 text-xs mb-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500 text-white font-bold">
+                    合規助手 Compliance AI
+                  </span>
+                  <h4 className="font-bold text-white text-xs sm:text-sm">
+                    門市規章與員工紀律即時諮詢
+                  </h4>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={regQuery}
+                    onChange={e => setRegQuery(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleAskCompliance()
+                    }}
+                    placeholder="例如：員工在吧檯內滑手機，店長依照規章該如何處理？"
+                    className="grow text-xs rounded-lg border border-slate-700 bg-slate-800 text-white px-3 py-2 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-400"
+                  />
+                  <Button
+                    onClick={handleAskCompliance}
+                    disabled={isAskingReg}
+                    className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-lg shrink-0 cursor-pointer"
+                  >
+                    {isAskingReg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                    諮詢規章
+                  </Button>
+                </div>
+
+                {/* 快速提問標籤 */}
+                <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-400">
+                  <span>常見規章諮詢：</span>
+                  <button
+                    type="button"
+                    onClick={() => setRegQuery('收銀員私自收取現金未打 POS 單，公司處分規定是什麼？')}
+                    className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+                  >
+                    「收銀誠信與舞弊處分」
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRegQuery('原料賞味期過了或是標籤塗改，依照公司紅線如何懲處？')}
+                    className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+                  >
+                    「過期原料與標籤偽造」
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRegQuery('員工把公司配方表拍照傳到社群網路，公司法律責任為何？')}
+                    className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
+                  >
+                    「配方機密外洩罰則」
+                  </button>
+                </div>
+
+                {regAnswer && (
+                  <div className="mt-3 p-3 rounded-lg bg-black/40 border border-rose-500/40 text-slate-200 space-y-1.5 leading-relaxed whitespace-pre-line">
+                    <strong className="text-rose-400 block font-bold">AI 援引規章條款回覆：</strong>
+                    <div>{regAnswer}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* 規章清單 */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    現行公司規章與紅線守則明細
+                  </h4>
+                  <div className="flex items-center gap-1 flex-wrap text-xs">
+                    {['all', 'food_safety', 'employee_conduct', 'confidentiality', 'store_safety', 'customer_crisis'].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setRegFilterCat(cat)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          regFilterCat === cat
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                        }`}
+                      >
+                        {cat === 'all' ? '全部' : cat === 'food_safety' ? '食安衛生' : cat === 'employee_conduct' ? '員工紀律' : cat === 'confidentiality' ? '配方機密' : cat === 'store_safety' ? '工安防護' : '客訴公關'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {regulations
+                    .filter(r => regFilterCat === 'all' || r.category === regFilterCat)
+                    .map(reg => (
+                      <div
+                        key={reg.id}
+                        className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 text-[11px]">
+                            {reg.code}
+                          </span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                            reg.mandatory_level === 'strict'
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          }`}>
+                            {reg.mandatory_level === 'strict' ? '🔴 嚴格紅線' : '🟡 常規守則'}
+                          </span>
+                        </div>
+
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                          {reg.title}
+                        </h4>
+
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                          {reg.clause_content}
+                        </p>
+
+                        <div className="p-2.5 rounded-lg bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 text-[11px] text-rose-900 dark:text-rose-200">
+                          <strong>違規罰則：</strong> {reg.violation_penalty}
+                        </div>
+
+                        {reg.manager_enforcement && (
+                          <div className="p-2.5 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 text-[11px] text-emerald-900 dark:text-emerald-200">
+                            <strong>店長查核指引：</strong> {reg.manager_enforcement}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
           </div>
