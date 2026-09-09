@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Store, BarChart3, Boxes, Receipt, Wrench, Calendar, ShoppingBag,
   ArrowRight, ArrowLeft, ShieldCheck, CheckCircle2, Building2,
-  Sparkles, ExternalLink, RefreshCw, Loader2
+  Sparkles, ExternalLink, RefreshCw, Loader2, Compass
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,17 @@ interface StoreFeature {
 }
 
 const STORE_FEATURES: StoreFeature[] = [
+  {
+    href: '/store-coach',
+    title: '門市營運教練 AI',
+    subtitle: 'Store Management Coach AI',
+    description: '七大營運維度、現場動線空間配置、90秒快閃清潔、十層全景診斷與現場視覺 AI（看現場）。',
+    icon: Compass,
+    color: 'text-emerald-600 dark:text-emerald-400',
+    chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    ring: 'hover:border-emerald-500/60 ring-1 ring-emerald-500/30',
+    tags: ['10層全景診斷', '現場視覺AI', '動線工效', '90秒清潔'],
+  },
   {
     href: '/store-reports',
     title: '門市報表',
@@ -154,7 +165,35 @@ export default function StoreDepartmentHubPage() {
         </div>
       )}
 
-      {/* 6 大核心功能卡片網格 */}
+      {/* 門市營運教練 AI 旗艦 Banner */}
+      <div className="p-4 sm:p-5 rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-400/30 shadow-xs">
+            <Compass className="h-6 w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-black text-white">
+                門市營運教練 AI (Store Management Coach AI)
+              </h2>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 font-black">
+                新旗艦大腦
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-emerald-200/90 mt-0.5">
+              陪著店長、區督導、門市指導員一同解決現場問題・七大維度・流程分離・十層全景診斷・現場視覺 AI
+            </p>
+          </div>
+        </div>
+        <Link href="/store-coach" className="shrink-0 self-start md:self-auto">
+          <Button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm px-5 rounded-xl gap-1.5 shadow-md cursor-pointer">
+            進入教練工作台
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+
+      {/* 7 大核心功能卡片網格 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STORE_FEATURES.map(f => {
           const Icon = f.icon

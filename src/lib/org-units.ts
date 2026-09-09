@@ -59,6 +59,7 @@ export const UNIT_AREAS: UnitArea[] = [
     homeHref: '/store',
     description: '門市報表・盤點訂貨・水電瓦斯冰塊・現場報修排班',
     pages: [
+      { href: '/store-coach', label: '門市營運教練 AI', description: '七大營運維度、現場動線空間配置、90秒快閃清潔、十層根因穿透診斷與現場視覺 AI' },
       { href: '/store-reports', label: '門市報表', description: '門市 POS 業績即時報表、毛利損益分析與門市銷售動態' },
       { href: '/store-inventory', label: '盤點・訂貨', description: '原物料庫存盤點、每日叫貨訂單、進貨驗收與耗損登記' },
       { href: '/store-bills', label: '水電費用填報', description: '每月電費、水費、瓦斯費、冰塊費申報與單據簽收憑證照片' },
