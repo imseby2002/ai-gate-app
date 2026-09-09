@@ -103,7 +103,6 @@ export default function RdPage() {
   const [busy, setBusy] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
-  const priceRef = useRef<HTMLInputElement>(null)
 
   const toggleExpand = (id: string) => {
     setExpandedRecipes(prev => {
@@ -168,30 +167,6 @@ export default function RdPage() {
       const d = await res.json()
       if (res.ok) {
         setMsg({ text: `成功匯入 / 更新 ${d.imported} 個配方！`, type: 'success' })
-        loadData()
-      } else {
-        setMsg({ text: d.error ?? '匯入失敗', type: 'error' })
-      }
-    } catch (err) {
-      setMsg({ text: `匯入發生錯誤：${err instanceof Error ? err.message : err}`, type: 'error' })
-    }
-    setUploading(false)
-  }
-
-  // 匯入原料/設備/道具/耗材 標準定價（中央維護）
-  const handleUploadPrice = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    setUploading(true)
-    setMsg(null)
-    const fd = new FormData()
-    fd.append('file', file)
-    try {
-      const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
-      const d = await res.json()
-      if (res.ok) {
-        setMsg({ text: `三層標準價匯入 ${d.imported} 筆！配方門市成本已自動重算更新。`, type: 'success' })
         loadData()
       } else {
         setMsg({ text: d.error ?? '匯入失敗', type: 'error' })
@@ -296,7 +271,7 @@ export default function RdPage() {
 
   const TABS: { id: RdTab; label: string; icon: ReactNode }[] = [
     { id: 'recipes', label: '配方與門市成本試算', icon: <BookOpen className="h-4 w-4" /> },
-    { id: 'prices', label: '原物料・設備・道具・耗材 定價庫', icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'prices', label: '出納核定物料價表 (唯讀參考)', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'mapping', label: 'POS 成品對照', icon: <Link2 className="h-4 w-4" /> },
     { id: 'variance', label: '使用量檢驗 (差異分析)', icon: <Scale className="h-4 w-4" /> },
   ]
@@ -332,6 +307,11 @@ export default function RdPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/finance?tab=pricing">
+            <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium">
+              <DollarSign className="h-4 w-4" />出納物料定價 (權責維護)
+            </Button>
+          </Link>
           <Link href="/rd-lab">
             <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 dark:text-purple-400">
               <FlaskConical className="h-4 w-4" />研發大腦 (Lab)
@@ -358,13 +338,6 @@ export default function RdPage() {
         accept=".xlsx,.xls"
         onChange={handleUpload}
       />
-      <input
-        ref={priceRef}
-        type="file"
-        hidden
-        accept=".xlsx"
-        onChange={handleUploadPrice}
-      />
 
       {/* 訊息提示 */}
       {msg && (
@@ -387,17 +360,17 @@ export default function RdPage() {
         </div>
       )}
 
-      {/* 價格體系說明 Banner */}
-      <div className="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/80 dark:border-purple-800/40 rounded-xl p-3.5 flex items-start gap-3">
-        <Info className="h-4 w-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
-        <div className="text-xs text-purple-950 dark:text-purple-200 space-y-1 leading-relaxed">
-          <p className="font-semibold">配方成本與出納原料定價連動機制：</p>
-          <ul className="list-disc list-inside space-y-0.5 text-purple-900/90 dark:text-purple-200/90">
-            <li><b>門市配方成本主要來源</b>：<b>主要來自【出納總務】設定之「賣給直營門市價格 (ĐGX CH)」</b>，每杯配方成本 ＝ 各原物料用量 × 出納門市出貨價。</li>
-            <li><b>工廠進貨價（ĐGN）</b>：工廠/總部的原物料採購成本。門市出貨價減去工廠進貨價即為工廠出貨給直營門市的毛利。</li>
-            <li><b>賣給經銷商或非直營門市價格（ĐGX Đại lý）</b>：加盟店、經銷通路之出貨價格。</li>
-            <li><b>出納人員可直接於本頁「原料價格」分頁或透過 Excel 匯入維護價表</b>，更新後所有研發配方之門市成本即時自動連動更新！</li>
-            <li>涵蓋四大品類：<b>原料、設備、道具、耗材</b>，出納與研發共享同一套物料標準價資料庫。</li>
+      {/* 公司權責原則說明 Banner */}
+      <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
+        <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="text-xs text-amber-950 dark:text-amber-200 space-y-1.5 leading-relaxed">
+          <p className="font-bold text-sm text-amber-900 dark:text-amber-300 flex items-center gap-2">
+            【公司權責劃分原則】：研發不負責物料定價，定價由【出納總務】統籌核定與維護
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-amber-900/90 dark:text-amber-200/90">
+            <li><b>出納總務專責定價</b>：全公司所有物料（原物料、設備、道具、耗材）之「工廠進貨價 (ĐGN)」、「直營門市出貨價 (ĐGX CH)」與「經銷商批發價 (ĐGX Đại lý)」均由<b>出納單位</b>於【出納・物料定價】獨立維護。</li>
+            <li><b>研發專責配方與風味</b>：研發人員專注於設計飲品比例、配方原料每杯用量 (克/毫升)、沖煮工藝與風味感官標準。</li>
+            <li><b>即時連動成本</b>：配方中的門市每杯成本 ＝ 各原料用量 × 出納核定之門市價，系統即時自動計算，<b>研發端無定價修改與匯入權限，確保全公司數據唯一真實來源</b>。若需調整價格請至出納模組辦理。</li>
           </ul>
         </div>
       </div>
@@ -470,21 +443,17 @@ export default function RdPage() {
                   )}
                   匯入配方
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 text-xs"
-                  disabled={uploading}
-                  onClick={() => priceRef.current?.click()}
-                  title="匯入中央廚房標準價表 (GIÁ XUẤT CHUẨN)"
-                >
-                  {uploading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FileSpreadsheet className="h-3.5 w-3.5 text-amber-600" />
-                  )}
-                  匯入定價
-                </Button>
+                <Link href="/finance?tab=pricing">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    title="物料價格由出納總務統籌管理，點擊前往出納維護"
+                  >
+                    <DollarSign className="h-3.5 w-3.5" />
+                    出納物料定價
+                  </Button>
+                </Link>
                 <Button
                   size="sm"
                   className="gap-1.5 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
@@ -702,13 +671,9 @@ export default function RdPage() {
         </div>
       )}
 
-      {/* 原物料・設備・道具・耗材 定價庫 TAB */}
+      {/* 原物料・設備・道具・耗材 出納核定價表 (唯讀參考) TAB */}
       {tab === 'prices' && (
-        <PricesSection
-          prices={prices}
-          uploading={uploading}
-          onUploadClick={() => priceRef.current?.click()}
-        />
+        <PricesSection prices={prices} />
       )}
 
       {/* POS 成品對照 TAB */}
@@ -771,7 +736,7 @@ export default function RdPage() {
                       原料成分與三層成本試算
                     </span>
                     <span className="text-[11px] text-muted-foreground">
-                      選擇原料自動帶出直營門市出貨價與工廠進價；<b>門市成本＝用量 × 賣給直營門市價</b>
+                      選擇原料自動帶出出納核定之門市價與工廠進價；<b>門市成本＝用量 × 出納門市出貨價（研發不可自訂修改單價）</b>
                     </span>
                   </div>
                   <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={addItem}>
@@ -800,7 +765,7 @@ export default function RdPage() {
                                 <option value="">選擇原料...</option>
                                 {materials.map(m => (
                                   <option key={m.code} value={m.code}>
-                                    {m.name || m.code} {m.unit ? `(${m.unit})` : ''} [直營門市價:{fmt(m.export_price || 0)} | 工廠進價:{fmt(m.purchase_price || 0)}]
+                                    {m.name || m.code} {m.unit ? `(${m.unit})` : ''} [出納門市價:{fmt(m.export_price || 0)} | 工廠進價:{fmt(m.purchase_price || 0)}]
                                   </option>
                                 ))}
                               </select>
@@ -834,35 +799,29 @@ export default function RdPage() {
                               value={it.qty_per_cup || ''}
                               onChange={e => setItem(i, { qty_per_cup: Number(e.target.value) || 0 })}
                               placeholder="用量"
-                              className="h-8 text-xs"
-                              title="每杯用量"
+                              className="h-8 text-xs font-semibold"
+                              title="研發設定每杯用量"
                             />
                           </div>
 
-                          {/* 賣給直營門市價格 (門市成本單價) */}
-                          <div className="w-24 shrink-0">
-                            <Input
-                              type="number"
-                              step="any"
-                              value={it.export_price ?? ''}
-                              onChange={e => setItem(i, { export_price: Number(e.target.value) || 0 })}
-                              placeholder="直營門市價"
-                              className="h-8 text-xs font-semibold text-purple-700 dark:text-purple-300"
-                              title="賣給直營門市價格（計算門市每杯成本）"
-                            />
+                          {/* 賣給直營門市價格 (出納核定・唯讀) */}
+                          <div className="w-28 shrink-0 text-right">
+                            <div
+                              className="h-8 px-2 flex items-center justify-end rounded bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/40 text-xs font-semibold text-purple-700 dark:text-purple-300 tabular-nums"
+                              title="由【出納總務】核定之賣給直營門市價格 (唯讀)"
+                            >
+                              {Number(it.export_price) > 0 ? `${fmt(it.export_price || 0)} ₫` : <span className="text-amber-500 text-[10px] font-normal">⚠️出納未定價</span>}
+                            </div>
                           </div>
 
-                          {/* 工廠進貨價 */}
-                          <div className="w-24 shrink-0">
-                            <Input
-                              type="number"
-                              step="any"
-                              value={it.purchase_price ?? ''}
-                              onChange={e => setItem(i, { purchase_price: Number(e.target.value) || 0 })}
-                              placeholder="工廠進價"
-                              className="h-8 text-xs text-muted-foreground"
-                              title="工廠採購進價（工廠進貨成本）"
-                            />
+                          {/* 工廠進貨價 (出納核定・唯讀) */}
+                          <div className="w-24 shrink-0 text-right">
+                            <div
+                              className="h-8 px-2 flex items-center justify-end rounded bg-muted/40 border text-xs text-muted-foreground tabular-nums"
+                              title="由【出納總務】核定之工廠進價 (唯讀)"
+                            >
+                              {fmt(it.purchase_price || 0)} ₫
+                            </div>
                           </div>
 
                           {/* 門市成本小計 */}
@@ -931,15 +890,11 @@ export default function RdPage() {
   )
 }
 
-// ── 子組件：原料・設備・道具・耗材 定價庫 ──
+// ── 子組件：原料・設備・道具・耗材 定價庫 (出納核定・研發唯讀參考) ──
 function PricesSection({
   prices,
-  uploading,
-  onUploadClick,
 }: {
   prices: MaterialPrice[]
-  uploading: boolean
-  onUploadClick: () => void
 }) {
   const [q, setQ] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<'all' | '原料' | '設備' | '道具' | '耗材'>('all')
@@ -967,28 +922,32 @@ function PricesSection({
         <div>
           <h3 className="font-bold text-lg flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-emerald-600" />
-            原物料・設備・道具・耗材 三層定價庫
+            原物料・設備・道具・耗材 定價庫 (出納核定・研發唯讀)
           </h3>
           <p className="text-xs text-muted-foreground">
-            維護全公司各品項的「工廠進貨價」、「賣給直營門市價格（配方門市成本）」與「賣給經銷商或非直營門市價格」。
+            即時同步自【出納總務】之原物料、設備、道具、耗材三層定價。研發部門僅做為配方成本試算之即時連動參考。
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs"
-            disabled={uploading}
-            onClick={onUploadClick}
-          >
-            {uploading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Upload className="h-3.5 w-3.5 text-amber-600" />
-            )}
-            匯入三層標準定價表 (.xlsx)
-          </Button>
+          <Link href="/finance?tab=pricing">
+            <Button size="sm" className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-sm">
+              <DollarSign className="h-3.5 w-3.5" />
+              前往出納總務・物料定價管理 ➔
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* 權責劃分公告條 */}
+      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-950 dark:text-amber-200 text-xs flex items-start gap-2.5">
+        <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="font-bold text-amber-900 dark:text-amber-300">【研發權責劃分公告】：研發不負責物料定價與價表管理</span>
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+            依全公司管理原則，所有物料（原物料、設備、道具、耗材）之<b>工廠進貨價 (ĐGN)、直營門市出貨價 (ĐGX CH)、經銷商批發價 (ĐGX Đại lý)</b> 均由【出納總務】統籌核定與維護。
+            研發部門專注於設計配方比例、每杯用量與工藝風味，此處僅提供唯讀查閱，不開放手動修改或價表匯入。若有新物料需定價或價格異動，請至出納模組辦理。
+          </p>
         </div>
       </div>
 
@@ -1025,15 +984,15 @@ function PricesSection({
           />
         </div>
         <span className="text-xs text-muted-foreground shrink-0">
-          共 {filtered.length} 項品類定價
+          共 {filtered.length} 項出納核定品類定價
         </span>
       </div>
 
       {prices.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm space-y-2">
-          <p>定價庫尚無標準價資料</p>
+          <p>出納定價庫尚無標準價資料</p>
           <p className="text-xs text-gray-400">
-            點擊上方「匯入三層標準定價表 (.xlsx)」上傳中央廚房進價／售價表（GIÁ XUẤT CHUẨN），系統將自動建立定價庫。
+            請至【出納・物料定價】上傳中央廚房進價／售價表（GIÁ XUẤT CHUẨN）或新增品項，配方成本將自動連動。
           </p>
         </div>
       ) : (

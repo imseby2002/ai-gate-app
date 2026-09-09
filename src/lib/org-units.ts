@@ -36,7 +36,7 @@ export const UNIT_AREAS: UnitArea[] = [
     description: '出納帳務・門市收支・物料定價與廠商管理',
     pages: [
       { href: '/finance', label: '出納總務', description: '出納流水帳、帳戶管理、財務損益報表與資料匯入' },
-      { href: '/finance?tab=pricing', label: '物料定價', description: '原料、設備、耗材之工廠進貨價、門市價與經銷價' },
+      { href: '/finance?tab=pricing', label: '物料定價', description: '原料、設備、耗材之工廠進貨價、門市價與經銷價（出納專責統籌管理）' },
       { href: '/store-expenses', label: '門市費用', description: '門市水電瓦斯冰塊費用管理、收支明細與廠商填報' },
       { href: '/vendors', label: '廠商資料', description: '供應商基本資料、採購紀錄、結帳日與專屬免登入填報端' },
     ],
@@ -47,7 +47,7 @@ export const UNIT_AREAS: UnitArea[] = [
     homeHref: '/rd',
     description: '飲品配方・門市成本試算・研發大腦與實驗日誌',
     pages: [
-      { href: '/rd', label: '配方', description: '飲品配方設計、每杯門市成本（串接出納定價）與 POS 對照' },
+      { href: '/rd', label: '配方', description: '飲品配方設計、每杯門市成本（自動連動出納定價，研發不負責定價）與 POS 對照' },
       { href: '/rd-lab', label: '研發大腦 (R&D Lab)', description: 'AI 配方實驗室、原料特性、糖稅法規與 6 Agent 創新模型' },
       { href: '/rd-ai', label: '研發討論AI', description: '研發專用 AI 智能對話助手、配方調研與風味建議' },
       { href: '/rd-logs', label: '研發日誌', description: '配方研發紀錄、品評反饋與產品迭代歷程' },

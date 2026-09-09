@@ -154,26 +154,7 @@ export async function POST(req: NextRequest) {
     if (e2) return NextResponse.json({ error: e2.message }, { status: 500 })
   }
 
-  // 同步更新自訂原料三層單價至原料成本庫
-  if (Array.isArray(body.items)) {
-    const priceUpserts = body.items
-      .filter((it: any) => it.material_code && (Number(it.export_price) > 0 || Number(it.purchase_price) > 0 || Number(it.dealer_price) > 0))
-      .map((it: any) => ({
-        owner_id: user.id,
-        material_code: String(it.material_code).trim(),
-        material_name: String(it.material_name ?? it.material_code).trim(),
-        unit: String(it.unit ?? '').trim(),
-        category: String(it.category ?? '原料').trim(),
-        export_price: Number(it.export_price) || 0,     // 賣給直營門市價格
-        purchase_price: Number(it.purchase_price) || 0, // 工廠進貨價
-        dealer_price: Number(it.dealer_price) || 0,     // 賣給經銷商價格
-        updated_at: new Date().toISOString(),
-      }))
-    if (priceUpserts.length) {
-      await supabase.from('inv_material_prices').upsert(priceUpserts, { onConflict: 'owner_id,material_code' })
-    }
-  }
-
+  // 研發不負責定價：物料價格由【出納總務】統籌維護，此處僅儲存配方原料與用量，不再覆寫物料價格庫。
   return NextResponse.json({ id: recipe.id })
 }
 
@@ -198,26 +179,7 @@ export async function PATCH(req: NextRequest) {
       const { error } = await supabase.from('inv_recipe_items').insert(items)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    // 同步更新自訂原料三層單價至原料成本庫
-    if (Array.isArray(body.items)) {
-      const priceUpserts = body.items
-        .filter((it: any) => it.material_code && (Number(it.export_price) > 0 || Number(it.purchase_price) > 0 || Number(it.dealer_price) > 0))
-        .map((it: any) => ({
-          owner_id: user.id,
-          material_code: String(it.material_code).trim(),
-          material_name: String(it.material_name ?? it.material_code).trim(),
-          unit: String(it.unit ?? '').trim(),
-          category: String(it.category ?? '原料').trim(),
-          export_price: Number(it.export_price) || 0,     // 賣給直營門市價格
-          purchase_price: Number(it.purchase_price) || 0, // 工廠進貨價
-          dealer_price: Number(it.dealer_price) || 0,     // 賣給經銷商價格
-          updated_at: new Date().toISOString(),
-        }))
-      if (priceUpserts.length) {
-        await supabase.from('inv_material_prices').upsert(priceUpserts, { onConflict: 'owner_id,material_code' })
-      }
-    }
+    // 研發不負責定價：物料價格由【出納總務】統籌維護，研發配方僅關聯原料用量。
   }
   return NextResponse.json({ ok: true })
 }
