@@ -10,7 +10,7 @@ import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
 const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
-const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', ice: '冰塊', '': '一般' }
+const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', electric: '電力', water: '水費', ice: '冰塊', '': '一般' }
 const PAY_LABEL: Record<string, string> = { postpaid: '後付', prepaid: '預付', '': '—' }
 
 const VENDOR_IMPORT_COLUMNS: ImportColumn[] = [
@@ -247,9 +247,13 @@ function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; re
         <div className="grid md:grid-cols-3 gap-2">
           <label className="space-y-1"><span className="text-xs text-gray-500">廠商名稱</span><Input value={f.name} onChange={e => set({ name: e.target.value })} className="h-9" /></label>
           <label className="space-y-1"><span className="text-xs text-gray-500">統編</span><Input value={f.tax_id} onChange={e => set({ tax_id: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">類別</span>
+          <label className="space-y-1"><span className="text-xs text-gray-500">類別 / 服務別</span>
             <select value={f.service} onChange={e => set({ service: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-              <option value="">一般</option><option value="gas">瓦斯</option><option value="ice">冰塊</option>
+              <option value="">一般廠商</option>
+              <option value="electric">電力公司 (單一公司提供・全門市/工廠/辦公室)</option>
+              <option value="water">水公司 (單一公司提供・全門市/工廠/辦公室)</option>
+              <option value="gas">瓦斯公司 (按區域劃分負責門市・支援簽收單上傳)</option>
+              <option value="ice">冰塊廠商 (按區域劃分)</option>
             </select></label>
           <label className="space-y-1"><span className="text-xs text-gray-500">聯絡人</span><Input value={f.contact} onChange={e => set({ contact: e.target.value })} className="h-9" /></label>
           <label className="space-y-1"><span className="text-xs text-gray-500">電話</span><Input value={f.phone} onChange={e => set({ phone: e.target.value })} className="h-9" /></label>
@@ -262,13 +266,20 @@ function VendorDetail({ vendor, regions, onBack, onSaved }: { vendor: Vendor; re
           <label className="space-y-1"><span className="text-xs text-gray-500">結帳週期</span><Input value={f.billing_cycle} onChange={e => set({ billing_cycle: e.target.value })} className="h-9" placeholder="如 月結／週結" /></label>
           <label className="space-y-1"><span className="text-xs text-gray-500">結帳日（1-31）</span><Input type="number" value={f.billing_day ? String(f.billing_day) : ''} onChange={e => set({ billing_day: Number(e.target.value) || null })} className="h-9" /></label>
         </div>
-        {f.service === 'ice' && (
+        {['gas', 'ice'].includes(f.service) && (
           <div className="space-y-1">
-            <span className="text-xs text-gray-500">涵蓋區域（冰塊）</span>
+            <span className="text-xs text-gray-500">
+              {f.service === 'gas' ? '負責配送區域（瓦斯公司，不選＝全據點）' : '涵蓋區域（冰塊廠商，不選＝全據點）'}
+            </span>
             <div className="flex flex-wrap gap-1">
               {regions.length === 0 && <span className="text-xs text-gray-400">尚無區域</span>}
-              {regions.map(r => <button key={r} onClick={() => toggleRegion(r)} className={`text-xs px-2 py-1 rounded border ${f.regions.includes(r) ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600'}`}>{r}</button>)}
+              {regions.map(r => <button key={r} type="button" onClick={() => toggleRegion(r)} className={`text-xs px-2 py-1 rounded border ${f.regions.includes(r) ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600'}`}>{r}</button>)}
             </div>
+          </div>
+        )}
+        {['electric', 'water'].includes(f.service) && (
+          <div className="text-xs text-muted-foreground bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border">
+            📌 {f.service === 'electric' ? '⚡ 電力公司' : '💧 自來水公司'}為單一公用事業，專屬填報連結自動涵蓋全部門市、工廠與總部辦公室據點。
           </div>
         )}
         <div className="flex items-center gap-3 text-xs">

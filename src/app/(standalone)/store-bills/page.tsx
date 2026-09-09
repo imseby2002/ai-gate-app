@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Zap, Droplets, Receipt, Upload, CheckCircle2, AlertCircle,
   Loader2, Image as ImageIcon, Store, Calendar, ArrowRight,
-  RefreshCw, FileText, Check, ExternalLink, Flame, Wifi, Plus
+  RefreshCw, FileText, Check, ExternalLink, Flame, Wifi, Plus, Building2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -18,6 +18,7 @@ interface StoreItem {
   code: string
   name: string
   region: string
+  unit_type?: string
   electricity_no?: string
   water_no?: string
 }
@@ -41,6 +42,7 @@ export default function StoreBillsPage() {
   const [submitting, setSubmitting] = useState(false)
   const [uploadingElec, setUploadingElec] = useState(false)
   const [uploadingWater, setUploadingWater] = useState(false)
+  const [uploadingGas, setUploadingGas] = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // 電費狀態
@@ -53,8 +55,10 @@ export default function StoreBillsPage() {
   const [waterReceiptUrl, setWaterReceiptUrl] = useState<string>('')
   const [waterNote, setWaterNote] = useState<string>('')
 
-  // 瓦斯狀態（可選）
+  // 瓦斯狀態（含單據照片與桶數）
   const [gasAmount, setGasAmount] = useState<string>('')
+  const [gasReceiptUrl, setGasReceiptUrl] = useState<string>('')
+  const [gasCylinders, setGasCylinders] = useState<string>('')
   const [gasNote, setGasNote] = useState<string>('')
 
   // 已送出之本期紀錄
@@ -62,6 +66,7 @@ export default function StoreBillsPage() {
 
   const elecFileRef = useRef<HTMLInputElement>(null)
   const waterFileRef = useRef<HTMLInputElement>(null)
+  const gasFileRef = useRef<HTMLInputElement>(null)
 
   // 載入門市與本期帳單
   const loadData = useCallback(async () => {
@@ -116,9 +121,18 @@ export default function StoreBillsPage() {
           const gBill = bills.find(b => b.store_code === selectedStore && b.category_code === 'GAS')
           if (gBill) {
             setGasAmount(String(gBill.amount || ''))
-            setGasNote(gBill.note || '')
+            try {
+              const parsed = JSON.parse(gBill.note || '{}')
+              if (parsed.receipt_url) setGasReceiptUrl(parsed.receipt_url)
+              if (parsed.cylinders) setGasCylinders(parsed.cylinders)
+              if (parsed.note) setGasNote(parsed.note)
+            } catch {
+              setGasNote(gBill.note || '')
+            }
           } else {
             setGasAmount('')
+            setGasReceiptUrl('')
+            setGasCylinders('')
             setGasNote('')
           }
         }
@@ -135,10 +149,11 @@ export default function StoreBillsPage() {
   }, [loadData])
 
   // 上傳單據附件
-  const handleFileUpload = async (file: File, type: 'elec' | 'water') => {
-    const isElec = type === 'elec'
-    if (isElec) setUploadingElec(true)
-    else setUploadingWater(true)
+  const handleFileUpload = async (file: File, type: 'elec' | 'water' | 'gas') => {
+    if (type === 'elec') setUploadingElec(true)
+    else if (type === 'water') setUploadingWater(true)
+    else setUploadingGas(true)
+
     try {
       const fd = new FormData()
       fd.append('file', file)
@@ -148,17 +163,21 @@ export default function StoreBillsPage() {
       })
       const data = await res.json()
       if (res.ok && data.url) {
-        if (isElec) setElecReceiptUrl(data.url)
-        else setWaterReceiptUrl(data.url)
-        setMsg({ type: 'success', text: `${isElec ? '電費' : '水費'}單據已成功上傳！` })
+        if (type === 'elec') setElecReceiptUrl(data.url)
+        else if (type === 'water') setWaterReceiptUrl(data.url)
+        else setGasReceiptUrl(data.url)
+
+        const typeLabel = type === 'elec' ? '電費' : type === 'water' ? '水費' : '瓦斯'
+        setMsg({ type: 'success', text: `${typeLabel}單據照片已成功上傳！` })
       } else {
         setMsg({ type: 'error', text: data.error || '單據上傳失敗' })
       }
     } catch {
       setMsg({ type: 'error', text: '上傳失敗，請檢查網路連線' })
     } finally {
-      if (isElec) setUploadingElec(false)
-      else setUploadingWater(false)
+      if (type === 'elec') setUploadingElec(false)
+      else if (type === 'water') setUploadingWater(false)
+      else setUploadingGas(false)
     }
   }
 
@@ -223,8 +242,14 @@ export default function StoreBillsPage() {
         )
       }
 
-      // 3. 瓦斯（若有填寫）
-      if (gasAmount !== '') {
+      // 3. 瓦斯
+      if (gasAmount !== '' || gasReceiptUrl) {
+        const notePayload = JSON.stringify({
+          receipt_url: gasReceiptUrl || '',
+          cylinders: gasCylinders || '',
+          note: gasNote || '',
+          submitted_at: new Date().toISOString(),
+        })
         tasks.push(
           fetch('/api/fin/bills', {
             method: 'POST',
@@ -236,7 +261,7 @@ export default function StoreBillsPage() {
               month,
               amount: Number(gasAmount) || 0,
               source: 'store_upload',
-              note: gasNote || '',
+              note: notePayload,
             }),
           })
         )
@@ -248,7 +273,7 @@ export default function StoreBillsPage() {
       if (hasError) {
         setMsg({ type: 'error', text: '部分費用送出失敗，請重試' })
       } else {
-        setMsg({ type: 'success', text: '✅ 門市水電費用已成功提交！數據已即時串接到出納總務之收支與損益報表。' })
+        setMsg({ type: 'success', text: '✅ 費用與單據憑證已成功提交！數據已即時串接到出納總務之收支與損益報表。' })
         loadData()
       }
     } catch {
@@ -261,7 +286,7 @@ export default function StoreBillsPage() {
   const currentStoreObj = stores.find(s => s.code === selectedStore)
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* 頂部標題 */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
         <div className="flex items-center gap-3">
@@ -270,13 +295,13 @@ export default function StoreBillsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">門市水電費用填報</h1>
+              <h1 className="text-2xl font-bold tracking-tight">門市水電與瓦斯費用填報</h1>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium">
                 自動串接觸納總務
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              各分店每月電費、水費與單據照片上傳；提交後即時匯入出納總務每店損益與收支報表
+              每月電費、水費與瓦斯費用填報，支援相機拍照／PDF 單據上傳；數據即時同步至出納月度損益與收支報表
             </p>
           </div>
         </div>
@@ -300,7 +325,7 @@ export default function StoreBillsPage() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="space-y-1 flex-1 min-w-[200px]">
             <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              申報門市 (Store)
+              申報據點 / 門市 (Unit)
             </label>
             <select
               value={selectedStore}
@@ -309,7 +334,7 @@ export default function StoreBillsPage() {
             >
               {stores.map(s => (
                 <option key={s.code} value={s.code}>
-                  [{s.code}] {s.name || s.code} {s.region ? `(${s.region})` : ''}
+                  [{s.code}] {s.name || s.code} {s.region ? `(${s.region})` : ''} {s.unit_type && s.unit_type !== 'store' ? `[${s.unit_type}]` : ''}
                 </option>
               ))}
             </select>
@@ -382,291 +407,398 @@ export default function StoreBillsPage() {
         </div>
       )}
 
-      {/* 填報主卡片 */}
-      <div className="grid md:grid-cols-2 gap-5">
+      {/* 填報主卡片（電費、水費、瓦斯費 三大核心公用支出） */}
+      <div className="grid md:grid-cols-3 gap-4">
         {/* 1. 電費申報 */}
-        <Card className="p-5 space-y-4 border-amber-200/70 dark:border-amber-900/40 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-                <Zap className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base">本期電費 (Electricity)</h3>
-                <p className="text-xs text-muted-foreground">科目編碼: ELEC</p>
-              </div>
-            </div>
-            {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'ELEC') && (
-              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-1 text-[11px]">
-                <Check className="h-3 w-3" />已登記出納
-              </Badge>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              電費金額 (VND) *
-            </label>
-            <div className="relative">
-              <Input
-                type="number"
-                placeholder="例如: 3500000"
-                value={elecAmount}
-                onChange={e => setElecAmount(e.target.value)}
-                className="font-mono text-base font-bold pr-8"
-              />
-              <span className="absolute right-3 top-2.5 text-xs text-gray-400">₫</span>
-            </div>
-            {elecAmount && Number(elecAmount) > 0 && (
-              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
-                約 {fmt(Number(elecAmount))} VND
-              </p>
-            )}
-          </div>
-
-          {/* 單據憑證拍照/上傳 */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-              <span>電費發票／繳費收據照片 (憑證)</span>
-              {elecReceiptUrl && (
-                <a
-                  href={elecReceiptUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-primary underline inline-flex items-center gap-1"
-                >
-                  查看單據 <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </label>
-
-            <input
-              ref={elecFileRef}
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0]
-                if (f) handleFileUpload(f, 'elec')
-              }}
-            />
-
-            {elecReceiptUrl ? (
-              <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-3">
-                {elecReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                  <img src={elecReceiptUrl} alt="電費單據" className="h-12 w-12 object-cover rounded border" />
-                ) : (
-                  <FileText className="h-10 w-10 text-amber-600" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                    <Check className="h-3.5 w-3.5" />單據已上傳成功
-                  </p>
-                  <p className="text-[11px] text-muted-foreground truncate">{elecReceiptUrl}</p>
+        <Card className="p-4 space-y-3.5 border-amber-200/70 dark:border-amber-900/40 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                  <Zap className="h-4 w-4" />
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7"
-                  disabled={uploadingElec}
-                  onClick={() => elecFileRef.current?.click()}
-                >
-                  更換
-                </Button>
+                <div>
+                  <h3 className="font-bold text-sm">本期電費</h3>
+                  <p className="text-[11px] text-muted-foreground">科目: ELEC</p>
+                </div>
               </div>
-            ) : (
-              <div
-                onClick={() => elecFileRef.current?.click()}
-                className="border-2 border-dashed border-amber-200 dark:border-amber-800/60 rounded-xl p-4 text-center cursor-pointer hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors"
-              >
-                {uploadingElec ? (
-                  <div className="flex items-center justify-center gap-2 text-xs text-amber-600">
-                    <Loader2 className="h-4 w-4 animate-spin" />上傳中...
-                  </div>
-                ) : (
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <Upload className="h-5 w-5 mx-auto text-amber-600" />
-                    <p className="font-medium text-foreground">點擊上傳或拍照電費單據</p>
-                    <p className="text-[11px]">支援 JPG, PNG, PDF</p>
-                  </div>
+              {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'ELEC') && (
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
+                  <Check className="h-3 w-3" />已登入
+                </Badge>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                電費金額 (VND) *
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="例: 3500000"
+                  value={elecAmount}
+                  onChange={e => setElecAmount(e.target.value)}
+                  className="font-mono text-sm font-bold pr-8"
+                />
+                <span className="absolute right-3 top-2 text-xs text-gray-400">₫</span>
+              </div>
+              {elecAmount && Number(elecAmount) > 0 && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                  約 {fmt(Number(elecAmount))} VND
+                </p>
+              )}
+            </div>
+
+            {/* 單據憑證拍照/上傳 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                <span>電費帳單／收據照片</span>
+                {elecReceiptUrl && (
+                  <a
+                    href={elecReceiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline inline-flex items-center gap-1"
+                  >
+                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
                 )}
-              </div>
-            )}
+              </label>
+
+              <input
+                ref={elecFileRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleFileUpload(f, 'elec')
+                }}
+              />
+
+              {elecReceiptUrl ? (
+                <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
+                  {elecReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                    <img src={elecReceiptUrl} alt="電費單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                  ) : (
+                    <FileText className="h-8 w-8 text-amber-600 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="h-3 w-3" />單據已上傳
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">{elecReceiptUrl}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[11px] h-6 px-2"
+                    disabled={uploadingElec}
+                    onClick={() => elecFileRef.current?.click()}
+                  >
+                    更換
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => elecFileRef.current?.click()}
+                  className="border-2 border-dashed border-amber-200 dark:border-amber-800/60 rounded-xl p-3 text-center cursor-pointer hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors"
+                >
+                  {uploadingElec ? (
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-amber-600">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      <Upload className="h-4 w-4 mx-auto text-amber-600" />
+                      <p className="font-medium text-foreground text-[11px]">上傳電費單據</p>
+                      <p className="text-[10px]">JPG, PNG, PDF</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">備註（如用電度數或經辦人）</label>
+          <div className="space-y-1 pt-2">
+            <label className="text-[11px] text-muted-foreground">用電度數 / 備註</label>
             <Input
-              placeholder="例：度數 1450 度，8月帳單"
+              placeholder="例：度數 1450 度"
               value={elecNote}
               onChange={e => setElecNote(e.target.value)}
-              className="text-xs"
+              className="text-xs h-8"
             />
           </div>
         </Card>
 
         {/* 2. 水費申報 */}
-        <Card className="p-5 space-y-4 border-blue-200/70 dark:border-blue-900/40 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                <Droplets className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-base">本期水費 (Water)</h3>
-                <p className="text-xs text-muted-foreground">科目編碼: WATER</p>
-              </div>
-            </div>
-            {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'WATER') && (
-              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-1 text-[11px]">
-                <Check className="h-3 w-3" />已登記出納
-              </Badge>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              水費金額 (VND) *
-            </label>
-            <div className="relative">
-              <Input
-                type="number"
-                placeholder="例如: 850000"
-                value={waterAmount}
-                onChange={e => setWaterAmount(e.target.value)}
-                className="font-mono text-base font-bold pr-8"
-              />
-              <span className="absolute right-3 top-2.5 text-xs text-gray-400">₫</span>
-            </div>
-            {waterAmount && Number(waterAmount) > 0 && (
-              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
-                約 {fmt(Number(waterAmount))} VND
-              </p>
-            )}
-          </div>
-
-          {/* 單據憑證拍照/上傳 */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-              <span>水費發票／繳費收據照片 (憑證)</span>
-              {waterReceiptUrl && (
-                <a
-                  href={waterReceiptUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-primary underline inline-flex items-center gap-1"
-                >
-                  查看單據 <ExternalLink className="h-3 w-3" />
-                </a>
-              )}
-            </label>
-
-            <input
-              ref={waterFileRef}
-              type="file"
-              accept="image/*,.pdf"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0]
-                if (f) handleFileUpload(f, 'water')
-              }}
-            />
-
-            {waterReceiptUrl ? (
-              <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-3">
-                {waterReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                  <img src={waterReceiptUrl} alt="水費單據" className="h-12 w-12 object-cover rounded border" />
-                ) : (
-                  <FileText className="h-10 w-10 text-blue-600" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                    <Check className="h-3.5 w-3.5" />單據已上傳成功
-                  </p>
-                  <p className="text-[11px] text-muted-foreground truncate">{waterReceiptUrl}</p>
+        <Card className="p-4 space-y-3.5 border-blue-200/70 dark:border-blue-900/40 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                  <Droplets className="h-4 w-4" />
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs h-7"
-                  disabled={uploadingWater}
-                  onClick={() => waterFileRef.current?.click()}
-                >
-                  更換
-                </Button>
+                <div>
+                  <h3 className="font-bold text-sm">本期水費</h3>
+                  <p className="text-[11px] text-muted-foreground">科目: WATER</p>
+                </div>
               </div>
-            ) : (
-              <div
-                onClick={() => waterFileRef.current?.click()}
-                className="border-2 border-dashed border-blue-200 dark:border-blue-800/60 rounded-xl p-4 text-center cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors"
-              >
-                {uploadingWater ? (
-                  <div className="flex items-center justify-center gap-2 text-xs text-blue-600">
-                    <Loader2 className="h-4 w-4 animate-spin" />上傳中...
-                  </div>
-                ) : (
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <Upload className="h-5 w-5 mx-auto text-blue-600" />
-                    <p className="font-medium text-foreground">點擊上傳或拍照水費單據</p>
-                    <p className="text-[11px]">支援 JPG, PNG, PDF</p>
-                  </div>
+              {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'WATER') && (
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
+                  <Check className="h-3 w-3" />已登入
+                </Badge>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                水費金額 (VND) *
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="例: 850000"
+                  value={waterAmount}
+                  onChange={e => setWaterAmount(e.target.value)}
+                  className="font-mono text-sm font-bold pr-8"
+                />
+                <span className="absolute right-3 top-2 text-xs text-gray-400">₫</span>
+              </div>
+              {waterAmount && Number(waterAmount) > 0 && (
+                <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
+                  約 {fmt(Number(waterAmount))} VND
+                </p>
+              )}
+            </div>
+
+            {/* 單據憑證拍照/上傳 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                <span>水費帳單／收據照片</span>
+                {waterReceiptUrl && (
+                  <a
+                    href={waterReceiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline inline-flex items-center gap-1"
+                  >
+                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
                 )}
-              </div>
-            )}
+              </label>
+
+              <input
+                ref={waterFileRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleFileUpload(f, 'water')
+                }}
+              />
+
+              {waterReceiptUrl ? (
+                <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
+                  {waterReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                    <img src={waterReceiptUrl} alt="水費單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                  ) : (
+                    <FileText className="h-8 w-8 text-blue-600 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="h-3 w-3" />單據已上傳
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">{waterReceiptUrl}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[11px] h-6 px-2"
+                    disabled={uploadingWater}
+                    onClick={() => waterFileRef.current?.click()}
+                  >
+                    更換
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => waterFileRef.current?.click()}
+                  className="border-2 border-dashed border-blue-200 dark:border-blue-800/60 rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors"
+                >
+                  {uploadingWater ? (
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-blue-600">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      <Upload className="h-4 w-4 mx-auto text-blue-600" />
+                      <p className="font-medium text-foreground text-[11px]">上傳水費單據</p>
+                      <p className="text-[10px]">JPG, PNG, PDF</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">備註（如用水度數或經辦人）</label>
+          <div className="space-y-1 pt-2">
+            <label className="text-[11px] text-muted-foreground">用水度數 / 備註</label>
             <Input
               placeholder="例：抄表 85 度"
               value={waterNote}
               onChange={e => setWaterNote(e.target.value)}
-              className="text-xs"
+              className="text-xs h-8"
             />
+          </div>
+        </Card>
+
+        {/* 3. 瓦斯費申報 (完整支援單據照片上傳與叫桶數量) */}
+        <Card className="p-4 space-y-3.5 border-orange-200/70 dark:border-orange-900/40 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400">
+                  <Flame className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">本期瓦斯費</h3>
+                  <p className="text-[11px] text-muted-foreground">科目: GAS (叫桶/管線)</p>
+                </div>
+              </div>
+              {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'GAS') && (
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
+                  <Check className="h-3 w-3" />已登入
+                </Badge>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                瓦斯金額 (VND) *
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="例: 960000"
+                  value={gasAmount}
+                  onChange={e => setGasAmount(e.target.value)}
+                  className="font-mono text-sm font-bold pr-8"
+                />
+                <span className="absolute right-3 top-2 text-xs text-gray-400">₫</span>
+              </div>
+              {gasAmount && Number(gasAmount) > 0 && (
+                <p className="text-[11px] text-orange-700 dark:text-orange-300 font-medium">
+                  約 {fmt(Number(gasAmount))} VND
+                </p>
+              )}
+            </div>
+
+            {/* 瓦斯簽收單/發票憑證拍照上傳 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                <span>瓦斯簽收單／發票單據</span>
+                {gasReceiptUrl && (
+                  <a
+                    href={gasReceiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline inline-flex items-center gap-1"
+                  >
+                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                )}
+              </label>
+
+              <input
+                ref={gasFileRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleFileUpload(f, 'gas')
+                }}
+              />
+
+              {gasReceiptUrl ? (
+                <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
+                  {gasReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                    <img src={gasReceiptUrl} alt="瓦斯單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                  ) : (
+                    <FileText className="h-8 w-8 text-orange-600 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="h-3 w-3" />單據已上傳
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">{gasReceiptUrl}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[11px] h-6 px-2"
+                    disabled={uploadingGas}
+                    onClick={() => gasFileRef.current?.click()}
+                  >
+                    更換
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => gasFileRef.current?.click()}
+                  className="border-2 border-dashed border-orange-200 dark:border-orange-800/60 rounded-xl p-3 text-center cursor-pointer hover:bg-orange-50/40 dark:hover:bg-orange-950/20 transition-colors"
+                >
+                  {uploadingGas ? (
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-orange-600">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      <Upload className="h-4 w-4 mx-auto text-orange-600" />
+                      <p className="font-medium text-foreground text-[11px]">上傳瓦斯單據／簽收單</p>
+                      <p className="text-[10px]">JPG, PNG, PDF</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">叫桶規格/數量</label>
+              <Input
+                placeholder="例: 50kg 2 桶"
+                value={gasCylinders}
+                onChange={e => setGasCylinders(e.target.value)}
+                className="text-xs h-8"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">廠商/經辦備註</label>
+              <Input
+                placeholder="例: 協發瓦斯行"
+                value={gasNote}
+                onChange={e => setGasNote(e.target.value)}
+                className="text-xs h-8"
+              />
+            </div>
           </div>
         </Card>
       </div>
 
-      {/* 3. 額外門市雜支（瓦斯桶等可選項目） */}
-      <Card className="p-4 border bg-card/40 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-orange-500" />
-            <h4 className="text-sm font-semibold">門市自叫瓦斯或其他雜支 (可選填)</h4>
-          </div>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">瓦斯金額 (GAS, VND)</label>
-            <Input
-              type="number"
-              placeholder="例: 480000"
-              value={gasAmount}
-              onChange={e => setGasAmount(e.target.value)}
-              className="text-xs"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">瓦斯備註 (叫桶數量 / 廠商)</label>
-            <Input
-              placeholder="例：大桶瓦斯 1 桶"
-              value={gasNote}
-              onChange={e => setGasNote(e.target.value)}
-              className="text-xs"
-            />
-          </div>
-        </div>
-      </Card>
-
       {/* 提交按鈕列 */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
         <p className="text-xs text-muted-foreground">
-          📌 送出後將自動建立費用紀錄至出納總務系統（<code>fin_bills</code>），出納月度費用與損益報表即時同步連動。
+          📌 提交後費用與單據照片將即時串接入帳至出納總務系統（<code>fin_bills</code>），店別損益報表同步生效。
         </p>
         <Button
           size="lg"
           onClick={handleSubmit}
-          disabled={submitting || (!elecAmount && !waterAmount && !gasAmount)}
+          disabled={submitting || (!elecAmount && !waterAmount && !gasAmount && !elecReceiptUrl && !waterReceiptUrl && !gasReceiptUrl)}
           className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-semibold px-6 shadow-md"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -688,7 +820,7 @@ export default function StoreBillsPage() {
 
         {currentBills.filter(b => b.store_code === selectedStore).length === 0 ? (
           <div className="text-center py-6 text-xs text-muted-foreground">
-            本門市於此月份尚未提報水電費用。請於上方輸入金額後點擊送出。
+            本門市於此月份尚未提報水電與瓦斯費用。請於上方輸入金額或上傳單據後點擊送出。
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -698,7 +830,8 @@ export default function StoreBillsPage() {
                   <th className="py-2 text-left">費用科目</th>
                   <th className="py-2 text-right">申報金額</th>
                   <th className="py-2 text-center">來源狀態</th>
-                  <th className="py-2 text-left">單據／憑證</th>
+                  <th className="py-2 text-left">單據憑證</th>
+                  <th className="py-2 text-left">備註明細</th>
                   <th className="py-2 text-right">更新時間</th>
                 </tr>
               </thead>
@@ -706,9 +839,11 @@ export default function StoreBillsPage() {
                 {currentBills.filter(b => b.store_code === selectedStore).map((b, i) => {
                   let receiptUrl = ''
                   let parsedNote = b.note || ''
+                  let parsedCylinders = ''
                   try {
                     const parsed = JSON.parse(b.note || '{}')
                     if (parsed.receipt_url) receiptUrl = parsed.receipt_url
+                    if (parsed.cylinders) parsedCylinders = parsed.cylinders
                     if (parsed.note) parsedNote = parsed.note
                   } catch {
                     // plain text note
@@ -726,8 +861,17 @@ export default function StoreBillsPage() {
                         {fmt(b.amount)} <span className="text-[11px] font-normal text-muted-foreground">VND</span>
                       </td>
                       <td className="py-2.5 text-center">
-                        <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200">
-                          {b.source === 'store_upload' ? '門市已送出' : b.source}
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${
+                            b.source === 'store_upload'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200'
+                              : b.source === 'vendor'
+                              ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200'
+                              : 'bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          {b.source === 'store_upload' ? '門市已提報' : b.source === 'vendor' ? '廠商已填報' : b.source}
                         </Badge>
                       </td>
                       <td className="py-2.5">
@@ -742,8 +886,11 @@ export default function StoreBillsPage() {
                             檢視單據照片 <ExternalLink className="h-2.5 w-2.5" />
                           </a>
                         ) : (
-                          <span className="text-muted-foreground">{parsedNote || '—'}</span>
+                          <span className="text-muted-foreground">—</span>
                         )}
+                      </td>
+                      <td className="py-2.5 text-muted-foreground">
+                        {parsedCylinders ? `[${parsedCylinders}] ` : ''}{parsedNote || '—'}
                       </td>
                       <td className="py-2.5 text-right text-muted-foreground">
                         {b.updated_at ? new Date(b.updated_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}

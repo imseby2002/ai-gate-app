@@ -8,12 +8,12 @@ async function getAdminUser() {
 }
 
 const ENTRY_METHODS = new Set(['import', 'vendor', 'manual'])
-const SERVICES = new Set(['', 'gas', 'ice'])
+const SERVICES = new Set(['', 'gas', 'ice', 'electric', 'water'])
 
 // 預設科目（首次載入自動建立）
 const DEFAULTS = [
-  { code: 'WATER', name: '水費', entry_method: 'import', vendor_service: '', sort: 1 },
-  { code: 'ELEC', name: '電費', entry_method: 'import', vendor_service: '', sort: 2 },
+  { code: 'WATER', name: '水費', entry_method: 'vendor', vendor_service: 'water', sort: 1 },
+  { code: 'ELEC', name: '電費', entry_method: 'vendor', vendor_service: 'electric', sort: 2 },
   { code: 'GAS', name: '瓦斯費', entry_method: 'vendor', vendor_service: 'gas', sort: 3 },
   { code: 'ICE', name: '冰塊費', entry_method: 'vendor', vendor_service: 'ice', sort: 4 },
 ]

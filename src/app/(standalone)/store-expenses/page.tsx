@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck, FileSpreadsheet, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ interface StoreRow { id: string; code: string; name: string; region: string; act
 interface CatRow { id: string; code: string; name: string; entry_method: string; vendor_service: string; sort: number }
 
 const METHOD_LABEL: Record<string, string> = { import: '人工匯入', vendor: '廠商填', manual: '手動' }
-const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', ice: '冰塊', '': '—' }
+const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', electric: '電力', water: '水費', ice: '冰塊', '': '—' }
 
 const STORE_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'code', label: '門市編碼', required: true, example: 'YL', aliases: ['code', '編碼', '門市代碼'] },
@@ -139,12 +139,14 @@ function VendorsTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-gray-500">瓦斯＝1 家(全部門市)；冰塊＝多家(依區域)。每家一條私密填報連結。</p>
+        <p className="text-sm text-gray-500">
+          電費/水費＝單一公用事業（全門市/工廠/辦公室）；瓦斯＝多家瓦斯公司（依負責區域配送）。每家一條專屬填報與單據上傳連結。
+        </p>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
             <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入廠商 (Excel/CSV)
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'ice', regions: [], active: true })}><Plus className="h-4 w-4" />新增廠商</Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'gas', regions: [], active: true })}><Plus className="h-4 w-4" />新增廠商</Button>
         </div>
       </div>
 
@@ -172,8 +174,14 @@ function VendorsTab() {
         : <div className="grid gap-2">{vendors.map(v => (
           <Card key={v.id} className="p-3 flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-medium">{v.name} <span className="text-xs text-gray-400 ml-1">{v.service === 'gas' ? '瓦斯' : '冰塊'}</span>{!v.active && <span className="text-xs text-red-400 ml-1">停用</span>}</div>
-              <div className="text-xs text-gray-500">{v.service === 'gas' ? '全部門市' : (v.regions.length ? `區域：${v.regions.join('、')}` : '（未指定區域＝全部）')}</div>
+              <div className="font-medium">{v.name} <span className="text-xs text-gray-400 ml-1">[{SERVICE_LABEL[v.service] ?? v.service}]</span>{!v.active && <span className="text-xs text-red-400 ml-1">停用</span>}</div>
+              <div className="text-xs text-gray-500">
+                {v.service === 'electric' || v.service === 'water'
+                  ? '全部門市、工廠、總部辦公室據點'
+                  : v.regions && v.regions.length > 0
+                  ? `負責區域：${v.regions.join('、')}`
+                  : '全部門市據點'}
+              </div>
             </div>
             <div className="flex gap-1 shrink-0 flex-wrap justify-end">
               <button onClick={() => copyLink(v)} className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">複製填報連結</button>
@@ -186,13 +194,18 @@ function VendorsTab() {
         <Modal title={editing.id ? '編輯廠商' : '新增廠商'} onClose={() => setEditing(null)}>
           <Field label="廠商名稱 *"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
           <Field label="服務別">
-            <select value={editing.service ?? 'ice'} onChange={e => setEditing({ ...editing, service: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-              <option value="gas">瓦斯（涵蓋全部門市）</option><option value="ice">冰塊（依區域）</option>
+            <select value={editing.service ?? 'gas'} onChange={e => setEditing({ ...editing, service: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
+              <option value="electric">電力公司 (單一公司提供・全門市/工廠/辦公室)</option>
+              <option value="water">水公司 (單一公司提供・全門市/工廠/辦公室)</option>
+              <option value="gas">瓦斯公司 (按區域劃分負責門市・支援簽收單上傳)</option>
+              <option value="ice">冰塊廠商 (按區域劃分)</option>
             </select>
           </Field>
-          {editing.service === 'ice' && (
+          {['gas', 'ice'].includes(editing.service ?? '') && (
             <div className="space-y-1">
-              <span className="text-xs text-gray-500">涵蓋區域（不選＝全部）</span>
+              <span className="text-xs text-gray-500">
+                {editing.service === 'gas' ? '負責配送區域（瓦斯公司，不選＝全據點）' : '涵蓋區域（冰塊廠商，不選＝全據點）'}
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {regions.length === 0 && <span className="text-xs text-gray-400">尚無區域，請先於門市設定區域</span>}
                 {regions.map(r => (
@@ -201,6 +214,11 @@ function VendorsTab() {
                 ))}
               </div>
             </div>
+          )}
+          {['electric', 'water'].includes(editing.service ?? '') && (
+            <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+              📌 單一公用事業提供，專屬填報連結自動涵蓋全部門市、工廠、總部辦公室據點。
+            </p>
           )}
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} />啟用</label>
           <ModalActions busy={busy} disabled={!editing.name?.trim()} onCancel={() => setEditing(null)} onSave={save} />
@@ -231,6 +249,9 @@ function BillsTab() {
   const [showImport, setShowImport] = useState(false)
   const [msg, setMsg] = useState('')
   const [tick, setTick] = useState(0)
+  const [uploadingCellKey, setUploadingCellKey] = useState<string | null>(null)
+  const [activeCellTarget, setActiveCellTarget] = useState<{ store_code: string; category_code: string } | null>(null)
+  const cellFileRef = useRef<HTMLInputElement>(null)
   const reload = () => setTick(t => t + 1)
 
   useEffect(() => {
@@ -263,6 +284,51 @@ function BillsTab() {
     })
   }
 
+  const handleCellUpload = async (file: File) => {
+    if (!activeCellTarget) return
+    const { store_code, category_code } = activeCellTarget
+    const k = billKey(store_code, category_code)
+    setUploadingCellKey(k)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/fin/bills/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        const curBill = billDetails[k]
+        let prevNote = {}
+        try { prevNote = JSON.parse(curBill?.note || '{}') } catch {}
+        const notePayload = JSON.stringify({
+          ...prevNote,
+          receipt_url: data.url,
+          uploaded_by: 'cashier',
+          updated_at: new Date().toISOString(),
+        })
+        await fetch('/api/fin/bills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            store_code,
+            category_code,
+            year,
+            month,
+            amount: amounts[k] ?? 0,
+            source: curBill?.source || 'cashier_upload',
+            note: notePayload,
+          }),
+        })
+        reload()
+      } else {
+        alert(data.error || '單據上傳失敗')
+      }
+    } catch {
+      alert('上傳發生異常')
+    } finally {
+      setUploadingCellKey(null)
+      setActiveCellTarget(null)
+    }
+  }
+
   const doImport = async () => {
     const rows = importText.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
       const [store_code, category_code, amount] = l.split(/[,\t]/).map(x => x.trim())
@@ -283,12 +349,23 @@ function BillsTab() {
 
   return (
     <div className="space-y-3">
+      <input
+        ref={cellFileRef}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0]
+          if (f) handleCellUpload(f)
+          e.target.value = ''
+        }}
+      />
       <div className="flex items-center gap-2 flex-wrap">
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}</select>
         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}</select>
         <Link href="/store-bills">
           <Button size="sm" variant="outline" className="gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
-            <Store className="h-3.5 w-3.5" />門市水電費用填報端 ↗
+            <Store className="h-3.5 w-3.5" />門市水電與瓦斯填報端 ↗
           </Button>
         </Link>
         <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowImport(v => !v)}><Upload className="h-4 w-4" />水電匯入</Button>
@@ -297,8 +374,8 @@ function BillsTab() {
 
       {showImport && (
         <Card className="p-3 space-y-2">
-          <p className="text-xs text-gray-500">每行一筆：<code>門市編碼,科目編碼,金額</code>（可貼 Excel 兩欄，用逗號或 Tab 分隔）。科目如 WATER/ELEC。</p>
-          <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={5} className="w-full rounded-md border px-2 py-1.5 text-sm font-mono" placeholder={'YL,WATER,1200000\nYL,ELEC,3400000'} />
+          <p className="text-xs text-gray-500">每行一筆：<code>門市編碼,科目編碼,金額</code>（可貼 Excel 兩欄，用逗號或 Tab 分隔）。科目如 WATER/ELEC/GAS。</p>
+          <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={5} className="w-full rounded-md border px-2 py-1.5 text-sm font-mono" placeholder={'YL,WATER,1200000\nYL,ELEC,3400000\nYL,GAS,960000'} />
           <div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setShowImport(false)}>取消</Button><Button size="sm" onClick={doImport} disabled={importing}>{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : '匯入'}</Button></div>
         </Card>
       )}
@@ -307,7 +384,7 @@ function BillsTab() {
         : stores.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無門市，請先到「門市／區域」新增。</div>
         : <div className="overflow-x-auto"><table className="text-sm border-collapse">
           <thead><tr className="text-gray-500 border-b">
-            <th className="text-left py-2 pr-3 sticky left-0 bg-card">門市</th>
+            <th className="text-left py-2 pr-3 sticky left-0 bg-card">門市據點</th>
             {cats.map(c => <th key={c.code} className="px-2 text-right whitespace-nowrap">{c.name || c.code}</th>)}
             <th className="px-2 text-right">合計</th>
           </tr></thead>
@@ -330,15 +407,46 @@ function BillsTab() {
                         onChange={e => setAmounts(p => ({ ...p, [k]: Number(e.target.value) || 0 }))}
                         onBlur={e => saveCell(st.code, c.code, Number(e.target.value) || 0)}
                         className="w-24 h-8 rounded border px-1.5 text-right tabular-nums text-xs" />
-                      {receiptUrl && (
-                        <a href={receiptUrl} target="_blank" rel="noreferrer" title="點擊檢視門市上傳之單據照片" className="text-amber-600 hover:text-amber-800 p-0.5 rounded hover:bg-amber-50 shrink-0">
-                          <ImageIcon className="h-4 w-4" />
-                        </a>
+                      {uploadingCellKey === k ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                      ) : receiptUrl ? (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <a href={receiptUrl} target="_blank" rel="noreferrer" title="點擊檢視單據照片憑證" className="text-amber-600 hover:text-amber-800 p-0.5 rounded hover:bg-amber-50">
+                            <ImageIcon className="h-4 w-4" />
+                          </a>
+                          <button
+                            type="button"
+                            title="出納更換此單據憑證"
+                            onClick={() => {
+                              setActiveCellTarget({ store_code: st.code, category_code: c.code })
+                              cellFileRef.current?.click()
+                            }}
+                            className="text-[10px] text-gray-400 hover:text-gray-700 p-0.5"
+                          >
+                            換
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          title="出納上傳此筆費用單據/發票照片"
+                          onClick={() => {
+                            setActiveCellTarget({ store_code: st.code, category_code: c.code })
+                            cellFileRef.current?.click()
+                          }}
+                          className="text-gray-300 hover:text-primary p-0.5 rounded hover:bg-slate-100 shrink-0"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </div>
-                    {bill?.source === 'store_upload' && (
+                    {bill?.source === 'store_upload' ? (
                       <span className="block text-[10px] text-emerald-600 text-right pr-1">門市提報</span>
-                    )}
+                    ) : bill?.source === 'vendor' ? (
+                      <span className="block text-[10px] text-indigo-600 text-right pr-1">廠商填報</span>
+                    ) : bill?.source === 'cashier_upload' ? (
+                      <span className="block text-[10px] text-amber-600 text-right pr-1">出納上傳</span>
+                    ) : null}
                   </td>
                 )
               })}
@@ -350,7 +458,9 @@ function BillsTab() {
               <td className="px-2 text-right tabular-nums">{fmt(stores.reduce((s, st) => s + rowTotal(st.code), 0))}</td>
             </tr>
           </tbody></table></div>}
-      <p className="text-xs text-gray-400">直接在格子輸入金額，離開欄位自動儲存。若門市已透過【水電費用填報】上傳單據，會顯示「門市提報」並可點擊圖示查看單據憑證。</p>
+      <p className="text-xs text-gray-400">
+        直接在格子輸入金額，離開欄位自動儲存。門市提報、公用事業與瓦斯廠商填報、出納自行上傳之單據憑證皆可即時檢視（<ImageIcon className="inline h-3.5 w-3.5 text-amber-600" />）或點擊 <Upload className="inline h-3 w-3" /> 上傳補充單據。
+      </p>
     </div>
   )
 }
