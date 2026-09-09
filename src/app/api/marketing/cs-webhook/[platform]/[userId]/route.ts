@@ -729,13 +729,14 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let filesLoaded = false
 
   if (campaigns?.length) {
-    // 排序：優先選有填寫直接知識庫、且提示詞/檔案最齊全的 campaign 來套用主設定
+    // 排序：優先選有填寫直接知識庫、且提示詞/檔案最齊全的 campaign 來套用主設定；若分數相同以最新更新者（updated_at）優先
     const sortedForConfig = [...campaigns].sort((a, b) => {
       const uA = ((a.unit_data as Record<string, unknown>)?.[12] || {}) as Record<string, unknown>
       const uB = ((b.unit_data as Record<string, unknown>)?.[12] || {}) as Record<string, unknown>
       const scoreA = (uA.knowledgeBase ? 10000 : 0) + (String(uA.systemPrompt || '').length) + ((Array.isArray(uA.dialogueFiles) ? uA.dialogueFiles.length : 0) * 100)
       const scoreB = (uB.knowledgeBase ? 10000 : 0) + (String(uB.systemPrompt || '').length) + ((Array.isArray(uB.dialogueFiles) ? uB.dialogueFiles.length : 0) * 100)
-      return scoreB - scoreA
+      if (scoreB !== scoreA) return scoreB - scoreA
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })
 
     for (const camp of sortedForConfig) {
@@ -760,27 +761,23 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         settingsLoaded = true
       }
 
-      // Direct text knowledge input（商家最高優先須知，去重排在最前方）
-      if (unit12.knowledgeBase) {
+      // Direct text knowledge input（商家最高優先須知：以主專案最新輸入為準，避免被歷史舊設定反覆疊加）
+      if (directKnowledgeParts.length === 0 && unit12.knowledgeBase) {
         const kbStr = String(unit12.knowledgeBase).trim()
-        if (kbStr && !seenDirectKbs.has(kbStr)) {
-          seenDirectKbs.add(kbStr)
+        if (kbStr) {
           directKnowledgeParts.push(`【商家重點須知／直接輸入知識（最高優先回答依據）】\n${kbStr}`)
         }
       }
 
-      // Dialogue files（CS 專用：以主專案的檔案清單為準，避免舊專案已刪除的檔案被挖出來）
-      if (!filesLoaded) {
-        const dialogueFiles = (unit12.dialogueFiles ?? []) as Array<{ name: string; textContent?: string }>
-        if (dialogueFiles.length > 0) {
-          for (const f of dialogueFiles) {
-            if (f.textContent && !seenFiles.has(f.name)) {
-              seenFiles.add(f.name)
-              fileParts.push(`【知識庫文件｜${f.name}】\n${f.textContent}`)
-            }
+      // Dialogue files（CS 專用：以主專案最新檔案清單為準，若主專案已有設定檔案清單，就完全依其為主，避免舊專案已刪除的檔案被挖出來）
+      if (!filesLoaded && Array.isArray(unit12.dialogueFiles)) {
+        for (const f of unit12.dialogueFiles) {
+          if (f.textContent && !seenFiles.has(f.name)) {
+            seenFiles.add(f.name)
+            fileParts.push(`【知識庫文件｜${f.name}】\n${f.textContent}`)
           }
-          filesLoaded = true
         }
+        filesLoaded = true
       }
     }
   }
