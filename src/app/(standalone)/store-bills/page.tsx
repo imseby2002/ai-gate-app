@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Zap, Droplets, Receipt, Upload, CheckCircle2, AlertCircle,
   Loader2, Image as ImageIcon, Store, Calendar, ArrowRight,
-  RefreshCw, FileText, Check, ExternalLink, Flame, Wifi, Plus, Building2
+  RefreshCw, FileText, Check, ExternalLink, Flame, Snowflake, Wifi, Plus, Building2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -44,6 +44,7 @@ export default function StoreBillsPage() {
   const [uploadingElec, setUploadingElec] = useState(false)
   const [uploadingWater, setUploadingWater] = useState(false)
   const [uploadingGas, setUploadingGas] = useState(false)
+  const [uploadingIce, setUploadingIce] = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // 電費狀態
@@ -62,12 +63,19 @@ export default function StoreBillsPage() {
   const [gasCylinders, setGasCylinders] = useState<string>('')
   const [gasNote, setGasNote] = useState<string>('')
 
+  // 冰塊狀態（含單據照片與包數/規格）
+  const [iceAmount, setIceAmount] = useState<string>('')
+  const [iceReceiptUrl, setIceReceiptUrl] = useState<string>('')
+  const [iceQuantity, setIceQuantity] = useState<string>('')
+  const [iceNote, setIceNote] = useState<string>('')
+
   // 已送出之本期紀錄
   const [currentBills, setCurrentBills] = useState<BillRecord[]>([])
 
   const elecFileRef = useRef<HTMLInputElement>(null)
   const waterFileRef = useRef<HTMLInputElement>(null)
   const gasFileRef = useRef<HTMLInputElement>(null)
+  const iceFileRef = useRef<HTMLInputElement>(null)
 
   // 載入門市與本期帳單
   const loadData = useCallback(async () => {
@@ -139,6 +147,24 @@ export default function StoreBillsPage() {
             setGasCylinders('')
             setGasNote('')
           }
+
+          const iBill = bills.find(b => b.store_code === selectedStore && b.category_code === 'ICE')
+          if (iBill) {
+            setIceAmount(String(iBill.amount || ''))
+            try {
+              const parsed = JSON.parse(iBill.note || '{}')
+              if (parsed.receipt_url) setIceReceiptUrl(parsed.receipt_url)
+              if (parsed.quantity || parsed.cylinders) setIceQuantity(parsed.quantity || parsed.cylinders)
+              if (parsed.note) setIceNote(parsed.note)
+            } catch {
+              setIceNote(iBill.note || '')
+            }
+          } else {
+            setIceAmount('')
+            setIceReceiptUrl('')
+            setIceQuantity('')
+            setIceNote('')
+          }
         }
       }
     } catch (e) {
@@ -153,10 +179,11 @@ export default function StoreBillsPage() {
   }, [loadData])
 
   // 上傳單據附件
-  const handleFileUpload = async (file: File, type: 'elec' | 'water' | 'gas') => {
+  const handleFileUpload = async (file: File, type: 'elec' | 'water' | 'gas' | 'ice') => {
     if (type === 'elec') setUploadingElec(true)
     else if (type === 'water') setUploadingWater(true)
-    else setUploadingGas(true)
+    else if (type === 'gas') setUploadingGas(true)
+    else setUploadingIce(true)
 
     try {
       const fd = new FormData()
@@ -169,9 +196,10 @@ export default function StoreBillsPage() {
       if (res.ok && data.url) {
         if (type === 'elec') setElecReceiptUrl(data.url)
         else if (type === 'water') setWaterReceiptUrl(data.url)
-        else setGasReceiptUrl(data.url)
+        else if (type === 'gas') setGasReceiptUrl(data.url)
+        else setIceReceiptUrl(data.url)
 
-        const typeLabel = type === 'elec' ? '電費' : type === 'water' ? '水費' : '瓦斯'
+        const typeLabel = type === 'elec' ? '電費' : type === 'water' ? '水費' : type === 'gas' ? '瓦斯' : '冰塊'
         setMsg({ type: 'success', text: `${typeLabel}單據照片已成功上傳！` })
       } else {
         setMsg({ type: 'error', text: data.error || '單據上傳失敗' })
@@ -181,7 +209,8 @@ export default function StoreBillsPage() {
     } finally {
       if (type === 'elec') setUploadingElec(false)
       else if (type === 'water') setUploadingWater(false)
-      else setUploadingGas(false)
+      else if (type === 'gas') setUploadingGas(false)
+      else setUploadingIce(false)
     }
   }
 
@@ -271,6 +300,32 @@ export default function StoreBillsPage() {
         )
       }
 
+      // 4. 冰塊
+      if (iceAmount !== '' || iceReceiptUrl) {
+        const notePayload = JSON.stringify({
+          receipt_url: iceReceiptUrl || '',
+          quantity: iceQuantity || '',
+          cylinders: iceQuantity || '',
+          note: iceNote || '',
+          submitted_at: new Date().toISOString(),
+        })
+        tasks.push(
+          fetch('/api/fin/bills', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              store_code: selectedStore,
+              category_code: 'ICE',
+              year,
+              month,
+              amount: Number(iceAmount) || 0,
+              source: 'store_upload',
+              note: notePayload,
+            }),
+          })
+        )
+      }
+
       const results = await Promise.all(tasks)
       const hasError = results.some(r => !r.ok)
 
@@ -299,13 +354,13 @@ export default function StoreBillsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">門市水電與瓦斯費用填報</h1>
+              <h1 className="text-2xl font-bold tracking-tight">門市水電、瓦斯與冰塊費用填報</h1>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium">
                 自動串接觸納總務
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              每月電費、水費與瓦斯費用填報，支援相機拍照／PDF 單據上傳；數據即時同步至出納月度損益與收支報表
+              每月電費、水費、瓦斯費與冰塊費用填報，支援相機拍照／送貨簽收單上傳；數據即時同步至出納月度損益與收支報表
             </p>
           </div>
         </div>
@@ -419,8 +474,8 @@ export default function StoreBillsPage() {
         </div>
       )}
 
-      {/* 填報主卡片（電費、水費、瓦斯費 三大核心公用支出） */}
-      <div className="grid md:grid-cols-3 gap-4">
+      {/* 填報主卡片（電費、水費、瓦斯費、冰塊費 四大核心公用支出） */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. 電費申報 */}
         <Card className="p-4 space-y-3.5 border-amber-200/70 dark:border-amber-900/40 shadow-sm relative overflow-hidden flex flex-col justify-between">
           <div className="space-y-3">
@@ -800,6 +855,140 @@ export default function StoreBillsPage() {
             </div>
           </div>
         </Card>
+
+        {/* 4. 冰塊費申報 (完整支援送冰簽收單照片上傳與包數/規格) */}
+        <Card className="p-4 space-y-3.5 border-cyan-200/70 dark:border-cyan-900/40 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400">
+                  <Snowflake className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">本期冰塊費</h3>
+                  <p className="text-[11px] text-muted-foreground">科目: ICE (每日食用冰)</p>
+                </div>
+              </div>
+              {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'ICE') && (
+                <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
+                  <Check className="h-3 w-3" />已登入
+                </Badge>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                冰塊金額 (VND) *
+              </label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="例: 1200000"
+                  value={iceAmount}
+                  onChange={e => setIceAmount(e.target.value)}
+                  className="font-mono text-sm font-bold pr-8"
+                />
+                <span className="absolute right-3 top-2 text-xs text-gray-400">₫</span>
+              </div>
+              {iceAmount && Number(iceAmount) > 0 && (
+                <p className="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
+                  約 {fmt(Number(iceAmount))} VND
+                </p>
+              )}
+            </div>
+
+            {/* 冰塊送貨單/簽收單拍照上傳 */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                <span>送冰簽收單／發票憑證</span>
+                {iceReceiptUrl && (
+                  <a
+                    href={iceReceiptUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary underline inline-flex items-center gap-1"
+                  >
+                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                )}
+              </label>
+
+              <input
+                ref={iceFileRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleFileUpload(f, 'ice')
+                }}
+              />
+
+              {iceReceiptUrl ? (
+                <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
+                  {iceReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
+                    <img src={iceReceiptUrl} alt="冰塊單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                  ) : (
+                    <FileText className="h-8 w-8 text-cyan-600 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <Check className="h-3 w-3" />單據已上傳
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">{iceReceiptUrl}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[11px] h-6 px-2"
+                    disabled={uploadingIce}
+                    onClick={() => iceFileRef.current?.click()}
+                  >
+                    更換
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => iceFileRef.current?.click()}
+                  className="border-2 border-dashed border-cyan-200 dark:border-cyan-800/60 rounded-xl p-3 text-center cursor-pointer hover:bg-cyan-50/40 dark:hover:bg-cyan-950/20 transition-colors"
+                >
+                  {uploadingIce ? (
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-cyan-600">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5 text-xs text-muted-foreground">
+                      <Upload className="h-4 w-4 mx-auto text-cyan-600" />
+                      <p className="font-medium text-foreground text-[11px]">上傳送冰簽收單／發票</p>
+                      <p className="text-[10px]">JPG, PNG, PDF</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">包數/規格</label>
+              <Input
+                placeholder="例: 20kg 30 包"
+                value={iceQuantity}
+                onChange={e => setIceQuantity(e.target.value)}
+                className="text-xs h-8"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">冰塊行/經辦備註</label>
+              <Input
+                placeholder="例: 順發製冰廠"
+                value={iceNote}
+                onChange={e => setIceNote(e.target.value)}
+                className="text-xs h-8"
+              />
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* 提交按鈕列 */}
@@ -810,7 +999,7 @@ export default function StoreBillsPage() {
         <Button
           size="lg"
           onClick={handleSubmit}
-          disabled={submitting || (!elecAmount && !waterAmount && !gasAmount && !elecReceiptUrl && !waterReceiptUrl && !gasReceiptUrl)}
+          disabled={submitting || (!elecAmount && !waterAmount && !gasAmount && !iceAmount && !elecReceiptUrl && !waterReceiptUrl && !gasReceiptUrl && !iceReceiptUrl)}
           className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-semibold px-6 shadow-md"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -832,7 +1021,7 @@ export default function StoreBillsPage() {
 
         {currentBills.filter(b => b.store_code === selectedStore).length === 0 ? (
           <div className="text-center py-6 text-xs text-muted-foreground">
-            本門市於此月份尚未提報水電與瓦斯費用。請於上方輸入金額或上傳單據後點擊送出。
+            本門市於此月份尚未提報水電、瓦斯或冰塊費用。請於上方輸入金額或上傳單據後點擊送出。
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -855,7 +1044,7 @@ export default function StoreBillsPage() {
                   try {
                     const parsed = JSON.parse(b.note || '{}')
                     if (parsed.receipt_url) receiptUrl = parsed.receipt_url
-                    if (parsed.cylinders) parsedCylinders = parsed.cylinders
+                    if (parsed.cylinders || parsed.quantity) parsedCylinders = parsed.cylinders || parsed.quantity
                     if (parsed.note) parsedNote = parsed.note
                   } catch {
                     // plain text note
@@ -867,7 +1056,8 @@ export default function StoreBillsPage() {
                         {b.category_code === 'ELEC' && '⚡ 電費 (ELEC)'}
                         {b.category_code === 'WATER' && '💧 水費 (WATER)'}
                         {b.category_code === 'GAS' && '🔥 瓦斯費 (GAS)'}
-                        {!['ELEC', 'WATER', 'GAS'].includes(b.category_code) && b.category_code}
+                        {b.category_code === 'ICE' && '🧊 冰塊費 (ICE)'}
+                        {!['ELEC', 'WATER', 'GAS', 'ICE'].includes(b.category_code) && b.category_code}
                       </td>
                       <td className="py-2.5 text-right font-mono font-bold text-sm text-foreground">
                         {fmt(b.amount)} <span className="text-[11px] font-normal text-muted-foreground">VND</span>

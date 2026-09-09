@@ -221,7 +221,7 @@ export default function VendorFillPage({ params }: { params: Promise<{ token: st
                   {vendor.service === 'electric' && '⚡ 單一電力公司・涵蓋全門市、工廠、辦公室電費帳單填報'}
                   {vendor.service === 'water' && '💧 單一自來水公司・涵蓋全門市、工廠、辦公室水費帳單填報'}
                   {vendor.service === 'gas' && `🔥 區域瓦斯專供・負責區域：${vendor.regions && vendor.regions.length ? vendor.regions.join('、') : '全據點'}・支援瓦斯簽收單／發票單據上傳`}
-                  {vendor.service === 'ice' && `🧊 冰塊配送・負責區域：${vendor.regions && vendor.regions.length ? vendor.regions.join('、') : '全部'}`}
+                  {vendor.service === 'ice' && `🧊 區域冰塊專供・負責區域：${vendor.regions && vendor.regions.length ? vendor.regions.join('、') : '全據點'}・支援送冰簽收單／發票單據上傳`}
                 </p>
               </div>
             </div>
@@ -389,13 +389,15 @@ export default function VendorFillPage({ params }: { params: Promise<{ token: st
 
                     {/* 金額與單據填報行 */}
                     <div className="grid sm:grid-cols-12 gap-3 items-center">
-                      {/* 瓦斯叫桶數量（若是瓦斯公司） */}
-                      {vendor.service === 'gas' && (
+                      {/* 瓦斯叫桶數量 或 冰塊送冰包數/規格 */}
+                      {(vendor.service === 'gas' || vendor.service === 'ice') && (
                         <div className="sm:col-span-4 space-y-1">
-                          <label className="text-[11px] font-medium text-slate-500">瓦斯規格/桶數 (可選)</label>
+                          <label className="text-[11px] font-medium text-slate-500">
+                            {vendor.service === 'gas' ? '瓦斯規格/桶數 (可選)' : '冰塊包數/規格 (可選)'}
+                          </label>
                           <input
                             type="text"
-                            placeholder="例: 50kg 2 桶"
+                            placeholder={vendor.service === 'gas' ? '例: 50kg 2 桶' : '例: 20kg 30 包'}
                             value={dt.cylinders || ''}
                             onChange={e => {
                               const val = e.target.value
@@ -413,7 +415,7 @@ export default function VendorFillPage({ params }: { params: Promise<{ token: st
                       )}
 
                       {/* 金額輸入框 */}
-                      <div className={`${vendor.service === 'gas' ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-1`}>
+                      <div className={`${(vendor.service === 'gas' || vendor.service === 'ice') ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-1`}>
                         <label className="text-[11px] font-medium text-slate-500 flex items-center justify-between">
                           <span>應繳金額 (VND) *</span>
                           {(amounts[st.code] || 0) > 0 && (
@@ -447,9 +449,9 @@ export default function VendorFillPage({ params }: { params: Promise<{ token: st
                       </div>
 
                       {/* 單店單據／簽收單照片上傳 */}
-                      <div className={`${vendor.service === 'gas' ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-1`}>
+                      <div className={`${(vendor.service === 'gas' || vendor.service === 'ice') ? 'sm:col-span-4' : 'sm:col-span-6'} space-y-1`}>
                         <label className="text-[11px] font-medium text-slate-500">
-                          {vendor.service === 'gas' ? '瓦斯簽收單／發票憑證' : '本據點繳費單據照片'}
+                          {vendor.service === 'gas' ? '瓦斯簽收單／發票憑證' : vendor.service === 'ice' ? '冰塊送貨單／簽收單' : '本據點繳費單據照片'}
                         </label>
 
                         <input

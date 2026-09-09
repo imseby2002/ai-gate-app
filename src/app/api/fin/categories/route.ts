@@ -28,6 +28,16 @@ export async function GET() {
     const r = await supabase.from('fin_expense_categories')
       .select('id, code, name, entry_method, vendor_service, sort').eq('owner_id', user.id).order('sort').order('code')
     data = r.data ?? []
+  } else {
+    // 確保預設核心科目（如 GAS 瓦斯、ICE 冰塊）自動補齊
+    const existingCodes = new Set(data.map(d => d.code))
+    const missing = DEFAULTS.filter(d => !existingCodes.has(d.code))
+    if (missing.length > 0) {
+      await supabase.from('fin_expense_categories').insert(missing.map(d => ({ ...d, owner_id: user.id })))
+      const r = await supabase.from('fin_expense_categories')
+        .select('id, code, name, entry_method, vendor_service, sort').eq('owner_id', user.id).order('sort').order('code')
+      data = r.data ?? []
+    }
   }
   return NextResponse.json({ categories: data })
 }
