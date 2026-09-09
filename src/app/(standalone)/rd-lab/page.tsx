@@ -213,90 +213,122 @@ export default function RdLabPage() {
         </div>
       </div>
 
-      {/* 核心導覽分頁 Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-gray-200 text-xs sm:text-sm font-medium">
+      {/* 核心導覽分頁 Tabs (自適應換行排列，無須向右拖拉即可看清所有功能) */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/90 dark:bg-muted/60 rounded-2xl border border-slate-200 dark:border-border text-xs sm:text-sm font-medium">
         <button
+          type="button"
           onClick={() => setTab('recipes')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'recipes'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-purple-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <Layers className="h-4 w-4" />
-          結構化配方與版本 ({recipes.length})
+          <Layers className="h-4 w-4 shrink-0" />
+          <span>結構化配方與版本</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+            tab === 'recipes' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          }`}>
+            {recipes.length}
+          </span>
         </button>
 
         <button
+          type="button"
           onClick={() => setTab('ingredients')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'ingredients'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-purple-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <Coffee className="h-4 w-4" />
-          原料庫與供應商矩陣 ({ingredients.length})
+          <Coffee className="h-4 w-4 shrink-0" />
+          <span>原料庫與供應商矩陣</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+            tab === 'ingredients' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          }`}>
+            {ingredients.length}
+          </span>
         </button>
 
         <button
+          type="button"
           onClick={() => setTab('calculator')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'calculator'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-purple-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <Scale className="h-4 w-4" />
-          配方計算器與糖稅檢查
+          <Scale className="h-4 w-4 shrink-0" />
+          <span>配方計算器與糖稅檢查</span>
         </button>
 
         <button
+          type="button"
           onClick={() => setTab('experiments')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'experiments'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-purple-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <Compass className="h-4 w-4" />
-          實驗管理與 9 軸感官 ({experiments.length})
+          <Compass className="h-4 w-4 shrink-0" />
+          <span>實驗管理與 9 軸感官</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+            tab === 'experiments' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          }`}>
+            {experiments.length}
+          </span>
         </button>
 
         <button
+          type="button"
           onClick={() => setTab('competitors')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'competitors'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-purple-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <TrendingUp className="h-4 w-4" />
-          競品庫與食品添加物 ({competitors.length + additives.length})
+          <TrendingUp className="h-4 w-4 shrink-0" />
+          <span>競品庫與食品添加物</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+            tab === 'competitors' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          }`}>
+            {competitors.length + additives.length}
+          </span>
         </button>
 
         <button
+          type="button"
           onClick={() => setTab('knowledge')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'knowledge'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-purple-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <Video className="h-4 w-4" />
-          外部研發知識庫 ({knowledge.length})
+          <Video className="h-4 w-4 shrink-0" />
+          <span>外部研發知識庫</span>
+          <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
+            tab === 'knowledge' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          }`}>
+            {knowledge.length}
+          </span>
         </button>
 
         <button
+          type="button"
           onClick={() => setTab('agents')}
-          className={`px-3.5 py-2 rounded-t-lg border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+          className={`px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
             tab === 'agents'
-              ? 'border-purple-600 text-purple-700 bg-purple-50/50 font-bold'
-              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-xs'
+              : 'bg-white dark:bg-card text-slate-700 dark:text-slate-300 hover:text-purple-600 hover:bg-white/90 border border-slate-200/70 dark:border-border'
           }`}
         >
-          <Sparkles className="h-4 w-4" />
-          研發 6 大 Agent 創意實驗室
+          <Sparkles className="h-4 w-4 shrink-0 text-amber-400" />
+          <span>研發 6 大 Agent 創意實驗室</span>
         </button>
       </div>
 
