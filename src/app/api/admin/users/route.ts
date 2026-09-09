@@ -97,7 +97,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Only allow safe field updates
-  const allowedFields = ['is_active', 'user_type', 'monthly_budget', 'department', 'enabled_modules', 'units']
+  const allowedFields = ['is_active', 'user_type', 'monthly_budget', 'department', 'enabled_modules', 'units', 'store_code']
   const safeUpdates = Object.fromEntries(
     Object.entries(updates).filter(([k]) => allowedFields.includes(k))
   )
@@ -120,5 +120,13 @@ export async function PATCH(req: NextRequest) {
     .eq('id', userId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (updates.store_code !== undefined) {
+    await supabase
+      .from('company_members')
+      .update({ store_code: safeUpdates.store_code || null })
+      .eq('member_id', userId)
+  }
+
   return NextResponse.json({ success: true })
 }

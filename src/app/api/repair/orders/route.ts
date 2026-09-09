@@ -14,7 +14,7 @@ async function manageCtx() { const c = await getUnitContext('repair'); return c.
 export async function GET(req: NextRequest) {
   const c = await readCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const sp = new URL(req.url).searchParams
-  const store = s(sp.get('store'))
+  const store = c.storeCode || s(sp.get('store'))
   const status = s(sp.get('status'))
   let q = c.admin.from('repair_orders')
     .select('id, store, equipment_id, equipment_name, title, description, priority, status, reporter_name, assignee_type, assignee_id, assignee_name, cost, resolution, reported_at, assigned_at, completed_at')
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   if (status) q = q.eq('status', status)
   const { data, error } = await q.order('reported_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ items: data ?? [] })
+  return NextResponse.json({ items: data ?? [], locked_store: c.storeCode ?? null })
 }
 
 // 建立報修單（門市或維修單位）
@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({}))
   const title = s(b.title)
   if (!title) return NextResponse.json({ error: '問題標題必填' }, { status: 400 })
+
+  // 門市強制限制：若帳號綁定特定門市，強制鎖死該門市
+  const store = c.storeCode || s(b.store)
+  if (!store) return NextResponse.json({ error: '請選擇申報門市' }, { status: 400 })
 
   // 報修人名稱
   const { data: prof } = await c.admin.from('profiles').select('full_name').eq('id', c.userId).maybeSingle()
@@ -46,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await c.admin.from('repair_orders').insert({
     owner_id: c.ownerId,
-    store: s(b.store),
+    store,
     equipment_id: equipmentId,
     equipment_name: equipmentName,
     title,

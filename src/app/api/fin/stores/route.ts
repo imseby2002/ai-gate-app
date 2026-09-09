@@ -3,25 +3,29 @@ import { getCompanyContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
   const ctx = await getCompanyContext()
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null, isAdmin: false }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode, isAdmin: ctx.isAdmin }
 }
 
 const UNIT_FIELDS = ['unit_type', 'short_name', 'electricity_no', 'water_no', 'address'] as const
 
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { data, error } = await supabase.from('fin_stores')
+  let query = supabase.from('fin_stores')
     .select('id, code, name, region, active, unit_type, short_name, electricity_no, water_no, address, base_hourly_rate').eq('owner_id', user.id)
     .order('unit_type').order('code')
+  if (storeCode) {
+    query = query.eq('code', storeCode)
+  }
+  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ stores: data ?? [] })
+  return NextResponse.json({ stores: data ?? [], locked_store: storeCode ?? null })
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, isAdmin } = await getAdminUser()
+  if (!user || !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const body = await req.json().catch(() => ({}))
   const code = String(body.code ?? '').trim()
   if (!code) return NextResponse.json({ error: '門市編碼必填' }, { status: 400 })
@@ -37,8 +41,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, isAdmin } = await getAdminUser()
+  if (!user || !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -52,8 +56,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, isAdmin } = await getAdminUser()
+  if (!user || !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await supabase.from('fin_stores').delete().eq('id', id).eq('owner_id', user.id)

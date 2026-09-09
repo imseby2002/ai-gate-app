@@ -5,8 +5,8 @@ import { notifyHR } from '@/lib/hr/notify'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['store', 'audit', 'rd', 'finance'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode }
 }
 
 type SB = Awaited<ReturnType<typeof createClient>>
@@ -193,10 +193,10 @@ async function compute(supabase: SB, ownerId: string, store: string, year: numbe
 }
 
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const sp = new URL(req.url).searchParams
-  const store = (sp.get('store') ?? '').trim()
+  const store = storeCode || (sp.get('store') ?? '').trim()
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()
   const month = parseInt(sp.get('month') ?? '') || (new Date().getMonth() + 1)
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
@@ -205,10 +205,10 @@ export async function GET(req: NextRequest) {
 
 // 通知人事超標原料。body: { store, year, month }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const body = await req.json().catch(() => ({}))
-  const store = String(body.store ?? '').trim()
+  const store = storeCode || String(body.store ?? '').trim()
   const year = parseInt(body.year) || new Date().getFullYear()
   const month = parseInt(body.month) || (new Date().getMonth() + 1)
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })

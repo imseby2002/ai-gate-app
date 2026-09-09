@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -12,9 +12,9 @@ const num = (v: unknown) => { const n = Number(String(v ?? '').replace(/[,\s]/g,
 
 // 某門市的安全庫存表（安全量／滿倉量）
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const store = s(new URL(req.url).searchParams.get('store'))
+  const store = storeCode || s(new URL(req.url).searchParams.get('store'))
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
   const { data } = await supabase.from('inv_safety_stock')
     .select('material_code, material_name, unit, safety_qty, full_qty').eq('owner_id', user.id).eq('store', store)
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
 
 // 批次 upsert。body: { store, rows:[{material_code, material_name, unit, safety_qty, full_qty}] }
 export async function PUT(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const b = await req.json().catch(() => ({}))
-  const store = s(b.store)
+  const store = storeCode || s(b.store)
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
   const rows = (Array.isArray(b.rows) ? b.rows : [])
     .map((r: Record<string, unknown>) => ({

@@ -23,10 +23,22 @@ export default function StoreInventoryPage() {
   const [tab, setTab] = useState<Tab>('count')
   const [stores, setStores] = useState<string[]>([])
   const [store, setStore] = useState('')
+  const [lockedStore, setLockedStore] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/inv/stores').then(r => { if (r.status === 403) { setIsAdmin(false); return null } setIsAdmin(true); return r.json() })
-      .then(d => { if (d) { setStores(d.stores ?? []); setStore(s => s || (d.stores?.[0] ?? '')) } })
+      .then(d => {
+        if (d) {
+          if (d.locked_store) {
+            setLockedStore(d.locked_store)
+            setStores([d.locked_store])
+            setStore(d.locked_store)
+          } else {
+            setStores(d.stores ?? [])
+            setStore(s => s || (d.stores?.[0] ?? ''))
+          }
+        }
+      })
   }, [])
 
   if (isAdmin === false) return (
@@ -60,9 +72,23 @@ export default function StoreInventoryPage() {
 
       <Card className="p-3">
         <label className="space-y-1 inline-block">
-          <span className="block text-xs text-gray-500">門市</span>
-          <Input list="inv-store-list" value={store} onChange={e => setStore(e.target.value)} placeholder="門市（如 YL）" className="w-40" />
-          <datalist id="inv-store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>
+          <div className="flex items-center gap-2">
+            <span className="block text-xs text-gray-500">門市代碼</span>
+            {lockedStore && (
+              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                🔒 本店專屬・不可切換其他門市
+              </span>
+            )}
+          </div>
+          <Input
+            list={lockedStore ? undefined : "inv-store-list"}
+            value={store}
+            disabled={!!lockedStore}
+            onChange={e => setStore(e.target.value)}
+            placeholder="門市（如 YL）"
+            className="w-48 disabled:bg-muted/50 disabled:cursor-not-allowed font-semibold"
+          />
+          {!lockedStore && <datalist id="inv-store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>}
         </label>
       </Card>
 

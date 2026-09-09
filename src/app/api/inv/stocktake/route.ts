@@ -6,8 +6,8 @@ import { computeOrder, loadEffectiveSafety, notifyForeman, type CountRow } from 
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -20,7 +20,7 @@ async function storeNameOf(supabase: Awaited<ReturnType<typeof createClient>>, o
 
 // GET ?id= → 單張盤點（含訂貨計算＋緊急）；GET ?store= → 該門市盤點清單
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const sp = new URL(req.url).searchParams
   const id = s(sp.get('id'))
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     const { data: head } = await supabase.from('inv_stocktakes')
       .select('id, store, taken_on, note').eq('id', id).eq('owner_id', user.id).single()
     if (!head) return NextResponse.json({ error: 'not found' }, { status: 404 })
+    if (storeCode && head.store !== storeCode) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     const { data: items } = await supabase.from('inv_stocktake_items')
       .select('material_code, material_name, unit, counted_qty').eq('stocktake_id', id).eq('owner_id', user.id)
     const safety = await loadEffectiveSafety(supabase, user.id, head.store, head.taken_on)
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ stocktake: head, order })
   }
 
-  const store = s(sp.get('store'))
+  const store = storeCode || s(sp.get('store'))
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
   const { data: list } = await supabase.from('inv_stocktakes')
     .select('id, store, taken_on, note, created_at').eq('owner_id', user.id).eq('store', store)
@@ -47,10 +48,10 @@ export async function GET(req: NextRequest) {
 // 建立盤點。body: { store, taken_on?, note?, items:[{material_code, material_name, unit, counted_qty}] }
 // → 計算訂貨（補到滿倉）＋緊急（≤安全量）；有緊急則通知領班。
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const b = await req.json().catch(() => ({}))
-  const store = s(b.store)
+  const store = storeCode || s(b.store)
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
   const items = (Array.isArray(b.items) ? b.items : [])
     .map((r: Record<string, unknown>) => ({ material_code: s(r.material_code), material_name: s(r.material_name), unit: s(r.unit), counted_qty: num(r.counted_qty) }))

@@ -19,7 +19,7 @@ interface Access {
   companyName?: string | null
   units: string[]
 }
-interface UserRow { id: string; full_name: string | null; email: string | null; user_type: string; units: string[] | null }
+interface UserRow { id: string; full_name: string | null; email: string | null; user_type: string; units: string[] | null; store_code?: string | null }
 
 // 各單位的圖示與主題色（class 為完整字串，讓 Tailwind 能靜態掃描）
 const UNIT_STYLE: Record<string, { icon: ComponentType<{ className?: string }>; chip: string; ring: string }> = {
@@ -164,12 +164,17 @@ export default function OfficePage() {
 
 function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolean; isCompanyAdmin?: boolean; companyRole?: string | null }) {
   const [users, setUsers] = useState<UserRow[]>([])
+  const [storeList, setStoreList] = useState<Array<{ code: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
 
   useEffect(() => {
-    fetch('/api/admin/users').then(r => r.ok ? r.json() : { users: [] }).then(d => {
-      setUsers((d.users ?? []).map((u: UserRow) => ({ ...u, units: u.units ?? [] })))
+    Promise.all([
+      fetch('/api/admin/users').then(r => r.ok ? r.json() : { users: [] }),
+      fetch('/api/fin/stores').then(r => r.ok ? r.json() : { stores: [] }),
+    ]).then(([userData, storeData]) => {
+      setUsers((userData.users ?? []).map((u: UserRow) => ({ ...u, units: u.units ?? [] })))
+      setStoreList((storeData.stores ?? []).map((s: { code: string; name: string }) => ({ code: s.code, name: s.name || s.code })))
       setLoading(false)
     })
   }, [])
@@ -190,6 +195,18 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
     setSaving('')
   }
 
+  const changeStore = async (u: UserRow, newStoreCode: string) => {
+    const code = newStoreCode.trim() || null
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, store_code: code } : x))
+    setSaving(u.id)
+    await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: u.id, store_code: code }),
+    })
+    setSaving('')
+  }
+
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-4 py-3">
@@ -205,7 +222,7 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
       </div>
       <div className="p-4 space-y-3">
         <p className="text-xs text-muted-foreground">
-          由公司負責人或 IT 維護人員名單與單位授權；勾選每位帳號可存取的單位。
+          由公司負責人或 IT 維護人員名單與單位授權；勾選每位帳號可存取的單位。若指定「所屬門市」，該門市人員登入後將自動鎖定為該門市，無法切換或存取其他門市資料。
           {isCompanyAdmin && `（目前以「${companyRole === 'owner' ? '公司負責人' : '公司 IT'}」身分管理本公司成員）`}
         </p>
         {loading ? <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
@@ -216,6 +233,7 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
               <thead>
                 <tr className="bg-muted/50 text-left text-muted-foreground border-b">
                   <th className="py-2.5 px-3 font-medium sticky left-0 bg-muted/50">帳號</th>
+                  <th className="px-3 py-2.5 font-medium whitespace-nowrap text-left">所屬門市 (Store 鎖定)</th>
                   {UNIT_AREAS.map(a => <th key={a.key} className="px-2 text-center font-medium whitespace-nowrap">{a.label}</th>)}
                 </tr>
               </thead>
@@ -228,6 +246,21 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
                       {saving === u.id && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                     </div>
                     {u.email && <div className="text-[11px] text-muted-foreground">{u.email}</div>}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <select
+                      value={u.store_code || ''}
+                      onChange={e => changeStore(u, e.target.value)}
+                      disabled={u.user_type === 'admin' && !isAdmin}
+                      className="h-8 rounded-md border bg-background px-2 text-xs font-medium focus:ring-1 focus:ring-primary disabled:opacity-50"
+                    >
+                      <option value="">總部 / 全門市（不鎖定）</option>
+                      {storeList.map(s => (
+                        <option key={s.code} value={s.code}>
+                          [{s.code}] {s.name}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   {UNIT_AREAS.map(a => {
                     const isMkt = a.key === 'marketing' || a.key === 'mkt'

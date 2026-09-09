@@ -38,6 +38,7 @@ export default function StoreBillsPage() {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [stores, setStores] = useState<StoreItem[]>([])
   const [selectedStore, setSelectedStore] = useState('')
+  const [lockedStore, setLockedStore] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [uploadingElec, setUploadingElec] = useState(false)
@@ -77,7 +78,10 @@ export default function StoreBillsPage() {
         const d = await res.json()
         const stList: StoreItem[] = d.stores ?? []
         setStores(stList)
-        if (!selectedStore && stList.length > 0) {
+        if (d.locked_store) {
+          setLockedStore(d.locked_store)
+          setSelectedStore(d.locked_store)
+        } else if (!selectedStore && stList.length > 0) {
           setSelectedStore(stList[0].code)
         }
 
@@ -324,13 +328,21 @@ export default function StoreBillsPage() {
       <Card className="p-4 bg-card/60 border shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <div className="space-y-1 flex-1 min-w-[200px]">
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              申報據點 / 門市 (Unit)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                申報據點 / 門市 (Unit)
+              </label>
+              {lockedStore && (
+                <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 font-normal">
+                  🔒 本店專屬・不可切換其他門市
+                </Badge>
+              )}
+            </div>
             <select
               value={selectedStore}
+              disabled={!!lockedStore}
               onChange={e => setSelectedStore(e.target.value)}
-              className="w-full h-10 rounded-lg border bg-background px-3 text-sm font-medium focus:ring-2 focus:ring-primary"
+              className="w-full h-10 rounded-lg border bg-background px-3 text-sm font-medium focus:ring-2 focus:ring-primary disabled:opacity-90 disabled:cursor-not-allowed disabled:bg-muted/50"
             >
               {stores.map(s => (
                 <option key={s.code} value={s.code}>

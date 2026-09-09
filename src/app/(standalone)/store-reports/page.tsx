@@ -45,6 +45,7 @@ export default function StoreReportsPage() {
   const [tab, setTab] = useState<Tab>('report')
   const [stores, setStores] = useState<string[]>([])
   const [store, setStore] = useState('')
+  const [lockedStore, setLockedStore] = useState<string | null>(null)
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
 
@@ -53,8 +54,14 @@ export default function StoreReportsPage() {
     if (res.status === 403) { setIsAdmin(false); return }
     setIsAdmin(true)
     const d = await res.json()
-    setStores(d.stores ?? [])
-    setStore(s => s || (d.stores?.[0] ?? ''))
+    if (d.locked_store) {
+      setLockedStore(d.locked_store)
+      setStores([d.locked_store])
+      setStore(d.locked_store)
+    } else {
+      setStores(d.stores ?? [])
+      setStore(s => s || (d.stores?.[0] ?? ''))
+    }
   }, [])
   useEffect(() => { loadStores() }, [loadStores])
 
@@ -113,9 +120,23 @@ export default function StoreReportsPage() {
         <Card className="p-3">
           <div className="flex flex-wrap items-end gap-3">
             <label className="space-y-1">
-              <span className="block text-xs text-gray-500">門市</span>
-              <Input list="store-list" value={store} onChange={e => setStore(e.target.value)} placeholder="門市（如 YL）" className="w-36" />
-              <datalist id="store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>
+              <div className="flex items-center gap-2">
+                <span className="block text-xs text-gray-500">門市代碼</span>
+                {lockedStore && (
+                  <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                    🔒 本店專屬・不可切換
+                  </span>
+                )}
+              </div>
+              <Input
+                list={lockedStore ? undefined : "store-list"}
+                value={store}
+                disabled={!!lockedStore}
+                onChange={e => setStore(e.target.value)}
+                placeholder="門市（如 YL）"
+                className="w-44 disabled:bg-muted/50 disabled:cursor-not-allowed font-semibold"
+              />
+              {!lockedStore && <datalist id="store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>}
             </label>
             <label className="space-y-1"><span className="block text-xs text-gray-500">年</span>
               <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y}</option>)}</select></label>
@@ -136,7 +157,7 @@ export default function StoreReportsPage() {
       {tab === 'report' && <ReportTab store={store} year={year} month={month} onImported={loadStores} />}
       {tab === 'recipes' && <RecipesTab />}
       {tab === 'mapping' && <MappingTab />}
-      {tab === 'variance' && <VarianceTab store={store} year={year} month={month} />}
+      {tab === 'variance' && <VarianceTab store={store} year={year} month={month} onGoToMapping={() => setTab('mapping')} />}
     </div>
   )
 }
@@ -353,7 +374,7 @@ function MappingTab() {
 }
 
 // ── 差異分析（智能）──
-function VarianceTab({ store, year, month }: { store: string; year: number; month: number }) {
+function VarianceTab({ store, year, month, onGoToMapping }: { store: string; year: number; month: number; onGoToMapping?: () => void }) {
   const [rows, setRows] = useState<VarRow[]>([])
   const [unmapped, setUnmapped] = useState<{ product_code: string; product_name: string; qty: number }[]>([])
   const [cc, setCc] = useState<CrossChecks | null>(null)
@@ -499,7 +520,7 @@ function VarianceTab({ store, year, month }: { store: string; year: number; mont
       {unmapped.length > 0 && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
           <span>有 {unmapped.length} 個成品尚未對照配方（不計入理論用量）：{unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、')}{unmapped.length > 8 ? '…' : ''}</span>
-          <button onClick={() => setTab('mapping')} className="text-amber-800 underline font-medium shrink-0">前往成品對照 →</button>
+          {onGoToMapping && <button onClick={onGoToMapping} className="text-amber-800 underline font-medium shrink-0">前往成品對照 →</button>}
         </div>
       )}
 

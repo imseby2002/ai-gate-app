@@ -11,7 +11,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('user_type, units, company_id')
+    .select('user_type, units, company_id, store_code')
     .eq('id', user.id)
     .single()
 
@@ -41,6 +41,7 @@ export async function GET() {
   }
 
   const canManage = isSuperAdmin || isCompanyAdmin
+  const storeCode = canManage ? null : (profile?.store_code ? String(profile.store_code).trim() : null)
 
   return NextResponse.json({
     isAdmin: isSuperAdmin,
@@ -49,5 +50,6 @@ export async function GET() {
     companyRole,
     companyName,
     units: profile?.units ?? [],
+    store_code: storeCode,
   })
 }
