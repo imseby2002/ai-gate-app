@@ -53,6 +53,7 @@ export interface ThrottleRuleInfo {
   shortLabel: string // e.g. "用畢降速 128 kbps 吃到飽", "全程高速不降速", "流量用畢停止上網"
   fullLabel: string // e.g. "高速流量用畢降速至 128 kbps 輕速吃到飽不斷線"
   badge: string // e.g. "降速 128 kbps", "降速 5 Mbps", "用畢斷線", "全程高速"
+  videoQuality: string // e.g. "不建議看影片", "可看 144p~240p", "可看 240p~360p", "可看 360p~480p", "可看 480p~720p", "可看 720p~1080p", "可看 1080p~4K", "全程 4K 極速", "用畢無連線"
   description: string // 詳細可做什麼說明，例如 "高速用畢降速至 128 kbps，可傳文字訊息、LINE 聊天與 Google 地圖導航，不斷線"
   canStreamVideo: boolean
   canVoiceCall: boolean
@@ -285,6 +286,7 @@ export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
       shortLabel: '流量用畢停止上網',
       fullLabel: '流量用畢即停止上網 (直接結束連線，不額外扣款)',
       badge: '用畢斷線',
+      videoQuality: '用畢無連線',
       description: '方案內含之高速流量使用完畢後即停止上網服務（斷線），不會產生任何超額費用。',
       canStreamVideo: false,
       canVoiceCall: false,
@@ -307,14 +309,15 @@ export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
       shortLabel: '全程高速吃到飽不降速',
       fullLabel: '全程維持 4G/5G 原生高速連線，不限速、不降速',
       badge: '全程高速不降速',
-      description: '全程享受 4G/5G 當地電信原生極速飆網，不降速、不斷線，盡情追劇、視訊與工作。',
+      videoQuality: '全程 4K 極速無限制',
+      description: '全程享受 4G/5G 當地電信原生極速飆網，不降速、不斷線，盡情 4K 追劇、視訊與工作。',
       canStreamVideo: true,
       canVoiceCall: true,
       canBasicMessaging: true,
     }
   }
 
-  // 3. 有指定速率的降速型方案 (例如 "unlimited 128kbps", "unlimited 5mbps", "unlimited 384kbps", "unlimited 10mbps")
+  // 3. 有指定速率的降速型方案 (例如 "unlimited 128kbps", "unlimited 256kbps", "unlimited 384kbps", "unlimited 512kbps", "unlimited 1mbps", "unlimited 5mbps", "unlimited 10mbps")
   const match = lower.match(/(\d+(?:\.\d+)?)\s*(kbps|mbps|k|m)/)
   if (match) {
     const num = parseFloat(match[1])
@@ -325,24 +328,44 @@ export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
     const speedKbps = isMbps ? num * 1024 : num
 
     let usageTips = ''
+    let videoQuality = ''
     let canStreamVideo = false
     let canVoiceCall = false
     let canBasicMessaging = true
 
     if (speedKbps <= 128) {
-      usageTips = '支援傳送 LINE / WhatsApp 文字訊息與 Google Maps 定位導航（網頁載入較慢，不建議觀看影片）。'
+      videoQuality = '不建議看影片'
+      usageTips = '支援傳送 LINE / WhatsApp 文字訊息與 Google Maps 定位導航（網頁載入較慢，不建議觀看串流影片）。'
       canVoiceCall = false
       canStreamVideo = false
+    } else if (speedKbps <= 256) {
+      videoQuality = '可看 144p ~ 240p 低畫質短片'
+      usageTips = '支援 LINE 文字傳送與語音通話、Google Maps 導航；串流影片建議手動設定 144p ~ 240p 低畫質順暢播放（高畫質可能需短暫緩衝）。'
+      canVoiceCall = true
+      canStreamVideo = true
     } else if (speedKbps <= 384) {
-      usageTips = '支援 LINE 文字傳送與語音通話、Google Maps 導航與基本網頁瀏覽。'
+      videoQuality = '可看 240p ~ 360p 標清影片'
+      usageTips = '支援 LINE 文字與語音通話、社群動態文字與圖片瀏覽；串流影片可順暢觀看 240p ~ 360p 標清畫質短片。'
       canVoiceCall = true
-      canStreamVideo = false
+      canStreamVideo = true
+    } else if (speedKbps <= 512) {
+      videoQuality = '可看 360p ~ 480p SD 標清'
+      usageTips = '支援 LINE 高音質通話、社群網頁順暢載入；串流影片可穩定觀看 360p ~ 480p (SD 標清畫質)，日常短影音與追劇順暢。'
+      canVoiceCall = true
+      canStreamVideo = true
     } else if (speedKbps <= 1024) {
-      usageTips = '支援 LINE 語音通話、社群動態文字與圖片瀏覽、一般網頁載入與地圖導航。'
+      videoQuality = '可看 480p ~ 720p HD 高畫質'
+      usageTips = '支援 LINE 視訊通話與各類網頁載入；串流影片可順暢觀看 480p ~ 720p (HD 高畫質) 影音。'
       canVoiceCall = true
-      canStreamVideo = false
+      canStreamVideo = true
+    } else if (speedKbps <= 5120) {
+      videoQuality = '可看 720p ~ 1080p FHD 超高畫質'
+      usageTips = '可順暢觀看 YouTube 720p ~ 1080p (FHD 超高畫質) 影音、TikTok/IG 短影音、高清視訊通話與快速載入所有網頁。'
+      canVoiceCall = true
+      canStreamVideo = true
     } else {
-      usageTips = '可順暢觀看 YouTube 720p/1080p 高畫質影音、社群短影音、視訊通話與快速載入所有網頁。'
+      videoQuality = '可看 1080p FHD ~ 2K/4K 極速畫質'
+      usageTips = '可順暢觀看 1080p FHD ~ 2K/4K 極速高畫質串流、支援多人熱點分享與大型檔案快速下載。'
       canVoiceCall = true
       canStreamVideo = true
     }
@@ -354,7 +377,8 @@ export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
       shortLabel: `用畢降速 ${speed} 吃到飽`,
       fullLabel: `高速用畢降速至 ${speed} 輕速吃到飽不斷線`,
       badge: `降速 ${speed}`,
-      description: `高速流量用罄後降速至 ${speed} 無限流量吃到飽。${usageTips}`,
+      videoQuality,
+      description: `高速流量用罄後降速至 ${speed} 無限流量吃到飽（影片${videoQuality}）。${usageTips}`,
       canStreamVideo,
       canVoiceCall,
       canBasicMessaging,
@@ -370,7 +394,8 @@ export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
       shortLabel: '用畢降速 128 kbps 吃到飽',
       fullLabel: '高速用畢降速至 128 kbps 輕速吃到飽不斷線',
       badge: '降速 128 kbps',
-      description: '高速流量用罄後降速至 128 kbps 輕速吃到飽不斷線，支援 LINE 文字訊息與定位導航。',
+      videoQuality: '不建議看影片',
+      description: '高速流量用罄後降速至 128 kbps 輕速吃到飽不斷線（影片不建議觀看），支援 LINE 文字訊息與定位導航。',
       canStreamVideo: false,
       canVoiceCall: false,
       canBasicMessaging: true,
@@ -385,6 +410,7 @@ export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
     shortLabel: '流量用畢停止上網',
     fullLabel: '流量用畢即停止上網',
     badge: '用畢斷線',
+    videoQuality: '用畢無連線',
     description: '方案高速流量使用完畢後即停止上網。',
     canStreamVideo: false,
     canVoiceCall: false,

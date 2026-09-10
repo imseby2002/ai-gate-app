@@ -536,6 +536,20 @@ export default function EsimShopPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
+                        <span className="text-slate-400">超額影音支援</span>
+                        <span className={`font-medium text-right ${
+                          plan.throttleRule?.type === 'unlimited_high_speed'
+                            ? 'text-emerald-600 font-semibold'
+                            : plan.throttleRule?.type === 'terminate'
+                            ? 'text-slate-400'
+                            : plan.throttleRule?.canStreamVideo
+                            ? 'text-blue-600 font-semibold'
+                            : 'text-amber-700 font-medium'
+                        }`}>
+                          {plan.throttleRule?.videoQuality || '依方案規定'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
                         <span className="text-slate-400">開通方式</span>
                         <span className="font-medium text-emerald-600">抵達落地開啟漫遊即開通</span>
                       </div>
@@ -883,6 +897,20 @@ export default function EsimShopPage() {
                   {checkoutPlan.throttleRule?.shortLabel || checkoutPlan.rule_desc}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">超額影音支援</span>
+                <span className={`font-semibold ${
+                  checkoutPlan.throttleRule?.type === 'unlimited_high_speed'
+                    ? 'text-emerald-600 font-semibold'
+                    : checkoutPlan.throttleRule?.type === 'terminate'
+                    ? 'text-slate-500'
+                    : checkoutPlan.throttleRule?.canStreamVideo
+                    ? 'text-blue-600 font-semibold'
+                    : 'text-amber-700 font-medium'
+                }`}>
+                  {checkoutPlan.throttleRule?.videoQuality || '依方案說明'}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">單價</span>
                 <div className="flex items-center gap-1.5">
@@ -896,7 +924,7 @@ export default function EsimShopPage() {
 
             {/* 降速速率與超額流量詳細說明 */}
             {checkoutPlan.throttleRule && (
-              <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs space-y-1.5">
+              <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-bold text-blue-950">
                     <Gauge className="w-4 h-4 text-blue-600 shrink-0" />
@@ -911,6 +939,10 @@ export default function EsimShopPage() {
                   }`}>
                     {checkoutPlan.throttleRule.badge}
                   </span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/90 p-2 rounded-xl text-[11px] font-medium text-slate-800 border border-blue-100">
+                  <span className="font-bold text-indigo-700 shrink-0">🎬 降速後影音畫質支援：</span>
+                  <span className="font-bold text-slate-900">{checkoutPlan.throttleRule.videoQuality}</span>
                 </div>
                 <p className="text-blue-900/90 text-[11px] leading-relaxed">
                   {checkoutPlan.throttleRule.description}

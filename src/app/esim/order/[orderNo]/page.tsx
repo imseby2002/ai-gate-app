@@ -342,18 +342,34 @@ export default function EsimOrderDetailPage() {
             </div>
 
             {throttleRule && (
-              <div className="flex justify-between py-2 border-b border-slate-100 items-center">
-                <span className="text-slate-500">降速/超額規格</span>
-                <span className={`font-bold ${
-                  throttleRule.type === 'unlimited_high_speed'
-                    ? 'text-emerald-600'
-                    : throttleRule.type === 'terminate'
-                    ? 'text-slate-700'
-                    : 'text-indigo-600'
-                }`}>
-                  {throttleRule.shortLabel}
-                </span>
-              </div>
+              <>
+                <div className="flex justify-between py-2 border-b border-slate-100 items-center">
+                  <span className="text-slate-500">降速/超額規格</span>
+                  <span className={`font-bold ${
+                    throttleRule.type === 'unlimited_high_speed'
+                      ? 'text-emerald-600'
+                      : throttleRule.type === 'terminate'
+                      ? 'text-slate-700'
+                      : 'text-indigo-600'
+                  }`}>
+                    {throttleRule.shortLabel}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100 items-center">
+                  <span className="text-slate-500">超額影音支援</span>
+                  <span className={`font-semibold ${
+                    throttleRule.type === 'unlimited_high_speed'
+                      ? 'text-emerald-600 font-semibold'
+                      : throttleRule.type === 'terminate'
+                      ? 'text-slate-500'
+                      : throttleRule.canStreamVideo
+                      ? 'text-blue-600 font-semibold'
+                      : 'text-amber-700 font-medium'
+                  }`}>
+                    {throttleRule.videoQuality}
+                  </span>
+                </div>
+              </>
             )}
 
             <div className="flex justify-between py-2 border-b border-slate-100">
@@ -401,6 +417,10 @@ export default function EsimOrderDetailPage() {
                 }`}>
                   {throttleRule.badge}
                 </span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-white/90 p-2 rounded-xl text-[11px] font-medium text-slate-800 border border-blue-100">
+                <span className="font-bold text-indigo-700 shrink-0">🎬 降速後影音畫質支援：</span>
+                <span className="font-bold text-slate-900">{throttleRule.videoQuality}</span>
               </div>
               <p className="text-blue-900/90 text-xs leading-relaxed">
                 {throttleRule.description}
