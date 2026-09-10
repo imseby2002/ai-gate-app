@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
   Search, Wifi, ShieldCheck, Zap, Globe, Smartphone, Check, Clock,
@@ -60,9 +61,31 @@ export default function EsimShopPage() {
   const [paymentMethod, setPaymentMethod] = useState<'ecpay' | 'test_mode'>('ecpay')
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [mounted, setMounted] = useState(false)
 
   // 機型檢測器狀態
   const [deviceBrand, setDeviceBrand] = useState<'apple' | 'samsung' | 'google' | 'other'>('apple')
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // 彈窗開啟時鎖定背景捲軸，並監聽 ESC 鍵以關閉彈窗
+  useEffect(() => {
+    if (checkoutPlan) {
+      document.body.style.overflow = 'hidden'
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setCheckoutPlan(null)
+      }
+      window.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.body.style.overflow = ''
+        window.removeEventListener('keydown', handleKeyDown)
+      }
+    } else {
+      document.body.style.overflow = ''
+    }
+  }, [checkoutPlan])
 
   // 1. 初次載入熱門目的地與預設日本方案
   useEffect(() => {
@@ -724,9 +747,15 @@ export default function EsimShopPage() {
       </section>
 
       {/* ── 7. 結帳購買彈窗 (Checkout Modal) ─────────────────────── */}
-      {checkoutPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
+      {mounted && checkoutPlan && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/70 backdrop-blur-sm">
+          {/* 點擊半透明背景關閉彈窗 */}
+          <div
+            className="absolute inset-0 cursor-pointer"
+            onClick={() => setCheckoutPlan(null)}
+          />
+
+          <div className="relative z-10 bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
@@ -737,8 +766,10 @@ export default function EsimShopPage() {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setCheckoutPlan(null)}
-                className="p-2 hover:bg-slate-100 rounded-full text-slate-400"
+                className="p-2 hover:bg-slate-100 rounded-full text-slate-400 cursor-pointer transition-colors"
+                title="關閉"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -907,7 +938,8 @@ export default function EsimShopPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

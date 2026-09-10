@@ -28,6 +28,7 @@ interface EsimOrder {
   operator_info?: string
   paid_at?: string
   created_at: string
+  metadata?: Record<string, any>
 }
 
 export default function EsimOrderDetailPage() {
