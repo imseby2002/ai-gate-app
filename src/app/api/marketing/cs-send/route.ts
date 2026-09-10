@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     const history = Array.isArray(conv?.history) ? conv!.history : []
     history.push({ role: 'assistant', content: message })
     await admin.from('cs_conversations').upsert(
-      { user_id: ctx.ownerId, customer_id: to, history: history.slice(-20), updated_at: now },
+      { user_id: ctx.ownerId, customer_id: to, history: history.slice(-60), updated_at: now },
       { onConflict: 'user_id,customer_id' }
     )
   } catch (err) { console.error('[cs-send] cs_conversations 更新失敗:', err) }

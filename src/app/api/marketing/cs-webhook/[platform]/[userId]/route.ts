@@ -83,7 +83,7 @@ type CsCustomerRow = {
   price_ask_count: number
   message_count: number
   discount_offered_at: string | null
-  facts: Record<string, string> | null
+  facts: Record<string, any> | null
 }
 
 // 偵測猶豫關鍵字
@@ -95,15 +95,40 @@ function buildSellSection(cust: CsCustomerRow | null, convoPriceAsks: number, is
 
   // 客戶記憶：永遠保留（不影響話術）
   if (cust?.name) lines.push(`\n\n客戶稱呼：${cust.name}，請自然稱呼對方。`)
-  if (cust?.summary) lines.push(`回頭客背景：「${cust.summary}」，勿重問已知資訊。`)
-  // 已核對過的身分事實（訂單號碼/電話/訂房大名）——真實案例：客人已經在對話中提供
-  // 過並且查詢成功核對過這些資訊，隔一陣子或換一則訊息再問，AI 完全不記得又重新
-  // 要求客人提供一次，客人會覺得完全沒被記住。這裡不是要 AI 跳過查詢直接洩漏密碼，
-  // 而是讓 AI 知道「這些身分資訊已經跟客人核對過」，不用再重複詢問或請客人重打一次。
-  const factLabels: Record<string, string> = { confirmedName: '訂房大名', orderNumber: '訂單號碼', phone: '手機號碼' }
-  const factEntries = Object.entries(cust?.facts ?? {}).filter(([, v]) => v)
+
+  // 檢查是否有已登記的行程參加者名單（身分證字號、姓名、生日）
+  let hasRegisteredParticipants = false
+  if (cust?.facts?.participants) {
+    try {
+      const parts = typeof cust.facts.participants === 'string'
+        ? JSON.parse(cust.facts.participants)
+        : cust.facts.participants
+      if (Array.isArray(parts) && parts.length > 0) {
+        hasRegisteredParticipants = true
+        lines.push(`\n\n【已登記的行程參加者與投保名單——資料已齊全，絕對禁止重複向客人索取！】`)
+        lines.push(`已登記參加者清單：`)
+        parts.forEach((p: any, idx: number) => {
+          lines.push(`${idx + 1}. 姓名：${p.name || '已登記'}，身分證字號：${p.idNumber || '已登記'}，出生年月日：${p.birthday || '已登記'}`)
+        })
+        if (cust.facts.phone) lines.push(`已登記聯絡電話：${cust.facts.phone}`)
+        lines.push(`【極重要死命令】上述參加者名單與個資已經全部建檔齊全！絕對禁止再要求客人提供身分證、生日、姓名或電話！客人回報已匯款、回報末五碼或傳送匯款截圖時，請直接親切確認已收到款項，說明管家會人工對帳，行程已為您保留，切勿再索取任何參加者資料！`)
+      }
+    } catch { /* parse error ignored */ }
+  }
+
+  if (cust?.summary) {
+    let cleanSummary = cust.summary
+    if (hasRegisteredParticipants && /等待.*(?:姓名|身分證|名單|生日)/.test(cleanSummary)) {
+      cleanSummary = cleanSummary.replace(/目前?等待客人提供.*?([。，,.]|$)/g, '參加者資料已全數登記完成。')
+    }
+    lines.push(`回頭客背景：「${cleanSummary}」，勿重問已知資訊。`)
+  }
+
+  // 已核對過的身分事實（訂單號碼/電話/訂房大名/行程資訊）
+  const factLabels: Record<string, string> = { confirmedName: '訂房大名', orderNumber: '訂單號碼', phone: '手機號碼', tour: '預訂行程', tourDate: '行程時間', tourTotal: '行程金額', paymentStatus: '款項狀態' }
+  const factEntries = Object.entries(cust?.facts ?? {}).filter(([k, v]) => v && k !== 'participants' && typeof v === 'string')
   if (factEntries.length) {
-    lines.push(`\n\n【客人已核對過的身分資訊——不用再詢問或請客人重新提供，需要查詢資料時可直接使用】\n${factEntries.map(([k, v]) => `${factLabels[k] ?? k}：${v}`).join('\n')}`)
+    lines.push(`\n\n【客人已核對過的身分與預訂資訊——不用再詢問或請客人重新提供，需要查詢資料時可直接使用】\n${factEntries.map(([k, v]) => `${factLabels[k] ?? k}：${v}`).join('\n')}`)
   }
 
   // 偵測猶豫：關鍵字 OR 第 2 次以上問價 OR 已在 negotiating 階段
@@ -172,7 +197,7 @@ async function saveHistory(userId: string, customerId: string, history: HistoryM
   const { error } = await supabase
     .from('cs_conversations')
     .upsert(
-      { user_id: userId, customer_id: customerId, history: history.slice(-20), updated_at: new Date().toISOString() },
+      { user_id: userId, customer_id: customerId, history: history.slice(-60), updated_at: new Date().toISOString() },
       { onConflict: 'user_id,customer_id' }
     )
   if (error) console.error('[cs-webhook] saveHistory failed:', error)
@@ -476,9 +501,11 @@ async function maybeCreatePaymentProofTicket(
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
     // 訊號一：AI 剛問完末五碼，客人回一串幾乎全是數字的訊息
     // 訊號二：客人主動用一整句話回報匯款（不管 AI 前一句問了什麼）
+    // 訊號三：客人明確表達已匯款、已轉帳或請查收
     const isSuffixReply = PAYMENT_SUFFIX_ASK_RE.test(lastAssistant) && PAYMENT_SUFFIX_REPLY_RE.test(text.trim())
     const isProofStatement = PAYMENT_KEYWORD_RE.test(text) && PAYMENT_SUFFIX_CODE_RE.test(text)
-    if (!isSuffixReply && !isProofStatement) return
+    const isPaymentClaim = /已匯款|已轉帳|匯款完成|匯款了|轉帳了|已付款|付完全額|付完款|轉了|匯了|請查收/.test(text)
+    if (!isSuffixReply && !isProofStatement && !isPaymentClaim) return
     const { data: existing } = await getServiceClient()
       .from('cs_tickets')
       .select('id')
@@ -487,11 +514,11 @@ async function maybeCreatePaymentProofTicket(
       .in('status', ['open', 'in_progress'])
       .limit(1)
     if (existing?.length) return
-    const recentText = history.slice(-10).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
+    const recentText = history.slice(-15).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId,
       subject: '客人已匯款，需人工核對並建立/更新訂單',
-      description: `客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
+      description: `客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房/行程可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
       priority: 'high', intent: '付款確認待跟進',
     })
     const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`
@@ -537,6 +564,96 @@ function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMs
   const h: HistoryMsg[] = [...history, { role: 'user', content: text }]
   if (reply) h.push({ role: 'assistant', content: reply })
   return h
+}
+
+export interface TourParticipant {
+  name?: string
+  idNumber: string
+  birthday?: string
+}
+
+export function extractParticipantsAndPhone(text: string): { participants: TourParticipant[]; phone: string | null } {
+  if (!text || typeof text !== 'string') return { participants: [], phone: null }
+
+  const raw = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean)
+
+  // 台灣手機號碼抽取：09xx-xxx-xxx 或 09xxxxxxxx
+  let phone: string | null = null
+  const phoneMatch = raw.match(/(?:09\d{2}[- ]?\d{3}[- ]?\d{3}|09\d{8})/)
+  if (phoneMatch) {
+    phone = phoneMatch[0].replace(/[- ]/g, '')
+  }
+
+  // 台灣身分證字號正則：1 碼大寫英文字母 + 1,2,8,9 + 8 碼數字
+  const idRegex = /[A-Z][1289]\d{8}/g
+  const idMatches: Array<{ id: string; index: number }> = []
+  let m: RegExpExecArray | null
+  while ((m = idRegex.exec(raw)) !== null) {
+    idMatches.push({ id: m[0], index: m.index })
+  }
+
+  const participants: TourParticipant[] = []
+  const isChineseName = (str: string) => /^[\u4e00-\u9fa5]{2,5}$/.test(str)
+  const extractDate = (str: string) => {
+    // 支援格式：62/09/24, 1991/04/04, 62.09.24, 62-09-24, 62年9月24日, 民國62年9月24日
+    const dMatch = str.match(/(?:民國)?(\d{2,4})[年\/\.\-](\d{1,2})[月\/\.\-](\d{1,2})日?/)
+    if (dMatch) {
+      return `${dMatch[1]}/${dMatch[2].padStart(2, '0')}/${dMatch[3].padStart(2, '0')}`
+    }
+    return null
+  }
+
+  if (idMatches.length > 0) {
+    for (const item of idMatches) {
+      const id = item.id
+      let name: string | undefined
+      let birthday: string | undefined
+
+      const lineIdx = lines.findIndex(l => l.includes(id))
+      if (lineIdx !== -1) {
+        const line = lines[lineIdx]
+        const cleanLine = line.replace(/身分證(字號)?[:：]?/g, '').replace(/姓名[:：]?/g, '').replace(/生日[:：]?/g, '')
+        const rawBefore = cleanLine.slice(0, cleanLine.indexOf(id)).trim()
+        const afterId = cleanLine.slice(cleanLine.indexOf(id) + id.length).trim()
+        const cleanBefore = rawBefore.replace(/(?:09\d{2}[- ]?\d{3}[- ]?\d{3}|09\d{8})/g, '').trim()
+        const beforeTokens = cleanBefore.split(/[\s,，、/]+/).filter(Boolean)
+        const lastToken = beforeTokens[beforeTokens.length - 1]
+
+        if (lastToken && isChineseName(lastToken)) {
+          name = lastToken
+        }
+        if (afterId) {
+          const b = extractDate(afterId)
+          if (b) birthday = b
+        }
+
+        if (!name && lineIdx > 0) {
+          const prevLine = lines[lineIdx - 1].replace(/姓名[:：]?/g, '').trim()
+          if (isChineseName(prevLine)) {
+            name = prevLine
+          }
+        }
+        if (!birthday && lineIdx < lines.length - 1) {
+          const nextLine = lines[lineIdx + 1].replace(/生日[:：]?/g, '').trim()
+          const b = extractDate(nextLine)
+          if (b) birthday = b
+        }
+        if (!birthday && lineIdx < lines.length - 2) {
+          const b = extractDate(lines[lineIdx + 2].replace(/生日[:：]?/g, '').trim())
+          if (b) birthday = b
+        }
+      }
+
+      participants.push({
+        name: name || undefined,
+        idNumber: id,
+        birthday: birthday || undefined,
+      })
+    }
+  }
+
+  return { participants, phone }
 }
 
 // Single entry point for every platform: human handoff → ticket, else AI reply; logs both.
@@ -649,7 +766,99 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, string> | undefined))
+  // 自動抽取並即時合併行程參加者資料（身分證字號、姓名、生日）與手機號碼
+  const extracted = extractParticipantsAndPhone(text)
+  const currentFacts: Record<string, any> = { ...(cust?.facts ?? {}) }
+  let factsUpdated = false
+
+  if (extracted.phone && (!currentFacts.phone || currentFacts.phone !== extracted.phone)) {
+    currentFacts.phone = extracted.phone
+    factsUpdated = true
+  }
+
+  if (extracted.participants.length > 0) {
+    let existingParts: TourParticipant[] = []
+    try {
+      if (typeof currentFacts.participants === 'string') {
+        existingParts = JSON.parse(currentFacts.participants)
+      } else if (Array.isArray(currentFacts.participants)) {
+        existingParts = currentFacts.participants
+      }
+    } catch {}
+
+    for (const newP of extracted.participants) {
+      const existIdx = existingParts.findIndex(p => p.idNumber === newP.idNumber)
+      if (existIdx >= 0) {
+        if (newP.name && (!existingParts[existIdx].name || existingParts[existIdx].name === '已登記')) {
+          existingParts[existIdx].name = newP.name
+          factsUpdated = true
+        }
+        if (newP.birthday && (!existingParts[existIdx].birthday || existingParts[existIdx].birthday === '已登記')) {
+          existingParts[existIdx].birthday = newP.birthday
+          factsUpdated = true
+        }
+      } else {
+        existingParts.push(newP)
+        factsUpdated = true
+      }
+    }
+    currentFacts.participants = JSON.stringify(existingParts)
+    factsUpdated = true
+  }
+
+  // 偵測行程名稱並記錄
+  const tourMatch = text.match(/(?:參加)?(401高地|賞鯨\+繞島\+登島|賞鯨\+繞島|繞島\+登島|二合一|三合一|賞鯨|牛奶湖)/)
+  if (tourMatch && !currentFacts.tour) {
+    currentFacts.tour = tourMatch[1] + '行程'
+    factsUpdated = true
+  }
+
+  // 偵測出海行程出發班次時間
+  const timeslotMatch = text.match(/(?:早上|上午|下午)?\s*([0-9]{1,2}[:：點時][0-9]{0,2})\s*(?:班次|出發)?/)
+  if (timeslotMatch && !currentFacts.tourTimeslot) {
+    currentFacts.tourTimeslot = timeslotMatch[0].trim()
+    factsUpdated = true
+  }
+
+  // 偵測人數
+  const headcountMatch = text.match(/([0-9一二三四五六七八九十]+)\s*(?:位|人|名)/)
+  if (headcountMatch && !currentFacts.tourHeadcount) {
+    currentFacts.tourHeadcount = headcountMatch[0].trim()
+    factsUpdated = true
+  }
+
+  // 偵測匯款意向或回報
+  const paidMatch = /已匯款|已轉帳|匯款完成|付款完成|已付|請查收/.test(text)
+  if (paidMatch && !currentFacts.paymentStatus) {
+    currentFacts.paymentStatus = '客人回報已匯款，待管家核對'
+    factsUpdated = true
+  }
+
+  if (factsUpdated) {
+    if (!cust) {
+      cust = {
+        name: fromName || null,
+        summary: null,
+        stage: 'inquiring',
+        price_ask_count: 0,
+        message_count: 0,
+        discount_offered_at: null,
+        facts: currentFacts,
+      }
+    } else {
+      cust.facts = currentFacts
+    }
+    // 即時寫入 cs_customers 避免任何非同步中斷丟失
+    void getServiceClient().from('cs_customers').upsert({
+      user_id: userId, platform, from_id: customerId, industry: knowledge.industry,
+      name: fromName || cust.name || null,
+      facts: currentFacts,
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,platform,from_id,industry' })
+  }
+
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined))
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply)
   const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit)
@@ -677,6 +886,7 @@ async function replyToCustomer(
       message_count: (cust?.message_count ?? 0) + 1,
       summary: cust?.summary ?? null,
       discount_offered_at: cust?.discount_offered_at ?? (discountJustOffered ? new Date().toISOString() : null),
+      facts: cust?.facts ?? {},
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,platform,from_id,industry' })
@@ -1026,7 +1236,7 @@ async function createExhaustedLookupTicket(
 // 又從頭問一次，客人會覺得完全沒被記住。fire-and-forget，不影響主流程。
 async function saveConfirmedFacts(
   userId: string, platform: string, customerId: string, industry: string,
-  facts: Record<string, string>,
+  facts: Record<string, any>,
 ): Promise<void> {
   try {
     const sb = getServiceClient()
@@ -1035,7 +1245,7 @@ async function saveConfirmedFacts(
       .select('facts, name')
       .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry)
       .maybeSingle()
-    const merged = { ...(existing?.facts as Record<string, string> | null ?? {}), ...facts }
+    const merged = { ...(existing?.facts as Record<string, any> | null ?? {}), ...facts }
     const confirmedName = typeof facts.confirmedName === 'string' && facts.confirmedName.trim() ? facts.confirmedName.trim() : null
     const nameToSet = confirmedName || existing?.name || null
     await sb.from('cs_customers').upsert({
@@ -1439,6 +1649,54 @@ function detectBookingCompletion(flows: BookingFlowDef[], history: HistoryMsg[],
   return ''
 }
 
+// ── 出海行程/票券預訂資料收集完成偵測 → 自動要求全額預付並給予帳號 ──
+function detectTourBookingCompletion(
+  history: HistoryMsg[],
+  message: string,
+  defaultPayment: string,
+  customerFacts?: Record<string, any>
+): string {
+  const allMessages = [...history, { role: 'user' as const, content: message }]
+  const userTexts = allMessages.filter(m => m.role === 'user').map(m => m.content).join('\n')
+
+  // 出海/船班關鍵字
+  const TOUR_RE = /401|賞鯨|二合一|三合一|繞島|登島|牛奶湖|龜山島/
+  if (!TOUR_RE.test(userTexts) && !TOUR_RE.test(String(customerFacts?.tour || ''))) return ''
+
+  // 已付款或已回報匯款截圖 → 不重複發動要款指令
+  const PAID_RE = /已匯款|已轉帳|匯款完成|付款完成|截圖|已付|請查收/
+  if (PAID_RE.test(message) || customerFacts?.paymentStatus) return ''
+
+  // 助手最近一兩則是否已提供匯款帳號
+  const lastAssistantMsgs = allMessages.filter(m => m.role === 'assistant').slice(-2).map(m => m.content).join('\n')
+  if (/將來銀行|88670989871477|823/.test(lastAssistantMsgs)) {
+    return '' // 剛給過帳號，不重複覆蓋
+  }
+
+  // 檢查預訂所需資訊是否齊全
+  const DATE_RE = /[0-9]{1,2}\s*月|[0-9]{4}[\/\-][0-9]{1,2}[\/\-][0-9]{1,2}|(?<![0-9])[0-9]{1,2}[\/\-][0-9]{1,2}(?![0-9])/
+  const hasDate = DATE_RE.test(userTexts) || !!customerFacts?.tourDate
+
+  const hasHeadcount = /[0-9一二三四五六七八九十]+\s*(位|人|名)/.test(userTexts) || !!customerFacts?.tourHeadcount
+
+  let hasParticipants = /[A-Za-z][0-9]{9}/.test(userTexts)
+  if (!hasParticipants && customerFacts?.participants) {
+    try {
+      const parts = typeof customerFacts.participants === 'string' ? JSON.parse(customerFacts.participants) : customerFacts.participants
+      if (Array.isArray(parts) && parts.length > 0) hasParticipants = true
+    } catch {}
+  }
+
+  const hasPhone = /0[0-9]{8,9}/.test(userTexts) || !!customerFacts?.phone
+
+  if (hasDate && hasHeadcount && hasParticipants && hasPhone) {
+    const payment = (defaultPayment || '銀行：將來銀行（823）\n帳號：88670989871477').trim()
+    return `\n\n【系統偵測：出海/船班行程預訂資料已齊全——最高優先：立即主動要求付款】\n所有預訂資料（行程、出發日期、班次、人數、參加者投保名單、電話）皆已收集齊全！\n你的下一則回覆【必須且只能】：\n1. 第一行告知預訂確認：「好的！以下是您的預訂明細：」\n2. 列出行程方案、出發日期與班次、參加人數、所有參加者姓名\n3. 計算並列出總金額，並【明確說明：搭船出海行程（龜山島、401高地、賞鯨等）因船公司劃位班次與投保名額規範，一律 100% 全額預付，不收訂金！】\n4. 原文提供以下匯款帳號：\n${payment}\n5. 提醒匯款後請提供「帳號末五碼」，以便管家人工核對入帳並完成劃位保險！\n【死命令】絕對禁止在此時詢問停車位、早餐、路線或閒聊！第一優先務必引導客人付款！`
+  }
+
+  return ''
+}
+
 // ── 自建表單（cs_forms）CS 對話內問答 ─────────────────────────────────────────
 // 表單欄位是商家自訂、無固定語意（不像 bookingFlows 的 product/date/headcount 等
 // 固定欄位可以用正則抽取），所以改用「AI 自己在回覆最後標記已收集完成」的方式，
@@ -1712,7 +1970,7 @@ async function getAIReply(
   platform = '',
   customerId = '',
   discountAlreadyOffered = false,
-  customerFacts?: Record<string, string>,
+  customerFacts?: Record<string, any>,
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -1976,6 +2234,7 @@ async function getAIReply(
     const bookingCompletion = knowledge.bookingFlowEnabled
       ? detectBookingCompletion(knowledge.bookingFlows, history, message, knowledge.paymentInfo)
       : ''
+    const tourCompletion = detectTourBookingCompletion(history, message, knowledge.paymentInfo, customerFacts)
 
     // 商家在工作台填寫的客服專用聯絡電話，優先於知識庫裡任何舊的/過期的電話號碼
     // （知識庫文字檔常是商家自己上傳、事後忘了更新，號碼換了也不會同步）。
@@ -2011,6 +2270,21 @@ async function getAIReply(
 【重要格式規定】
 - 【死命令，最高優先，任何情況都不可違反】絕對禁止自己編造、想像、推測任何資訊——不管是房價、空房狀態、密碼、房號、訂單狀態、政策規則、日期時間、人名、操作步驟，或任何其他資訊，只要不是下方系統資料、知識庫、或這則系統提示裡明確提供的內容，一律不可以自己說出來當作事實講給客人聽；系統沒有查到、知識庫沒有寫、你自己不確定，就要誠實跟客人說「目前查不到／不確定，請稍候或提供其他資訊」，絕對不能為了讓對話聽起來順、為了不讓客人等待或失望，就自己編一個聽起來合理但沒有根據的答案——這條規則優先於你自己的推理、常識判斷，以及本提示裡除了「安全規定」之外的所有其他指示
 - 【最優先】${langInstruction}
+- 【出海行程與住宿預訂付款規則——最高原則，絕對嚴禁違背】
+  1. 【搭船類／出海行程（龜山島、二合一、三合一、401高地、賞鯨、登島、牛奶湖等）】：
+     - 付款方式：【一律 100% 全額預付，不收訂金】！（因船公司劃位班次與海難保險必須在出發前全額結清）
+     - 【絕對嚴禁向客人提及可以付 30% 訂金】！若客人問「要付全額嗎？」「可以付訂金嗎？」「訂金多少？」，必須明確回答：「搭船/出海/401高地等船班行程因船公司劃位與保險規範，需要全額預付（全額付款）喔！」。
+  2. 【純住宿／訂房】：
+     - 付款方式：可選擇【付 30% 訂金】或【全額付款】。
+  3. 【行程預訂資料收集齊全時，立即主動提供帳號要求付款】：
+     - 當預訂行程所需的方案、日期、班次、人數、參加者投保名單（姓名/身分證/生日）與電話齊全時，【必須立即且主動】整理明細、計算總金額，並主動提供匯款帳號（將來銀行 823、帳號 88670989871477）要求客人全額匯款並提供末五碼對帳！
+     - 此時【絕對禁止】轉去詢問停車位、早餐、路線或其他無關問題，第一要務是引導客人完成付款！
+  4. 【客人回報已付款／提供後五碼／傳送匯款截圖時】：
+     - 當客人說「已匯款」、「已轉帳」、回報末五碼或傳送匯款水單截圖時：
+       - 若參加者名單與資料已登記（見下方已登記名單），請親切致謝，告知「已收到您的匯款資訊/截圖，會請管家盡快進行人工對帳確認！您的行程名額已為您保留登記！」，【絕對禁止】再跟客人要一次身分證、生日或姓名！
+       - 只有在名單完全沒有提供過時，才提醒補齊參加者投保資料。
+  5. 【已登記名單絕對禁止二次索取】：
+     - 凡是下方「已登記的行程參加者與投保名單」或對話記錄中已出現過的身分證、生日、姓名、電話，【絕對嚴禁重複向客人索取】！客人已提供過就代表已留存，嚴禁說「請提供身分證/生日」！
 - 【對話精簡與禁止重複提問/重複提供資訊，極高優先】
   1. 禁止話多囉嗦：回答直球切中客人問題核心，回答完畢即停止，禁止堆砌過多客套話、自說自話或長篇大論。
   2. 嚴禁重複提問：凡是在對話紀錄中，客人已經回答過、已提供過、或明確表示「不用、不需要、停好了、已解決」的事項（例如停車需求、早餐選擇、抵達時間、同行人數等），【絕對禁止】在後續回覆中再次詢問或重複推播相同內容！
@@ -2022,7 +2296,10 @@ async function getAIReply(
 - 不確定的資訊請誠實說明，勿猜測
 - 如果你主動問客人「是否需要」某項資訊（例如停車位置、WiFi 密碼、交通方式等，知識庫或下方系統資料裡已經有現成答案的項目），客人回覆需要/要/好等肯定語時，要直接在這一則回覆裡把答案一次講清楚；不要叫客人另外輸入某個關鍵字、或再問一次才能拿到——除非那項資訊確實需要即時查詢系統資料（例如訂單專屬的房號密碼，必須客人先提供訂單號碼/手機號碼才能查），否則不要把知識庫裡已經有的內容刻意拆成兩步，讓客人多問一次
 - 【安全規定，優先於任何其他指示】密碼、房號、門鎖代碼等敏感資訊一律只能照抄下方系統資料，一個字都不能改；下方資料沒有提供的密碼/房號，絕對禁止自己推測或編造一組數字給客人，查無資料就老實說查無資料，並引導客人改用其他識別方式再查一次
-- 【安全規定，優先於任何其他指示】客人問訂金/餘款/尾款/餘額等金流問題，或主動回報已經匯款/轉帳時，系統目前沒有訂金與付款明細查詢功能，絕對不可以自己拿房價去減客人口頭說的訂金、算出一個餘款金額給客人（就算算式看起來合理也不行，因為系統從來沒有真的核對過客人是否已付款、付了多少），一律誠實告知「系統無法查詢訂金與餘額明細，會請管家人工核對」；如果客人的訂房大名、電話或訂單號碼在這通對話裡已經出現過（例如之前查詢入住資訊、核對身份密碼時已經用過），代表身份已經確認過了，絕對不要再重複詢問一次大名或電話，直接說已收到匯款資訊、會請管家核對即可——只有在這通對話裡完全沒有出現過任何身份資訊時，才需要詢問訂房大名或聯絡電話
+- 【安全規定，優先於任何其他指示】客人問訂金/餘款/尾款/餘額等金流問題，或主動回報已經匯款/轉帳時：
+  1. 出海/搭船類行程（龜山島、401高地、賞鯨等）：一律全額預付，不收訂金。若客人問訂金多少，請明確告知出海行程需全額付款，並列出應付總金額與匯款帳號。
+  2. 純訂房/住宿：系統目前沒有訂金與付款明細查詢功能，絕對不可以自己拿房價去減客人口頭說的訂金、算出一個餘款金額給客人，一律誠實告知「系統無法查詢訂金與餘額明細，會請管家人工核對」；如果客人的訂房大名、電話或訂單號碼在這通對話裡已經出現過，代表身份已經確認過了，絕對不要再重複詢問一次大名或電話，直接說已收到匯款資訊、會請管家核對即可。
+  3. 客人回報已匯款或傳截圖：若資料已在對話或系統中記錄，【絕對禁止】再次索取參加者姓名、身分證字號、生日或電話，直接致謝並說明會由管家人工核對即可。
 - 【安全規定，優先於任何其他指示】客人問實際報價（多少錢、優惠價、折扣後多少）時，只能照抄下方「系統精算房價」區塊給的總金額與每晚金額，那個金額已經是系統套用所有定價規則算好的最終結果；如果下方沒有出現「系統精算房價」這個區塊，就算你自己知道原價、猜得出大概的加成或折扣比例，也絕對不可以自己列公式、自己算一個總金額給客人（包含「旺季 x1.15」「當天訂房打 7 折」這類自己編的加成/折扣說法），一律要先跟客人確認完整的入住日期、退房日期、房型之後才能取得正確報價，或誠實說「請稍候，我幫您確認正確價格」，不可以用推算的數字搪塞客人
 - 【安全規定，優先於任何其他指示】如果下方完全沒有出現「入住資訊查詢結果」或「訂單查詢結果」這類區塊（代表這則訊息沒有比對到任何系統資料），即使客人問的是密碼、房號、訂單狀態，也只能回覆「目前無法為您查詢，麻煩提供訂單號碼、訂房大名或訂房手機號碼」，絕對不可以自己想像、編造一組房號或密碼給客人，也不可以在客人質疑密碼錯誤時，編一套「拉一下門」「輸入速度要均勻」之類聽起來合理但沒有根據的操作說明
 - 【安全規定，優先於任何其他指示】客人詢問「訂單/訂房是否存在、是否已確認、款項是否收到」等狀態時，只能依下方系統資料回答；只有下方明確出現「找到訂單」「找到 N 筆相符的訂單」等查詢結果時才能說已找到/已核對；下方沒有任何查詢結果，或明確顯示「查無資料」時，一律誠實告知客人查無此訂單，引導客人改用其他識別方式再查一次，絕對禁止自己說「已核對」「訂單已完成處理」「款項確認無誤」等話術
@@ -2045,14 +2322,14 @@ https://ciaohome.net/routeofciaohome/
   3. 訂房訂單截圖（Booking.com、Agoda、Airbnb、Traiwan 等）：
      - 主動說明已看到截圖中的訂單內容（若有辨識出單號或旅客姓名）。若下方系統資料已成功比對出入住資訊，依規定核對身份後提供指引；若下方顯示「查無資料」，請清楚告知辨識到的單號/姓名在系統中暫查無資料，引導客人改提供訂房手機號碼或訂房大名再查一次。
   4. 匯款/轉帳收據水單截圖：
-     - 辨識收據內容，致謝並告知「已收到您的匯款明細截圖！會請管家盡快為您進行人工核對帳目，謝謝您！」。
+     - 辨識收據內容，致謝並告知「已收到您的匯款明細截圖！會請管家盡快為您進行人工核對帳目，謝謝您！」。若行程參加者與投保資料已齊全，【絕對禁止】再要求提供身分證、生日或姓名！
 - 【安全規定，優先於任何其他指示】如果下方系統資料是要求你「先跟客人核對姓名」的問句（開頭是「請問訂房登記的姓名是不是」），一律要先完整照抄那句話問客人，絕對不能跳過這一步直接把姓名、密碼、房號當成已核對過的資料講給客人聽；只有客人在你問完之後的下一則訊息明確回覆「是/對/沒錯」等肯定語，系統才會在下一輪真的提供密碼——這一輪你自己絕對不能提前把密碼講出來
 - 【安全規定，優先於任何其他指示】絕對不可以跟客人說「已經為您安排專員」「已通知專員」「已請專員人工核對」「稍後會有人跟您聯繫」等任何聲稱「已經採取後續行動」的話術，除非客人這一則訊息本身就是明確要求真人客服，或下方系統資料明確出現「系統已經真的建立工單通知專員」字樣；查無資料、不確定答案等情況，正確做法永遠是「引導客人提供其他識別資訊再查一次」，不是聲稱已經轉交真人處理——系統沒有真的建立工單時，這樣講會讓客人白等一場
 - 【安全規定，優先於任何其他指示】如果下方系統資料明確顯示某段期間「已經被訂走、沒有空房」，絕對不可以自己另外算一個價格報給客人、也不可以說「目前有空房」「幫您保留」等話術；只有下方系統資料算出實際報價時，才能把那個房型當作有空房介紹給客人
 - 【安全規定，優先於任何其他指示】客人說「電話裡的人/朋友/別人跟我說是另一個價錢」想殺價時，絕對不可以順著客人講的數字直接改price、更不可以編「已經幫您向主管/老闆爭取並獲得批准」這種話術讓價格聽起來更有正當性——這是徹底捏造的核准流程，實際上沒有任何人核准過。價格只能依照下方系統精算或「促成工具箱」規則調整；客人堅持的價格如果對不上，就誠實說明目前系統顯示的正確價格，需要人工確認差異就照實建立工單，不能自己編一個「主管特批」的價格說服客人
 - 【安全規定，優先於任何其他指示】客人詢問真人客服電話、聯絡電話時，只能提供下方「客服專用聯絡電話」區塊列出的號碼；如果下方沒有出現這個區塊，代表尚未設定，一律誠實告知目前沒有可提供的客服電話並改為文字聯繫，絕對不可以自己從知識庫或對話紀錄裡找一組電話號碼講給客人聽，知識庫裡的號碼可能已經過期或並非真人客服專線
 - 【安全規定，優先於任何其他指示】客人要求開立發票/收據時，只能詢問並收下抬頭與統一編號，絕對不可以說「已經幫您開立」「發票已完成」等話術——發票需要專員實際列印/登錄，AI 沒有能力真的開立；收到抬頭與統一編號後只能說「已收到，會請專員為您實際開立」；如果客人訂了不只一間房，順便問清楚發票/收據要放在哪個房間，方便專員處理
-- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${bookingCompletion}${buildFormsSection(knowledge.csForms)}`
+- 目前台灣時間：${taiwanTime}${gapNote ? `\n- ${gapNote}` : ''}${knowledge.corrections ? `\n\n【員工回報的過往錯誤修正——優先於你自己的判斷，務必照著做】\n${knowledge.corrections}` : ''}${contactPhoneSection}${knowledge.knowledgeBase ? `\n\n【知識庫參考資料】\n${knowledge.knowledgeBase}` : ''}${sellSection}${salesContext}${externalDataSection}${deterministicQuote ? `\n\n${deterministicQuote}` : ''}${tourCompletion || bookingCompletion}${buildFormsSection(knowledge.csForms)}`
 
     // Build user message — multimodal if image present
     type UserContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>
@@ -2064,7 +2341,7 @@ https://ciaohome.net/routeofciaohome/
       : message
 
     const messages = [
-      ...history.slice(-10),
+      ...history.slice(-40),
       { role: 'user' as const, content: userContent },
     ]
 
