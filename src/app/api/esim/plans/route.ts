@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { microEsimClient } from '@/lib/esim/microesim'
-import { parseMicroEsimPlan, DESTINATIONS, getDestinationMeta, DestinationMeta, ParsedEsimPlan } from '@/lib/esim/catalog'
+import {
+  parseMicroEsimPlan,
+  DESTINATIONS,
+  getDestinationMeta,
+  DestinationMeta,
+  ParsedEsimPlan,
+  DEFAULT_PRICING_SETTINGS,
+  EsimPricingSettings,
+} from '@/lib/esim/catalog'
+import { getEsimSettings } from '@/lib/esim/db'
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,13 +19,16 @@ export async function GET(req: NextRequest) {
     const popularOnly = searchParams.get('popular') === 'true'
     const forceRefresh = searchParams.get('refresh') === '1'
 
+    // 0. 讀取管理後台設定的利潤倍率與促銷設定
+    const pricingSettings = await getEsimSettings<EsimPricingSettings>('pricing_settings', DEFAULT_PRICING_SETTINGS)
+
     // 1. 取得所有原生方案（帶快取）
     const rawPlans = await microEsimClient.getDataplanList(forceRefresh)
 
-    // 2. 解析並美化定價
+    // 2. 解析並美化定價與限制分析
     const parsedPlans = rawPlans
       .filter(p => p.status === '1') // 只選啟用的方案
-      .map(p => parseMicroEsimPlan(p))
+      .map(p => parseMicroEsimPlan(p, pricingSettings))
 
     // 3. 彙總目的地清單與最低起價
     const destinationMap = new Map<string, { meta: DestinationMeta; planCount: number; minPriceTwd: number }>()
@@ -100,6 +112,11 @@ export async function GET(req: NextRequest) {
       totalPlans: parsedPlans.length,
       destinations,
       plans: plansToReturn,
+      pricingSettings: {
+        promo_active: pricingSettings.promo_active,
+        promo_title: pricingSettings.promo_title,
+        promo_discount: pricingSettings.promo_discount,
+      },
       currency: 'TWD',
       refreshedAt: new Date().toISOString(),
     })

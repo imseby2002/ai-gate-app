@@ -245,3 +245,76 @@ export async function getAllEsimOrders(limit: number = 100): Promise<EsimOrder[]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit)
 }
+
+const LOCAL_SETTINGS_FILE = path.join(process.cwd(), 'scratch', 'esim_settings_fallback.json')
+
+/**
+ * 讀取商城系統設定（優先 Supabase，若無則回退本地 JSON，最後使用預設值）
+ */
+export async function getEsimSettings<T = any>(key: string, defaultValue: T): Promise<T> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('esim_settings')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle()
+
+    if (!error && data?.value) {
+      return data.value as T
+    }
+  } catch (err) {
+    // Fallback to local
+  }
+
+  try {
+    if (fs.existsSync(LOCAL_SETTINGS_FILE)) {
+      const allSettings = JSON.parse(fs.readFileSync(LOCAL_SETTINGS_FILE, 'utf8'))
+      if (allSettings[key] !== undefined) {
+        return allSettings[key] as T
+      }
+    }
+  } catch (err) {
+    // Ignore fallback read error
+  }
+
+  return defaultValue
+}
+
+/**
+ * 儲存商城系統設定
+ */
+export async function saveEsimSettings(key: string, value: any, description?: string): Promise<boolean> {
+  // 1. 嘗試存入 Supabase
+  try {
+    const admin = createAdminClient()
+    await admin
+      .from('esim_settings')
+      .upsert({
+        key,
+        value,
+        description: description || '',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'key' })
+  } catch (err) {
+    console.warn('[EsimDB] Failed to upsert Supabase settings, saving to local fallback:', err)
+  }
+
+  // 2. 存入本地 Fallback
+  try {
+    const dir = path.dirname(LOCAL_SETTINGS_FILE)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    let allSettings: Record<string, any> = {}
+    if (fs.existsSync(LOCAL_SETTINGS_FILE)) {
+      try {
+        allSettings = JSON.parse(fs.readFileSync(LOCAL_SETTINGS_FILE, 'utf8'))
+      } catch {}
+    }
+    allSettings[key] = value
+    fs.writeFileSync(LOCAL_SETTINGS_FILE, JSON.stringify(allSettings, null, 2), 'utf8')
+  } catch (err) {
+    console.warn('[EsimDB] Failed to write fallback settings file:', err)
+  }
+
+  return true
+}

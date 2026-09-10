@@ -21,6 +21,17 @@ interface Destination {
   minPriceTwd: number
 }
 
+interface EsimAppRestrictions {
+  tiktok: { allowed: boolean; reason?: string }
+  chatgpt: { allowed: boolean; reason?: string }
+  googleLine: { allowed: boolean; note?: string }
+  hotspot: { allowed: boolean; note?: string }
+  voiceCalls: { allowed: boolean; note?: string }
+  ipEgress: string
+  isLocalIp: boolean
+  specialNotes: string[]
+}
+
 interface EsimPlan {
   channel_dataplan_id: string
   channel_dataplan_name: string
@@ -31,6 +42,7 @@ interface EsimPlan {
   planType: 'daily' | 'total' | 'unlimited'
   dataTierLabel: string
   retailPriceTwd: number
+  originalPriceTwd?: number
   costHkd: number
   primaryCountryCode: string
   primaryCountryName: string
@@ -39,6 +51,7 @@ interface EsimPlan {
   networks: string
   rule_desc: string
   special_desc?: string
+  restrictions?: EsimAppRestrictions
 }
 
 export default function EsimShopPage() {
@@ -47,6 +60,7 @@ export default function EsimShopPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCountry, setSelectedCountry] = useState<string>('JP')
+  const [promoInfo, setPromoInfo] = useState<{ promo_active: boolean; promo_title: string; promo_discount: number } | null>(null)
   
   // 方案篩選狀態
   const [planTypeFilter, setPlanTypeFilter] = useState<'all' | 'daily' | 'total' | 'unlimited'>('all')
@@ -103,6 +117,9 @@ export default function EsimShopPage() {
       if (data.success) {
         setDestinations(data.destinations || [])
         setPlans(data.plans || [])
+        if (data.pricingSettings) {
+          setPromoInfo(data.pricingSettings)
+        }
       }
     } catch (err) {
       console.error('Failed to load plans:', err)
@@ -204,6 +221,17 @@ export default function EsimShopPage() {
 
   return (
     <div className="space-y-16 pb-24">
+      {/* ── 0. 全館限時促銷橫幅 ────────────────────────────────────────── */}
+      {promoInfo?.promo_active && (
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white text-xs sm:text-sm font-bold py-2.5 px-4 text-center flex items-center justify-center gap-2 shadow-sm animate-in fade-in">
+          <Sparkles className="w-4 h-4 animate-bounce" />
+          <span>{promoInfo.promo_title || '🎉 全館出國上網限時特惠中！結帳自動折抵'}</span>
+          <span className="bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wide">
+            {Math.round(promoInfo.promo_discount * 100)} 折特惠
+          </span>
+        </div>
+      )}
+
       {/* ── 1. HERO BANNER 區塊 ────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-blue-900 via-indigo-950 to-slate-900 text-white pt-12 pb-20 px-4 sm:px-6">
         {/* 背景裝飾光暈 */}
@@ -491,17 +519,54 @@ export default function EsimShopPage() {
                         <span className="font-medium text-emerald-600">抵達落地開啟漫遊即開通</span>
                       </div>
                     </div>
+
+                    {/* App 相容性與使用限制標籤 */}
+                    <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-100 text-[11px] mb-3">
+                      {plan.restrictions?.tiktok.allowed ? (
+                        <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md" title={plan.restrictions.tiktok.reason}>
+                          <Check className="w-3 h-3 shrink-0 text-emerald-600" />
+                          <span className="truncate">TikTok 支援</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-1 rounded-md" title={plan.restrictions?.tiktok.reason || 'TikTok 受限'}>
+                          <AlertCircle className="w-3 h-3 shrink-0 text-amber-600" />
+                          <span className="truncate font-medium">TikTok 不保證</span>
+                        </div>
+                      )}
+
+                      {plan.restrictions?.chatgpt.allowed ? (
+                        <div className="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md" title={plan.restrictions.chatgpt.reason}>
+                          <Check className="w-3 h-3 shrink-0 text-emerald-600" />
+                          <span className="truncate">ChatGPT 支援</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-1 rounded-md" title={plan.restrictions?.chatgpt.reason || 'ChatGPT 不支援'}>
+                          <AlertCircle className="w-3 h-3 shrink-0 text-amber-600" />
+                          <span className="truncate font-medium">ChatGPT 受限</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-1 text-slate-600 bg-slate-100 px-2 py-1 rounded-md col-span-2 truncate text-[10px]">
+                        <Globe className="w-3 h-3 shrink-0 text-blue-500" />
+                        <span className="truncate">IP 歸屬：{plan.restrictions?.ipEgress || '原生/漫遊'}</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* 價格與下單按鈕 */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                     <div>
                       <span className="text-[11px] text-slate-400 block">特惠含稅價</span>
-                      <div className="flex items-baseline gap-1">
+                      <div className="flex items-baseline gap-1.5">
                         <span className="text-xs text-slate-500 font-bold">NT$</span>
                         <span className="text-2xl font-black text-slate-900 tracking-tight">
                           {plan.retailPriceTwd}
                         </span>
+                        {plan.originalPriceTwd && plan.originalPriceTwd > plan.retailPriceTwd && (
+                          <span className="text-xs text-slate-400 line-through font-semibold">
+                            NT$ {plan.originalPriceTwd}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <button
@@ -787,8 +852,64 @@ export default function EsimShopPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">單價</span>
-                <span className="font-bold text-slate-900">NT$ {checkoutPlan.retailPriceTwd}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-900">NT$ {checkoutPlan.retailPriceTwd}</span>
+                  {checkoutPlan.originalPriceTwd && checkoutPlan.originalPriceTwd > checkoutPlan.retailPriceTwd && (
+                    <span className="text-xs text-slate-400 line-through">NT$ {checkoutPlan.originalPriceTwd}</span>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* 重要使用限制與功能支援說明 */}
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-200 space-y-2.5 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span>重要使用限制與功能支援說明</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="flex items-start gap-1.5 bg-white p-2.5 rounded-xl border border-amber-100">
+                  <span className="font-bold shrink-0">🎵 TikTok：</span>
+                  <span className={checkoutPlan.restrictions?.tiktok.allowed ? 'text-emerald-700 font-semibold' : 'text-amber-800'}>
+                    {checkoutPlan.restrictions?.tiktok.allowed ? '✅ 支援使用' : `⚠️ ${checkoutPlan.restrictions?.tiktok.reason || '不保證支援'}`}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-1.5 bg-white p-2.5 rounded-xl border border-amber-100">
+                  <span className="font-bold shrink-0">🤖 ChatGPT：</span>
+                  <span className={checkoutPlan.restrictions?.chatgpt.allowed ? 'text-emerald-700 font-semibold' : 'text-amber-800'}>
+                    {checkoutPlan.restrictions?.chatgpt.allowed ? '✅ 支援使用' : `⚠️ ${checkoutPlan.restrictions?.chatgpt.reason || '不保證支援'}`}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-1.5 bg-white p-2.5 rounded-xl border border-amber-100">
+                  <span className="font-bold shrink-0">🌐 出口 IP：</span>
+                  <span className="text-slate-700 font-medium">
+                    {checkoutPlan.restrictions?.ipEgress || '當地原生/漫遊'}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-1.5 bg-white p-2.5 rounded-xl border border-amber-100">
+                  <span className="font-bold shrink-0">📶 個人熱點：</span>
+                  <span className="text-slate-700 font-medium">
+                    {checkoutPlan.restrictions?.hotspot.allowed ? '✅ 支援分享' : '⚠️ 限制熱點'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-slate-600 pt-1.5 border-t border-amber-200/50 leading-relaxed">
+                📱 <strong>通話備註</strong>：純出國數據流量卡（無實體門號），不支援傳統手機號碼通話與一般簡訊，可正常使用 LINE、WhatsApp、WeChat 網路通話。
+              </div>
+
+              {checkoutPlan.restrictions?.specialNotes && checkoutPlan.restrictions.specialNotes.length > 0 && (
+                <div className="text-[11px] text-amber-900 bg-white/90 p-2.5 rounded-xl space-y-1 border border-amber-200/60">
+                  <div className="font-bold">🔔 電信商特別指引：</div>
+                  {checkoutPlan.restrictions.specialNotes.map((note, i) => (
+                    <div key={i}>• {note}</div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 表單 */}

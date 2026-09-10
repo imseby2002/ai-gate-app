@@ -11,14 +11,51 @@ export interface DestinationMeta {
   popularRank?: number
 }
 
+export interface EsimPricingSettings {
+  hkd_twd_rate: number // 港幣換台幣匯率 e.g. 4.15
+  default_markup: number // 利潤倍率 e.g. 1.35 (35% 毛利)
+  fixed_fee_twd: number // 每單固定手續費 e.g. 20
+  round_to_9: boolean // 9 字尾美化 e.g. true
+  min_price_twd: number // 最低售價門檻 e.g. 79
+  promo_discount: number // 全館折扣成數 (0.9 代表9折, 1.0 代表不打折)
+  promo_title: string // 促銷活動名稱 e.g. "出國限時早鳥 9 折特惠"
+  promo_active: boolean // 是否啟動促銷活動
+  country_markups?: Record<string, number> // 個別國家自訂利潤倍率 e.g. { "JP": 1.30, "EU": 1.40 }
+}
+
+export const DEFAULT_PRICING_SETTINGS: EsimPricingSettings = {
+  hkd_twd_rate: 4.15,
+  default_markup: 1.35,
+  fixed_fee_twd: 20,
+  round_to_9: true,
+  min_price_twd: 79,
+  promo_discount: 1.0,
+  promo_title: '',
+  promo_active: false,
+  country_markups: {},
+}
+
+export interface EsimAppRestrictions {
+  tiktok: { allowed: boolean; reason?: string }
+  chatgpt: { allowed: boolean; reason?: string }
+  googleLine: { allowed: boolean; note?: string }
+  hotspot: { allowed: boolean; note?: string }
+  voiceCalls: { allowed: boolean; note?: string }
+  ipEgress: string // e.g. "日本 (原生 IP)", "香港 (漫遊 IP)"
+  isLocalIp: boolean
+  specialNotes: string[]
+}
+
 export interface ParsedEsimPlan extends MicroEsimPlan {
   planType: 'daily' | 'total' | 'unlimited'
   dataTierLabel: string // e.g. "每日 1GB", "總量 10GB", "無限上網"
   retailPriceTwd: number
+  originalPriceTwd?: number // 若啟動促銷活動，此處為原價
   costHkd: number
   primaryCountryCode: string
   primaryCountryName: string
   flagEmoji: string
+  restrictions: EsimAppRestrictions
 }
 
 export const DESTINATIONS: Record<string, DestinationMeta> = {
@@ -111,27 +148,160 @@ export function getFlagEmoji(countryCode: string): string {
 }
 
 /**
- * 將 MicroEsim 原生方案物件解析成商城展示格式，包含定價計算
+ * 分析方案在常見 App (TikTok, ChatGPT, Google, LINE) 與網路架構上的使用限制
  */
-export function parseMicroEsimPlan(
-  plan: MicroEsimPlan,
-  hkdToTwdRate: number = 4.15,
-  markupMultiplier: number = 1.35,
-  fixedFeeTwd: number = 20
-): ParsedEsimPlan {
-  const costHkd = parseFloat(plan.price) || 0
-  // 計算台幣建議售價：成本(HKD) * 匯率 * 利潤倍率 + 基礎服務費
-  let rawTwd = costHkd * hkdToTwdRate * markupMultiplier + fixedFeeTwd
-  // 美化售價：整數、最低 NT$ 79，結尾以 9 為主（如 89, 99, 149, 199, 299...）
-  let twdPrice = Math.max(79, Math.round(rawTwd))
-  if (twdPrice > 100) {
-    const rem = twdPrice % 10
-    if (rem !== 9) {
-      twdPrice = twdPrice - rem + 9
+export function analyzePlanRestrictions(plan: MicroEsimPlan): EsimAppRestrictions {
+  const rawIp = (plan.ip || '').toUpperCase().trim()
+  const rawDesc = (plan.special_desc || '').toLowerCase()
+  const rawRule = (plan.rule_desc || '').toLowerCase()
+  const countryCode = (plan.code || '').toUpperCase().trim()
+
+  // 1. IP 歸屬地判斷
+  let ipEgress = rawIp || '當地原生/漫遊'
+  let isLocalIp = false
+  if (rawIp.includes('HK')) {
+    ipEgress = '香港 (漫遊 IP)'
+  } else if (rawIp.includes('JP')) {
+    ipEgress = '日本 (原生 IP)'
+    isLocalIp = countryCode.includes('JP')
+  } else if (rawIp.includes('SG')) {
+    ipEgress = '新加坡 (漫遊 IP)'
+  } else if (rawIp.includes('KR')) {
+    ipEgress = '韓國 (原生 IP)'
+    isLocalIp = countryCode.includes('KR')
+  } else if (rawIp.includes('US')) {
+    ipEgress = '美國 (原生 IP)'
+    isLocalIp = countryCode.includes('US')
+  } else if (rawIp.includes('GB') || rawIp.includes('DE') || rawIp.includes('PL') || rawIp.includes('FR')) {
+    ipEgress = '歐洲 (漫遊 IP)'
+  }
+
+  // 2. TikTok 限制
+  let tiktokAllowed = true
+  let tiktokReason = '原生/優質線路，可正常使用國際版 TikTok'
+  if (rawIp.includes('HK')) {
+    tiktokAllowed = false
+    tiktokReason = '因香港法規限制，TikTok 官方不開放香港 IP 存取服務'
+  } else if (rawDesc.includes('not support tiktok') || rawDesc.includes('tiktok do not guarantee') || rawDesc.includes('not tiktok')) {
+    tiktokAllowed = false
+    tiktokReason = '此電信漫遊線路 TikTok 不保證正常存取'
+  }
+
+  // 3. ChatGPT (OpenAI) 限制
+  let chatgptAllowed = true
+  let chatgptReason = '支援 ChatGPT / OpenAI / Claude 等 AI 工具'
+  if (rawIp.includes('HK') || rawIp.includes('CN')) {
+    chatgptAllowed = false
+    chatgptReason = 'OpenAI 官方未支援香港/中國 IP 區域'
+  } else if (rawDesc.includes('not support chatgpt') || rawDesc.includes('gpt do not guarantee')) {
+    chatgptAllowed = false
+    chatgptReason = '此線路 OpenAI/ChatGPT 不保證正常存取'
+  }
+
+  // 4. Google / LINE / FB / IG
+  const googleLineAllowed = true
+  let googleLineNote = '免翻牆直連 Google, LINE, Facebook, IG, 各大社群網站'
+  if (countryCode.includes('CN')) {
+    googleLineNote = '中港澳免翻牆漫遊線路，免 VPN 直連 LINE / Google / FB / IG'
+  }
+
+  // 5. 熱點分享 (Hotspot)
+  let hotspotAllowed = true
+  let hotspotNote = '支援手機個人熱點分享功能'
+  if (rawRule.includes('no hotspot') || rawDesc.includes('no hotspot') || rawDesc.includes('hotspot is not supported')) {
+    hotspotAllowed = false
+    hotspotNote = '此專用方案電信商限制個人熱點分享功能'
+  }
+
+  // 6. 語音通話與簡訊
+  const voiceCalls = {
+    allowed: false,
+    note: '純出國數據上網卡，無門號。支援 LINE / WhatsApp / WeChat 網路語音通話'
+  }
+
+  // 7. 特殊說明清單解析 (special_desc)
+  const specialNotes: string[] = []
+  if (plan.special_desc) {
+    const parts = plan.special_desc.split('|').map(s => s.trim()).filter(Boolean)
+    for (const part of parts) {
+      if (part.toLowerCase().includes('apn to')) {
+        specialNotes.push(`需手動檢查 APN 設定為「${plan.apn?.trim()}」`)
+      } else if (part.toLowerCase().includes('reinstall')) {
+        specialNotes.push('若安裝失敗可刪除重新掃描安裝一次')
+      } else if (part.toLowerCase().includes('activate upon arrival')) {
+        specialNotes.push('抵達目的地國家連接當地基地台即自動開通啟用')
+      } else if (part.toLowerCase().includes('data reset')) {
+        specialNotes.push(`每日流量重置時間為 ${plan.date_reset || '當地跨日 00:00'}`)
+      } else {
+        specialNotes.push(part)
+      }
     }
   }
 
-  // 分析方案類型
+  return {
+    tiktok: { allowed: tiktokAllowed, reason: tiktokReason },
+    chatgpt: { allowed: chatgptAllowed, reason: chatgptReason },
+    googleLine: { allowed: googleLineAllowed, note: googleLineNote },
+    hotspot: { allowed: hotspotAllowed, note: hotspotNote },
+    voiceCalls,
+    ipEgress,
+    isLocalIp,
+    specialNotes,
+  }
+}
+
+/**
+ * 將 MicroEsim 原生方案物件解析成商城展示格式，包含定價計算與限制分析
+ */
+export function parseMicroEsimPlan(
+  plan: MicroEsimPlan,
+  settingsInput?: Partial<EsimPricingSettings>
+): ParsedEsimPlan {
+  const settings: EsimPricingSettings = {
+    ...DEFAULT_PRICING_SETTINGS,
+    ...(settingsInput || {}),
+  }
+
+  const costHkd = parseFloat(plan.price) || 0
+  const codes = (plan.code || '').split(',').map(c => c.trim().toUpperCase())
+  const primaryCode = codes.length > 5 ? 'GLOBAL' : codes[0]
+  const destMeta = getDestinationMeta(primaryCode)
+
+  // 1. 決定適用的利潤倍率 (優先使用該國家個別倍率，否則使用全域 default_markup)
+  let markup = settings.default_markup
+  if (settings.country_markups && settings.country_markups[primaryCode]) {
+    markup = settings.country_markups[primaryCode]
+  }
+
+  // 2. 計算原價台幣：成本(HKD) * 匯率 * 利潤倍率 + 基礎服務費
+  let rawTwd = costHkd * settings.hkd_twd_rate * markup + settings.fixed_fee_twd
+  let baseTwdPrice = Math.max(settings.min_price_twd, Math.round(rawTwd))
+
+  // 3. 9 字尾美化
+  if (settings.round_to_9 && baseTwdPrice > 100) {
+    const rem = baseTwdPrice % 10
+    if (rem !== 9) {
+      baseTwdPrice = baseTwdPrice - rem + 9
+    }
+  }
+
+  // 4. 計算全館促銷折扣 (若有開啟 promo_active 且折扣 < 1.0)
+  let retailPriceTwd = baseTwdPrice
+  let originalPriceTwd: number | undefined = undefined
+
+  if (settings.promo_active && settings.promo_discount > 0 && settings.promo_discount < 1.0) {
+    originalPriceTwd = baseTwdPrice
+    const discounted = Math.round(baseTwdPrice * settings.promo_discount)
+    retailPriceTwd = Math.max(settings.min_price_twd, discounted)
+    if (settings.round_to_9 && retailPriceTwd > 100) {
+      const rem = retailPriceTwd % 10
+      if (rem !== 9) {
+        retailPriceTwd = retailPriceTwd - rem + 9
+      }
+    }
+  }
+
+  // 5. 分析方案類型
   let planType: 'daily' | 'total' | 'unlimited' = 'daily'
   let dataTierLabel = plan.data || ''
 
@@ -159,19 +329,19 @@ export function parseMicroEsimPlan(
     }
   }
 
-  // 決定主國家資訊
-  const codes = (plan.code || '').split(',').map(c => c.trim())
-  const primaryCode = codes.length > 5 ? 'GLOBAL' : codes[0]
-  const destMeta = getDestinationMeta(primaryCode)
+  // 6. 分析 App 與網路架構使用限制
+  const restrictions = analyzePlanRestrictions(plan)
 
   return {
     ...plan,
     planType,
     dataTierLabel,
-    retailPriceTwd: twdPrice,
+    retailPriceTwd,
+    originalPriceTwd,
     costHkd,
     primaryCountryCode: primaryCode,
     primaryCountryName: destMeta.name,
     flagEmoji: destMeta.flag,
+    restrictions,
   }
 }
