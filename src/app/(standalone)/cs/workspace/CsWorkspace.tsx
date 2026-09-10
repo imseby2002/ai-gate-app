@@ -3423,32 +3423,46 @@ function Unit12CustomerService({
                       <span className="text-[10px] text-gray-400 ml-auto">{new Date(ticket.created_at).toLocaleString(locale)}</span>
                     </div>
 
-                    {/* 客戶身分資訊與前往收件匣 */}
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100 text-xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <UserRound className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                        <span className="font-semibold text-gray-800 truncate">
-                          {formatCustomerName(ticket.from_name, ticket.from_id || '')}
-                        </span>
-                        {ticket.from_id && (
-                          <span className="text-[10px] font-mono text-gray-400 truncate max-w-[150px]">
-                            ({ticket.from_id})
-                          </span>
-                        )}
-                      </div>
-                      {ticket.from_id ? (
-                        <button
-                          type="button"
-                          onClick={() => jumpToCustomerInbox(ticket.platform, ticket.from_id, ticket.from_name)}
-                          className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary font-medium text-[11px] transition-colors"
-                        >
-                          <Inbox className="h-3 w-3" />
-                          前往收件匣回覆 →
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-gray-400">無關聯客戶帳號</span>
-                      )}
-                    </div>
+                    {/* 客戶身分資訊與前往收件匣（確保跟收件匣 100% 一致的人類可讀姓名） */}
+                    {(() => {
+                      const custFromConvo = inboxConvos.find(c => c.from_id === ticket.from_id)
+                      const humanName = ticket.from_name || custFromConvo?.name
+                      const displayName = formatCustomerName(humanName, ticket.from_id || '')
+                      return (
+                        <div className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-100/70 text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                              {displayName.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-gray-900 text-sm truncate flex items-center gap-1.5">
+                                {displayName}
+                                <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-gray-200/70 text-gray-600">
+                                  {platformEmoji(ticket.platform)} {ticket.platform.toUpperCase()}
+                                </span>
+                              </div>
+                              {ticket.from_id && (
+                                <div className="text-[10px] font-mono text-gray-400 truncate">
+                                  ID: {ticket.from_id}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {ticket.from_id ? (
+                            <button
+                              type="button"
+                              onClick={() => jumpToCustomerInbox(ticket.platform, ticket.from_id, humanName ?? undefined)}
+                              className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-white font-medium text-xs shadow-xs hover:opacity-90 transition-opacity"
+                            >
+                              <Inbox className="h-3.5 w-3.5" />
+                              前往收件匣回覆 →
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">無關聯客戶帳號</span>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     <div className="text-xs font-semibold text-gray-800">{ticket.subject}</div>
                     <div className="text-[11px] text-gray-500 line-clamp-2">{ticket.description.slice(0, 120)}{ticket.description.length > 120 ? '…' : ''}</div>

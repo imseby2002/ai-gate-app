@@ -480,7 +480,7 @@ async function maybeCreateOrderTicket(
       .limit(1)
     if (existing?.length) return
     await getServiceClient().from('cs_tickets').insert({
-      user_id: userId, industry, platform, from_id: customerId,
+      user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
       subject: '新訂單待跟進',
       description: `客人已確認訂單，請專員跟進。\n\n【訂單確認內容】\n${lastAssistant.slice(0, 1000)}`,
       priority: 'high', intent: '新訂單待跟進',
@@ -516,7 +516,7 @@ async function maybeCreatePaymentProofTicket(
     if (existing?.length) return
     const recentText = history.slice(-15).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
     await getServiceClient().from('cs_tickets').insert({
-      user_id: userId, industry, platform, from_id: customerId,
+      user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
       subject: '客人已匯款，需人工核對並建立/更新訂單',
       description: `客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房/行程可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
       priority: 'high', intent: '付款確認待跟進',
@@ -550,7 +550,7 @@ async function maybeCreateInvoiceTicket(
       .limit(1)
     if (existing?.length) return
     await getServiceClient().from('cs_tickets').insert({
-      user_id: userId, industry, platform, from_id: customerId,
+      user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
       subject: '客人提供發票抬頭/統一編號，需人工開立發票',
       description: `客人回報發票資訊：「${text.trim()}」，請專員協助實際開立發票（若客人訂了多間房，也請確認發票/收據要放在哪個房間）。`,
       priority: 'medium', intent: '發票開立待處理',
@@ -698,7 +698,7 @@ async function replyToCustomer(
   if (MANUAL_SWITCH_RE.test(text.trim())) {
     try {
       await getServiceClient().from('cs_tickets').insert({
-        user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
+        user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
         subject: '手動模式（AI 已暫停）', description: '專員或客人於通訊軟體輸入切換手動/暫停指令',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
@@ -711,7 +711,7 @@ async function replyToCustomer(
   if (HUMAN_ESCALATION_RE.test(text)) {
     try {
       await getServiceClient().from('cs_tickets').insert({
-        user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
+        user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
         subject: text.slice(0, 80), description: '客人要求人工客服',
         priority: 'high', intent: '人工客服請求',
       })
@@ -728,7 +728,7 @@ async function replyToCustomer(
   if (REFUND_RE.test(text) && !isRefundPolicyQuestion) {
     try {
       await getServiceClient().from('cs_tickets').insert({
-        user_id: userId, industry: knowledge.industry, platform, from_id: customerId,
+        user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
         subject: text.slice(0, 80), description: '客人提出退換貨/退款需求',
         priority: 'high', intent: '人工客服請求',
       })
