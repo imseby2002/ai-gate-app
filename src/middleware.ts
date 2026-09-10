@@ -39,6 +39,7 @@ export async function middleware(request: NextRequest) {
       office:    '/office',        // 辦公系統
       agent:     '/agent',         // AI Agent 系統
       www:       '/dashboard',     // owner 主控台
+      esim:      '/esim',          // eSIM 出國上網商城
     }
     const subHome = SUBDOMAIN_HOME[sub]
     const rawPath = request.nextUrl.pathname
@@ -67,6 +68,8 @@ export async function middleware(request: NextRequest) {
     // Public routes
     const isPublic =
       pathname === '/' ||
+      pathname.startsWith('/esim') ||
+      pathname.startsWith('/api/esim') ||
       pathname.startsWith('/book/') ||
       pathname.startsWith('/api/book/') ||
       pathname.startsWith('/apply') ||
