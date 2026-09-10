@@ -169,6 +169,12 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     if (!active) return
     const next = !takeover
     setTakeover(next)
+    setActive(prev => prev ? { ...prev, takeover: next } : null)
+    setConvos(prev => prev.map(c =>
+      c.platform === active.platform && c.from_id === active.from_id
+        ? { ...c, takeover: next }
+        : c
+    ))
     try {
       await fetch('/api/marketing/cs-takeover', {
         method: 'POST',
@@ -178,6 +184,12 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
       loadList()
     } catch {
       setTakeover(!next) // 還原
+      setActive(prev => prev ? { ...prev, takeover: !next } : null)
+      setConvos(prev => prev.map(c =>
+        c.platform === active.platform && c.from_id === active.from_id
+          ? { ...c, takeover: !next }
+          : c
+      ))
     }
   }
 
@@ -232,9 +244,13 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                       {stageLabel(c.stage) && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{stageLabel(c.stage)}</span>
                       )}
-                      {c.takeover && (
+                      {c.takeover ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 inline-flex items-center gap-0.5">
-                          <UserRound className="h-2.5 w-2.5" /> {t('humanTag')}
+                          <UserRound className="h-2.5 w-2.5" /> 真人接管(AI靜音)
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 inline-flex items-center gap-0.5">
+                          <Bot className="h-2.5 w-2.5" /> AI 運行中
                         </span>
                       )}
                     </div>
@@ -263,13 +279,41 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                       <div className="text-[11px] text-muted-foreground">{plat(active.platform).name} · {active.from_id}</div>
                     </div>
                   </div>
-                  <button onClick={toggleTakeover}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors shrink-0 ${
+                  <button
+                    type="button"
+                    onClick={toggleTakeover}
+                    title={takeover ? '目前真人接管中（AI 靜音）。點擊恢復 AI 自動回覆。' : '目前 AI 自動回覆中。點擊立即暫停 AI（讓 AI 閉嘴），真人接管。'}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border shadow-xs transition-all cursor-pointer ${
                       takeover
-                        ? 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400'
-                        : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400'
-                    }`}>
-                    {takeover ? <><UserRound className="h-3.5 w-3.5" /> {t('takeoverOn')}</> : <><Bot className="h-3.5 w-3.5" /> {t('aiAuto')}</>}
+                        ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-800'
+                    }`}
+                  >
+                    <span className="flex h-2 w-2 relative">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                        takeover ? 'bg-amber-400' : 'bg-emerald-400'
+                      }`} />
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                        takeover ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`} />
+                    </span>
+                    {takeover ? (
+                      <span className="flex items-center gap-1.5">
+                        <UserRound className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="font-semibold">真人接管中 (AI 已靜音)</span>
+                        <span className="ml-1 px-2 py-0.5 rounded-md bg-amber-200/80 dark:bg-amber-900/80 text-[11px] font-bold text-amber-900 dark:text-amber-100 hover:underline">
+                          恢復 AI 🤖
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <Bot className="h-3.5 w-3.5 text-emerald-600" />
+                        <span className="font-semibold">AI 自動回覆中</span>
+                        <span className="ml-1 px-2 py-0.5 rounded-md bg-emerald-200/80 dark:bg-emerald-900/80 text-[11px] font-bold text-emerald-900 dark:text-emerald-100 hover:underline">
+                          暫停 AI 🛑
+                        </span>
+                      </span>
+                    )}
                   </button>
                 </div>
 
@@ -305,9 +349,33 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 {/* 回覆框 */}
                 <div className="border-t bg-card/60 px-3 py-3">
                   {err && <div className="text-xs text-rose-600 mb-2 px-1">{err}</div>}
-                  {!takeover && (
-                    <div className="text-[11px] text-muted-foreground mb-2 px-1">
-                      {t('sendNote')}
+                  {takeover ? (
+                    <div className="flex items-center justify-between text-[11px] bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900 rounded-lg px-3 py-1.5 mb-2 text-amber-900 dark:text-amber-200">
+                      <span className="flex items-center gap-1.5">
+                        <UserRound className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <span>目前為<strong>真人接管</strong>，AI 已靜音不會自動插嘴。談話結束後可點擊右上角隨時恢復 AI。</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={toggleTakeover}
+                        className="underline font-bold text-amber-700 hover:text-amber-900 dark:text-amber-300 shrink-0 ml-2 cursor-pointer"
+                      >
+                        恢復 AI 接手
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-lg px-3 py-1.5 mb-2 text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>目前 <strong>AI 自動回覆中</strong>。若您在此發送訊息，系統將自動暫停 AI 並切換為真人接管。</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={toggleTakeover}
+                        className="underline text-amber-600 dark:text-amber-400 font-bold hover:text-amber-800 shrink-0 ml-2 cursor-pointer"
+                      >
+                        讓 AI 閉嘴 (手動接手)
+                      </button>
                     </div>
                   )}
                   <div className="flex items-end gap-2">

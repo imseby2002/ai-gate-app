@@ -5,7 +5,7 @@
  *  - takeover=false：將該客戶的 open 人工客服工單標記 resolved → AI 恢復自動回覆
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getBnbContext } from '@/lib/bnb/context'
 
 export async function POST(req: NextRequest) {
@@ -16,16 +16,18 @@ export async function POST(req: NextRequest) {
   const { platform, to, industry = 'homestay', takeover } = await req.json()
   if (!to) return NextResponse.json({ error: '缺少 to' }, { status: 400 })
 
+  const admin = await createAdminClient()
+
   if (takeover) {
-    const { data: open } = await supabase
+    const { data: open } = await admin
       .from('cs_tickets').select('id')
       .eq('user_id', ctx.ownerId).eq('from_id', to)
       .eq('intent', '人工客服請求').in('status', ['open', 'in_progress'])
       .limit(1)
     if (!open?.length) {
-      const { error } = await supabase.from('cs_tickets').insert({
+      const { error } = await admin.from('cs_tickets').insert({
         user_id: ctx.ownerId, industry, platform: platform ?? 'test', from_id: to,
-        subject: '真人接管中', description: '客服人員已於收件匣接手此對話',
+        subject: '手動接管中（AI 已暫停）', description: '客服人員已於收件匣手動暫停 AI',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 恢復 AI：關閉所有 open 人工客服工單
-  const { error } = await supabase
+  const { error } = await admin
     .from('cs_tickets')
     .update({ status: 'resolved' })
     .eq('user_id', ctx.ownerId).eq('from_id', to)
