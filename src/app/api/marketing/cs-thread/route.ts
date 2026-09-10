@@ -69,13 +69,15 @@ export async function GET(req: NextRequest) {
   }
 
   // ── 對話清單 ────────────────────────────────────────────────────────────────
+  const limit = Math.min(parseInt(sp.get('limit') ?? '500'), 1000)
   let q = supabase
     .from('cs_customers')
     .select('platform, from_id, name, stage, message_count, last_message_at, facts')
     .eq('user_id', ctx.ownerId)
     .order('last_message_at', { ascending: false })
-    .limit(200)
+    .limit(limit)
   if (industry) q = q.eq('industry', industry)
+  if (platform && platform !== 'all') q = q.eq('platform', platform)
 
   const { data: customers, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

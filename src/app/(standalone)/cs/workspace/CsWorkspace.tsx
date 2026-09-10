@@ -7,6 +7,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
+  PanelLeftClose, PanelLeftOpen, UserRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -14,6 +15,14 @@ import { CsSupportPanel } from './CsSupportPanel'
 import { CsFormsPanel } from './CsFormsPanel'
 import { CsCorrectionsPanel } from './CsCorrectionsPanel'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
+
+function formatCustomerName(name: string | null | undefined, fromId: string): string {
+  if (name && name.trim()) return name.trim()
+  if (fromId.startsWith('U') && fromId.length === 33) {
+    return `LINE 客戶 (${fromId.slice(1, 6)})`
+  }
+  return fromId || '未知用戶'
+}
 
 // ─── 與 marketing-auto 共用的小型型別／helper（原本定義在 marketing-auto/page.tsx，
 // 這裡各自保留一份，比照 CS_PLATFORMS 與 CsChannels.tsx 既有的重複慣例） ──────────
@@ -119,14 +128,18 @@ interface BookingParticipant {
 }
 
 interface BookingFormConfig {
-  flowId: string
-  packageName: string
-  requirePassengerId: boolean
-  headcount: number
+  tourName?: string
+  packageName?: string
+  flowId?: string
+  date?: string
+  timeslot?: string
+  headcount?: number
+  requirePassengerId?: boolean
+  callbackUrl?: string
 }
 
-function calcParticipantAge(birthday: string): number {
-  if (!birthday) return -1
+function calcAge(birthday: string): number {
+  if (!birthday) return 0
   const birth = new Date(birthday)
   const today = new Date()
   let age = today.getFullYear() - birth.getFullYear()
@@ -161,10 +174,21 @@ interface CsTicket {
   status: 'open' | 'in_progress' | 'resolved' | 'closed'
   priority: 'low' | 'medium' | 'high' | 'urgent'
   platform: string
+  from_id?: string
   from_name?: string
   intent?: string
   created_at: string
   updated_at: string
+}
+
+interface InboxConvo {
+  platform: string
+  from_id: string
+  name: string | null
+  stage?: string
+  messageCount?: number
+  lastMessageAt?: string
+  takeover?: boolean
 }
 
 interface CsInboxMessage {
@@ -422,6 +446,7 @@ function Unit12CustomerService({
   const stepLabel = (s: BookingStep) => t(`u12.step.${s}`)
   const industryLabel = (id: string) => t.has(`u12.industry.${id}`) ? t(`u12.industry.${id}`) : (CS_INDUSTRY_TEMPLATES[id]?.label ?? id)
   const [tab, setTab] = useState<Cs12Tab>(initialTab ?? 'platforms')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialTab === 'inbox')
 
   // CS 方案權限（決定哪些分頁要鎖定顯示升級提示）
   const [csFeatures, setCsFeatures] = useState<CsPlanFeatures | null>(null)
@@ -553,6 +578,11 @@ function Unit12CustomerService({
   const [ticketFilter, setTicketFilter] = useState<string>('all')
 
   // 統一收件匣
+  const [inboxSearch, setInboxSearch] = useState('')
+  const [inboxConvos, setInboxConvos] = useState<InboxConvo[]>([])
+  const [activeConvo, setActiveConvo] = useState<InboxConvo | null>(null)
+  const [threadBubbles, setThreadBubbles] = useState<Array<{ side: 'in' | 'out'; sender: 'customer' | 'ai' | 'agent'; text: string; at: string }>>([])
+  const [threadLoading, setThreadLoading] = useState(false)
   const [inboxMessages, setInboxMessages] = useState<CsInboxMessage[]>([])
   const [inboxLoading, setInboxLoading] = useState(false)
   const [inboxPlatformFilter, setInboxPlatformFilter] = useState<string>('all')
@@ -1265,65 +1295,145 @@ function Unit12CustomerService({
     }
   }
 
-  // 載入收件匣
-  async function loadInbox() {
+  // 載入收件匣（從 cs-thread 取得所有客戶對話，支援全部 168+ 位客戶）
+  async function loadInbox(targetKey?: string) {
     setInboxLoading(true)
     try {
       const url = inboxPlatformFilter !== 'all'
-        ? `/api/marketing/cs-messages?industry=${ind}&platform=${inboxPlatformFilter}`
-        : `/api/marketing/cs-messages?industry=${ind}`
+        ? `/api/marketing/cs-thread?industry=${ind}&platform=${inboxPlatformFilter}&limit=500`
+        : `/api/marketing/cs-thread?industry=${ind}&limit=500`
       const res = await fetch(url)
       const d = await res.json()
-      if (d.messages) setInboxMessages(d.messages)
+      const convos: InboxConvo[] = d.conversations ?? []
+      setInboxConvos(convos)
+
+      let next: InboxConvo | null = null
+      if (targetKey) {
+        next = convos.find(c => `${c.platform}:${c.from_id}` === targetKey) ?? null
+      }
+      if (!next && activeConvo) {
+        next = convos.find(c => c.platform === activeConvo.platform && c.from_id === activeConvo.from_id) ?? null
+      }
+      if (!next && convos.length > 0) {
+        next = convos[0]
+      }
+      setActiveConvo(next)
+      if (next) {
+        setInboxThreadKey(`${next.platform}:${next.from_id}`)
+        void loadThreadBubbles(next.platform, next.from_id)
+      } else {
+        setThreadBubbles([])
+      }
       void loadTickets()
     } finally {
       setInboxLoading(false)
     }
   }
 
-  // 依「平台＋客戶」把訊息分組成一則則對話串，最新一則有動靜的排最前面
-  const inboxThreads = useMemo(() => {
-    const map = new Map<string, { key: string; platform: string; fromId: string; fromName?: string; messages: CsInboxMessage[] }>()
-    for (const m of inboxMessages) {
-      if (inboxPlatformFilter !== 'all' && m.platform !== inboxPlatformFilter) continue
-      const key = `${m.platform}:${m.from_id}`
-      const existing = map.get(key)
-      if (existing) {
-        existing.messages.push(m)
-        if (m.from_name && !existing.fromName) existing.fromName = m.from_name
-      } else {
-        map.set(key, { key, platform: m.platform, fromId: m.from_id, fromName: m.from_name, messages: [m] })
+  async function loadThreadBubbles(platform: string, to: string) {
+    setThreadLoading(true)
+    try {
+      const res = await fetch(`/api/marketing/cs-thread?to=${to}&platform=${platform}`)
+      const d = await res.json()
+      if (d.bubbles) setThreadBubbles(d.bubbles)
+      if (typeof d.takeover === 'boolean') {
+        setActiveConvo(prev => prev && prev.from_id === to ? { ...prev, takeover: d.takeover } : prev)
       }
+    } finally {
+      setThreadLoading(false)
     }
-    return Array.from(map.values())
-      .map(t => ({ ...t, messages: [...t.messages].sort((a, b) => a.created_at.localeCompare(b.created_at)) }))
-      .sort((a, b) => b.messages[b.messages.length - 1].created_at.localeCompare(a.messages[a.messages.length - 1].created_at))
-  }, [inboxMessages, inboxPlatformFilter])
+  }
 
-  const activeInboxThread = inboxThreads.find(t => t.key === inboxThreadKey) ?? inboxThreads[0] ?? null
+  function jumpToCustomerInbox(platform: string, fromId?: string, fromName?: string) {
+    setTab('inbox')
+    setSidebarCollapsed(true)
+    if (fromId) {
+      const targetKey = `${platform}:${fromId}`
+      setInboxThreadKey(targetKey)
+      const target: InboxConvo = { platform, from_id: fromId, name: fromName ?? null }
+      setActiveConvo(target)
+      void loadInbox(targetKey)
+      void loadThreadBubbles(platform, fromId)
+    } else {
+      void loadInbox()
+    }
+  }
+
+  async function toggleInboxTakeover() {
+    if (!activeConvo) return
+    const next = !activeConvo.takeover
+    setActiveConvo(prev => prev ? { ...prev, takeover: next } : null)
+    setInboxConvos(prev => prev.map(c =>
+      c.platform === activeConvo.platform && c.from_id === activeConvo.from_id
+        ? { ...c, takeover: next }
+        : c
+    ))
+    try {
+      await fetch('/api/marketing/cs-takeover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: activeConvo.platform,
+          to: activeConvo.from_id,
+          industry: ind,
+          takeover: next,
+        }),
+      })
+      void loadTickets()
+    } catch {
+      setActiveConvo(prev => prev ? { ...prev, takeover: !next } : null)
+      setInboxConvos(prev => prev.map(c =>
+        c.platform === activeConvo.platform && c.from_id === activeConvo.from_id
+          ? { ...c, takeover: !next }
+          : c
+      ))
+    }
+  }
 
   async function sendInboxReply() {
-    if (!activeInboxThread || !inboxReplyText.trim() || inboxSending) return
+    if (!activeConvo || !inboxReplyText.trim() || inboxSending) return
+    const text = inboxReplyText.trim()
     setInboxSending(true)
     setInboxSendError('')
+    const optimisticBubble = {
+      side: 'out' as const,
+      sender: 'agent' as const,
+      text,
+      at: new Date().toISOString(),
+    }
+    setThreadBubbles(prev => [...prev, optimisticBubble])
+    setInboxReplyText('')
     try {
       const res = await fetch('/api/marketing/cs-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          platform: activeInboxThread.platform, to: activeInboxThread.fromId,
-          text: inboxReplyText, industry: ind, fromName: activeInboxThread.fromName,
+          platform: activeConvo.platform,
+          to: activeConvo.from_id,
+          text,
+          industry: ind,
+          fromName: activeConvo.name,
         }),
       })
       const d = await res.json()
       if (res.ok) {
-        setInboxReplyText('')
-        await loadInbox()
+        setActiveConvo(prev => prev ? { ...prev, takeover: true } : null)
+        setInboxConvos(prev => prev.map(c =>
+          c.platform === activeConvo.platform && c.from_id === activeConvo.from_id
+            ? { ...c, takeover: true, lastMessageAt: new Date().toISOString() }
+            : c
+        ))
+        void loadThreadBubbles(activeConvo.platform, activeConvo.from_id)
+        void loadTickets()
       } else {
         setInboxSendError(d.error ?? t('u12.unknownError'))
+        setThreadBubbles(prev => prev.filter(b => b !== optimisticBubble))
+        setInboxReplyText(text)
       }
     } catch (e) {
       setInboxSendError(String(e))
+      setThreadBubbles(prev => prev.filter(b => b !== optimisticBubble))
+      setInboxReplyText(text)
     } finally {
       setInboxSending(false)
     }
@@ -1389,11 +1499,7 @@ function Unit12CustomerService({
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-            <Headphones className="h-4 w-4" style={{ color: 'var(--primary)' }} />
-            {t('u12.title')}
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-500">
             {t('u12.subtitle')}
             <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="ml-2 text-primary font-medium hover:underline">
               完整設定教學 →
@@ -1410,7 +1516,19 @@ function Unit12CustomerService({
         </div>
       </div>
       <div className="flex flex-col sm:flex-row gap-5 items-start">
-        <nav className="flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap sm:w-48 sm:shrink-0">
+        <nav className={`flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}>
+          {/* 折疊/展開按鈕 */}
+          <div className="hidden sm:flex items-center justify-between pb-1 border-b border-gray-100 mb-1 w-full">
+            {!sidebarCollapsed && <span className="text-[11px] font-semibold text-gray-400 px-1">選單項目</span>}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 ml-auto transition-colors"
+              title={sidebarCollapsed ? '展開側邊選單' : '收合側邊選單'}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+          </div>
           {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'forms', 'corrections', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
             const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
             const labels: Record<Cs12Tab, string> = {
@@ -1438,17 +1556,23 @@ function Unit12CustomerService({
               <button key={tb}
                 onClick={() => {
                   setTab(tb)
+                  if (tb === 'inbox') {
+                    setSidebarCollapsed(true)
+                    loadInbox()
+                  }
                   if (tb === 'tickets') loadTickets()
-                  if (tb === 'inbox') loadInbox()
                   if (tb === 'data-sources') loadFaq(industry ?? 'homestay')
                 }}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors relative flex items-center gap-2 sm:w-full sm:justify-start ${
+                title={sidebarCollapsed ? labels[tb] : undefined}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors relative flex items-center gap-2 sm:w-full ${
+                  sidebarCollapsed ? 'sm:justify-center' : 'sm:justify-start'
+                } ${
                   active ? 'bg-primary/10 text-primary font-semibold' : 'text-gray-600 hover:bg-gray-100'
                 }`}>
                 <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : 'text-gray-400'}`} />
-                <span className="flex-1 text-left">{labels[tb]}</span>
-                {isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
-                {isNew && tb === 'inbox' && inboxMessages.length === 0 && (
+                {!sidebarCollapsed && <span className="flex-1 text-left truncate">{labels[tb]}</span>}
+                {!sidebarCollapsed && isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
+                {isNew && tb === 'inbox' && inboxConvos.length === 0 && (
                   <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 )}
               </button>
@@ -3269,11 +3393,6 @@ function Unit12CustomerService({
             </div>
           </div>
 
-          <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-xs text-orange-700 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {t('u12.ticketTip')}
-          </div>
-
           {ticketsLoading ? (
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
           ) : tickets.length === 0 ? (
@@ -3295,6 +3414,34 @@ function Unit12CustomerService({
                       {ticket.intent && <span className="text-[10px] text-gray-400">{ticket.intent}</span>}
                       <span className="text-[10px] text-gray-400 ml-auto">{new Date(ticket.created_at).toLocaleString(locale)}</span>
                     </div>
+
+                    {/* 客戶身分資訊與前往收件匣 */}
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100 text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <UserRound className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <span className="font-semibold text-gray-800 truncate">
+                          {formatCustomerName(ticket.from_name, ticket.from_id || '')}
+                        </span>
+                        {ticket.from_id && (
+                          <span className="text-[10px] font-mono text-gray-400 truncate max-w-[150px]">
+                            ({ticket.from_id})
+                          </span>
+                        )}
+                      </div>
+                      {ticket.from_id ? (
+                        <button
+                          type="button"
+                          onClick={() => jumpToCustomerInbox(ticket.platform, ticket.from_id, ticket.from_name)}
+                          className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary font-medium text-[11px] transition-colors"
+                        >
+                          <Inbox className="h-3 w-3" />
+                          前往收件匣回覆 →
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-gray-400">無關聯客戶帳號</span>
+                      )}
+                    </div>
+
                     <div className="text-xs font-semibold text-gray-800">{ticket.subject}</div>
                     <div className="text-[11px] text-gray-500 line-clamp-2">{ticket.description.slice(0, 120)}{ticket.description.length > 120 ? '…' : ''}</div>
                     <div className="flex gap-1.5 pt-1 flex-wrap items-center">
@@ -3325,165 +3472,290 @@ function Unit12CustomerService({
       ))}
 
       {/* ── Tab: Inbox ────────────────────────────────────────────────────────── */}
-      {tab === 'inbox' && (csFeatures && !csFeatures.inbox ? renderLockedUpgrade('統一收件匣') : (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-semibold text-gray-800">{t('u12.unifiedInbox')}</span>
-            <HelpTip title="統一收件匣怎麼用？" href="/cs/help#inbox">
-              所有平台的對話都集中在這裡，可以直接回覆客人，也能切換「AI 自動回覆」或「真人接管」。也可以安裝成手機 App，方便隨時查看。
-            </HelpTip>
-            <div className="flex gap-1.5 ml-auto flex-wrap">
-              {['all', 'line', 'whatsapp', 'telegram', 'test'].map(p => (
-                <button key={p} onClick={() => { setInboxPlatformFilter(p); }}
-                  className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all ${
-                    inboxPlatformFilter === p ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-                  }`}
-                  style={inboxPlatformFilter === p ? { background: 'var(--primary)' } : {}}>
-                  {p === 'all' ? t('u12.filterAll') : `${platformEmoji(p)} ${p.toUpperCase()}`}
+      {tab === 'inbox' && (csFeatures && !csFeatures.inbox ? renderLockedUpgrade('統一收件匣') : (() => {
+        const filteredConvos = inboxConvos.filter(c => {
+          if (!inboxSearch.trim()) return true
+          const q = inboxSearch.toLowerCase().trim()
+          const name = (c.name || '').toLowerCase()
+          const fromId = (c.from_id || '').toLowerCase()
+          return name.includes(q) || fromId.includes(q)
+        })
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-semibold text-gray-800">{t('u12.unifiedInbox')}</span>
+              <HelpTip title="統一收件匣怎麼用？" href="/cs/help#inbox">
+                所有平台的對話都集中在這裡，可以直接回覆客人，也能切換「AI 自動回覆」或「真人接管」。也可以安裝成手機 App，方便隨時查看。
+              </HelpTip>
+              <div className="flex gap-1.5 ml-auto flex-wrap">
+                {['all', 'line', 'whatsapp', 'telegram', 'test'].map(p => (
+                  <button key={p} onClick={() => { setInboxPlatformFilter(p); }}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all ${
+                      inboxPlatformFilter === p ? 'text-white border-transparent' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                    }`}
+                    style={inboxPlatformFilter === p ? { background: 'var(--primary)' } : {}}>
+                    {p === 'all' ? t('u12.filterAll') : `${platformEmoji(p)} ${p.toUpperCase()}`}
+                  </button>
+                ))}
+                <button onClick={() => void loadInbox()} disabled={inboxLoading}
+                  className="text-[10px] px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+                  {inboxLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                 </button>
-              ))}
-              <button onClick={loadInbox} disabled={inboxLoading}
-                className="text-[10px] px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
-                {inboxLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
-            <div className="font-medium">{t('u12.sourceNote')}</div>
-            <div>• {t('u12.sourceTest')}</div>
-            <div>• {t('u12.sourcePlatforms')}</div>
-          </div>
-
-          {inboxLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
-          ) : inboxThreads.length === 0 ? (
-            <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">
-              <div className="mb-2">{t('u12.noInbox')}</div>
-              <div className="text-[11px]">{t('u12.noInboxHint')}</div>
-            </div>
-          ) : (
-            <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden" style={{ height: '560px' }}>
-              {/* 左側：客戶列表（依平台＋客戶分組） */}
-              <div className="md:w-64 shrink-0 max-h-48 md:max-h-none border-b md:border-b-0 md:border-r overflow-y-auto bg-gray-50">
-                {inboxThreads.map(thread => {
-                  const last = thread.messages[thread.messages.length - 1]
-                  const preview = last.reply || last.message
-                  const active = activeInboxThread?.key === thread.key
-                  return (
-                    <button key={thread.key} onClick={() => setInboxThreadKey(thread.key)}
-                      className={`w-full text-left px-3 py-2.5 border-b hover:bg-white transition-colors border-l-2 ${active ? 'bg-white' : 'border-l-transparent'}`}
-                      style={active ? { borderLeftColor: 'var(--primary)' } : {}}>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-gray-800 truncate">
-                          {platformEmoji(thread.platform)} {thread.fromName ?? thread.fromId}
-                        </span>
-                        {tickets.some(tk => tk.from_id === thread.fromId && tk.intent === '人工客服請求' && ['open', 'in_progress'].includes(tk.status)) && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-medium shrink-0">真人接管</span>
-                        )}
-                        <span className="text-[9px] text-gray-400 ml-auto shrink-0">
-                          {new Date(last.created_at).toLocaleString(locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-gray-500 truncate mt-0.5">{preview}</div>
-                    </button>
-                  )
-                })}
               </div>
+            </div>
 
-              {/* 右側：對話串 + 回覆框 */}
-              <div className="flex-1 flex flex-col min-w-0">
-                {!activeInboxThread ? (
-                  <div className="flex-1 flex items-center justify-center text-sm text-gray-400">{t('u12.inboxSelectHint')}</div>
-                ) : (
-                  <>
-                    <div className="px-3 py-2 border-b bg-gray-50 shrink-0 flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-gray-800">
-                        {platformEmoji(activeInboxThread.platform)} {activeInboxThread.fromName ?? activeInboxThread.fromId}
-                      </span>
-                      {(() => {
-                        const isTakeover = tickets.some(tk => tk.from_id === activeInboxThread.fromId && tk.intent === '人工客服請求' && ['open', 'in_progress'].includes(tk.status))
+            {inboxLoading && inboxConvos.length === 0 ? (
+              <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-gray-400" /></div>
+            ) : inboxConvos.length === 0 ? (
+              <div className="text-center text-sm text-gray-400 py-12 border rounded-xl">
+                <div className="mb-2">{t('u12.noInbox')}</div>
+                <div className="text-[11px]">{t('u12.noInboxHint')}</div>
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden bg-white shadow-sm" style={{ height: 'calc(100vh - 210px)', minHeight: '600px' }}>
+                {/* 左側：客戶列表（支援搜尋、垂直滾動、全部客戶） */}
+                <div className="md:w-80 shrink-0 border-b md:border-b-0 md:border-r flex flex-col bg-gray-50/50">
+                  {/* 搜尋列與計數 */}
+                  <div className="p-2.5 border-b bg-white space-y-2 shrink-0">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={inboxSearch}
+                        onChange={e => setInboxSearch(e.target.value)}
+                        placeholder="搜尋客戶姓名或帳號 ID..."
+                        className="w-full text-xs pl-8 pr-7 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-gray-50 focus:bg-white transition-all"
+                      />
+                      <svg className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      {inboxSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setInboxSearch('')}
+                          className="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600 text-xs p-0.5"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 px-0.5">
+                      <span>全部 {inboxConvos.length} 位客戶對話</span>
+                      {inboxSearch && <span>篩選出 {filteredConvos.length} 位</span>}
+                    </div>
+                  </div>
+
+                  {/* 滾動客戶名單列表 */}
+                  <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+                    {filteredConvos.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-gray-400">
+                        {inboxSearch ? '查無符合條件的客戶' : '尚無對話記錄'}
+                      </div>
+                    ) : (
+                      filteredConvos.map(convo => {
+                        const active = activeConvo?.platform === convo.platform && activeConvo?.from_id === convo.from_id
+                        const displayName = formatCustomerName(convo.name, convo.from_id)
                         return (
                           <button
-                            type="button"
-                            onClick={async () => {
-                              const next = !isTakeover
-                              setTickets(prev => prev.map(tk =>
-                                tk.from_id === activeInboxThread.fromId && tk.intent === '人工客服請求' && ['open', 'in_progress'].includes(tk.status)
-                                  ? { ...tk, status: next ? 'open' : 'resolved' }
-                                  : tk
-                              ))
-                              try {
-                                await fetch('/api/marketing/cs-takeover', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ platform: activeInboxThread.platform, to: activeInboxThread.fromId, industry: ind, takeover: next }),
-                                })
-                                void loadTickets()
-                              } catch { /* ignore */ }
+                            key={`${convo.platform}:${convo.from_id}`}
+                            onClick={() => {
+                              setActiveConvo(convo)
+                              setInboxThreadKey(`${convo.platform}:${convo.from_id}`)
+                              void loadThreadBubbles(convo.platform, convo.from_id)
                             }}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-                              isTakeover
-                                ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                            className={`w-full text-left p-3 hover:bg-white transition-colors border-l-4 ${
+                              active ? 'bg-white border-l-primary shadow-xs' : 'border-l-transparent bg-transparent'
                             }`}
-                            title={isTakeover ? '點擊切換為 AI 自動回覆' : '點擊切換為真人專員接管'}
                           >
-                            {isTakeover ? '👤 真人接管中（點擊切回 AI）' : '🤖 AI 自動回覆中'}
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-xs font-semibold text-gray-900 truncate flex-1">
+                                {displayName}
+                              </span>
+                              {convo.takeover && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium shrink-0">
+                                  真人接管
+                                </span>
+                              )}
+                              {convo.lastMessageAt && (
+                                <span className="text-[10px] text-gray-400 shrink-0">
+                                  {new Date(convo.lastMessageAt).toLocaleDateString(locale, { month: 'numeric', day: 'numeric' })}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between gap-1 text-[11px] text-gray-500">
+                              <span className="truncate flex items-center gap-1 font-mono text-[10px] text-gray-400">
+                                {platformEmoji(convo.platform)} {convo.from_id.slice(0, 16)}{convo.from_id.length > 16 ? '…' : ''}
+                              </span>
+                              {convo.messageCount != null && (
+                                <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">
+                                  {convo.messageCount} 則
+                                </span>
+                              )}
+                            </div>
                           </button>
                         )
-                      })()}
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 右側：對話串 + 回覆框 */}
+                <div className="flex-1 flex flex-col min-w-0 bg-white">
+                  {!activeConvo ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2 p-6">
+                      <Inbox className="h-10 w-10 text-gray-300" />
+                      <p className="text-sm">{t('u12.inboxSelectHint')}</p>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                      {activeInboxThread.messages.map(msg => (
-                        <div key={msg.id} className="space-y-1.5">
-                          {msg.message && (
-                            <div className="flex justify-start">
-                              <div className="max-w-[85%] bg-gray-100 rounded-xl rounded-tl-sm px-3 py-2 text-xs text-gray-800">
-                                {msg.message}
-                                <div className="text-[9px] text-gray-400 mt-1">{new Date(msg.created_at).toLocaleString(locale)}</div>
-                              </div>
+                  ) : (
+                    <>
+                      {/* 對話頭部 */}
+                      <div className="px-4 py-3 border-b bg-gray-50/70 shrink-0 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            {formatCustomerName(activeConvo.name, activeConvo.from_id).charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-gray-900 truncate flex items-center gap-1.5">
+                              {formatCustomerName(activeConvo.name, activeConvo.from_id)}
+                              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-gray-200/70 text-gray-600 font-mono">
+                                {platformEmoji(activeConvo.platform)} {activeConvo.platform.toUpperCase()}
+                              </span>
                             </div>
-                          )}
-                          {msg.reply && (
-                            <div className="flex justify-end">
-                              <div className="max-w-[85%] rounded-xl rounded-tr-sm px-3 py-2 text-xs text-white" style={{ background: 'var(--primary)' }}>
-                                <div className="text-[9px] opacity-70 mb-0.5">{msg.intent === 'agent' ? t('u12.agentLabel') : t('u12.aiLabel')}</div>
-                                {msg.reply}
-                                <button
-                                  onClick={() => setFaqDialog({ open: true, q: msg.message, a: msg.reply ?? '', keywords: '', saving: false })}
-                                  className="block mt-1 text-[10px] underline opacity-80 hover:opacity-100">
-                                  📚 {t('u12.addToKb')}
-                                </button>
-                              </div>
+                            <div className="text-[10px] font-mono text-gray-400 truncate">
+                              帳號 ID: {activeConvo.from_id}
                             </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={toggleInboxTakeover}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border shadow-xs transition-colors cursor-pointer ${
+                              activeConvo.takeover
+                                ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            }`}
+                            title={activeConvo.takeover ? '點擊切換為 AI 自動回覆' : '點擊切換為真人接管（讓 AI 閉嘴靜音）'}
+                          >
+                            {activeConvo.takeover ? '👤 真人接管中（AI 靜音，點擊切回 AI）' : '🤖 AI 自動接手中（點擊切換真人接管）'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void loadThreadBubbles(activeConvo.platform, activeConvo.from_id)}
+                            disabled={threadLoading}
+                            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
+                            title="重新載入此對話串"
+                          >
+                            {threadLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 訊息對話區 */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/30">
+                        {threadLoading && threadBubbles.length === 0 ? (
+                          <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" /> 載入對話紀錄中...
+                          </div>
+                        ) : threadBubbles.length === 0 ? (
+                          <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                            尚無訊息記錄
+                          </div>
+                        ) : (
+                          threadBubbles.map((bubble, idx) => {
+                            const isOut = bubble.side === 'out'
+                            const isAgent = bubble.sender === 'agent'
+                            return (
+                              <div key={idx} className={`flex ${isOut ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs shadow-xs ${
+                                  isOut
+                                    ? isAgent
+                                      ? 'bg-amber-700 text-white rounded-tr-xs'
+                                      : 'bg-primary text-white rounded-tr-xs'
+                                    : 'bg-white border border-gray-200 text-gray-800 rounded-tl-xs'
+                                }`}>
+                                  <div className="text-[10px] opacity-80 mb-1 flex items-center justify-between gap-4 font-medium">
+                                    <span>
+                                      {!isOut
+                                        ? `👤 ${formatCustomerName(activeConvo.name, activeConvo.from_id)}`
+                                        : isAgent
+                                        ? '🧑‍💼 真人客服'
+                                        : '🤖 AI 自動回覆'}
+                                    </span>
+                                    {bubble.at && (
+                                      <span className="font-normal opacity-75">
+                                        {new Date(bubble.at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="whitespace-pre-wrap leading-relaxed break-words">{bubble.text}</div>
+                                  {isOut && !isAgent && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const prevCust = [...threadBubbles.slice(0, idx)].reverse().find(b => b.side === 'in')
+                                        setFaqDialog({ open: true, q: prevCust?.text || '', a: bubble.text, keywords: '', saving: false })
+                                      }}
+                                      className="mt-1.5 text-[10px] underline opacity-80 hover:opacity-100 flex items-center gap-1"
+                                    >
+                                      📚 加到常見問答庫
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+
+                      {/* 底部輸入框 */}
+                      <div className="border-t p-3 bg-white space-y-2 shrink-0">
+                        {inboxSendError && (
+                          <div className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg flex items-center gap-1">
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                            <span>{t('u12.inboxSendFailed', { error: inboxSendError })}</span>
+                          </div>
+                        )}
+                        <div className="flex items-end gap-2">
+                          <textarea
+                            rows={2}
+                            value={inboxReplyText}
+                            onChange={e => setInboxReplyText(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault()
+                                void sendInboxReply()
+                              }
+                            }}
+                            placeholder={activeConvo.takeover ? "輸入回覆內容，按 Enter 送出..." : "輸入真人回覆（送出後系統會自動切換為真人接管，AI 將閉嘴靜音）..."}
+                            className="flex-1 text-xs border border-gray-300 rounded-xl p-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                          <button
+                            type="button"
+                            onClick={sendInboxReply}
+                            disabled={!inboxReplyText.trim() || inboxSending}
+                            className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white disabled:opacity-50 flex items-center gap-1.5 shrink-0 shadow-sm transition-all hover:opacity-90"
+                            style={{ background: 'var(--primary)' }}
+                          >
+                            {inboxSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                            {t('u12.inboxSend')}
+                          </button>
+                        </div>
+                        <div className="text-[10px] text-gray-400 flex items-center justify-between px-1">
+                          <span>Shift + Enter 換行，Enter 送出回覆</span>
+                          {!activeConvo.takeover && (
+                            <span className="text-amber-600">※ 真人回覆後將自動啟用真人接管，避免 AI 插嘴</span>
                           )}
                         </div>
-                      ))}
-                    </div>
-                    <div className="border-t p-2 space-y-1 shrink-0">
-                      {inboxSendError && <div className="text-[10px] text-red-500 px-1">{t('u12.inboxSendFailed', { error: inboxSendError })}</div>}
-                      <div className="flex items-end gap-2">
-                        <textarea rows={2} value={inboxReplyText}
-                          onChange={e => setInboxReplyText(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendInboxReply() } }}
-                          placeholder={t('u12.inboxReplyPlaceholder')}
-                          className="flex-1 text-xs border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
-                        <button onClick={sendInboxReply} disabled={!inboxReplyText.trim() || inboxSending}
-                          className="px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50 flex items-center gap-1 shrink-0"
-                          style={{ background: 'var(--primary)' }}>
-                          {inboxSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-                          {t('u12.inboxSend')}
-                        </button>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        )
+      })())}
 
       {/* ── 報名表單 Modal ── */}
       {bookingFormOpen && bookingFormConfig && (
@@ -3516,7 +3788,7 @@ function Unit12CustomerService({
                 </div>
               </div>
               {bookingParticipants.map((p, i) => {
-                const age = calcParticipantAge(p.birthday)
+                const age = calcAge(p.birthday)
                 const cat = age >= 0 ? getAgeCategory(age) : null
                 const isInfant = cat === '幼兒'
                 const catColor = cat === '成人' ? 'bg-blue-100 text-blue-700' : cat === '小孩' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
@@ -3790,13 +4062,7 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
   if (!loaded) return <div className="h-[calc(100vh-53px)] bg-white" />
 
   return (
-    <div className="h-[calc(100vh-53px)] overflow-y-auto bg-white">
-      <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2 bg-white/95 backdrop-blur border-b">
-        <a href="/cs" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          {t('mp.backToCs')}
-        </a>
-      </div>
+    <div className="h-[calc(100vh-53px)] overflow-y-auto bg-white p-4 sm:p-6">
       <Unit12CustomerService
         campaignId={campaignId}
         savedData={unit12Data}

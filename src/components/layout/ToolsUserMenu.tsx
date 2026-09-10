@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, ChevronDown, Settings, Wallet } from 'lucide-react'
+import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
 
@@ -36,7 +36,16 @@ export function ToolsUserMenu({ displayName }: { displayName: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border bg-white shadow-md z-50 overflow-hidden py-1">
+          <div className="absolute right-0 top-full mt-1 w-44 rounded-lg border bg-white shadow-md z-50 overflow-hidden py-1">
+            {pathname.startsWith('/cs') && (
+              <a
+                href="/cs"
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors font-medium border-b border-gray-100"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 text-blue-500" />
+                返回客服統整頁
+              </a>
+            )}
             <a
               href="/settings"
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
