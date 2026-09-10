@@ -389,8 +389,17 @@ export default function EsimOrderDetailPage() {
               </span>
             </div>
 
+            {order.metadata?.coupon_code && (
+              <div className="flex justify-between py-2 border-b border-slate-100 items-center">
+                <span className="text-slate-500">優惠券折抵</span>
+                <span className="font-bold text-emerald-600">
+                  {order.metadata.coupon_code} (-NT$ {order.metadata.coupon_discount_twd || 0})
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500">結帳金額</span>
+              <span className="text-slate-500">結帳實付金額</span>
               <span className="font-bold text-slate-900">NT$ {order.total_price_twd} (已完成付款)</span>
             </div>
 

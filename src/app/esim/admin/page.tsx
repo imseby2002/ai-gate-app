@@ -5,12 +5,13 @@ import Link from 'next/link'
 import {
   Wallet, RefreshCw, CheckCircle2, AlertCircle, QrCode, Mail,
   ArrowRight, ExternalLink, Globe, Shield, ShoppingCart, DollarSign, Bell,
-  Tag, Percent, Sliders, Calculator, Sparkles, Save, Check
+  Tag, Percent, Sliders, Calculator, Sparkles, Save, Check,
+  Ticket, Plus, Trash2, ToggleLeft, ToggleRight
 } from 'lucide-react'
 import { DEFAULT_PRICING_SETTINGS, EsimPricingSettings } from '@/lib/esim/catalog'
 
 export default function EsimAdminPage() {
-  const [activeTab, setActiveTab] = useState<'pricing' | 'overview' | 'orders'>('pricing')
+  const [activeTab, setActiveTab] = useState<'pricing' | 'overview' | 'orders' | 'coupons'>('pricing')
   
   // 廠商餘額與訂單狀態
   const [balance, setBalance] = useState<{ balance: number; currency: string; account: string } | null>(null)
@@ -25,6 +26,22 @@ export default function EsimAdminPage() {
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSavedMessage, setSettingsSavedMessage] = useState('')
 
+  // 優惠券管理狀態
+  const [coupons, setCoupons] = useState<any[]>([])
+  const [loadingCoupons, setLoadingCoupons] = useState(false)
+  const [savingCoupon, setSavingCoupon] = useState(false)
+  const [couponMessage, setCouponMessage] = useState('')
+  const [newCoupon, setNewCoupon] = useState({
+    code: '',
+    name: '',
+    discount_type: 'fixed',
+    discount_value: 50,
+    min_spend_twd: 100,
+    max_discount_twd: '',
+    applicable_countries: '',
+    is_active: true,
+  })
+
   // 即時定價試算器 (Simulator)
   const [testCostHkd, setTestCostHkd] = useState<number>(15.0)
 
@@ -35,10 +52,11 @@ export default function EsimAdminPage() {
   async function loadAdminData() {
     setLoading(true)
     try {
-      const [balRes, ordRes, setRes] = await Promise.all([
+      const [balRes, ordRes, setRes, cpnRes] = await Promise.all([
         fetch('/api/esim/balance').then(r => r.json()).catch(() => ({ success: false })),
         fetch('/api/esim/admin/orders').then(r => r.json()).catch(() => ({ success: false })),
         fetch('/api/esim/admin/settings').then(r => r.json()).catch(() => ({ success: false })),
+        fetch('/api/esim/admin/coupons').then(r => r.json()).catch(() => ({ success: false })),
       ])
 
       if (balRes.success) {
@@ -53,10 +71,104 @@ export default function EsimAdminPage() {
       if (setRes.success && setRes.settings) {
         setPricingSettings(setRes.settings)
       }
+
+      if (cpnRes.success) {
+        setCoupons(cpnRes.coupons || [])
+      }
     } catch (err) {
       console.error('Failed to load admin data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // 新增優惠券
+  async function handleCreateCoupon(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newCoupon.code.trim()) return
+    setSavingCoupon(true)
+    setCouponMessage('')
+    try {
+      const countries = newCoupon.applicable_countries
+        ? newCoupon.applicable_countries.split(',').map(c => c.trim().toUpperCase()).filter(Boolean)
+        : []
+
+      const res = await fetch('/api/esim/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          coupon: {
+            ...newCoupon,
+            code: newCoupon.code.trim().toUpperCase(),
+            max_discount_twd: newCoupon.max_discount_twd ? parseInt(newCoupon.max_discount_twd, 10) : undefined,
+            applicable_countries: countries,
+          },
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCoupons(data.coupons)
+        setCouponMessage(`✅ 優惠券「${newCoupon.code.toUpperCase()}」已成功新增！`)
+        setNewCoupon({
+          code: '',
+          name: '',
+          discount_type: 'fixed',
+          discount_value: 50,
+          min_spend_twd: 100,
+          max_discount_twd: '',
+          applicable_countries: '',
+          is_active: true,
+        })
+        setTimeout(() => setCouponMessage(''), 4000)
+      } else {
+        alert(`新增失敗: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`新增異常: ${err.message}`)
+    } finally {
+      setSavingCoupon(false)
+    }
+  }
+
+  // 切換優惠券啟用狀態
+  async function handleToggleCoupon(coupon: any) {
+    try {
+      const res = await fetch('/api/esim/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle',
+          coupon: { id: coupon.id },
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCoupons(data.coupons)
+      }
+    } catch (err) {
+      console.error('Failed to toggle coupon:', err)
+    }
+  }
+
+  // 刪除優惠券
+  async function handleDeleteCoupon(coupon: any) {
+    if (!confirm(`確定要刪除優惠代碼「${coupon.code}」嗎？`)) return
+    try {
+      const res = await fetch('/api/esim/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          coupon: { id: coupon.id },
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCoupons(data.coupons)
+      }
+    } catch (err) {
+      console.error('Failed to delete coupon:', err)
     }
   }
 
@@ -211,6 +323,18 @@ export default function EsimAdminPage() {
         >
           <ShoppingCart className="w-4 h-4" />
           <span>📋 顧客訂單總表 ({orders.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('coupons')}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'coupons'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          <Ticket className="w-4 h-4" />
+          <span>🎟️ 優惠券管理 ({coupons.length})</span>
         </button>
       </div>
 
@@ -664,6 +788,271 @@ export default function EsimAdminPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────── */}
+      {/* 4. 優惠券管理 TAB                                             */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      {activeTab === 'coupons' && (
+        <div className="space-y-8 animate-in fade-in duration-150">
+          {couponMessage && (
+            <div className="p-4 bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-bold rounded-2xl border border-emerald-200 flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span>{couponMessage}</span>
+            </div>
+          )}
+
+          {/* 新增優惠券卡片 */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">建立新優惠券折扣碼</h3>
+                  <p className="text-xs text-slate-500">顧客於結帳彈窗輸入此代碼即可立即折抵訂單金額</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateCoupon} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+              {/* 優惠券代碼 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  優惠代碼 (Code) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="例如 WELCOME50, SUMMER88"
+                  value={newCoupon.code}
+                  onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold uppercase focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 優惠券名稱 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  活動名稱 / 說明
+                </label>
+                <input
+                  type="text"
+                  placeholder="例如 新客首購折抵 50 元"
+                  value={newCoupon.name}
+                  onChange={e => setNewCoupon({ ...newCoupon, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 折扣類型 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  折扣方式
+                </label>
+                <select
+                  value={newCoupon.discount_type}
+                  onChange={e => setNewCoupon({
+                    ...newCoupon,
+                    discount_type: e.target.value as 'fixed' | 'percent',
+                    discount_value: e.target.value === 'percent' ? 0.9 : 50,
+                  })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none font-medium"
+                >
+                  <option value="fixed">現折固定金額 (TWD)</option>
+                  <option value="percent">成數折扣 (例如 9 折、85 折)</option>
+                </select>
+              </div>
+
+              {/* 折扣數值 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  {newCoupon.discount_type === 'fixed' ? '折抵金額 (NT$)' : '折扣成數 (0.9=9折)'} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step={newCoupon.discount_type === 'percent' ? '0.01' : '1'}
+                  min={newCoupon.discount_type === 'percent' ? '0.01' : '1'}
+                  max={newCoupon.discount_type === 'percent' ? '0.99' : '10000'}
+                  required
+                  value={newCoupon.discount_value}
+                  onChange={e => setNewCoupon({ ...newCoupon, discount_value: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-bold text-blue-600 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 最低消費門檻 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  最低消費金額門檻 (NT$)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  placeholder="0 為不限"
+                  value={newCoupon.min_spend_twd}
+                  onChange={e => setNewCoupon({ ...newCoupon, min_spend_twd: parseInt(e.target.value, 10) || 0 })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 最高折抵上限 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  最高折抵上限 (NT$，選填)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="留空代表不設上限"
+                  value={newCoupon.max_discount_twd}
+                  onChange={e => setNewCoupon({ ...newCoupon, max_discount_twd: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 適用國家 */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  限定適用國家代碼 (選填)
+                </label>
+                <input
+                  type="text"
+                  placeholder="如 JP 或 JP,KR (留空為全館)"
+                  value={newCoupon.applicable_countries}
+                  onChange={e => setNewCoupon({ ...newCoupon, applicable_countries: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 uppercase font-mono focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+
+              {/* 提交按鈕 */}
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={savingCoupon || !newCoupon.code.trim()}
+                  className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{savingCoupon ? '建立中...' : '建立優惠券'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* 優惠券列表卡片 */}
+          <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-slate-700" />
+                <h3 className="text-sm font-bold text-slate-900">商城現有優惠券總覽</h3>
+              </div>
+              <span className="text-xs text-slate-400">共 {coupons.length} 張優惠券</span>
+            </div>
+
+            {coupons.length === 0 ? (
+              <div className="p-12 text-center text-slate-400 text-xs">
+                尚無設定優惠券，可於上方表單快速建立。
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4">優惠代碼 (Code)</th>
+                      <th className="py-3 px-4">活動名稱</th>
+                      <th className="py-3 px-4">折扣內容</th>
+                      <th className="py-3 px-4">使用門檻</th>
+                      <th className="py-3 px-4">適用國家</th>
+                      <th className="py-3 px-4">已兌換次數</th>
+                      <th className="py-3 px-4">狀態</th>
+                      <th className="py-3 px-4 text-right">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {coupons.map((c: any) => (
+                      <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4">
+                          <span className="font-mono font-bold text-slate-900 text-sm bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
+                            {c.code}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-medium text-slate-800">
+                          {c.name}
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.discount_type === 'fixed' ? (
+                            <span className="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              現折 NT$ {c.discount_value}
+                            </span>
+                          ) : (
+                            <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                              {Math.round(c.discount_value * 100) / 10} 折 ({Math.round((1 - c.discount_value) * 100)}% OFF)
+                            </span>
+                          )}
+                          {c.max_discount_twd && (
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              最高折 NT$ {c.max_discount_twd}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">
+                          {c.min_spend_twd > 0 ? `滿 NT$ ${c.min_spend_twd}` : '無消費門檻'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.applicable_countries && c.applicable_countries.length > 0 ? (
+                            <span className="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                              {c.applicable_countries.join(', ')}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">全館通用</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-700">
+                          {c.usage_count || 0} 次
+                        </td>
+                        <td className="py-3 px-4">
+                          {c.is_active ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              啟用中
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                              已暫停
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCoupon(c)}
+                              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors cursor-pointer"
+                              title={c.is_active ? '暫停此優惠券' : '啟用此優惠券'}
+                            >
+                              {c.is_active ? (
+                                <ToggleRight className="w-5 h-5 text-emerald-600" />
+                              ) : (
+                                <ToggleLeft className="w-5 h-5 text-slate-400" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCoupon(c)}
+                              className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                              title="刪除優惠券"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

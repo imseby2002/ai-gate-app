@@ -3,6 +3,7 @@ import { microEsimClient } from '@/lib/esim/microesim'
 import { parseMicroEsimPlan } from '@/lib/esim/catalog'
 import { createEsimOrder, updateEsimOrder } from '@/lib/esim/db'
 import { fulfillEsimOrder } from '@/lib/esim/fulfillment'
+import { validateCoupon, incrementCouponUsage } from '@/lib/esim/coupons'
 import {
   getEcpayConfig,
   generateCheckMac,
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
       quantity = 1,
       payment_method = 'ecpay',
       return_url,
+      coupon_code,
     } = body
 
     if (!channel_dataplan_id) {
@@ -42,8 +44,28 @@ export async function POST(req: NextRequest) {
 
     const parsedPlan = parseMicroEsimPlan(rawPlan)
     const unitPriceTwd = parsedPlan.retailPriceTwd
-    const totalPriceTwd = unitPriceTwd * qty
+    const subtotalPriceTwd = unitPriceTwd * qty
     const costHkd = parsedPlan.costHkd * qty
+
+    // 1.5 優惠券折扣計算與驗證
+    let finalTotalPriceTwd = subtotalPriceTwd
+    let couponDiscountTwd = 0
+    let appliedCouponCode = ''
+    let appliedCouponName = ''
+
+    if (coupon_code && typeof coupon_code === 'string' && coupon_code.trim()) {
+      const couponRes = await validateCoupon(coupon_code, subtotalPriceTwd, parsedPlan.primaryCountryCode)
+      if (couponRes.valid && couponRes.coupon) {
+        couponDiscountTwd = couponRes.discountTwd
+        finalTotalPriceTwd = couponRes.finalPriceTwd
+        appliedCouponCode = couponRes.coupon.code
+        appliedCouponName = couponRes.coupon.name
+        // 累計使用次數
+        await incrementCouponUsage(appliedCouponCode)
+      } else {
+        return NextResponse.json({ error: couponRes.error || '優惠券代碼無效' }, { status: 400 })
+      }
+    }
 
     // 2. 產生獨一無二的訂單編號（20 字元內，方便綠界 ECPay 相容）
     const timestampSuffix = Date.now().toString().slice(-7)
@@ -64,7 +86,7 @@ export async function POST(req: NextRequest) {
       data_amount: parsedPlan.dataTierLabel,
       quantity: qty,
       unit_price_twd: unitPriceTwd,
-      total_price_twd: totalPriceTwd,
+      total_price_twd: finalTotalPriceTwd,
       cost_hkd: costHkd,
       currency: 'TWD',
       payment_status: 'pending',
@@ -77,13 +99,34 @@ export async function POST(req: NextRequest) {
         raw_data: rawPlan.data,
         rule_desc: rawPlan.rule_desc,
         ip: rawPlan.ip,
+        subtotal_price_twd: subtotalPriceTwd,
+        coupon_code: appliedCouponCode || undefined,
+        coupon_name: appliedCouponName || undefined,
+        coupon_discount_twd: couponDiscountTwd,
       },
     })
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://esim.im-tourist.com'
     const { origin } = resolvePayReturn(return_url)
 
-    // 4. 若為測試付款模式 (即刻完成付款並觸發發卡)
+    // 4. 若全額折抵 (金額 <= 0)，直接完成發卡
+    if (finalTotalPriceTwd <= 0) {
+      await updateEsimOrder(orderNo, {
+        payment_status: 'paid',
+        payment_trade_no: `FREE_COUPON_${Date.now()}`,
+        paid_at: new Date().toISOString(),
+      })
+      const fulfillRes = await fulfillEsimOrder(orderNo)
+      return NextResponse.json({
+        success: true,
+        order_no: orderNo,
+        payment_method: 'free_coupon',
+        fulfilled: fulfillRes.success,
+        redirect_url: `/esim/order/${orderNo}`,
+      })
+    }
+
+    // 5. 若為測試付款模式 (即刻完成付款並觸發發卡)
     if (payment_method === 'test_mode' || payment_method === 'demo') {
       await updateEsimOrder(orderNo, {
         payment_status: 'paid',
@@ -103,7 +146,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // 5. 綠界科技 ECPay 付款整合
+    // 6. 綠界科技 ECPay 付款整合
     const config = getEcpayConfig()
     const tradeDate = formatEcpayTradeDate()
 
@@ -112,7 +155,7 @@ export async function POST(req: NextRequest) {
       MerchantTradeNo: orderNo,
       MerchantTradeDate: tradeDate,
       PaymentType: 'aio',
-      TotalAmount: String(totalPriceTwd),
+      TotalAmount: String(finalTotalPriceTwd),
       TradeDesc: encodeURIComponent(`imTourist eSIM ${parsedPlan.primaryCountryName}`),
       ItemName: `eSIM ${parsedPlan.primaryCountryName} ${parsedPlan.dataTierLabel} (${parsedPlan.day}天) x${qty}`,
       ReturnURL: `${appUrl}/api/esim/ecpay-return`,
