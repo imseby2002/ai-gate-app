@@ -13,17 +13,22 @@ export async function POST(req: NextRequest) {
   const ctx = await getBnbContext(supabase, 'cs')
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { platform, to, industry = 'homestay', takeover } = await req.json()
+  const body = await req.json()
+  const { platform, industry = 'homestay', takeover } = body
+  const to = body.to || body.from_id
   if (!to) return NextResponse.json({ error: '缺少 to' }, { status: 400 })
 
   const admin = await createAdminClient()
+  const now = new Date().toISOString()
 
   if (takeover) {
     const { data: open } = await admin
-      .from('cs_tickets').select('id')
+      .from('cs_tickets').select('id, created_at')
       .eq('user_id', ctx.ownerId).eq('from_id', to)
       .eq('intent', '人工客服請求').in('status', ['open', 'in_progress'])
+      .order('created_at', { ascending: false })
       .limit(1)
+
     if (!open?.length) {
       const { error } = await admin.from('cs_tickets').insert({
         user_id: ctx.ownerId, industry, platform: platform ?? 'test', from_id: to,
@@ -31,6 +36,13 @@ export async function POST(req: NextRequest) {
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    } else {
+      // 確保工單時間刷新為當前時間，維持有效接管窗口 2 小時
+      await admin.from('cs_tickets').update({
+        created_at: now,
+        updated_at: now,
+        status: 'open',
+      }).eq('id', open[0].id)
     }
     return NextResponse.json({ ok: true, takeover: true })
   }
@@ -38,7 +50,7 @@ export async function POST(req: NextRequest) {
   // 恢復 AI：關閉所有 open 人工客服工單
   const { error } = await admin
     .from('cs_tickets')
-    .update({ status: 'resolved' })
+    .update({ status: 'resolved', updated_at: now })
     .eq('user_id', ctx.ownerId).eq('from_id', to)
     .eq('intent', '人工客服請求').in('status', ['open', 'in_progress'])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

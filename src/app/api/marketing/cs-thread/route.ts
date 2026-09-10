@@ -171,5 +171,5 @@ export async function GET(req: NextRequest) {
     takeover: takeoverSet.has(c.from_id),
   }))
 
-  return NextResponse.json({ conversations })
+  return NextResponse.json({ conversations, convos: conversations })
 }

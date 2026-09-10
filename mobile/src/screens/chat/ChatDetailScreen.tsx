@@ -40,14 +40,55 @@ export default function ChatDetailScreen() {
 
   const fetchThread = useCallback(async () => {
     try {
-      const res = await apiFetch(`/api/marketing/cs-thread?platform=${platform}&to=${from_id}`)
-      if (res.ok) {
-        const json = await res.json()
-        setBubbles(json.bubbles || [])
-        if (typeof json.takeover === 'boolean') {
-          setTakeover(json.takeover)
+      // 1. 直接向 Supabase 查詢該客戶的歷史對話氣泡
+      const { data: rows } = await supabase
+        .from('cs_messages')
+        .select('message, reply, intent, created_at')
+        .eq('from_id', from_id)
+        .order('created_at', { ascending: true })
+        .limit(300)
+
+      if (rows && rows.length > 0) {
+        const bubblesList: Bubble[] = []
+        for (const r of rows) {
+          if (r.message && String(r.message).trim()) {
+            bubblesList.push({ side: 'in', sender: 'customer', text: r.message, at: r.created_at })
+          }
+          if (r.reply && String(r.reply).trim()) {
+            bubblesList.push({
+              side: 'out',
+              sender: r.intent === 'agent' ? 'agent' : 'ai',
+              text: r.reply,
+              at: r.created_at,
+            })
+          }
+        }
+        setBubbles(bubblesList)
+      } else {
+        // Fallback 到 API
+        const res = await apiFetch(`/api/marketing/cs-thread?platform=${platform}&to=${from_id}`)
+        if (res.ok) {
+          const json = await res.json()
+          setBubbles(json.bubbles || [])
+          if (typeof json.takeover === 'boolean') {
+            setTakeover(json.takeover)
+          }
         }
       }
+
+      // 檢查是否處於人工接管中（超過 2 小時未處理視為過期歸還 AI，與網頁端一致）
+      const HANDOFF_STALE_HOURS = 2
+      const staleCutoff = new Date(Date.now() - HANDOFF_STALE_HOURS * 3600_000).toISOString()
+      const { data: openTickets } = await supabase
+        .from('cs_tickets')
+        .select('id')
+        .eq('from_id', from_id)
+        .eq('intent', '人工客服請求')
+        .in('status', ['open', 'in_progress'])
+        .gte('created_at', staleCutoff)
+        .limit(1)
+
+      setTakeover(!!(openTickets && openTickets.length > 0))
     } catch (err) {
       console.log('載入對話訊息失敗:', err)
     } finally {
@@ -116,6 +157,7 @@ export default function ChatDetailScreen() {
         method: 'POST',
         body: JSON.stringify({
           platform,
+          to: from_id,
           from_id,
           takeover: nextState,
         }),

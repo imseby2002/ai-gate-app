@@ -11,8 +11,8 @@ import {
   StatusBar,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from '@react-navigation/native'
-import { apiFetch } from '../../lib/supabase'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import { apiFetch, supabase } from '../../lib/supabase'
 
 interface Conversation {
   platform: string
@@ -43,11 +43,64 @@ export default function ChatListScreen() {
 
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await apiFetch('/api/marketing/cs-thread')
-      if (res.ok) {
-        const json = await res.json()
-        setConversations(json.convos || [])
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setLoading(false)
+        setRefreshing(false)
+        return
       }
+
+      // 1. 查找此帳號是否為其他商戶/客服的協作者 (bnb_members)
+      const { data: memberRows } = await supabase
+        .from('bnb_members')
+        .select('owner_id')
+        .eq('status', 'active')
+
+      const ownerIds = Array.from(new Set([user.id, ...(memberRows || []).map((m) => m.owner_id)]))
+
+      // 2. 直接查詢屬於自己或受邀商戶的客戶對話
+      const { data: customers, error } = await supabase
+        .from('cs_customers')
+        .select('platform, from_id, name, stage, message_count, last_message_at')
+        .in('user_id', ownerIds)
+        .order('last_message_at', { ascending: false })
+        .limit(200)
+
+      if (error) {
+        console.log('查詢客戶列表錯誤:', error.message)
+        // Fallback 到 API
+        const res = await apiFetch('/api/marketing/cs-thread')
+        if (res.ok) {
+          const json = await res.json()
+          setConversations(json.conversations || json.convos || [])
+        }
+        return
+      }
+
+      // 3. 查詢是否有人工接管中的工單（超過 2 小時無人處理視為過期，由 AI 接管，與網頁版及 Webhook 保持一致）
+      const HANDOFF_STALE_HOURS = 2
+      const staleCutoff = new Date(Date.now() - HANDOFF_STALE_HOURS * 3600_000).toISOString()
+      const { data: openTickets } = await supabase
+        .from('cs_tickets')
+        .select('from_id')
+        .in('user_id', ownerIds)
+        .eq('intent', '人工客服請求')
+        .in('status', ['open', 'in_progress'])
+        .gte('created_at', staleCutoff)
+
+      const takeoverSet = new Set((openTickets || []).map((t) => t.from_id))
+
+      const convosList: Conversation[] = (customers || []).map((c) => ({
+        platform: c.platform,
+        from_id: c.from_id,
+        name: c.name,
+        stage: c.stage,
+        messageCount: c.message_count || 0,
+        lastMessageAt: c.last_message_at,
+        takeover: takeoverSet.has(c.from_id),
+      }))
+
+      setConversations(convosList)
     } catch (err) {
       console.log('載入對話清單失敗:', err)
     } finally {
@@ -55,6 +108,13 @@ export default function ChatListScreen() {
       setRefreshing(false)
     }
   }, [])
+
+  // 當畫面獲得焦點時立即刷新
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations()
+    }, [fetchConversations])
+  )
 
   useEffect(() => {
     fetchConversations()

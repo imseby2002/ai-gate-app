@@ -1,6 +1,7 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../context/AuthContext'
 
 import ChatListScreen from '../screens/chat/ChatListScreen'
@@ -13,6 +14,10 @@ const Tab = createBottomTabNavigator()
 
 export default function MainTabs() {
   const { hasBookingAccess } = useAuth()
+  const insets = useSafeAreaInsets()
+
+  const bottomPadding = insets.bottom > 0 ? insets.bottom : 8
+  const tabHeight = 58 + insets.bottom
 
   return (
     <Tab.Navigator
@@ -20,9 +25,9 @@ export default function MainTabs() {
         tabBarActiveTintColor: '#2563EB',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: tabHeight,
+          paddingBottom: bottomPadding,
+          paddingTop: 6,
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E2E8F0',
