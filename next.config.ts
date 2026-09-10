@@ -8,10 +8,6 @@ const nextConfig: NextConfig = {
     // 避免歷史邊緣頁面型別推導差異阻礙 Vercel 上線部署
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // 避免 ESLint 警告阻礙 Vercel 上線建置
-    ignoreDuringBuilds: true,
-  },
   images: {
     unoptimized: true,
     remotePatterns: [

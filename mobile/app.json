@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "AI GATE",
+    "slug": "ai-gate-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "aigate",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.imtourist.aigate",
+      "infoPlist": {
+        "NSCameraUsageDescription": "用於工單現場拍照回報與問題反饋附圖",
+        "NSPhotoLibraryUsageDescription": "用於上傳工單證明照片與反饋截圖"
+      }
+    },
+    "android": {
+      "package": "com.imtourist.aigate",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允許存取相簿以上傳照片與問題截圖",
+          "cameraPermission": "允許使用相機以拍攝工單維修照片"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#3B82F6"
+        }
+      ],
+      "expo-font"
+    ]
+  }
+}
