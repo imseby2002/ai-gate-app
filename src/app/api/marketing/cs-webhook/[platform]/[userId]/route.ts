@@ -22,6 +22,7 @@ import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
 import { sendToCustomer } from '@/lib/cs/send'
+import { notifyUserMobile } from '@/lib/push/expo'
 
 // Agent 核准請求走這個 webhook 通知老闆自己的 LINE（見 src/lib/agents/notify.ts），
 // 老闆用同一個 LINE 帳號回覆時走這裡辨識，不會被當成一般客服訊息處理。
@@ -196,6 +197,15 @@ async function logCsMessage(userId: string, platform: string, customerId: string
     await getServiceClient().from('cs_messages').insert({
       user_id: userId, industry, platform, from_id: customerId, from_name: fromName ?? null, message, reply,
     })
+    // 當有真實客戶訊息進入時，即時推播給該商家的手機 APP
+    if (message && message.trim()) {
+      const displayName = fromName?.trim() || customerId
+      notifyUserMobile(userId, {
+        title: `【${displayName} (${platform.toUpperCase()})】`,
+        body: message.trim().slice(0, 100),
+        data: { platform, from_id: customerId },
+      }).catch(() => {})
+    }
   } catch { /* metrics logging must never break the reply flow */ }
 }
 
@@ -273,11 +283,9 @@ const COMPLAINT_RE = /投訴|抱怨|complaint/i
 const SEARCH_RE = /天氣|氣溫|下雨|附近|景點|怎麼走|路況|交通|開了嗎|營業中嗎|特產|名產|伴手禮|美食|小吃|好吃|好玩|必吃|必買|必去|哪裡(買|吃|玩)|weather|nearby|traffic/i
 
 // 工單開超過這麼久還沒被員工處理（狀態一直沒變成 resolved/closed），視為員工可能
-// 漏看或這條規則誤觸發——真實案例：客人問「如天候因素船隻不能成行，請問可否退款？」
-// 這種假設性政策問題被誤判成真的要退款，轉真人後從此沒有任何人回應，客人接下來
-// 4 天、十幾則訊息全部石沉大海，也沒有任何自動恢復機制。超過這個時數就先讓 AI
-// 恢復回覆，避免客人永遠卡住；工單本身仍然維持 open，員工看到還是可以隨時真的接手。
-const HANDOFF_STALE_HOURS = 24
+// 離線或對話已結束。超過 2 小時讓 AI 自動恢復回覆接手，避免客人永遠卡住等候。
+// 工單本身仍然維持 open，員工若隨時上線還是可以再次手動接手。
+const HANDOFF_STALE_HOURS = 2
 
 // Is there an unresolved human-handoff ticket for this customer? (→ stop auto-replying)
 async function hasOpenHandoff(userId: string, customerId: string): Promise<boolean> {
@@ -546,7 +554,8 @@ async function replyToCustomer(
   // A human is already handling this customer → check if user/staff wants to resume AI
   if (await hasOpenHandoff(userId, customerId)) {
     // 專員或客人輸入「自動」或「恢復AI」解除手動模式
-    if (/^(切換)?自動(模式)?$|^(開啟|啟動|恢復)AI$|^AI(自動|啟動|開啟)$/i.test(text.trim())) {
+    const RESUME_AI_RE = /^(?:切換|恢復|開啟|啟動|換回|轉成|改為)?(?:AI)?自動(?:模式|回覆)?$|^(?:開啟|啟動|恢復)AI$|^AI(?:自動|啟動|開啟|接手)$/i
+    if (RESUME_AI_RE.test(text.trim())) {
       try {
         await getServiceClient()
           .from('cs_tickets')
@@ -558,6 +567,11 @@ async function replyToCustomer(
       void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
       return reply
     }
+
+    // 即使在真人接管靜音期間，若客人傳送匯款證明或發票需求，依然開工單通知專員（不漏收付款證據）
+    void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+    void maybeCreateInvoiceTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, '', fromName)
     return ''
   }

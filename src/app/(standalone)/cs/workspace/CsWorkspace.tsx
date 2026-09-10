@@ -1275,6 +1275,7 @@ function Unit12CustomerService({
       const res = await fetch(url)
       const d = await res.json()
       if (d.messages) setInboxMessages(d.messages)
+      void loadTickets()
     } finally {
       setInboxLoading(false)
     }
@@ -3377,6 +3378,9 @@ function Unit12CustomerService({
                         <span className="text-xs font-medium text-gray-800 truncate">
                           {platformEmoji(thread.platform)} {thread.fromName ?? thread.fromId}
                         </span>
+                        {tickets.some(tk => tk.from_id === thread.fromId && tk.intent === '人工客服請求' && ['open', 'in_progress'].includes(tk.status)) && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-medium shrink-0">真人接管</span>
+                        )}
                         <span className="text-[9px] text-gray-400 ml-auto shrink-0">
                           {new Date(last.created_at).toLocaleString(locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -3393,10 +3397,42 @@ function Unit12CustomerService({
                   <div className="flex-1 flex items-center justify-center text-sm text-gray-400">{t('u12.inboxSelectHint')}</div>
                 ) : (
                   <>
-                    <div className="px-3 py-2 border-b bg-gray-50 shrink-0">
+                    <div className="px-3 py-2 border-b bg-gray-50 shrink-0 flex items-center justify-between gap-2">
                       <span className="text-sm font-medium text-gray-800">
                         {platformEmoji(activeInboxThread.platform)} {activeInboxThread.fromName ?? activeInboxThread.fromId}
                       </span>
+                      {(() => {
+                        const isTakeover = tickets.some(tk => tk.from_id === activeInboxThread.fromId && tk.intent === '人工客服請求' && ['open', 'in_progress'].includes(tk.status))
+                        return (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const next = !isTakeover
+                              setTickets(prev => prev.map(tk =>
+                                tk.from_id === activeInboxThread.fromId && tk.intent === '人工客服請求' && ['open', 'in_progress'].includes(tk.status)
+                                  ? { ...tk, status: next ? 'open' : 'resolved' }
+                                  : tk
+                              ))
+                              try {
+                                await fetch('/api/marketing/cs-takeover', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ platform: activeInboxThread.platform, to: activeInboxThread.fromId, industry: ind, takeover: next }),
+                                })
+                                void loadTickets()
+                              } catch { /* ignore */ }
+                            }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                              isTakeover
+                                ? 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                            }`}
+                            title={isTakeover ? '點擊切換為 AI 自動回覆' : '點擊切換為真人專員接管'}
+                          >
+                            {isTakeover ? '👤 真人接管中（點擊切回 AI）' : '🤖 AI 自動回覆中'}
+                          </button>
+                        )
+                      })()}
                     </div>
                     <div className="flex-1 overflow-y-auto p-3 space-y-3">
                       {activeInboxThread.messages.map(msg => (
