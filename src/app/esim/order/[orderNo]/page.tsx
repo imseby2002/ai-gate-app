@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
   CheckCircle2, QrCode, Copy, Check, Download, Mail, Smartphone,
-  Wifi, HelpCircle, ShieldCheck, ArrowLeft, RefreshCw, AlertCircle, Share2
+  Wifi, HelpCircle, ShieldCheck, ArrowLeft, RefreshCw, AlertCircle, Share2, Gauge
 } from 'lucide-react'
+import { parseThrottleRule } from '@/lib/esim/catalog'
 
 interface EsimOrder {
   order_no: string
@@ -112,6 +113,12 @@ export default function EsimOrderDetailPage() {
     }
     return { smdp: code, matchId: '' }
   }, [order?.activation_code])
+
+  // 解析超額降速速率規則
+  const throttleRule = React.useMemo(() => {
+    if (!order?.metadata?.rule_desc) return null
+    return parseThrottleRule(order.metadata.rule_desc)
+  }, [order?.metadata?.rule_desc])
 
   if (loading) {
     return (
@@ -334,6 +341,21 @@ export default function EsimOrderDetailPage() {
               <span className="font-semibold text-slate-900">{order.data_amount} ({order.day} 天)</span>
             </div>
 
+            {throttleRule && (
+              <div className="flex justify-between py-2 border-b border-slate-100 items-center">
+                <span className="text-slate-500">降速/超額規格</span>
+                <span className={`font-bold ${
+                  throttleRule.type === 'unlimited_high_speed'
+                    ? 'text-emerald-600'
+                    : throttleRule.type === 'terminate'
+                    ? 'text-slate-700'
+                    : 'text-indigo-600'
+                }`}>
+                  {throttleRule.shortLabel}
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-between py-2 border-b border-slate-100">
               <span className="text-slate-500">ICCID 識別碼</span>
               <span className="font-mono font-semibold text-slate-900">{order.iccid || '開通後回傳'}</span>
@@ -361,6 +383,30 @@ export default function EsimOrderDetailPage() {
               <span className="font-semibold text-slate-900">{order.customer_email}</span>
             </div>
           </div>
+
+          {/* 超額降速速率詳細說明卡 */}
+          {throttleRule && (
+            <div className="bg-blue-50/80 rounded-3xl border border-blue-200 p-5 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-bold text-blue-950 text-sm">
+                  <Gauge className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>流量超額降速速率：{throttleRule.speed}</span>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  throttleRule.type === 'unlimited_high_speed'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : throttleRule.type === 'terminate'
+                    ? 'bg-slate-200 text-slate-800'
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {throttleRule.badge}
+                </span>
+              </div>
+              <p className="text-blue-900/90 text-xs leading-relaxed">
+                {throttleRule.description}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

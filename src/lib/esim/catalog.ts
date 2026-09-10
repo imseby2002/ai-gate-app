@@ -46,6 +46,19 @@ export interface EsimAppRestrictions {
   specialNotes: string[]
 }
 
+export interface ThrottleRuleInfo {
+  type: 'speed_throttle' | 'terminate' | 'unlimited_high_speed'
+  raw: string
+  speed: string // e.g. "128 kbps", "256 kbps", "384 kbps", "512 kbps", "1 Mbps", "5 Mbps", "10 Mbps", "全程不降速", "停止上網"
+  shortLabel: string // e.g. "用畢降速 128 kbps 吃到飽", "全程高速不降速", "流量用畢停止上網"
+  fullLabel: string // e.g. "高速流量用畢降速至 128 kbps 輕速吃到飽不斷線"
+  badge: string // e.g. "降速 128 kbps", "降速 5 Mbps", "用畢斷線", "全程高速"
+  description: string // 詳細可做什麼說明，例如 "高速用畢降速至 128 kbps，可傳文字訊息、LINE 聊天與 Google 地圖導航，不斷線"
+  canStreamVideo: boolean
+  canVoiceCall: boolean
+  canBasicMessaging: boolean
+}
+
 export interface ParsedEsimPlan extends MicroEsimPlan {
   planType: 'daily' | 'total' | 'unlimited'
   dataTierLabel: string // e.g. "每日 1GB", "總量 10GB", "無限上網"
@@ -56,6 +69,7 @@ export interface ParsedEsimPlan extends MicroEsimPlan {
   primaryCountryName: string
   flagEmoji: string
   restrictions: EsimAppRestrictions
+  throttleRule: ThrottleRuleInfo
 }
 
 export const DESTINATIONS: Record<string, DestinationMeta> = {
@@ -251,6 +265,134 @@ export function analyzePlanRestrictions(plan: MicroEsimPlan): EsimAppRestriction
 }
 
 /**
+ * 解析方案降速規則與速率 (例如 128kbps, 256kbps, 384kbps, 512kbps, 1mbps, 5mbps, 10mbps, terminate, unlimited)
+ */
+export function parseThrottleRule(ruleDesc?: string): ThrottleRuleInfo {
+  const raw = (ruleDesc || '').trim()
+  const lower = raw.toLowerCase()
+
+  // 1. Terminate / 斷線停止上網
+  if (
+    lower.includes('terminate') ||
+    lower.includes('stop') ||
+    lower.includes('斷線') ||
+    lower.includes('用完即止')
+  ) {
+    return {
+      type: 'terminate',
+      raw,
+      speed: '停止上網',
+      shortLabel: '流量用畢停止上網',
+      fullLabel: '流量用畢即停止上網 (直接結束連線，不額外扣款)',
+      badge: '用畢斷線',
+      description: '方案內含之高速流量使用完畢後即停止上網服務（斷線），不會產生任何超額費用。',
+      canStreamVideo: false,
+      canVoiceCall: false,
+      canBasicMessaging: false,
+    }
+  }
+
+  // 2. Unlimited High Speed / 全程高速不降速吃到飽
+  if (
+    lower === 'unlimited' ||
+    lower === 'unlimited high speed' ||
+    lower === 'unlimited highspeed' ||
+    lower.includes('全程不降速') ||
+    lower.includes('高速不限速')
+  ) {
+    return {
+      type: 'unlimited_high_speed',
+      raw,
+      speed: '全程不降速',
+      shortLabel: '全程高速吃到飽不降速',
+      fullLabel: '全程維持 4G/5G 原生高速連線，不限速、不降速',
+      badge: '全程高速不降速',
+      description: '全程享受 4G/5G 當地電信原生極速飆網，不降速、不斷線，盡情追劇、視訊與工作。',
+      canStreamVideo: true,
+      canVoiceCall: true,
+      canBasicMessaging: true,
+    }
+  }
+
+  // 3. 有指定速率的降速型方案 (例如 "unlimited 128kbps", "unlimited 5mbps", "unlimited 384kbps", "unlimited 10mbps")
+  const match = lower.match(/(\d+(?:\.\d+)?)\s*(kbps|mbps|k|m)/)
+  if (match) {
+    const num = parseFloat(match[1])
+    const unitRaw = match[2].toLowerCase()
+    const isMbps = unitRaw.startsWith('m')
+    const unit = isMbps ? 'Mbps' : 'kbps'
+    const speed = `${num} ${unit}`
+    const speedKbps = isMbps ? num * 1024 : num
+
+    let usageTips = ''
+    let canStreamVideo = false
+    let canVoiceCall = false
+    let canBasicMessaging = true
+
+    if (speedKbps <= 128) {
+      usageTips = '支援傳送 LINE / WhatsApp 文字訊息與 Google Maps 定位導航（網頁載入較慢，不建議觀看影片）。'
+      canVoiceCall = false
+      canStreamVideo = false
+    } else if (speedKbps <= 384) {
+      usageTips = '支援 LINE 文字傳送與語音通話、Google Maps 導航與基本網頁瀏覽。'
+      canVoiceCall = true
+      canStreamVideo = false
+    } else if (speedKbps <= 1024) {
+      usageTips = '支援 LINE 語音通話、社群動態文字與圖片瀏覽、一般網頁載入與地圖導航。'
+      canVoiceCall = true
+      canStreamVideo = false
+    } else {
+      usageTips = '可順暢觀看 YouTube 720p/1080p 高畫質影音、社群短影音、視訊通話與快速載入所有網頁。'
+      canVoiceCall = true
+      canStreamVideo = true
+    }
+
+    return {
+      type: 'speed_throttle',
+      raw,
+      speed,
+      shortLabel: `用畢降速 ${speed} 吃到飽`,
+      fullLabel: `高速用畢降速至 ${speed} 輕速吃到飽不斷線`,
+      badge: `降速 ${speed}`,
+      description: `高速流量用罄後降速至 ${speed} 無限流量吃到飽。${usageTips}`,
+      canStreamVideo,
+      canVoiceCall,
+      canBasicMessaging,
+    }
+  }
+
+  // 4. 預設吃到飽 (若無特別標註速率)
+  if (lower.includes('unlimited')) {
+    return {
+      type: 'speed_throttle',
+      raw,
+      speed: '128 kbps',
+      shortLabel: '用畢降速 128 kbps 吃到飽',
+      fullLabel: '高速用畢降速至 128 kbps 輕速吃到飽不斷線',
+      badge: '降速 128 kbps',
+      description: '高速流量用罄後降速至 128 kbps 輕速吃到飽不斷線，支援 LINE 文字訊息與定位導航。',
+      canStreamVideo: false,
+      canVoiceCall: false,
+      canBasicMessaging: true,
+    }
+  }
+
+  // 5. 其它預設為斷線
+  return {
+    type: 'terminate',
+    raw,
+    speed: '停止上網',
+    shortLabel: '流量用畢停止上網',
+    fullLabel: '流量用畢即停止上網',
+    badge: '用畢斷線',
+    description: '方案高速流量使用完畢後即停止上網。',
+    canStreamVideo: false,
+    canVoiceCall: false,
+    canBasicMessaging: false,
+  }
+}
+
+/**
  * 將 MicroEsim 原生方案物件解析成商城展示格式，包含定價計算與限制分析
  */
 export function parseMicroEsimPlan(
@@ -332,6 +474,9 @@ export function parseMicroEsimPlan(
   // 6. 分析 App 與網路架構使用限制
   const restrictions = analyzePlanRestrictions(plan)
 
+  // 7. 解析降速規格與速率
+  const throttleRule = parseThrottleRule(plan.rule_desc)
+
   return {
     ...plan,
     planType,
@@ -343,5 +488,6 @@ export function parseMicroEsimPlan(
     primaryCountryName: destMeta.name,
     flagEmoji: destMeta.flag,
     restrictions,
+    throttleRule,
   }
 }

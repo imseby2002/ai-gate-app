@@ -6,8 +6,9 @@ import Link from 'next/link'
 import {
   Search, Wifi, ShieldCheck, Zap, Globe, Smartphone, Check, Clock,
   ChevronRight, AlertCircle, ShoppingCart, Sparkles, HelpCircle,
-  QrCode, CreditCard, ArrowRight, CheckCircle2, RefreshCw, X, Radio
+  QrCode, CreditCard, ArrowRight, CheckCircle2, RefreshCw, X, Radio, Gauge
 } from 'lucide-react'
+import { ThrottleRuleInfo } from '@/lib/esim/catalog'
 
 interface Destination {
   code: string
@@ -52,6 +53,7 @@ interface EsimPlan {
   rule_desc: string
   special_desc?: string
   restrictions?: EsimAppRestrictions
+  throttleRule?: ThrottleRuleInfo
 }
 
 export default function EsimShopPage() {
@@ -485,12 +487,25 @@ export default function EsimShopPage() {
                             {plan.day} 天
                           </span>
                         </div>
-                        <h4 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">
-                          {plan.dataTierLabel}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">
+                            {plan.dataTierLabel}
+                          </h4>
+                          {plan.throttleRule && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 border ${
+                              plan.throttleRule.type === 'unlimited_high_speed'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : plan.throttleRule.type === 'terminate'
+                                ? 'bg-slate-100 text-slate-600 border-slate-200'
+                                : 'bg-blue-50 text-blue-700 border-blue-200'
+                            }`}>
+                              {plan.throttleRule.badge}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {isHot && (
-                        <span className="bg-amber-50 text-amber-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                        <span className="bg-amber-50 text-amber-700 text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-200 shrink-0">
                           人氣首選
                         </span>
                       )}
@@ -510,8 +525,14 @@ export default function EsimShopPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400">降速/斷線規則</span>
-                        <span className="font-medium text-slate-700">
-                          {plan.rule_desc.includes('unlimited') ? '用畢輕速吃到飽不斷線' : '用畢停止上網'}
+                        <span className={`font-semibold text-right ${
+                          plan.throttleRule?.type === 'unlimited_high_speed'
+                            ? 'text-emerald-600'
+                            : plan.throttleRule?.type === 'terminate'
+                            ? 'text-slate-600'
+                            : 'text-indigo-600 font-bold'
+                        }`}>
+                          {plan.throttleRule?.shortLabel || (plan.rule_desc.includes('unlimited') ? '用畢輕速吃到飽' : '用畢停止上網')}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -850,6 +871,18 @@ export default function EsimShopPage() {
                 <span className="text-slate-500">有效天數</span>
                 <span className="font-bold text-slate-900">{checkoutPlan.day} 天</span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">降速/超額規格</span>
+                <span className={`font-bold ${
+                  checkoutPlan.throttleRule?.type === 'unlimited_high_speed'
+                    ? 'text-emerald-600'
+                    : checkoutPlan.throttleRule?.type === 'terminate'
+                    ? 'text-slate-700'
+                    : 'text-indigo-600'
+                }`}>
+                  {checkoutPlan.throttleRule?.shortLabel || checkoutPlan.rule_desc}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">單價</span>
                 <div className="flex items-center gap-1.5">
@@ -860,6 +893,30 @@ export default function EsimShopPage() {
                 </div>
               </div>
             </div>
+
+            {/* 降速速率與超額流量詳細說明 */}
+            {checkoutPlan.throttleRule && (
+              <div className="p-3.5 rounded-2xl bg-blue-50/90 border border-blue-200 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-950">
+                    <Gauge className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>降速速率規格：{checkoutPlan.throttleRule.speed}</span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    checkoutPlan.throttleRule.type === 'unlimited_high_speed'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : checkoutPlan.throttleRule.type === 'terminate'
+                      ? 'bg-slate-200 text-slate-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {checkoutPlan.throttleRule.badge}
+                  </span>
+                </div>
+                <p className="text-blue-900/90 text-[11px] leading-relaxed">
+                  {checkoutPlan.throttleRule.description}
+                </p>
+              </div>
+            )}
 
             {/* 重要使用限制與功能支援說明 */}
             <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-200 space-y-2.5 text-xs">
