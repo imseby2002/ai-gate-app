@@ -1496,25 +1496,6 @@ function Unit12CustomerService({
   return (
     <>
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs text-gray-500">
-            {t('u12.subtitle')}
-            <a href="/cs/help" target="_blank" rel="noopener noreferrer" className="ml-2 text-primary font-medium hover:underline">
-              完整設定教學 →
-            </a>
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <a href="/cs/plan"
-            className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
-            style={{ background: 'var(--primary)' }}>
-            <Zap className="h-3.5 w-3.5" />
-            升級方案
-          </a>
-        </div>
-      </div>
       <div className="flex flex-col sm:flex-row gap-5 items-start">
         <nav className={`flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}>
           {/* 折疊/展開按鈕 */}
@@ -1578,6 +1559,33 @@ function Unit12CustomerService({
               </button>
             )
           })}
+
+          {/* 分隔線與底部常用連結（方案 A） */}
+          <div className="hidden sm:block my-2 border-t border-gray-100 w-full" />
+
+          <a
+            href="/cs/plan"
+            title={sidebarCollapsed ? '⚡ 升級方案' : undefined}
+            className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 sm:w-full ${
+              sidebarCollapsed ? 'sm:justify-center' : 'sm:justify-start'
+            } bg-primary/10 text-primary hover:bg-primary/20`}
+          >
+            <Zap className="h-4 w-4 shrink-0 fill-current" />
+            {!sidebarCollapsed && <span className="flex-1 text-left truncate">升級方案</span>}
+          </a>
+
+          <a
+            href="/cs/help"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={sidebarCollapsed ? '完整設定教學' : undefined}
+            className={`px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors flex items-center gap-2 sm:w-full ${
+              sidebarCollapsed ? 'sm:justify-center' : 'sm:justify-start'
+            }`}
+          >
+            <BookOpen className="h-4 w-4 shrink-0 text-gray-400" />
+            {!sidebarCollapsed && <span className="flex-1 text-left truncate">完整設定教學 ↗</span>}
+          </a>
         </nav>
         <div className="flex-1 min-w-0 space-y-5">
 
