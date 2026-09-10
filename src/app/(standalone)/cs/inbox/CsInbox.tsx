@@ -20,6 +20,14 @@ const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
 }
 const plat = (p: string) => PLATFORM_LABELS[p] ?? { name: p, emoji: '🔗' }
 
+function formatCustomerName(name: string | null | undefined, fromId: string): string {
+  if (name && name.trim()) return name.trim()
+  if (fromId.startsWith('U') && fromId.length === 33) {
+    return `LINE 客戶 (${fromId.slice(1, 6)})`
+  }
+  return fromId
+}
+
 interface Conversation {
   platform: string
   from_id: string
@@ -215,7 +223,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-base shrink-0">{p.emoji}</span>
-                        <span className="font-medium truncate">{c.name || c.from_id}</span>
+                        <span className="font-medium truncate">{formatCustomerName(c.name, c.from_id)}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{fmtTime(c.lastMessageAt)}</span>
                     </div>
@@ -251,7 +259,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <button onClick={() => setActive(null)} className="md:hidden text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button>
                     <span className="text-base">{plat(active.platform).emoji}</span>
                     <div className="min-w-0">
-                      <div className="font-semibold truncate">{active.name || active.from_id}</div>
+                      <div className="font-semibold truncate">{formatCustomerName(active.name, active.from_id)}</div>
                       <div className="text-[11px] text-muted-foreground">{plat(active.platform).name} · {active.from_id}</div>
                     </div>
                   </div>
@@ -307,7 +315,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                       value={draft}
                       onChange={e => setDraft(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send() } }}
-                      placeholder={t('replyPlaceholder', { name: active.name || active.from_id })}
+                      placeholder={t('replyPlaceholder', { name: formatCustomerName(active.name, active.from_id) })}
                       rows={1}
                       className="flex-1 resize-none rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 max-h-32"
                     />

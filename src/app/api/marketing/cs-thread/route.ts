@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
   // ── 對話清單 ────────────────────────────────────────────────────────────────
   let q = supabase
     .from('cs_customers')
-    .select('platform, from_id, name, stage, message_count, last_message_at')
+    .select('platform, from_id, name, stage, message_count, last_message_at, facts')
     .eq('user_id', ctx.ownerId)
     .order('last_message_at', { ascending: false })
     .limit(200)
@@ -79,6 +79,85 @@ export async function GET(req: NextRequest) {
 
   const { data: customers, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 自動解析缺漏的客戶名稱（從歷史訊息、訂房確認姓名或 LINE Profile API）並非同步回填
+  const missingList = (customers ?? []).filter(c => !c.name?.trim())
+  if (missingList.length > 0) {
+    const missingIds = missingList.map(c => c.from_id)
+    const nameMap = new Map<string, string>()
+
+    try {
+      const { data: msgRows } = await supabase
+        .from('cs_messages')
+        .select('from_id, from_name')
+        .eq('user_id', ctx.ownerId)
+        .in('from_id', missingIds)
+        .not('from_name', 'is', null)
+        .order('created_at', { ascending: false })
+
+      for (const m of msgRows ?? []) {
+        if (m.from_name && !nameMap.has(m.from_id)) {
+          nameMap.set(m.from_id, m.from_name)
+        }
+      }
+    } catch { /* ignore */ }
+
+    for (const c of missingList) {
+      if (!nameMap.has(c.from_id)) {
+        const facts = c.facts as Record<string, string> | null
+        if (facts?.confirmedName && typeof facts.confirmedName === 'string') {
+          nameMap.set(c.from_id, facts.confirmedName.trim())
+        }
+      }
+    }
+
+    const stillMissingLine = missingList.filter(c => (c.platform === 'line' || c.platform === 'line-oa') && !nameMap.has(c.from_id))
+    if (stillMissingLine.length > 0) {
+      try {
+        const { data: cred } = await supabase
+          .from('social_platform_credentials')
+          .select('credentials')
+          .eq('user_id', ctx.ownerId)
+          .eq('platform', 'line')
+          .maybeSingle()
+        const token = cred?.credentials?.line_channel_access_token || cred?.credentials?.channel_access_token
+        if (token) {
+          const toFetch = stillMissingLine.slice(0, 15)
+          await Promise.allSettled(toFetch.map(async (c) => {
+            try {
+              const res = await fetch(`https://api.line.me/v2/bot/profile/${c.from_id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(3000),
+              })
+              if (res.ok) {
+                const d = await res.json()
+                if (d.displayName) nameMap.set(c.from_id, d.displayName)
+              }
+            } catch { /* ignore */ }
+          }))
+        }
+      } catch { /* ignore */ }
+    }
+
+    const updates: Array<{ from_id: string; name: string }> = []
+    for (const c of customers ?? []) {
+      if (!c.name && nameMap.has(c.from_id)) {
+        c.name = nameMap.get(c.from_id)
+        updates.push({ from_id: c.from_id, name: c.name })
+      }
+    }
+
+    if (updates.length > 0) {
+      void Promise.allSettled(
+        updates.map(u => supabase
+          .from('cs_customers')
+          .update({ name: u.name, updated_at: new Date().toISOString() })
+          .eq('user_id', ctx.ownerId)
+          .eq('from_id', u.from_id)
+        )
+      )
+    }
+  }
 
   const conversations = (customers ?? []).map(c => ({
     platform: c.platform,

@@ -200,8 +200,17 @@ async function logCsMessage(userId: string, platform: string, customerId: string
 }
 
 // LINE 的 userId（U + 32 hex）在畫面上完全看不出是誰，call 一次 Profile API 換顯示名稱。
-// 先查 cs_messages 有沒有存過這個客人的名字，省下重複呼叫 LINE API。
+// 先查 cs_customers 與 cs_messages 有沒有存過這個客人的名字，省下重複呼叫 LINE API。
 async function resolveLineDisplayName(userId: string, customerId: string, token: string): Promise<string | undefined> {
+  try {
+    const { data: cust } = await getServiceClient()
+      .from('cs_customers').select('name')
+      .eq('user_id', userId).eq('from_id', customerId)
+      .not('name', 'is', null)
+      .maybeSingle()
+    if (cust?.name) return cust.name as string
+  } catch { /* 表可能尚未建立 */ }
+
   try {
     const { data } = await getServiceClient()
       .from('cs_messages').select('from_name')
@@ -648,7 +657,7 @@ async function replyToCustomer(
     else if (stage === 'new') stage = 'inquiring'
     await getServiceClient().from('cs_customers').upsert({
       user_id: userId, platform, from_id: customerId, industry: knowledge.industry,
-      name: cust?.name ?? null,
+      name: fromName || cust?.name || null,
       stage,
       price_ask_count: (cust?.price_ask_count ?? 0) + (isPriceAskNow ? 1 : 0),
       message_count: (cust?.message_count ?? 0) + 1,
@@ -1009,12 +1018,15 @@ async function saveConfirmedFacts(
     const sb = getServiceClient()
     const { data: existing } = await sb
       .from('cs_customers')
-      .select('facts')
+      .select('facts, name')
       .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry)
       .maybeSingle()
     const merged = { ...(existing?.facts as Record<string, string> | null ?? {}), ...facts }
+    const confirmedName = typeof facts.confirmedName === 'string' && facts.confirmedName.trim() ? facts.confirmedName.trim() : null
+    const nameToSet = confirmedName || existing?.name || null
     await sb.from('cs_customers').upsert({
       user_id: userId, platform, from_id: customerId, industry, facts: merged,
+      ...(nameToSet ? { name: nameToSet } : {}),
       last_message_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,platform,from_id,industry' })
   } catch { /* 不中斷主流程 */ }
@@ -1658,7 +1670,7 @@ async function extractOrderClueFromImage(
           role: 'user',
           content: [
             { type: 'text' as const, text: '這張圖片可能是訂房平台的訂單畫面截圖。請找出圖中的「訂單號碼/確認碼」與「入住旅客姓名」，只回傳 JSON：{"order_number": "字串或null", "guest_name": "字串或null"}。看不出來的欄位填 null，不要猜測。只回傳 JSON，不要其他說明。' },
-            { type: 'image' as const, image: new Uint8Array(imageBuffer), mimeType: imageMimeType },
+            { type: 'image' as const, image: new Uint8Array(imageBuffer), mimeType: imageMimeType } as any,
           ],
         }],
       })
