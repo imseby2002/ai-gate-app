@@ -71,5 +71,29 @@ export async function buildBookingModuleQuote(
   const lines = quote.perNight.map(p => `  ${p.date} $${p.amount.toLocaleString()}`).join('\n')
   const extra = quote.extraGuestFee > 0 ? `\n  加人費 $${quote.extraGuestFee.toLocaleString()}` : ''
   const warn = quote.warnings.length ? `\n（${quote.warnings.join('；')}）` : ''
-  return `【系統精算房價（權威，與線上訂房同價；請原文引用此金額，禁止自行加減或重算）】\n${prop.name}　${extracted.checkIn} ~ ${extracted.checkOut}（${quote.nights} 晚）\n${lines}${extra}\n── 總計 $${quote.total.toLocaleString()} ${quote.currency}\n（這是定價，客人若猶豫或嫌貴，才依「促成工具箱」提供折扣或贈品，讓客人感覺比訂房網划算；未猶豫前不主動降價。）${warn}`
+
+  if (quote.hasPromotionalDiscount) {
+    const promoNames = quote.promotionsApplied.join('、') || '早鳥/晚鳥專案特惠'
+    return `【系統精算房價（權威資料，請原文引用此金額，禁止自行加減或重算）】
+房型：${prop.name}
+日期：${extracted.checkIn} ~ ${extracted.checkOut}（${quote.nights} 晚）
+官方原價（定價／牌價）：$${quote.baseTotal.toLocaleString()} ${quote.currency}
+專案特惠價：$${quote.total.toLocaleString()} ${quote.currency}（已享 ${promoNames}）
+每日特惠明細：
+${lines}${extra}
+── 實收總計：$${quote.total.toLocaleString()} ${quote.currency}
+
+【極重要：優惠與補助互斥規定（最高原則，嚴禁重複疊加折扣）】
+1. 本民宿所有優惠專案（早鳥優惠、晚鳥特惠、促成折扣）與各類政府補助（國旅補助、振興抵用券等）採【獨立計算，二擇一使用，嚴禁重複疊加折扣】！
+2. 若客人要申請使用「國旅補助」：房價一律必須以【官方原價 $${quote.baseTotal.toLocaleString()} 元】計算，入住當天憑身分證正本由管家現場核銷折抵，【絕對嚴禁】在專案特惠價 $${quote.total.toLocaleString()} 上再重複扣除補助（例如不可扣成更低的雙重折扣價）！
+3. 若客人選擇享有【${promoNames}】：直接享有專案特惠價 $${quote.total.toLocaleString()} 元，但【恕無法再申請國旅補助】或折抵其他專案！
+4. 當客人詢問價格且提到國旅補助、或詢問早鳥等優惠方案時，請務必主動禮貌說明「優惠與補助恕無法重複併用，需二擇一」，並清楚列出兩種方案供客人評估何者最划算（例如：「方案 A：使用國旅補助，依原價 $${quote.baseTotal.toLocaleString()} 折抵補助款」vs「方案 B：享有 ${promoNames} 特惠價 $${quote.total.toLocaleString()}」，由客人決定）！${warn}`
+  }
+
+  return `【系統精算房價（權威，與線上訂房同價；請原文引用此金額，禁止自行加減或重算）】
+房型：${prop.name}
+日期：${extracted.checkIn} ~ ${extracted.checkOut}（${quote.nights} 晚）
+${lines}${extra}
+── 總計 $${quote.total.toLocaleString()} ${quote.currency}
+（這是官方牌價／原價。若客人欲申請「國旅補助」，以此原價為準，入住時憑身分證正本由管家現場核銷折抵。客人若猶豫或嫌貴，才依「促成工具箱」提供折扣或贈品，促成折扣恕不與國旅補助重複併用；未猶豫前不主動降價。）${warn}`
 }

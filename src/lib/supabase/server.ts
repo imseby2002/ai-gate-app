@@ -23,17 +23,32 @@ async function clientIp(): Promise<string | undefined> {
   }
 }
 
+async function authHeader(): Promise<string | undefined> {
+  try {
+    const h = await headers()
+    return h.get('authorization') || undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function createClient() {
   const cookieStore = await cookies()
   const domain = await cookieDomain()
   const ip = await clientIp()
+  const auth = await authHeader()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       ...(domain ? { cookieOptions: { domain } } : {}),
-      ...(ip ? { global: { headers: { 'Sb-Forwarded-For': ip } } } : {}),
+      global: {
+        headers: {
+          ...(ip ? { 'Sb-Forwarded-For': ip } : {}),
+          ...(auth ? { 'Authorization': auth } : {}),
+        },
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll()
