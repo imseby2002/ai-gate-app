@@ -821,7 +821,8 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   let externalDataSection = ''
   if (sheetResults.length > 0) {
-    const guard = (detectedOrderNum && checkin.before)
+    const hasBnbCheckinResult = sheetResults.some(r => r.includes('【入住資訊查詢結果】'))
+    const guard = (detectedOrderNum && checkin.before && !hasBnbCheckinResult)
       ? `\n\n【系統強制指令——最高優先】目前台灣時間 ${checkin.nowHHMM} 尚未到入住時間（${checkin.checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；你只能告知客人：入住時間為今日 ${checkin.checkinTime}，請於該時間後再輸入訂單號碼查詢。`
       : ''
     externalDataSection = guard + `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`

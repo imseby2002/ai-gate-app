@@ -121,6 +121,119 @@ export async function checkBeforeCheckin(supabase: any, userId: string): Promise
   return { before: nowHHMM < checkinTime, checkinTime, nowHHMM }
 }
 
+export type CheckinTimingEvaluation =
+  | { canReleasePassword: false; reason: 'FUTURE'; checkIn: string; checkOut: string; checkinTime: string; nowHHMM: string }
+  | { canReleasePassword: false; reason: 'SAME_DAY_EARLY'; checkIn: string; checkOut: string; checkinTime: string; nowHHMM: string }
+  | { canReleasePassword: false; reason: 'EXPIRED'; checkIn: string; checkOut: string; checkinTime: string; nowHHMM: string }
+  | { canReleasePassword: true; reason: 'READY'; checkIn: string; checkOut: string; checkinTime: string; nowHHMM: string }
+
+// 依入住日、退房日與入住時間嚴格判斷密碼是否可發放
+export function evaluateCheckinTiming(
+  checkIn: string,
+  checkOut: string,
+  checkinTime: string = '15:00',
+  referenceDate?: string,
+  referenceHHMM?: string
+): CheckinTimingEvaluation {
+  const todayDate = referenceDate || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+  const nowHHMM = referenceHHMM || new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit' })
+  const cTime = /^\d{2}:\d{2}$/.test(checkinTime) ? checkinTime : '15:00'
+
+  // 1. 尚未到入住日期（例如 9/9 查詢 9/11 入住的訂單）
+  if (todayDate < checkIn) {
+    return { canReleasePassword: false, reason: 'FUTURE', checkIn, checkOut, checkinTime: cTime, nowHHMM }
+  }
+
+  // 2. 入住日當天，但尚未到下午入住時間（例如 9/11 早上 11:00 查詢 15:00 入住）
+  if (todayDate === checkIn && nowHHMM < cTime) {
+    return { canReleasePassword: false, reason: 'SAME_DAY_EARLY', checkIn, checkOut, checkinTime: cTime, nowHHMM }
+  }
+
+  // 3. 超過退房日（住宿期間已結束）
+  if (checkOut && todayDate > checkOut) {
+    return { canReleasePassword: false, reason: 'EXPIRED', checkIn, checkOut, checkinTime: cTime, nowHHMM }
+  }
+
+  // 4. 入住期間內且已達入住時間（或入住次日退房日前）
+  return { canReleasePassword: true, reason: 'READY', checkIn, checkOut, checkinTime: cTime, nowHHMM }
+}
+
+export function formatFutureBookingPrompt(
+  orderLabel: string,
+  guestName: string | null | undefined,
+  checkIn: string,
+  checkOut: string,
+  roomDesc: string | null | undefined,
+  checkinTime: string
+): string {
+  const realName = guestName && guestName !== '(Not available)' ? guestName : null
+  const lines = [
+    `【入住資訊查詢結果】`,
+    `找到${orderLabel}的預訂資訊：`,
+    realName ? `・旅客姓名：${realName}` : null,
+    `・入住日期：${checkIn}`,
+    `・退房日期：${checkOut}`,
+    roomDesc ? `・預訂房型：${roomDesc}` : null,
+    ``,
+    `【尚未到入住日期・密碼發放說明】`,
+    `・目前尚未到入住日期（您的入住日為 ${checkIn}）。`,
+    `・為維護現場住客安全、隱私與房務清潔作業，大門與房門密碼將於【入住當天（${checkIn}）下午 ${checkinTime}】準時開放發放。`,
+    `・請於入住日（${checkIn}）下午 ${checkinTime} 後，再次輸入訂單號碼或於對話中提出入住，系統將自動為您提供密碼與詳細入住指引。`,
+    `（【系統最高安全指令】：此訂單入住日為 ${checkIn}，目前尚未到入住日，嚴禁提供、推測或捏造任何房門密碼或大門密碼。必須向客人確認已找到此筆預訂，並清楚告知密碼將於入住日 ${checkIn} 下午 ${checkinTime} 開放發放，請客人於該時間後再次輸入訂單號碼或詢問入住）`,
+  ].filter(line => line !== null)
+  return lines.join('\n')
+}
+
+export function formatSameDayEarlyPrompt(
+  orderLabel: string,
+  guestName: string | null | undefined,
+  checkIn: string,
+  checkOut: string,
+  roomDesc: string | null | undefined,
+  checkinTime: string,
+  nowHHMM: string
+): string {
+  const realName = guestName && guestName !== '(Not available)' ? guestName : null
+  const lines = [
+    `【入住資訊查詢結果】`,
+    `找到${orderLabel}的今日入住資訊：`,
+    realName ? `・旅客姓名：${realName}` : null,
+    `・入住日期：今日 ${checkIn}`,
+    `・退房日期：${checkOut}`,
+    roomDesc ? `・預訂房型：${roomDesc}` : null,
+    ``,
+    `【尚未到入住時間・密碼發放說明】`,
+    `・您好！您的入住日為今日（${checkIn}），目前台灣時間為 ${nowHHMM}，尚未到入住時間（下午 ${checkinTime}）。`,
+    `・房務人員正在為您進行房間清潔與消毒整備，大門與房門密碼將於【今日下午 ${checkinTime}】準時開放提供。`,
+    `・請您於今日下午 ${checkinTime} 後再次輸入訂單號碼或提出入住，系統將立即提供房門與大門密碼及詳細入住指引。若需提前寄放行李，請聯繫工作人員。`,
+    `（【系統最高安全指令】：今日為入住日，但目前時間 ${nowHHMM} 尚未到入住時間 ${checkinTime}，嚴禁提供任何房門或大門密碼。請告知客人於今日 ${checkinTime} 後再次輸入訂單號碼或詢問入住即可取得密碼）`,
+  ].filter(line => line !== null)
+  return lines.join('\n')
+}
+
+export function formatExpiredBookingPrompt(
+  orderLabel: string,
+  guestName: string | null | undefined,
+  checkIn: string,
+  checkOut: string,
+  roomDesc: string | null | undefined
+): string {
+  const realName = guestName && guestName !== '(Not available)' ? guestName : null
+  const lines = [
+    `【入住資訊查詢結果】`,
+    `找到${orderLabel}的訂單紀錄：`,
+    realName ? `・旅客姓名：${realName}` : null,
+    `・入住日期：${checkIn}　退房日期：${checkOut}`,
+    roomDesc ? `・房間：${roomDesc}` : null,
+    ``,
+    `【此訂單住宿期間已結束】`,
+    `・該訂單入住日為 ${checkIn}，退房日為 ${checkOut}，目前已結束住宿並完成退房。`,
+    `・若有遺留物品確認或其他協助需求，請聯繫工作人員為您服務。`,
+    `（【系統指令】：此訂單住宿期間已結束，嚴禁提供任何門鎖密碼）`,
+  ].filter(line => line !== null)
+  return lines.join('\n')
+}
+
 // 輔助函式：取得房型與大門密碼。若當日記錄尚未產生（或欄位為空），依系統「延續之後日期」原則，
 // 自動回退尋找該房型最近一次設定過的有效密碼，避免因當日尚未開啟管理後台而誤報「尚未設定」。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,39 +293,106 @@ async function resolveRoomAndGatePassword(
   }
 }
 
-// 依訂單號碼從「訂單系統」(bnb_daily_records → bookings) 查今日入住資訊與門鎖密碼。
-// cs-chat 沙盒與 cs-webhook 生產共用。
-// 與訂房模組的串接（讓 CS 讀訂房每日入住資料）是訂房 PRO 以上才有的功能，
-// 沒有訂房方案或方案不足時直接回 null，讓呼叫端照既有「查無資料」流程處理，不額外洩露方案資訊給訪客。
+// 依訂單號碼從「訂單系統」(bookings → bnb_daily_records) 查入住資訊與門鎖密碼。
+// 嚴格執行入住日期與時間控管：未到入住日或未到下午 15:00 絕不提供任何密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function queryBnbCheckin(supabase: any, userId: string, orderNum: string): Promise<string | null> {
   const { features } = await getBookingEntitlements(supabase, userId)
   if (!features.csIntegration) return null
 
   const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+  const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
 
-  // 入住時間（民宿資料可設，預設 15:00）；未到入住時間不提供密碼
-  const { before: beforeCheckin, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
-  const notYetMsg = (label: string) =>
-    `【入住資訊查詢結果】\n找到訂單「${orderNum}」${label}，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再輸入訂單號碼查詢房門與大門密碼。\n（嚴禁提供任何密碼或房號數字）`
-
-  // 優先：直接從 daily_records 的 order_number 欄位比對
-  const { data: rec } = await supabase
-    .from('bnb_daily_records')
-    .select('room_name, room_password, gate_password, guest_name')
+  // 1. 優先查 bookings 訂單表（支援一組單號對應多個房型）
+  const { data: bookingRows } = await supabase
+    .from('bookings')
+    .select('property_id, guest_name, check_in, check_out, status')
     .eq('user_id', userId)
-    .eq('date', todayDate)
-    .eq('order_number', orderNum)
-    .maybeSingle()
+    .eq('platform_booking_id', orderNum)
 
-  if (rec) {
-    if (beforeCheckin) return notYetMsg('的今日入住資訊')
-    const pw = await resolveRoomAndGatePassword(supabase, userId, rec.room_name, rec.room_password, rec.gate_password, todayDate)
+  if (bookingRows && bookingRows.length > 0) {
+    const checkIns = bookingRows.map((b: any) => b.check_in).filter(Boolean).sort()
+    const checkOuts = bookingRows.map((b: any) => b.check_out).filter(Boolean).sort()
+    const checkIn = checkIns[0] || todayDate
+    const checkOut = checkOuts[checkOuts.length - 1] || checkIn
+    const guestName = bookingRows[0].guest_name
+
+    const roomNames: string[] = []
+    for (const b of bookingRows) {
+      if (b.property_id) {
+        const { data: prop } = await supabase.from('properties').select('name').eq('id', b.property_id).maybeSingle()
+        if (prop?.name) roomNames.push(prop.name)
+      }
+    }
+    const roomDesc = roomNames.length ? roomNames.join('、') : null
+
+    const timing = evaluateCheckinTiming(checkIn, checkOut, checkinTime, todayDate, nowHHMM)
+    if (!timing.canReleasePassword) {
+      if (timing.reason === 'FUTURE') {
+        return formatFutureBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime)
+      }
+      if (timing.reason === 'SAME_DAY_EARLY') {
+        return formatSameDayEarlyPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime, nowHHMM)
+      }
+      if (timing.reason === 'EXPIRED') {
+        return formatExpiredBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc)
+      }
+    }
+
+    const lines = [
+      `【入住資訊查詢結果】`,
+      `找到訂單「${orderNum}」：`,
+      ...await formatBookingsWithPassword(supabase, userId, bookingRows, todayDate),
+    ]
+    return lines.join('\n')
+  }
+
+  // 2. 備用：從 bnb_daily_records 查 order_number
+  const { data: dailyRows } = await supabase
+    .from('bnb_daily_records')
+    .select('date, room_name, room_password, gate_password, guest_name')
+    .eq('user_id', userId)
+    .eq('order_number', orderNum)
+    .order('date', { ascending: true })
+
+  if (dailyRows && dailyRows.length > 0) {
+    const checkIn = dailyRows[0].date
+    const lastDate = new Date(dailyRows[dailyRows.length - 1].date)
+    lastDate.setDate(lastDate.getDate() + 1)
+    const checkOut = lastDate.toLocaleDateString('sv-SE')
+    const guestName = dailyRows[0].guest_name
+    const roomNames = Array.from(new Set(dailyRows.map((r: any) => r.room_name).filter(Boolean)))
+    const roomDesc = roomNames.length ? roomNames.join('、') : null
+
+    const timing = evaluateCheckinTiming(checkIn, checkOut, checkinTime, todayDate, nowHHMM)
+    if (!timing.canReleasePassword) {
+      if (timing.reason === 'FUTURE') {
+        return formatFutureBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime)
+      }
+      if (timing.reason === 'SAME_DAY_EARLY') {
+        return formatSameDayEarlyPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc, checkinTime, nowHHMM)
+      }
+      if (timing.reason === 'EXPIRED') {
+        return formatExpiredBookingPrompt(`訂單「${orderNum}」`, guestName, checkIn, checkOut, roomDesc)
+      }
+    }
+
+    // 已到入住時間，可提供密碼
+    const todayDaily = dailyRows.find((r: any) => r.date === todayDate) || dailyRows[0]
+    const pw = await resolveRoomAndGatePassword(
+      supabase,
+      userId,
+      todayDaily.room_name,
+      todayDaily.room_password,
+      todayDaily.gate_password,
+      todayDate
+    )
+
     const lines = [
       `【入住資訊查詢結果】`,
       `找到訂單「${orderNum}」的今日入住資訊：`,
-      rec.guest_name ? `・旅客姓名：${rec.guest_name}` : null,
-      `・房間：${rec.room_name || '（尚未設定，請聯繫工作人員）'}`,
+      todayDaily.guest_name ? `・旅客姓名：${todayDaily.guest_name}` : null,
+      `・房間：${todayDaily.room_name || '（尚未設定，請聯繫工作人員）'}`,
       `・房門密碼：${pw.room_password}`,
       `・大門密碼：${pw.gate_password}`,
       `（以上每一項請逐條列出給客人，不可省略任何一項或濃縮成一句話；資料為系統即時資料，請直接引用，禁止修改或捏造）`,
@@ -220,46 +400,33 @@ export async function queryBnbCheckin(supabase: any, userId: string, orderNum: s
     return lines
   }
 
-  // 備用：從 bookings 查訂單，再交叉查 daily_records。
-  // 一張訂單可能訂了多個房型（同一訂單號對應多筆 bookings，見 migration 090），
-  // 所以這裡查全部相符的訂單，逐一列出房間與密碼，不能只取第一筆。
-  const { data: bookingRows } = await supabase
-    .from('bookings')
-    .select('property_id, guest_name, check_in, check_out')
-    .eq('user_id', userId)
-    .eq('platform_booking_id', orderNum)
-
-  // 系統確實有串接訂房功能、也真的查過了，但查無此訂單——一定要明講「查無資料」，
-  // 絕對不能讓呼叫端什麼都不回，逼 AI 自己編一組密碼出來給客人。
-  // 訂房平台顯示給客人的訂單號，跟平台同步給民宿系統的訂單號常常不是同一組
-  // （尤其 Agoda/Booking.com），查無資料時要引導客人改用姓名或電話查詢，而不是叫他再試一次同一組號碼。
-  if (!bookingRows?.length) {
-    return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
-  }
-  if (beforeCheckin) return notYetMsg('')
-
-  const lines = [
-    `【入住資訊查詢結果】`,
-    `找到訂單「${orderNum}」：`,
-    ...await formatBookingsWithPassword(supabase, userId, bookingRows, todayDate),
-  ]
-  return lines.join('\n')
+  // 3. 兩者皆查無資料
+  return `【入住資訊查詢結果】\n查無訂單「${orderNum}」的資料，系統中沒有這筆訂單（有些訂房平台顯示給客人的訂單號跟系統收到的不同）。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
 }
 
 interface MatchedBookingRow { property_id: string | null; guest_name?: string | null; guest_phone?: string | null; check_in: string; check_out: string; status?: string }
 
-// 把已核對身份的訂單列出房型、入住/退房日期與門鎖密碼（今日的 daily_records）。
-// 呼叫端必須先確認「這是唯一一筆、身份已核對相符的訂單」才能呼叫這個函式——
-// 匹配到多筆（姓名/電話撞號）時不能呼叫這個函式，只能列出摘要讓客人自己指認，不可洩漏密碼。
+// 把已核對身份的訂單列出房型、入住/退房日期與門鎖密碼。
+// 呼叫端必須先確認身份已核對相符且入住時間已到。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function formatBookingsWithPassword(supabase: any, userId: string, rows: MatchedBookingRow[], todayDate: string): Promise<string[]> {
   const lines: string[] = []
-  // Airbnb 的日曆同步（iCal）基於隱私政策不會提供真實姓名，guest_name 會是固定字串
-  // 「(Not available)」——不能把這個佔位字串當成真實姓名唸給客人聽
   const realName = rows[0].guest_name && rows[0].guest_name !== '(Not available)' ? rows[0].guest_name : ''
   lines.push(realName ? `・旅客姓名：${realName}` : '')
   lines.push(`・入住：${rows[0].check_in}　退房：${rows[0].check_out}`)
   if (rows.length > 1) lines.push(`・共訂了 ${rows.length} 個房型，以下逐一列出：`)
+
+  // 雙重安全防禦：若今日早於入住日，嚴禁輸出真實密碼
+  if (todayDate < rows[0].check_in) {
+    for (const booking of rows) {
+      if (booking.property_id) {
+        const { data: prop } = await supabase.from('properties').select('name').eq('id', booking.property_id).maybeSingle()
+        if (prop?.name) lines.push(`・預訂房間：${prop.name}`)
+      }
+    }
+    lines.push(`・門鎖密碼：（尚未到入住日，密碼將於入住當日 15:00 開放發放）`)
+    return lines.filter(Boolean)
+  }
 
   for (const booking of rows) {
     if (booking.property_id) {
@@ -288,9 +455,8 @@ async function formatBookingsWithPassword(supabase: any, userId: string, rows: M
 }
 
 // 依手機號碼查訂單（比對末 9 碼，容忍 +886 / 0 開頭等格式差異）。
-// 手機號碼視為與訂單號碼同等強度的身份憑證——比對到「唯一一筆」訂單即可直接給密碼；
-// 比對到多筆（例如同一支手機訂了好幾間房、或號碼太短導致撞號）時，一律只列清單不給密碼，
-// 讓客人自己指認是哪一筆，避免把別人的房號密碼給錯人。
+// 手機號碼視為與訂單號碼同等強度的身份憑證——比對到「唯一一筆」訂單即可在到達入住時間後給密碼；
+// 未到入住日或未到 15:00 嚴禁給密碼；比對到多筆時只列清單不給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function queryBookingByPhone(supabase: any, userId: string, rawPhone: string): Promise<string | null> {
   const { features } = await getBookingEntitlements(supabase, userId)
@@ -318,10 +484,7 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
   const matched = (candidates ?? []).filter((c: any) => (c.guest_phone ?? '').replace(/\D/g, '').endsWith(suffix))
   if (!matched.length) return notFoundMsg
 
-  const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
-  if (before) {
-    return `【入住資訊查詢結果】\n找到電話「${rawPhone}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
-  }
+  const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
 
   if (matched.length > 1) {
     const lines = [`【入住資訊查詢結果】`, `找到 ${matched.length} 筆與電話「${rawPhone}」相符的訂單，請客人提供訂房姓名或訂單號碼以確認是哪一筆：`]
@@ -329,6 +492,26 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
     for (const b of matched.slice(0, 5)) lines.push(`・${b.guest_name ?? '（無姓名）'}｜入住 ${b.check_in} 退房 ${b.check_out}｜狀態：${b.status}`)
     lines.push(`（比對到多筆前，嚴禁提供任何一筆的密碼或房號；務必先讓客人自己指認）`)
     return lines.join('\n')
+  }
+
+  const b = matched[0]
+  let roomName = ''
+  if (b.property_id) {
+    const { data: prop } = await supabase.from('properties').select('name').eq('id', b.property_id).maybeSingle()
+    roomName = prop?.name ?? ''
+  }
+
+  const timing = evaluateCheckinTiming(b.check_in, b.check_out, checkinTime, todayDate, nowHHMM)
+  if (!timing.canReleasePassword) {
+    if (timing.reason === 'FUTURE') {
+      return formatFutureBookingPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime)
+    }
+    if (timing.reason === 'SAME_DAY_EARLY') {
+      return formatSameDayEarlyPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime, nowHHMM)
+    }
+    if (timing.reason === 'EXPIRED') {
+      return formatExpiredBookingPrompt(`電話「${rawPhone}」`, b.guest_name, b.check_in, b.check_out, roomName)
+    }
   }
 
   const lines = [`【入住資訊查詢結果】`, `找到電話「${rawPhone}」的訂單：`, ...await formatBookingsWithPassword(supabase, userId, matched, todayDate)]
@@ -426,10 +609,28 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const group = orderNum ? dailyCandidates.filter((c: any) => c.order_number === orderNum) : dailyMatched
 
-        const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
-        if (before) {
-          return `【訂單查詢結果】\n找到旅客「${lookupName}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
+        const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
+        const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+        const dates = (group as any[]).map(r => r.date).filter(Boolean).sort()
+        const checkIn = dates[0] || todayDate
+        const lastDate = new Date(dates[dates.length - 1] || checkIn)
+        lastDate.setDate(lastDate.getDate() + 1)
+        const checkOut = lastDate.toLocaleDateString('sv-SE')
+        const roomDesc = Array.from(new Set((group as any[]).map(r => r.room_name).filter(Boolean))).join('、')
+
+        const timing = evaluateCheckinTiming(checkIn, checkOut, checkinTime, todayDate, nowHHMM)
+        if (!timing.canReleasePassword) {
+          if (timing.reason === 'FUTURE') {
+            return formatFutureBookingPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc, checkinTime)
+          }
+          if (timing.reason === 'SAME_DAY_EARLY') {
+            return formatSameDayEarlyPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc, checkinTime, nowHHMM)
+          }
+          if (timing.reason === 'EXPIRED') {
+            return formatExpiredBookingPrompt(`旅客「${lookupName}」`, dailyMatched[0].guest_name, checkIn, checkOut, roomDesc)
+          }
         }
+
         const lines = [`【訂單查詢結果】`, `找到旅客「${lookupName}」的入住資訊：`, `・旅客姓名：${dailyMatched[0].guest_name}`]
         if (group.length > 1) lines.push(`・共訂了 ${group.length} 個房型，以下逐一列出：`)
         for (const r of group as any[]) {
@@ -487,11 +688,28 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   // 一律先跟客人核對候選姓名。比對到多筆（同名撞號）也不可洩漏，只列摘要讓客人自己指認。
   if (matched.length === 1) {
     if (norm(matched[0].guest_name ?? '') !== n) return buildNameVerifyPrompt(matched[0].guest_name)
-    const { before, checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
-    if (before) {
-      return `【訂單查詢結果】\n找到旅客「${lookupName}」的訂單，但目前台灣時間 ${nowHHMM} 尚未到入住時間（${checkinTime}）。\n請告知客人：入住時間為今日 ${checkinTime}，請於 ${checkinTime} 後再查詢。\n（嚴禁提供任何密碼或房號數字）`
-    }
+    const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
     const todayDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' })
+    const b = matched[0]
+    let roomName = ''
+    if (b.property_id) {
+      const { data: prop } = await supabase.from('properties').select('name').eq('id', b.property_id).maybeSingle()
+      roomName = prop?.name ?? ''
+    }
+
+    const timing = evaluateCheckinTiming(b.check_in, b.check_out, checkinTime, todayDate, nowHHMM)
+    if (!timing.canReleasePassword) {
+      if (timing.reason === 'FUTURE') {
+        return formatFutureBookingPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime)
+      }
+      if (timing.reason === 'SAME_DAY_EARLY') {
+        return formatSameDayEarlyPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName, checkinTime, nowHHMM)
+      }
+      if (timing.reason === 'EXPIRED') {
+        return formatExpiredBookingPrompt(`旅客「${lookupName}」`, b.guest_name, b.check_in, b.check_out, roomName)
+      }
+    }
+
     const lines = [`【訂單查詢結果】`, `找到旅客「${lookupName}」的訂單：`, ...await formatBookingsWithPassword(supabase, userId, matched, todayDate)]
     return lines.join('\n')
   }

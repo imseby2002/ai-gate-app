@@ -626,7 +626,7 @@ async function replyToCustomer(
     cust = (data as CsCustomerRow | null) ?? null
   } catch { /* 表可能尚未建立 */ }
 
-  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at)
+  const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, string> | undefined))
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply)
   const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit)
@@ -1686,6 +1686,7 @@ async function getAIReply(
   platform = '',
   customerId = '',
   discountAlreadyOffered = false,
+  customerFacts?: Record<string, string>,
 ): Promise<string> {
   const FALLBACK = '感謝您的訊息，我們的客服人員將盡快與您聯繫。'
 
@@ -1866,6 +1867,37 @@ async function getAIReply(
                 currentLookupFailed = byName.includes('查無')
                 if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: message.trim() })
                 externalDataSection = `\n\n${byName}${externalDataSection}`
+              }
+            } catch { /* 不中斷主流程 */ }
+          }
+        }
+      }
+
+      // 客人之前已提供過訂單號碼或手機（儲存於 customerFacts），若本輪對話提出入住或詢問密碼需求（例如「我到了」「我要辦理入住」「請問密碼」），
+      // 自動引用已知身分查詢入住資訊；若已到入住日 15:00 後自動給密碼，若未到入住日/時間則自動提醒，免去客人重複打同一組號碼的困擾。
+      if (!orderLookupDone && !passwordFromDatasource && customerFacts) {
+        const hasCheckinIntent = /入住|密碼|房號|開門|check\s*in|鑰匙|門鎖|進房|辦理入住|到(了|門口|現場)/i.test(message)
+        if (hasCheckinIntent) {
+          if (customerFacts.orderNumber) {
+            try {
+              const savedOrderNum = customerFacts.orderNumber
+              const bnbResult = await queryBnbCheckin(getServiceClient(), userId, savedOrderNum)
+              if (bnbResult && !bnbResult.includes('查無')) {
+                orderLookupDone = true
+                currentLookupKind = 'order'
+                currentLookupFailed = false
+                externalDataSection = `\n\n${bnbResult}${externalDataSection}`
+              }
+            } catch { /* 不中斷主流程 */ }
+          } else if (customerFacts.phone) {
+            try {
+              const savedPhone = customerFacts.phone
+              const byPhone = await queryBookingByPhone(getServiceClient(), userId, savedPhone)
+              if (byPhone && !byPhone.includes('查無')) {
+                orderLookupDone = true
+                currentLookupKind = 'phone'
+                currentLookupFailed = false
+                externalDataSection = `\n\n${byPhone}${externalDataSection}`
               }
             } catch { /* 不中斷主流程 */ }
           }
