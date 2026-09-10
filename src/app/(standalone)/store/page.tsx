@@ -36,6 +36,17 @@ const STORE_FEATURES: StoreFeature[] = [
     tags: ['10層全景診斷', '現場視覺AI', '動線工效', '90秒清潔'],
   },
   {
+    href: '/repair?tab=ai&mode=store',
+    title: '門市設備快速排查 AI',
+    subtitle: 'Equipment Diagnostic Assistant',
+    description: '封口機、果糖機、萃茶機與 POS 出單機故障免拆機快速引導、防呆安全與一鍵轉報修。',
+    icon: Wrench,
+    color: 'text-amber-600 dark:text-amber-400',
+    chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    ring: 'hover:border-amber-500/60 ring-1 ring-amber-500/30',
+    tags: ['免拆機排查', '3分鐘診斷', '安全防呆', '一鍵報修'],
+  },
+  {
     href: '/store-reports',
     title: '門市報表',
     subtitle: 'Store Reports & Profit',
@@ -193,7 +204,35 @@ export default function StoreDepartmentHubPage() {
         </Link>
       </div>
 
-      {/* 7 大核心功能卡片網格 */}
+      {/* 門市設備快速排查 AI 快捷通道 */}
+      <div className="p-4 rounded-2xl border bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+            <Wrench className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-foreground">
+                ⚡ 門市設備快速排查 AI (免拆機引導・一鍵報修)
+              </h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold">
+                水吧 / POS / IT
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              封口機 E01/E04、果糖機出糖不準、出單機卡紙、錢箱彈不開？現場免拆機 3 步快速排查，若無法解決一鍵送出工單！
+            </p>
+          </div>
+        </div>
+        <Link href="/repair?tab=ai&mode=store" className="shrink-0 self-start sm:self-auto">
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold gap-1.5 rounded-xl shadow-xs">
+            開始設備排查
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+      </div>
+
+      {/* 8 大核心功能卡片網格 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STORE_FEATURES.map(f => {
           const Icon = f.icon

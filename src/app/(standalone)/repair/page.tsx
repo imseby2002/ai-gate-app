@@ -28,15 +28,32 @@ function warrantyBadge(days: number | null, until: string | null) {
   return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${cls}`}>{txt}</span>
 }
 
+import RepairAIAssistantTab from '@/components/repair/RepairAIAssistantTab'
+import RepairKnowledgeTab from '@/components/repair/RepairKnowledgeTab'
+import type { RepairMode } from '@/lib/types/repair-ai'
+import { Sparkles, BookOpen } from 'lucide-react'
+
 // ─────────────────────────── 頁面 ───────────────────────────
-type Tab = 'orders' | 'equipment'
+type Tab = 'orders' | 'ai' | 'knowledge' | 'equipment'
 
 export default function RepairPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('orders')
+  const [initialAiMode, setInitialAiMode] = useState<RepairMode>('store')
 
   useEffect(() => {
     fetch('/api/repair/orders').then(r => setAllowed(r.status !== 403))
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      const t = sp.get('tab')
+      if (t === 'ai' || t === 'knowledge' || t === 'equipment' || t === 'orders') {
+        setTab(t as Tab)
+      }
+      const m = sp.get('mode')
+      if (m === 'store' || m === 'technician') {
+        setInitialAiMode(m as RepairMode)
+      }
+    }
   }, [])
 
   if (allowed === false) return (
@@ -50,18 +67,35 @@ export default function RepairPage() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Wrench className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">維修管理</h1>
-          <p className="text-sm text-muted-foreground">報修工單、設備資產台帳</p>
+          <h1 className="text-2xl font-bold">維修管理與機電 AI</h1>
+          <p className="text-sm text-muted-foreground">報修工單、維修 AI 助理 (雙模式)、設備手冊 RAG 知識庫與資產台帳</p>
         </div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['orders', '報修單', <ClipboardList key="o" className="h-4 w-4" />], ['equipment', '設備台帳', <Boxes key="e" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
-          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+      <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-xl w-fit">
+        {([
+          ['orders', '報修工單', <ClipboardList key="o" className="h-4 w-4" />],
+          ['ai', '維修 AI 助理 (雙模式)', <Sparkles key="a" className="h-4 w-4 text-amber-500" />],
+          ['knowledge', '設備手冊與 RAG 庫', <BookOpen key="k" className="h-4 w-4 text-indigo-500" />],
+          ['equipment', '設備台帳', <Boxes key="e" className="h-4 w-4" />],
+        ] as const).map(([id, label, icon]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === id ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {icon}
+            {label}
+          </button>
         ))}
       </div>
 
-      {tab === 'orders' ? <OrdersTab /> : <EquipmentTab />}
+      {tab === 'orders' && <OrdersTab />}
+      {tab === 'ai' && <RepairAIAssistantTab initialMode={initialAiMode} onSwitchToOrders={() => setTab('orders')} />}
+      {tab === 'knowledge' && <RepairKnowledgeTab />}
+      {tab === 'equipment' && <EquipmentTab />}
     </div>
   )
 }

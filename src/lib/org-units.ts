@@ -64,6 +64,7 @@ export const UNIT_AREAS: UnitArea[] = [
       { href: '/store-inventory', label: '盤點・訂貨', description: '原物料庫存盤點、每日叫貨訂單、進貨驗收與耗損登記' },
       { href: '/store-bills', label: '水電費用填報', description: '每月電費、水費、瓦斯費、冰塊費申報與單據簽收憑證照片' },
       { href: '/repair', label: '門市報修', description: '門市設備故障即時申報、維修進度追蹤與器材保養台帳' },
+      { href: '/repair?tab=ai&mode=store', label: '設備故障快速排查 AI', description: '吧檯設備與POS資訊故障免拆機引導、安全防呆與一鍵報修' },
       { href: '/shift', label: '門市排班', description: '門市人員輪值排班表、班別規劃與每月工時統計' },
       { href: '/pos', label: '門市點單 POS', description: '門市現場櫃台收銀點單、商品出單列印與即時銷售' },
     ],
@@ -106,9 +107,10 @@ export const UNIT_AREAS: UnitArea[] = [
     key: 'repair',
     label: '維修',
     homeHref: '/repair',
-    description: '設備保養台帳・工單維修進度與故障排除',
+    description: '設備保養台帳・工單維修進度・故障排除與機電AI助理',
     pages: [
       { href: '/repair', label: '設備・報修', description: '全公司各據點設備報修工單、修繕歷程與器材台帳' },
+      { href: '/repair?tab=ai', label: '維修 AI 助理 (雙模式)', description: '門市免拆機快速排查、技師工程電路診斷、原廠手冊RAG與冷啟動推導' },
     ],
   },
   {
