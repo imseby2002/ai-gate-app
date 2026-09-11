@@ -50,6 +50,10 @@ export function EmployeeWhitelistManager({
   const [editingNote, setEditingNote] = useState('')
   const [savingNote, setSavingNote] = useState(false)
 
+  // 編輯所屬公司狀態
+  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null)
+  const [savingCompany, setSavingCompany] = useState(false)
+
   // 同步外部 initialEntries
   useEffect(() => {
     if (initialEntries) {
@@ -163,6 +167,34 @@ export function EmployeeWhitelistManager({
       alert(err.message)
     }
     setSavingNote(false)
+  }
+
+  // 儲存修改後的所屬公司
+  const handleSaveCompany = async (id: string, newCompanyId: string) => {
+    setSavingCompany(true)
+    try {
+      const res = await fetch(apiEndpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, company_id: newCompanyId || null }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        const rawComp = updated.companies || updated.company
+        const companyObj = Array.isArray(rawComp) ? rawComp[0] : rawComp
+        setEntries(prev => prev.map(e => e.id === id
+          ? { ...e, company_id: newCompanyId || null, companies: companyObj, company: companyObj }
+          : e
+        ))
+        setEditingCompanyId(null)
+      } else {
+        const d = await res.json()
+        alert(d.error ?? '更新所屬公司失敗')
+      }
+    } catch (err: any) {
+      alert(err.message)
+    }
+    setSavingCompany(false)
   }
 
   return (
@@ -307,12 +339,38 @@ export function EmployeeWhitelistManager({
 
                       {!isCompanyMode && (
                         <td className="px-5 py-3">
-                          {companyObj?.name ? (
-                            <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-purple-50 text-purple-700 border border-purple-200">
-                              {companyObj.name}
-                            </span>
+                          {editingCompanyId === entry.id ? (
+                            <div className="flex items-center gap-1">
+                              <select
+                                autoFocus
+                                defaultValue={entry.company_id ?? ''}
+                                disabled={savingCompany}
+                                onChange={e => handleSaveCompany(entry.id, e.target.value)}
+                                onBlur={() => setEditingCompanyId(null)}
+                                className="h-7 px-2 text-xs rounded border bg-white dark:bg-background outline-none focus:ring-1"
+                              >
+                                <option value="">全域 / 未指定</option>
+                                {companies.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                              {savingCompany && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
+                            </div>
                           ) : (
-                            <span className="text-xs text-gray-400">全域 / 未指定</span>
+                            <div
+                              onClick={() => setEditingCompanyId(entry.id)}
+                              className="group/comp flex items-center gap-1.5 cursor-pointer"
+                              title="點擊修改所屬公司"
+                            >
+                              {companyObj?.name ? (
+                                <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                                  {companyObj.name}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">全域 / 未指定</span>
+                              )}
+                              <Edit3 className="h-3 w-3 opacity-0 group-hover/comp:opacity-100 text-gray-400 transition-opacity shrink-0" />
+                            </div>
                           )}
                         </td>
                       )}
