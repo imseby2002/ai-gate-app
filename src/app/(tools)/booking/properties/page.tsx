@@ -7,7 +7,8 @@ import { Plus, Edit2, Trash2, BedDouble, X, ImagePlus, Loader2, GripVertical } f
 interface Property {
   id: string; name: string; description: string
   room_count: number; max_guests: number; base_price: number | null; extra_guest_fee: number | null
-  max_extra_beds: number; extra_bed_fee: number | null
+  max_extra_beds: number; extra_bed_fee: number | null; extra_bed_type: string
+  base_guests: number; extra_fee_mode: string
   currency: string; status: string; name_aliases: string[]
   amenities: string[]; images: string[]; sort_order: number
 }
@@ -15,6 +16,7 @@ interface Property {
 const EMPTY_FORM = {
   name: '', description: '', room_count: 1, max_guests: 2,
   base_price: '', extra_guest_fee: '', max_extra_beds: 0, extra_bed_fee: '',
+  extra_bed_type: 'single', base_guests: 2, extra_fee_mode: 'by_guest',
   currency: 'TWD', name_aliases: [] as string[],
   amenities: [] as string[], images: [] as string[],
 }
@@ -65,6 +67,9 @@ export default function PropertiesPage() {
       extra_guest_fee: p.extra_guest_fee?.toString() ?? '',
       max_extra_beds: p.max_extra_beds ?? 0,
       extra_bed_fee: p.extra_bed_fee?.toString() ?? '',
+      extra_bed_type: p.extra_bed_type ?? 'single',
+      base_guests: p.base_guests ?? 2,
+      extra_fee_mode: p.extra_fee_mode ?? 'by_guest',
       currency: p.currency,
       name_aliases: p.name_aliases ?? [],
       amenities: p.amenities ?? [],
@@ -346,7 +351,8 @@ export default function PropertiesPage() {
                     rows={2} className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* ── 間數 / 人數 ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">{t('properties.form.roomCount')}</label>
                     <input type="number" min={1} value={form.room_count}
@@ -366,29 +372,83 @@ export default function PropertiesPage() {
                       placeholder="2000"
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">{t('properties.form.extraFee')}</label>
-                    <input type="number" value={form.extra_guest_fee}
-                      onChange={e => setForm(p => ({ ...p, extra_guest_fee: e.target.value }))}
-                      placeholder="500"
-                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                {/* ── 收費模式 ── */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">{t('properties.form.extraFeeMode')}</label>
+                  <div className="flex gap-2">
+                    {(['by_guest', 'by_bed'] as const).map(mode => (
+                      <button key={mode} type="button"
+                        onClick={() => setForm(p => ({ ...p, extra_fee_mode: mode }))}
+                        className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors
+                          ${form.extra_fee_mode === mode
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'}`}>
+                        {mode === 'by_guest' ? t('properties.form.feeModeByGuest') : t('properties.form.feeModeByBed')}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {form.extra_fee_mode === 'by_guest'
+                      ? t('properties.form.feeModeByGuestHint')
+                      : t('properties.form.feeModeByBedHint')}
+                  </p>
+                </div>
+
+                {/* ── 加人費（by_guest 模式） ── */}
+                {form.extra_fee_mode === 'by_guest' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600">{t('properties.form.baseGuests')}</label>
+                      <input type="number" min={1} max={form.max_guests} value={form.base_guests}
+                        onChange={e => setForm(p => ({ ...p, base_guests: parseInt(e.target.value) || 1 }))}
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <p className="text-[11px] text-gray-400">{t('properties.form.baseGuestsHint', { n: form.base_guests + 1 })}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600">
+                        {t('properties.form.extraFee')}
+                        {form.base_guests > 0 && (
+                          <span className="ml-1 font-normal text-gray-400 text-[11px]">
+                            {t('properties.form.extraFeeFrom', { n: form.base_guests + 1 })}
+                          </span>
+                        )}
+                      </label>
+                      <input type="number" value={form.extra_guest_fee}
+                        onChange={e => setForm(p => ({ ...p, extra_guest_fee: e.target.value }))}
+                        placeholder="500"
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── 加床設定 ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600">{t('properties.form.maxExtraBeds')}</label>
                     <input type="number" min={0} value={form.max_extra_beds}
                       onChange={e => setForm(p => ({ ...p, max_extra_beds: parseInt(e.target.value) || 0 }))}
                       className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600">{t('properties.form.extraBedFee')}</label>
-                    <input type="number" value={form.extra_bed_fee}
-                      onChange={e => setForm(p => ({ ...p, extra_bed_fee: e.target.value }))}
-                      placeholder="800"
-                      className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                  </div>
+                  {form.max_extra_beds > 0 && (<>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600">{t('properties.form.extraBedType')}</label>
+                      <select value={form.extra_bed_type}
+                        onChange={e => setForm(p => ({ ...p, extra_bed_type: e.target.value }))}
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                        <option value="single">{t('properties.form.bedTypeSingle')}</option>
+                        <option value="double">{t('properties.form.bedTypeDouble')}</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600">{t('properties.form.extraBedFee')}</label>
+                      <input type="number" value={form.extra_bed_fee}
+                        onChange={e => setForm(p => ({ ...p, extra_bed_fee: e.target.value }))}
+                        placeholder="800"
+                        className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    </div>
+                  </>)}
                 </div>
               </>}
 

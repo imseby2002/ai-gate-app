@@ -411,6 +411,11 @@
       "confirmAdd": "確認加入",
       "roomsSelectedTitle": "已選 {count} 個房型",
       "addAnotherRoom": "+ 加另一間房（同一位旅客）",
+      "extraBeds": "加床",
+      "bedTypeSingle": "單人床",
+      "bedTypeDouble": "雙人床",
+      "noBed": "不加床",
+      "bedUnit": "張",
       "col": {
         "room": "房型",
         "price": "房價",
@@ -1261,7 +1266,18 @@
         "basePrice": "底價/晚",
         "extraFee": "超額/人/晚",
         "maxExtraBeds": "可加床數量",
-        "extraBedFee": "加床費用/床/晚"
+        "extraBedFee": "加床費用/床/晚",
+        "extraBedType": "加床類型",
+        "bedTypeSingle": "單人床",
+        "bedTypeDouble": "雙人床",
+        "baseGuests": "底價含人數",
+        "baseGuestsHint": "第 {n} 人起才收超額費",
+        "extraFeeFrom": "（第 {n} 人起）",
+        "extraFeeMode": "收費模式",
+        "feeModeByGuest": "按加人收費",
+        "feeModeByBed": "按加床收費",
+        "feeModeByGuestHint": "超過底價含人數後，每多一人加收超額費（適合：看人頭計費）",
+        "feeModeByBedHint": "以加床數計費，不論人數（適合：加嬰兒床/備用床按床計費）"
       }
     },
     "amenityGroups": {

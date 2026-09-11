@@ -411,6 +411,11 @@
       "confirmAdd": "Xác nhận thêm",
       "roomsSelectedTitle": "Đã chọn {count} phòng",
       "addAnotherRoom": "+ Thêm phòng khác (cùng khách)",
+      "extraBeds": "Giường phụ",
+      "bedTypeSingle": "Đơn",
+      "bedTypeDouble": "Đôi",
+      "noBed": "Không thêm giường",
+      "bedUnit": "giường",
       "col": {
         "room": "Loại phòng",
         "price": "Giá phòng",
@@ -1261,7 +1266,18 @@
         "basePrice": "Giá gốc/đêm",
         "extraFee": "Phụ thu/khách/đêm",
         "maxExtraBeds": "Số giường phụ tối đa",
-        "extraBedFee": "Phí giường phụ/giường/đêm"
+        "extraBedFee": "Phí giường phụ/giường/đêm",
+        "extraBedType": "Loại giường phụ",
+        "bedTypeSingle": "Giường đơn",
+        "bedTypeDouble": "Giường đôi",
+        "baseGuests": "Số khách trong giá gốc",
+        "baseGuestsHint": "Phụ thu từ khách thứ {n}",
+        "extraFeeFrom": "(từ khách thứ {n})",
+        "extraFeeMode": "Chế độ tính phí",
+        "feeModeByGuest": "Theo số khách thêm",
+        "feeModeByBed": "Theo số giường thêm",
+        "feeModeByGuestHint": "Tính phụ thu cho từng khách vượt quá số khách cơ bản",
+        "feeModeByBedHint": "Tính phí theo số giường phụ thêm, không tính theo khách"
       }
     },
     "amenityGroups": {
