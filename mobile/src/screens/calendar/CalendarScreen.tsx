@@ -97,6 +97,18 @@ interface QuickForm {
   rooms: RoomLine[]
 }
 
+interface EditForm {
+  id: string
+  guest_name: string
+  guest_phone: string
+  check_in: string
+  check_out: string
+  platform: string
+  status: string
+  total_price: string
+  num_guests: string
+}
+
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
 export default function CalendarScreen() {
@@ -349,6 +361,95 @@ export default function CalendarScreen() {
     }
   }
 
+  // ── 編輯訂單 ──────────────────────────────────────────────
+  const [editOpen, setEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState<EditForm>({
+    id: '', guest_name: '', guest_phone: '',
+    check_in: '', check_out: '', platform: 'direct',
+    status: 'confirmed', total_price: '', num_guests: '1',
+  })
+  const [editSaving, setEditSaving] = useState(false)
+
+  const openEdit = (bk: Booking) => {
+    setEditForm({
+      id: bk.id,
+      guest_name: bk.guest_name || '',
+      guest_phone: bk.guest_phone || '',
+      check_in: bk.check_in,
+      check_out: bk.check_out,
+      platform: bk.platform,
+      status: bk.status,
+      total_price: bk.total_price != null ? String(bk.total_price) : '',
+      num_guests: String(bk.num_guests || 1),
+    })
+    setEditOpen(true)
+  }
+
+  const saveEdit = async () => {
+    if (!editForm.guest_name.trim()) {
+      Alert.alert('請填寫旅客姓名')
+      return
+    }
+    setEditSaving(true)
+    try {
+      const res = await apiFetch('/api/booking/bookings', {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: editForm.id,
+          guest_name: editForm.guest_name.trim(),
+          guest_phone: editForm.guest_phone.trim(),
+          check_in: editForm.check_in,
+          check_out: editForm.check_out,
+          platform: editForm.platform,
+          status: editForm.status,
+          total_price: editForm.total_price ? parseFloat(editForm.total_price) : null,
+          num_guests: parseInt(editForm.num_guests) || 1,
+        }),
+      })
+      const d = await res.json()
+      if (!res.ok) {
+        Alert.alert('更新失敗', d.error || '無法更新訂單')
+        return
+      }
+      setEditOpen(false)
+      fetchData()
+    } catch {
+      Alert.alert('錯誤', '網路連線異常，請稍後重試')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  const deleteBooking = (bk: Booking) => {
+    Alert.alert(
+      '確認刪除',
+      `確定要刪除「${bk.guest_name || '此訂單'}」？此操作無法復原。`,
+      [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '刪除', style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await apiFetch('/api/booking/bookings', {
+                method: 'DELETE',
+                body: JSON.stringify({ id: bk.id }),
+              })
+              if (!res.ok) {
+                const d = await res.json()
+                Alert.alert('刪除失敗', d.error || '無法刪除訂單')
+                return
+              }
+              setEditOpen(false)
+              fetchData()
+            } catch {
+              Alert.alert('錯誤', '網路連線異常，請稍後重試')
+            }
+          },
+        },
+      ]
+    )
+  }
+
   return (
     <View style={styles.container}>
       {/* 頂部月曆導覽列 */}
@@ -586,14 +687,19 @@ export default function CalendarScreen() {
                 const plat = PLATFORM_META[bk.platform] || { label: bk.platform || '其他', color: '#64748B' }
 
                 return (
-                  <View key={bk.id} style={styles.bookingCard}>
+                  <TouchableOpacity key={bk.id} style={styles.bookingCard} onPress={() => openEdit(bk)} activeOpacity={0.8}>
                     <View style={styles.bkTopRow}>
                       <View style={styles.guestCol}>
                         <Text style={styles.guestNameText}>{bk.guest_name || '無姓名'}</Text>
                         {bk.guest_phone ? <Text style={styles.guestPhoneText}>{bk.guest_phone}</Text> : null}
                       </View>
-                      <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
-                        <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
+                          <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => openEdit(bk)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <Ionicons name="create-outline" size={18} color="#2563EB" />
+                        </TouchableOpacity>
                       </View>
                     </View>
 
@@ -612,7 +718,7 @@ export default function CalendarScreen() {
                         <Text style={styles.bkPriceText}>NT$ {Number(bk.total_price).toLocaleString()}</Text>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 )
               })
             )}
@@ -809,6 +915,153 @@ export default function CalendarScreen() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={styles.confirmBtnText}>確認新增訂單</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 編輯訂單 Modal */}
+      <Modal visible={editOpen} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>編輯訂單</Text>
+                <Text style={styles.modalSub}>{editForm.check_in} ~ {editForm.check_out}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setEditOpen(false)}>
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* 旅客姓名 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>旅客姓名 <Text style={styles.required}>*</Text></Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="例如：王小明"
+                  value={editForm.guest_name}
+                  onChangeText={(v) => setEditForm((f) => ({ ...f, guest_name: v }))}
+                />
+              </View>
+
+              {/* 聯絡電話 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>聯絡電話</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="0912-345-678"
+                  keyboardType="phone-pad"
+                  value={editForm.guest_phone}
+                  onChangeText={(v) => setEditForm((f) => ({ ...f, guest_phone: v }))}
+                />
+              </View>
+
+              {/* 入住 / 退房 */}
+              <View style={styles.dateRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.inputLabel}>入住日期</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.check_in}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, check_in: v }))}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>退房日期</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={editForm.check_out}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, check_out: v }))}
+                  />
+                </View>
+              </View>
+
+              {/* 人數 / 金額 */}
+              <View style={styles.dateRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.inputLabel}>人數</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    keyboardType="numeric"
+                    value={editForm.num_guests}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, num_guests: v }))}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 2 }]}>
+                  <Text style={styles.inputLabel}>金額 (NT$)</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    keyboardType="numeric"
+                    placeholder="總金額"
+                    value={editForm.total_price}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, total_price: v }))}
+                  />
+                </View>
+              </View>
+
+              {/* 來源通路 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>來源通路</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+                  {Object.entries(PLATFORM_META).map(([key, meta]) => {
+                    const sel = editForm.platform === key
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={[styles.platPill, sel && { backgroundColor: meta.color, borderColor: meta.color }]}
+                        onPress={() => setEditForm((f) => ({ ...f, platform: key }))}
+                      >
+                        <Text style={[styles.platPillText, sel && { color: '#FFFFFF' }]}>{meta.label}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* 狀態 */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>訂單狀態</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 4 }}>
+                  {Object.entries(STATUS_MAP).map(([key, meta]) => {
+                    const sel = editForm.status === key
+                    return (
+                      <TouchableOpacity
+                        key={key}
+                        style={[
+                          styles.platPill,
+                          sel && { backgroundColor: meta.color, borderColor: meta.color },
+                        ]}
+                        onPress={() => setEditForm((f) => ({ ...f, status: key }))}
+                      >
+                        <Text style={[styles.platPillText, sel && { color: '#FFFFFF' }]}>{meta.label}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </ScrollView>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: '#FCA5A5' }]}
+                onPress={() => deleteBooking({ id: editForm.id, guest_name: editForm.guest_name } as Booking)}
+                disabled={editSaving}
+              >
+                <Text style={[styles.cancelBtnText, { color: '#DC2626' }]}>刪除訂單</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmBtn, editSaving && styles.confirmBtnDisabled]}
+                onPress={saveEdit}
+                disabled={editSaving}
+              >
+                {editSaving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmBtnText}>儲存修改</Text>
                 )}
               </TouchableOpacity>
             </View>
