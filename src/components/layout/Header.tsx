@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield, Menu } from 'lucide-react'
+import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield, Menu, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
@@ -137,6 +137,15 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
                     <Settings className="h-4 w-4 text-muted-foreground" />
                     {t('settings')}
                   </button>
+                  {profile.company_id && (
+                    <button
+                      onClick={() => { router.push('/company/plan'); setMenuOpen(false) }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-accent transition-colors"
+                    >
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      公司方案
+                    </button>
+                  )}
                   {profile.user_type === 'admin' && (
                     <button
                       onClick={() => { router.push('/admin'); setMenuOpen(false) }}

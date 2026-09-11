@@ -13,7 +13,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('display_name, company_id').eq('id', user.id).single()
   const locale = await getLocale()
 
   return (
@@ -30,7 +30,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
         </div>
         <div className="flex-1" />
         <LanguageSwitcher currentLocale={locale} />
-        <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} />
+        <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
       </header>
 
       {/* Tool content (each tool has its own sub-layout) */}

@@ -13,7 +13,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('display_name, company_id').eq('id', user.id).single()
   const locale = await getLocale()
 
   return (
@@ -24,7 +24,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
         <div className="flex items-center gap-3">
           <UpgradePlanBadge />
           <LanguageSwitcher currentLocale={locale} />
-          <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} />
+          <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
         </div>
       </header>
 
