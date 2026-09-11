@@ -134,3 +134,22 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ success: true })
 }
+
+// DELETE - 永久刪除用戶帳號（僅總管理員；公司負責人只能停用，不開放硬刪除）
+export async function DELETE(req: NextRequest) {
+  const auth = await getManagementAuth()
+  if (!auth) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!auth.isSuperAdmin) return NextResponse.json({ error: '僅總管理員可刪除帳號' }, { status: 403 })
+
+  const { userId } = await req.json().catch(() => ({}))
+  if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+  if (userId === auth.user.id) return NextResponse.json({ error: '無法刪除自己的帳號' }, { status: 400 })
+
+  const supabase = await createAdminClient()
+  // profiles.id → auth.users.id 為 ON DELETE CASCADE，刪除 auth 帳號會一併清掉 profile 與其餘關聯資料
+  const { error } = await supabase.auth.admin.deleteUser(userId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}
