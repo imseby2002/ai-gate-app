@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { MessageSquarePlus, CheckCircle2, Clock, GitBranch, AlertCircle, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 
 type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other'
-type FbStatus = 'pending' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
+type FbStatus = 'pending' | 'awaiting_approval' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
 
 interface Feedback {
   id: string; title: string; description: string; type: FbType; status: FbStatus
@@ -22,6 +22,7 @@ const TYPE_LABELS: Record<FbType, { label: string; desc: string; color: string }
 
 const STATUS_CONFIG: Record<FbStatus, { label: string; color: string; icon: React.ReactNode }> = {
   pending:    { label: '待處理', color: 'text-gray-500', icon: <Clock className="h-3.5 w-3.5" /> },
+  awaiting_approval: { label: '需計費，待管理者審核', color: 'text-orange-600', icon: <Clock className="h-3.5 w-3.5" /> },
   processing: { label: 'AI 處理中', color: 'text-amber-600', icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
   pr_ready:   { label: '已產生分支，待測試', color: 'text-emerald-600', icon: <GitBranch className="h-3.5 w-3.5" /> },
   suggestion: { label: '已記錄為建議', color: 'text-indigo-600', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },

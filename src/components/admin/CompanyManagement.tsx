@@ -39,6 +39,7 @@ export interface CompanyItem {
   created_by: string
   enabled_modules: string[] | null
   bnb_owner_id: string | null
+  feedback_free_features: boolean
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -118,6 +119,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formOwnerId, setFormOwnerId] = useState('')
   const [formItId, setFormItId] = useState('')
   const [formModules, setFormModules] = useState<string[]>([])
+  const [formFeedbackFree, setFormFeedbackFree] = useState(false)
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -227,6 +229,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormOwnerId(company.owner?.id ?? '')
     setFormItId(company.it?.id ?? '')
     setFormModules(company.enabled_modules ?? ALL_MODULES.map(m => m.id))
+    setFormFeedbackFree(company.feedback_free_features ?? false)
   }
 
   const handleSaveEdit = async () => {
@@ -242,6 +245,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           ownerId: formOwnerId || undefined,
           itId: formItId || '',
           enabledModules: formModules,
+          feedbackFree: formFeedbackFree,
         }),
       })
       const d = await res.json()
@@ -949,6 +953,19 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                   })}
                 </div>
               </div>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formFeedbackFree}
+                  onChange={e => setFormFeedbackFree(e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                />
+                <div>
+                  <div className="text-sm font-bold text-slate-800">意見反映：功能新增/調整免計費</div>
+                  <div className="text-xs text-slate-500 mt-0.5">開啟後，這間公司送出的「功能新增/調整」需求不用等審核報價，直接視同免費走 AI 自動處理</div>
+                </div>
+              </label>
             </div>
 
             <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">

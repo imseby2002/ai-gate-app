@@ -54,6 +54,12 @@ export function GlobalFeedbackWidget() {
         body: JSON.stringify({ title: title.trim(), description: description.trim(), type, source: `web:${pathname}` }),
       })
       if (res.ok) {
+        const { feedback } = await res.json()
+        // 免費項目（bug/ai_error，或公司被標記免計費）馬上觸發 AI 處理；
+        // 計費項目這裡會被 /api/feedback/[id] 自己擋下（awaiting_approval），不用在前端先判斷。
+        if (feedback?.id) {
+          fetch(`/api/feedback/${feedback.id}`, { method: 'POST' }).catch(() => {})
+        }
         setDone(true)
         setTitle('')
         setDescription('')

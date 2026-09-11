@@ -3,27 +3,29 @@ import { useState, useEffect } from 'react'
 import { GitBranch, Loader2, RefreshCw, ExternalLink, Zap, CheckCircle2, Clock, AlertCircle, MessageSquare } from 'lucide-react'
 
 type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other'
-type FbStatus = 'pending' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
+type FbStatus = 'pending' | 'awaiting_approval' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
 
 interface Feedback {
   id: string; title: string; description: string; type: FbType; status: FbStatus
   complexity: string | null; ai_plan: string | null; branch_name: string | null
   pr_url: string | null; preview_url: string | null; admin_notes: string | null
   error_log: string | null; created_at: string; source: string | null
+  contact: string | null; is_paid: boolean; price_quote_usd: number | null
   profiles?: { email: string; full_name: string | null }
   companies?: { id: string; name: string } | { id: string; name: string }[] | null
 }
 
 const STATUS_COLORS: Record<FbStatus, string> = {
-  pending:    'bg-gray-100 text-gray-600',
-  processing: 'bg-amber-100 text-amber-700',
-  pr_ready:   'bg-emerald-100 text-emerald-700',
-  suggestion: 'bg-indigo-100 text-indigo-700',
-  rejected:   'bg-gray-100 text-gray-400',
-  merged:     'bg-green-100 text-green-700',
+  pending:           'bg-gray-100 text-gray-600',
+  awaiting_approval: 'bg-orange-100 text-orange-700',
+  processing:        'bg-amber-100 text-amber-700',
+  pr_ready:          'bg-emerald-100 text-emerald-700',
+  suggestion:        'bg-indigo-100 text-indigo-700',
+  rejected:          'bg-gray-100 text-gray-400',
+  merged:            'bg-green-100 text-green-700',
 }
 const STATUS_LABELS: Record<FbStatus, string> = {
-  pending: '待處理', processing: '處理中', pr_ready: 'PR 已建立',
+  pending: '待處理', awaiting_approval: '待審核（計費）', processing: '處理中', pr_ready: 'PR 已建立',
   suggestion: '建議記錄', rejected: '已關閉', merged: '已合併',
 }
 const TYPE_LABELS: Record<FbType, string> = {
@@ -37,6 +39,11 @@ export default function AdminFeedbackPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [priceInputs, setPriceInputs] = useState<Record<string, string>>({})
+  const [editTitle, setEditTitle] = useState<Record<string, string>>({})
+  const [editDesc, setEditDesc] = useState<Record<string, string>>({})
+  const [approving, setApproving] = useState<string | null>(null)
+  const [merging, setMerging] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -72,6 +79,36 @@ export default function AdminFeedbackPage() {
     setFeedbacks(prev => prev.map(f => f.id === id ? { ...f, admin_notes: notes[id] ?? '' } : f))
   }
 
+  // 核准計費項目：可同時修正標題/內容範圍、填報價，核准後後端會直接觸發 AI 處理
+  async function approve(fb: Feedback) {
+    setApproving(fb.id)
+    try {
+      const body: Record<string, unknown> = { approve: true }
+      const price = priceInputs[fb.id]
+      if (price !== undefined && price.trim() !== '') body.price_quote_usd = Number(price)
+      if (editTitle[fb.id] !== undefined) body.title = editTitle[fb.id]
+      if (editDesc[fb.id] !== undefined) body.description = editDesc[fb.id]
+      await fetch(`/api/feedback/${fb.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      await load()
+    } finally {
+      setApproving(null)
+    }
+  }
+
+  async function confirmMerge(id: string) {
+    setMerging(id)
+    try {
+      const r = await fetch(`/api/feedback/${id}/merge`, { method: 'POST' })
+      const d = await r.json()
+      if (!r.ok) { alert(d.error ?? '合併失敗'); return }
+      await load()
+    } finally {
+      setMerging(null)
+    }
+  }
+
   const filtered = feedbacks.filter(f => statusFilter === 'all' || f.status === statusFilter)
 
   return (
@@ -91,7 +128,7 @@ export default function AdminFeedbackPage() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
-        {(['all', 'pending', 'processing', 'pr_ready', 'suggestion', 'merged', 'rejected'] as const).map(s => (
+        {(['all', 'awaiting_approval', 'pending', 'processing', 'pr_ready', 'suggestion', 'merged', 'rejected'] as const).map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}
             className={`text-[11px] px-3 py-1 rounded-full border font-medium transition-all ${
               statusFilter === s ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
@@ -120,6 +157,9 @@ export default function AdminFeedbackPage() {
                     {fb.complexity === 'auto' ? '⚡ 自動' : '🔧 需人工'}
                   </span>
                 )}
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${fb.is_paid ? 'bg-rose-50 text-rose-700' : 'bg-teal-50 text-teal-700'}`}>
+                  {fb.is_paid ? `💰 需計費${fb.price_quote_usd != null ? ` $${fb.price_quote_usd}` : ''}` : '🆓 免費'}
+                </span>
                 <span className="text-[10px] text-gray-400 ml-auto">{new Date(fb.created_at).toLocaleString('zh-TW')}</span>
               </div>
 
@@ -156,6 +196,37 @@ export default function AdminFeedbackPage() {
                       來源：{fb.source === 'mobile' ? '手機 APP' : fb.source}
                     </span>
                   )}
+                  {fb.contact && <span>聯絡方式：{fb.contact}</span>}
+                </div>
+              )}
+
+              {/* 計費項目待審核：可修正標題/內容範圍、填報價，再核准或拒絕 */}
+              {fb.status === 'awaiting_approval' && (
+                <div className="rounded-lg border border-orange-200 bg-orange-50/60 p-3 space-y-2">
+                  <p className="text-[11px] font-medium text-orange-700">此項目需計費，需先核准才會開始處理</p>
+                  <input
+                    value={editTitle[fb.id] ?? fb.title}
+                    onChange={e => setEditTitle(p => ({ ...p, [fb.id]: e.target.value }))}
+                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    placeholder="標題"
+                  />
+                  <textarea
+                    value={editDesc[fb.id] ?? fb.description}
+                    onChange={e => setEditDesc(p => ({ ...p, [fb.id]: e.target.value }))}
+                    rows={3}
+                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+                    placeholder="內容（可修正範圍後再核准）"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-gray-500">報價 $</span>
+                    <input
+                      type="number"
+                      value={priceInputs[fb.id] ?? (fb.price_quote_usd ?? '')}
+                      onChange={e => setPriceInputs(p => ({ ...p, [fb.id]: e.target.value }))}
+                      placeholder="美元"
+                      className="w-24 text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -204,6 +275,13 @@ export default function AdminFeedbackPage() {
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2">
+                {fb.status === 'awaiting_approval' && (
+                  <button onClick={() => approve(fb)} disabled={approving === fb.id}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                    {approving === fb.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                    {approving === fb.id ? '核准並送出 AI 處理中…' : '核准並開始處理'}
+                  </button>
+                )}
                 {/* Retry: only for failed/stuck items */}
                 {(fb.status === 'pending' || fb.status === 'suggestion') && (
                   <button onClick={() => process(fb.id)} disabled={processing === fb.id}
@@ -213,15 +291,16 @@ export default function AdminFeedbackPage() {
                   </button>
                 )}
                 {fb.status === 'pr_ready' && (
-                  <button onClick={() => updateStatus(fb.id, 'merged')}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    <CheckCircle2 className="h-3.5 w-3.5" />標記已合併
+                  <button onClick={() => confirmMerge(fb.id)} disabled={merging === fb.id}
+                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                    {merging === fb.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    {merging === fb.id ? '合併中…' : '確認合併'}
                   </button>
                 )}
                 {fb.status !== 'rejected' && fb.status !== 'merged' && (
                   <button onClick={() => updateStatus(fb.id, 'rejected')}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">
-                    <AlertCircle className="h-3.5 w-3.5" />關閉
+                    <AlertCircle className="h-3.5 w-3.5" />{fb.status === 'awaiting_approval' ? '拒絕' : '關閉'}
                   </button>
                 )}
               </div>

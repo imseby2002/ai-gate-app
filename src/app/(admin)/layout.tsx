@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/feedback', label: '意見反映（全模組）', icon: MessageSquare },
     { href: '/admin/cs-plans', label: 'CS 方案管理', icon: Headphones },
     { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },
-    { href: '/admin/cs-support-requests', label: 'CS 客製/反映', icon: Wrench },
+    { href: '/admin/cs-support-requests', label: 'CS 客製/反映（舊資料）', icon: Wrench },
     { href: '/admin/agents', label: 'Agent 管理', icon: Bot },
     { href: '/admin/models', label: '模型設定', icon: Settings },
     { href: '/admin/usage', label: '使用統計', icon: BarChart3 },
