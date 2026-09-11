@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
   const companyId = profile?.company_id ?? null
-  const { isPaid, initialStatus } = await resolveFeedbackBilling(companyId, type)
+  const { isPaid, initialStatus, quota } = await resolveFeedbackBilling(companyId, type)
 
   const { data, error } = await admin
     .from('user_feedback')
@@ -58,7 +58,11 @@ export async function POST(req: NextRequest) {
   if (isPaid) {
     await notifyFeedbackAdmin(
       `[意見反映] 新的計費需求待審核：${data.title}`,
-      [`類型：${type}`, `帳號：${user.email ?? user.id}`, `內容：${description}`, `後台審核：https://www.im-tourist.com/admin/feedback`]
+      [
+        `類型：${type}`, `帳號：${user.email ?? user.id}`, `內容：${description}`,
+        ...(quota ? [`本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
+        `後台審核：https://www.im-tourist.com/admin/feedback`,
+      ]
     )
   }
 

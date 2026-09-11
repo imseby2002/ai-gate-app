@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await admin.from('profiles').select('company_id').eq('id', ctx.user.id).single()
   const companyId = profile?.company_id ?? null
-  const { isPaid, initialStatus } = await resolveFeedbackBilling(companyId, fbType)
+  const { isPaid, initialStatus, quota } = await resolveFeedbackBilling(companyId, fbType)
 
   const { data: row, error } = await admin
     .from('user_feedback')
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       `CS 方案：${plan}`,
       `聯絡方式：${contact || '（未留）'}`,
       `內容：${note}`,
+      ...(isPaid && quota ? [`本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
       isPaid
         ? '此項目需計費，請至後台審核／報價／核准或拒絕：https://www.im-tourist.com/admin/feedback'
         : 'AI 將自動處理，完成後請至後台確認合併：https://www.im-tourist.com/admin/feedback',

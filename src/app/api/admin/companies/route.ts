@@ -174,7 +174,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -182,6 +182,7 @@ export async function PATCH(req: NextRequest) {
       ownerId?: string
       itId?: string
       feedbackFree?: boolean
+      freeFeatureQuotaMonthly?: number | null
     }
 
     if (!id) {
@@ -194,6 +195,7 @@ export async function PATCH(req: NextRequest) {
     if (enabledModules !== undefined) patch.enabled_modules = enabledModules
     if (bnbOwnerId !== undefined) patch.bnb_owner_id = bnbOwnerId || null
     if (feedbackFree !== undefined) patch.feedback_free_features = feedbackFree
+    if (freeFeatureQuotaMonthly !== undefined) patch.free_feature_quota_monthly = freeFeatureQuotaMonthly
 
     if (Object.keys(patch).length > 0) {
       const { error: updateErr } = await admin.from('companies').update(patch).eq('id', id)

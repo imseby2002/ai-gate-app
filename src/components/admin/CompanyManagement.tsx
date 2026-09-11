@@ -40,6 +40,7 @@ export interface CompanyItem {
   enabled_modules: string[] | null
   bnb_owner_id: string | null
   feedback_free_features: boolean
+  free_feature_quota_monthly: number | null
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -120,6 +121,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formItId, setFormItId] = useState('')
   const [formModules, setFormModules] = useState<string[]>([])
   const [formFeedbackFree, setFormFeedbackFree] = useState(false)
+  const [formFeedbackQuota, setFormFeedbackQuota] = useState('')
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -230,6 +232,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormItId(company.it?.id ?? '')
     setFormModules(company.enabled_modules ?? ALL_MODULES.map(m => m.id))
     setFormFeedbackFree(company.feedback_free_features ?? false)
+    setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
   }
 
   const handleSaveEdit = async () => {
@@ -246,6 +249,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           itId: formItId || '',
           enabledModules: formModules,
           feedbackFree: formFeedbackFree,
+          freeFeatureQuotaMonthly: formFeedbackQuota.trim() === '' ? null : Number(formFeedbackQuota),
         }),
       })
       const d = await res.json()
@@ -954,18 +958,34 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={formFeedbackFree}
-                  onChange={e => setFormFeedbackFree(e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                />
-                <div>
-                  <div className="text-sm font-bold text-slate-800">意見反映：功能新增/調整免計費</div>
-                  <div className="text-xs text-slate-500 mt-0.5">開啟後，這間公司送出的「功能新增/調整」需求不用等審核報價，直接視同免費走 AI 自動處理</div>
-                </div>
-              </label>
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formFeedbackFree}
+                    onChange={e => setFormFeedbackFree(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                  />
+                  <div>
+                    <div className="text-sm font-bold text-slate-800">意見反映：功能新增/調整完全免計費（不限次數）</div>
+                    <div className="text-xs text-slate-500 mt-0.5">開啟後，這間公司送出的「功能新增/調整」需求一律直接視同免費走 AI 自動處理</div>
+                  </div>
+                </label>
+
+                {!formFeedbackFree && (
+                  <div className="flex items-center gap-2 pl-6">
+                    <label className="text-xs font-medium text-slate-700 shrink-0">每月免費次數上限</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={formFeedbackQuota}
+                      onChange={e => setFormFeedbackQuota(e.target.value)}
+                      placeholder="留空＝不免費，超過此次數才需要老闆審核計費"
+                      className="h-8 text-xs bg-white border-slate-200 rounded-lg"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
