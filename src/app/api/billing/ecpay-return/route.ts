@@ -151,7 +151,52 @@ export async function POST(req: NextRequest) {
     return new NextResponse('1|OK', { status: 200 })
   }
 
-  // 找不到 CS 方案訂單 → 檢查是否為行銷方案升級訂單
+  // 找不到 CS 方案訂單 → 檢查是否為公司會員方案升級訂單
+  const { data: companyPurchase } = await supabase
+    .from('company_plan_purchases')
+    .select('id, company_id, plan, billing_cycle')
+    .eq('trade_no', MerchantTradeNo)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (companyPurchase) {
+    const days = companyPurchase.billing_cycle === 'yearly' ? 365 : 30
+
+    // 同方案續購 → 從原到期日往後延（提前續約不吃掉剩餘天數）；
+    // 不同方案（升級）→ 立即生效，從現在起算。比照 CS／訂房方案續購邏輯。
+    const { data: existingCompanySub } = await supabase
+      .from('company_subscriptions')
+      .select('plan, status, current_period_end')
+      .eq('company_id', companyPurchase.company_id)
+      .maybeSingle()
+    const nowMsCompany = Date.now()
+    const companyRemainingValid = existingCompanySub?.status === 'active'
+      && existingCompanySub.plan === companyPurchase.plan
+      && !!existingCompanySub.current_period_end
+      && new Date(existingCompanySub.current_period_end).getTime() > nowMsCompany
+    const companyBaseMs = companyRemainingValid ? new Date(existingCompanySub!.current_period_end!).getTime() : nowMsCompany
+    const companyPeriodEnd = new Date(companyBaseMs + days * 86400000).toISOString()
+
+    await supabase
+      .from('company_plan_purchases')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', companyPurchase.id)
+
+    await supabase
+      .from('company_subscriptions')
+      .upsert({
+        company_id: companyPurchase.company_id,
+        plan: companyPurchase.plan,
+        billing_cycle: companyPurchase.billing_cycle,
+        status: 'active',
+        current_period_end: companyPeriodEnd,
+      }, { onConflict: 'company_id' })
+
+    console.log('[ECPay] 公司方案升級成功', { companyId: companyPurchase.company_id, plan: companyPurchase.plan })
+    return new NextResponse('1|OK', { status: 200 })
+  }
+
+  // 找不到公司方案訂單 → 檢查是否為行銷方案升級訂單
   const { data: marketingPurchase } = await supabase
     .from('marketing_plan_purchases')
     .select('id, user_id, plan, billing_cycle')
