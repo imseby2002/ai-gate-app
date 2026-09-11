@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { MessageSquarePlus, CheckCircle2, Clock, GitBranch, AlertCircle, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 
-type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error'
+type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other'
 type FbStatus = 'pending' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
 
 interface Feedback {
@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<FbType, { label: string; desc: string; color: string }
   ai_error:    { label: 'AI 回應錯誤', desc: '金額錯誤、資訊不準確', color: 'bg-orange-100 text-orange-700 border-orange-200' },
   text_change: { label: 'UI / 文字調整', desc: '顏色、版面、措辭', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   feature:     { label: '新功能需求', desc: '新頁面、新功能', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  other:       { label: '其他問題', desc: '不確定分類的問題', color: 'bg-gray-100 text-gray-600 border-gray-200' },
 }
 
 const STATUS_CONFIG: Record<FbStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -48,9 +49,12 @@ export default function FeedbackPage() {
     if (!form.title.trim() || !form.description.trim()) return
     setSubmitting(true)
     try {
+      const ref = typeof document !== 'undefined' && document.referrer.startsWith(window.location.origin)
+        ? new URL(document.referrer).pathname
+        : '/feedback'
       const r = await fetch('/api/feedback', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, source: `web:${ref}` }),
       })
       const d = await r.json()
       if (d.feedback) {
@@ -139,7 +143,7 @@ export default function FeedbackPage() {
         ) : (
           feedbacks.map(fb => {
             const sc = STATUS_CONFIG[fb.status]
-            const tc = TYPE_LABELS[fb.type]
+            const tc = TYPE_LABELS[fb.type] ?? TYPE_LABELS.other
             return (
               <div key={fb.id} className="bg-white border rounded-xl p-4 space-y-3">
                 <div className="flex items-start gap-2 flex-wrap">

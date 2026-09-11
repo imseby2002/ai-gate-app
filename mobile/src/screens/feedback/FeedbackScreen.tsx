@@ -100,6 +100,7 @@ APP 版本: v${CONFIG.APP_VERSION}
           title: `[APP] ${title.trim()}`,
           description: finalDescription,
           type,
+          source: 'mobile',
         }),
       })
 

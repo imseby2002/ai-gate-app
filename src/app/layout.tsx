@@ -3,6 +3,7 @@ import { getLocale, getMessages } from 'next-intl/server'
 import { IntlProvider } from '@/components/layout/IntlProvider'
 import { ScopeManager } from '@/components/layout/ScopeManager'
 import { ServiceWorkerRegister } from '@/components/layout/ServiceWorkerRegister'
+import { GlobalFeedbackWidget } from '@/components/layout/GlobalFeedbackWidget'
 import "./globals.css";
 
 export const dynamic = 'force-dynamic'
@@ -55,6 +56,7 @@ export default async function RootLayout({
           <ScopeManager />
           <ServiceWorkerRegister />
           {children}
+          <GlobalFeedbackWidget />
         </IntlProvider>
       </body>
     </html>

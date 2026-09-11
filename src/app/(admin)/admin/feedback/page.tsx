@@ -2,15 +2,16 @@
 import { useState, useEffect } from 'react'
 import { GitBranch, Loader2, RefreshCw, ExternalLink, Zap, CheckCircle2, Clock, AlertCircle, MessageSquare } from 'lucide-react'
 
-type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error'
+type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other'
 type FbStatus = 'pending' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
 
 interface Feedback {
   id: string; title: string; description: string; type: FbType; status: FbStatus
   complexity: string | null; ai_plan: string | null; branch_name: string | null
   pr_url: string | null; preview_url: string | null; admin_notes: string | null
-  error_log: string | null; created_at: string
-  profiles?: { email: string }
+  error_log: string | null; created_at: string; source: string | null
+  profiles?: { email: string; full_name: string | null }
+  companies?: { id: string; name: string } | { id: string; name: string }[] | null
 }
 
 const STATUS_COLORS: Record<FbStatus, string> = {
@@ -26,7 +27,7 @@ const STATUS_LABELS: Record<FbStatus, string> = {
   suggestion: '建議記錄', rejected: '已關閉', merged: '已合併',
 }
 const TYPE_LABELS: Record<FbType, string> = {
-  bug: '🐛 錯誤', ai_error: '🤖 AI錯誤', text_change: '🎨 UI調整', feature: '✨ 新功能',
+  bug: '🐛 錯誤', ai_error: '🤖 AI錯誤', text_change: '🎨 UI調整', feature: '✨ 新功能', other: '💬 其他',
 }
 
 export default function AdminFeedbackPage() {
@@ -81,7 +82,7 @@ export default function AdminFeedbackPage() {
             <MessageSquare className="h-5 w-5 text-indigo-600" />
             使用者回饋管理
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">用戶送出後 AI 自動處理。你只需：① 合併 GitHub PR  ② 手動解決「建議」類複雜需求</p>
+          <p className="text-sm text-gray-500 mt-0.5">所有模組（AI 對話、行銷、客服、訂房、人事、出納、Agent…）與網頁版／手機 APP 的問題回報與功能建議統一彙整於此，用戶送出後 AI 自動處理。你只需：① 合併 GitHub PR  ② 手動解決「建議」類複雜需求</p>
         </div>
         <button onClick={load} className="p-2 rounded-lg border hover:bg-gray-50 text-gray-500">
           <RefreshCw className="h-4 w-4" />
@@ -137,8 +138,25 @@ export default function AdminFeedbackPage() {
                 )}
               </div>
 
-              {fb.profiles?.email && (
-                <div className="text-[11px] text-gray-400">提交者：{fb.profiles.email}</div>
+              {(fb.profiles?.email || fb.companies || fb.source) && (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                  {fb.profiles?.email && (
+                    <span>提交者：{fb.profiles.full_name ?? fb.profiles.email}（{fb.profiles.email}）</span>
+                  )}
+                  {(() => {
+                    const comp = Array.isArray(fb.companies) ? fb.companies[0] : fb.companies
+                    return comp?.name ? (
+                      <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-600 font-medium">{comp.name}</span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">無所屬公司</span>
+                    )
+                  })()}
+                  {fb.source && (
+                    <span className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-600 font-medium">
+                      來源：{fb.source === 'mobile' ? '手機 APP' : fb.source}
+                    </span>
+                  )}
+                </div>
               )}
 
               {fb.ai_plan && (

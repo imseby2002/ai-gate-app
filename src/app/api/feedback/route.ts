@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data: profile } = await admin.from('profiles').select('user_type').eq('id', user.id).single()
   const isAdmin = profile?.user_type === 'admin'
 
-  let q = admin.from('user_feedback').select('*, profiles(email)').order('created_at', { ascending: false })
+  let q = admin.from('user_feedback').select('*, profiles(email, full_name), companies(id, name)').order('created_at', { ascending: false })
   if (!isAdmin) q = q.eq('user_id', user.id)
 
   const { data, error } = await q
@@ -24,15 +24,25 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { title, description, type = 'bug' } = await req.json()
+  const { title, description, type = 'bug', source } = await req.json()
   if (!title?.trim() || !description?.trim()) {
     return NextResponse.json({ error: '標題和描述不可為空' }, { status: 400 })
   }
 
   const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).single()
+
   const { data, error } = await admin
     .from('user_feedback')
-    .insert({ user_id: user.id, title: title.trim(), description: description.trim(), type })
+    .insert({
+      user_id: user.id,
+      title: title.trim(),
+      description: description.trim(),
+      type,
+      company_id: profile?.company_id ?? null,
+      // 前端沒帶（例如舊版 APP）就標記不明來源，而不是靜默留空
+      source: typeof source === 'string' && source.trim() ? source.trim() : 'unknown',
+    })
     .select()
     .single()
 
