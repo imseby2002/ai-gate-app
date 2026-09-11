@@ -41,6 +41,7 @@ export interface CompanyItem {
   bnb_owner_id: string | null
   feedback_free_features: boolean
   free_feature_quota_monthly: number | null
+  plan?: 'free' | 'core' | 'pro' | 'max'
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -122,6 +123,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formModules, setFormModules] = useState<string[]>([])
   const [formFeedbackFree, setFormFeedbackFree] = useState(false)
   const [formFeedbackQuota, setFormFeedbackQuota] = useState('')
+  const [formPlan, setFormPlan] = useState<'free' | 'core' | 'pro' | 'max'>('free')
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -233,6 +235,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormModules(company.enabled_modules ?? ALL_MODULES.map(m => m.id))
     setFormFeedbackFree(company.feedback_free_features ?? false)
     setFormFeedbackQuota(company.free_feature_quota_monthly != null ? String(company.free_feature_quota_monthly) : '')
+    setFormPlan(company.plan ?? 'free')
   }
 
   const handleSaveEdit = async () => {
@@ -250,6 +253,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           enabledModules: formModules,
           feedbackFree: formFeedbackFree,
           freeFeatureQuotaMonthly: formFeedbackQuota.trim() === '' ? null : Number(formFeedbackQuota),
+          plan: formPlan,
         }),
       })
       const d = await res.json()
@@ -958,6 +962,21 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                 </div>
               </div>
 
+              <div>
+                <label className="font-bold text-slate-800 block mb-1.5">公司會員方案</label>
+                <select
+                  value={formPlan}
+                  onChange={e => setFormPlan(e.target.value as typeof formPlan)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="free">FREE — 每月免費功能修改 0 次</option>
+                  <option value="core">CORE — 每月免費功能修改 1 次</option>
+                  <option value="pro">PRO — 每月免費功能修改 3 次</option>
+                  <option value="max">MAX — 每月免費功能修改 10 次</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">下面「每月免費次數上限」若有手動填寫，會蓋過方案的預設次數</p>
+              </div>
+
               <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
@@ -968,19 +987,19 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                   />
                   <div>
                     <div className="text-sm font-bold text-slate-800">意見反映：功能新增/調整完全免計費（不限次數）</div>
-                    <div className="text-xs text-slate-500 mt-0.5">開啟後，這間公司送出的「功能新增/調整」需求一律直接視同免費走 AI 自動處理</div>
+                    <div className="text-xs text-slate-500 mt-0.5">開啟後，不論方案為何，這間公司送出的「功能新增/調整」需求一律直接視同免費走 AI 自動處理</div>
                   </div>
                 </label>
 
                 {!formFeedbackFree && (
                   <div className="flex items-center gap-2 pl-6">
-                    <label className="text-xs font-medium text-slate-700 shrink-0">每月免費次數上限</label>
+                    <label className="text-xs font-medium text-slate-700 shrink-0">每月免費次數上限（手動覆寫）</label>
                     <Input
                       type="number"
                       min={0}
                       value={formFeedbackQuota}
                       onChange={e => setFormFeedbackQuota(e.target.value)}
-                      placeholder="留空＝不免費，超過此次數才需要老闆審核計費"
+                      placeholder="留空＝依上面方案的預設次數"
                       className="h-8 text-xs bg-white border-slate-200 rounded-lg"
                     />
                   </div>
