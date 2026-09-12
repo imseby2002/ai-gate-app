@@ -531,7 +531,11 @@ async function maybeCreatePaymentProofTicket(
     // 訊號三：客人明確表達已匯款、已轉帳或請查收
     const isSuffixReply = PAYMENT_SUFFIX_ASK_RE.test(lastAssistant) && PAYMENT_SUFFIX_REPLY_RE.test(text.trim())
     const isProofStatement = PAYMENT_KEYWORD_RE.test(text) && PAYMENT_SUFFIX_CODE_RE.test(text)
-    const isPaymentClaim = /已匯款|已轉帳|匯款完成|匯款了|轉帳了|已付款|付完全額|付完款|轉了|匯了|請查收/.test(text)
+    // 真實需求：客人只簡單說「已經付款了」「已經付款請查收」這類自然說法，未來
+    // 就算系統做了 email 自動對帳查詢，也不能因為查不到或還沒做這個功能就不理會——
+    // 只要客人明確表達已付款，一律先建工單讓專員人工核對，不能悄悄漏掉。原本的
+    // regex 沒涵蓋「已經」+付款動詞、或「付款/支付」+「了/完成」這類常見組合。
+    const isPaymentClaim = /已匯款|已轉帳|已付款|已支付|已經付款|已經匯款|已經轉帳|已經支付|匯款完成|轉帳完成|付款完成|支付完成|匯款了|轉帳了|付款了|支付了|付完全額|付完款|轉了|匯了|請查收|請確認(收款|款項)?/.test(text)
     if (!isSuffixReply && !isProofStatement && !isPaymentClaim) return
     const { data: existing } = await getServiceClient()
       .from('cs_tickets')
@@ -731,6 +735,7 @@ async function replyToCustomer(
         subject: '手動模式（AI 已暫停）', description: '專員或客人於通訊軟體輸入切換手動/暫停指令',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
+      dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 已切換為手動客服模式（AI 暫停）：\n\n${text.slice(0, 300)}`)
     } catch { /* ignore */ }
     const reply = '已切換為【手動客服模式】🤖❌，AI 已暫停回覆。真人專員接手為您服務。\n（若要恢復 AI 自動回覆，隨時輸入「自動」或「恢復AI」即可切回）'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
