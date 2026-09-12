@@ -3792,6 +3792,29 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
   const [smsSending, setSmsSending] = useState(false)
   const [smsError, setSmsError] = useState('')
   const [smsResults, setSmsResults] = useState<SmsRecord[]>(savedData?.lastSmsBatch?.results ?? [])
+  const [smsGetBalance, setSmsGetBalance] = useState<number | null>(null)
+  const [loadingBalance, setLoadingBalance] = useState(false)
+
+  const fetchBalance = useCallback(async () => {
+    try {
+      setLoadingBalance(true)
+      const res = await fetch('/api/marketing/sms-send')
+      const data = await res.json()
+      if (typeof data?.tw?.credits === 'number') {
+        setSmsGetBalance(data.tw.credits)
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoadingBalance(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'sms') {
+      fetchBalance()
+    }
+  }, [activeTab, fetchBalance])
 
   const handleSmsPhoneInputChange = (val: string) => {
     setSmsPhoneInput(val)
@@ -3850,6 +3873,7 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSmsResults(data.results || [])
+      fetchBalance()
       onDone({
         ...savedData,
         smsText,
@@ -4335,9 +4359,16 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
               <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100 flex items-start gap-2 shadow-xs">
                 <span className="text-base">🇹🇼</span>
-                <div>
-                  <div className="font-semibold text-gray-800">台灣門號 (09xx / +886)</div>
-                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-emerald-700">sms-get.com</span></div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-800 flex items-center justify-between">
+                    <span>台灣門號 (09xx / +886)</span>
+                    {smsGetBalance !== null && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                        剩餘 {smsGetBalance} 點
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-emerald-700">sms-get.com</span> (已綁定帳號)</div>
                   <div className="text-[10px] text-emerald-600 mt-0.5 font-medium">本地直連通道 · 約 $0.72~$0.86/則</div>
                 </div>
               </div>

@@ -62,7 +62,66 @@ export function normalizePhoneForCountry(rawPhone: string, country: SmsCountry):
 }
 
 // ── 1. 台灣通道：sms-get.com ──────────────────────────────────────────────────
-async function sendViaSmsGet(phone: string, text: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+const SMSGET_ERROR_CODES: Record<string, string> = {
+  '000': '成功',
+  '001': '參數錯誤',
+  '002': '預約時間參數錯誤',
+  '003': '預約時間過期',
+  '004': '訊息長度過長',
+  '005': '帳號密碼錯誤',
+  '006': 'IP 無法存取',
+  '007': '收件者人數為 0',
+  '008': '收件人超過 250 人',
+  '009': '點數不足',
+  '010': '尚未申請雙向功能',
+}
+
+/**
+ * 查詢 SMS-GET 剩餘點數
+ */
+export async function querySmsGetCredit(): Promise<{ ok: boolean; credits?: number; error?: string }> {
+  const username = process.env.SMSGET_USERNAME
+  const password = process.env.SMSGET_PASSWORD
+  if (!username || !password) {
+    return { ok: false, error: 'SMS-GET 帳號或密碼未設定' }
+  }
+
+  try {
+    const params = new URLSearchParams()
+    params.set('username', username)
+    params.set('password', password)
+
+    const res = await fetch('https://sms-get.com/api_query_credit.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+      },
+      body: params.toString(),
+    })
+
+    const data = await res.json().catch(async () => {
+      const txt = await res.text()
+      try { return JSON.parse(txt) } catch { return { raw: txt } }
+    })
+
+    if (data && (data.stats === true || data.stats === 'true' || data.error_code === '000')) {
+      // 成功格式: 帳號|剩餘點數 (例如: imseby|438)
+      const parts = String(data.error_msg || '').split('|')
+      const credits = Number(parts[1] ?? parts[0])
+      return { ok: true, credits: isNaN(credits) ? 0 : credits }
+    }
+
+    const errMsg = data?.error_msg || SMSGET_ERROR_CODES[data?.error_code] || '查詢剩餘點數失敗'
+    return { ok: false, error: errMsg }
+  } catch (e) {
+    return { ok: false, error: `SMS-GET 點數查詢連線異常：${String(e)}` }
+  }
+}
+
+async function sendViaSmsGet(
+  phone: string,
+  text: string,
+): Promise<{ ok: boolean; messageId?: string; remainingCredits?: number; error?: string }> {
   const username = process.env.SMSGET_USERNAME
   const password = process.env.SMSGET_PASSWORD
   if (!username || !password) {
@@ -70,24 +129,38 @@ async function sendViaSmsGet(phone: string, text: string): Promise<{ ok: boolean
   }
 
   try {
-    const url = new URL('http://sms-get.com/api_send.php')
-    url.searchParams.set('username', username)
-    url.searchParams.set('password', password)
-    url.searchParams.set('method', '1') // 1: 即時發送
-    url.searchParams.set('phone', phone)
-    url.searchParams.set('sms_msg', text)
+    // 依 SMS-Get 官方規範使用 HTTPS POST，支援大量名單與 UTF-8 URL 編碼
+    const params = new URLSearchParams()
+    params.set('username', username)
+    params.set('password', password)
+    params.set('method', '1') // 1: 即時發送
+    params.set('phone', phone)
+    params.set('sms_msg', text)
 
-    const res = await fetch(url.toString(), { method: 'GET' })
+    const res = await fetch('https://sms-get.com/api_send.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
+      },
+      body: params.toString(),
+    })
+
     const data = await res.json().catch(async () => {
       const txt = await res.text()
       try { return JSON.parse(txt) } catch { return { raw: txt } }
     })
 
-    if (data.stats === true || data.status === 'success' || data.code === '000') {
-      return { ok: true, messageId: data.msgid || data.id || 'ok' }
+    const isStatsOk = data?.stats === true || data?.stats === 'true' || data?.stats === 'True'
+    if (isStatsOk && data?.error_code === '000') {
+      // 成功格式: 訊息 ID|使用點數|剩餘點數 (例如: 12345678|1|437)
+      const parts = String(data.error_msg || '').split('|')
+      const messageId = parts[0] || 'smsget-ok'
+      const remainingCredits = parts[2] ? Number(parts[2]) : undefined
+      return { ok: true, messageId, remainingCredits }
     }
-    const errMsg = data.error_msg || data.msg || data.error || (typeof data === 'string' ? data : JSON.stringify(data))
-    return { ok: false, error: `SMS-GET 發送失敗：${errMsg}` }
+
+    const errDetail = SMSGET_ERROR_CODES[data?.error_code] || data?.error_msg || data?.error || JSON.stringify(data)
+    return { ok: false, error: `SMS-GET 發送失敗 [${data?.error_code || 'Err'}]：${errDetail}` }
   } catch (e) {
     return { ok: false, error: `SMS-GET 連線異常：${String(e)}` }
   }

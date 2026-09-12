@@ -17,7 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { SMS_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
-import { sendBatchSms } from '@/lib/telephony/sms-service'
+import { sendBatchSms, querySmsGetCredit } from '@/lib/telephony/sms-service'
 
 export async function POST(req: NextRequest) {
   const user = await getCronOrUserAuth(req)
@@ -84,5 +84,21 @@ export async function POST(req: NextRequest) {
     success,
     failed: total - success,
     results,
+  })
+}
+
+export async function GET(req: NextRequest) {
+  const user = await getCronOrUserAuth(req)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const twRes = await querySmsGetCredit()
+  return NextResponse.json({
+    ok: true,
+    tw: {
+      provider: 'sms-get.com',
+      configured: !!(process.env.SMSGET_USERNAME && process.env.SMSGET_PASSWORD),
+      credits: twRes.ok ? twRes.credits : null,
+      error: twRes.ok ? null : twRes.error,
+    },
   })
 }
