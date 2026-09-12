@@ -422,6 +422,32 @@ function dispatchTicketNotify(
   }))
 }
 
+// 六種工單過去大多只把原始觸發訊息或一句固定罐頭文字（例如「客人要求人工客服」）當
+// description，完全沒說明「為什麼」——員工打開工單還是得自己回頭翻對話紀錄才知道
+// 客人到底在氣什麼、要什麼。這裡用一次便宜的 LLM 呼叫，讀完整段對話脈絡（不只最後
+// 一則訊息）生成一段給員工看的摘要；人工客服請求這一類尤其要講清楚「客人為什麼想
+// 找真人」。只回傳摘要本身，呼叫端會自己把原始內容/引言接在摘要後面保留佐證，不能
+// 只靠這段摘要——摘要是給員工快速掃過用，原始逐字內容才是最終依據。
+async function summarizeTicketReason(kind: string, history: HistoryMsg[], message: string): Promise<string> {
+  try {
+    const geminiKey = process.env.GOOGLE_AI_API_KEY
+    if (!geminiKey) return ''
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+    const convo = [...history.slice(-20), { role: 'user' as const, content: message }]
+      .map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
+    const { text } = await generateText({
+      model: google('gemini-3.1-flash-lite'),
+      messages: [{
+        role: 'user',
+        content: `你是客服系統的內部工具，負責幫員工把對話整理成工單摘要。情境類型：${kind}。\n\n完整對話：\n${convo.slice(-4000)}\n\n請用 2-4 句繁體中文摘要，講清楚客人具體想要什麼、為什麼（如果是要求真人客服或退換貨/退款，一定要說明客人不滿或需要協助的具體原因）；只描述對話中真的出現的內容，絕對不要猜測或編造沒提到的資訊。只輸出摘要本身，不要加前綴或標題。`,
+      }],
+    })
+    return text.trim()
+  } catch {
+    return ''
+  }
+}
+
 // 訂單確認 → 用租戶自己的 LINE OA push 通知已綁定的專員
 async function notifyStaffOrder(userId: string, orderDetail: string): Promise<void> {
   try {
@@ -479,10 +505,11 @@ async function maybeCreateOrderTicket(
       .in('status', ['open', 'in_progress'])
       .limit(1)
     if (existing?.length) return
+    const summary = await summarizeTicketReason('新訂單待跟進', history, text)
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
       subject: '新訂單待跟進',
-      description: `客人已確認訂單，請專員跟進。\n\n【訂單確認內容】\n${lastAssistant.slice(0, 1000)}`,
+      description: `${summary ? `摘要：${summary}\n\n` : ''}客人已確認訂單，請專員跟進。\n\n【訂單確認內容】\n${lastAssistant.slice(0, 1000)}`,
       priority: 'high', intent: '新訂單待跟進',
     })
     // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員 + 工作台設定的工單通知管道
@@ -504,7 +531,11 @@ async function maybeCreatePaymentProofTicket(
     // 訊號三：客人明確表達已匯款、已轉帳或請查收
     const isSuffixReply = PAYMENT_SUFFIX_ASK_RE.test(lastAssistant) && PAYMENT_SUFFIX_REPLY_RE.test(text.trim())
     const isProofStatement = PAYMENT_KEYWORD_RE.test(text) && PAYMENT_SUFFIX_CODE_RE.test(text)
-    const isPaymentClaim = /已匯款|已轉帳|匯款完成|匯款了|轉帳了|已付款|付完全額|付完款|轉了|匯了|請查收/.test(text)
+    // 真實需求：客人只簡單說「已經付款了」「已經付款請查收」這類自然說法，未來
+    // 就算系統做了 email 自動對帳查詢，也不能因為查不到或還沒做這個功能就不理會——
+    // 只要客人明確表達已付款，一律先建工單讓專員人工核對，不能悄悄漏掉。原本的
+    // regex 沒涵蓋「已經」+付款動詞、或「付款/支付」+「了/完成」這類常見組合。
+    const isPaymentClaim = /已匯款|已轉帳|已付款|已支付|已經付款|已經匯款|已經轉帳|已經支付|匯款完成|轉帳完成|付款完成|支付完成|匯款了|轉帳了|付款了|支付了|付完全額|付完款|轉了|匯了|請查收|請確認(收款|款項)?/.test(text)
     if (!isSuffixReply && !isProofStatement && !isPaymentClaim) return
     const { data: existing } = await getServiceClient()
       .from('cs_tickets')
@@ -515,10 +546,11 @@ async function maybeCreatePaymentProofTicket(
       .limit(1)
     if (existing?.length) return
     const recentText = history.slice(-15).map(m => `${m.role === 'user' ? '客人' : 'AI'}：${m.content}`).join('\n')
+    const summary = await summarizeTicketReason('付款確認待跟進', history, text)
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
       subject: '客人已匯款，需人工核對並建立/更新訂單',
-      description: `客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房/行程可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
+      description: `${summary ? `摘要：${summary}\n\n` : ''}客人回報匯款資訊：「${text.trim()}」，請專員核對款項並手動建立或更新訂單紀錄（本次訂房/行程可能是自由對話談成，系統未必已有結構化訂單資料）。\n\n【近期對話】\n${recentText.slice(0, 1500)}`,
       priority: 'high', intent: '付款確認待跟進',
     })
     const notifyMsg = `客人已回報匯款：「${text.trim()}」，請核對款項並手動建立/更新訂單。`
@@ -549,10 +581,11 @@ async function maybeCreateInvoiceTicket(
       .in('status', ['open', 'in_progress'])
       .limit(1)
     if (existing?.length) return
+    const summary = await summarizeTicketReason('發票開立待處理', history, text)
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId, from_name: fromName,
       subject: '客人提供發票抬頭/統一編號，需人工開立發票',
-      description: `客人回報發票資訊：「${text.trim()}」，請專員協助實際開立發票（若客人訂了多間房，也請確認發票/收據要放在哪個房間）。`,
+      description: `${summary ? `摘要：${summary}\n\n` : ''}客人回報發票資訊：「${text.trim()}」，請專員協助實際開立發票（若客人訂了多間房，也請確認發票/收據要放在哪個房間）。`,
       priority: 'medium', intent: '發票開立待處理',
     })
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 客人提供發票資訊，需人工開立發票：\n\n${text.slice(0, 300)}`)
@@ -702,6 +735,7 @@ async function replyToCustomer(
         subject: '手動模式（AI 已暫停）', description: '專員或客人於通訊軟體輸入切換手動/暫停指令',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
+      dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 已切換為手動客服模式（AI 暫停）：\n\n${text.slice(0, 300)}`)
     } catch { /* ignore */ }
     const reply = '已切換為【手動客服模式】🤖❌，AI 已暫停回覆。真人專員接手為您服務。\n（若要恢復 AI 自動回覆，隨時輸入「自動」或「恢復AI」即可切回）'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
@@ -709,14 +743,20 @@ async function replyToCustomer(
   }
 
   if (HUMAN_ESCALATION_RE.test(text)) {
-    try {
-      await getServiceClient().from('cs_tickets').insert({
-        user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
-        subject: text.slice(0, 80), description: '客人要求人工客服',
-        priority: 'high', intent: '人工客服請求',
-      })
-    } catch { /* ignore */ }
-    dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人要求人工客服：\n\n${text.slice(0, 300)}`)
+    // 摘要需要一次 LLM 呼叫，不能拖慢客人這則罐頭回覆——fire-and-forget，
+    // 摘要生成期間客人先收到「已安排專員」的回覆，工單內容稍後才補齊。
+    void (async () => {
+      try {
+        const summary = await summarizeTicketReason('人工客服請求', history, text)
+        await getServiceClient().from('cs_tickets').insert({
+          user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
+          subject: text.slice(0, 80),
+          description: summary ? `摘要：${summary}\n\n客人原始訊息：「${text.trim()}」` : `客人要求人工客服：「${text.trim()}」`,
+          priority: 'high', intent: '人工客服請求',
+        })
+        dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人要求人工客服：\n\n${summary || text.slice(0, 300)}`)
+      } catch { /* ignore */ }
+    })()
     const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏\n（若要重新開啟 AI，請隨時輸入「自動」）'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
@@ -726,14 +766,18 @@ async function replyToCustomer(
   // 單純問取消/退款政策（沒有要求真的採取行動）不轉人工，讓 AI 照常回答問題。
   const isRefundPolicyQuestion = REFUND_POLICY_RE.test(text) && !REFUND_ACTION_RE.test(text)
   if (REFUND_RE.test(text) && !isRefundPolicyQuestion) {
-    try {
-      await getServiceClient().from('cs_tickets').insert({
-        user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
-        subject: text.slice(0, 80), description: '客人提出退換貨/退款需求',
-        priority: 'high', intent: '人工客服請求',
-      })
-    } catch { /* ignore */ }
-    dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人提出退換貨/退款需求：\n\n${text.slice(0, 300)}`)
+    void (async () => {
+      try {
+        const summary = await summarizeTicketReason('人工客服請求（退換貨/退款）', history, text)
+        await getServiceClient().from('cs_tickets').insert({
+          user_id: userId, industry: knowledge.industry, platform, from_id: customerId, from_name: fromName,
+          subject: text.slice(0, 80),
+          description: summary ? `摘要：${summary}\n\n客人原始訊息：「${text.trim()}」` : `客人提出退換貨/退款需求：「${text.trim()}」`,
+          priority: 'high', intent: '人工客服請求',
+        })
+        dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 客人提出退換貨/退款需求：\n\n${summary || text.slice(0, 300)}`)
+      } catch { /* ignore */ }
+    })()
     const reply = '好的，退換貨/退款需要專人為您處理，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
     void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
     return reply
@@ -1209,7 +1253,7 @@ function priorFailedLookupKinds(history: HistoryMsg[]): Set<LookupKind> {
 
 // 三種方式都查無資料時才會呼叫——真的建立工單，之後才能讓 AI 誠實告知客人已建立工單
 async function createExhaustedLookupTicket(
-  userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[],
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[], history: HistoryMsg[] = [],
 ): Promise<void> {
   try {
     const { data: existing } = await getServiceClient()
@@ -1220,10 +1264,11 @@ async function createExhaustedLookupTicket(
       .in('status', ['open', 'in_progress'])
       .limit(1)
     if (existing?.length) return  // 已有未結工單，不重複建立
+    const summary = await summarizeTicketReason('查無資料人工協助', history, lastMessage)
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId,
       subject: '客人訂單號碼/手機號碼/訂房姓名皆查無資料',
-      description: `客人依序嘗試訂單號碼、手機號碼、訂房姓名三種方式查詢，系統都查無對應資料，需要專員人工協助核對。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
+      description: `${summary ? `摘要：${summary}\n\n` : ''}客人依序嘗試訂單號碼、手機號碼、訂房姓名三種方式查詢，系統都查無對應資料，需要專員人工協助核對。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
       priority: 'high', intent: '查無資料人工協助',
     })
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry }, `🔔 客人訂單號碼/手機號碼/訂房姓名皆查無資料：\n\n${lastMessage.slice(0, 300)}`)
@@ -1875,7 +1920,7 @@ const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂�
 // 這裡直接建立工單通知管家人工核對，比照 createExhaustedLookupTicket 的「先真的建立
 // 工單，才能讓 AI 誠實說已經轉真人」邏輯，避免又是一句沒有兌現的空話。
 async function createBalanceCheckTicket(
-  userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[],
+  userId: string, platform: string, customerId: string, industry: string, lastMessage: string, notifyWebhooks: NotifyWebhook[], history: HistoryMsg[] = [],
 ): Promise<void> {
   try {
     const { data: existing } = await getServiceClient()
@@ -1886,10 +1931,11 @@ async function createBalanceCheckTicket(
       .in('status', ['open', 'in_progress'])
       .limit(1)
     if (existing?.length) return  // 已有未結工單，不重複建立
+    const summary = await summarizeTicketReason('訂金餘款人工核對', history, lastMessage)
     await getServiceClient().from('cs_tickets').insert({
       user_id: userId, industry, platform, from_id: customerId,
       subject: '客人詢問訂金/餘款，系統無金流查詢功能',
-      description: `客人詢問訂金或剩餘款項，系統沒有訂金/付款明細查詢功能，AI 已誠實告知查無資料，需要專員人工核對金額。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
+      description: `${summary ? `摘要：${summary}\n\n` : ''}客人詢問訂金或剩餘款項，系統沒有訂金/付款明細查詢功能，AI 已誠實告知查無資料，需要專員人工核對金額。\n\n最後一則訊息：${lastMessage.slice(0, 300)}`,
       priority: 'high', intent: '訂金餘款人工核對',
     })
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry }, `🔔 客人詢問訂金/餘款，需人工核對：\n\n${lastMessage.slice(0, 300)}`)
@@ -1920,7 +1966,7 @@ async function enforceNoFabricatedReveal(
   })
   const hasUnbackedBalance = balanceMatches.some(([, , value]) => !backedByQuery(value.replace(/,/g, '')))
   if (hasUnbackedBalance) {
-    await createBalanceCheckTicket(userId, platform, customerId, industry, lastMessage, notifyWebhooks)
+    await createBalanceCheckTicket(userId, platform, customerId, industry, lastMessage, notifyWebhooks, history)
     return BALANCE_ESCALATION_FALLBACK
   }
   return hasUnbackedId ? NO_FABRICATION_FALLBACK : reply
@@ -2225,7 +2271,7 @@ async function getAIReply(
         const failedKinds = priorFailedLookupKinds(history)
         failedKinds.add(currentLookupKind)
         if (failedKinds.size >= 2) {
-          await createExhaustedLookupTicket(userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks)
+          await createExhaustedLookupTicket(userId, platform, customerId, knowledge.industry, message, knowledge.notifyWebhooks, history)
           externalDataSection += `\n\n【系統提示——最高優先，覆蓋上方「引導客人換方式查詢」的指示】客人已經嘗試過不同的識別方式（訂單號碼／手機號碼／訂房姓名），系統查詢都查無資料，這次系統已經真的建立工單通知專員。現在可以且應該告訴客人「已經為您建立工單，專員會盡快協助核對資料並與您聯繫」，不用再要求客人換方式查詢，也不要再重複索取客人剛才已經提供過的同一組資訊。`
         }
       }
