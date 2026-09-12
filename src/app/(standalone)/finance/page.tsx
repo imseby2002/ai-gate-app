@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
-import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,8 +30,9 @@ const CASHFLOW_IMPORT_COLUMNS: ImportColumn[] = [
 
 // ─── Types ───────────────────────────────────────────────────────
 import PnlReport from './PnlReport'
+import PricingTab from './PricingTab'
 
-type Tab = 'cashflow' | 'accounts' | 'reports' | 'pnl' | 'import'
+type Tab = 'cashflow' | 'accounts' | 'pricing' | 'reports' | 'pnl' | 'import'
 type FlowType = 'income' | 'expense' | 'transfer'
 
 interface Cashflow {
@@ -978,11 +979,18 @@ export default function FinancePage() {
 
   useEffect(() => {
     fetch('/api/hr/accounts').then(res => setIsAdmin(res.status !== 403))
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab')
+      if (p === 'pricing' || p === 'cashflow' || p === 'accounts' || p === 'reports' || p === 'pnl' || p === 'import') {
+        setTab(p as Tab)
+      }
+    }
   }, [])
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
     { id: 'cashflow',  label: '出納帳務', icon: <Wallet className="h-4 w-4" /> },
     { id: 'accounts',  label: '帳戶管理', icon: <Landmark className="h-4 w-4" /> },
+    { id: 'pricing',   label: '物料定價', icon: <Package className="h-4 w-4 text-emerald-600" /> },
     { id: 'reports',   label: '財務報表', icon: <BarChart3 className="h-4 w-4" /> },
     { id: 'pnl',       label: '業績報表', icon: <TrendingUp className="h-4 w-4" /> },
     { id: 'import',    label: '資料匯入', icon: <Upload className="h-4 w-4" /> },
@@ -1009,17 +1017,12 @@ export default function FinancePage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">出納總務</h1>
-          <p className="text-sm text-gray-500">出納帳務、帳戶管理、財務報表</p>
+          <p className="text-sm text-gray-500">出納帳務、帳戶管理、物料定價（原料/設備/耗材）、財務報表</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Link href="/store-expenses">
             <Button variant="outline" size="sm" className="gap-1.5">
               <Store className="h-4 w-4" />門市費用
-            </Button>
-          </Link>
-          <Link href="/units">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />單位資料
             </Button>
           </Link>
           <Link href="/vendors">
@@ -1027,29 +1030,14 @@ export default function FinancePage() {
               <Truck className="h-4 w-4" />廠商資料
             </Button>
           </Link>
-          <Link href="/affairs">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FileText className="h-4 w-4" />外務・證照
-            </Button>
-          </Link>
-          <Link href="/hr">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />人事管理
-            </Button>
-          </Link>
-          <Link href="/resume">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Zap className="h-4 w-4" />職場工具
-            </Button>
-          </Link>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id ? 'bg-card text-primary shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'}`}>
             {t.icon}{t.label}
           </button>
         ))}
@@ -1059,6 +1047,7 @@ export default function FinancePage() {
       <Card className="p-5">
         {tab === 'cashflow'  && <CashflowTab />}
         {tab === 'accounts'  && <AccountsTab />}
+        {tab === 'pricing'   && <PricingTab />}
         {tab === 'reports'   && <ReportsTab />}
         {tab === 'pnl'       && <PnlReport />}
         {tab === 'import'    && <ImportTab />}

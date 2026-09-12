@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/marketing/upload
  * 上傳行銷素材至各大社群平台
  *
@@ -231,7 +231,7 @@ async function uploadTwitter(creds: Record<string, string>, copyText: string): P
 // ─── LINE VOOM ─────────────────────────────────────────────────────────────────
 async function uploadLineVoom(creds: Record<string, string>, imageUrls: string[], copyText: string): Promise<PlatformResult> {
   try {
-    const { channel_access_token } = creds
+    const channel_access_token = creds.channel_access_token || creds.line_channel_access_token
     if (!channel_access_token) return { platform: 'LINE VOOM', ok: false, error: '未設定 Channel Access Token' }
 
     // LINE VOOM Post (Timeline post via Messaging API)
@@ -265,7 +265,8 @@ async function uploadLineVoom(creds: Record<string, string>, imageUrls: string[]
 // ─── Zalo OA ───────────────────────────────────────────────────────────────────
 async function uploadZalo(creds: Record<string, string>, imageUrls: string[], copyText: string): Promise<PlatformResult> {
   try {
-    const { access_token, oa_id } = creds
+    const access_token = creds.access_token || creds.zalo_access_token
+    const oa_id = creds.oa_id || creds.zalo_oa_id
     if (!access_token || !oa_id) return { platform: 'Zalo', ok: false, error: '未設定 Access Token 或 OA ID' }
 
     // Zalo OA Article Post
@@ -507,7 +508,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { platforms, imageUrls = [], videoUrl = '', copyText = '' } = await req.json()
+  const body = await req.json()
+  const platforms = body.platforms
+  const imageUrls: string[] = body.imageUrls ?? (Array.isArray(body.images) ? body.images.map((img: unknown) => typeof img === 'string' ? img : (img as { url?: string })?.url).filter(Boolean) : [])
+  const videoUrl: string = body.videoUrl ?? (Array.isArray(body.videos) ? (body.videos[0]?.url ?? (typeof body.videos[0] === 'string' ? body.videos[0] : '')) : (typeof body.video === 'string' ? body.video : '')) ?? ''
+  const copyText: string = (body.copyText ?? (Array.isArray(body.copies) ? body.copies.join('\n\n') : (typeof body.copies === 'string' ? body.copies : '')) ?? '').trim()
+
   if (!platforms?.length) return NextResponse.json({ error: 'platforms required' }, { status: 400 })
 
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
@@ -523,7 +529,26 @@ export async function POST(req: NextRequest) {
 
   const credMap: Record<string, Record<string, string>> = {}
   for (const row of credRows ?? []) {
-    if (row.is_connected) credMap[row.platform] = row.credentials
+    if (row.is_connected && row.credentials) {
+      credMap[row.platform] = row.credentials
+      const lower = row.platform.toLowerCase()
+      if (lower === 'line') {
+        credMap['LINE VOOM'] = credMap['LINE VOOM'] || row.credentials
+        credMap['line'] = row.credentials
+      }
+      if (lower === 'zalo') {
+        credMap['Zalo'] = credMap['Zalo'] || row.credentials
+        credMap['zalo'] = row.credentials
+      }
+      if (lower === 'facebook') {
+        credMap['Facebook'] = credMap['Facebook'] || row.credentials
+        credMap['FB Reels'] = credMap['FB Reels'] || row.credentials
+      }
+      if (lower === 'instagram') {
+        credMap['Instagram'] = credMap['Instagram'] || row.credentials
+        credMap['IG Reels'] = credMap['IG Reels'] || row.credentials
+      }
+    }
   }
 
   // Dispatch uploads in parallel

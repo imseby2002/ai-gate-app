@@ -75,7 +75,13 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
 
     if (signIn.error.message === 'Invalid login credentials') {
       // 可能是未註冊 → 嘗試自動註冊
-      const signUp = await supabase.auth.signUp({ email, password })
+      const signUp = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/callback?system=${system}`
+        }
+      })
       if (signUp.error) {
         setError(signUp.error.message.includes('already registered')
           ? '密碼錯誤，請重新輸入'

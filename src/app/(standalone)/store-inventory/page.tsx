@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus, Ban, PackageMinus, ExternalLink } from 'lucide-react'
+import { ClipboardList, Upload, Download, Loader2, AlertCircle, Store, Save, Bell, ShieldAlert, PackageCheck, History, Boxes, CalendarClock, Trash2, Plus, Ban, PackageMinus, ExternalLink, Wrench, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -23,10 +23,22 @@ export default function StoreInventoryPage() {
   const [tab, setTab] = useState<Tab>('count')
   const [stores, setStores] = useState<string[]>([])
   const [store, setStore] = useState('')
+  const [lockedStore, setLockedStore] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/inv/stores').then(r => { if (r.status === 403) { setIsAdmin(false); return null } setIsAdmin(true); return r.json() })
-      .then(d => { if (d) { setStores(d.stores ?? []); setStore(s => s || (d.stores?.[0] ?? '')) } })
+      .then(d => {
+        if (d) {
+          if (d.locked_store) {
+            setLockedStore(d.locked_store)
+            setStores([d.locked_store])
+            setStore(d.locked_store)
+          } else {
+            setStores(d.stores ?? [])
+            setStore(s => s || (d.stores?.[0] ?? ''))
+          }
+        }
+      })
   }, [])
 
   if (isAdmin === false) return (
@@ -51,14 +63,32 @@ export default function StoreInventoryPage() {
           <h1 className="text-2xl font-bold">門市盤點・訂貨</h1>
           <p className="text-sm text-gray-500">每日盤點 → 補到滿倉自動產生訂貨表；低於安全量緊急通知領班</p>
         </div>
-        <div className="ml-auto"><Link href="/store-reports"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />門市報表</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <Link href="/store-reports"><Button variant="outline" size="sm" className="gap-1.5"><Store className="h-4 w-4" />門市報表</Button></Link>
+          <Link href="/store-bills"><Button variant="outline" size="sm" className="gap-1.5"><Receipt className="h-4 w-4 text-emerald-600" />水電費用</Button></Link>
+          <Link href="/repair"><Button variant="outline" size="sm" className="gap-1.5"><Wrench className="h-4 w-4 text-amber-600" />門市報修</Button></Link>
+        </div>
       </div>
 
       <Card className="p-3">
         <label className="space-y-1 inline-block">
-          <span className="block text-xs text-gray-500">門市</span>
-          <Input list="inv-store-list" value={store} onChange={e => setStore(e.target.value)} placeholder="門市（如 YL）" className="w-40" />
-          <datalist id="inv-store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>
+          <div className="flex items-center gap-2">
+            <span className="block text-xs text-gray-500">門市代碼</span>
+            {lockedStore && (
+              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                🔒 本店專屬・不可切換其他門市
+              </span>
+            )}
+          </div>
+          <Input
+            list={lockedStore ? undefined : "inv-store-list"}
+            value={store}
+            disabled={!!lockedStore}
+            onChange={e => setStore(e.target.value)}
+            placeholder="門市（如 YL）"
+            className="w-48 disabled:bg-muted/50 disabled:cursor-not-allowed font-semibold"
+          />
+          {!lockedStore && <datalist id="inv-store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>}
         </label>
       </Card>
 

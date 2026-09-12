@@ -9,6 +9,7 @@ import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
+import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -820,7 +821,8 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
 
   let externalDataSection = ''
   if (sheetResults.length > 0) {
-    const guard = (detectedOrderNum && checkin.before)
+    const hasBnbCheckinResult = sheetResults.some(r => r.includes('【入住資訊查詢結果】'))
+    const guard = (detectedOrderNum && checkin.before && !hasBnbCheckinResult)
       ? `\n\n【系統強制指令——最高優先】目前台灣時間 ${checkin.nowHHMM} 尚未到入住時間（${checkin.checkinTime}）。即使下方資料含密碼或房號，也一律禁止提供；你只能告知客人：入住時間為今日 ${checkin.checkinTime}，請於該時間後再輸入訂單號碼查詢。`
       : ''
     externalDataSection = guard + `\n\n【外部資料查詢結果】\n${sheetResults.join('\n\n')}\n${hasPricing ? '計算價格時請逐步列式，嚴格使用以上定價表數字，不得估算。' : '請根據以上資料回覆客戶，資料中沒有的欄位請勿捏造。'}`
@@ -1079,6 +1081,8 @@ const systemPrompt = `${baseInstructions}
 - 計算步驟用純文字逐行呈現，例如「成人 2 位 × $800 = $1,600」，不用符號列點
 - 報價禁止顯示加價乘數（× 1.15 等），直接查定價表取假日/週末價輸出；只有折扣（打折、優惠）才需標示
 - 資料使用分工：初次詢問房型 → 定價計算機簡介；客人追問細節（設施/空間/特色）→ 查知識庫給具體答案，禁止二次重複簡介
+- 【對話極度精簡、直球回答、禁止囉嗦廢話與嚴禁句尾慣性追問——最高禁令】回覆一律精簡扼要，直中要害，禁止堆砌客套話或自說自話！回答完客人的問題即立刻結束，【絕對禁止】在句尾習慣性加上「請問您想了解哪間呢？」、「請問這樣清楚嗎？」、「您想先確認哪一項呢？」等任何多餘追問！當客人只是陳述事實、告知資訊（如「了解」、「好的」、「已匯款」）或禮貌道謝（如「謝謝」），只需簡短禮貌回應，嚴禁強行反問！凡對話紀錄中已出現過之資訊，嚴禁再次詢問！
+- 【優惠與補助互斥規定——最高原則，嚴禁重複疊加折扣，嚴禁虛報2,600定價】本民宿房間平日一般售價為：201龜山加大床房2,000元、202蘭博1,800元、302山景1,800元、401露臺2,200元、301海景2,500元。本民宿絕無2,600元等虛高門牌定價，絕對禁止向客人報2,600元！若客人要使用國旅補助（折抵1,000元），一律以【平日一般售價（如龜山房2,000元）】為基準現場折抵，客人實付只要1,000元！所有優惠（早鳥8折1,600元）與國旅補助採獨立計算二擇一，絕對不可在早鳥價1,600元上再重複扣補助變成600元！
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
@@ -1233,6 +1237,77 @@ const systemPrompt = `${baseInstructions}
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,platform,from_id,industry' })
     } catch { /* 表可能尚未建立，略過追蹤 */ }
+  }
+
+  // ── Record AI Usage for CS Chat ──
+  try {
+    const inTokens = estimateTextTokens(message) + 150
+    const outTokens = estimateTextTokens(reply)
+    let modelId = 'groq-qwen3-32b'
+    let sourceChannel: 'cliproxy' | 'freellm' | 'groq' | 'google' = 'groq'
+
+    if (provider?.includes('CLIProxy')) {
+      modelId = 'cliproxy:gemini-3-flash'
+      sourceChannel = 'cliproxy'
+    } else if (provider?.includes('FreeLLM')) {
+      modelId = 'freellm:glm-4.7-flash'
+      sourceChannel = 'freellm'
+    } else if (provider?.includes('Gemini')) {
+      modelId = 'gemini-2.0-flash'
+      sourceChannel = 'google'
+    }
+
+    const costs = calculateModelCosts(modelId, inTokens, outTokens, sourceChannel)
+    const finishReasonMeta = JSON.stringify({
+      source: sourceChannel,
+      model: modelId,
+      savedUsd: costs.savedCostUsd,
+      isFree: costs.isFree,
+      service: 'cs',
+    })
+
+    await supabase.from('messages').insert({
+      user_id: user.id,
+      conversation_id: null,
+      role: 'assistant',
+      content: reply.slice(0, 500),
+      model_id: modelId,
+      input_tokens: inTokens,
+      output_tokens: outTokens,
+      cost_usd: costs.actualCostUsd,
+      latency_ms: latencyMs,
+      finish_reason: finishReasonMeta,
+    })
+
+    const today = new Date().toISOString().split('T')[0]
+    const { data: existingUd } = await supabase
+      .from('usage_daily')
+      .select('id, message_count, input_tokens, output_tokens, total_cost_usd')
+      .eq('user_id', user.id)
+      .eq('model_id', modelId)
+      .eq('date', today)
+      .maybeSingle()
+
+    if (existingUd) {
+      await supabase.from('usage_daily').update({
+        message_count: (existingUd.message_count || 0) + 1,
+        input_tokens: (existingUd.input_tokens || 0) + inTokens,
+        output_tokens: (existingUd.output_tokens || 0) + outTokens,
+        total_cost_usd: (existingUd.total_cost_usd || 0) + costs.actualCostUsd,
+      }).eq('id', existingUd.id)
+    } else {
+      await supabase.from('usage_daily').insert({
+        user_id: user.id,
+        model_id: modelId,
+        date: today,
+        message_count: 1,
+        input_tokens: inTokens,
+        output_tokens: outTokens,
+        total_cost_usd: costs.actualCostUsd,
+      })
+    }
+  } catch (usageErr) {
+    console.error('[cs-chat] usage recording error:', usageErr)
   }
 
   return NextResponse.json({ reply, intent, risk, provider, latencyMs, summary, images })

@@ -28,15 +28,32 @@ function warrantyBadge(days: number | null, until: string | null) {
   return <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${cls}`}>{txt}</span>
 }
 
+import RepairAIAssistantTab from '@/components/repair/RepairAIAssistantTab'
+import RepairKnowledgeTab from '@/components/repair/RepairKnowledgeTab'
+import type { RepairMode } from '@/lib/types/repair-ai'
+import { Sparkles, BookOpen } from 'lucide-react'
+
 // ─────────────────────────── 頁面 ───────────────────────────
-type Tab = 'orders' | 'equipment'
+type Tab = 'orders' | 'ai' | 'knowledge' | 'equipment'
 
 export default function RepairPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('orders')
+  const [initialAiMode, setInitialAiMode] = useState<RepairMode>('store')
 
   useEffect(() => {
     fetch('/api/repair/orders').then(r => setAllowed(r.status !== 403))
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      const t = sp.get('tab')
+      if (t === 'ai' || t === 'knowledge' || t === 'equipment' || t === 'orders') {
+        setTab(t as Tab)
+      }
+      const m = sp.get('mode')
+      if (m === 'store' || m === 'technician') {
+        setInitialAiMode(m as RepairMode)
+      }
+    }
   }, [])
 
   if (allowed === false) return (
@@ -50,19 +67,35 @@ export default function RepairPage() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Wrench className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">維修管理</h1>
-          <p className="text-sm text-muted-foreground">報修工單、設備資產台帳</p>
+          <h1 className="text-2xl font-bold">維修管理與機電 AI</h1>
+          <p className="text-sm text-muted-foreground">報修工單、維修 AI 助理 (雙模式)、設備手冊 RAG 知識庫與資產台帳</p>
         </div>
-        <div className="ml-auto"><Link href="/office"><Button variant="outline" size="sm">返回</Button></Link></div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['orders', '報修單', <ClipboardList key="o" className="h-4 w-4" />], ['equipment', '設備台帳', <Boxes key="e" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
-          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+      <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-xl w-fit">
+        {([
+          ['orders', '報修工單', <ClipboardList key="o" className="h-4 w-4" />],
+          ['ai', '維修 AI 助理 (雙模式)', <Sparkles key="a" className="h-4 w-4 text-amber-500" />],
+          ['knowledge', '設備手冊與 RAG 庫', <BookOpen key="k" className="h-4 w-4 text-indigo-500" />],
+          ['equipment', '設備台帳', <Boxes key="e" className="h-4 w-4" />],
+        ] as const).map(([id, label, icon]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === id ? 'bg-card text-primary shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {icon}
+            {label}
+          </button>
         ))}
       </div>
 
-      {tab === 'orders' ? <OrdersTab /> : <EquipmentTab />}
+      {tab === 'orders' && <OrdersTab />}
+      {tab === 'ai' && <RepairAIAssistantTab initialMode={initialAiMode} onSwitchToOrders={() => setTab('orders')} />}
+      {tab === 'knowledge' && <RepairKnowledgeTab />}
+      {tab === 'equipment' && <EquipmentTab />}
     </div>
   )
 }
@@ -91,10 +124,12 @@ function OrdersTab() {
   const [items, setItems] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
+  const [lockedStore, setLockedStore] = useState<string | null>(null)
   const [canManage, setCanManage] = useState(false)
   const [vendors, setVendors] = useState<Assignee[]>([])
   const [employees, setEmployees] = useState<Assignee[]>([])
   const [equip, setEquip] = useState<Equip[]>([])
+  const [storeOptions, setStoreOptions] = useState<{ code: string; name: string }[]>([])
   const [creating, setCreating] = useState<Record<string, string> | null>(null)
   const [managing, setManaging] = useState<Order | null>(null)
   const [saving, setSaving] = useState(false)
@@ -107,11 +142,12 @@ function OrdersTab() {
     const res = await fetch('/api/repair/orders?' + sp.toString())
     const j = await res.json().catch(() => ({}))
     setItems(j.items ?? [])
+    if (j.locked_store) setLockedStore(j.locked_store)
     setLoading(false)
   }, [status])
   useEffect(() => { load() }, [load])
 
-  // 判斷是否可管理（派工）＋載入派工對象與設備清單
+  // 判斷是否可管理（派工）＋載入派工對象與設備清單、門市清單
   useEffect(() => {
     fetch('/api/repair/assignees').then(async r => {
       if (r.status === 403) { setCanManage(false); return }
@@ -121,6 +157,9 @@ function OrdersTab() {
     })
     fetch('/api/repair/equipment').then(async r => {
       if (r.ok) { const j = await r.json().catch(() => ({})); setEquip(j.items ?? []) }
+    })
+    fetch('/api/fin/stores').then(async r => {
+      if (r.ok) { const j = await r.json().catch(() => ({})); setStoreOptions(j.stores ?? []) }
     })
   }, [])
 
@@ -149,7 +188,10 @@ function OrdersTab() {
     load()
   }
 
-  const stores = Array.from(new Set(equip.map(e => e.store).filter(Boolean))).sort()
+  const stores = Array.from(new Set([
+    ...storeOptions.map(s => s.code),
+    ...equip.map(e => e.store)
+  ].filter(Boolean))).sort()
 
   return (
     <div className="space-y-4">
@@ -158,7 +200,14 @@ function OrdersTab() {
           <option value="">全部狀態</option>
           {Object.entries(OS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setErr(''); setCreating({ title: '', store: '', equipment_id: '', description: '', priority: 'normal' }) }}><Plus className="h-4 w-4" />報修</Button>
+        {lockedStore && (
+          <span className="text-xs px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium border border-amber-300">
+            🔒 本店專屬 [{lockedStore}]
+          </span>
+        )}
+        <Button size="sm" className="ml-auto gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { setErr(''); setCreating({ title: '', store: lockedStore || '', equipment_id: '', description: '', priority: 'normal' }) }}>
+          <Plus className="h-4 w-4" />新增門市報修
+        </Button>
       </div>
 
       {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -201,16 +250,26 @@ function OrdersTab() {
       {creating && (
         <Modal title="報修" onClose={() => setCreating(null)} err={err} saving={saving} onSave={createReport}>
           <label className="col-span-2 text-sm">問題標題 *<Input value={creating.title} onChange={e => setCreating({ ...creating, title: e.target.value })} className="mt-1" /></label>
-          <label className="text-sm">門市
-            <select value={creating.store} onChange={e => setCreating({ ...creating, store: e.target.value })} className={`mt-1 w-full ${selCls}`}>
-              <option value="">—</option>
-              {stores.map(s => <option key={s} value={s}>{s}</option>)}
+          <label className="text-sm">門市 *
+            <select
+              value={creating.store}
+              disabled={!!lockedStore}
+              onChange={e => setCreating({ ...creating, store: e.target.value })}
+              className={`mt-1 w-full ${selCls} disabled:opacity-85 disabled:cursor-not-allowed`}
+            >
+              <option value="">請選擇門市</option>
+              {stores.map(s => {
+                const opt = storeOptions.find(o => o.code === s)
+                return <option key={s} value={s}>[{s}] {opt?.name || s}{lockedStore === s ? '（本店專用）' : ''}</option>
+              })}
             </select>
           </label>
           <label className="text-sm">關聯設備
             <select value={creating.equipment_id} onChange={e => setCreating({ ...creating, equipment_id: e.target.value })} className={`mt-1 w-full ${selCls}`}>
-              <option value="">—（無/未登錄）</option>
-              {equip.map(e => <option key={e.id} value={e.id}>{e.name}{e.store ? `（${e.store}）` : ''}</option>)}
+              <option value="">—（無 / 自行描述）</option>
+              {equip.filter(e => !creating.store || e.store === creating.store || !e.store).map(e => (
+                <option key={e.id} value={e.id}>{e.name} {e.brand_model ? `(${e.brand_model})` : ''} {e.store ? `[${e.store}]` : ''}</option>
+              ))}
             </select>
           </label>
           <label className="text-sm">優先度
@@ -292,6 +351,7 @@ function EquipmentTab() {
   const [items, setItems] = useState<Equip[]>([])
   const [loading, setLoading] = useState(true)
   const [store, setStore] = useState('')
+  const [lockedStore, setLockedStore] = useState<string | null>(null)
   const [status, setStatus] = useState('')
   const [editing, setEditing] = useState<Partial<Equip> | null>(null)
   const [saving, setSaving] = useState(false)
@@ -305,6 +365,10 @@ function EquipmentTab() {
     const res = await fetch('/api/repair/equipment?' + sp.toString())
     const j = await res.json().catch(() => ({}))
     setItems(j.items ?? [])
+    if (j.locked_store) {
+      setLockedStore(j.locked_store)
+      setStore(j.locked_store)
+    }
     setLoading(false)
   }, [store, status])
   useEffect(() => { load() }, [load])
@@ -331,15 +395,27 @@ function EquipmentTab() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <select value={store} onChange={e => setStore(e.target.value)} className={selCls}>
-          <option value="">全部門市</option>
-          {stores.map(s => <option key={s} value={s}>{s}</option>)}
+        <select
+          value={store}
+          disabled={!!lockedStore}
+          onChange={e => setStore(e.target.value)}
+          className={`${selCls} disabled:opacity-85 disabled:cursor-not-allowed`}
+        >
+          {!lockedStore && <option value="">全部門市</option>}
+          {stores.map(s => <option key={s} value={s}>{s}{lockedStore === s ? '（本店專用）' : ''}</option>)}
         </select>
         <select value={status} onChange={e => setStatus(e.target.value)} className={selCls}>
           <option value="">全部狀態</option>
           {Object.entries(EQ_STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setErr(''); setEditing(blankEq()) }}><Plus className="h-4 w-4" />新增設備</Button>
+        {lockedStore && (
+          <span className="text-xs px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 font-medium border border-amber-300">
+            🔒 本店專屬 [{lockedStore}]
+          </span>
+        )}
+        <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setErr(''); setEditing({ ...blankEq(), store: lockedStore || '' }) }}>
+          <Plus className="h-4 w-4" />新增設備
+        </Button>
       </div>
 
       {loading ? <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
@@ -381,7 +457,7 @@ function EquipmentTab() {
       {editing && (
         <Modal title={editing.id ? '編輯設備' : '新增設備'} onClose={() => setEditing(null)} err={err} saving={saving} onSave={save}>
           <label className="col-span-2 text-sm">設備名稱 *<Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} className="mt-1" /></label>
-          <label className="text-sm">門市<Input value={editing.store ?? ''} onChange={e => setEditing({ ...editing, store: e.target.value })} className="mt-1" /></label>
+          <label className="text-sm">門市<Input value={editing.store ?? ''} disabled={!!lockedStore} onChange={e => setEditing({ ...editing, store: e.target.value })} className="mt-1 disabled:opacity-85 disabled:cursor-not-allowed" /></label>
           <label className="text-sm">類別<Input value={editing.category ?? ''} onChange={e => setEditing({ ...editing, category: e.target.value })} className="mt-1" placeholder="製冰機/封口機…" /></label>
           <label className="text-sm">品牌型號<Input value={editing.brand_model ?? ''} onChange={e => setEditing({ ...editing, brand_model: e.target.value })} className="mt-1" /></label>
           <label className="text-sm">序號/財產編號<Input value={editing.serial_no ?? ''} onChange={e => setEditing({ ...editing, serial_no: e.target.value })} className="mt-1" /></label>

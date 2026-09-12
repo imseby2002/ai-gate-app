@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const ACTIVE_BNB_COOKIE = 'active_bnb_owner'
 
@@ -23,7 +24,7 @@ export interface BnbContext {
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 /**
- * 解析當前請求要操作哪一間民宿。
+ * 解析當前請求要操作哪一間民宿／商戶客服。
  * - 未設 cookie 或 cookie = 自己 → 操作自己的民宿（owner）
  * - cookie 指向他人 → 驗證對該 owner 有 active membership，取得角色
  *   驗證失敗則安全退回自己的民宿
@@ -54,8 +55,8 @@ export async function getBnbContext(
   // 使用者主動選了自己的民宿
   if (requested === user.id) return selfCtx()
 
-  // 尚未設定切換 cookie：若是「純協作者」（自己沒有任何民宿房型資料、但有受邀的
-  // active membership）→ 自動進入受邀民宿，省去手動切換。一旦用切換器選過即寫入
+  // 尚未設定切換 cookie：若是「純協作者」（自己沒有任何民宿房型或 CS 客戶資料、但有受邀的
+  // active membership）→ 自動進入受邀民宿／商戶，省去手動切換。一旦用切換器選過即寫入
   // cookie，走下方驗證分支，不再自動判定。
   if (!requested) {
     const { data: memberships } = await sb
@@ -67,12 +68,56 @@ export async function getBnbContext(
       .order('created_at', { ascending: true })
 
     if (memberships?.length) {
-      const { count } = await sb
-        .from('properties')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-      if (!count) return memberCtx(memberships[0].owner_id, memberships[0].role as BnbRole, memberships[0].can_correct_ai)
+      if (scope === 'booking') {
+        const { count } = await sb
+          .from('properties')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        if (!count) return memberCtx(memberships[0].owner_id, memberships[0].role as BnbRole, memberships[0].can_correct_ai)
+      } else {
+        const { count } = await sb
+          .from('cs_customers')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        if (!count) return memberCtx(memberships[0].owner_id, memberships[0].role as BnbRole, memberships[0].can_correct_ai)
+      }
     }
+
+    // 若在 bnb_members 未找到，再檢查公司身分（company_members）
+    const admin = createAdminClient()
+    const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
+    if (profile?.company_id) {
+      const [{ data: company }, { data: cm }] = await Promise.all([
+        admin.from('companies').select('created_by, bnb_owner_id').eq('id', profile.company_id).maybeSingle(),
+        admin.from('company_members').select('role').eq('company_id', profile.company_id).eq('member_id', user.id).eq('status', 'active').maybeSingle(),
+      ])
+      const companyOwnerId = company?.bnb_owner_id || company?.created_by
+      if (companyOwnerId && companyOwnerId !== user.id && cm) {
+        const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
+        const canCorrectAi = role === 'admin' || role === 'manager'
+
+        // 背景確保同步至 bnb_members（以利 Postgres RLS accessible_owner_ids 順利放行）
+        admin.from('bnb_members').upsert({
+          owner_id: companyOwnerId,
+          member_id: user.id,
+          invited_email: user.email,
+          role,
+          status: 'active',
+          scope,
+          can_correct_ai: canCorrectAi,
+          accepted_at: new Date().toISOString(),
+        }, { onConflict: 'owner_id,invited_email,scope' }).then(() => {}, () => {})
+
+        if (scope === 'booking') {
+          const { count } = await sb.from('properties').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+          if (!count) return memberCtx(companyOwnerId, role, canCorrectAi)
+        } else {
+          const { count } = await sb.from('cs_customers').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+          if (!count) return memberCtx(companyOwnerId, role, canCorrectAi)
+        }
+      }
+    }
+
     return selfCtx()
   }
 
@@ -93,6 +138,36 @@ export async function getBnbContext(
     .eq('scope', scope)
     .maybeSingle()
 
-  if (!member) return selfCtx() // 無效的切換目標 → 退回自己的民宿
-  return memberCtx(requested, member.role as BnbRole, member.can_correct_ai)
+  if (member) return memberCtx(requested, member.role as BnbRole, member.can_correct_ai)
+
+  // 亦支援以公司成員身分切換
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
+  if (profile?.company_id) {
+    const [{ data: company }, { data: cm }] = await Promise.all([
+      admin.from('companies').select('created_by, bnb_owner_id').eq('id', profile.company_id).maybeSingle(),
+      admin.from('company_members').select('role').eq('company_id', profile.company_id).eq('member_id', user.id).eq('status', 'active').maybeSingle(),
+    ])
+    const companyOwnerId = company?.bnb_owner_id || company?.created_by
+    if (companyOwnerId === requested && cm) {
+      const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
+      const canCorrectAi = role === 'admin' || role === 'manager'
+
+      // 背景確保同步至 bnb_members
+      admin.from('bnb_members').upsert({
+        owner_id: companyOwnerId,
+        member_id: user.id,
+        invited_email: user.email,
+        role,
+        status: 'active',
+        scope,
+        can_correct_ai: canCorrectAi,
+        accepted_at: new Date().toISOString(),
+      }, { onConflict: 'owner_id,invited_email,scope' }).then(() => {}, () => {})
+
+      return memberCtx(requested, role, canCorrectAi)
+    }
+  }
+
+  return selfCtx() // 無效的切換目標 → 退回自己的民宿
 }

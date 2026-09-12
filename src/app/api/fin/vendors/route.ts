@@ -10,7 +10,10 @@ async function getAdminUser() {
 
 const cleanRegions = (v: unknown): string[] =>
   Array.isArray(v) ? [...new Set(v.map(x => String(x).trim()).filter(Boolean))] : []
-const svc = (v: unknown) => (v === 'gas' ? 'gas' : v === 'ice' ? 'ice' : '')
+const svc = (v: unknown) => {
+  const s = String(v ?? '').trim().toLowerCase()
+  return ['gas', 'ice', 'electric', 'water'].includes(s) ? s : ''
+}
 const dayOrNull = (v: unknown) => { const n = parseInt(String(v ?? '')); return n >= 1 && n <= 31 ? n : null }
 
 // 基本資料欄位（廠商主檔）
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
   const service = svc(b.service)
   const { data, error } = await supabase.from('fin_vendors').insert({
     owner_id: user.id, name, service,
-    regions: service === 'ice' ? cleanRegions(b.regions) : [],
+    regions: ['gas', 'ice'].includes(service) ? cleanRegions(b.regions) : [],
     fill_token: randomBytes(24).toString('base64url'), active: b.active !== false,
     ...baseFields(b),
   }).select('id').single()
@@ -62,7 +65,7 @@ export async function PATCH(req: NextRequest) {
   if (b.service !== undefined) upd.service = svc(b.service)
   if (b.regions !== undefined) upd.regions = cleanRegions(b.regions)
   if (b.active !== undefined) upd.active = !!b.active
-  if (upd.service === 'gas') upd.regions = []
+  if (['electric', 'water'].includes(upd.service as string)) upd.regions = []
   const { error } = await supabase.from('fin_vendors').update(upd).eq('id', id).eq('owner_id', user.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ ok: true })

@@ -13,6 +13,7 @@ export interface GmSnapshot {
   affairs: { expiring: { title: string; doc_type: string; expiry_date: string; days: number }[]; count: number }
   hr: { active: number; new_this_month: number; contracts_expiring: number }
   audit: { active_rules: number }
+  marketing: { delivery_revenue: number; delivery_orders: number; content_review: number; offline_active: number }
   flags: GmFlag[]
 }
 
@@ -102,8 +103,20 @@ export async function buildGmSnapshot(admin: Admin, ownerId: string): Promise<Gm
   const { count: auditRules } = await admin.from('audit_rules').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('active', true)
   const audit = { active_rules: auditRules ?? 0 }
 
+  // ── 行銷 ──
+  const [{ data: deliv }, { count: contentReview }, { data: offline }] = await Promise.all([
+    admin.from('mkt_delivery').select('monthly_orders, monthly_revenue').eq('owner_id', ownerId),
+    admin.from('mkt_content').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId).eq('status', 'review'),
+    admin.from('mkt_offline').select('status').eq('owner_id', ownerId),
+  ])
+  const deliveryRevenue = (deliv ?? []).reduce((t, d) => t + (Number(d.monthly_revenue) || 0), 0)
+  const deliveryOrders = (deliv ?? []).reduce((t, d) => t + (Number(d.monthly_orders) || 0), 0)
+  const offlineActive = (offline ?? []).filter(o => o.status !== 'done' && o.status !== 'cancelled').length
+  const marketing = { delivery_revenue: deliveryRevenue, delivery_orders: deliveryOrders, content_review: contentReview ?? 0, offline_active: offlineActive }
+  if ((contentReview ?? 0) > 0) flags.push({ dept: '行銷', level: 'info', text: `${contentReview} 則行銷內容待審核` })
+
   const order = { urgent: 0, warn: 1, info: 2 }
   flags.sort((a, b) => order[a.level] - order[b.level])
 
-  return { period, finance, repair, affairs, hr, audit, flags }
+  return { period, finance, repair, affairs, hr, audit, marketing, flags }
 }

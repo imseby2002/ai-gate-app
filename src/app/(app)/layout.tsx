@@ -1,4 +1,4 @@
-﻿import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, companies(enabled_modules)')
     .eq('id', user.id)
     .single()
 
@@ -47,10 +47,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const sub = host.split('.')[0]
   const subScope = SUBDOMAIN_SYSTEM[sub]
 
+  const effectiveModules = (profile.companies as any)?.enabled_modules ?? profile.enabled_modules ?? undefined
+
   return (
     <AppShell
       userType={profile.user_type}
-      enabledModules={profile.enabled_modules ?? undefined}
+      enabledModules={effectiveModules}
       scope={subScope}
       conversations={conversations ?? []}
       profile={profile}

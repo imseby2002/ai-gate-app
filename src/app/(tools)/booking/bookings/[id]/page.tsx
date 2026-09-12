@@ -29,7 +29,7 @@ interface OrderInfo {
 
 interface RoomRow {
   id: string; property_id: string | null
-  check_in: string; check_out: string; num_guests: number
+  check_in: string; check_out: string; num_guests: number; extra_beds: number
   total_price: number | null; currency: string; status: string
   properties: { id: string; name: string } | null
 }
@@ -95,6 +95,7 @@ export default function BookingDetailPage() {
         setRooms(d.order ? (d.rooms ?? []) : (d.booking ? [{
           id: d.booking.id, property_id: d.booking.properties?.id ?? null,
           check_in: d.booking.check_in, check_out: d.booking.check_out, num_guests: d.booking.num_guests,
+          extra_beds: d.booking.extra_beds ?? 0,
           total_price: d.booking.total_price, currency: d.booking.currency, status: d.booking.status,
           properties: d.booking.properties,
         }] : []))
@@ -147,7 +148,8 @@ export default function BookingDetailPage() {
         body: JSON.stringify({
           id: editingRoomId,
           check_in: roomForm.check_in, check_out: roomForm.check_out,
-          num_guests: roomForm.num_guests, total_price: roomForm.total_price,
+          num_guests: roomForm.num_guests, extra_beds: roomForm.extra_beds ?? 0,
+          total_price: roomForm.total_price,
           status: roomForm.status,
         }),
       })
@@ -265,23 +267,44 @@ export default function BookingDetailPage() {
                 {isEditingRoom ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <input type="date" value={roomForm.check_in ?? ''}
-                        onChange={e => setRoomForm(p => ({ ...p, check_in: e.target.value }))}
-                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                      <input type="date" value={roomForm.check_out ?? ''}
-                        onChange={e => setRoomForm(p => ({ ...p, check_out: e.target.value }))}
-                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <div className="space-y-0.5">
+                        <div className="text-[11px] text-gray-400">{t('bookings.form.checkIn')}</div>
+                        <input type="date" value={roomForm.check_in ?? ''}
+                          onChange={e => setRoomForm(p => ({ ...p, check_in: e.target.value }))}
+                          className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[11px] text-gray-400">{t('bookings.form.checkOut')}</div>
+                        <input type="date" value={roomForm.check_out ?? ''}
+                          onChange={e => setRoomForm(p => ({ ...p, check_out: e.target.value }))}
+                          className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                      <input type="number" min={1} value={roomForm.num_guests ?? 1}
-                        onChange={e => setRoomForm(p => ({ ...p, num_guests: parseInt(e.target.value) }))}
-                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                      <input type="number" value={roomForm.total_price ?? ''}
-                        onChange={e => setRoomForm(p => ({ ...p, total_price: parseFloat(e.target.value) }))}
-                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      <div className="space-y-0.5">
+                        <div className="text-[11px] text-gray-400">{t('bookings.form.guests')}</div>
+                        <input type="number" min={1} value={roomForm.num_guests ?? 1}
+                          onChange={e => setRoomForm(p => ({ ...p, num_guests: parseInt(e.target.value) }))}
+                          className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[11px] text-gray-400">{t('calendar.extraBeds')}</div>
+                        <input type="number" min={0} value={roomForm.extra_beds ?? 0}
+                          onChange={e => setRoomForm(p => ({ ...p, extra_beds: parseInt(e.target.value) || 0 }))}
+                          className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[11px] text-gray-400">{t('bookings.form.amount')}</div>
+                        <input type="number" value={roomForm.total_price ?? ''}
+                          onChange={e => setRoomForm(p => ({ ...p, total_price: parseFloat(e.target.value) }))}
+                          className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                      </div>
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-[11px] text-gray-400">{t('bookings.col.status')}</div>
                       <select value={roomForm.status ?? 'confirmed'}
                         onChange={e => setRoomForm(p => ({ ...p, status: e.target.value }))}
-                        className="text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                        className="w-full text-sm border rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300">
                         {Object.entries(STATUS_MAP).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                       </select>
                     </div>

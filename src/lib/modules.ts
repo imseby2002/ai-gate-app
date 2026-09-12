@@ -8,6 +8,15 @@ export const MODULES = [
     color: 'from-blue-500 to-indigo-600',
   },
   {
+    id: 'roundtable',
+    label: '智慧圓桌',
+    desc: '多模型與多角色 AI 專家會議、論述與自動總結',
+    href: '/roundtable',
+    emoji: '🏛️',
+    color: 'from-amber-500 to-orange-600',
+    standalone: true,
+  },
+  {
     id: 'marketing',
     label: '行銷自動化',
     desc: '內容生成、圖片影片、流程自動化',
@@ -57,8 +66,16 @@ export const MODULES = [
     label: 'AI Agent',
     desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准',
     href: '/agent',
-    emoji: '🤖',
     color: 'from-slate-600 to-zinc-800',
+    standalone: true,
+  },
+  {
+    id: 'legal',
+    label: '法律合規 AI',
+    desc: '越南法律公務文書、各國進口規定與門市設立合規',
+    href: '/legal',
+    emoji: '⚖️',
+    color: 'from-amber-600 to-rose-600',
     standalone: true,
   },
 ] as const

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isSuperAdminEmail } from '@/lib/auth/admin-check'
 
 // API route 專用的模組存取檢查（取代未被使用的 module-guard.ts）。
 //
@@ -18,11 +19,11 @@ export async function hasModuleAccess(
 ): Promise<boolean> {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('user_type, enabled_modules')
+    .select('user_type, enabled_modules, email')
     .eq('id', userId)
     .single()
   if (!profile) return false
-  if (profile.user_type === 'admin') return true
+  if (profile.user_type === 'admin' || isSuperAdminEmail(profile.email)) return true
   const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
   return enabled.includes(moduleId)
 }

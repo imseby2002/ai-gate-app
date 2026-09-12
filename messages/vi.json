@@ -79,6 +79,7 @@
     "newChat": "Cuộc trò chuyện mới",
     "work": "Không gian làm việc",
     "dashboard": "Trang chủ",
+    "roundtable": "Hội nghị bàn tròn AI",
     "assistants": "Trợ lý AI",
     "imageGen": "Tạo ảnh",
     "videoGen": "Tạo video",
@@ -131,6 +132,10 @@
       "chat": {
         "label": "AI Chat",
         "desc": "Trò chuyện, tạo ảnh, tạo video, trợ lý RAG"
+      },
+      "roundtable": {
+        "label": "Hội nghị bàn tròn AI",
+        "desc": "Hội nghị chuyên gia AI đa mô hình & đa vai trò, phản biện và tổng hợp tự động"
       },
       "marketing": {
         "label": "Marketing Tự Động",
@@ -406,6 +411,11 @@
       "confirmAdd": "Xác nhận thêm",
       "roomsSelectedTitle": "Đã chọn {count} phòng",
       "addAnotherRoom": "+ Thêm phòng khác (cùng khách)",
+      "extraBeds": "Giường phụ",
+      "bedTypeSingle": "Đơn",
+      "bedTypeDouble": "Đôi",
+      "noBed": "Không thêm giường",
+      "bedUnit": "giường",
       "col": {
         "room": "Loại phòng",
         "price": "Giá phòng",
@@ -1256,7 +1266,18 @@
         "basePrice": "Giá gốc/đêm",
         "extraFee": "Phụ thu/khách/đêm",
         "maxExtraBeds": "Số giường phụ tối đa",
-        "extraBedFee": "Phí giường phụ/giường/đêm"
+        "extraBedFee": "Phí giường phụ/giường/đêm",
+        "extraBedType": "Loại giường phụ",
+        "bedTypeSingle": "Giường đơn",
+        "bedTypeDouble": "Giường đôi",
+        "baseGuests": "Số khách trong giá gốc",
+        "baseGuestsHint": "Phụ thu từ khách thứ {n}",
+        "extraFeeFrom": "(từ khách thứ {n})",
+        "extraFeeMode": "Chế độ tính phí",
+        "feeModeByGuest": "Theo số khách thêm",
+        "feeModeByBed": "Theo số giường thêm",
+        "feeModeByGuestHint": "Tính phụ thu cho từng khách vượt quá số khách cơ bản",
+        "feeModeByBedHint": "Tính phí theo số giường phụ thêm, không tính theo khách"
       }
     },
     "amenityGroups": {
@@ -1428,7 +1449,7 @@
       "daily": "Nhận phòng hàng ngày",
       "bookings": "Đơn đặt",
       "publicBookings": "Đặt phòng trực tuyến",
-      "calendar": "Lịch",
+      "calendar": "Lịch đặt phòng",
       "roomgrid": "Bảng phòng trống",
       "notifications": "Thông báo",
       "reviews": "Đánh giá",
@@ -1458,13 +1479,17 @@
     "enter": "Vào",
     "nav": {
       "auto": "Tự động hóa Marketing",
+      "pipeline": "Quy trình Marketing",
       "designer": "Nhà thiết kế sản phẩm",
       "studio": "Xưởng hình ảnh AI",
       "geo": "Nội dung GEO",
       "expert": "Chế độ chuyên gia",
       "prospect": "Marketing khách tiềm năng",
       "plan": "Gói đăng ký",
-      "experts": "Chuyên gia tùy chỉnh"
+      "experts": "Chuyên gia tùy chỉnh",
+      "logbook": "Nhật ký Marketing",
+      "offline": "Marketing thực địa",
+      "brand": "Thương hiệu"
     },
     "geo": {
       "title": "Cây bút nội dung GEO",

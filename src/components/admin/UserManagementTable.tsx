@@ -65,6 +65,22 @@ export function UserManagementTable({ users, companies = [] }: Props) {
     router.refresh()
   }
 
+  const handleDelete = async (user: UserRow) => {
+    if (!confirm(`確定要永久刪除「${user.full_name ?? user.email}」的帳號嗎？\n此操作無法復原，會一併刪除該帳號所有資料。`)) return
+    setSaving(user.id + ':delete')
+    const res = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: user.id }),
+    })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      alert(d.error ?? '刪除失敗')
+    }
+    setSaving(null)
+    router.refresh()
+  }
+
   const handleToggleModule = async (user: UserRow, moduleId: ModuleId) => {
     const current = user.enabled_modules ?? ALL_MODULES.map(m => m.id)
     const next = current.includes(moduleId)
@@ -208,6 +224,13 @@ export function UserManagementTable({ users, companies = [] }: Props) {
                           className="text-xs px-2.5 py-1 rounded-md border hover:bg-gray-100 transition-colors"
                         >
                           {user.is_active ? '停用' : '啟用'}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user)}
+                          disabled={saving === user.id + ':delete'}
+                          className="text-xs px-2.5 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                        >
+                          {saving === user.id + ':delete' ? '刪除中…' : '刪除'}
                         </button>
                         <select
                           value={user.user_type}

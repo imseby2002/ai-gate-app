@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { EmployeeWhitelistManager } from '@/components/admin/EmployeeWhitelistManager'
 
 const ROLE_INFO: Record<string, { label: string; color: string }> = {
   owner:   { label: '公司擁有者', color: 'bg-purple-100 text-purple-800 border-purple-200' },
@@ -349,6 +350,14 @@ export function CompanyMembershipSection() {
             </div>
           </div>
         </Card>
+      )}
+
+      {/* 公司專屬員工 Email 白名單 */}
+      {company && isOwnerOrAdmin && (
+        <EmployeeWhitelistManager
+          mode="company"
+          currentCompany={{ id: company.companyId, name: company.name }}
+        />
       )}
     </div>
   )

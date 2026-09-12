@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUnitContextAny } from '@/lib/auth/unit-access'
+import { getCompanyContext } from '@/lib/auth/unit-access'
 
-async function getFinanceOrStoreUser() {
-  const ctx = await getUnitContextAny(['finance', 'store'])
+async function getCompanyUser() {
+  const ctx = await getCompanyContext()
   if (!ctx.ok) return { user: null, supabase: ctx.admin }
   return { user: { id: ctx.ownerId }, supabase: ctx.admin }
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getFinanceOrStoreUser()
+  const { user, supabase } = await getCompanyUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { rows } = (await req.json()) as { rows?: Record<string, unknown>[] }

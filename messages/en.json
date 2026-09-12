@@ -79,6 +79,7 @@
     "newChat": "New Chat",
     "work": "Work",
     "dashboard": "Dashboard",
+    "roundtable": "Smart Roundtable",
     "assistants": "AI Assistants",
     "imageGen": "Image Gen",
     "videoGen": "Video Gen",
@@ -131,6 +132,10 @@
       "chat": {
         "label": "AI Chat",
         "desc": "Text chat, image gen, video gen, RAG assistant"
+      },
+      "roundtable": {
+        "label": "Smart Roundtable",
+        "desc": "Multi-model & multi-role AI expert discussion and auto-synthesis"
       },
       "marketing": {
         "label": "Marketing Auto",
@@ -406,6 +411,11 @@
       "confirmAdd": "Confirm",
       "roomsSelectedTitle": "{count} room(s) selected",
       "addAnotherRoom": "+ Add another room (same guest)",
+      "extraBeds": "Extra beds",
+      "bedTypeSingle": "Single",
+      "bedTypeDouble": "Double",
+      "noBed": "No extra bed",
+      "bedUnit": "bed(s)",
       "col": {
         "room": "Room Type",
         "price": "Rate",
@@ -1256,7 +1266,18 @@
         "basePrice": "Base/night",
         "extraFee": "Extra/guest/night",
         "maxExtraBeds": "Extra beds allowed",
-        "extraBedFee": "Extra bed fee/bed/night"
+        "extraBedFee": "Extra bed fee/bed/night",
+        "extraBedType": "Extra bed type",
+        "bedTypeSingle": "Single bed",
+        "bedTypeDouble": "Double bed",
+        "baseGuests": "Guests in base price",
+        "baseGuestsHint": "Extra guest fee starts from guest #{n}",
+        "extraFeeFrom": "(from guest #{n})",
+        "extraFeeMode": "Fee mode",
+        "feeModeByGuest": "Per extra guest",
+        "feeModeByBed": "Per extra bed",
+        "feeModeByGuestHint": "Charge per additional guest over the base count (recommended for headcount billing)",
+        "feeModeByBedHint": "Charge per extra bed added, regardless of guest count (e.g. baby cot, rollaway)"
       }
     },
     "amenityGroups": {
@@ -1428,7 +1449,7 @@
       "daily": "Daily Check-ins",
       "bookings": "Bookings",
       "publicBookings": "Online Bookings",
-      "calendar": "Calendar",
+      "calendar": "Calendar Bookings",
       "roomgrid": "Availability",
       "notifications": "Notifications",
       "reviews": "Reviews",
@@ -1458,13 +1479,17 @@
     "enter": "Enter",
     "nav": {
       "auto": "Marketing Automation",
+      "pipeline": "Marketing Pipeline",
       "designer": "Product Designer",
       "studio": "AI Visual Studio",
       "geo": "GEO Content",
       "expert": "Expert Mode",
       "prospect": "Prospect Marketing",
       "plan": "Subscription",
-      "experts": "Custom Experts"
+      "experts": "Custom Experts",
+      "logbook": "Marketing Log",
+      "offline": "Field Marketing",
+      "brand": "Brand"
     },
     "studio": {
       "title": "AI Visual Studio",

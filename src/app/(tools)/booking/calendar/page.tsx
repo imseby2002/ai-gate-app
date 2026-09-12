@@ -10,7 +10,12 @@ interface Booking {
   status: string; platform: string; num_guests: number; total_price: number | null; currency: string
   properties?: { name: string }; property_id: string | null
 }
-interface Property { id: string; name: string; room_count: number; base_price: number | null; currency: string }
+interface Property {
+  id: string; name: string; room_count: number; base_price: number | null; currency: string
+  max_guests: number; extra_guest_fee: number | null; base_guests: number; extra_fee_mode: string
+  max_extra_beds: number; extra_bed_fee: number | null; extra_bed_type: string
+}
+
 
 const PLATFORM_COLORS: Record<string, string> = {
   booking_com: 'bg-blue-600', agoda: 'bg-purple-600', airbnb: 'bg-rose-500',
@@ -40,7 +45,7 @@ function addDays(ds: string, n: number) {
   const d = new Date(ds + 'T00:00:00'); d.setDate(d.getDate() + n); return toDateStr(d)
 }
 
-interface RoomLine { property_id: string; property_name: string; total_price: string; num_guests: number }
+interface RoomLine { property_id: string; property_name: string; total_price: string; num_guests: number; extra_beds: number }
 interface QuickForm {
   guest_name: string; guest_phone: string; guest_email: string
   platform_booking_id: string
@@ -150,11 +155,12 @@ export default function CalendarPage() {
   function openQuick(p: Property, ds: string) {
     setQuickOpen(true)
     setOrderTotal('')
+    const defaultGuests = p.base_guests ?? 2
     setQuickForm({
       guest_name: '', guest_phone: '', guest_email: '',
       platform_booking_id: '',
       check_in: ds, check_out: addDays(ds, 1), platform: 'direct',
-      rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1 }],
+      rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: defaultGuests, extra_beds: 0 }],
     })
   }
 
@@ -164,9 +170,10 @@ export default function CalendarPage() {
     if (!propertyId) return
     const p = properties.find(x => x.id === propertyId)
     if (!p || quickForm.rooms.some(r => r.property_id === propertyId)) return
+    const defaultGuests = p.base_guests ?? 2
     setQuickForm(f => ({
       ...f,
-      rooms: [...f.rooms, { property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1 }],
+      rooms: [...f.rooms, { property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: defaultGuests, extra_beds: 0 }],
     }))
   }
   function removeRoomLine(propertyId: string) {
@@ -207,6 +214,7 @@ export default function CalendarPage() {
           rooms: quickForm.rooms.map(r => ({
             property_id: r.property_id,
             num_guests: r.num_guests,
+            extra_beds: r.extra_beds,
             total_price: r.total_price ? parseFloat(r.total_price) : null,
           })),
         }),
@@ -490,29 +498,107 @@ export default function CalendarPage() {
             </div>
 
             {/* 已選房型（可加多間，共用下方旅客資訊一次送出） */}
-            <div className="space-y-2">
-              {quickForm.rooms.map(r => (
-                <div key={r.property_id} className="flex items-center gap-2 bg-gray-50 border rounded-lg p-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-800 truncate">{r.property_name}</div>
-                    <div className="flex gap-2 mt-1">
-                      <input type="number" min={1} value={r.num_guests}
-                        onChange={e => updateRoomLine(r.property_id, { num_guests: parseInt(e.target.value) || 1 })}
-                        title={t('bookings.form.guests')}
-                        className="w-16 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                      <input type="number" value={r.total_price}
-                        onChange={e => updateRoomLine(r.property_id, { total_price: e.target.value })}
-                        placeholder={t('bookings.form.amount')}
-                        className="flex-1 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+            <div className="space-y-3">
+              {quickForm.rooms.map(r => {
+                const prop = properties.find(p => p.id === r.property_id)
+                // 計算試算費用
+                const nights = (() => {
+                  const ci = new Date(r.property_id && quickForm.check_in ? quickForm.check_in + 'T00:00:00' : '')
+                  const co = new Date(quickForm.check_out + 'T00:00:00')
+                  const diff = Math.round((co.getTime() - ci.getTime()) / 86400000)
+                  return diff > 0 ? diff : 1
+                })()
+                const calcNights = (() => {
+                  const ci = new Date(quickForm.check_in + 'T00:00:00')
+                  const co = new Date(quickForm.check_out + 'T00:00:00')
+                  const diff = Math.round((co.getTime() - ci.getTime()) / 86400000)
+                  return diff > 0 ? diff : 1
+                })()
+                const basePrice = prop?.base_price ?? 0
+                const extraGuestFee = prop?.extra_guest_fee ?? 0
+                const extraBedFee = prop?.extra_bed_fee ?? 0
+                const baseGuests = prop?.base_guests ?? 2
+                const feeMode = prop?.extra_fee_mode ?? 'by_guest'
+                const extraPersonCharge = feeMode === 'by_guest'
+                  ? Math.max(0, r.num_guests - baseGuests) * extraGuestFee * calcNights
+                  : 0
+                const extraBedCharge = r.extra_beds * extraBedFee * calcNights
+                const calcTotal = basePrice * calcNights + extraPersonCharge + extraBedCharge
+                const hasExtraBeds = (prop?.max_extra_beds ?? 0) > 0
+                void nights // suppress unused warning
+
+                return (
+                  <div key={r.property_id} className="bg-gray-50 border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-gray-800 truncate">{r.property_name}</div>
+                      {quickForm.rooms.length > 1 && (
+                        <button onClick={() => removeRoomLine(r.property_id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0 ml-2">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
+
+                    {/* 人數 + 加床 */}
+                    <div className="flex gap-2 flex-wrap">
+                      <div className="space-y-0.5 flex-1 min-w-[80px]">
+                        <label className="text-[11px] text-gray-500">
+                          {t('bookings.form.guests')}
+                          {prop && <span className="ml-1 text-gray-400">(max {prop.max_guests})</span>}
+                        </label>
+                        <input type="number" min={1} max={prop?.max_guests ?? 99} value={r.num_guests}
+                          onChange={e => updateRoomLine(r.property_id, { num_guests: Math.min(parseInt(e.target.value) || 1, prop?.max_guests ?? 99) })}
+                          className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                        {prop && feeMode === 'by_guest' && extraGuestFee > 0 && (
+                          <p className="text-[10px] text-gray-400">第{baseGuests + 1}人起 +{extraGuestFee.toLocaleString()}/人/晚</p>
+                        )}
+                      </div>
+                      {hasExtraBeds && (
+                        <div className="space-y-0.5 flex-1 min-w-[80px]">
+                          <label className="text-[11px] text-gray-500">
+                            {t('calendar.extraBeds')}
+                            <span className="ml-1 text-gray-400">
+                              ({prop?.extra_bed_type === 'double' ? t('calendar.bedTypeDouble') : t('calendar.bedTypeSingle')})
+                            </span>
+                          </label>
+                          <select value={r.extra_beds}
+                            onChange={e => updateRoomLine(r.property_id, { extra_beds: parseInt(e.target.value) })}
+                            className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                            {Array.from({ length: (prop?.max_extra_beds ?? 0) + 1 }, (_, i) => (
+                              <option key={i} value={i}>{i === 0 ? t('calendar.noBed') : `${i} ${t('calendar.bedUnit')}`}</option>
+                            ))}
+                          </select>
+                          {extraBedFee > 0 && (
+                            <p className="text-[10px] text-gray-400">+{extraBedFee.toLocaleString()}/床/晚</p>
+                          )}
+                        </div>
+                      )}
+                      <div className="space-y-0.5 flex-1 min-w-[100px]">
+                        <label className="text-[11px] text-gray-500">{t('bookings.form.amount')}</label>
+                        <input type="number" value={r.total_price}
+                          onChange={e => updateRoomLine(r.property_id, { total_price: e.target.value })}
+                          placeholder={t('bookings.form.amount')}
+                          className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                      </div>
+                    </div>
+
+                    {/* 費用試算提示 */}
+                    {prop && calcTotal > 0 && (
+                      <div className="flex items-center justify-between text-[11px] text-gray-400 bg-white rounded px-2 py-1 border">
+                        <span>
+                          底 {basePrice.toLocaleString()} × {calcNights}晚
+                          {extraPersonCharge > 0 && ` + 加人 ${extraPersonCharge.toLocaleString()}`}
+                          {extraBedCharge > 0 && ` + 加床 ${extraBedCharge.toLocaleString()}`}
+                        </span>
+                        <button type="button"
+                          onClick={() => updateRoomLine(r.property_id, { total_price: String(calcTotal) })}
+                          className="ml-2 text-sky-600 font-semibold hover:underline shrink-0">
+                          = {calcTotal.toLocaleString()} ↑
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {quickForm.rooms.length > 1 && (
-                    <button onClick={() => removeRoomLine(r.property_id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
             {quickForm.rooms.length > 1 && (
               <div className="flex items-center gap-2">

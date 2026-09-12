@@ -12,12 +12,12 @@ export interface SystemDef {
 }
 
 export const SYSTEMS: Record<SystemKey, SystemDef> = {
-  chat:      { key: 'chat',      label: 'AI 對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage'] },
+  chat:      { key: 'chat',      label: 'AI 對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
   booking:   { key: 'booking',   label: '訂房系統',   desc: '房源、訂單、定價、線上訂房與通路同步', home: '/booking',        prefixes: ['/booking'] },
   cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
-  marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call'] },
+  marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
   leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
-  office:    { key: 'office',    label: '公司入口',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs', '/store-reports', '/store-inventory', '/shift', '/pos', '/affairs', '/audit', '/meeting', '/work'] },
+  office:    { key: 'office',    label: '公司入口',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store-reports', '/store-inventory', '/shift', '/pos', '/affairs', '/audit', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
   resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume'] },
   agent:     { key: 'agent',     label: 'AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
 }
@@ -52,7 +52,7 @@ export const SCOPE_SESSION_KEY = 'ai_gate_scope'
 
 // 不受 scope 限制、任何系統都可存取的共用路徑
 // /dashboard 不在此列：為 owner 專用總控台，非管理者會被導向 /apps
-const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/work', '/office']
+const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/work', '/office', '/roundtable', '/mkt', '/legal', '/esim']
 
 export function isSystemKey(s: string | undefined | null): s is SystemKey {
   return !!s && Object.prototype.hasOwnProperty.call(SYSTEMS, s)

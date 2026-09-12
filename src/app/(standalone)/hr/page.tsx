@@ -2227,26 +2227,6 @@ export default function HRPage() {
               <Users className="h-4 w-4" />人員資料
             </Button>
           </Link>
-          <Link href="/store-reports">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Store className="h-4 w-4" />門市報表
-            </Button>
-          </Link>
-          <Link href="/meeting">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Video className="h-4 w-4" />會議紀錄
-            </Button>
-          </Link>
-          <Link href="/finance">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Wallet className="h-4 w-4" />出納總務
-            </Button>
-          </Link>
-          <Link href="/resume">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Zap className="h-4 w-4" />職場工具
-            </Button>
-          </Link>
         </div>
       </div>
 

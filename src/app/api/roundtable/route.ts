@@ -8,6 +8,8 @@ import {
   type RoundtableEvent,
   type RoundtableDomain,
   type Statement,
+  type SynthesisStyle,
+  type VerbosityMode,
 } from '@/lib/ai/roundtable'
 
 export const maxDuration = 300
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
     interactive = true, // 預設啟用老闆介入互動機制
     moderator,
     synthesisStyle,
+    verbosity = 'standard_300',
   } = body as {
     instruction: string
     domain?: RoundtableDomain
@@ -56,6 +59,7 @@ export async function POST(req: NextRequest) {
     interactive?: boolean
     moderator?: Seat
     synthesisStyle?: SynthesisStyle
+    verbosity?: VerbosityMode
   }
 
   if (!instruction?.trim()) {
@@ -129,6 +133,7 @@ export async function POST(req: NextRequest) {
             interactive,
             moderator,
             synthesisStyle,
+            verbosity,
           },
           emit,
         )

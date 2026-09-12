@@ -8,12 +8,12 @@ async function getAdminUser() {
 }
 
 const ENTRY_METHODS = new Set(['import', 'vendor', 'manual'])
-const SERVICES = new Set(['', 'gas', 'ice'])
+const SERVICES = new Set(['', 'gas', 'ice', 'electric', 'water'])
 
 // 預設科目（首次載入自動建立）
 const DEFAULTS = [
-  { code: 'WATER', name: '水費', entry_method: 'import', vendor_service: '', sort: 1 },
-  { code: 'ELEC', name: '電費', entry_method: 'import', vendor_service: '', sort: 2 },
+  { code: 'WATER', name: '水費', entry_method: 'vendor', vendor_service: 'water', sort: 1 },
+  { code: 'ELEC', name: '電費', entry_method: 'vendor', vendor_service: 'electric', sort: 2 },
   { code: 'GAS', name: '瓦斯費', entry_method: 'vendor', vendor_service: 'gas', sort: 3 },
   { code: 'ICE', name: '冰塊費', entry_method: 'vendor', vendor_service: 'ice', sort: 4 },
 ]
@@ -28,6 +28,16 @@ export async function GET() {
     const r = await supabase.from('fin_expense_categories')
       .select('id, code, name, entry_method, vendor_service, sort').eq('owner_id', user.id).order('sort').order('code')
     data = r.data ?? []
+  } else {
+    // 確保預設核心科目（如 GAS 瓦斯、ICE 冰塊）自動補齊
+    const existingCodes = new Set(data.map(d => d.code))
+    const missing = DEFAULTS.filter(d => !existingCodes.has(d.code))
+    if (missing.length > 0) {
+      await supabase.from('fin_expense_categories').insert(missing.map(d => ({ ...d, owner_id: user.id })))
+      const r = await supabase.from('fin_expense_categories')
+        .select('id, code, name, entry_method, vendor_service, sort').eq('owner_id', user.id).order('sort').order('code')
+      data = r.data ?? []
+    }
   }
   return NextResponse.json({ categories: data })
 }

@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -14,10 +14,10 @@ const REASONS = new Set(['expired', 'damaged', 'other'])
 
 // 某門市的耗損紀錄。?store= 必填，可選 &from=&to=（loss_date 區間）
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const sp = new URL(req.url).searchParams
-  const store = s(sp.get('store'))
+  const store = storeCode || s(sp.get('store'))
   if (!store) return NextResponse.json({ error: 'store required' }, { status: 400 })
   let q = supabase.from('inv_losses')
     .select('id, material_code, material_name, unit, qty, reason, loss_date, batch_id, note')
@@ -32,10 +32,10 @@ export async function GET(req: NextRequest) {
 
 // 獨立填報耗損（未走批次報廢）。body: { store, material_code, material_name?, unit?, qty, reason?, loss_date?, note? }
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
+  const { user, supabase, storeCode } = await getAdminUser()
   if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 400 })
   const b = await req.json().catch(() => ({}))
-  const store = s(b.store)
+  const store = storeCode || s(b.store)
   const material_code = s(b.material_code)
   if (!store || !material_code) return NextResponse.json({ error: 'store 與 material_code 必填' }, { status: 400 })
   const { data, error } = await supabase.from('inv_losses').insert({

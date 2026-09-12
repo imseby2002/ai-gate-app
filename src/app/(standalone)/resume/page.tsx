@@ -776,28 +776,6 @@ export default function WorkerToolsPage() {
             {selectedTool && tool && <p className="text-gray-500 text-sm mt-1">{tool.emoji} {tool.label}</p>}
           </div>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Link href="/office">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />公司入口
-            </Button>
-          </Link>
-          <Link href="/hr">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />人事管理
-            </Button>
-          </Link>
-          <Link href="/finance">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Wallet className="h-4 w-4" />出納總務
-            </Button>
-          </Link>
-          <Link href="/work">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <NotebookPen className="h-4 w-4" />{t('workArea')}
-            </Button>
-          </Link>
-        </div>
       </div>
 
       {/* Tool View */}

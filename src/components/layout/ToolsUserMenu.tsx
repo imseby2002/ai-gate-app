@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { LogOut, ChevronDown, Settings, Wallet } from 'lucide-react'
+import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard, Building2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
 
-export function ToolsUserMenu({ displayName }: { displayName: string }) {
+export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string; hasCompany?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   // 儲值頁返回時要回到「進來的那個模組」，帶上目前路徑
@@ -36,7 +36,16 @@ export function ToolsUserMenu({ displayName }: { displayName: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border bg-white shadow-md z-50 overflow-hidden py-1">
+          <div className="absolute right-0 top-full mt-1 w-44 rounded-lg border bg-white shadow-md z-50 overflow-hidden py-1">
+            {pathname.startsWith('/cs') && (
+              <a
+                href="/cs"
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors font-medium border-b border-gray-100"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 text-blue-500" />
+                返回客服統整頁
+              </a>
+            )}
             <a
               href="/settings"
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
@@ -44,6 +53,15 @@ export function ToolsUserMenu({ displayName }: { displayName: string }) {
               <Settings className="h-3.5 w-3.5 text-gray-400" />
               帳號設定
             </a>
+            {hasCompany && (
+              <a
+                href="/company/plan"
+                className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                公司方案
+              </a>
+            )}
             <a
               href={creditsHref}
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"

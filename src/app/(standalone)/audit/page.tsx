@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ClipboardCheck, Loader2, AlertCircle, Upload, Store, ShoppingCart, Boxes, Tag, FlaskConical, Gauge, Bell, Settings, MessageSquare, Plus, Trash2, ScrollText, Send } from 'lucide-react'
+import { ClipboardCheck, Loader2, AlertCircle, Upload, Store, ShoppingCart, Boxes, Tag, FlaskConical, Gauge, Bell, Settings, MessageSquare, Plus, Trash2, ScrollText, Send, Scale } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -41,11 +41,39 @@ export default function AuditPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><ClipboardCheck className="h-5 w-5 text-primary" /></div>
-        <div>
-          <h1 className="text-2xl font-bold">稽核・原物料合理性</h1>
-          <p className="text-sm text-gray-500">整併四來源：IPOS 銷售量、IVT 進銷存、中央廚房進貨價、研發配方（分析引擎為下一階段）</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><ClipboardCheck className="h-5 w-5 text-primary" /></div>
+          <div>
+            <h1 className="text-2xl font-bold">稽核・原物料合理性</h1>
+            <p className="text-sm text-gray-500">整併四來源：IPOS 銷售量、IVT 進銷存、中央廚房進貨價、研發配方</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/audit-platform">
+            <Button size="sm" className="gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold">
+              <Scale className="h-3.5 w-3.5" />
+              企業稽核智慧平台
+            </Button>
+          </Link>
+          <Link href="/audit-inspection">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs text-primary border-primary/30">
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              現場巡檢
+            </Button>
+          </Link>
+          <Link href="/audit-ai">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+              <MessageSquare className="h-3.5 w-3.5" />
+              稽核討論AI
+            </Button>
+          </Link>
+          <Link href="/audit-logs">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+              <ScrollText className="h-3.5 w-3.5" />
+              稽核日誌
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -385,8 +413,7 @@ function RecipesTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-xs text-gray-500">配方來自研發單位（唯讀）。維護請至研發。</p>
-        <Link href="/rd-recipes" className="ml-auto"><Button size="sm" variant="outline" className="gap-1.5"><FlaskConical className="h-4 w-4" />研發配方</Button></Link>
+        <p className="text-xs text-gray-500">配方來自研發單位（唯讀）。維護請由研發同仁於研發系統進行。</p>
       </div>
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : rows.length === 0 ? <div className="text-center py-8 text-gray-400 text-sm">尚無配方資料。</div>

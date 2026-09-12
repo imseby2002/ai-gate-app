@@ -65,17 +65,18 @@ export async function POST(req: NextRequest) {
     const history = Array.isArray(conv?.history) ? conv!.history : []
     history.push({ role: 'assistant', content: message })
     await admin.from('cs_conversations').upsert(
-      { user_id: ctx.ownerId, customer_id: to, history: history.slice(-20), updated_at: now },
+      { user_id: ctx.ownerId, customer_id: to, history: history.slice(-60), updated_at: now },
       { onConflict: 'user_id,customer_id' }
     )
   } catch (err) { console.error('[cs-send] cs_conversations 更新失敗:', err) }
 
-  // 4. 自動接管：確保有 open 的人工客服工單（webhook 會據此讓 AI 靜音）
+  // 4. 自動接管：確保有 open 的人工客服工單（webhook 會據此讓 AI 靜音 2 小時）
   try {
     const { data: open } = await admin
       .from('cs_tickets').select('id')
       .eq('user_id', ctx.ownerId).eq('from_id', to)
       .eq('intent', '人工客服請求').in('status', ['open', 'in_progress'])
+      .order('created_at', { ascending: false })
       .limit(1)
     if (!open?.length) {
       await admin.from('cs_tickets').insert({
@@ -83,6 +84,13 @@ export async function POST(req: NextRequest) {
         from_name: fromName ?? null, subject: '真人接管中', description: '客服人員已於收件匣接手此對話',
         priority: 'high', intent: '人工客服請求', status: 'open',
       })
+    } else {
+      // 專員回覆時刷新工單時間，確保進入新的 2 小時真人接管窗口
+      await admin.from('cs_tickets').update({
+        created_at: now,
+        updated_at: now,
+        status: 'open',
+      }).eq('id', open[0].id)
     }
   } catch { /* 不中斷送訊結果 */ }
 

@@ -22,9 +22,10 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     //    點「返回主選單」一律回到 /office，絕不跳到 /work！
     const OFFICE_PREFIXES = [
       '/office', '/hr', '/personnel', '/finance', '/store-expenses',
-      '/vendors', '/units', '/rd', '/rd-recipes', '/rd-ai', '/rd-logs',
-      '/store-reports', '/store-inventory', '/shift', '/pos',
-      '/affairs', '/audit', '/meeting', '/work'
+      '/vendors', '/units', '/rd', '/rd-lab', '/rd-recipes', '/rd-ai', '/rd-logs',
+      '/store', '/store-reports', '/store-inventory', '/store-bills', '/repair',
+      '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai',
+      '/audit-logs', '/meeting', '/work', '/mkt', '/gm'
     ]
     if (OFFICE_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))) {
       setHref('/office')
@@ -42,6 +43,17 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     if (pathname.startsWith('/marketing')) {
       setHref(SYSTEMS.marketing.home); return
     }
+    // CS 系統特殊處理：
+    // 若在 /cs/workspace 工作台（已設定帳號），返回連結回收件匣；若在 /cs 統整頁則回 /apps
+    if (pathname.startsWith('/cs/workspace')) {
+      setHref('/cs/workspace?tab=inbox')
+      return
+    }
+    if (pathname.startsWith('/cs')) {
+      setHref('/apps')
+      return
+    }
+
     const sys = systemForPath(pathname)
     if (sys) {
       const targetHome = SYSTEMS[sys].home === '/work' ? '/office' : SYSTEMS[sys].home
@@ -76,11 +88,17 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     }
   }, [pathname])
 
+  const isCs = pathname.startsWith('/cs')
+  const isCsWorkspace = pathname.startsWith('/cs/workspace')
+
+  const titleText = isCs ? 'AI GATE 客服系統' : 'AI GATE'
+  const subText = isCsWorkspace ? '← 返回收件匣' : `← ${t('backToMenu')}`
+
   if (variant === 'tools') {
     return (
       <a href={href} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm transition-colors">
         <ArrowLeft className="h-3.5 w-3.5" />
-        {t('backHome')}
+        {isCsWorkspace ? '返回收件匣' : t('backHome')}
       </a>
     )
   }
@@ -89,8 +107,8 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
     <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
       <Zap className="h-5 w-5 text-primary" />
       <div className="leading-none">
-        <span className="font-bold text-base">AI GATE</span>
-        <span className="block text-xs text-muted-foreground mt-0.5">← {t('backToMenu')}</span>
+        <span className="font-bold text-base">{titleText}</span>
+        <span className="block text-xs text-muted-foreground mt-0.5">{subText}</span>
       </div>
     </a>
   )

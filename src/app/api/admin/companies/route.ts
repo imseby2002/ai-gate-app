@@ -29,15 +29,18 @@ export async function GET() {
     { data: companies, error: compErr },
     { data: members, error: memErr },
     { data: profiles, error: profErr },
+    { data: subscriptions },
   ] = await Promise.all([
     admin.from('companies').select('*').order('created_at', { ascending: false }),
     admin.from('company_members').select('*').order('created_at', { ascending: true }),
     admin.from('profiles').select('id, email, full_name'),
+    admin.from('company_subscriptions').select('company_id, plan, current_period_end'),
   ])
 
   if (compErr) return NextResponse.json({ error: compErr.message }, { status: 500 })
 
   const profMap = new Map((profiles ?? []).map(p => [p.id, p]))
+  const planMap = new Map((subscriptions ?? []).map(s => [s.company_id, s]))
 
   // 組織每間公司的成員資料
   const membersByCompany = new Map<string, any[]>()
@@ -63,6 +66,7 @@ export async function GET() {
       memberCount: compMembers.filter(m => m.status === 'active').length,
       pendingCount: compMembers.filter(m => m.status === 'pending').length,
       members: compMembers,
+      plan: planMap.get(c.id)?.plan ?? 'free',
     }
   })
 
@@ -174,13 +178,16 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
       bnbOwnerId?: string | null
       ownerId?: string
       itId?: string
+      feedbackFree?: boolean
+      freeFeatureQuotaMonthly?: number | null
+      plan?: 'free' | 'core' | 'pro' | 'max'
     }
 
     if (!id) {
@@ -192,10 +199,19 @@ export async function PATCH(req: NextRequest) {
     if (name !== undefined) patch.name = String(name).trim()
     if (enabledModules !== undefined) patch.enabled_modules = enabledModules
     if (bnbOwnerId !== undefined) patch.bnb_owner_id = bnbOwnerId || null
+    if (feedbackFree !== undefined) patch.feedback_free_features = feedbackFree
+    if (freeFeatureQuotaMonthly !== undefined) patch.free_feature_quota_monthly = freeFeatureQuotaMonthly
 
     if (Object.keys(patch).length > 0) {
       const { error: updateErr } = await admin.from('companies').update(patch).eq('id', id)
       if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
+    }
+
+    if (plan !== undefined) {
+      const { error: planErr } = await admin
+        .from('company_subscriptions')
+        .upsert({ company_id: id, plan, status: 'active' }, { onConflict: 'company_id' })
+      if (planErr) return NextResponse.json({ error: planErr.message }, { status: 500 })
     }
 
     // 若變更負責人

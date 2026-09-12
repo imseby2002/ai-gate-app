@@ -1,7 +1,7 @@
 import { getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 
-async function ctx() { const c = await getUnitContextAny(['audit', 'store']); return c.ok ? c : null }
+async function ctx() { const c = await getUnitContextAny(['audit', 'store', 'rd']); return c.ok ? c : null }
 const s = (v: unknown) => String(v ?? '').trim()
 
 // ?id= 取單一對話訊息；否則對話清單（可選 &store=）
@@ -10,12 +10,12 @@ export async function GET(req: NextRequest) {
   const sp = new URL(req.url).searchParams
   const id = s(sp.get('id'))
   if (id) {
-    const { data: chat } = await c.admin.from('audit_chats').select('id, store, title').eq('id', id).eq('owner_id', c.ownerId).single()
+    const { data: chat } = await c.admin.from('audit_chats').select('id, store, title, mode').eq('id', id).eq('owner_id', c.ownerId).single()
     if (!chat) return NextResponse.json({ error: 'not found' }, { status: 404 })
-    const { data: msgs } = await c.admin.from('audit_messages').select('role, content, created_at').eq('chat_id', id).eq('owner_id', c.ownerId).order('created_at')
+    const { data: msgs } = await c.admin.from('audit_messages').select('id, role, content, suggestion, photo_url, created_at').eq('chat_id', id).eq('owner_id', c.ownerId).order('created_at')
     return NextResponse.json({ chat, messages: msgs ?? [] })
   }
-  let q = c.admin.from('audit_chats').select('id, store, title, updated_at').eq('owner_id', c.ownerId)
+  let q = c.admin.from('audit_chats').select('id, store, title, mode, updated_at').eq('owner_id', c.ownerId)
   const store = s(sp.get('store'))
   if (store) q = q.eq('store', store)
   const { data } = await q.order('updated_at', { ascending: false }).limit(50)

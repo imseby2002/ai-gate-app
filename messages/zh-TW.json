@@ -79,6 +79,7 @@
     "newChat": "新對話",
     "work": "工作區",
     "dashboard": "儀表板",
+    "roundtable": "智慧圓桌",
     "assistants": "AI 助理",
     "imageGen": "圖片生成",
     "videoGen": "影片生成",
@@ -131,6 +132,10 @@
       "chat": {
         "label": "AI 對話",
         "desc": "文字對話、畫圖、影片生成、RAG 助理"
+      },
+      "roundtable": {
+        "label": "智慧圓桌",
+        "desc": "多模型與多角色 AI 專家會議、交叉論述與自動總結"
       },
       "marketing": {
         "label": "行銷自動化",
@@ -406,6 +411,11 @@
       "confirmAdd": "確認加入",
       "roomsSelectedTitle": "已選 {count} 個房型",
       "addAnotherRoom": "+ 加另一間房（同一位旅客）",
+      "extraBeds": "加床",
+      "bedTypeSingle": "單人床",
+      "bedTypeDouble": "雙人床",
+      "noBed": "不加床",
+      "bedUnit": "張",
       "col": {
         "room": "房型",
         "price": "房價",
@@ -1256,7 +1266,18 @@
         "basePrice": "底價/晚",
         "extraFee": "超額/人/晚",
         "maxExtraBeds": "可加床數量",
-        "extraBedFee": "加床費用/床/晚"
+        "extraBedFee": "加床費用/床/晚",
+        "extraBedType": "加床類型",
+        "bedTypeSingle": "單人床",
+        "bedTypeDouble": "雙人床",
+        "baseGuests": "底價含人數",
+        "baseGuestsHint": "第 {n} 人起才收超額費",
+        "extraFeeFrom": "（第 {n} 人起）",
+        "extraFeeMode": "收費模式",
+        "feeModeByGuest": "按加人收費",
+        "feeModeByBed": "按加床收費",
+        "feeModeByGuestHint": "超過底價含人數後，每多一人加收超額費（適合：看人頭計費）",
+        "feeModeByBedHint": "以加床數計費，不論人數（適合：加嬰兒床/備用床按床計費）"
       }
     },
     "amenityGroups": {
@@ -1428,7 +1449,7 @@
       "daily": "每日入住",
       "bookings": "訂單",
       "publicBookings": "線上訂房",
-      "calendar": "日曆",
+      "calendar": "日曆訂房",
       "roomgrid": "空房表",
       "notifications": "通知信",
       "reviews": "評價管理",
@@ -1458,13 +1479,17 @@
     "enter": "進入",
     "nav": {
       "auto": "行銷自動化",
+      "pipeline": "行銷流水線",
       "designer": "產品設計師",
       "studio": "AI 視覺工坊",
       "geo": "GEO 內容",
       "expert": "專家模式",
       "prospect": "潛在客戶行銷",
       "plan": "訂閱方案",
-      "experts": "自製專家"
+      "experts": "自製專家",
+      "logbook": "行銷日誌",
+      "offline": "實體行銷",
+      "brand": "品牌資料"
     },
     "studio": {
       "title": "AI 視覺工坊",

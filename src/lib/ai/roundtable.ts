@@ -28,7 +28,7 @@ import { loadExpertContext } from '@/lib/experts/loader'
 
 // ── 領域與哲學學派定義 ────────────────────────────────────────────────────────
 
-export type RoundtableDomain = 'auto' | 'finance' | 'marketing' | 'tech' | 'hr'
+export type RoundtableDomain = 'auto' | 'academic' | 'finance' | 'marketing' | 'tech' | 'hr'
 
 export interface DomainStance {
   name: string // 員工A, 員工B, 員工C
@@ -47,6 +47,39 @@ export interface DomainPreset {
 }
 
 export const DOMAIN_PRESETS: Record<RoundtableDomain, DomainPreset> = {
+  academic: {
+    id: 'academic',
+    label: '大學學術',
+    icon: 'GraduationCap',
+    description: '理論本質、經世致用、產學落地與學術倫理治理',
+    dataChecklist: `
+針對討論的學術/高教/研究議題，強制查核並列出客觀指標矩陣：
+1. 學術基石與現狀：國際權威文獻/頂級期刊 (SCI/SSCI) 共識、核心理論奠基人與主流學派爭點。
+2. 實證與產業數據：該領域現有全球研發投資額、專利轉化率、畢業生就業起薪與業界實際採納率。
+3. 倫理與法規邊界：相關學術誠信守則、教育部/評鑑機構法規、AI/智財版權爭端、研究受試者倫理標準。
+4. 國內外標竿案例：全球前 50 大學（如哈佛、MIT、史丹佛、牛津）或國內領先大學目前的實際政策與處置作法。
+*(鐵律：無公開數據強制標記 N/A，嚴禁編造)*`,
+    stances: [
+      {
+        name: '員工A',
+        title: '學術基石 · 理論真理派 (Academic Rigor & Epistemic Truth)',
+        philosophy: '大學是追求真理與原創思想的殿堂。沒有深刻的理論根基與獨立批判思維，任何熱門技術或政策都只是泡沫。',
+        attackTriggers: '砲轟他人迎合市場短視近利、出賣學術靈魂；抨擊行政官僚指標主義扼殺純粹思想原創性。',
+      },
+      {
+        name: '員工B',
+        title: '經世致用 · 實證創新派 (Empirical & Pragmatic Utility)',
+        philosophy: '學術必須解決真實世界難題。無法落地驗證、不能讓學生在就業市場脫穎而出的理論，只是象牙塔裡的自我陶醉。',
+        attackTriggers: '砲轟他人自命清高、不知民間疾苦的玄學空談；痛批學校行政流程拖沓喪失時代先機。',
+      },
+      {
+        name: '員工C',
+        title: '倫理法治 · 永續治理派 (Ethical & Institutional Governance)',
+        philosophy: '守住底線才能長青。再崇高的理想或突破，一旦觸犯學術倫理紅線、違反法規或導致少子化退場破產，一切歸零。',
+        attackTriggers: '抨擊他人忽視少子化生源雪崩與財務現實；痛批為求速度踐踏倫理規範，導致百年校譽毀於一旦。',
+      },
+    ],
+  },
   finance: {
     id: 'finance',
     label: '投資金融',
@@ -230,11 +263,11 @@ export interface Seat {
 
 export const DEFAULT_SEATS: Seat[] = [
   { name: '員工A', model: 'anthropic/claude-sonnet-4-6', role: '資深管理合夥人' },
-  { name: '員工B', model: 'openai/gpt-5',                role: '資深管理合夥人' },
+  { name: '員工B', model: 'openai/gpt-4o',                role: '資深管理合夥人' },
   { name: '員工C', model: 'google/gemini-2.5-pro',      role: '資深管理合夥人' },
 ]
 
-export type SynthesisStyle = 'default' | 'risk' | 'growth' | 'consulting'
+export type SynthesisStyle = 'default' | 'academic' | 'risk' | 'growth' | 'consulting'
 
 export interface SynthesisStyleOption {
   id: SynthesisStyle
@@ -251,6 +284,13 @@ export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
     shortLabel: '標準中立幕僚長',
     description: '不偏不倚，客觀評估各方得失，給出推薦的主路徑與 Plan B 備案。',
     instruction: '以董事會首席幕僚長的中立超然視角，不偏袒任何一方，客觀檢驗各學派論據漏洞，權衡整體風險與回報，給予明確的第一順位推薦路徑與 Plan B 備選路線。',
+  },
+  {
+    id: 'academic',
+    label: '🎓 講座教授 / 學術審議會主席（理論真理・實證產學・倫理永續）',
+    shortLabel: '學術審議會主席',
+    description: '以博大超然的學術視野，兼顧理論真理、產學實效與校務倫理底線。',
+    instruction: '以特聘終身講座教授兼大學學術審議會主席的超然視野進行收斂。不偏廢任何一端：融會「基礎理論之求真深度」、「產學就業之經世致用」與「學術倫理與校務生存之制度底線」，出具一份具備思想深度、數據證據與合規路徑的大學戰略決策白皮書。',
   },
   {
     id: 'risk',
@@ -276,22 +316,101 @@ export const SYNTHESIS_STYLES: SynthesisStyleOption[] = [
 ]
 
 export const MODERATOR_MODELS = [
-  { id: 'anthropic/claude-opus-4-8', name: 'Claude 3.7 Opus (Anthropic)', shortName: 'Claude 3.7 Opus', badge: '頂級旗艦 · 商業白皮書首選' },
-  { id: 'openai/gpt-5', name: 'GPT-4o / o1 (OpenAI)', shortName: 'GPT-4o / o1', badge: '深度推理與數理邏輯' },
-  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文與跨文檔' },
-  { id: 'deepseek/deepseek-r1', name: 'DeepSeek-R1', shortName: 'DeepSeek-R1', badge: '博弈思維鏈與極限壓力測試' },
-  { id: 'anthropic/claude-sonnet-4-6', name: 'Claude 3.7 Sonnet (Anthropic)', shortName: 'Claude 3.7 Sonnet', badge: '高速敏捷分析' },
+  { id: 'anthropic/claude-opus-4-8', name: 'Claude 3.7 Opus (Anthropic)', shortName: 'Claude 3.7 Opus', badge: '頂級旗艦 · 商業白皮書首選 (預設)' },
+  { id: 'anthropic/claude-fable-5-1', name: 'Claude Fable 5.1 (Anthropic)', shortName: 'Claude Fable 5.1', badge: '全新世代 · 深度研究與高階裁斷' },
+  { id: 'openai/gpt-6-astra', name: 'OpenAI Astra (GPT-6)', shortName: 'OpenAI Astra', badge: '遞歸深度推理 · 數理精算與博弈' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (Google)', shortName: 'Gemini 2.5 Pro', badge: '百萬超長上下文 · 跨文檔精確對齊' },
+  { id: 'cliproxy/gemini-2.5-pro', name: 'Gemini 2.5 Pro (CLIProxy 免費代理)', shortName: 'CLIProxy Gemini Pro', badge: '⚡ 零成本 · 免費代理高速推理' },
+  { id: 'freellm/auto', name: 'FreeLLM Auto (免費代理平台)', shortName: 'FreeLLM Auto', badge: '⚡ 零成本 · 多平台備援路由' },
+]
+
+export type VerbosityMode = 'concise_150' | 'standard_300' | 'detailed_500' | 'unlimited'
+
+export interface VerbosityOption {
+  id: VerbosityMode
+  label: string
+  shortLabel: string
+  targetWords: string
+  description: string
+  instruction: string
+  maxOutputTokens: number
+}
+
+export const VERBOSITY_OPTIONS: VerbosityOption[] = [
+  {
+    id: 'concise_150',
+    label: '⚡ 極簡電梯版 (約 150 字)',
+    shortLabel: '極簡電梯版',
+    targetWords: '約 150 字 / 席',
+    description: '極速瀏覽、秒抓態度與核心衝突。',
+    instruction:
+      `【嚴格篇幅限制：極簡電梯簡報，總字數嚴格控制在 150 字以內】\n` +
+      `強制輸出三段格式，嚴禁任何開場白、寒暄與官僚套話：\n` +
+      `1. 【核心定調】：30字以內，直接亮出底牌立場。\n` +
+      `2. 【核心論據】：條列 2 點，每點不超過 30 字，純硬數據或因果邏輯。\n` +
+      `3. 【死穴質疑】：40字以內，直戳對手致命傷或自身不妥協底線。`,
+    maxOutputTokens: 600,
+  },
+  {
+    id: 'standard_300',
+    label: '🎯 標準精華版 (約 300 字)',
+    shortLabel: '標準精華版',
+    targetWords: '約 300 字 / 席',
+    description: '日常高階決策，速度與深度最佳平衡。',
+    instruction:
+      `【篇幅限制：標準商務精華，總字數控制在 250 ~ 350 字左右】\n` +
+      `高度結構化呈現，零寒暄客套：\n` +
+      `1. 【戰略主張】：40字以內明確主張。\n` +
+      `2. 【三大支撐事實/推導】：條列 3 點，每點約 40~50 字，具備具體事實或傳導機制。\n` +
+      `3. 【代價與底線】：50字以內，直言採納本方案的真實代價與風險監控指標。`,
+    maxOutputTokens: 1200,
+  },
+  {
+    id: 'detailed_500',
+    label: '📊 深化研析版 (約 500 字)',
+    shortLabel: '深化研析版',
+    targetWords: '約 500 字 / 席',
+    description: '包含前因後果、邊界假設、預算/資源推估與競品反應。',
+    instruction:
+      `【篇幅限制：深化研析，總字數控制在 450 ~ 550 字左右】\n` +
+      `深入拆解方案前因後果，嚴禁空洞贅語：\n` +
+      `* 包含：假設前提、推導邏輯鏈、邊界敏感度、具體資源配置與競品可能應對策略。\n` +
+      `* 全程採用 Markdown 標題與項目符號分層條列。`,
+    maxOutputTokens: 2048,
+  },
+  {
+    id: 'unlimited',
+    label: '📜 不限字數深度版 (完整說明)',
+    shortLabel: '不限字數深度版',
+    targetWords: '不限字數 (完整說明)',
+    description: '重大投資立項、董事會白皮書，全面展開推導，嚴格反廢話。',
+    instruction:
+      `【篇幅不設字數上限，重在推論深度，但嚴格啟動三大「反廢話」軍規】：\n` +
+      `1. 【零寒暄開場禁令】：第 1 個字直插核心論點，嚴禁「各位同仁好」、「這是一個好問題」等任何官僚套話。\n` +
+      `2. 【MECE 模組化分層條列】：禁止大段落冗長文字堆疊，所有說明強制使用二級/三級標題與項目符號（Bullet points）清晰拆解。\n` +
+      `3. 【嚴格因果鏈檢驗】：每項主張必須符合「核心主張 -> 底層機制/數據佐證 -> 邊界代價」，嚴禁使用缺乏依據的空洞形容詞（如「大幅度」、「顯著提升」），必須說透為什麼與代價。`,
+    maxOutputTokens: 4096,
+  },
 ]
 
 export function formatModelDisplayName(model?: string): string {
   if (!model) return ''
   const m = model.toLowerCase()
+  if (m.startsWith('cliproxy/')) {
+    return `CLIProxy · ${model.slice('cliproxy/'.length)}`
+  }
+  if (m.startsWith('freellm/')) {
+    return `FreeLLM · ${model.slice('freellm/'.length)}`
+  }
+  if (m.includes('fable')) return 'Claude Fable 5.1'
+  if (m.includes('astra')) return 'OpenAI Astra (GPT-6)'
   if (m.includes('claude-opus') || m.includes('claude-3-opus') || m.includes('claude-3.7-opus')) return 'Claude 3.7 Opus'
   if (m.includes('claude-sonnet-4-6') || m.includes('claude-3-7-sonnet') || m.includes('claude-3.7-sonnet')) return 'Claude 3.7 Sonnet'
   if (m.includes('claude-3-5-sonnet') || m.includes('claude-3.5-sonnet')) return 'Claude 3.5 Sonnet'
   if (m.includes('gpt-5') || m.includes('gpt-4o')) return 'GPT-4o (OpenAI)'
   if (m.includes('o1')) return 'o1 (OpenAI)'
   if (m.includes('o3-mini')) return 'o3-mini (OpenAI)'
+  if (m.includes('gemini-3.8-flash') || m.includes('gemini-3.8')) return 'Gemini 3.8 Flash'
   if (m.includes('gemini-2.5-pro') || m.includes('gemini-pro')) return 'Gemini 2.5 Pro'
   if (m.includes('gemini-2.5-flash') || m.includes('gemini-flash')) return 'Gemini 2.5 Flash'
   if (m.includes('deepseek-r1') || m.includes('deepseek')) return 'DeepSeek-R1'
@@ -346,12 +465,14 @@ function resolveModel(id: string): LanguageModel | string {
         apiKey: process.env.OPENROUTER_API_KEY,
         baseURL: 'https://openrouter.ai/api/v1',
       })
-      const orModel =
-        rawModel === 'claude-sonnet-4-6' || rawModel === 'claude-3-7-sonnet-20250219'
-          ? 'anthropic/claude-sonnet-4.6'
-          : rawModel === 'claude-opus-4-8' || rawModel === 'claude-3-opus-20240229'
-            ? 'anthropic/claude-opus-4.8'
-            : `anthropic/${rawModel}`
+      let orModel = `anthropic/${rawModel}`
+      if (rawModel === 'claude-sonnet-4-6' || rawModel === 'claude-3-7-sonnet-20250219') {
+        orModel = 'anthropic/claude-sonnet-4.6'
+      } else if (rawModel === 'claude-opus-4-8' || rawModel === 'claude-3-opus-20240229') {
+        orModel = 'anthropic/claude-opus-4.8'
+      } else if (rawModel.includes('fable')) {
+        orModel = 'anthropic/claude-fable-5.1'
+      }
       return openrouter.chat(orModel)
     }
 
@@ -363,7 +484,9 @@ function resolveModel(id: string): LanguageModel | string {
           ? 'claude-3-7-sonnet-20250219'
           : rawModel === 'claude-opus-4-8'
             ? 'claude-3-opus-20240229'
-            : rawModel
+            : rawModel.includes('fable')
+              ? 'claude-fable-5-1'
+              : rawModel
       return createAnthropic({ apiKey: key })(model)
     }
 
@@ -376,8 +499,74 @@ function resolveModel(id: string): LanguageModel | string {
     }
   }
   if (provider === 'openai') {
-    return createOpenAI({ apiKey: process.env.OPENAI_API_KEY! }).chat(rawModel)
+    // 模型別名歸一化：將不存在於 OpenAI 官方 API 的別名（如 gpt-5、astra）映射至真實穩定的旗艦模型
+    let realModel = rawModel
+    if (rawModel === 'gpt-5' || rawModel.startsWith('gpt-5')) {
+      realModel = 'gpt-4o'
+    } else if (rawModel.includes('astra') || rawModel.includes('gpt-6')) {
+      realModel = 'gpt-4o'
+    }
+
+    const key = process.env.OPENAI_API_KEY?.trim()
+    if (key) {
+      return createOpenAI({ apiKey: key }).chat(realModel)
+    }
+    if (process.env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      }).chat(`openai/${realModel}`)
+    }
+    if (process.env.GOOGLE_AI_API_KEY) {
+      return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash')
+    }
   }
+  if (provider === 'cliproxy') {
+    const baseURL = process.env.CLI_PROXY_API_URL ?? process.env.NEXT_PUBLIC_CLI_PROXY_API_URL
+    const apiKey = process.env.CLI_PROXY_API_KEY ?? 'no-key'
+    if (baseURL) {
+      return createOpenAI({ apiKey, baseURL }).chat(rawModel)
+    }
+  }
+
+  if (provider === 'freellm') {
+    const rawUrl = process.env.FREE_LLM_URL ?? process.env.NEXT_PUBLIC_FREE_LLM_URL
+    const baseURL = rawUrl ? (rawUrl.replace(/\/+$/, '').endsWith('/v1') ? rawUrl.replace(/\/+$/, '') : `${rawUrl.replace(/\/+$/, '')}/v1`) : rawUrl
+    const apiKey = process.env.FREE_LLM_API_KEY ?? 'no-key'
+    if (baseURL) {
+      return createOpenAI({ apiKey, baseURL }).chat(rawModel)
+    }
+  }
+
+  if (provider === 'deepseek') {
+    const key = process.env.DEEPSEEK_API_KEY?.trim()
+    if (key) {
+      return createOpenAI({ apiKey: key, baseURL: 'https://api.deepseek.com' }).chat(rawModel)
+    }
+    if (process.env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      }).chat(`deepseek/${rawModel}`)
+    }
+  }
+
+  if (provider === 'groq') {
+    const key = process.env.GROQ_API_KEY?.trim()
+    if (key) {
+      return createOpenAI({ apiKey: key, baseURL: 'https://api.groq.com/openai/v1' }).chat(rawModel)
+    }
+  }
+
+  if (provider === 'openrouter') {
+    if (process.env.OPENROUTER_API_KEY) {
+      return createOpenAI({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
+      }).chat(rawModel)
+    }
+  }
+
   if (provider === 'google') {
     return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY! })(rawModel)
   }
@@ -385,7 +574,8 @@ function resolveModel(id: string): LanguageModel | string {
 }
 
 function isReasoningModel(model: string): boolean {
-  return /^(openai\/)?(o\d+|gpt-5)/i.test(model)
+  // 僅針對 OpenAI 真正支援 reasoningEffort 的 o-series 推理模型 (o1, o3, o3-mini)，嚴禁對 gpt-* 系列傳入該參數
+  return /^(openai\/)?(o1|o3|o\d+)/i.test(model) && !/gpt/i.test(model)
 }
 
 function getGoogleThinkingBudget(model: string): number {
@@ -438,6 +628,15 @@ export function detectDomain(instruction: string, specifiedDomain?: RoundtableDo
     text.includes('團隊') || text.includes('管理') || text.includes('主管')
   ) {
     return 'hr'
+  }
+  if (
+    text.includes('大學') || text.includes('教授') || text.includes('學校') || text.includes('學術') ||
+    text.includes('論文') || text.includes('高教') || text.includes('少子化') || text.includes('系所') ||
+    text.includes('學生') || text.includes('課程') || text.includes('教學') || text.includes('產學') ||
+    text.includes('通識') || text.includes('期刊') || text.includes('研究計畫') || text.includes('教育部') ||
+    text.includes('校務') || text.includes('學位') || text.includes('退場') || text.includes('學院')
+  ) {
+    return 'academic'
   }
   return 'auto'
 }
@@ -612,19 +811,32 @@ async function speak(
       let fallbackSuccess = false
       const fallbackCandidates: { name: string; model: LanguageModel }[] = []
 
-      if (process.env.OPENAI_API_KEY && !seat.model.startsWith('openai/')) {
+      // 1. 若當前失敗席位不是 GPT-4o，優先嘗試直連 GPT-4o
+      if (process.env.OPENAI_API_KEY && seat.model !== 'openai/gpt-4o') {
         fallbackCandidates.push({
           name: 'openai/gpt-4o',
           model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o'),
         })
       }
+      // 2. 若當前失敗席位不是 Google，嘗試 Gemini 2.5 Flash
       if (process.env.GOOGLE_AI_API_KEY && !seat.model.startsWith('google/')) {
         fallbackCandidates.push({
           name: 'google/gemini-2.5-flash',
           model: createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })('gemini-2.5-flash'),
         })
       }
-      if (process.env.OPENAI_API_KEY && seat.model.startsWith('google/')) {
+      // 3. 支援 OpenRouter 跨模型備援
+      if (process.env.OPENROUTER_API_KEY && !seat.model.startsWith('anthropic/')) {
+        fallbackCandidates.push({
+          name: 'openrouter/claude-sonnet-4.6',
+          model: createOpenAI({
+            apiKey: process.env.OPENROUTER_API_KEY,
+            baseURL: 'https://openrouter.ai/api/v1',
+          }).chat('anthropic/claude-sonnet-4.6'),
+        })
+      }
+      // 4. 若為 Google 席位失敗，且尚未加入 GPT-4o
+      if (process.env.OPENAI_API_KEY && seat.model.startsWith('google/') && !fallbackCandidates.some(c => c.name === 'openai/gpt-4o')) {
         fallbackCandidates.push({
           name: 'openai/gpt-4o',
           model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).chat('gpt-4o'),
@@ -692,7 +904,10 @@ export function resolveSeatStance(seat: Seat, idx: number, domainPreset: DomainP
 
 export function formatStatements(statements: Statement[]): string {
   return statements
-    .map(s => `### ${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`)
+    .map(s => {
+      const roundLabel = s.round ? `[第 ${s.round} 輪] ` : ''
+      return `### ${roundLabel}${s.name} (${s.role}${s.stance ? ` · ${s.stance}` : ''})\n${s.content?.trim() || '(未發言)'}`
+    })
     .join('\n\n')
 }
 
@@ -705,8 +920,10 @@ export async function executeRound1(
   domainPreset: DomainPreset,
   emit: (e: RoundtableEvent) => void,
   expertContextMap: Map<string, string>,
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
   emit({ type: 'phase', phase: 'discuss', label: '第一輪 · 獨立研議 (平行進行)' })
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
 
   const results = await Promise.all(
     seats.map(async (seat, idx) => {
@@ -717,17 +934,19 @@ export async function executeRound1(
         `你的核心戰略學派與觀點立場：【${stance.title}】。\n` +
         `你的底層信仰與立論依據：${stance.philosophy}\n` +
         `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
-        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+        `\n${verbosityOption.instruction}`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
         `請完全依據你代表的【${seat.name}】（${stance.title}）戰略立場與客觀事實簡報，提出你最犀利、最具深度、有數據支撐的觀點。\n` +
-        `直奔核心，嚴禁重複背景介紹與客套寒暄。字數不限，重在推論深度。`
+        `直奔核心，嚴禁重複背景介紹與客套寒暄。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-      let content = await speak(seat, system, userPrompt, 1, emit, 4096, expertCtx, stance.title)
+      let content = await speak(seat, system, userPrompt, 1, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R1, generating emergency stance view`)
         content = `【學派基本立場：${stance.title}】\n本席位秉持「${stance.philosophy}」之核心哲學，強烈關注「${stance.attackTriggers}」。在本次議題中，我方堅持以此維度嚴格審視各項方案代價。`
+        emit({ type: 'delta', round: 1, name: seat.name, content })
       }
       return { round: 1, name: seat.name, role: seat.role, stance: stance.title, content }
     })
@@ -746,8 +965,10 @@ export async function executeRound2(
   domainPreset: DomainPreset,
   emit: (e: RoundtableEvent) => void,
   expertContextMap: Map<string, string>,
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
   emit({ type: 'phase', phase: 'rebut', label: '第二輪 · 針鋒相對 (平行進行)' })
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
   const transcript1 = formatStatements(round1Statements)
 
   const results = await Promise.all(
@@ -763,17 +984,19 @@ export async function executeRound2(
         `1. 請仔細檢驗其他合夥人在第一輪發言中的邏輯盲點、過度樂觀的虛假假設或漏洞。\n` +
         `2. 查核對方引用的事實或數據是否有誤。\n` +
         `3. 捍衛並補強自身立場，針對根本性分歧正面開火。\n\n` +
-        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+        ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+        `\n${verbosityOption.instruction}`
       const userPrompt =
         `老闆的指令：\n${boss}\n\n` +
         `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
         `【第一輪全體發言】：\n${transcript1}\n\n` +
-        `請直接對其他合夥人的推論開砲，補強你自己立場。只談新增反駁與修正，嚴禁重複第一輪已說過的內容。`
+        `請直接對其他合夥人的推論開砲，補強你自己立場。只談新增反駁與修正，嚴禁重複第一輪已說過的內容。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-      let content = await speak(seat, system, userPrompt, 2, emit, 4096, expertCtx, stance.title)
+      let content = await speak(seat, system, userPrompt, 2, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
       if (!content || content.trim().length === 0) {
         console.warn(`[roundtable] seat ${seat.name} produced empty content in R2, generating emergency stance view`)
         content = `【學派本輪深化：${stance.title}】\n針對同僚所提出的論據，我方重申：任何未考慮「${stance.attackTriggers}」的方案都具有重大致命傷，呼籲老闆切勿輕信過度樂觀之假設。`
+        emit({ type: 'delta', round: 2, name: seat.name, content })
       }
       return { round: 2, name: seat.name, role: seat.role, stance: stance.title, content }
     })
@@ -797,14 +1020,26 @@ export async function executeBossStep(
   domainPreset: DomainPreset,
   emit: (e: RoundtableEvent) => void,
   expertContextMap: Map<string, string>,
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<Statement[]> {
+  const rebutRound = currentRound + 1
   emit({ type: 'boss-instruction', round: currentRound, content: bossGuidance, targetSeat: targetSeatName })
 
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
   const priorTranscript = formatStatements(allPriorStatements)
   const results: Statement[] = []
 
+  // 記錄老闆的介入指令
+  results.push({
+    round: currentRound,
+    name: '老闆指令',
+    role: '董事會主席 / 老闆',
+    stance: action === 'call_on' ? `點名 ${targetSeatName}` : '全體深化',
+    content: bossGuidance,
+  })
+
   if (action === 'call_on' && targetSeatName) {
-    // 點名單挑：指定該席位獨立發言
+    // 點名單挑：指定該席位在 currentRound 獨立發言
     const targetSeat = seats.find(s => s.name === targetSeatName) ?? seats[0]
     const seatIdx = Math.max(0, seats.indexOf(targetSeat))
     const stance = resolveSeatStance(targetSeat, seatIdx, domainPreset)
@@ -816,21 +1051,27 @@ export async function executeBossStep(
       `你是資深合夥人【${targetSeat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
       `老闆現在親自點名你回答問題。\n` +
       `請針對老闆的最新指示，依據你的戰略學派與客觀數據，正面且深入作答。\n\n` +
-      ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+      ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+      `\n${verbosityOption.instruction}`
 
     const userPrompt =
       `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
       `【先前的會議發言紀錄】：\n${priorTranscript}\n\n` +
-      `【👑 老闆對你的直接指示/提問】：\n${bossGuidance}`
+      `【👑 老闆對你的直接指示/提問】：\n${bossGuidance}\n\n` +
+      `遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-    const content = await speak(targetSeat, system, userPrompt, currentRound, emit, 4096, expertCtx, stance.title)
+    let content = await speak(targetSeat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
+    if (!content || content.trim().length === 0) {
+      content = `【學派應對裁示：${stance.title}】\n遵照老闆最新裁示，我方堅持以「${stance.philosophy}」之核心準則貫徹落實，並嚴密防範「${stance.attackTriggers}」。`
+      emit({ type: 'delta', round: currentRound, name: targetSeat.name, content })
+    }
     const firstReply: Statement = { round: currentRound, name: targetSeat.name, role: targetSeat.role, stance: stance.title, content }
     results.push(firstReply)
 
-    // 若開啟互相質詢 (crossExamine)，其他合夥人針對此發言反駁
+    // 若開啟同儕反駁 (crossExamine)，其他合夥人在第 rebutRound (currentRound + 1) 質詢
     if (crossExamine) {
       const otherSeats = seats.filter(s => s.name !== targetSeatName)
-      emit({ type: 'phase', phase: 'rebut', label: `第 ${currentRound} 輪 · 同儕反駁 (${targetSeat.name}的回答)` })
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 同儕質詢反駁 (${targetSeat.name}的回答)` })
 
       const crossResults = await Promise.all(
         otherSeats.map(async (seat) => {
@@ -839,23 +1080,28 @@ export async function executeBossStep(
           const otherExpert = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
           const crossSystem =
             `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${otherStance.title}】。\n` +
-            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】的回答提出反駁、質疑或補充。\n\n` +
-            ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+            `老闆剛才點名了【${targetSeat.name}】，現在請你針對【${targetSeat.name}】在第 ${currentRound} 輪的回答提出反駁、質疑或補充。\n\n` +
+            ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+            `\n${verbosityOption.instruction}`
           const crossPrompt =
             `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
             `【👑 老闆的指示】：\n${bossGuidance}\n\n` +
-            `【${targetSeat.name} 的最新回答】：\n${content}\n\n` +
-            `請從你的學派立場無情檢視其邏輯漏洞。`
+            `【${targetSeat.name} 在第 ${currentRound} 輪的最新回答】：\n${content}\n\n` +
+            `請從你的學派立場無情檢視其邏輯漏洞，指出死穴。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-          const crossContent = await speak(seat, crossSystem, crossPrompt, currentRound, emit, 4096, otherExpert, otherStance.title)
-          return { round: currentRound, name: seat.name, role: seat.role, stance: otherStance.title, content: crossContent }
+          let crossContent = await speak(seat, crossSystem, crossPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, otherExpert, otherStance.title)
+          if (!crossContent || crossContent.trim().length === 0) {
+            crossContent = `【質詢挑刺：${otherStance.title}】\n我方必須指出：剛才提出的方案仍忽視了「${otherStance.attackTriggers}」之根本風險，缺乏扎實的數據支撐。`
+            emit({ type: 'delta', round: rebutRound, name: seat.name, content: crossContent })
+          }
+          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${otherStance.title} (反駁)`, content: crossContent }
         })
       )
       results.push(...crossResults)
     }
   } else {
-    // 全體深化：全體合夥人帶著老闆的最新指示，平行發言
-    emit({ type: 'phase', phase: 'discuss', label: `第 ${currentRound} 輪 · 全員深化研議 (平行進行)` })
+    // 拍子 1：全體深化論述 —— 全體合夥人帶著老闆最新指示，平行發言 (第 currentRound 輪)
+    emit({ type: 'phase', phase: 'discuss', label: `第 ${currentRound} 輪 · 全員深化論述 (平行進行)` })
 
     const allResults = await Promise.all(
       seats.map(async (seat, idx) => {
@@ -864,19 +1110,59 @@ export async function executeBossStep(
         const system =
           `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
           `老闆剛剛介入了會議並給予了最新的戰略指示。\n` +
-          `請針對老闆的最新導向，依據你的戰略學派進一步深化你的方案，並回應先前的爭議焦點。\n\n` +
-          ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES
+          `請針對老闆的最新導向，依據你的戰略學派進一步深化推進你的方案，並回應先前的爭議焦點。\n\n` +
+          ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+          `\n${verbosityOption.instruction}`
         const userPrompt =
           `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
           `【先前的會議發言紀錄】：\n${priorTranscript}\n\n` +
           `【👑 老闆的最新裁示/方向指引】：\n${bossGuidance}\n\n` +
-          `請深入推進方案，直擊痛點。`
+          `請深入推進方案，直擊痛點。遵守篇幅要求（${verbosityOption.targetWords}）。`
 
-        const content = await speak(seat, system, userPrompt, currentRound, emit, 4096, expertCtx, stance.title)
+        let content = await speak(seat, system, userPrompt, currentRound, emit, verbosityOption.maxOutputTokens, expertCtx, stance.title)
+        if (!content || content.trim().length === 0) {
+          content = `【學派深化觀點：${stance.title}】\n遵照老闆最新裁示，我方進一步將「${stance.philosophy}」之核心準則貫徹於推演中。`
+          emit({ type: 'delta', round: currentRound, name: seat.name, content })
+        }
         return { round: currentRound, name: seat.name, role: seat.role, stance: stance.title, content }
       })
     )
     results.push(...allResults)
+
+    // 拍子 2：同儕互評挑刺 —— 針對彼此在第 currentRound 輪剛交出的新深化方案，無情挑刺、刺刀見紅 (第 rebutRound 輪)
+    if (crossExamine !== false) {
+      emit({ type: 'phase', phase: 'rebut', label: `第 ${rebutRound} 輪 · 針對新方案互評挑刺 (平行進行)` })
+      const roundTranscript = formatStatements(allResults)
+
+      const rebuttalResults = await Promise.all(
+        seats.map(async (seat, idx) => {
+          const stance = resolveSeatStance(seat, idx, domainPreset)
+          const expertCtx = seat.expertId ? expertContextMap.get(seat.expertId) : undefined
+          const system =
+            `你是資深合夥人【${seat.name}】，核心學派與觀點立場：【${stance.title}】。\n` +
+            `你的底層信仰與立論依據：${stance.philosophy}\n` +
+            `你的挑刺觸發點：${stance.attackTriggers}\n\n` +
+            `【本輪核心任務】：針對其他合夥人在第 ${currentRound} 輪剛交出的深化方案，無情挑刺、刺刀見紅！\n` +
+            `1. 仔細檢驗其他人在老闆最新指示下，是否提出了不切實際的假設、是否在偷換概念或存在隱性風險。\n` +
+            `2. 正面開火反駁，指出對手方案的死穴，並捍衛我方方案的不可替代性。\n\n` +
+            ANTI_SYCOPHANCY_AND_HALLUCINATION_RULES +
+            `\n${verbosityOption.instruction}`
+          const userPrompt =
+            `【👑 老闆的最新裁示】：\n${bossGuidance}\n\n` +
+            `【會前客觀事實簡報】：\n${factBriefing}\n\n` +
+            `【第 ${currentRound} 輪各合夥人最新深化方案】：\n${roundTranscript}\n\n` +
+            `請直接點名其他合夥人，對其剛剛在第 ${currentRound} 輪提出的新論點進行毫不留情之猛烈批判與反駁！遵守篇幅要求（${verbosityOption.targetWords}）。`
+
+          let content = await speak(seat, system, userPrompt, rebutRound, emit, verbosityOption.maxOutputTokens, expertCtx, `${stance.title} · 互評挑刺`)
+          if (!content || content.trim().length === 0) {
+            content = `【互評挑刺：${stance.title}】\n綜觀同僚的新版方案，依然存在嚴重盲點，未嚴格防範「${stance.attackTriggers}」，切忌盲目樂觀。`
+            emit({ type: 'delta', round: rebutRound, name: seat.name, content })
+          }
+          return { round: rebutRound, name: seat.name, role: seat.role, stance: `${stance.title} (互評挑刺)`, content }
+        })
+      )
+      results.push(...rebuttalResults)
+    }
   }
 
   return results
@@ -891,18 +1177,29 @@ export async function executeSynthesize(
   moderator: Seat,
   emit: (e: RoundtableEvent) => void,
   synthesisStyle: SynthesisStyle = 'default',
+  verbosity: VerbosityMode = 'standard_300',
 ): Promise<string> {
   const styleConfig = SYNTHESIS_STYLES.find(s => s.id === synthesisStyle) ?? SYNTHESIS_STYLES[0]
+  const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
+
   emit({
     type: 'phase',
     phase: 'synthesize',
     label: `最終收斂 · 首席幕僚長出具報告 (${formatModelDisplayName(moderator.model)})`,
   })
 
+  const lengthGuide =
+    verbosity === 'concise_150'
+      ? '【篇幅要求：高層極速 Memo，全文約 400~600 字，精準提煉勝負判定與唯一優先行動。】'
+      : verbosity === 'unlimited'
+        ? '【篇幅要求：高層決策白皮書，不設字數上限，全面詳盡推導，但嚴格條列清晰、無任何贅語廢話。】'
+        : '【篇幅要求：標準商務白皮書，結構完整、資訊密度極高、無客套空話。】'
+
   const moderatorSystem =
     `你是董事會【首席幕僚長】，代表職責：${moderator.role}。\n` +
     `全體資深合夥人已針對老闆的指令展開激烈辯論，現在請把全體研議收斂成一份結構完整、可直接落地的最高決策報告。\n\n` +
     `【本次收斂風格指導原則】：\n${styleConfig.instruction}\n\n` +
+    `${lengthGuide}\n\n` +
     `報告必須包含以下結構：\n` +
     `1. 💡 30 秒高層結論 (讓老闆在 30 秒內看懂最核心定論與推薦路徑)\n` +
     `2. 📊 客觀事實與關鍵指標矩陣摘要 (引用 Fact Sheet 數據)\n` +
@@ -918,7 +1215,8 @@ export async function executeSynthesize(
     `【會議全程研議紀錄】：\n${fullDebate}\n\n` +
     `請以首席幕僚長之最高視野綜觀全場，出具交付老闆的最終結構化決策報告。`
 
-  const report = await speak(moderator, moderatorSystem, userPrompt, 99, emit, 8192)
+  const maxSynthesizeTokens = verbosity === 'concise_150' ? 2048 : 8192
+  const report = await speak(moderator, moderatorSystem, userPrompt, 99, emit, maxSynthesizeTokens)
   emit({ type: 'report', content: report })
   return report
 }
@@ -934,6 +1232,7 @@ export interface RoundtableConfig {
   interactive?: boolean // 若為 true，跑完第 2 輪後即暫停並拋出 waiting_boss
   uploadedFilesContext?: string
   synthesisStyle?: SynthesisStyle
+  verbosity?: VerbosityMode
 }
 
 export async function runRoundtable(
@@ -946,6 +1245,7 @@ export async function runRoundtable(
   const seats = config.seats?.length ? config.seats : DEFAULT_SEATS
   const moderator = config.moderator ?? DEFAULT_MODERATOR
   const boss = config.bossInstruction.trim()
+  const verbosity = config.verbosity ?? 'standard_300'
 
   const broadcastStances = seats.map((s, idx) => {
     const st = resolveSeatStance(s, idx, preset)
@@ -975,12 +1275,12 @@ export async function runRoundtable(
   const factBriefing = await fetchFactBriefing(boss, domain, emit, config.uploadedFilesContext)
 
   // ── 階段 1：第一輪獨立發言 (⚡ 平行併發) ────────────────────────────────────
-  const round1 = await executeRound1(boss, factBriefing, seats, preset, emit, expertContextMap)
+  const round1 = await executeRound1(boss, factBriefing, seats, preset, emit, expertContextMap, verbosity)
 
   // ── 階段 2：第二輪互評挑刺 (⚡ 平行併發) ────────────────────────────────────
   let allStatements = [...round1]
   if (config.rebuttal !== false) {
-    const round2 = await executeRound2(boss, factBriefing, round1, seats, preset, emit, expertContextMap)
+    const round2 = await executeRound2(boss, factBriefing, round1, seats, preset, emit, expertContextMap, verbosity)
     allStatements.push(...round2)
   }
 
@@ -991,6 +1291,6 @@ export async function runRoundtable(
   }
 
   // ── 階段 3：最終收斂報告 ───────────────────────────────────────────────────
-  const report = await executeSynthesize(boss, factBriefing, allStatements, moderator, emit, config.synthesisStyle)
+  const report = await executeSynthesize(boss, factBriefing, allStatements, moderator, emit, config.synthesisStyle, verbosity)
   return report
 }

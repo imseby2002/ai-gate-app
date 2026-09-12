@@ -24,7 +24,10 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // 先認領信箱相符的待接受邀請，比照 bnb_members 的 claim_bnb_invitations() 慣例
-  await supabase.rpc('claim_company_invitations')
+  await Promise.allSettled([
+    supabase.rpc('claim_company_invitations'),
+    supabase.rpc('claim_bnb_invitations'),
+  ])
 
   const company = await getUserCompany(user.id)
   if (!company) return NextResponse.json({ company: null, members: [] })
@@ -78,6 +81,35 @@ export async function POST(req: NextRequest) {
     accepted_at: null,
   }, { onConflict: 'company_id,invited_email' })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 同步建立/更新 bnb_members，讓客服 (CS) 與訂房協作權限及 RLS 立即生效
+  try {
+    const { data: comp } = await admin.from('companies').select('created_by, bnb_owner_id').eq('id', company.companyId).single()
+    const ownerId = comp?.bnb_owner_id || comp?.created_by || user.id
+    const { data: existingUser } = await admin.from('profiles').select('id').eq('email', normEmail).maybeSingle()
+    const memberId = existingUser?.id ?? null
+    const status = memberId ? 'active' : 'pending'
+    const acceptedAt = memberId ? new Date().toISOString() : null
+    const bnbRole = role === 'owner' ? 'admin' : role
+    const canCorrectAi = bnbRole === 'admin' || bnbRole === 'manager'
+
+    for (const sc of ['cs', 'booking'] as const) {
+      await admin.from('bnb_members').upsert({
+        owner_id: ownerId,
+        invited_email: normEmail,
+        member_id: memberId,
+        role: bnbRole,
+        status,
+        scope: sc,
+        can_correct_ai: canCorrectAi,
+        invited_by: user.id,
+        accepted_at: acceptedAt,
+      }, { onConflict: 'owner_id,invited_email,scope' })
+    }
+  } catch (syncErr) {
+    console.warn('[company/members] Failed to sync bnb_members:', syncErr)
+  }
+
   return NextResponse.json({ ok: true })
 }
 
@@ -103,6 +135,24 @@ export async function PATCH(req: NextRequest) {
     .eq('company_id', company.companyId)
     .neq('role', 'owner')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 同步更新 bnb_members 角色
+  try {
+    const { data: targetCm } = await admin.from('company_members').select('invited_email').eq('id', id).single()
+    const { data: comp } = await admin.from('companies').select('created_by, bnb_owner_id').eq('id', company.companyId).single()
+    const ownerId = comp?.bnb_owner_id || comp?.created_by || user.id
+    if (targetCm?.invited_email) {
+      const bnbRole = role === 'owner' ? 'admin' : role
+      const canCorrectAi = bnbRole === 'admin' || bnbRole === 'manager'
+      await admin.from('bnb_members')
+        .update({ role: bnbRole, can_correct_ai: canCorrectAi })
+        .eq('owner_id', ownerId)
+        .eq('invited_email', targetCm.invited_email)
+    }
+  } catch (syncErr) {
+    console.warn('[company/members] Failed to update bnb_members:', syncErr)
+  }
+
   return NextResponse.json({ ok: true })
 }
 
@@ -121,6 +171,22 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
 
   const admin = createAdminClient()
+
+  // 同步在 bnb_members 移除對應權限
+  try {
+    const { data: targetCm } = await admin.from('company_members').select('invited_email').eq('id', id).single()
+    const { data: comp } = await admin.from('companies').select('created_by, bnb_owner_id').eq('id', company.companyId).single()
+    const ownerId = comp?.bnb_owner_id || comp?.created_by || user.id
+    if (targetCm?.invited_email) {
+      await admin.from('bnb_members')
+        .delete()
+        .eq('owner_id', ownerId)
+        .eq('invited_email', targetCm.invited_email)
+    }
+  } catch (syncErr) {
+    console.warn('[company/members] Failed to delete bnb_members:', syncErr)
+  }
+
   const { error } = await admin
     .from('company_members')
     .delete()

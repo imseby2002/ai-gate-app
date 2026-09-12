@@ -8,6 +8,10 @@ export interface StayQuote {
   extraGuestFee: number
   extraBedFee: number
   warnings: string[]
+  baseTotal: number
+  basePerNight: { date: string; amount: number }[]
+  hasPromotionalDiscount: boolean
+  promotionsApplied: string[]
 }
 
 function enumerateNights(checkIn: string, checkOut: string): string[] {
@@ -83,6 +87,7 @@ export async function computeStayPrice(
   checkOut: string,
   guests: number,
   extraBeds: number = 0,
+  options?: { skipPromotionalDiscounts?: boolean },
 ): Promise<StayQuote | null> {
   const { data: prop } = await supabase
     .from('properties')
@@ -103,10 +108,10 @@ export async function computeStayPrice(
 
   // 規則（此房型或全房型）
   const { data: rules } = await supabase
-    .from('pricing_rules').select('rule_type, adjustment_type, adjustment_value, conditions, priority, property_id')
+    .from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions, priority, property_id')
     .eq('user_id', userId).eq('enabled', true)
     .or(`property_id.eq.${propertyId},property_id.is.null`)
-  const sortedRules = ((rules ?? []) as RuleRow[]).sort((a, b) => b.priority - a.priority)
+  const sortedRules = ((rules ?? []) as (RuleRow & { name?: string })[]).sort((a, b) => b.priority - a.priority)
 
   // 住房率（僅在有 occupancy 規則時計算）
   const occByDate = new Map<string, number>()
@@ -134,69 +139,96 @@ export async function computeStayPrice(
 
   const todayMs = taipeiTodayMs()
   const perNight: { date: string; amount: number }[] = []
+  const basePerNight: { date: string; amount: number }[] = []
   let total = 0
+  let baseTotal = 0
+  const appliedPromotionsSet = new Set<string>()
 
   for (const date of nights) {
     const override = overrideMap.get(date)
-    let price = (override != null ? override : prop.base_price)
-    if (price == null) {
+    let rawPrice = (override != null ? override : prop.base_price)
+    if (rawPrice == null) {
       warnings.push(`${date} 無定價，請於定價管理設定`)
       continue
     }
+
+    let baseDailyPrice = rawPrice
+    let promoDailyPrice = rawPrice
+
     if (prop.dynamic_pricing_enabled) {
       const dow = new Date(`${date}T00:00:00Z`).getUTCDay()
       const mmdd = date.slice(5)
       const daysUntil = Math.round((new Date(`${date}T00:00:00Z`).getTime() - todayMs) / 86400000)
       const occ = occByDate.get(date) ?? 0
 
-      // advance_booking／early_bird 是「級距」規則（同一種規則依天數分好幾檔，例如
-      // 當天訂房 30%、1 天前 25%、2 天前 20%、5 天前 15%）——這些檔位的判斷條件本來
-      // 就會互相涵蓋（「當天訂房」同時也符合「5 天內」的條件），只能套用最貼近的那一
-      // 檔，不能把每一檔符合條件的都疊乘上去，否則會疊出離譜的價格（真實案例：一間
-      // 1800 元的房間，四檔全部疊上去變成 4000 多元）。
-      let bestAdvanceBooking: RuleRow | null = null
-      let bestEarlyBird: RuleRow | null = null
-      for (const rule of sortedRules) {
-        const c = rule.conditions ?? {}
-        if (rule.rule_type === 'advance_booking') {
-          const threshold = (c.days_before as number) ?? 0
-          if (daysUntil <= threshold) {
-            const bestThreshold = (bestAdvanceBooking?.conditions?.days_before as number) ?? Infinity
-            if (threshold < bestThreshold) bestAdvanceBooking = rule
-          }
-        } else if (rule.rule_type === 'early_bird') {
-          const threshold = (c.days_before as number) ?? 90
-          if (daysUntil >= threshold) {
-            const bestThreshold = (bestEarlyBird?.conditions?.days_before as number) ?? -Infinity
-            if (threshold > bestThreshold) bestEarlyBird = rule
-          }
-        }
-      }
-
+      // 1. 標準日曆與需求定價（週末／假日／季節／住房率）：構成當日官方牌價／定價
       for (const rule of sortedRules) {
         const c = rule.conditions ?? {}
         let applies = false
         switch (rule.rule_type) {
-          case 'weekend':         applies = dow === 0 || dow === 6; break
-          case 'holiday':         applies = ((c.dates as string[]) ?? []).includes(date); break
+          case 'weekend':   applies = dow === 0 || dow === 6; break
+          case 'holiday':   applies = ((c.dates as string[]) ?? []).includes(date); break
           case 'seasonal': {
             const s = c.start_mmdd as string, e = c.end_mmdd as string
             applies = !!(s && e && mmdd >= s && mmdd <= e); break
           }
-          case 'occupancy':       applies = occ >= ((c.threshold as number) ?? 0.8); break
-          case 'advance_booking': applies = rule === bestAdvanceBooking; break
-          case 'early_bird':      applies = rule === bestEarlyBird; break
+          case 'occupancy': applies = occ >= ((c.threshold as number) ?? 0.8); break
         }
         if (applies) {
-          price = rule.adjustment_type === 'percent'
-            ? price * (1 + Number(rule.adjustment_value) / 100)
-            : price + Number(rule.adjustment_value)
+          baseDailyPrice = rule.adjustment_type === 'percent'
+            ? baseDailyPrice * (1 + Number(rule.adjustment_value) / 100)
+            : baseDailyPrice + Number(rule.adjustment_value)
         }
       }
+      baseDailyPrice = Math.max(0, Math.round(baseDailyPrice))
+      promoDailyPrice = baseDailyPrice
+
+      // 2. 促銷型動態折扣（早鳥／晚鳥出清）
+      if (!options?.skipPromotionalDiscounts) {
+        let bestAdvanceBooking: (RuleRow & { name?: string }) | null = null
+        let bestEarlyBird: (RuleRow & { name?: string }) | null = null
+        for (const rule of sortedRules) {
+          const c = rule.conditions ?? {}
+          if (rule.rule_type === 'advance_booking') {
+            const threshold = (c.days_before as number) ?? 0
+            if (daysUntil <= threshold) {
+              const bestThreshold = (bestAdvanceBooking?.conditions?.days_before as number) ?? Infinity
+              if (threshold < bestThreshold) bestAdvanceBooking = rule
+            }
+          } else if (rule.rule_type === 'early_bird') {
+            const threshold = (c.days_before as number) ?? 90
+            if (daysUntil >= threshold) {
+              const bestThreshold = (bestEarlyBird?.conditions?.days_before as number) ?? -Infinity
+              if (threshold > bestThreshold) bestEarlyBird = rule
+            }
+          }
+        }
+
+        const promoRule = bestAdvanceBooking ?? bestEarlyBird
+        if (promoRule) {
+          if (promoRule.adjustment_type === 'percent') {
+            const discountPct = Math.abs(Number(promoRule.adjustment_value))
+            promoDailyPrice = Math.max(0, Math.round(baseDailyPrice * (1 - discountPct / 100)))
+            const label = promoRule.name || (promoRule.rule_type === 'early_bird' ? `早鳥優惠 (${(10 - discountPct / 10).toFixed(discountPct % 10 === 0 ? 0 : 1)}折)` : `晚鳥特惠 (${(10 - discountPct / 10).toFixed(discountPct % 10 === 0 ? 0 : 1)}折)`)
+            appliedPromotionsSet.add(label)
+          } else {
+            const discountAmt = Math.abs(Number(promoRule.adjustment_value))
+            promoDailyPrice = Math.max(0, Math.round(baseDailyPrice - discountAmt))
+            const label = promoRule.name || `特惠折抵 $${discountAmt}`
+            appliedPromotionsSet.add(label)
+          }
+        }
+      }
+    } else {
+      baseDailyPrice = Math.max(0, Math.round(baseDailyPrice))
+      promoDailyPrice = baseDailyPrice
     }
-    price = Math.max(0, Math.round(price))
-    perNight.push({ date, amount: price })
-    total += price
+
+    basePerNight.push({ date, amount: baseDailyPrice })
+    baseTotal += baseDailyPrice
+
+    perNight.push({ date, amount: promoDailyPrice })
+    total += promoDailyPrice
   }
 
   // 加床：數量不能超過房型設定的上限，且每加一張床視同多容納一位旅客，
@@ -206,6 +238,7 @@ export async function computeStayPrice(
   if (beds > 0 && prop.extra_bed_fee) {
     extraBedFee = Math.round(Number(prop.extra_bed_fee) * beds * nights.length)
     total += extraBedFee
+    baseTotal += extraBedFee
   }
 
   let extraGuestFee = 0
@@ -213,9 +246,25 @@ export async function computeStayPrice(
   if (guests > maxGuests && prop.extra_guest_fee) {
     extraGuestFee = Math.round(Number(prop.extra_guest_fee) * (guests - maxGuests) * nights.length)
     total += extraGuestFee
+    baseTotal += extraGuestFee
   } else if (guests > maxGuests) {
     warnings.push(`入住人數 ${guests} 超過上限 ${maxGuests} 人，且未設定加人費，請洽民宿`)
   }
 
-  return { nights: nights.length, total, currency, perNight, extraGuestFee, extraBedFee, warnings }
+  const hasPromotionalDiscount = baseTotal > total && appliedPromotionsSet.size > 0
+  const promotionsApplied = Array.from(appliedPromotionsSet)
+
+  return {
+    nights: nights.length,
+    total,
+    currency,
+    perNight,
+    extraGuestFee,
+    extraBedFee,
+    warnings,
+    baseTotal,
+    basePerNight,
+    hasPromotionalDiscount,
+    promotionsApplied,
+  }
 }

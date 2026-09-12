@@ -2,6 +2,10 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { assembleExpertKnowledge } from '@/lib/skills/expertKnowledge'
+
+// 一鍵產出沿用的行銷專家（與行銷中心專家模式同源）：短影音爆款＋推廣文案＋社群人設
+const MKT_EXPERT_SKILLS = ['viral-video-copywriting', 'product-marketing-copywriter', 'kol-persona-writer']
 
 type Admin = ReturnType<typeof createAdminClient>
 export const MKT_MODEL = 'claude-sonnet-4-5'
@@ -33,6 +37,8 @@ export async function generateContentSet(
 ): Promise<{ outputs: Record<string, unknown>; model: string }> {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY 未設定')
   const { data: brand } = await admin.from('mkt_brand').select('*').eq('owner_id', ownerId).maybeSingle()
+  // 沿用行銷中心「專家模式」的專家知識（內建方法論＋公司自訓知識）
+  const expertKnowledge = await assembleExpertKnowledge(admin, ownerId, MKT_EXPERT_SKILLS)
 
   const chList = channels.filter(c => CHANNEL_LABEL[c])
   const chDesc = chList.map(c => `- "${c}"：${CHANNEL_LABEL[c]}`).join('\n')
@@ -45,7 +51,10 @@ ${brandBlock(brand as Record<string, unknown> | null)}
 - 每個平台依其特性調整（FB 稍長可說故事；IG 精簡＋主題標籤；TikTok 給口語腳本與分鏡；Zalo／LINE 親切促購）。
 - 文案要具體、有記憶點、含明確行動呼籲（CTA），不要空泛。
 - hashtags 給 5–10 個、貼近該市場。
-- 只能輸出 JSON，不要任何解釋或 markdown 圍欄。`
+- 只能輸出 JSON，不要任何解釋或 markdown 圍欄。
+
+${expertKnowledge}
+（撰寫文案與 video_script 時，務必套用上述行銷專家方法論——尤其短影片腳本要用短影音爆款技巧：黃金前 3 秒 Hook、完播與互動設計、POV 或敘事框架、不像廣告的 CTA，並具體到可直接拍攝。）`
 
   const shape = `{
 ${chList.map(c => `  "${c}": { "copy": "貼文文案", "hashtags": ["..."] }`).join(',\n')}${chList.length ? ',' : ''}

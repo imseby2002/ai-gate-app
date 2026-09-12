@@ -2,17 +2,21 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2, Crown, Brain } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2, Crown, Brain, NotebookPen, MapPin, Fingerprint, GitBranch } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
+  { href: '/marketing/brand',            labelKey: 'nav.brand',    icon: Fingerprint },
   { href: '/marketing-auto',             labelKey: 'nav.auto',     icon: LayoutDashboard },
+  { href: '/marketing-pipeline',         labelKey: 'nav.pipeline', icon: GitBranch },
   { href: '/marketing/product-designer', labelKey: 'nav.designer', icon: Palette },
   { href: '/marketing/ai-studio',        labelKey: 'nav.studio',   icon: Wand2 },
   { href: '/marketing/geo-writer',       labelKey: 'nav.geo',      icon: Search },
   { href: '/marketing/skills',           labelKey: 'nav.expert',   icon: Sparkles },
   { href: '/marketing/experts',          labelKey: 'nav.experts',  icon: Brain },
   { href: '/prospect-call',              labelKey: 'nav.prospect', icon: Phone },
+  { href: '/marketing/offline',          labelKey: 'nav.offline',  icon: MapPin },
+  { href: '/marketing/logbook',          labelKey: 'nav.logbook',  icon: NotebookPen },
   { href: '/marketing/plan',             labelKey: 'nav.plan',     icon: Crown },
 ]
 
@@ -39,6 +43,22 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </Link>
         )
       })}
+      <div className="mt-auto pt-3 border-t border-gray-100 flex flex-col gap-1">
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide px-2">跨部門協作</span>
+        <Link
+          href="/mkt"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-pink-700 bg-pink-50 hover:bg-pink-100 transition-colors"
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          門市與產品資產庫 ↗
+        </Link>
+        <Link
+          href="/office"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+        >
+          公司入口 (OFFICE) ↗
+        </Link>
+      </div>
     </>
   )
 

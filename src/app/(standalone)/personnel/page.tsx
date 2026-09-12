@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Users, ArrowLeft, Loader2, AlertCircle, Search, FileText, Upload, Trash2, ExternalLink, Save, Building2, CheckCircle2, XCircle, DollarSign, Bell, FileSpreadsheet } from 'lucide-react'
+import { Users, ArrowLeft, Loader2, AlertCircle, Search, FileText, Upload, Trash2, ExternalLink, Save, Building2, CheckCircle2, XCircle, DollarSign, Bell, FileSpreadsheet, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
+import { EmployeeWhitelistManager } from '@/components/admin/EmployeeWhitelistManager'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
 const PERSONNEL_IMPORT_COLUMNS: ImportColumn[] = [
@@ -42,6 +43,7 @@ interface Person { id: string; name: string; gender: string; native_place: strin
 export default function PersonnelPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  const [showWhitelist, setShowWhitelist] = useState(false)
 
   useEffect(() => { fetch('/api/hr/personnel').then(r => setIsAdmin(r.status !== 403)) }, [])
   if (isAdmin === false) return (
@@ -58,8 +60,24 @@ export default function PersonnelPage() {
           <h1 className="text-2xl font-bold">人員資料</h1>
           <p className="text-sm text-gray-500">基本資料、文件、薪資獎金與勞動合同</p>
         </div>
-        <div className="ml-auto"><Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2">
+          <Button
+            variant={showWhitelist ? 'default' : 'outline'}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setShowWhitelist(v => !v)}
+          >
+            <Mail className="h-4 w-4" />
+            員工白名單
+          </Button>
+          <Link href="/hr"><Button variant="outline" size="sm" className="gap-1.5"><Building2 className="h-4 w-4" />人事管理</Button></Link>
+        </div>
       </div>
+
+      {showWhitelist && (
+        <EmployeeWhitelistManager mode="company" />
+      )}
+
       {selected ? <PersonDetail id={selected} onBack={() => setSelected(null)} /> : <PeopleList onOpen={setSelected} />}
     </div>
   )

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Bot,
   Plus, ChevronLeft, ChevronRight, Image, Video, Zap,
-  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2,
+  FileText, Megaphone, Headphones, LayoutDashboard, CalendarDays, Terminal, MessageSquarePlus, NotebookPen, Code2, Users, Scale,
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,7 @@ type NavItem = {
 
 const MAIN_NAV: NavItem[] = [
   { labelKey: 'dashboard',   href: '/apps',           icon: LayoutDashboard, module: null },
+  { labelKey: 'roundtable',  label: '智慧圓桌',        href: '/roundtable',     icon: Users,           module: 'chat' },
   { labelKey: 'assistants',  href: '/assistants',     icon: Bot,             module: 'chat' },
   { labelKey: 'imageGen',    href: '/image-gen',      icon: Image,           module: 'chat' },
   { labelKey: 'videoGen',    href: '/video-gen',      icon: Video,           module: 'chat' },
@@ -44,6 +45,7 @@ const TOOL_NAV: NavItem[] = [
   { labelKey: 'marketing',     href: '/marketing-auto',   icon: Megaphone,    module: 'marketing' },
   { labelKey: 'cs',            href: '/cs',              icon: Headphones,   module: 'cs' },
   { labelKey: 'booking',       href: '/booking',         icon: CalendarDays, module: 'booking' },
+  { labelKey: 'legal',         label: '法律合規',         href: '/legal',     icon: Scale,        module: null },
 ]
 
 // 僅總管理員可見的連結
@@ -82,12 +84,12 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
     return () => window.removeEventListener('sidebar:collapse', handleCollapseEvent)
   }, [])
 
-  // 連結可見性：管理員看全部；非管理員若帶系統範圍（scope）只看該系統，否則依 enabled_modules
+  // 連結可見性：總管理員專屬工具 (adminOnly) 僅總管理員可見；常規模組依 enabled_modules 判斷
   const isVisible = (item: NavItem) => {
     if (item.alwaysShow) return true
     if (item.adminOnly) return isAdmin
-    if (isAdmin) return true
-    // module 為 null 代表不綁定任何系統的共用連結（選單、意見回饋），恆顯示
+    
+    // module 為 null 代表不綁定任何系統的共用連結（例如 dashboard, feedback），恆顯示
     if (scope) return item.module === null || item.module === scope
     return !item.module || mods.includes(item.module)
   }

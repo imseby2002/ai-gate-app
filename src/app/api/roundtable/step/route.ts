@@ -10,6 +10,8 @@ import {
   type RoundtableEvent,
   type RoundtableDomain,
   type Statement,
+  type SynthesisStyle,
+  type VerbosityMode,
 } from '@/lib/ai/roundtable'
 import { loadExpertContext } from '@/lib/experts/loader'
 
@@ -23,6 +25,23 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('user_type, is_active')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.is_active) {
+    return new Response(JSON.stringify({ error: 'Account suspended' }), { status: 403 })
+  }
+
+  if (profile.user_type === 'external') {
+    const { data: balance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
+    if ((balance ?? 0) < 0.1) {
+      return new Response(JSON.stringify({ error: 'insufficient_credits' }), { status: 402 })
+    }
+  }
+
   const body = await req.json()
   const {
     sessionId,
@@ -32,6 +51,8 @@ export async function POST(req: NextRequest) {
     crossExamine = true,
     moderatorModel,
     synthesisStyle = 'default',
+    verbosity = 'standard_300',
+    seats: bodySeats,
   } = body as {
     sessionId: string
     action: 'continue_all' | 'call_on' | 'synthesize'
@@ -40,6 +61,8 @@ export async function POST(req: NextRequest) {
     crossExamine?: boolean
     moderatorModel?: string
     synthesisStyle?: SynthesisStyle
+    verbosity?: VerbosityMode
+    seats?: Seat[]
   }
 
   if (!sessionId) {
@@ -58,14 +81,14 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Session not found' }), { status: 404 })
   }
 
-  const seats: Seat[] = session.seats?.length ? session.seats : DEFAULT_SEATS
+  const seats: Seat[] = bodySeats?.length ? bodySeats : (session.seats?.length ? session.seats : DEFAULT_SEATS)
   const domain: RoundtableDomain = session.domain ?? 'auto'
   const preset = DOMAIN_PRESETS[domain] ?? DOMAIN_PRESETS.auto
   const factBriefing: string = session.fact_briefing ?? ''
   const priorTranscript: Statement[] = session.transcript ?? []
 
   // 計算新一輪次編號 (取既有最大 round + 1)
-  const maxRound = priorTranscript.reduce((max, item) => Math.max(max, item.round ?? 1), 2)
+  const maxRound = priorTranscript.reduce((max, item) => Math.max(max, Number(item.round) || 1), 2)
   const nextRound = maxRound + 1
 
   // 預先載入席位專家知識
@@ -112,6 +135,7 @@ export async function POST(req: NextRequest) {
             moderatorToUse,
             emit,
             synthesisStyle,
+            verbosity,
           )
           finalReport = report
         } else {
@@ -129,10 +153,12 @@ export async function POST(req: NextRequest) {
             preset,
             emit,
             expertContextMap,
+            verbosity,
           )
           newStatements.push(...stepStatements)
-          // 完成本輪後，再次暫停等待老闆後續指令
-          emit({ type: 'waiting_boss', round: nextRound })
+          // 完成本組輪次（論述輪 + 互評輪）後，取得最大結束輪次，再次暫停等待老闆後續指令
+          const endRound = stepStatements.reduce((max, item) => Math.max(max, Number(item.round) || nextRound), nextRound)
+          emit({ type: 'waiting_boss', round: endRound })
           isWaitingBoss = true
         }
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
@@ -148,6 +174,7 @@ export async function POST(req: NextRequest) {
             transcript: updatedTranscript,
             report: finalReport,
             status: isWaitingBoss ? 'waiting_boss' : 'completed',
+            seats: seats,
           })
           .eq('id', sessionId)
 

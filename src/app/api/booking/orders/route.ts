@@ -4,7 +4,7 @@ import { getBnbContext } from '@/lib/bnb/context'
 import { findOrCreateOrder } from '@/lib/booking/orders'
 import { syncDailyRecordForBooking } from '@/lib/booking/daily-sync'
 
-interface RoomInput { property_id: string; num_guests?: number; total_price?: number | null }
+interface RoomInput { property_id: string; num_guests?: number; total_price?: number | null; extra_beds?: number }
 
 // POST — 一次建立一張訂單（可能包含多個房型）。取代原本「日曆加入訂單」對每個
 // 房型各自呼叫一次 /api/booking/bookings 的作法——那樣建出來的多筆 bookings 只靠
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       guest_name, guest_email, guest_phone,
       check_in, check_out, num_guests: r.num_guests ?? 1, total_price: r.total_price ?? null, currency,
       status, special_requests, notes, source,
+      extra_beds: r.extra_beds ?? 0,
     }
     const { data, error } = existingIds[i]
       ? await supabase.from('bookings').update(payload).eq('id', existingIds[i]).select().single()

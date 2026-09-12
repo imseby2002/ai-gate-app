@@ -439,7 +439,13 @@ function MarketingPipelineContent() {
         const { res, data } = await safeFetch('/api/marketing/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ platforms: imagePlatforms, copies, images }),
+          body: JSON.stringify({
+            platforms: imagePlatforms,
+            copies,
+            images,
+            imageUrls: images,
+            copyText: copies.join('\n\n'),
+          }),
         })
         if (!res.ok) return { ok: false, output: String(data.error ?? t('out.uploadFailed')) }
         uploadResults.push(imagePlatforms.join('、'))
@@ -546,7 +552,9 @@ function MarketingPipelineContent() {
               body: JSON.stringify({
                 platforms: videoPlatforms,
                 copies: caption ? [caption] : [],
+                copyText: caption,
                 videos: [{ url: videoUrl }],
+                videoUrl,
               }),
             })
             uploadNote = upRes.ok

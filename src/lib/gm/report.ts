@@ -32,6 +32,7 @@ export function snapshotToText(snap: GmSnapshot): string {
   L.push(`【外務】30 天內到期文件 ${snap.affairs.count}${snap.affairs.expiring.slice(0, 8).map(d => `\n- ${d.title || d.doc_type}（${d.expiry_date}，${d.days < 0 ? `逾期 ${-d.days} 天` : `${d.days} 天`}）`).join('')}`)
   L.push(`【人事】在職 ${snap.hr.active}、本月新進 ${snap.hr.new_this_month}、合約 60 天內到期 ${snap.hr.contracts_expiring}`)
   L.push(`【稽核】啟用硬性規定 ${snap.audit.active_rules} 條`)
+  L.push(`【行銷】外送當月營收 ${fmt(snap.marketing.delivery_revenue)}（訂單 ${fmt(snap.marketing.delivery_orders)}）、內容待審核 ${snap.marketing.content_review}、實體行銷進行中 ${snap.marketing.offline_active}`)
   return L.join('\n').slice(0, 8000)
 }
 

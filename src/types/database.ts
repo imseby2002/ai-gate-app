@@ -1,6 +1,6 @@
 export type UserType = 'employee' | 'external' | 'admin'
 export type PlanId = 'free' | 'starter' | 'pro' | 'enterprise'
-export type ModelProvider = 'deepseek' | 'google' | 'anthropic' | 'perplexity' | 'fal' | 'kling' | 'veo'
+export type ModelProvider = 'deepseek' | 'google' | 'anthropic' | 'perplexity' | 'fal' | 'kling' | 'veo' | 'openrouter' | 'groq' | 'cliproxy' | 'freellm'
 export type Modality = 'text' | 'image' | 'video' | 'multimodal'
 export type MessageRole = 'user' | 'assistant' | 'system'
 export type FileType = 'pdf' | 'docx' | 'xlsx' | 'jpg' | 'jpeg' | 'png' | 'json' | 'txt'
@@ -19,6 +19,7 @@ export interface Profile {
   credit_balance: number
   telegram_bot_token: string | null
   telegram_chat_id: string | null
+  company_id: string | null
   created_at: string
   updated_at: string
 }

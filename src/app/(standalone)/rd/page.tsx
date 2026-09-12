@@ -5,20 +5,35 @@ import Link from 'next/link'
 import {
   FlaskConical, Upload, Loader2, AlertCircle, Building2, Store,
   Plus, Trash2, Edit3, Search, FileSpreadsheet, X, CheckCircle2,
-  Package, BookOpen, Link2, Scale, TrendingUp
+  Package, BookOpen, Link2, Scale, TrendingUp, DollarSign, ChevronDown, ChevronUp, Info,
+  Wrench, Coffee, ShoppingBag, Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 
-const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
-const fmt1 = (n: number) => (Math.round(n * 100) / 100).toLocaleString('zh-TW')
+const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
+const fmt1 = (n: number) => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('zh-TW')
 
 interface Material {
   code: string
   name: string
   unit: string
+  category?: string
+  purchase_price?: number // 工廠進貨價
+  export_price?: number   // 賣給直營門市價格 (配方門市成本)
+  dealer_price?: number   // 賣給經銷商或非直營門市價格
+}
+
+interface MaterialPrice {
+  material_code: string
+  material_name: string
+  unit: string
+  category?: string
+  purchase_price: number // 工廠進貨價
+  export_price: number   // 賣給直營門市價格 (配方門市成本)
+  dealer_price: number   // 賣給經銷商或非直營門市價格
+  updated_at: string
 }
 
 interface RecipeItem {
@@ -26,6 +41,16 @@ interface RecipeItem {
   material_code: string
   material_name: string
   qty_per_cup: number
+  unit?: string
+  category?: string
+  purchase_price?: number // 工廠進貨價
+  export_price?: number   // 賣給直營門市價格 (門市配方成本)
+  dealer_price?: number   // 賣給經銷商或非直營門市價格
+  store_cost?: number     // 門市成本 = 用量 × 直營門市價
+  factory_cost?: number   // 工廠成本 = 用量 × 工廠進貨價
+  dealer_cost?: number    // 經銷成本 = 用量 × 經銷價
+  item_cost?: number      // 相容欄位 (門市成本)
+  item_export?: number    // 相容欄位
 }
 
 interface Recipe {
@@ -33,6 +58,11 @@ interface Recipe {
   name: string
   note: string
   created_at: string
+  store_cost?: number     // 門市每杯總成本
+  factory_cost?: number   // 工廠每杯總成本
+  dealer_cost?: number    // 經銷每杯總成本
+  factory_margin?: number // 工廠每杯毛利
+  total_cost?: number     // 相容欄位
   items: RecipeItem[]
 }
 
@@ -56,22 +86,32 @@ interface VarRow {
   money_loss: number
 }
 
-type RdTab = 'recipes' | 'mapping' | 'variance'
+type RdTab = 'recipes' | 'prices' | 'mapping' | 'variance'
 
 export default function RdPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tab, setTab] = useState<RdTab>('recipes')
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
+  const [prices, setPrices] = useState<MaterialPrice[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [expandedRecipes, setExpandedRecipes] = useState<Set<string>>(new Set())
   const [editing, setEditing] = useState<{ id?: string; name: string; note: string; items: RecipeItem[] } | null>(null)
   const [busy, setBusy] = useState(false)
 
   const fileRef = useRef<HTMLInputElement>(null)
-  const priceRef = useRef<HTMLInputElement>(null)
+
+  const toggleExpand = (id: string) => {
+    setExpandedRecipes(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -87,6 +127,7 @@ export default function RdPage() {
         const d = await res.json()
         setRecipes(d.recipes ?? [])
         setMaterials(d.materials ?? [])
+        setPrices(d.prices ?? [])
       }
     } catch {
       setIsAdmin(false)
@@ -97,6 +138,15 @@ export default function RdPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab')
+      if (p === 'prices' || p === 'mapping' || p === 'variance' || p === 'recipes') {
+        setTab(p as RdTab)
+      }
+    }
+  }, [])
 
   // 匯入檔案 (.xlsx / .xls)
   const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -127,25 +177,6 @@ export default function RdPage() {
     setUploading(false)
   }
 
-  // 匯入原料標準價（中央維護，非每月、非門市）
-  const handleUploadPrice = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    setUploading(true)
-    setMsg(null)
-    const fd = new FormData()
-    fd.append('file', file)
-    try {
-      const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
-      const d = await res.json()
-      setMsg(res.ok ? { text: `標準價匯入 ${d.imported} 筆！`, type: 'success' } : { text: d.error ?? '匯入失敗', type: 'error' })
-    } catch (err) {
-      setMsg({ text: `匯入發生錯誤：${err instanceof Error ? err.message : err}`, type: 'error' })
-    }
-    setUploading(false)
-  }
-
   // 儲存（新增/修改配方）
   const saveRecipe = async () => {
     if (!editing?.name.trim()) return
@@ -159,7 +190,7 @@ export default function RdPage() {
       })
       if (res.ok) {
         setEditing(null)
-        setMsg({ text: editing.id ? '配方修改成功！' : '新配方建立成功！', type: 'success' })
+        setMsg({ text: editing.id ? '配方與門市成本修改成功！' : '新配方建立成功！', type: 'success' })
         loadData()
       } else {
         const d = await res.json().catch(() => ({}))
@@ -190,7 +221,7 @@ export default function RdPage() {
 
   // 彈出視窗：新增/修改原料
   const addItem = () =>
-    setEditing(e => (e ? { ...e, items: [...e.items, { material_code: '', material_name: '', qty_per_cup: 0 }] } : e))
+    setEditing(e => (e ? { ...e, items: [...e.items, { material_code: '', material_name: '', qty_per_cup: 0, unit: '', export_price: 0, purchase_price: 0, dealer_price: 0 }] } : e))
 
   const setItem = (i: number, patch: Partial<RecipeItem>) =>
     setEditing(e => {
@@ -202,7 +233,16 @@ export default function RdPage() {
 
   const pickMaterial = (i: number, code: string) => {
     const m = materials.find(x => x.code === code)
-    setItem(i, { material_code: code, material_name: m?.name ?? code })
+    const pr = prices.find(p => p.material_code === code)
+    setItem(i, {
+      material_code: code,
+      material_name: m?.name ?? pr?.material_name ?? code,
+      unit: m?.unit || pr?.unit || '',
+      category: m?.category || pr?.category || '原料',
+      export_price: pr?.export_price ?? m?.export_price ?? 0,     // 賣給直營門市價格 (門市成本)
+      purchase_price: pr?.purchase_price ?? m?.purchase_price ?? 0, // 工廠進貨價
+      dealer_price: pr?.dealer_price ?? m?.dealer_price ?? 0,     // 經銷商價格
+    })
   }
 
   if (isAdmin === false) {
@@ -230,10 +270,24 @@ export default function RdPage() {
   })
 
   const TABS: { id: RdTab; label: string; icon: ReactNode }[] = [
-    { id: 'recipes', label: '配方設計', icon: <BookOpen className="h-4 w-4" /> },
+    { id: 'recipes', label: '配方與門市成本試算', icon: <BookOpen className="h-4 w-4" /> },
+    { id: 'prices', label: '出納核定物料價表 (唯讀參考)', icon: <DollarSign className="h-4 w-4" /> },
     { id: 'mapping', label: 'POS 成品對照', icon: <Link2 className="h-4 w-4" /> },
     { id: 'variance', label: '使用量檢驗 (差異分析)', icon: <Scale className="h-4 w-4" /> },
   ]
+
+  // 計算當前編輯中配方的每杯門市成本（以賣給直營門市價格計算）與工廠成本（以工廠進貨價計算）
+  const currentStoreCost = editing?.items.reduce((sum, it) => {
+    const qty = Number(it.qty_per_cup) || 0
+    const price = Number(it.export_price) || 0
+    return sum + (qty * price)
+  }, 0) ?? 0
+
+  const currentFactoryCost = editing?.items.reduce((sum, it) => {
+    const qty = Number(it.qty_per_cup) || 0
+    const price = Number(it.purchase_price) || 0
+    return sum + (qty * price)
+  }, 0) ?? 0
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
@@ -244,38 +298,33 @@ export default function RdPage() {
             <FlaskConical className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">研發配方中心 (R&D)</h1>
-            <p className="text-sm text-muted-foreground">配方設計、POS成品串接、原料使用量正常檢驗</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">配方</h1>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">門市出貨定價體系</span>
+            </div>
+            <p className="text-sm text-muted-foreground">配方設計、門市每杯成本（核心取自出納【賣給門市價格】）、工廠進價與經銷批發價試算</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/rd-recipes">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FlaskConical className="h-4 w-4 text-purple-600" />配方成本
+          <Link href="/finance?tab=pricing">
+            <Button variant="outline" size="sm" className="gap-1.5 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 font-medium">
+              <DollarSign className="h-4 w-4" />出納物料定價 (權責維護)
+            </Button>
+          </Link>
+          <Link href="/rd-lab">
+            <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 dark:text-purple-400">
+              <FlaskConical className="h-4 w-4" />研發大腦 (Lab)
             </Button>
           </Link>
           <Link href="/rd-ai">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <FlaskConical className="h-4 w-4 text-indigo-600" />研發討論AI
+            <Button variant="outline" size="sm" className="gap-1.5 text-indigo-600 dark:text-indigo-400">
+              <FlaskConical className="h-4 w-4" />研發討論AI
             </Button>
           </Link>
-          <Link href="/office">
+          <Link href="/rd-logs">
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />
-              公司入口
-            </Button>
-          </Link>
-          <Link href="/store-reports">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Store className="h-4 w-4" />
-              門市報表
-            </Button>
-          </Link>
-          <Link href="/hr">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />
-              人事管理
+              <BookOpen className="h-4 w-4" />研發日誌
             </Button>
           </Link>
         </div>
@@ -288,13 +337,6 @@ export default function RdPage() {
         hidden
         accept=".xlsx,.xls"
         onChange={handleUpload}
-      />
-      <input
-        ref={priceRef}
-        type="file"
-        hidden
-        accept=".xlsx"
-        onChange={handleUploadPrice}
       />
 
       {/* 訊息提示 */}
@@ -318,8 +360,23 @@ export default function RdPage() {
         </div>
       )}
 
+      {/* 公司權責原則說明 Banner */}
+      <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
+        <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="text-xs text-amber-950 dark:text-amber-200 space-y-1.5 leading-relaxed">
+          <p className="font-bold text-sm text-amber-900 dark:text-amber-300 flex items-center gap-2">
+            【公司權責劃分原則】：研發不負責物料定價，定價由【出納總務】統籌核定與維護
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-amber-900/90 dark:text-amber-200/90">
+            <li><b>出納總務專責定價</b>：全公司所有物料（原物料、設備、道具、耗材）之「工廠進貨價 (ĐGN)」、「直營門市出貨價 (ĐGX CH)」與「經銷商批發價 (ĐGX Đại lý)」均由<b>出納單位</b>於【出納・物料定價】獨立維護。</li>
+            <li><b>研發專責配方與風味</b>：研發人員專注於設計飲品比例、配方原料每杯用量 (克/毫升)、沖煮工藝與風味感官標準。</li>
+            <li><b>即時連動成本</b>：配方中的門市每杯成本 ＝ 各原料用量 × 出納核定之門市價，系統即時自動計算，<b>研發端無定價修改與匯入權限，確保全公司數據唯一真實來源</b>。若需調整價格請至出納模組辦理。</li>
+          </ul>
+        </div>
+      </div>
+
       {/* 分頁按鈕列 */}
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit border">
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit border flex-wrap">
         {TABS.map(t => (
           <button
             key={t.id}
@@ -354,13 +411,13 @@ export default function RdPage() {
             </Card>
 
             <Card className="p-4 flex items-center gap-3">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-xl">
-                <Package className="h-5 w-5" />
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 rounded-xl">
+                <DollarSign className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">已引用原料品項</p>
+                <p className="text-xs text-muted-foreground font-medium">定價庫已建檔品項</p>
                 <p className="text-2xl font-bold">
-                  {materials.length} <span className="text-xs font-normal text-muted-foreground">項</span>
+                  {prices.length} <span className="text-xs font-normal text-muted-foreground">項（原料/設備/道具/耗材）</span>
                 </p>
               </div>
             </Card>
@@ -368,43 +425,41 @@ export default function RdPage() {
             <Card className="p-4 flex items-center justify-between gap-2">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground font-medium">快速操作</p>
-                <p className="text-xs text-gray-500">配方與原料標準價由此中央維護（非每月、非門市）</p>
+                <p className="text-xs text-gray-500">支援匯入配方表與三層定價標準檔</p>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5"
+                  className="gap-1.5 text-xs"
                   disabled={uploading}
                   onClick={() => fileRef.current?.click()}
+                  title="匯入配方表 Excel (.xlsx)"
                 >
                   {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
                   )}
                   匯入配方
                 </Button>
+                <Link href="/finance?tab=pricing">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs text-emerald-600 border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    title="物料價格由出納總務統籌管理，點擊前往出納維護"
+                  >
+                    <DollarSign className="h-3.5 w-3.5" />
+                    出納物料定價
+                  </Button>
+                </Link>
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  disabled={uploading}
-                  onClick={() => priceRef.current?.click()}
-                >
-                  {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileSpreadsheet className="h-4 w-4 text-amber-600" />
-                  )}
-                  匯入標準價
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  className="gap-1.5 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
                   onClick={() => setEditing({ name: '', note: '', items: [] })}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   新增配方
                 </Button>
               </div>
@@ -460,80 +515,165 @@ export default function RdPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredRecipes.map(r => (
-                <Card
-                  key={r.id}
-                  className="p-5 flex flex-col justify-between space-y-3 hover:shadow-md transition-shadow"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-bold text-lg text-foreground">{r.name}</h3>
-                        {r.note && <p className="text-xs text-muted-foreground mt-0.5">{r.note}</p>}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-500 hover:text-purple-600"
-                          onClick={() =>
-                            setEditing({
-                              id: r.id,
-                              name: r.name,
-                              note: r.note,
-                              items: r.items.map(i => ({ ...i })),
-                            })
-                          }
-                          title="編輯配方"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-rose-600"
-                          onClick={() => removeRecipe(r)}
-                          title="刪除配方"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+              {filteredRecipes.map(r => {
+                const isExpanded = expandedRecipes.has(r.id)
+                const storeCost = r.store_cost ?? r.total_cost ?? 0
+                const factoryCost = r.factory_cost ?? 0
+                const factoryMargin = r.factory_margin ?? (storeCost - factoryCost)
 
-                    {/* 原料明細標籤 */}
-                    <div className="pt-2 border-t space-y-1.5">
-                      <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                        <Package className="h-3.5 w-3.5" /> 每杯標準用量（{r.items.length} 種原料）：
-                      </p>
-
-                      {r.items.length === 0 ? (
-                        <p className="text-xs text-amber-500 italic py-1">（未設定原料成分）</p>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {r.items.map((it, idx) => (
-                            <div
-                              key={idx}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-accent text-accent-foreground text-xs"
-                            >
-                              <span className="font-medium">{it.material_name || it.material_code}</span>
-                              <span className="text-purple-600 dark:text-purple-400 font-semibold">
-                                ×{fmt1(it.qty_per_cup)}
-                              </span>
-                            </div>
-                          ))}
+                return (
+                  <Card
+                    key={r.id}
+                    className="p-5 flex flex-col justify-between space-y-3 hover:shadow-md transition-shadow border"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-lg text-foreground">{r.name}</h3>
+                          </div>
+                          {r.note && <p className="text-xs text-muted-foreground mt-0.5">{r.note}</p>}
                         </div>
-                      )}
-                    </div>
-                  </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-500 hover:text-purple-600"
+                            onClick={() =>
+                              setEditing({
+                                id: r.id,
+                                name: r.name,
+                                note: r.note,
+                                items: r.items.map(i => ({ ...i })),
+                              })
+                            }
+                            title="編輯配方與成本"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-rose-600"
+                            onClick={() => removeRecipe(r)}
+                            title="刪除配方"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
 
-                  <div className="text-[11px] text-muted-foreground/60 text-right pt-2">
-                    更新時間：{new Date(r.created_at || Date.now()).toLocaleDateString('zh-TW')}
-                  </div>
-                </Card>
-              ))}
+                      {/* 成本試算核心指標：依賣給直營門市價格計算門市成本 */}
+                      <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40">
+                        <div>
+                          <span className="text-[10px] text-purple-700 dark:text-purple-300 block font-bold">直營門市成本 (每杯)</span>
+                          <span className="text-sm font-extrabold text-purple-700 dark:text-purple-300">
+                            {fmt(storeCost)} <span className="text-[10px] font-normal">₫</span>
+                          </span>
+                          <span className="text-[9px] text-muted-foreground block">直營門市出貨價</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-muted-foreground block font-medium">工廠進貨成本 (每杯)</span>
+                          <span className="text-sm font-bold text-foreground">
+                            {fmt(factoryCost)} <span className="text-[10px] font-normal">₫</span>
+                          </span>
+                          <span className="text-[9px] text-muted-foreground block">工廠進貨底價</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-emerald-700 dark:text-emerald-300 block font-bold">工廠出貨毛利 (每杯)</span>
+                          <span className={`text-sm font-bold ${factoryMargin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
+                            {fmt(factoryMargin)} <span className="text-[10px] font-normal">₫</span>
+                          </span>
+                          <span className="text-[9px] text-muted-foreground block">門市價 − 工廠價</span>
+                        </div>
+                      </div>
+
+                      {/* 原料明細標籤與展開按鈕 */}
+                      <div className="pt-2 border-t space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                            <Package className="h-3.5 w-3.5" /> 原料構成（{r.items.length} 項）：
+                          </p>
+                          {r.items.length > 0 && (
+                            <button
+                              onClick={() => toggleExpand(r.id)}
+                              className="text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5"
+                            >
+                              {isExpanded ? <>收合明細 <ChevronUp className="h-3 w-3" /></> : <>完整成本明細 <ChevronDown className="h-3 w-3" /></>}
+                            </button>
+                          )}
+                        </div>
+
+                        {r.items.length === 0 ? (
+                          <p className="text-xs text-amber-500 italic py-1">（未設定原料成分）</p>
+                        ) : isExpanded ? (
+                          /* 展開的 BOM 成本計算表格 */
+                          <div className="overflow-x-auto rounded-lg border bg-background text-[11px]">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-b bg-muted/40 text-muted-foreground">
+                                  <th className="py-1.5 px-2 text-left">原料名稱</th>
+                                  <th className="px-2 text-right">用量</th>
+                                  <th className="px-2 text-right">直營門市價</th>
+                                  <th className="px-2 text-right">門市每杯成本</th>
+                                  <th className="px-2 text-right">工廠進價</th>
+                                  <th className="px-2 text-right">經銷商價</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {r.items.map((it, idx) => (
+                                  <tr key={idx} className="hover:bg-muted/20">
+                                    <td className="py-1.5 px-2 font-medium">
+                                      {it.material_name || it.material_code}
+                                      {it.unit ? <span className="text-muted-foreground text-[10px] ml-1">({it.unit})</span> : ''}
+                                    </td>
+                                    <td className="px-2 text-right tabular-nums">{fmt1(it.qty_per_cup)}</td>
+                                    <td className="px-2 text-right tabular-nums font-semibold text-purple-700 dark:text-purple-300">
+                                      {fmt(it.export_price || 0)}
+                                    </td>
+                                    <td className="px-2 text-right tabular-nums font-bold text-purple-700 dark:text-purple-300">
+                                      {fmt(it.store_cost ?? it.item_cost ?? 0)}
+                                    </td>
+                                    <td className="px-2 text-right tabular-nums text-muted-foreground">{fmt(it.purchase_price || 0)}</td>
+                                    <td className="px-2 text-right tabular-nums text-muted-foreground">{fmt(it.dealer_price || 0)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          /* 未展開時的標籤預覽 */
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {r.items.map((it, idx) => (
+                              <div
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-accent text-accent-foreground text-xs"
+                              >
+                                <span className="font-medium">{it.material_name || it.material_code}</span>
+                                <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                                  ×{fmt1(it.qty_per_cup)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-muted-foreground/60 text-right pt-2">
+                      建立時間：{new Date(r.created_at || Date.now()).toLocaleDateString('zh-TW')}
+                    </div>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </div>
+      )}
+
+      {/* 原物料・設備・道具・耗材 出納核定價表 (唯讀參考) TAB */}
+      {tab === 'prices' && (
+        <PricesSection prices={prices} />
       )}
 
       {/* POS 成品對照 TAB */}
@@ -549,14 +689,14 @@ export default function RdPage() {
           onClick={() => setEditing(null)}
         >
           <div
-            className="bg-card text-card-foreground border rounded-2xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl"
+            className="bg-card text-card-foreground border rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <div className="flex items-center gap-2">
                 <FlaskConical className="h-5 w-5 text-purple-600" />
-                <h3 className="font-bold text-lg">{editing.id ? '修改配方' : '新增研發配方'}</h3>
+                <h3 className="font-bold text-lg">{editing.id ? '修改研發配方與成本' : '新增研發配方（含門市成本試算）'}</h3>
               </div>
               <button
                 onClick={() => setEditing(null)}
@@ -568,31 +708,37 @@ export default function RdPage() {
 
             {/* Body */}
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">配方 / 成品名稱 *</span>
-                <Input
-                  value={editing.name}
-                  onChange={e => setEditing({ ...editing, name: e.target.value })}
-                  placeholder="例如：招牌珍珠奶茶 (L)"
-                />
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">配方 / 成品名稱 *</span>
+                  <Input
+                    value={editing.name}
+                    onChange={e => setEditing({ ...editing, name: e.target.value })}
+                    placeholder="例如：招牌珍珠奶茶 (L)"
+                  />
+                </label>
 
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">備註說明</span>
-                <Textarea
-                  value={editing.note}
-                  onChange={e => setEditing({ ...editing, note: e.target.value })}
-                  placeholder="可寫入研發心得、甜度冰量標準或說明..."
-                  rows={2}
-                />
-              </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-muted-foreground">備註說明</span>
+                  <Input
+                    value={editing.note}
+                    onChange={e => setEditing({ ...editing, note: e.target.value })}
+                    placeholder="研發心得或規格說明..."
+                  />
+                </label>
+              </div>
 
               <div className="space-y-2 pt-2 border-t">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold flex items-center gap-1.5">
-                    <Package className="h-4 w-4 text-purple-600" />
-                    配方原料成分（每杯用量）
-                  </span>
+                  <div>
+                    <span className="text-sm font-bold flex items-center gap-1.5">
+                      <Package className="h-4 w-4 text-purple-600" />
+                      原料成分與三層成本試算
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      選擇原料自動帶出出納核定之門市價與工廠進價；<b>門市成本＝用量 × 出納門市出貨價（研發不可自訂修改單價）</b>
+                    </span>
+                  </div>
                   <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={addItem}>
                     <Plus className="h-3.5 w-3.5" /> 增加原料
                   </Button>
@@ -604,82 +750,298 @@ export default function RdPage() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {editing.items.map((it, i) => (
-                      <div key={i} className="flex items-center gap-2 bg-accent/40 p-2 rounded-lg border">
-                        {/* 選擇原料 */}
-                        <div className="flex-1 min-w-0">
-                          {materials.length > 0 ? (
-                            <select
-                              value={it.material_code}
-                              onChange={e => pickMaterial(i, e.target.value)}
-                              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                            >
-                              <option value="">選擇原料...</option>
-                              {materials.map(m => (
-                                <option key={m.code} value={m.code}>
-                                  {m.name || m.code} {m.unit ? `(${m.unit})` : ''}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
+                    {editing.items.map((it, i) => {
+                      const lineStoreCost = (Number(it.qty_per_cup) || 0) * (Number(it.export_price) || 0)
+                      return (
+                        <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-accent/30 p-2.5 rounded-lg border text-xs">
+                          {/* 選擇原料 */}
+                          <div className="flex-1 min-w-0">
+                            {materials.length > 0 ? (
+                              <select
+                                value={it.material_code}
+                                onChange={e => pickMaterial(i, e.target.value)}
+                                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                              >
+                                <option value="">選擇原料...</option>
+                                {materials.map(m => (
+                                  <option key={m.code} value={m.code}>
+                                    {m.name || m.code} {m.unit ? `(${m.unit})` : ''} [出納門市價:{fmt(m.export_price || 0)} | 工廠進價:{fmt(m.purchase_price || 0)}]
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <Input
+                                value={it.material_name || it.material_code}
+                                onChange={e =>
+                                  setItem(i, { material_code: e.target.value, material_name: e.target.value })
+                                }
+                                placeholder="原料代碼或名稱"
+                                className="h-8 text-xs"
+                              />
+                            )}
+                          </div>
+
+                          {/* 單位 */}
+                          <div className="w-14 shrink-0">
                             <Input
-                              value={it.material_name || it.material_code}
-                              onChange={e =>
-                                setItem(i, { material_code: e.target.value, material_name: e.target.value })
-                              }
-                              placeholder="輸入原料名稱或代碼"
-                              className="h-9"
+                              value={it.unit || ''}
+                              onChange={e => setItem(i, { unit: e.target.value })}
+                              placeholder="單位"
+                              className="h-8 text-xs text-center"
                             />
-                          )}
-                        </div>
+                          </div>
 
-                        {/* 每杯用量 */}
-                        <div className="w-32 shrink-0">
-                          <Input
-                            type="number"
-                            step="any"
-                            value={it.qty_per_cup || ''}
-                            onChange={e => setItem(i, { qty_per_cup: Number(e.target.value) || 0 })}
-                            placeholder="每杯用量"
-                            className="h-9"
-                          />
-                        </div>
+                          {/* 每杯用量 */}
+                          <div className="w-20 shrink-0">
+                            <Input
+                              type="number"
+                              step="any"
+                              value={it.qty_per_cup || ''}
+                              onChange={e => setItem(i, { qty_per_cup: Number(e.target.value) || 0 })}
+                              placeholder="用量"
+                              className="h-8 text-xs font-semibold"
+                              title="研發設定每杯用量"
+                            />
+                          </div>
 
-                        {/* 刪除列 */}
-                        <button
-                          onClick={() =>
-                            setEditing(e => (e ? { ...e, items: e.items.filter((_, x) => x !== i) } : e))
-                          }
-                          className="h-9 w-9 rounded-md flex items-center justify-center text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                          {/* 賣給直營門市價格 (出納核定・唯讀) */}
+                          <div className="w-28 shrink-0 text-right">
+                            <div
+                              className="h-8 px-2 flex items-center justify-end rounded bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-800/40 text-xs font-semibold text-purple-700 dark:text-purple-300 tabular-nums"
+                              title="由【出納總務】核定之賣給直營門市價格 (唯讀)"
+                            >
+                              {Number(it.export_price) > 0 ? `${fmt(it.export_price || 0)} ₫` : <span className="text-amber-500 text-[10px] font-normal">⚠️出納未定價</span>}
+                            </div>
+                          </div>
+
+                          {/* 工廠進貨價 (出納核定・唯讀) */}
+                          <div className="w-24 shrink-0 text-right">
+                            <div
+                              className="h-8 px-2 flex items-center justify-end rounded bg-muted/40 border text-xs text-muted-foreground tabular-nums"
+                              title="由【出納總務】核定之工廠進價 (唯讀)"
+                            >
+                              {fmt(it.purchase_price || 0)} ₫
+                            </div>
+                          </div>
+
+                          {/* 門市成本小計 */}
+                          <div className="w-20 shrink-0 text-right tabular-nums font-bold text-purple-700 dark:text-purple-300">
+                            {fmt(lineStoreCost)} ₫
+                          </div>
+
+                          {/* 刪除列 */}
+                          <button
+                            onClick={() =>
+                              setEditing(e => (e ? { ...e, items: e.items.filter((_, x) => x !== i) } : e))
+                            }
+                            className="h-8 w-8 shrink-0 rounded-md flex items-center justify-center text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/20">
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
-                取消
-              </Button>
-              <Button
-                size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-                onClick={saveRecipe}
-                disabled={busy || !editing.name.trim()}
-              >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                儲存配方
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t bg-muted/20">
+              <div className="flex items-center gap-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground">直營門市每杯成本：</span>
+                  <span className="text-base font-extrabold text-purple-700 dark:text-purple-400 ml-1">
+                    {fmt(currentStoreCost)} ₫
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">工廠每杯進價：</span>
+                  <span className="text-sm font-semibold text-foreground ml-1">
+                    {fmt(currentFactoryCost)} ₫
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">工廠毛利：</span>
+                  <span className={`text-sm font-semibold ml-1 ${currentStoreCost >= currentFactoryCost ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {fmt(currentStoreCost - currentFactoryCost)} ₫
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>
+                  取消
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={saveRecipe}
+                  disabled={busy || !editing.name.trim()}
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  儲存配方與成本
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
+  )
+}
+
+// ── 子組件：原料・設備・道具・耗材 定價庫 (出納核定・研發唯讀參考) ──
+function PricesSection({
+  prices,
+}: {
+  prices: MaterialPrice[]
+}) {
+  const [q, setQ] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<'all' | '原料' | '設備' | '道具' | '耗材'>('all')
+
+  const filtered = prices.filter(p => {
+    const matchQ =
+      !q.trim() ||
+      p.material_code.toLowerCase().includes(q.toLowerCase()) ||
+      p.material_name.toLowerCase().includes(q.toLowerCase())
+    const matchCat = categoryFilter === 'all' || (p.category || '原料') === categoryFilter
+    return matchQ && matchCat
+  })
+
+  const CATEGORIES = [
+    { id: 'all', label: '全製品項', icon: Layers },
+    { id: '原料', label: '原料 (飲品配方)', icon: Coffee },
+    { id: '設備', label: '設備機器', icon: Wrench },
+    { id: '道具', label: '吧台道具器具', icon: Package },
+    { id: '耗材', label: '包裝耗材', icon: ShoppingBag },
+  ] as const
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-3">
+        <div>
+          <h3 className="font-bold text-lg flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-emerald-600" />
+            原物料・設備・道具・耗材 定價庫 (出納核定・研發唯讀)
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            即時同步自【出納總務】之原物料、設備、道具、耗材三層定價。研發部門僅做為配方成本試算之即時連動參考。
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Link href="/finance?tab=pricing">
+            <Button size="sm" className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-sm">
+              <DollarSign className="h-3.5 w-3.5" />
+              前往出納總務・物料定價管理 ➔
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* 權責劃分公告條 */}
+      <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-950 dark:text-amber-200 text-xs flex items-start gap-2.5">
+        <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <span className="font-bold text-amber-900 dark:text-amber-300">【研發權責劃分公告】：研發不負責物料定價與價表管理</span>
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+            依全公司管理原則，所有物料（原物料、設備、道具、耗材）之<b>工廠進貨價 (ĐGN)、直營門市出貨價 (ĐGX CH)、經銷商批發價 (ĐGX Đại lý)</b> 均由【出納總務】統籌核定與維護。
+            研發部門專注於設計配方比例、每杯用量與工藝風味，此處僅提供唯讀查閱，不開放手動修改或價表匯入。若有新物料需定價或價格異動，請至出納模組辦理。
+          </p>
+        </div>
+      </div>
+
+      {/* 分類篩選 Tab 按鈕 */}
+      <div className="flex flex-wrap items-center gap-2">
+        {CATEGORIES.map(c => {
+          const Icon = c.icon
+          const count = c.id === 'all' ? prices.length : prices.filter(p => (p.category || '原料') === c.id).length
+          return (
+            <button
+              key={c.id}
+              onClick={() => setCategoryFilter(c.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                categoryFilter === c.id
+                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                  : 'bg-background hover:bg-muted text-muted-foreground'
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {c.label} ({count})
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="搜尋品項代碼、名稱..."
+            className="pl-9 h-9 text-xs"
+          />
+        </div>
+        <span className="text-xs text-muted-foreground shrink-0">
+          共 {filtered.length} 項出納核定品類定價
+        </span>
+      </div>
+
+      {prices.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm space-y-2">
+          <p>出納定價庫尚無標準價資料</p>
+          <p className="text-xs text-gray-400">
+            請至【出納・物料定價】上傳中央廚房進價／售價表（GIÁ XUẤT CHUẨN）或新增品項，配方成本將自動連動。
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b bg-muted/40 text-muted-foreground text-left">
+                <th className="py-2 px-3 font-semibold">品類</th>
+                <th className="px-3 font-semibold">品項代碼</th>
+                <th className="px-3 font-semibold">品項名稱</th>
+                <th className="px-3 font-semibold">單位</th>
+                <th className="px-3 text-right font-semibold">工廠進貨價 (ĐGN)</th>
+                <th className="px-3 text-right font-semibold text-purple-700 dark:text-purple-300">
+                  賣給直營門市價 (門市配方成本)
+                </th>
+                <th className="px-3 text-right font-semibold">賣給經銷商/非直營門市價</th>
+                <th className="px-3 text-right font-semibold">最後更新</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filtered.map(p => (
+                <tr key={p.material_code} className="hover:bg-muted/20">
+                  <td className="py-2 px-3">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border">
+                      {p.category || '原料'}
+                    </span>
+                  </td>
+                  <td className="px-3 font-mono font-medium text-foreground">{p.material_code}</td>
+                  <td className="px-3 font-medium">{p.material_name}</td>
+                  <td className="px-3 text-muted-foreground">{p.unit}</td>
+                  <td className="px-3 text-right tabular-nums text-foreground">
+                    {fmt(p.purchase_price)} ₫
+                  </td>
+                  <td className="px-3 text-right tabular-nums font-bold text-purple-700 dark:text-purple-300">
+                    {fmt(p.export_price)} ₫
+                  </td>
+                  <td className="px-3 text-right tabular-nums text-foreground">
+                    {fmt(p.dealer_price || 0)} ₫
+                  </td>
+                  <td className="px-3 text-right text-muted-foreground/70">
+                    {new Date(p.updated_at || Date.now()).toLocaleDateString('zh-TW')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   )
 }
 

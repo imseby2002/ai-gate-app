@@ -1,6 +1,7 @@
-import { getUnitContext } from '@/lib/auth/unit-access'
+import { getUnitContext, getUnitContextAny } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 
+async function readCtx() { const c = await getUnitContextAny(['repair', 'store']); return c.ok ? c : null }
 async function ctx() { const c = await getUnitContext('repair'); return c.ok ? c : null }
 const s = (v: unknown) => String(v ?? '').trim()
 const d = (v: unknown) => { const t = s(v); return t || null }  // 日期：空字串轉 null
@@ -8,9 +9,9 @@ const STATUS = ['active', 'repairing', 'scrapped']
 
 // 設備清單。?store= 篩門市；?status= 篩狀態；warranty_days = 距保固到期天數（負值＝已過期）
 export async function GET(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await readCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const sp = new URL(req.url).searchParams
-  const store = s(sp.get('store'))
+  const store = c.storeCode || s(sp.get('store'))
   const status = s(sp.get('status'))
   let q = c.admin.from('repair_equipment')
     .select('id, store, category, name, brand_model, serial_no, purchase_date, warranty_until, location, status, note, created_at')
@@ -28,19 +29,20 @@ export async function GET(req: NextRequest) {
     }
     return { ...r, warranty_days }
   })
-  return NextResponse.json({ items })
+  return NextResponse.json({ items, locked_store: c.storeCode ?? null })
 }
 
 // 新增設備
 export async function POST(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await readCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const b = await req.json().catch(() => ({}))
   const name = s(b.name)
   if (!name) return NextResponse.json({ error: '設備名稱必填' }, { status: 400 })
   const status = STATUS.includes(s(b.status)) ? s(b.status) : 'active'
+  const store = c.storeCode || s(b.store)
   const { data, error } = await c.admin.from('repair_equipment').insert({
     owner_id: c.ownerId,
-    store: s(b.store), category: s(b.category), name, brand_model: s(b.brand_model),
+    store, category: s(b.category), name, brand_model: s(b.brand_model),
     serial_no: s(b.serial_no), purchase_date: d(b.purchase_date), warranty_until: d(b.warranty_until),
     location: s(b.location), status, note: s(b.note),
   }).select('id').single()

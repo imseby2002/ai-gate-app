@@ -1,15 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil, X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink } from 'lucide-react'
+import {
+  Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil,
+  X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink,
+  BarChart3, Building2, UtensilsCrossed, Upload, Image as ImageIcon, Camera, Globe,
+  CheckCircle2, Search, Tag, Eye, BookOpen
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-type Tab = 'brand' | 'generate' | 'offline' | 'delivery' | 'calendar'
+type Tab = 'brand' | 'stores' | 'products' | 'generate' | 'offline' | 'delivery' | 'analytics' | 'calendar'
 
 export default function MktPage() {
   const [allowed, setAllowed] = useState<boolean | null>(null)
@@ -29,30 +34,80 @@ export default function MktPage() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Megaphone className="h-5 w-5 text-primary" /></div>
         <div>
           <h1 className="text-2xl font-bold">品牌・行銷</h1>
-          <p className="text-sm text-muted-foreground">品牌中樞、內容行事曆</p>
+          <p className="text-sm text-muted-foreground">品牌中樞、門市與產品視覺庫、跨平台內容排程</p>
         </div>
-        <div className="ml-auto"><Link href="/office"><Button variant="outline" size="sm">返回</Button></Link></div>
+        <div className="ml-auto flex items-center gap-2">
+          <a
+            href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-pink-600 text-white hover:bg-pink-700 transition-colors shadow-sm"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            開啟行銷中心 (marketing.im-tourist.com) <ExternalLink className="h-3 w-3" />
+          </a>
+          <Link href="/marketing/logbook"><Button variant="outline" size="sm" className="gap-1.5"><BookOpen className="h-4 w-4" />行銷日誌</Button></Link>
+        </div>
       </div>
 
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['brand', '品牌中樞', <Palette key="b" className="h-4 w-4" />], ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />], ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />], ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />], ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]] as const).map(([id, label, icon]) => (
-          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+      {/* 提示連結卡片 */}
+      <div className="p-3.5 bg-gradient-to-r from-pink-50/80 via-purple-50/60 to-blue-50/60 dark:from-pink-950/30 dark:via-purple-950/20 dark:to-blue-950/20 border border-pink-200/70 dark:border-pink-800/40 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-pink-600 shrink-0" />
+          <span className="text-slate-700 dark:text-slate-200">
+            行銷部門專用子域名 <code className="font-mono bg-white dark:bg-black/30 px-1.5 py-0.5 rounded text-pink-600 font-bold">marketing.im-tourist.com</code>：包含行銷自動化、AI 視覺工坊、流水線與潛在客戶外呼開發。
+          </span>
+        </div>
+        <a
+          href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
+          target="_blank"
+          rel="noreferrer"
+          className="font-bold text-pink-700 dark:text-pink-300 hover:underline inline-flex items-center gap-1"
+        >
+          前往行銷中心 ↗
+        </a>
+      </div>
+
+      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
+        {([
+          ['brand', '品牌與官方通路', <Palette key="b" className="h-4 w-4" />],
+          ['stores', '門市圖文資產', <Building2 key="s" className="h-4 w-4" />],
+          ['products', '產品圖文資產', <UtensilsCrossed key="p" className="h-4 w-4" />],
+          ['generate', '一鍵產出', <Sparkles key="g" className="h-4 w-4" />],
+          ['offline', '實體行銷', <MapPin key="o" className="h-4 w-4" />],
+          ['delivery', '外送平台', <Bike key="d" className="h-4 w-4" />],
+          ['analytics', '成效分析', <BarChart3 key="a" className="h-4 w-4" />],
+          ['calendar', '內容行事曆', <CalendarDays key="c" className="h-4 w-4" />]
+        ] as const).map(([id, label, icon]) => (
+          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
 
-      {tab === 'brand' ? <BrandTab /> : tab === 'generate' ? <GenerateTab /> : tab === 'offline' ? <OfflineTab /> : tab === 'delivery' ? <DeliveryTab /> : <CalendarTab />}
+      {tab === 'brand' ? <BrandTab />
+        : tab === 'stores' ? <StoresTab />
+        : tab === 'products' ? <ProductsTab />
+        : tab === 'generate' ? <GenerateTab />
+        : tab === 'offline' ? <OfflineTab />
+        : tab === 'delivery' ? <DeliveryTab />
+        : tab === 'analytics' ? <AnalyticsTab />
+        : <CalendarTab />}
     </div>
   )
 }
 
 // ─────────────────────── 品牌中樞 ───────────────────────
+interface BrandPlatforms {
+  website?: string; facebook?: string; instagram?: string; line?: string;
+  tiktok?: string; threads?: string; zalo?: string; youtube?: string; google_business?: string
+}
 interface Brand {
   name: string; slogan: string; tagline: string
   colors: { primary?: string; secondary?: string; accent?: string }
+  platforms: BrandPlatforms
   fonts: string; tone: string; audience: string; selling_points: string
   banned_words: string; brand_story: string; logo_url: string
 }
-const emptyBrand = (): Brand => ({ name: '', slogan: '', tagline: '', colors: {}, fonts: '', tone: '', audience: '', selling_points: '', banned_words: '', brand_story: '', logo_url: '' })
+const emptyBrand = (): Brand => ({ name: '', slogan: '', tagline: '', colors: {}, platforms: {}, fonts: '', tone: '', audience: '', selling_points: '', banned_words: '', brand_story: '', logo_url: '' })
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -72,7 +127,7 @@ function BrandTab() {
     fetch('/api/mkt/brand').then(async r => {
       const j = await r.json().catch(() => ({}))
       const d = j.brand
-      setB(d ? { ...emptyBrand(), ...d, colors: d.colors ?? {} } : emptyBrand())
+      setB(d ? { ...emptyBrand(), ...d, colors: d.colors ?? {}, platforms: d.platforms ?? {} } : emptyBrand())
     })
   }, [])
 
@@ -81,15 +136,33 @@ function BrandTab() {
     setSaving(true); setMsg('')
     const r = await fetch('/api/mkt/brand', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) })
     setSaving(false)
-    setMsg(r.ok ? '已儲存' : '儲存失敗')
+    setMsg(r.ok ? '✅ 已成功儲存！此處與行銷中心（marketing.im-tourist.com）資料已完全同步。' : '儲存失敗')
   }
 
   if (!b) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
   const setColor = (k: 'primary' | 'secondary' | 'accent', v: string) => setB({ ...b, colors: { ...b.colors, [k]: v } })
+  const setPlat = (k: keyof BrandPlatforms, v: string) => setB(prev => prev ? { ...prev, platforms: { ...prev.platforms, [k]: v } } : null)
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">品牌守則會作為後續 AI 產出文案／圖／影片的依據，填得越完整，產出品質越一致。</p>
+      {/* 雙向同步提示列 */}
+      <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 rounded-xl flex items-center justify-between gap-3 text-xs flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold text-indigo-950 dark:text-indigo-200">
+            品牌資料已與行銷中心（marketing.im-tourist.com/marketing/brand）實時雙向同步。
+          </span>
+          <span className="text-slate-500">任一邊修改儲存，兩邊皆會即時更新。</span>
+        </div>
+        <a
+          href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com/marketing/brand' : '/marketing/brand'}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-xs"
+        >
+          在行銷中心開啟此頁 ↗
+        </a>
+      </div>
 
       <div className="rounded-xl border bg-card p-5 space-y-4">
         <div className="grid sm:grid-cols-2 gap-4">
@@ -114,6 +187,24 @@ function BrandTab() {
           <Field label="Logo 連結"><Input value={b.logo_url} onChange={e => setB({ ...b, logo_url: e.target.value })} placeholder="https://" /></Field>
         </div>
 
+        {/* 官方社群與數位通路平台 */}
+        <div className="pt-2 border-t">
+          <div className="mb-3">
+            <span className="font-semibold text-sm">官方社群與數位通路平台</span>
+            <p className="text-xs text-muted-foreground mt-0.5">全公司共用統一通路網址（OFFICE 門市後勤、業務手冊與行銷貼文自動引用）</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="官方網站" hint="官網網址"><Input value={b.platforms?.website ?? ''} onChange={e => setPlat('website', e.target.value)} placeholder="https://..." /></Field>
+            <Field label="Facebook 粉專"><Input value={b.platforms?.facebook ?? ''} onChange={e => setPlat('facebook', e.target.value)} placeholder="https://facebook.com/..." /></Field>
+            <Field label="Instagram"><Input value={b.platforms?.instagram ?? ''} onChange={e => setPlat('instagram', e.target.value)} placeholder="https://instagram.com/..." /></Field>
+            <Field label="LINE 官方帳號"><Input value={b.platforms?.line ?? ''} onChange={e => setPlat('line', e.target.value)} placeholder="https://line.me/R/ti/p/..." /></Field>
+            <Field label="TikTok"><Input value={b.platforms?.tiktok ?? ''} onChange={e => setPlat('tiktok', e.target.value)} placeholder="https://tiktok.com/@..." /></Field>
+            <Field label="Threads"><Input value={b.platforms?.threads ?? ''} onChange={e => setPlat('threads', e.target.value)} placeholder="https://threads.net/@..." /></Field>
+            <Field label="Zalo 官方帳號" hint="東南亞/越南"><Input value={b.platforms?.zalo ?? ''} onChange={e => setPlat('zalo', e.target.value)} placeholder="https://zalo.me/..." /></Field>
+            <Field label="Google 商家主頁" hint="商家檔案"><Input value={b.platforms?.google_business ?? ''} onChange={e => setPlat('google_business', e.target.value)} placeholder="https://g.page/..." /></Field>
+          </div>
+        </div>
+
         <Field label="品牌語氣 Tone of Voice" hint="AI 寫文案的口吻"><textarea rows={2} className={ta} value={b.tone} onChange={e => setB({ ...b, tone: e.target.value })} placeholder="例：年輕、活潑、親切，多用口語與 emoji" /></Field>
         <Field label="目標客群"><textarea rows={2} className={ta} value={b.audience} onChange={e => setB({ ...b, audience: e.target.value })} placeholder="例：18–30 歲學生與上班族" /></Field>
         <Field label="產品特色／賣點"><textarea rows={3} className={ta} value={b.selling_points} onChange={e => setB({ ...b, selling_points: e.target.value })} placeholder="每行一個賣點" /></Field>
@@ -121,10 +212,894 @@ function BrandTab() {
         <Field label="禁用詞" hint="AI 產出時避免使用"><Input value={b.banned_words} onChange={e => setB({ ...b, banned_words: e.target.value })} placeholder="以逗號分隔" /></Field>
 
         <div className="flex items-center gap-3 pt-1">
-          <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存品牌檔</Button>
+          <Button onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存品牌檔（雙向同步）</Button>
           {msg && <span className="text-sm text-emerald-600">{msg}</span>}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─────────────────────── 門市圖文資產 ───────────────────────
+const STORE_FEATURE_PRESETS = ['免費WiFi', '充電插座', '獨立包廂', '打卡拍照牆', '寵物友善', '近捷運站', '戶外座位', '無障礙空間']
+interface StoreWithMarketing {
+  id: string; code: string; name: string; short_name?: string; region?: string; unit_type?: string; address?: string; active?: boolean
+  profile_id?: string | null; photos: string[]; story: string; opening_hours: string; google_maps_url: string
+  delivery_urls: Record<string, string>; features: string[]; updated_at?: string | null
+}
+
+function StoresTab() {
+  const [stores, setStores] = useState<StoreWithMarketing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [editing, setEditing] = useState<StoreWithMarketing | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [newPhotoUrl, setNewPhotoUrl] = useState('')
+  const [msg, setMsg] = useState('')
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const loadStores = useCallback(async () => {
+    setLoading(true)
+    const r = await fetch('/api/mkt/stores')
+    const j = await r.json().catch(() => ({}))
+    setStores(j.stores ?? [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadStores() }, [loadStores])
+
+  async function handleFileUpload(file: File) {
+    setUploading(true); setMsg('')
+    const form = new FormData()
+    form.append('file', file)
+    const r = await fetch('/api/mkt/upload', { method: 'POST', body: form })
+    const j = await r.json().catch(() => ({}))
+    setUploading(false)
+    if (r.ok && j.url && editing) {
+      setEditing({ ...editing, photos: [...(editing.photos || []), j.url] })
+    } else {
+      alert(j.error || '圖片上傳失敗')
+    }
+  }
+
+  function addPhotoUrl() {
+    if (!newPhotoUrl.trim() || !editing) return
+    setEditing({ ...editing, photos: [...(editing.photos || []), newPhotoUrl.trim()] })
+    setNewPhotoUrl('')
+  }
+
+  function removePhoto(idx: number) {
+    if (!editing) return
+    const updated = [...editing.photos]
+    updated.splice(idx, 1)
+    setEditing({ ...editing, photos: updated })
+  }
+
+  function toggleFeature(feat: string) {
+    if (!editing) return
+    const cur = editing.features || []
+    const updated = cur.includes(feat) ? cur.filter(f => f !== feat) : [...cur, feat]
+    setEditing({ ...editing, features: updated })
+  }
+
+  async function saveStore() {
+    if (!editing) return
+    setSaving(true); setMsg('')
+    const r = await fetch('/api/mkt/stores', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        store_id: editing.id,
+        photos: editing.photos,
+        story: editing.story,
+        opening_hours: editing.opening_hours,
+        google_maps_url: editing.google_maps_url,
+        delivery_urls: editing.delivery_urls,
+        features: editing.features,
+      })
+    })
+    setSaving(false)
+    if (r.ok) {
+      setMsg('已成功儲存門市行銷圖文！')
+      await loadStores()
+      setTimeout(() => { setEditing(null); setMsg('') }, 600)
+    } else {
+      const j = await r.json().catch(() => ({}))
+      alert(j.error || '儲存失敗')
+    }
+  }
+
+  const filtered = stores.filter(s => {
+    const q = search.toLowerCase()
+    return (s.name || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q) || (s.region || '').toLowerCase().includes(q) || (s.address || '').toLowerCase().includes(q)
+  })
+
+  return (
+    <div className="space-y-4">
+      {/* 頂部資訊與搜尋 */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            門市圖文資產中樞
+            <Badge variant="outline" className="text-xs">{stores.length} 間營運據點</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            門市基本名稱與代碼由 OFFICE 單位資料統一建立；行銷中心在此補充高畫質門面照、店內氛圍圖、行銷簡介與地圖導航。
+          </p>
+        </div>
+        <div className="w-64">
+          <Input
+            placeholder="搜尋門市名稱／代碼／地區..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-9 text-xs"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 border rounded-xl bg-card text-muted-foreground text-sm">
+          {search ? '沒有符合搜尋條件的門市' : '目前尚無門市資料，請先至 OFFICE「單位資料」建立門市。'}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          {filtered.map(store => {
+            const hasPhotos = store.photos && store.photos.length > 0
+            const primaryPhoto = hasPhotos ? store.photos[0] : null
+            return (
+              <div key={store.id} className="rounded-xl border bg-card overflow-hidden shadow-xs hover:border-primary/40 transition-colors flex flex-col">
+                {/* 封面相簿預覽 */}
+                <div className="relative h-44 bg-muted flex items-center justify-center overflow-hidden group">
+                  {primaryPhoto ? (
+                    <img src={primaryPhoto} alt={store.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="text-center text-muted-foreground space-y-1.5 p-4">
+                      <Camera className="h-8 w-8 mx-auto opacity-30" />
+                      <div className="text-xs">尚無門面照片</div>
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setEditing(store)}>
+                        <Upload className="h-3 w-3" />上傳首張照片
+                      </Button>
+                    </div>
+                  )}
+                  {hasPhotos && (
+                    <div className="absolute bottom-2 right-2 bg-black/65 backdrop-blur-xs text-white text-[11px] px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                      <ImageIcon className="h-3 w-3" />
+                      {store.photos.length} 張照片
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                    <Badge variant="secondary" className="bg-white/90 dark:bg-black/80 backdrop-blur-xs text-xs font-bold text-foreground">
+                      [{store.code}] {store.name}
+                    </Badge>
+                    {store.region && (
+                      <Badge variant="outline" className="bg-white/80 dark:bg-black/70 backdrop-blur-xs text-[10px]">
+                        {store.region}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* 內容區塊 */}
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                  <div className="space-y-2">
+                    {/* 地址與營業時間 */}
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      {store.address && (
+                        <div className="flex items-start gap-1">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-gray-400 mt-0.5" />
+                          <span className="line-clamp-1">{store.address}</span>
+                        </div>
+                      )}
+                      {store.opening_hours && (
+                        <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          <span>🕒 {store.opening_hours}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 行銷故事／介紹 */}
+                    {store.story ? (
+                      <p className="text-xs text-foreground/80 line-clamp-2 leading-relaxed bg-muted/30 p-2 rounded-lg">
+                        {store.story}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground/60 italic">
+                        尚未填寫行銷故事或門市亮點特色...
+                      </p>
+                    )}
+
+                    {/* 特色標籤 */}
+                    {store.features && store.features.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {store.features.map(f => (
+                          <span key={f} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                            {f}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 底部按鈕 */}
+                  <div className="pt-2 border-t flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {store.google_maps_url && (
+                        <a
+                          href={store.google_maps_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />地圖導航
+                        </a>
+                      )}
+                    </div>
+                    <Button size="sm" variant="default" className="h-8 text-xs gap-1.5" onClick={() => setEditing(store)}>
+                      <Pencil className="h-3.5 w-3.5" />編輯行銷圖文
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 門市編輯彈窗 */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}>
+          <div className="w-full max-w-2xl rounded-2xl bg-card p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  編輯門市行銷圖文 — [{editing.code}] {editing.name}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  基本代碼與地址由 OFFICE 單位資料同步；此處維護對外宣傳照片、故事與導流連結。
+                </p>
+              </div>
+              <button onClick={() => setEditing(null)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X className="h-5 w-5" /></button>
+            </div>
+
+            {/* 門市照片庫 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold flex items-center gap-1.5">
+                  <Camera className="h-4 w-4 text-primary" />
+                  門市宣傳照片（門面、內部裝潢、打卡拍照牆）
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) handleFileUpload(f)
+                    e.target.value = ''
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  本機上傳照片
+                </Button>
+              </div>
+
+              {/* URL 貼上加入 */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="或直接貼上照片網址 (https://...)"
+                  value={newPhotoUrl}
+                  onChange={e => setNewPhotoUrl(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" variant="secondary" className="h-8 text-xs shrink-0" onClick={addPhotoUrl}>
+                  加入網址
+                </Button>
+              </div>
+
+              {/* 照片預覽縮圖清單 */}
+              {editing.photos && editing.photos.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-2">
+                  {editing.photos.map((p, idx) => (
+                    <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border bg-muted group">
+                      <img src={p} alt="" className="w-full h-full object-cover" />
+                      {idx === 0 && (
+                        <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[9px] px-1.5 py-0.2 rounded font-bold">
+                          封面主圖
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(idx)}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
+                        title="移除照片"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 border-2 border-dashed rounded-xl text-center text-xs text-muted-foreground">
+                  尚未加入任何門市照片，點擊上方按鈕上傳或貼上網址
+                </div>
+              )}
+            </div>
+
+            {/* 故事簡介 */}
+            <Field label="門市特色簡介與故事" hint="顧客介紹／環境氛圍／打卡特色">
+              <textarea
+                rows={3}
+                className={ta}
+                value={editing.story}
+                onChange={e => setEditing({ ...editing, story: e.target.value })}
+                placeholder="例：座落於繁華商圈，擁有挑高自然採光與整面落地植物牆，二樓備有商務會議專用包廂與高速充電座..."
+              />
+            </Field>
+
+            {/* 營業時間與 Google 地圖 */}
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="對外營業時間" hint="例：週一至週日 10:00 - 22:00">
+                <Input
+                  value={editing.opening_hours}
+                  onChange={e => setEditing({ ...editing, opening_hours: e.target.value })}
+                  placeholder="週一至週日 10:00 - 22:00"
+                />
+              </Field>
+              <Field label="Google 商家／地圖導航連結" hint="顧客一鍵導航">
+                <Input
+                  value={editing.google_maps_url}
+                  onChange={e => setEditing({ ...editing, google_maps_url: e.target.value })}
+                  placeholder="https://maps.app.goo.gl/..."
+                />
+              </Field>
+            </div>
+
+            {/* 特色亮點標籤 */}
+            <div>
+              <div className="text-xs font-semibold mb-1.5">門市特色標籤（點選切換）</div>
+              <div className="flex flex-wrap gap-1.5">
+                {STORE_FEATURE_PRESETS.map(f => {
+                  const on = (editing.features || []).includes(f)
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => toggleFeature(f)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                        on ? 'bg-primary text-primary-foreground border-primary font-medium' : 'bg-muted/30 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {f} {on && '✓'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 外送平台專屬連結 */}
+            <div className="pt-2 border-t">
+              <div className="text-xs font-semibold mb-2">外送平台本門市專屬連結（選填）</div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <Input
+                  placeholder="GrabFood 連結 (https://...)"
+                  value={editing.delivery_urls?.grab || ''}
+                  onChange={e => setEditing({ ...editing, delivery_urls: { ...editing.delivery_urls, grab: e.target.value } })}
+                  className="h-8 text-xs"
+                />
+                <Input
+                  placeholder="ShopeeFood 連結 (https://...)"
+                  value={editing.delivery_urls?.shopee || ''}
+                  onChange={e => setEditing({ ...editing, delivery_urls: { ...editing.delivery_urls, shopee: e.target.value } })}
+                  className="h-8 text-xs"
+                />
+                <Input
+                  placeholder="Foodpanda 連結 (https://...)"
+                  value={editing.delivery_urls?.foodpanda || ''}
+                  onChange={e => setEditing({ ...editing, delivery_urls: { ...editing.delivery_urls, foodpanda: e.target.value } })}
+                  className="h-8 text-xs"
+                />
+                <Input
+                  placeholder="UberEats 連結 (https://...)"
+                  value={editing.delivery_urls?.ubereats || ''}
+                  onChange={e => setEditing({ ...editing, delivery_urls: { ...editing.delivery_urls, ubereats: e.target.value } })}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* 儲存按鈕 */}
+            <div className="pt-3 border-t flex items-center justify-end gap-3">
+              {msg && <span className="text-xs text-emerald-600 font-medium">{msg}</span>}
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+              <Button size="sm" onClick={saveStore} disabled={saving} className="gap-1.5">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                儲存門市圖文
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────── 產品圖文資產 ───────────────────────
+const PRODUCT_TAG_PRESETS = ['新品上市', '人氣熱銷', '招牌必喝', '季節限定', '拍照打卡', '低卡輕盈', '主廚推薦']
+interface ProductProfile {
+  id: string; product_code: string; name: string; category: string; price: number
+  images: string[]; slogan: string; description: string; flavor_notes: string; tags: string[]
+  recipe_id?: string | null; pos_item_id?: string | null; created_at?: string; updated_at?: string
+}
+interface CandidateProduct {
+  source: 'pos' | 'recipe'; id: string; name: string; price: number; note: string; image_url?: string
+}
+
+function ProductsTab() {
+  const [products, setProducts] = useState<ProductProfile[]>([])
+  const [candidates, setCandidates] = useState<CandidateProduct[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [editing, setEditing] = useState<Partial<ProductProfile> | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [newImageUrl, setNewImageUrl] = useState('')
+  const [msg, setMsg] = useState('')
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const loadProducts = useCallback(async () => {
+    setLoading(true)
+    const r = await fetch('/api/mkt/products')
+    const j = await r.json().catch(() => ({}))
+    setProducts(j.products ?? [])
+    setCandidates(j.candidates ?? [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadProducts() }, [loadProducts])
+
+  async function handleFileUpload(file: File) {
+    setUploading(true)
+    const form = new FormData()
+    form.append('file', file)
+    const r = await fetch('/api/mkt/upload', { method: 'POST', body: form })
+    const j = await r.json().catch(() => ({}))
+    setUploading(false)
+    if (r.ok && j.url && editing) {
+      setEditing({ ...editing, images: [...(editing.images || []), j.url] })
+    } else {
+      alert(j.error || '圖片上傳失敗')
+    }
+  }
+
+  function addImageUrl() {
+    if (!newImageUrl.trim() || !editing) return
+    setEditing({ ...editing, images: [...(editing.images || []), newImageUrl.trim()] })
+    setNewImageUrl('')
+  }
+
+  function removeImage(idx: number) {
+    if (!editing) return
+    const updated = [...(editing.images || [])]
+    updated.splice(idx, 1)
+    setEditing({ ...editing, images: updated })
+  }
+
+  function toggleTag(tag: string) {
+    if (!editing) return
+    const cur = editing.tags || []
+    const updated = cur.includes(tag) ? cur.filter(t => t !== tag) : [...cur, tag]
+    setEditing({ ...editing, tags: updated })
+  }
+
+  function importCandidate(c: CandidateProduct) {
+    setEditing({
+      name: c.name,
+      price: c.price,
+      category: '飲料',
+      slogan: '',
+      description: c.note || '',
+      flavor_notes: '',
+      images: c.image_url ? [c.image_url] : [],
+      tags: ['新品上市'],
+      pos_item_id: c.source === 'pos' ? c.id : null,
+      recipe_id: c.source === 'recipe' ? c.id : null,
+    })
+  }
+
+  async function saveProduct() {
+    if (!editing || !String(editing.name ?? '').trim()) {
+      alert('請填寫商品名稱')
+      return
+    }
+    setSaving(true); setMsg('')
+    const isNew = !editing.id
+    const r = await fetch('/api/mkt/products', {
+      method: isNew ? 'POST' : 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editing)
+    })
+    setSaving(false)
+    if (r.ok) {
+      setMsg('已成功儲存產品行銷圖文！')
+      await loadProducts()
+      setTimeout(() => { setEditing(null); setMsg('') }, 600)
+    } else {
+      const j = await r.json().catch(() => ({}))
+      alert(j.error || '儲存失敗')
+    }
+  }
+
+  async function deleteProduct(id: string) {
+    if (!confirm('確定從行銷視覺庫移除此商品圖文資料？（不會影響研發配方與 POS 品項）')) return
+    await fetch('/api/mkt/products', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+    loadProducts()
+  }
+
+  const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean)))
+
+  const filtered = products.filter(p => {
+    const q = search.toLowerCase()
+    const matchQ = (p.name || '').toLowerCase().includes(q) || (p.slogan || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)
+    const matchCat = !categoryFilter || p.category === categoryFilter
+    return matchQ && matchCat
+  })
+
+  return (
+    <div className="space-y-4">
+      {/* 待補行銷圖文提示條 (從 POS/研發配方發現) */}
+      {candidates.length > 0 && (
+        <div className="p-3.5 rounded-xl border border-amber-300/80 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+              <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+              發現 {candidates.length} 個來自研發配方與 POS 點單的商品，尚未建立行銷圖文！
+            </div>
+            <span className="text-[11px] text-amber-700 dark:text-amber-300">點選立即帶入</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {candidates.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => importCandidate(c)}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-white/90 dark:bg-black/60 hover:bg-amber-100/60 transition-colors text-xs font-medium text-amber-950 dark:text-amber-100 shadow-2xs"
+              >
+                <Plus className="h-3 w-3 text-amber-600" />
+                <span className="font-semibold">{c.name}</span>
+                <span className="text-[10px] text-muted-foreground">({c.source === 'pos' ? 'POS' : '研發'})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 搜尋與分類過濾 */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <UtensilsCrossed className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">產品行銷圖文資產庫</span>
+          <Badge variant="outline" className="text-xs">{products.length} 項產品</Badge>
+        </div>
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
+          {categories.length > 0 && (
+            <select
+              value={categoryFilter}
+              onChange={e => setCategoryFilter(e.target.value)}
+              className={selCls}
+            >
+              <option value="">全部分類</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          <Input
+            placeholder="搜尋品名／Slogan／風味..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="h-9 w-56 text-xs"
+          />
+          <Button
+            size="sm"
+            onClick={() => setEditing({
+              name: '', category: '飲料', price: 0, images: [], slogan: '', description: '', flavor_notes: '', tags: ['新品上市']
+            })}
+            className="h-9 gap-1 text-xs"
+          >
+            <Plus className="h-4 w-4" />新增商品圖文
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 border rounded-xl bg-card text-muted-foreground text-sm">
+          {search ? '沒有符合條件的商品' : '目前尚無商品行銷檔案，點選上方「新增商品圖文」或從上方候選清單一鍵匯入。'}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map(p => {
+            const hasImg = p.images && p.images.length > 0
+            const mainImg = hasImg ? p.images[0] : null
+            return (
+              <div key={p.id} className="rounded-xl border bg-card overflow-hidden shadow-xs hover:border-primary/40 transition-colors flex flex-col justify-between">
+                <div>
+                  {/* 圖片展示 */}
+                  <div className="relative h-40 bg-muted/40 flex items-center justify-center overflow-hidden">
+                    {mainImg ? (
+                      <img src={mainImg} alt={p.name} className="w-full h-full object-contain p-2 hover:scale-105 transition-transform" />
+                    ) : (
+                      <div className="text-center text-muted-foreground space-y-1">
+                        <ImageIcon className="h-8 w-8 mx-auto opacity-30" />
+                        <span className="text-[11px]">尚無去背／情境圖</span>
+                      </div>
+                    )}
+                    {p.category && (
+                      <span className="absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-white/90 dark:bg-black/80 font-medium shadow-2xs">
+                        {p.category}
+                      </span>
+                    )}
+                    {hasImg && (
+                      <span className="absolute bottom-2 right-2 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white">
+                        {p.images.length} 張素材
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 內容 */}
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-base leading-tight">{p.name}</h3>
+                      {p.price > 0 && (
+                        <span className="text-xs font-semibold text-primary shrink-0">
+                          NT$ {p.price}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Slogan */}
+                    {p.slogan && (
+                      <div className="text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 px-2 py-1 rounded-md">
+                        「{p.slogan}」
+                      </div>
+                    )}
+
+                    {/* 介紹 */}
+                    {p.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                        {p.description}
+                      </p>
+                    )}
+
+                    {/* 風味筆記 */}
+                    {p.flavor_notes && (
+                      <div className="text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/20 px-2 py-0.5 rounded">
+                        💡 {p.flavor_notes}
+                      </div>
+                    )}
+
+                    {/* 標籤 */}
+                    {p.tags && p.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {p.tags.map(t => (
+                          <span key={t} className="text-[10px] px-1.5 py-0.2 rounded bg-muted font-medium text-foreground/80">
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 底部按鈕 */}
+                <div className="p-3 pt-2 border-t flex items-center justify-end gap-1.5 bg-muted/10">
+                  <Button size="sm" variant="ghost" className="h-8 text-xs gap-1" onClick={() => setEditing(p)}>
+                    <Pencil className="h-3.5 w-3.5" />編輯
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 text-xs text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => deleteProduct(p.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 產品編輯彈窗 */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}>
+          <div className="w-full max-w-2xl rounded-2xl bg-card p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <UtensilsCrossed className="h-5 w-5 text-primary" />
+                  {editing.id ? `編輯商品行銷圖文 — ${editing.name}` : '新增商品行銷圖文'}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  上傳高解析度商品去背照、撰寫廣告 Slogan 與美味文案，供 AI 生圖與各平台發布引用。
+                </p>
+              </div>
+              <button onClick={() => setEditing(null)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X className="h-5 w-5" /></button>
+            </div>
+
+            {/* 品名與基本資料 */}
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <Field label="商品名稱 *">
+                  <Input
+                    value={editing.name ?? ''}
+                    onChange={e => setEditing({ ...editing, name: e.target.value })}
+                    placeholder="例：炭焙烏龍鮮奶茶"
+                  />
+                </Field>
+              </div>
+              <Field label="分類">
+                <Input
+                  value={editing.category ?? '一般'}
+                  onChange={e => setEditing({ ...editing, category: e.target.value })}
+                  placeholder="例：鮮奶茶 / 咖啡 / 甜點"
+                />
+              </Field>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="建議售價">
+                <Input
+                  type="number"
+                  value={String(editing.price ?? 0)}
+                  onChange={e => setEditing({ ...editing, price: Number(e.target.value) || 0 })}
+                />
+              </Field>
+              <Field label="一句話特色賣點 Slogan" hint="廣告文案標題">
+                <Input
+                  value={editing.slogan ?? ''}
+                  onChange={e => setEditing({ ...editing, slogan: e.target.value })}
+                  placeholder="例：濃郁厚焙茶香，交織百分百純鮮奶"
+                />
+              </Field>
+            </div>
+
+            {/* 商品照片庫 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold flex items-center gap-1.5">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                  商品宣傳圖片（高解析度去背 PNG、情境海報）
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0]
+                    if (f) handleFileUpload(f)
+                    e.target.value = ''
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1"
+                  disabled={uploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  本機上傳圖片
+                </Button>
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder="或直接貼上圖片網址 (https://...)"
+                  value={newImageUrl}
+                  onChange={e => setNewImageUrl(e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" variant="secondary" className="h-8 text-xs shrink-0" onClick={addImageUrl}>
+                  加入網址
+                </Button>
+              </div>
+
+              {editing.images && editing.images.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                  {editing.images.map((img, idx) => (
+                    <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border bg-muted/40 group p-1 flex items-center justify-center">
+                      <img src={img} alt="" className="w-full h-full object-contain" />
+                      {idx === 0 && (
+                        <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[9px] px-1.5 py-0.2 rounded font-bold">
+                          主圖
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
+                        title="移除圖片"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 border-2 border-dashed rounded-xl text-center text-xs text-muted-foreground">
+                  尚未加入任何商品圖片，上傳白底去背圖有助於後續 AI 自動海報合成
+                </div>
+              )}
+            </div>
+
+            {/* 美味介紹與風味筆記 */}
+            <Field label="美味口感描繪與產品故事" hint="AI 生成文案時的重要依據">
+              <textarea
+                rows={3}
+                className={ta}
+                value={editing.description ?? ''}
+                onChange={e => setEditing({ ...editing, description: e.target.value })}
+                placeholder="例：精選台灣高山烏龍，經古法低溫慢火細心烘焙，入口甘醇回甘，尾韻帶有濃郁堅果香氣..."
+              />
+            </Field>
+
+            <Field label="風味筆記與甜度冰塊推薦" hint="例：微糖少冰為最佳黃金比例">
+              <Input
+                value={editing.flavor_notes ?? ''}
+                onChange={e => setEditing({ ...editing, flavor_notes: e.target.value })}
+                placeholder="例：推薦微糖少冰，茶香最顯明"
+              />
+            </Field>
+
+            {/* 行銷標籤 */}
+            <div>
+              <div className="text-xs font-semibold mb-1.5">行銷標籤（點選切換）</div>
+              <div className="flex flex-wrap gap-1.5">
+                {PRODUCT_TAG_PRESETS.map(t => {
+                  const on = (editing.tags || []).includes(t)
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleTag(t)}
+                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                        on ? 'bg-primary text-primary-foreground border-primary font-medium' : 'bg-muted/30 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      #{t} {on && '✓'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 儲存按鈕 */}
+            <div className="pt-3 border-t flex items-center justify-end gap-3">
+              {msg && <span className="text-xs text-emerald-600 font-medium">{msg}</span>}
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+              <Button size="sm" onClick={saveProduct} disabled={saving} className="gap-1.5">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                儲存商品圖文
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -563,6 +1538,92 @@ function DeliveryTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─────────────────────── 成效分析 ───────────────────────
+interface MktSnap {
+  delivery: { byPlatform: { platform: string; orders: number; revenue: number; count: number; online: number }[]; totalOrders: number; totalRevenue: number }
+  offline: { spend: number; active: number; byType: { type: string; count: number; spend: number }[] }
+  content: { total: number; review: number; published: number }
+  pnl: { period: string; revenue: number; advertising: number } | null
+  spend_total: number; delivery_share: number | null
+}
+
+function AnalyticsTab() {
+  const [snap, setSnap] = useState<MktSnap | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [report, setReport] = useState('')
+  const [gen, setGen] = useState('')
+
+  useEffect(() => { fetch('/api/mkt/analytics').then(async r => { if (r.ok) setSnap(await r.json().catch(() => null)); setLoading(false) }) }, [])
+
+  async function genReport(kind: 'weekly' | 'monthly') {
+    setGen(kind); setReport('')
+    const r = await fetch('/api/mkt/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind }) })
+    const j = await r.json().catch(() => ({})); setGen('')
+    setReport(j.report || j.error || '產生失敗')
+  }
+
+  if (loading || !snap) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">外送當月營收</div><div className="mt-1 text-xl font-bold">{fmtNum(snap.delivery.totalRevenue)}</div><div className="text-xs text-muted-foreground">訂單 {fmtNum(snap.delivery.totalOrders)}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">行銷總支出</div><div className="mt-1 text-xl font-bold">{fmtNum(snap.spend_total)}</div><div className="text-xs text-muted-foreground">實體 {fmtNum(snap.offline.spend)}＋廣告 {fmtNum(snap.pnl?.advertising ?? 0)}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">外送佔營業額</div><div className="mt-1 text-xl font-bold">{snap.delivery_share != null ? (snap.delivery_share * 100).toFixed(1) + '%' : '—'}</div><div className="text-xs text-muted-foreground">{snap.pnl ? `損益 ${snap.pnl.period}` : '無損益資料'}</div></div>
+        <div className="rounded-xl border bg-card p-4"><div className="text-xs text-muted-foreground">內容產出</div><div className="mt-1 text-xl font-bold">{snap.content.total}</div><div className="text-xs text-muted-foreground">待審 {snap.content.review}・已發布 {snap.content.published}</div></div>
+      </div>
+
+      {snap.delivery.byPlatform.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-sm">外送平台成效</h2>
+          <div className="overflow-x-auto rounded-xl border bg-card">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b bg-muted/50 text-left text-muted-foreground"><th className="px-3 py-2 font-medium">平台</th><th className="px-3 py-2 font-medium text-right">上架</th><th className="px-3 py-2 font-medium text-right">訂單</th><th className="px-3 py-2 font-medium text-right">營收</th></tr></thead>
+              <tbody>
+                {snap.delivery.byPlatform.map(p => (
+                  <tr key={p.platform} className="border-b last:border-0">
+                    <td className="px-3 py-2 font-medium">{DELIVERY_PLATFORM_LABEL[p.platform] ?? p.platform}</td>
+                    <td className="px-3 py-2 text-right">{p.online}/{p.count}</td>
+                    <td className="px-3 py-2 text-right">{fmtNum(p.orders)}</td>
+                    <td className="px-3 py-2 text-right">{fmtNum(p.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {snap.offline.byType.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="font-semibold text-sm">實體行銷支出</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {snap.offline.byType.map(t => (
+              <div key={t.type} className="rounded-lg border bg-card px-3 py-2">
+                <div className="text-xs text-muted-foreground">{OFFLINE_TYPE_LABEL[t.type] ?? t.type}</div>
+                <div className="mt-0.5 font-semibold">{fmtNum(t.spend)}</div>
+                <div className="text-xs text-muted-foreground">{t.count} 項</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-2">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-sm">AI 行銷報告</h2>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => genReport('weekly')} disabled={!!gen}>{gen === 'weekly' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}週報</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => genReport('monthly')} disabled={!!gen}>{gen === 'monthly' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}月報</Button>
+          </div>
+        </div>
+        {report ? <div className="rounded-xl border bg-card p-4 text-sm whitespace-pre-wrap">{report}</div>
+          : <p className="text-sm text-muted-foreground">按「週報／月報」由 AI 依上述資料產出行銷分析與建議行動。</p>}
+      </section>
     </div>
   )
 }

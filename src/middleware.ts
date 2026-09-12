@@ -39,6 +39,7 @@ export async function middleware(request: NextRequest) {
       office:    '/office',        // 辦公系統
       agent:     '/agent',         // AI Agent 系統
       www:       '/dashboard',     // owner 主控台
+      esim:      '/esim',          // eSIM 出國上網商城
     }
     const subHome = SUBDOMAIN_HOME[sub]
     const rawPath = request.nextUrl.pathname
@@ -67,6 +68,8 @@ export async function middleware(request: NextRequest) {
     // Public routes
     const isPublic =
       pathname === '/' ||
+      pathname.startsWith('/esim') ||
+      pathname.startsWith('/api/esim') ||
       pathname.startsWith('/book/') ||
       pathname.startsWith('/api/book/') ||
       pathname.startsWith('/apply') ||
@@ -169,6 +172,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/admin') ||
       pathname.startsWith('/cli-proxy') ||
       pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/marketing') ||
+      pathname.startsWith('/mkt') ||
       pathname.startsWith('/marketing-auto') ||
       pathname.startsWith('/cs') ||
       pathname.startsWith('/prospect-call') ||
@@ -184,17 +189,20 @@ export async function middleware(request: NextRequest) {
     if (needsProfileCheck) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_type, enabled_modules')
+        .select('user_type, enabled_modules, units, company_id, companies(enabled_modules)')
         .eq('id', user.id)
         .single()
 
-      const isAdmin = profile?.user_type === 'admin'
+      const isAdmin = profile?.user_type === 'admin' ||
+        user.email?.toLowerCase() === 'imseby@gmail.com' ||
+        (process.env.ADMIN_EMAIL && user.email?.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase())
 
-      // Admin/Owner guard — /admin、/cli-proxy、/dashboard 僅限總管理員
+      // Admin/Owner guard — /admin、/cli-proxy、/programing (FreeLLM)、/dashboard 僅限總管理員
       // 非管理者一律導向 /apps（功能選單），用 nextUrl 保留原始 host（含子域名）
       if (!isAdmin && (
         pathname.startsWith('/admin') ||
         pathname.startsWith('/cli-proxy') ||
+        pathname.startsWith('/programing') ||
         pathname.startsWith('/dashboard')
       )) {
         const url = request.nextUrl.clone()
@@ -203,13 +211,17 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url)
       }
 
-      // Module guard — 檢查 enabled_modules，admin 跳過
+      // Module guard — 檢查 enabled_modules 與單位權限 units，總管理員(admin)跳過
+      // 員工或公司負責人，皆受限於其個人或所屬公司的 enabled_modules
       if (profile && !isAdmin) {
-        const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+        const effectiveModules: string[] = (profile.companies as any)?.enabled_modules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+        const units: string[] = profile.units ?? []
         const ROUTE_MODULES: Record<string, string[]> = {
-          '/marketing-auto': ['marketing', 'cs'],
+          '/marketing':      ['marketing', 'mkt'],
+          '/mkt':            ['marketing', 'mkt'],
+          '/marketing-auto': ['marketing', 'cs', 'mkt'],
           '/cs':             ['cs'],
-          '/prospect-call':  ['leads', 'marketing'],
+          '/prospect-call':  ['leads', 'marketing', 'mkt'],
           '/resume':         ['resume'],
           '/work':           ['work'],
           '/pos':            ['work'],
@@ -220,7 +232,7 @@ export async function middleware(request: NextRequest) {
         }
         for (const [route, modules] of Object.entries(ROUTE_MODULES)) {
           if (pathname.startsWith(route)) {
-            const hasAccess = modules.some(m => enabled.includes(m))
+            const hasAccess = modules.some(m => effectiveModules.includes(m) || units.includes(m))
             if (!hasAccess) {
               const url = request.nextUrl.clone()
               url.pathname = '/apps'
