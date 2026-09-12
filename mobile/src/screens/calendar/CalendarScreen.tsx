@@ -655,11 +655,11 @@ export default function CalendarScreen() {
             </View>
           </View>
 
-          {/* 1. 空房表 (可直接點「快速訂房」) */}
+          {/* 房型合併狀態清單：已售訂單（可點擊修改）+ 剩餘空房（可點擊訂房） */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="bed-outline" size={16} color="#0284C7" />
-              <Text style={styles.sectionTitle}>空房狀況與快速訂房</Text>
+              <Ionicons name="apps-outline" size={16} color="#0284C7" />
+              <Text style={styles.sectionTitle}>當日各房型預訂與空房</Text>
             </View>
 
             {visibleProps.length === 0 ? (
@@ -671,85 +671,100 @@ export default function CalendarScreen() {
                 const isFull = av === 0
 
                 return (
-                  <View key={p.id} style={[styles.roomRow, isFull && styles.roomRowFull]}>
-                    <View style={styles.roomInfoCol}>
-                      <Text style={styles.roomName}>{p.name}</Text>
-                      <Text style={styles.roomPrice}>
-                        {p.base_price ? `NT$ ${Number(p.base_price).toLocaleString()} / 晚` : '未定價'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.roomAvailCol}>
-                      <Text style={[styles.availBadge, isFull ? styles.availBadgeFull : styles.availBadgeOk]}>
-                        {isFull ? '已滿房' : `剩 ${av} 間`}
-                      </Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={[styles.addBtn, isFull && styles.addBtnDisabled]}
-                      onPress={() => openQuickBooking(p, selectedDate)}
-                      disabled={isFull}
-                    >
-                      <Ionicons name="add" size={14} color="#FFFFFF" />
-                      <Text style={styles.addBtnText}>快速訂房</Text>
-                    </TouchableOpacity>
-                  </View>
-                )
-              })
-            )}
-          </View>
-
-          {/* 2. 已售訂單列表 */}
-          <View style={[styles.section, styles.sectionTopBorder]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="receipt-outline" size={16} color="#4F46E5" />
-              <Text style={styles.sectionTitle}>已售訂單明細 ({selectedBookings.length})</Text>
-            </View>
-
-            {selectedBookings.length === 0 ? (
-              <Text style={styles.emptyNotice}>當日尚無訂單</Text>
-            ) : (
-              selectedBookings.map((bk) => {
-                const st = STATUS_MAP[bk.status] || { label: bk.status, color: '#64748B', bg: '#F1F5F9' }
-                const plat = PLATFORM_META[bk.platform] || { label: bk.platform || '其他', color: '#64748B' }
-
-                return (
-                  <TouchableOpacity key={bk.id} style={styles.bookingCard} onPress={() => openEdit(bk)} activeOpacity={0.8}>
-                    <View style={styles.bkTopRow}>
-                      <View style={styles.guestCol}>
-                        <Text style={styles.guestNameText}>{bk.guest_name || '無姓名'}</Text>
-                        {bk.guest_phone ? <Text style={styles.guestPhoneText}>{bk.guest_phone}</Text> : null}
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
-                          <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
+                  <View key={p.id} style={styles.propGroupCard}>
+                    {/* 房型頂部標題列 */}
+                    <View style={styles.propGroupHeader}>
+                      <View style={styles.propHeaderLeft}>
+                        <View style={styles.propNameRow}>
+                          <Ionicons name="bed" size={15} color="#0284C7" />
+                          <Text style={styles.propGroupNameText}>{p.name}</Text>
                         </View>
-                        <TouchableOpacity onPress={() => openEdit(bk)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                          <Ionicons name="create-outline" size={18} color="#2563EB" />
+                        <Text style={styles.propGroupPriceSub}>
+                          {p.base_price ? `底價 NT$ ${Number(p.base_price).toLocaleString()} / 晚` : '未定價'}
+                          {p.base_guests ? ` · 含${p.base_guests}人` : ''}
+                        </Text>
+                      </View>
+                      <View style={[styles.availBadge, isFull ? styles.availBadgeFull : styles.availBadgeOk]}>
+                        <Text style={[styles.availBadgeText, isFull ? styles.availBadgeTextFull : styles.availBadgeTextOk]}>
+                          {isFull ? '已滿房' : `剩 ${av} / ${p.room_count} 間`}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* 房型內明細項目 */}
+                    <View style={styles.propGroupBody}>
+                      {/* 已售出房間：直接顯示訂單，點擊可修改 */}
+                      {bksThis.map((bk) => {
+                        const st = STATUS_MAP[bk.status] || { label: bk.status, color: '#64748B', bg: '#F1F5F9' }
+                        const plat = PLATFORM_META[bk.platform] || { label: bk.platform || '其他', color: '#64748B' }
+
+                        return (
+                          <TouchableOpacity
+                            key={bk.id}
+                            style={styles.bookedRowCard}
+                            onPress={() => openEdit(bk)}
+                            activeOpacity={0.8}
+                          >
+                            <View style={styles.bookedRowTop}>
+                              <View style={styles.bookedGuestCol}>
+                                <View style={styles.bookedTagSold}>
+                                  <Text style={styles.bookedTagSoldText}>已售</Text>
+                                </View>
+                                <Text style={styles.bookedGuestName}>{bk.guest_name || '無姓名'}</Text>
+                                {bk.guest_phone ? (
+                                  <Text style={styles.bookedGuestPhone}>{bk.guest_phone}</Text>
+                                ) : null}
+                              </View>
+
+                              <View style={styles.bookedRowRight}>
+                                <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
+                                  <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
+                                </View>
+                                <View style={[styles.platBadge, { borderColor: plat.color, backgroundColor: plat.color + '15' }]}>
+                                  <Text style={[styles.platText, { color: plat.color }]}>{plat.label}</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                              </View>
+                            </View>
+
+                            <View style={styles.bookedRowBottom}>
+                              <Text style={styles.bookedInfoText}>
+                                {bk.check_in} ~ {bk.check_out}
+                                {bk.num_guests > 1 ? ` · ${bk.num_guests}人` : ''}
+                                {(bk.extra_beds ?? 0) > 0 ? ` · 加${bk.extra_beds}床` : ''}
+                              </Text>
+                              {bk.total_price != null && (
+                                <Text style={styles.bookedPriceText}>
+                                  NT$ {Number(bk.total_price).toLocaleString()}
+                                </Text>
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        )
+                      })}
+
+                      {/* 剩餘空房列：點擊直接開啟該房型的快速訂房 */}
+                      {Array.from({ length: av }).map((_, idx) => (
+                        <TouchableOpacity
+                          key={`empty-${p.id}-${idx}`}
+                          style={styles.vacantRowCard}
+                          onPress={() => openQuickBooking(p, selectedDate)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.vacantRowLeft}>
+                            <View style={styles.vacantDot} />
+                            <Text style={styles.vacantLabel}>
+                              空房 {av > 1 ? `#${idx + 1}` : ''}（可預訂）
+                            </Text>
+                          </View>
+                          <View style={styles.vacantActionBtn}>
+                            <Ionicons name="add" size={14} color="#FFFFFF" />
+                            <Text style={styles.vacantActionBtnText}>快速訂房</Text>
+                          </View>
                         </TouchableOpacity>
-                      </View>
+                      ))}
                     </View>
-
-                    <View style={styles.bkMidRow}>
-                      <Text style={styles.bkRoomText}>
-                        {bk.properties?.name || '指定房型'}
-                        {bk.num_guests > 1 ? ` · ${bk.num_guests}人` : ''}
-                        {(bk.extra_beds ?? 0) > 0 ? ` · 加${bk.extra_beds}床` : ''}
-                      </Text>
-                      <View style={[styles.platBadge, { borderColor: plat.color }]}>
-                        <Text style={[styles.platText, { color: plat.color }]}>{plat.label}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.bkBotRow}>
-                      <Text style={styles.bkDatesText}>
-                        入住: {bk.check_in} ~ 退房: {bk.check_out}
-                      </Text>
-                      {bk.total_price != null && (
-                        <Text style={styles.bkPriceText}>NT$ {Number(bk.total_price).toLocaleString()}</Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
+                  </View>
                 )
               })
             )}
@@ -1465,45 +1480,177 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   availBadge: {
-    fontSize: 12,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
   },
   availBadgeOk: {
     backgroundColor: '#DCFCE7',
-    color: '#15803D',
   },
   availBadgeFull: {
     backgroundColor: '#FEE2E2',
+  },
+  availBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  availBadgeTextOk: {
+    color: '#15803D',
+  },
+  availBadgeTextFull: {
     color: '#B91C1C',
   },
-  addBtn: {
+
+  /* 房型合併卡片群組 */
+  propGroupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  propGroupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF2F6',
+  },
+  propHeaderLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  propNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  propGroupNameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  propGroupPriceSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  propGroupBody: {
+    padding: 10,
+    gap: 8,
+  },
+
+  /* 已售出項目卡片（可點選編輯） */
+  bookedRowCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E11D48',
+  },
+  bookedRowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bookedGuestCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  bookedTagSold: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  bookedTagSoldText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#E11D48',
+  },
+  bookedGuestName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  bookedGuestPhone: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  bookedRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bookedRowBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  bookedInfoText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  bookedPriceText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+
+  /* 空房項目列（可點選訂房） */
+  vacantRowCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderStyle: 'dashed',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  vacantRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  vacantDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  vacantLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+  vacantActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0284C7',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 2,
+    paddingVertical: 5,
+    borderRadius: 6,
+    gap: 4,
   },
-  addBtnDisabled: {
-    backgroundColor: '#94A3B8',
-  },
-  addBtnText: {
+  vacantActionBtnText: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-  },
-  bookingCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   bkTopRow: {
     flexDirection: 'row',
