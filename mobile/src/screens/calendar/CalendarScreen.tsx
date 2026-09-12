@@ -674,15 +674,9 @@ export default function CalendarScreen() {
                   <View key={p.id} style={styles.propGroupCard}>
                     {/* 房型頂部標題列 */}
                     <View style={styles.propGroupHeader}>
-                      <View style={styles.propHeaderLeft}>
-                        <View style={styles.propNameRow}>
-                          <Ionicons name="bed" size={15} color="#0284C7" />
-                          <Text style={styles.propGroupNameText}>{p.name}</Text>
-                        </View>
-                        <Text style={styles.propGroupPriceSub}>
-                          {p.base_price ? `底價 NT$ ${Number(p.base_price).toLocaleString()} / 晚` : '未定價'}
-                          {p.base_guests ? ` · 含${p.base_guests}人` : ''}
-                        </Text>
+                      <View style={styles.propNameRow}>
+                        <Ionicons name="bed" size={16} color="#0284C7" />
+                        <Text style={styles.propGroupNameText}>{p.name}</Text>
                       </View>
                       <View style={[styles.availBadge, isFull ? styles.availBadgeFull : styles.availBadgeOk]}>
                         <Text style={[styles.availBadgeText, isFull ? styles.availBadgeTextFull : styles.availBadgeTextOk]}>
@@ -705,21 +699,18 @@ export default function CalendarScreen() {
                             onPress={() => openEdit(bk)}
                             activeOpacity={0.8}
                           >
+                            {/* 第一行：住客姓名 + 電話 (左) / 來源平台 + 箭頭 (右) */}
                             <View style={styles.bookedRowTop}>
                               <View style={styles.bookedGuestCol}>
-                                <View style={styles.bookedTagSold}>
-                                  <Text style={styles.bookedTagSoldText}>已售</Text>
-                                </View>
-                                <Text style={styles.bookedGuestName}>{bk.guest_name || '無姓名'}</Text>
+                                <Text style={styles.bookedGuestName} numberOfLines={1}>
+                                  {bk.guest_name || '無姓名'}
+                                </Text>
                                 {bk.guest_phone ? (
                                   <Text style={styles.bookedGuestPhone}>{bk.guest_phone}</Text>
                                 ) : null}
                               </View>
 
                               <View style={styles.bookedRowRight}>
-                                <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
-                                  <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
-                                </View>
                                 <View style={[styles.platBadge, { borderColor: plat.color, backgroundColor: plat.color + '15' }]}>
                                   <Text style={[styles.platText, { color: plat.color }]}>{plat.label}</Text>
                                 </View>
@@ -727,17 +718,23 @@ export default function CalendarScreen() {
                               </View>
                             </View>
 
+                            {/* 第二行：入住區間/加床 (左) / 狀態徽章 + 總額 (右) */}
                             <View style={styles.bookedRowBottom}>
                               <Text style={styles.bookedInfoText}>
                                 {bk.check_in} ~ {bk.check_out}
                                 {bk.num_guests > 1 ? ` · ${bk.num_guests}人` : ''}
                                 {(bk.extra_beds ?? 0) > 0 ? ` · 加${bk.extra_beds}床` : ''}
                               </Text>
-                              {bk.total_price != null && (
-                                <Text style={styles.bookedPriceText}>
-                                  NT$ {Number(bk.total_price).toLocaleString()}
-                                </Text>
-                              )}
+                              <View style={styles.bookedBottomRight}>
+                                <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
+                                  <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
+                                </View>
+                                {bk.total_price != null && (
+                                  <Text style={styles.bookedPriceText}>
+                                    NT$ {Number(bk.total_price).toLocaleString()}
+                                  </Text>
+                                )}
+                              </View>
                             </View>
                           </TouchableOpacity>
                         )
@@ -1520,24 +1517,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#EEF2F6',
   },
-  propHeaderLeft: {
-    flex: 1,
-    marginRight: 8,
-  },
   propNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   propGroupNameText: {
     fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
-  },
-  propGroupPriceSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
   },
   propGroupBody: {
     padding: 10,
@@ -1552,7 +1541,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     padding: 10,
     borderLeftWidth: 4,
-    borderLeftColor: '#E11D48',
+    borderLeftColor: '#2563EB',
   },
   bookedRowTop: {
     flexDirection: 'row',
@@ -1562,22 +1551,12 @@ const styles = StyleSheet.create({
   bookedGuestCol: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flex: 1,
-  },
-  bookedTagSold: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  bookedTagSoldText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#E11D48',
+    marginRight: 8,
   },
   bookedGuestName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
   },
@@ -1602,6 +1581,13 @@ const styles = StyleSheet.create({
   bookedInfoText: {
     fontSize: 11,
     color: '#64748B',
+    flex: 1,
+    marginRight: 8,
+  },
+  bookedBottomRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   bookedPriceText: {
     fontSize: 13,
