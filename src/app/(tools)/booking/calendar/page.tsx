@@ -155,11 +155,12 @@ export default function CalendarPage() {
   function openQuick(p: Property, ds: string) {
     setQuickOpen(true)
     setOrderTotal('')
+    const defaultGuests = p.base_guests ?? 2
     setQuickForm({
       guest_name: '', guest_phone: '', guest_email: '',
       platform_booking_id: '',
       check_in: ds, check_out: addDays(ds, 1), platform: 'direct',
-      rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1, extra_beds: 0 }],
+      rooms: [{ property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: defaultGuests, extra_beds: 0 }],
     })
   }
 
@@ -169,9 +170,10 @@ export default function CalendarPage() {
     if (!propertyId) return
     const p = properties.find(x => x.id === propertyId)
     if (!p || quickForm.rooms.some(r => r.property_id === propertyId)) return
+    const defaultGuests = p.base_guests ?? 2
     setQuickForm(f => ({
       ...f,
-      rooms: [...f.rooms, { property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: 1, extra_beds: 0 }],
+      rooms: [...f.rooms, { property_id: p.id, property_name: p.name, total_price: p.base_price ? String(p.base_price) : '', num_guests: defaultGuests, extra_beds: 0 }],
     }))
   }
   function removeRoomLine(propertyId: string) {
