@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Copy, Check, Loader2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { Plus, Trash2, Copy, Check, Loader2, ChevronDown, ChevronUp, ExternalLink, RefreshCw } from 'lucide-react'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 
 interface CsForm {
@@ -59,6 +59,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   const [expandedSubs, setExpandedSubs] = useState<string | null>(null)
   const [subs, setSubs] = useState<CsFormSubmission[]>([])
   const [subsLoading, setSubsLoading] = useState(false)
+  const [notifyingId, setNotifyingId] = useState<string | null>(null)
 
   const [name, setName] = useState('')
   const [fields, setFields] = useState<CsFormField[]>([emptyField()])
@@ -156,6 +157,26 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
       setSubs(data.submissions ?? [])
     } finally {
       setSubsLoading(false)
+    }
+  }
+
+  const handleManualNotify = async (formId: string, subId: string) => {
+    if (!confirm('確定已核對款項，並將此筆報名名單推播至通知群組？')) return
+    setNotifyingId(subId)
+    try {
+      const res = await fetch(`/api/marketing/cs-forms/${formId}/submissions/${subId}/notify`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || '推播失敗')
+        return
+      }
+      setSubs(prev => prev.map(s => s.id === subId ? { ...s, notified_at: data.notified_at, notify_error: null } : s))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '推播連線失敗')
+    } finally {
+      setNotifyingId(null)
     }
   }
 
@@ -286,22 +307,34 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
               </div>
             )}
             {notifyTarget.platform && (
-              <div className="flex items-center gap-3 text-xs text-gray-500">
-                <label className="flex items-center gap-1">
-                  <input type="radio" checked={notifyTarget.batchMode === 'daily'}
-                    onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'daily' }))} />
-                  每日彙整一次
-                </label>
-                {notifyTarget.batchMode === 'daily' && (
-                  <input type="time" value={notifyTarget.batchTime}
-                    onChange={e => setNotifyTarget(prev => ({ ...prev, batchTime: e.target.value }))}
-                    className="rounded border border-gray-300 px-1.5 py-1 text-xs" />
+              <div className="space-y-2 pt-1">
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={notifyTarget.batchMode === 'immediate'}
+                      onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'immediate' }))} />
+                    每筆立即通知
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={notifyTarget.batchMode === 'manual'}
+                      onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'manual' }))} />
+                    <span className="font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">💰 待確認收款後手動推播（推薦給賞鯨/出海等需劃位行程）</span>
+                  </label>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="radio" checked={notifyTarget.batchMode === 'daily'}
+                      onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'daily' }))} />
+                    每日彙整一次
+                  </label>
+                  {notifyTarget.batchMode === 'daily' && (
+                    <input type="time" value={notifyTarget.batchTime}
+                      onChange={e => setNotifyTarget(prev => ({ ...prev, batchTime: e.target.value }))}
+                      className="rounded border border-gray-300 px-1.5 py-1 text-xs" />
+                  )}
+                </div>
+                {notifyTarget.batchMode === 'manual' && (
+                  <p className="text-[11px] text-gray-500 bg-emerald-50/60 p-2 rounded-lg border border-emerald-100">
+                    💡 啟用「手動推播」後，客人完成填單時<strong>不會</strong>立即送出到外部群組；待客人完成匯款、管家核對入帳後，可在提交紀錄上點擊<strong>【確認入帳並推播至群組】</strong>，名單才會送達船公司。
+                  </p>
                 )}
-                <label className="flex items-center gap-1">
-                  <input type="radio" checked={notifyTarget.batchMode === 'immediate'}
-                    onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'immediate' }))} />
-                  每筆立即通知
-                </label>
               </div>
             )}
           </div>
@@ -371,7 +404,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                   {subsLoading && <div className="text-xs text-gray-400">載入中...</div>}
                   {!subsLoading && subs.length === 0 && <div className="text-xs text-gray-400">尚無提交紀錄</div>}
                   {!subsLoading && subs.map(s => (
-                    <div key={s.id} className="text-xs bg-gray-50 rounded-lg p-2 space-y-0.5">
+                    <div key={s.id} className="text-xs bg-gray-50 rounded-lg p-2.5 space-y-2 border">
                       <div className="flex items-center gap-2 text-gray-400 flex-wrap">
                         <span>{new Date(s.created_at).toLocaleString('zh-TW')}</span>
                         {s.updated_at && (
@@ -387,17 +420,48 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                           </span>
                         )}
                         {!s.notify_error && s.notified_at && (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-600">
-                            已通知：{new Date(s.notified_at).toLocaleString('zh-TW')}
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
+                            已推播群組：{new Date(s.notified_at).toLocaleString('zh-TW')}
                           </span>
                         )}
                         {!s.notify_error && !s.notified_at && (
-                          <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-600">等待通知</span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700 font-medium">
+                            待核款推播
+                          </span>
+                        )}
+                        {f.notify_target?.platform && (
+                          <div className="ml-auto flex items-center gap-1.5">
+                            {s.notified_at ? (
+                              <button
+                                type="button"
+                                onClick={() => handleManualNotify(f.id, s.id)}
+                                disabled={notifyingId === s.id}
+                                className="px-2 py-0.5 rounded border border-gray-200 text-[11px] text-gray-500 hover:bg-white hover:text-gray-700 flex items-center gap-1 disabled:opacity-50 transition-colors"
+                                title="重新發送此報名資料至通知管道"
+                              >
+                                {notifyingId === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                                重新推播
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleManualNotify(f.id, s.id)}
+                                disabled={notifyingId === s.id}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
+                              >
+                                {notifyingId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span>💰</span>}
+                                確認入帳並推播至群組
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
-                      <div className="text-gray-600">
+                      <div className="text-gray-700 bg-white p-2.5 rounded-lg border space-y-1">
                         {f.fields.map(field => s.answers[field.id] ? (
-                          <div key={field.id}>{field.label}：{s.answers[field.id]}</div>
+                          <div key={field.id} className="whitespace-pre-line">
+                            <span className="font-medium text-gray-500">{field.label}：</span>
+                            <span>{s.answers[field.id]}</span>
+                          </div>
                         ) : null)}
                       </div>
                     </div>

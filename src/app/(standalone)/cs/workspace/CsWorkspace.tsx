@@ -3460,6 +3460,15 @@ function Unit12CustomerService({
                           ) : (
                             <span className="text-[10px] text-gray-400">無關聯客戶帳號</span>
                           )}
+                          {(ticket.intent === '行程預訂待核款' || ticket.subject?.includes('行程預訂') || ticket.description?.includes('報名資料') || ticket.description?.includes('自建表單')) && (
+                            <button
+                              type="button"
+                              onClick={() => setTab('forms')}
+                              className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 font-medium text-xs hover:bg-emerald-100 transition-colors"
+                            >
+                              📋 查看報名名單／核帳推播 →
+                            </button>
+                          )}
                         </div>
                       )
                     })()}

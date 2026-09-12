@@ -905,7 +905,7 @@ async function replyToCustomer(
   const rawReply = await getAIReply(text, knowledge, history, userId, buildSellSection(cust, convoPriceAsks, isPriceAskNow, text), gapNote, imageBuffer, imageMimeType, platform, customerId, !!cust?.discount_offered_at, (cust?.facts as Record<string, any> | undefined))
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply)
   const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
-  if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit)
+  if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
   void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
@@ -1823,6 +1823,7 @@ function extractFormSubmit(reply: string): { visibleReply: string; submit: Parse
 async function saveFormSubmissionFromChat(
   userId: string, platform: string, customerId: string, industry: string,
   forms: CsChatForm[], submit: ParsedFormSubmit,
+  fromName?: string, notifyWebhooks: NotifyWebhook[] = [],
 ): Promise<void> {
   const form = forms.find(f => f.id === submit.formId)
   if (!form) return
@@ -1839,6 +1840,7 @@ async function saveFormSubmissionFromChat(
 
     const notifyTarget = form.notify_target
     const isImmediate = notifyTarget?.batchMode === 'immediate'
+    const isManual = notifyTarget?.batchMode === 'manual'
     const isUpdate = match.kind === 'update'
     // 同一個房號當天已有紀錄、但這次答案不同 → 客人是在改原本的訂單，直接覆蓋原紀錄，
     // 不要另開一筆讓員工分不清哪筆才是最終版本（見 resolveTodaySubmission 註解）
@@ -1863,6 +1865,29 @@ async function saveFormSubmissionFromChat(
         .from('cs_form_submissions')
         .update(result.ok ? { notified_at: new Date().toISOString() } : { notify_error: result.error ?? '未知錯誤' })
         .eq('id', row.id))
+    } else if (isManual && row) {
+      // manual 模式：客人填好名單，但不自動發送至外部群組，建立工單讓管家確認款項後手動推播
+      const formatted = formatFormSubmission(form.name, form.fields, submit.answers, null, isUpdate)
+      try {
+        await supabase.from('cs_tickets').insert({
+          user_id: userId,
+          industry,
+          platform,
+          from_id: customerId,
+          from_name: fromName,
+          subject: `【行程預訂待核款】${form.name}（${fromName || customerId}）`,
+          description: `客人已提交「${form.name}」報名資料，請確認客人匯款入帳後，至自建表單紀錄確認收款並一鍵推播名單至船公司群組。\n\n【報名資料】\n${formatted}`,
+          priority: 'high',
+          intent: '行程預訂待核款',
+        })
+      } catch {}
+      if (notifyWebhooks?.length) {
+        dispatchTicketNotify(
+          notifyWebhooks,
+          { platform, customerId, industry, fromName },
+          `🔔 客人已填寫「${form.name}」，待核對匯款後一鍵推播報名：\n\n${formatted.slice(0, 500)}`
+        )
+      }
     }
   } catch { /* 不中斷主流程 */ }
 }

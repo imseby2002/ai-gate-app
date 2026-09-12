@@ -17,8 +17,8 @@ export interface CsFormField {
 export interface CsFormNotifyTarget {
   platform: 'line' | 'email' | 'webhook' | 'telegram' | ''
   to: string            // LINE：使用者或群組 id；email：收件地址；webhook：目標網址（例如既有的 Google Apps Script）；telegram：Chat ID（個人或群組）
-  batchMode: 'daily' | 'immediate'
-  batchTime: string      // HH:MM，batchMode=daily 時使用
+  batchMode: 'daily' | 'immediate' | 'manual'
+  batchTime: string      // HH:MM，batchMode=daily 時使用；manual=確認款項後手動推播
   lineToken?: string     // LINE 專用，選填：這個表單要用哪一個 OA 帳號發送，不同於平台分頁預設的 OA；留空則用平台分頁設定的憑證
   telegramBotToken?: string  // Telegram 專用，選填：這個表單要用哪一個 Bot 發送；留空則用平台分頁設定的預設 Bot
 }

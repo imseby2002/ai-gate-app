@@ -84,8 +84,12 @@ export async function GET(req: Request) {
   // 補救重試：immediate 表單在提交當下沒送成功就沒有其他重試機會了（daily 表單已經
   // 在上面處理過，這裡用 form_id not in 已處理清單排除，避免重複通知）。
   // 只抓 10 分鐘前的紀錄，避免跟剛送出、還在走 immediate 路徑的提交搶著重試。
-  const dailyFormIds = new Set((forms ?? [])
-    .filter(f => (f.notify_target as CsFormNotifyTarget | null)?.batchMode === 'daily')
+  // 排除 daily 與 manual 表單：daily 已在上方依時間批次處理；manual 為人工核帳後手動推播，絕不能由排程自動補發
+  const nonImmediateFormIds = new Set((forms ?? [])
+    .filter(f => {
+      const mode = (f.notify_target as CsFormNotifyTarget | null)?.batchMode
+      return mode === 'daily' || mode === 'manual'
+    })
     .map(f => f.id))
   const tenMinAgo = new Date(Date.now() - 10 * 60_000).toISOString()
 
@@ -102,7 +106,7 @@ export async function GET(req: Request) {
     .limit(100)
 
   for (const sub of orphaned ?? []) {
-    if (dailyFormIds.has(sub.form_id)) continue  // daily 的已經在上面批次處理過
+    if (nonImmediateFormIds.has(sub.form_id)) continue  // daily 與 manual 均不由排程自動補推
     const form = formById.get(sub.form_id)
     const notifyTarget = form?.notify_target as CsFormNotifyTarget | null
     if (!form || !notifyTarget?.platform || !notifyTarget.to) continue
