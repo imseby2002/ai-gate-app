@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, ExternalLink, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/usage', label: '使用統計', icon: BarChart3 },
     { href: '/admin/cover-letter-templates', label: '求職信模板', icon: FileText },
     { href: '/admin/links', label: '功能登入連結', icon: Link2 },
+    { href: 'https://cs.im-tourist.com/tools/line-id-finder', label: 'LINE ID 查詢工具', icon: MessageCircle, external: true },
   ]
 
   return (
@@ -47,16 +48,33 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </div>
 
-        <nav className="flex-1 px-2 py-3 space-y-0.5">
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
+            item.external ? (
+              <a
+                key={item.href}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors group"
+                title="開啟 LINE ID 查詢工具（外部連結）"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <item.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100 shrink-0 ml-1" />
+              </a>
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            )
           ))}
         </nav>
 

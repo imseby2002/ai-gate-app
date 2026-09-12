@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
-import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus, Building2, Sparkles } from 'lucide-react'
+import { Users, MessageSquare, DollarSign, Activity, Shield, MessageSquarePlus, Building2, Sparkles, ExternalLink, MessageCircle, Link2 } from 'lucide-react'
 import NextLink from 'next/link'
 
 export default async function AdminDashboardPage() {
@@ -51,6 +51,8 @@ export default async function AdminDashboardPage() {
     { href: '/admin/models',   label: '模型設定',   desc: '管理 AI 模型與計費配置', icon: Activity },
     { href: '/admin/usage',    label: '用量與成本分析', desc: '全模型 Token 計算、FreeLLM / CLIProxy 免費代理效益與商業費用', icon: DollarSign },
     { href: '/admin/feedback', label: '使用者回饋', desc: '審查回饋、觸發 AI 生成分支', icon: MessageSquarePlus },
+    { href: '/admin/links',    label: '功能登入連結', desc: '各模組獨立登入連結與後台專用外部工具', icon: Link2 },
+    { href: 'https://cs.im-tourist.com/tools/line-id-finder', label: 'LINE ID 查詢工具', desc: '快速查詢檢索 LINE 使用者、群組與聊天室 ID', icon: MessageCircle, external: true },
   ]
 
   return (
@@ -113,15 +115,42 @@ export default async function AdminDashboardPage() {
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">管理功能</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {adminLinks.map(item => (
-              <NextLink key={item.href} href={item.href} className="group bg-card rounded-2xl border p-5 shadow-sm hover:border-primary/40 hover:shadow-md transition-all">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <item.icon className="h-4 w-4 text-primary" />
+              item.external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group bg-card rounded-2xl border border-emerald-500/30 p-5 shadow-sm hover:border-emerald-500/70 hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                          <item.icon className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <span className="font-semibold text-sm">{item.label}</span>
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-emerald-600 transition-colors" />
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
                   </div>
-                  <span className="font-semibold text-sm">{item.label}</span>
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-              </NextLink>
+                  <div className="mt-3 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <span>外部專用工具</span>
+                    <span>↗</span>
+                  </div>
+                </a>
+              ) : (
+                <NextLink key={item.href} href={item.href} className="group bg-card rounded-2xl border p-5 shadow-sm hover:border-primary/40 hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <item.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="font-semibold text-sm">{item.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                </NextLink>
+              )
             ))}
           </div>
         </div>
