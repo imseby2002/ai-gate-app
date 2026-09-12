@@ -66,6 +66,8 @@ export const TTS_COST = 0.03
 export const CALL_COST = 0.15
 // 行銷 Email（每封）
 export const EMAIL_COST = 0.002
+// 行銷 SMS 簡訊（每則，依通道成本加成，約合 NT$ 1）
+export const SMS_COST = 0.035
 // AI 視覺工坊「AI 建議」（Claude 看圖，每次）
 export const AI_STUDIO_SUGGEST_COST = 0.01
 // AI 視覺工坊節點執行的預估上限（實際依節點回報的 cost 扣）

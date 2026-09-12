@@ -1,6 +1,6 @@
-﻿'use client'
+'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import {
   Search, Building2, BarChart3, PenLine, Image as ImageIcon,
@@ -11,7 +11,7 @@ import {
   Bell, ShoppingBag, Smartphone, TrendingUp,
   MoreHorizontal, Pencil, Trash2, Check, AlertTriangle, ClipboardList,
   PieChart, Clock as ClockIcon, ThumbsUp, MessageSquare as MessageSquareIcon,
-  Lock,
+  Lock, Send,
 } from 'lucide-react'
 import DriveImagePicker from '@/components/marketing/DriveImagePicker'
 import { SimulationPanel } from '@/components/marketing/SimulationPanel'
@@ -3463,6 +3463,16 @@ interface EmailRule {
   templateId: string // 對應哪個 EmailTemplate
 }
 
+interface SmsRecord {
+  phone: string
+  normalizedPhone?: string
+  country?: string
+  provider?: string
+  ok: boolean
+  messageId?: string
+  error?: string
+}
+
 interface Unit10Data {
   // Phone
   script?: string
@@ -3482,6 +3492,12 @@ interface Unit10Data {
   fromEmail?: string
   lastEmailBatch?: {
     total: number; success: number; results: EmailRecord[]; sentAt: string
+  }
+  // SMS (簡訊行銷)
+  smsText?: string
+  smsPhoneInput?: string
+  lastSmsBatch?: {
+    total: number; success: number; results: SmsRecord[]; sentAt: string
   }
 }
 
@@ -3509,7 +3525,7 @@ function Unit10ProspectMarketing({
 }) {
   const t = useTranslations('MA')
   const locale = useLocale()
-  const [activeTab, setActiveTab] = useState<'phone' | 'email'>('phone')
+  const [activeTab, setActiveTab] = useState<'phone' | 'email' | 'sms'>('phone')
 
   // ── Phone tab state ──────────────────────────────────────────────────────
   const [script, setScript] = useState(savedData?.script ?? '')
@@ -3736,12 +3752,96 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
     finally { setCalling(false) }
   }
 
+  // ── SMS tab state & helpers ───────────────────────────────────────────────
+  const [smsText, setSmsText] = useState(savedData?.smsText ?? '')
+  const [generatingSms, setGeneratingSms] = useState(false)
+  const [smsPhoneInput, setSmsPhoneInput] = useState(savedData?.smsPhoneInput ?? savedData?.phoneInput ?? '')
+  const [smsPhones, setSmsPhones] = useState<string[]>(() => {
+    const raw = savedData?.smsPhoneInput ?? savedData?.phoneInput ?? ''
+    return raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
+  })
+  const [smsSending, setSmsSending] = useState(false)
+  const [smsError, setSmsError] = useState('')
+  const [smsResults, setSmsResults] = useState<SmsRecord[]>(savedData?.lastSmsBatch?.results ?? [])
+
+  const handleSmsPhoneInputChange = (val: string) => {
+    setSmsPhoneInput(val)
+    setSmsPhones(val.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8))
+  }
+
+  const smsBreakdown = useMemo(() => {
+    let tw = 0, vn = 0, intl = 0
+    smsPhones.forEach(p => {
+      const c = p.replace(/[^\d+]/g, '')
+      if (c.startsWith('+886') || c.startsWith('886') || (c.startsWith('09') && c.length === 10)) tw++
+      else if (c.startsWith('+84') || c.startsWith('84') || /^0[35789]\d{8}$/.test(c)) vn++
+      else intl++
+    })
+    return { tw, vn, intl, total: smsPhones.length }
+  }, [smsPhones])
+
+  const generateSmsText = async () => {
+    setGeneratingSms(true)
+    try {
+      const companyName = unit2Data?.companyName || '我們'
+      const brandCore = unit2Data?.description || unit2Data?.brandTone || ''
+      const res = await fetch('/api/marketing/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          copyTypes: ['sms_promo'],
+          userInstructions: `請以繁體中文為「${companyName}」撰寫一則 70 字以內的吸睛促銷簡訊。要求：繁體中文、文字簡潔有力、包含限時優惠或行動呼籲，並在結尾預留短網址位置「詳情: https://...」。核心理念：${brandCore}`,
+          companyData: unit2Data,
+        }),
+      })
+      const data = await res.json()
+      if (data.results?.sms_promo) {
+        setSmsText(data.results.sms_promo.trim())
+      } else if (data.results) {
+        const first = Object.values(data.results)[0] as string
+        setSmsText(first?.slice(0, 70).trim() || '')
+      }
+    } catch { /* ignore */ }
+    finally { setGeneratingSms(false) }
+  }
+
+  const startSendingSms = async () => {
+    if (!smsText.trim()) { setSmsError('簡訊內容不可為空'); return }
+    if (smsPhones.length === 0) { setSmsError('請提供至少一組有效電話號碼'); return }
+    setSmsSending(true); setSmsError(''); setSmsResults([])
+    try {
+      const res = await fetch('/api/marketing/sms-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: smsPhones.map(p => ({ phone: p })),
+          defaultText: smsText.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSmsResults(data.results || [])
+      onDone({
+        ...savedData,
+        smsText,
+        smsPhoneInput,
+        lastSmsBatch: {
+          total: data.total,
+          success: data.success,
+          results: data.results,
+          sentAt: new Date().toISOString(),
+        }
+      })
+    } catch (e) { setSmsError(String(e)) }
+    finally { setSmsSending(false) }
+  }
+
   return (
     <div className="space-y-5">
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {([['phone', `📞 ${t('u10.tabPhone')}`], ['email', `📧 ${t('u10.tabEmail')}`]] as const).map(([tab, label]) => (
+        {([['phone', `📞 ${t('u10.tabPhone')}`], ['email', `📧 ${t('u10.tabEmail')}`], ['sms', '💬 簡訊 (SMS)']] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab
@@ -4124,6 +4224,240 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         </div>
       </div>
       </div>}
+
+      {/* ── SMS tab ── */}
+      {activeTab === 'sms' && (
+        <div className="space-y-5">
+          {/* Smart routing channel indicators */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200">
+            <div className="text-xs font-bold text-emerald-800 mb-2 flex items-center gap-1.5">
+              <Zap className="h-4 w-4 text-emerald-600" />
+              全球智慧多國分流簡訊系統 (Smart SMS Routing)
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+              <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-100 flex items-start gap-2 shadow-xs">
+                <span className="text-base">🇹🇼</span>
+                <div>
+                  <div className="font-semibold text-gray-800">台灣門號 (09xx / +886)</div>
+                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-emerald-700">sms-get.com</span></div>
+                  <div className="text-[10px] text-emerald-600 mt-0.5 font-medium">本地直連通道 · 約 $0.72~$0.86/則</div>
+                </div>
+              </div>
+              <div className="bg-white/90 p-2.5 rounded-lg border border-teal-100 flex items-start gap-2 shadow-xs">
+                <span className="text-base">🇻🇳</span>
+                <div>
+                  <div className="font-semibold text-gray-800">越南門號 (+84)</div>
+                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-teal-700">Stringee / ZNS</span></div>
+                  <div className="text-[10px] text-teal-600 mt-0.5 font-medium">品牌簡訊/Zalo · 約 $0.3~$0.8/則</div>
+                </div>
+              </div>
+              <div className="bg-white/90 p-2.5 rounded-lg border border-blue-100 flex items-start gap-2 shadow-xs">
+                <span className="text-base">🌐</span>
+                <div>
+                  <div className="font-semibold text-gray-800">其他國際門號</div>
+                  <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-blue-700">Twilio (備援 Bird)</span></div>
+                  <div className="text-[10px] text-blue-600 mt-0.5 font-medium">全球 180+ 國直達</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SMS Content Editor */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <MessageSquareIcon className="h-4 w-4 text-indigo-600" />
+                簡訊推廣內容 (SMS Content)
+              </label>
+              <div className="flex items-center gap-2">
+                {unit4Data?.results && (
+                  <button
+                    onClick={() => {
+                      const resMap = unit4Data?.results as Record<string, string> | undefined
+                      if (resMap) {
+                        const vals = Object.values(resMap)
+                        if (vals.length > 0 && typeof vals[0] === 'string') {
+                          setSmsText(vals[0].slice(0, 70).trim())
+                        }
+                      }
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  >
+                    帶入單元4文案
+                  </button>
+                )}
+                <button
+                  onClick={generateSmsText}
+                  disabled={generatingSms}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium text-white transition-opacity disabled:opacity-50"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {generatingSms ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                  AI 產生 70 字精準簡訊
+                </button>
+              </div>
+            </div>
+
+            <textarea
+              value={smsText}
+              onChange={e => setSmsText(e.target.value)}
+              placeholder="請輸入簡訊內容... 支援變數 {name} (客戶名稱)。&#10;例：【喬民宿】親愛的{name}，感謝支持！本週專屬住宿優惠已發送，點擊查看詳情: https://example.com/promo 回覆 STOP 停閱"
+              rows={4}
+              className="w-full p-3 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-indigo-400 font-sans"
+            />
+
+            {/* Character & segment calculator */}
+            <div className="flex items-center justify-between text-xs text-gray-500 px-1">
+              <div className="flex items-center gap-2">
+                <span>當前字數：<strong className={smsText.length > 70 ? 'text-amber-600 font-semibold' : 'text-gray-800'}>{smsText.length}</strong> 字</span>
+                <span className="text-gray-300">|</span>
+                <span>預估則數：<span className="font-semibold text-indigo-600">{Math.max(1, Math.ceil(smsText.length / 70))}</span> 則 / 門號</span>
+                {smsText.length > 70 && (
+                  <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">超過 70 字將自動以長簡訊拼接發送</span>
+                )}
+              </div>
+              <span className="text-[11px] text-gray-400">標準中文單則上限 70 字</span>
+            </div>
+          </div>
+
+          {/* Recipients / Phone Numbers */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <Smartphone className="h-4 w-4 text-emerald-600" />
+                收件電話號碼清單
+              </label>
+              <div className="flex items-center gap-2">
+                {phones.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setSmsPhoneInput(phones.join('\n'))
+                      setSmsPhones(phones)
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  >
+                    帶入語音名單 ({phones.length} 支)
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <textarea
+              value={smsPhoneInput}
+              onChange={e => handleSmsPhoneInputChange(e.target.value)}
+              placeholder="請輸入目標電話號碼，支援以換行、逗號或分號分隔。例如：&#10;0912345678 (台灣)&#10;+84912345678 (越南)&#10;+12025550123 (國際)"
+              rows={4}
+              className="w-full p-3 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-indigo-400 font-mono"
+            />
+
+            {/* Live routing breakdown statistics */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded-md bg-gray-100 font-medium text-gray-700">
+                總計：<strong>{smsBreakdown.total}</strong> 門號
+              </span>
+              {smsBreakdown.tw > 0 && (
+                <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  🇹🇼 台灣：<strong>{smsBreakdown.tw}</strong> (sms-get.com)
+                </span>
+              )}
+              {smsBreakdown.vn > 0 && (
+                <span className="px-2 py-1 rounded-md bg-teal-50 text-teal-700 border border-teal-200">
+                  🇻🇳 越南：<strong>{smsBreakdown.vn}</strong> (Stringee / ZNS)
+                </span>
+              )}
+              {smsBreakdown.intl > 0 && (
+                <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+                  🌐 國際：<strong>{smsBreakdown.intl}</strong> (Twilio)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Action Button */}
+          {smsError && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{smsError}</span>
+            </div>
+          )}
+
+          <button
+            onClick={startSendingSms}
+            disabled={smsSending || smsPhones.length === 0 || !smsText.trim()}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity cursor-pointer"
+            style={{ background: 'var(--primary)' }}
+          >
+            {smsSending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                正在批次發送 {smsPhones.length} 則簡訊...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                開始批次發送簡訊 ({smsPhones.length} 支門號)
+              </>
+            )}
+          </button>
+
+          {/* Results List */}
+          {smsResults.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-700">簡訊發送結果</span>
+                <span className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                  成功 {smsResults.filter(r => r.ok).length} / 共 {smsResults.length} 則
+                </span>
+              </div>
+              <div className="max-h-64 overflow-y-auto space-y-1.5">
+                {smsResults.map((r, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-xs ${
+                      r.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                    }`}
+                  >
+                    {r.ok ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                    )}
+                    <span className="font-mono font-medium">{r.phone}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white border border-gray-200 text-gray-600">
+                      {r.provider}
+                    </span>
+                    {r.ok ? (
+                      <span className="text-green-700 ml-auto font-mono text-[11px]">
+                        已送達 {r.messageId ? `(${r.messageId})` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-red-600 ml-auto truncate max-w-[200px]">{r.error}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {savedData?.lastSmsBatch && (
+                <div className="text-[10px] text-gray-400">
+                  上次發送時間：{new Date(savedData.lastSmsBatch.sentAt).toLocaleString(locale)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Environment variables notice */}
+          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-600 space-y-1.5">
+            <div className="font-semibold text-gray-800">各通道金鑰設定（於 .env.local 或伺服器環境變數）：</div>
+            <div className="flex gap-2 flex-wrap text-[11px]">
+              <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_USERNAME</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-gray-700 font-mono">SMSGET_PASSWORD</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SID</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SECRET</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_ACCOUNT_SID</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_AUTH_TOKEN</span>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

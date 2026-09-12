@@ -492,6 +492,25 @@ function MarketingPipelineContent() {
         else outputs.push(t('out.emailFailed', { error: String(data.error) }))
       }
 
+      // SMS marketing
+      const smsBatch = (u10d as { lastSmsBatch?: { results: { phone: string }[] }; smsPhoneInput?: string; smsText?: string } | undefined)
+      const smsPhones = smsBatch?.lastSmsBatch?.results?.map(r => r.phone)
+        ?? smsBatch?.smsPhoneInput?.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
+        ?? []
+      const smsText = smsBatch?.smsText ?? u4d?.results?.sms_promo ?? u4d?.results?.line_message ?? ''
+      if (smsPhones.length > 0 && smsText) {
+        const { res, data } = await safeFetch('/api/marketing/sms-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipients: smsPhones.map(p => ({ phone: p })),
+            defaultText: smsText,
+          }),
+        })
+        if (res.ok) outputs.push(`SMS: 成功 ${data.success}/${data.total}`)
+        else outputs.push(`SMS失敗: ${data.error}`)
+      }
+
       if (outputs.length === 0) return { ok: false, output: t('out.noLeadsList') }
       return { ok: true, output: `${t('out.leadsDone')} · ${outputs.join(' | ')}` }
     }

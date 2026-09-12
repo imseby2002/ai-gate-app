@@ -13,16 +13,29 @@
  *   STRINGEE_SMS_BRANDNAME     (簡訊發送名稱)
  *   STRINGEE_ANSWER_URL        (語音 SCCO 腳本網址，含 playAudio/收按鍵)
  */
+import * as crypto from 'crypto'
 import type { TelephonyProvider, VoiceCallParams, SmsParams } from './types'
 
 function configured() {
   return !!(process.env.STRINGEE_API_KEY_SID && process.env.STRINGEE_API_KEY_SECRET)
 }
 
-// TODO: 以 STRINGEE_API_KEY_SID/SECRET 簽發 Stringee REST JWT（HS256）。
-async function stringeeJwt(): Promise<string | null> {
-  // 佔位：待補 JWT 簽發（payload: { jti, iss=sid, exp, rest_api:true }）
-  return null
+function stringeeJwt(): string | null {
+  const sid = process.env.STRINGEE_API_KEY_SID
+  const secret = process.env.STRINGEE_API_KEY_SECRET
+  if (!sid || !secret) return null
+
+  const header = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'HS256', cty: 'stringee-api;v=1' })).toString('base64url')
+  const now = Math.floor(Date.now() / 1000)
+  const payload = Buffer.from(JSON.stringify({
+    jti: `${sid}-${now}`,
+    iss: sid,
+    exp: now + 3600,
+    rest_api: true,
+  })).toString('base64url')
+
+  const sig = crypto.createHmac('sha256', secret).update(`${header}.${payload}`).digest('base64url')
+  return `${header}.${payload}.${sig}`
 }
 
 export const stringeeProvider: TelephonyProvider = {
