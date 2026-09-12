@@ -4,14 +4,13 @@
  *
  * 認證：Stringee 用 JWT（API key SID + secret 簽發）。
  * Docs: https://developer.stringee.com
- * TODO: 確認 voice answer_url(SCCO)、SMS brandname 端點與 JWT 簽發細節後補完。
  *
  * 需要環境變數：
  *   STRINGEE_API_KEY_SID
  *   STRINGEE_API_KEY_SECRET
  *   STRINGEE_FROM_NUMBER       (語音外顯)
  *   STRINGEE_SMS_BRANDNAME     (簡訊發送名稱)
- *   STRINGEE_ANSWER_URL        (語音 SCCO 腳本網址，含 playAudio/收按鍵)
+ *   STRINGEE_ANSWER_URL        (語音 SCCO 腳本網址，若無則自動使用內聯 actions)
  */
 import * as crypto from 'crypto'
 import type { TelephonyProvider, VoiceCallParams, SmsParams } from './types'
@@ -38,6 +37,17 @@ function stringeeJwt(): string | null {
   return `${header}.${payload}.${sig}`
 }
 
+/**
+ * 格式化為 Stringee 越南格式：84xxxxxxxxx
+ */
+function normalizeVietnamPhone(phone: string): string {
+  const cleaned = phone.replace(/[^\d+]/g, '')
+  if (cleaned.startsWith('+84')) return cleaned.slice(1)
+  if (cleaned.startsWith('84')) return cleaned
+  if (cleaned.startsWith('0')) return '84' + cleaned.slice(1)
+  return cleaned
+}
+
 export const stringeeProvider: TelephonyProvider = {
   name: 'stringee',
 
@@ -45,41 +55,72 @@ export const stringeeProvider: TelephonyProvider = {
     return configured()
   },
 
-  async call({ phone, audioUrl, callerId }: VoiceCallParams) {
-    const token = await stringeeJwt()
-    if (!token) return { callId: null } // 尚未設定/簽發，待補
-    // Stringee 以 answer_url 回傳 SCCO 控制語音（播音檔、收 DTMF）。
-    // 此處傳遞 from/to，腳本由 STRINGEE_ANSWER_URL 提供。
+  async call({ phone, audioUrl, callerId, collectDtmf }: VoiceCallParams) {
+    const token = stringeeJwt()
+    if (!token) throw new Error('STRINGEE_API_KEY_SID / STRINGEE_API_KEY_SECRET 未設定')
+
+    const fromNum = callerId || process.env.STRINGEE_FROM_NUMBER
+    if (!fromNum) {
+      throw new Error('Stringee 撥打需要設定外顯電話號碼 (STRINGEE_FROM_NUMBER 或 callerId)')
+    }
+
+    const toPhone = normalizeVietnamPhone(phone)
+    const fromPhone = normalizeVietnamPhone(fromNum)
+
+    const answerUrl = process.env.STRINGEE_ANSWER_URL
+    const reqBody: Record<string, unknown> = {
+      from: { type: 'external', number: fromPhone, alias: fromPhone },
+      to: [{ type: 'external', number: toPhone, alias: toPhone }],
+      custom: { audioUrl },
+    }
+
+    if (answerUrl) {
+      reqBody.answer_url = answerUrl
+    } else {
+      // 內聯 actions (SCCO): 播放 ElevenLabs 音檔，可選收集 DTMF 按鍵
+      const actions: Array<Record<string, unknown>> = [
+        { action: 'play', fileName: audioUrl },
+      ]
+      if (collectDtmf) {
+        actions.push({ action: 'input', maxDigits: 1, timeout: 8 })
+      }
+      reqBody.actions = actions
+    }
+
     const res = await fetch('https://api.stringee.com/v1/call2/callout', {
       method: 'POST',
       headers: { 'X-STRINGEE-AUTH': token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: { type: 'external', number: callerId || process.env.STRINGEE_FROM_NUMBER, alias: callerId },
-        to: [{ type: 'external', number: phone, alias: phone }],
-        answer_url: process.env.STRINGEE_ANSWER_URL,
-        // audioUrl 由 answer_url 腳本使用（playAudio）
-        custom: { audioUrl },
-      }),
-    }).catch(() => null)
-    if (!res || !res.ok) return { callId: null }
-    const data = await res.json().catch(() => null)
+      body: JSON.stringify(reqBody),
+    })
+
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || (typeof data?.r === 'number' && data.r !== 0)) {
+      const errMsg = data?.message || data?.error || `Stringee 撥打失敗 (${res.status})`
+      throw new Error(errMsg)
+    }
+
     return { callId: data?.call_id ?? data?.callId ?? null }
   },
 
   async sendSms({ phone, text }: SmsParams) {
-    const token = await stringeeJwt()
+    const token = stringeeJwt()
     if (!token) return false
+    const toPhone = normalizeVietnamPhone(phone)
+
     const res = await fetch('https://api.stringee.com/v1/sms', {
       method: 'POST',
       headers: { 'X-STRINGEE-AUTH': token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sms: [{
-          from: process.env.STRINGEE_SMS_BRANDNAME,
-          to: phone,
+          from: process.env.STRINGEE_SMS_BRANDNAME || 'NOTICE',
+          to: toPhone,
           text,
         }],
       }),
     }).catch(() => null)
-    return !!res && res.ok
+
+    if (!res || !res.ok) return false
+    const data = await res.json().catch(() => ({}))
+    return data?.r === 0 || data?.status === 'success'
   },
 }

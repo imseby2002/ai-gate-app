@@ -469,7 +469,14 @@ function MarketingPipelineContent() {
         const { res, data } = await safeFetch('/api/marketing/phone-call', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'batch', phones, script, voiceId: (u10d as { voiceId?: string } | undefined)?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL', birdCallerId: (u10d as { callerId?: string } | undefined)?.callerId }),
+          body: JSON.stringify({
+            action: 'batch',
+            phones,
+            script,
+            voiceId: (u10d as { voiceId?: string } | undefined)?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL',
+            callerId: (u10d as { callerId?: string } | undefined)?.callerId,
+            birdCallerId: (u10d as { callerId?: string } | undefined)?.callerId,
+          }),
         })
         if (res.ok) outputs.push(t('out.phoneResult', { success: String(data.success), total: String(data.total) }))
         else outputs.push(t('out.phoneFailed', { error: String(data.error) }))

@@ -4,6 +4,7 @@
  */
 import { randomBytes } from 'crypto'
 import { getTelephonyProvider } from '@/lib/telephony'
+import { sendSmsMessage } from '@/lib/telephony/sms-service'
 
 export function generateShortToken(): string {
   // 16 字元 base64url，足夠唯一且短
@@ -40,9 +41,9 @@ export async function dispatchJoinLink(params: {
     return { deliveryMethod: 'zns', delivered: ok }
   }
 
-  // line / whatsapp / zalo(未設 ZNS) → 經 telephony provider 發 SMS 夾短連結
-  const ok = await getTelephonyProvider().sendSms({ phone, text }).catch(() => false)
-  return { deliveryMethod: 'sms', delivered: ok }
+  // line / whatsapp / zalo(未設 ZNS) → 經智慧多國簡訊發送短連結
+  const smsRes = await sendSmsMessage({ phone, text }).catch(() => ({ ok: false, provider: 'sms' as const }))
+  return { deliveryMethod: smsRes.provider || 'sms', delivered: smsRes.ok }
 }
 
 // ── Zalo ZNS ─────────────────────────────────────────────────────────────────

@@ -918,6 +918,7 @@ export default function ProspectCallPage() {
               script: script.text,
               phones,
               voiceId: script.voiceId,
+              callerId: config.birdCallerId,
               birdCallerId: config.birdCallerId,
               keyMappings: config.keyMappings,
             }),
@@ -965,6 +966,7 @@ export default function ProspectCallPage() {
           script: script.text,
           phones,
           voiceId: script.voiceId,
+          callerId: config.birdCallerId,
           birdCallerId: config.birdCallerId,
           keyMappings: config.keyMappings,
         }),
@@ -1379,7 +1381,7 @@ export default function ProspectCallPage() {
                     <span className="ml-1 text-[10px] text-gray-400 font-normal">{t('s6p.callerIdHint')}</span>
                   </label>
                   <input value={config.birdCallerId} onChange={e => setC('birdCallerId', e.target.value)}
-                    placeholder="+886xxxxxxxxx / +84xxxxxxxxx"
+                    placeholder="+886xxxxxxxxx (Twilio 驗證號碼) / +84xxxxxxxxx (Stringee 外顯)"
                     className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2" />
                   {!config.birdCallerId.trim() && (
                     <p className="text-[10px] text-amber-500 mt-1">{t('s6p.callerIdWarn')}</p>

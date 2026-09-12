@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/marketing/phone-call
  * 電話行銷單元
  *
@@ -22,7 +22,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getTelephonyProvider } from '@/lib/telephony'
+import { getTelephonyProvider, getTelephonyProviderForPhone } from '@/lib/telephony'
 import { TTS_COST, CALL_COST, checkCredits, deductCredits, isBillableUser } from '@/lib/marketing/billing'
 import { getMarketingEntitlements } from '@/lib/marketing/entitlements'
 
@@ -130,8 +130,11 @@ export async function POST(req: NextRequest) {
     voiceId = 'EXAVITQu4vr4xnSDxMaL',
     modelId = 'eleven_multilingual_v2',
     birdCallerId = '',
+    callerId = '',
     keyMappings = [],
   } = body
+
+  const finalCallerId = callerId || birdCallerId || ''
 
   if (!script.trim()) return NextResponse.json({ error: '腳本不可為空' }, { status: 400 })
 
@@ -152,8 +155,6 @@ export async function POST(req: NextRequest) {
   const mappings: KeyMapping[] = Array.isArray(keyMappings) ? keyMappings : []
   const collectDtmf = mappings.some((m) => m?.digit && m?.join_url)
 
-  const provider = getTelephonyProvider()  // Bird / Stringee（依 TELEPHONY_PROVIDER）
-
   try {
     // ── TTS only ─────────────────────────────────────────────────────────────
     if (action === 'tts') {
@@ -165,11 +166,11 @@ export async function POST(req: NextRequest) {
     // 有按鍵加入社群設定 → 建立/更新活動，撥打後記錄通話供 webhook 對應
     const campaignId = collectDtmf ? await ensureIvrCampaign(supabase, user.id, mappings) : null
     const admin = campaignId ? await createAdminClient() : null
-    const recordCall = async (p: string, callId: string | null) => {
+    const recordCall = async (p: string, callId: string | null, providerName: string) => {
       if (!admin || !campaignId || !callId) return
       await admin.from('ivr_calls').insert({
         user_id: user.id, campaign_id: campaignId, phone: p,
-        provider: provider.name, provider_call_id: callId, status: 'dialing',
+        provider: providerName, provider_call_id: callId, status: 'dialing',
       })
     }
 
@@ -177,10 +178,11 @@ export async function POST(req: NextRequest) {
     if (action === 'call') {
       if (!phone) return NextResponse.json({ error: '請提供電話號碼' }, { status: 400 })
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
-      const result = await provider.call({ phone, audioUrl, callerId: birdCallerId, collectDtmf })
-      await recordCall(phone, result.callId)
+      const pProvider = getTelephonyProviderForPhone(phone)
+      const result = await pProvider.call({ phone, audioUrl, callerId: finalCallerId, collectDtmf })
+      await recordCall(phone, result.callId, pProvider.name)
       await deductCredits(user.id, TTS_COST + CALL_COST, '[marketing] 電話行銷撥打 1 通', billable)
-      return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: provider.name })
+      return NextResponse.json({ ok: true, phone, callId: result.callId, audioUrl, provider: pProvider.name })
     }
 
     // ── Batch calls ───────────────────────────────────────────────────────────
@@ -191,14 +193,15 @@ export async function POST(req: NextRequest) {
       // Generate TTS once, reuse audio URL for all calls
       const audioUrl = await elevenLabsTTS(script, voiceId, modelId, supabase, user.id)
 
-      const results: { phone: string; ok: boolean; id?: string; error?: string }[] = []
+      const results: { phone: string; ok: boolean; id?: string; provider?: string; error?: string }[] = []
       for (const p of list) {
+        const pProvider = getTelephonyProviderForPhone(p)
         try {
-          const r = await provider.call({ phone: p, audioUrl, callerId: birdCallerId, collectDtmf })
-          await recordCall(p, r.callId)
-          results.push({ phone: p, ok: true, id: r.callId ?? undefined })
+          const r = await pProvider.call({ phone: p, audioUrl, callerId: finalCallerId, collectDtmf })
+          await recordCall(p, r.callId, pProvider.name)
+          results.push({ phone: p, ok: true, id: r.callId ?? undefined, provider: pProvider.name })
         } catch (e) {
-          results.push({ phone: p, ok: false, error: String(e) })
+          results.push({ phone: p, ok: false, provider: pProvider.name, error: String(e) })
         }
         await new Promise(r => setTimeout(r, 600))
       }
@@ -216,7 +219,6 @@ export async function POST(req: NextRequest) {
         audioUrl,
         total: list.length,
         success: successCount,
-        provider: provider.name,
       })
     }
 

@@ -3438,6 +3438,7 @@ interface CallRecord {
   phone: string
   ok: boolean
   id?: string
+  provider?: string
   error?: string
 }
 
@@ -3477,6 +3478,7 @@ interface Unit10Data {
   // Phone
   script?: string
   voiceId?: string
+  callerId?: string
   birdCallerId?: string
   phoneInput?: string
   lastBatch?: {
@@ -3533,13 +3535,24 @@ function Unit10ProspectMarketing({
   const [scriptLang, setScriptLang] = useState('繁體中文')
 
   const [voiceId, setVoiceId] = useState(savedData?.voiceId ?? 'EXAVITQu4vr4xnSDxMaL')
-  const [birdCallerId, setBirdCallerId] = useState(savedData?.birdCallerId ?? '')
+  const [callerId, setCallerId] = useState(savedData?.callerId ?? savedData?.birdCallerId ?? '')
 
   const [phoneInput, setPhoneInput] = useState(savedData?.phoneInput ?? '')
   const [phones, setPhones] = useState<string[]>(() => {
     const raw = savedData?.phoneInput ?? ''
     return raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
   })
+
+  const phoneBreakdown = useMemo(() => {
+    let tw = 0, vn = 0, intl = 0
+    phones.forEach(p => {
+      const c = p.replace(/[^\d+]/g, '')
+      if (c.startsWith('+886') || c.startsWith('886') || (c.startsWith('09') && c.length === 10)) tw++
+      else if (c.startsWith('+84') || c.startsWith('84') || /^0[35789]\d{8}$/.test(c)) vn++
+      else intl++
+    })
+    return { tw, vn, intl, total: phones.length }
+  }, [phones])
 
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -3576,11 +3589,11 @@ function Unit10ProspectMarketing({
     if (!unit10InitRef.current) { unit10InitRef.current = true; return }
     onDone({
       ...savedData,
-      script, voiceId, birdCallerId, phoneInput,
+      script, voiceId, callerId, birdCallerId: callerId, phoneInput,
       emailTemplates, emailRules, emailInput, emailRecipients, fromName, fromEmail,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [script, voiceId, birdCallerId, phoneInput, emailTemplates, emailRules, emailInput, emailRecipients, fromName, fromEmail])
+  }, [script, voiceId, callerId, phoneInput, emailTemplates, emailRules, emailInput, emailRecipients, fromName, fromEmail])
 
   const parsePhones = (raw: string): string[] =>
     raw.split(/[\n,;，；\s]+/).map(p => p.trim()).filter(p => p.length >= 8)
@@ -3742,12 +3755,28 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       const res = await fetch('/api/marketing/phone-call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'batch', script: script.trim(), phones, voiceId, birdCallerId }),
+        body: JSON.stringify({
+          action: 'batch',
+          script: script.trim(),
+          phones,
+          voiceId,
+          callerId: callerId.trim(),
+          birdCallerId: callerId.trim(),
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setResults(data.results)
-      onDone({ lastBatch: { total: data.total, success: data.success, results: data.results, audioUrl: data.audioUrl, calledAt: new Date().toISOString() } })
+      onDone({
+        ...savedData,
+        lastBatch: {
+          total: data.total,
+          success: data.success,
+          results: data.results,
+          audioUrl: data.audioUrl,
+          calledAt: new Date().toISOString(),
+        },
+      })
     } catch (e) { setCallError(String(e)) }
     finally { setCalling(false) }
   }
@@ -4098,31 +4127,70 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs font-medium text-gray-600">
           <Volume2 className="h-3.5 w-3.5" /> {t('u10.ttsProvider')}
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs font-medium text-gray-600">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 border border-indigo-200 text-xs font-medium text-indigo-700">
           <PhoneCall className="h-3.5 w-3.5" /> {t('u10.callProvider')}
         </div>
-        {/* VBEE locked */}
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border text-xs text-gray-300 line-through cursor-not-allowed select-none">
-          🇻🇳 {t('u10.vbeeLocked')}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700">
+          <CheckCircle2 className="h-3.5 w-3.5" /> 支援真實號碼外顯 (Verified Caller ID)
         </div>
       </div>
 
-      {/* ElevenLabs + Bird settings */}
+      {/* Smart Voice Routing channel banner */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 via-sky-50 to-blue-50 border border-indigo-200">
+        <div className="text-xs font-bold text-indigo-900 mb-2 flex items-center gap-1.5">
+          <Zap className="h-4 w-4 text-indigo-600" />
+          全球智慧多國語音外呼系統 (Smart Voice Routing)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+          <div className="bg-white/90 p-2.5 rounded-lg border border-indigo-100 flex items-start gap-2 shadow-xs">
+            <span className="text-base">🇹🇼</span>
+            <div>
+              <div className="font-semibold text-gray-800">台灣門號 (09xx / +886)</div>
+              <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-indigo-700">Twilio Voice</span></div>
+              <div className="text-[10px] text-indigo-600 mt-0.5 font-medium">支援驗證主叫號碼 (Verified ID) · 免租號</div>
+            </div>
+          </div>
+          <div className="bg-white/90 p-2.5 rounded-lg border border-sky-100 flex items-start gap-2 shadow-xs">
+            <span className="text-base">🇻🇳</span>
+            <div>
+              <div className="font-semibold text-gray-800">越南門號 (+84)</div>
+              <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-sky-700">Stringee Voice</span></div>
+              <div className="text-[10px] text-sky-600 mt-0.5 font-medium">越南本地直撥 · 約 $0.8~$1.2/分 · 境內線路</div>
+            </div>
+          </div>
+          <div className="bg-white/90 p-2.5 rounded-lg border border-blue-100 flex items-start gap-2 shadow-xs">
+            <span className="text-base">🌐</span>
+            <div>
+              <div className="font-semibold text-gray-800">全球其他國家</div>
+              <div className="text-[11px] text-gray-500">走 <span className="font-mono font-medium text-blue-700">Twilio / Bird</span></div>
+              <div className="text-[10px] text-blue-600 mt-0.5 font-medium">國際頂級 CPaaS · 高接通率</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Voice and Caller ID settings */}
       <div className="p-4 rounded-xl bg-gray-50 border space-y-4">
-        <div className="text-xs font-semibold text-gray-600">{t('u10.voiceDialSettings')}</div>
+        <div className="text-xs font-semibold text-gray-700">{t('u10.voiceDialSettings')}</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u10.elevenVoice')}</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('u10.elevenVoice')}</label>
             <select value={voiceId} onChange={e => setVoiceId(e.target.value)}
               className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white">
               {ELEVEN_VOICES.map(v => <option key={v.id} value={v.id}>{v.name} — {t(`u10.voice.${v.descKey}`)}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('u10.birdCallerId')}</label>
-            <input value={birdCallerId} onChange={e => setBirdCallerId(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2"
-              placeholder="+886xxxxxxxxx / +84xxxxxxxxx" />
+            <label className="block text-xs font-medium text-gray-600 mb-1.5 flex items-center justify-between">
+              <span>{t('u10.birdCallerId')}</span>
+              <span className="text-[10px] text-gray-400 font-normal">受話端螢幕顯示</span>
+            </label>
+            <input value={callerId} onChange={e => setCallerId(e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border text-sm outline-none focus:ring-2 bg-white font-mono"
+              placeholder="+886912345678 或 84xxxxxxxxx" />
+            <p className="text-[10px] text-gray-500 mt-1">
+              💡 填寫於 Twilio 免費通過驗證的真實電話（Verified Caller ID），撥出時對方手機將直接顯示您本人電話。
+            </p>
           </div>
         </div>
       </div>
@@ -4161,15 +4229,37 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
       </div>
 
       {/* Phone list */}
-      <div>
-        <label className="block text-sm font-semibold mb-1.5">
+      <div className="space-y-2">
+        <label className="block text-sm font-semibold">
           {t('u10.phoneList')}
           <span className="ml-2 text-xs font-normal text-gray-400">{t('u10.recognizedPhones', { n: phones.length })}</span>
         </label>
         <textarea value={phoneInput} onChange={e => handlePhoneInput(e.target.value)} rows={5}
           className="w-full px-3 py-2.5 rounded-lg border text-sm outline-none focus:ring-2 resize-none font-mono"
-          placeholder={'+886912345678\n+84901234567\n+1234567890'} />
-        <p className="text-[10px] text-gray-400 mt-1">{t('u10.phoneHint')}</p>
+          placeholder={'+886912345678 (台灣)\n+84901234567 (越南)\n+12025550123 (國際)'} />
+        <p className="text-[10px] text-gray-400">{t('u10.phoneHint')}</p>
+
+        {/* Live routing breakdown statistics */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="px-2 py-1 rounded-md bg-gray-100 font-medium text-gray-700">
+            總計：<strong>{phoneBreakdown.total}</strong> 門號
+          </span>
+          {phoneBreakdown.tw > 0 && (
+            <span className="px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+              🇹🇼 台灣：<strong>{phoneBreakdown.tw}</strong> (Twilio Voice)
+            </span>
+          )}
+          {phoneBreakdown.vn > 0 && (
+            <span className="px-2 py-1 rounded-md bg-sky-50 text-sky-700 border border-sky-200">
+              🇻🇳 越南：<strong>{phoneBreakdown.vn}</strong> (Stringee Voice)
+            </span>
+          )}
+          {phoneBreakdown.intl > 0 && (
+            <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
+              🌐 國際：<strong>{phoneBreakdown.intl}</strong> (Twilio)
+            </span>
+          )}
+        </div>
       </div>
 
       {callError && (
@@ -4200,6 +4290,11 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg border text-xs ${r.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                 {r.ok ? <PhoneCall className="h-3.5 w-3.5 text-green-600 flex-shrink-0" /> : <PhoneOff className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
                 <span className="font-mono font-medium">{r.phone}</span>
+                {r.provider && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white border border-gray-200 text-gray-600">
+                    {r.provider}
+                  </span>
+                )}
                 {r.ok
                   ? <span className="text-green-700 ml-auto">{t('u10.callOk')}{r.id ? ` · ${r.id}` : ''}</span>
                   : <span className="text-red-600 ml-auto truncate max-w-[200px]">{r.error}</span>}
@@ -4208,19 +4303,22 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
           </div>
           {savedData?.lastBatch && (
             <div className="text-[10px] text-gray-400">
-              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs + Bird
+              {new Date(savedData.lastBatch.calledAt).toLocaleString(locale)} · ElevenLabs TTS + Twilio / Stringee
             </div>
           )}
         </div>
       )}
 
       {/* Env notice */}
-      <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700">
-        <div className="font-semibold mb-1">{t('u10.envNotice')}</div>
-        <div className="flex gap-2 flex-wrap">
+      <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-xs text-blue-700 space-y-1.5">
+        <div className="font-semibold">{t('u10.envNotice')}</div>
+        <div className="flex gap-2 flex-wrap text-[11px]">
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">ELEVENLABS_API_KEY</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">BIRD_API_KEY</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">BIRD_WORKSPACE_ID</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_ACCOUNT_SID</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_AUTH_TOKEN</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_FROM_NUMBER</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SID</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SECRET</code>
         </div>
       </div>
       </div>}
