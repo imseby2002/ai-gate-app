@@ -406,10 +406,33 @@ function dispatchTicketNotify(
       })
     } else if (wh.type === 'telegram') {
       if (!wh.target?.trim()) return Promise.resolve()
+      const escapedBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const escapedWho = who.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const safeLink = link.replace(/&/g, '&amp;')
+      const tgHtmlText = `${escapedBody}\n\n👤 客人：${escapedWho}\n👉 <a href="${safeLink}">點此直接回覆客人</a>`
+      const inlineButton = { inline_keyboard: [[{ text: '💬 點此開啟對話回覆', url: link }]] }
       return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
+        body: JSON.stringify({
+          chat_id: wh.target.trim(),
+          text: tgHtmlText,
+          parse_mode: 'HTML',
+          reply_markup: inlineButton,
+        }),
+      }).then(async res => {
+        if (!res.ok) {
+          // HTML 解析若失敗，退回純文字且無長網址，僅以底部按鈕提供連結
+          return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: wh.target.trim(),
+              text: `${body}\n\n👤 客人：${who}`,
+              reply_markup: inlineButton,
+            }),
+          })
+        }
       })
     } else {
       if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
