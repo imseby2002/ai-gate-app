@@ -1714,7 +1714,8 @@ function detectTourBookingCompletion(
 
   // 助手最近一兩則是否已提供匯款帳號
   const lastAssistantMsgs = allMessages.filter(m => m.role === 'assistant').slice(-2).map(m => m.content).join('\n')
-  if (/將來銀行|88670989871477|823/.test(lastAssistantMsgs)) {
+  const paymentDigits = (defaultPayment || '').match(/\d{6,}/)?.[0]
+  if ((paymentDigits && lastAssistantMsgs.includes(paymentDigits)) || /匯款帳號|請匯款至|末五碼/.test(lastAssistantMsgs)) {
     return '' // 剛給過帳號，不重複覆蓋
   }
 
@@ -1735,7 +1736,7 @@ function detectTourBookingCompletion(
   const hasPhone = /0[0-9]{8,9}/.test(userTexts) || !!customerFacts?.phone
 
   if (hasDate && hasHeadcount && hasParticipants && hasPhone) {
-    const payment = (defaultPayment || '銀行：將來銀行（823）\n帳號：88670989871477').trim()
+    const payment = (defaultPayment || '').trim()
     return `\n\n【系統偵測：出海/船班行程預訂資料已齊全——最高優先：立即主動要求付款】\n所有預訂資料（行程、出發日期、班次、人數、參加者投保名單、電話）皆已收集齊全！\n你的下一則回覆【必須且只能】：\n1. 第一行告知預訂確認：「好的！以下是您的預訂明細：」\n2. 列出行程方案、出發日期與班次、參加人數、所有參加者姓名\n3. 計算並列出總金額，並【明確說明：搭船出海行程（龜山島、401高地、賞鯨等）因船公司劃位班次與投保名額規範，一律 100% 全額預付，不收訂金！】\n4. 原文提供以下匯款帳號：\n${payment}\n5. 提醒匯款後請提供「帳號末五碼」，以便管家人工核對入帳並完成劃位保險！\n【死命令】絕對禁止在此時詢問停車位、早餐、路線或閒聊！第一優先務必引導客人付款！`
   }
 
@@ -2323,7 +2324,7 @@ async function getAIReply(
   2. 【純住宿／訂房】：
      - 付款方式：可選擇【付 30% 訂金】或【全額付款】。
   3. 【行程預訂資料收集齊全時，立即主動提供帳號要求付款】：
-     - 當預訂行程所需的方案、日期、班次、人數、參加者投保名單（姓名/身分證/生日）與電話齊全時，【必須立即且主動】整理明細、計算總金額，並主動提供匯款帳號（將來銀行 823、帳號 88670989871477）要求客人全額匯款並提供末五碼對帳！
+     - 當預訂行程所需的方案、日期、班次、人數、參加者投保名單（姓名/身分證/生日）與電話齊全時，【必須立即且主動】整理明細、計算總金額，並主動提供客服設定之匯款帳號${knowledge.paymentInfo ? `（${knowledge.paymentInfo.trim()}）` : ''}要求客人全額匯款並提供末五碼對帳！
      - 此時【絕對禁止】轉去詢問停車位、早餐、路線或其他無關問題，第一要務是引導客人完成付款！
   4. 【客人回報已付款／提供後五碼／傳送匯款截圖時】：
      - 當客人說「已匯款」、「已轉帳」、回報末五碼或傳送匯款水單截圖時：
