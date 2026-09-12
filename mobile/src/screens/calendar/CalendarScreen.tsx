@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useFocusEffect } from '@react-navigation/native'
 import { apiFetch } from '../../lib/supabase'
 
 interface Booking {
@@ -23,6 +24,7 @@ interface Booking {
   status: string
   platform: string
   num_guests: number
+  extra_beds?: number
   total_price: number | null
   currency: string
   properties?: { name: string } | null
@@ -35,17 +37,26 @@ interface Property {
   room_count: number
   base_price: number | null
   currency: string
+  max_guests?: number
+  extra_guest_fee?: number | null
+  base_guests?: number
+  extra_fee_mode?: string
+  max_extra_beds?: number
+  extra_bed_fee?: number | null
+  extra_bed_type?: string
 }
 
 const PLATFORM_META: Record<string, { label: string; color: string }> = {
+  direct: { label: '直訂', color: '#4F46E5' },
+  manual: { label: '手動', color: '#64748B' },
   booking_com: { label: 'Booking', color: '#1E40AF' },
   agoda: { label: 'Agoda', color: '#7E22CE' },
   airbnb: { label: 'Airbnb', color: '#E11D48' },
   trip_com: { label: 'Trip.com', color: '#0284C7' },
   asiayo: { label: 'AsiaYo', color: '#EA580C' },
   easytravel: { label: 'EzTravel', color: '#0891B2' },
-  manual: { label: '自來客', color: '#64748B' },
-  direct: { label: '官網', color: '#4F46E5' },
+  expedia: { label: 'Expedia', color: '#D97706' },
+  klook: { label: 'Klook', color: '#FF5722' },
 }
 
 const PROP_PALETTE = [
@@ -84,6 +95,7 @@ interface RoomLine {
   property_name: string
   total_price: string
   num_guests: number
+  extra_beds: number
 }
 
 interface QuickForm {
@@ -107,6 +119,7 @@ interface EditForm {
   status: string
   total_price: string
   num_guests: string
+  extra_beds: string
 }
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
@@ -245,9 +258,17 @@ export default function CalendarScreen() {
   const daysInMonth = getDaysInMonth(year, month)
   const firstDay = getFirstDayOfWeek(year, month)
 
+  // 頁面聚焦時自動重新整理資料（保持與每日入住同步）
+  useFocusEffect(
+    useCallback(() => {
+      fetchData()
+    }, [fetchData])
+  )
+
   // 快速訂房：打開指定房型與日期
   const openQuickBooking = (p: Property, ds: string) => {
     setOrderTotal('')
+    const defaultGuests = p.base_guests ?? 2
     setQuickForm({
       guest_name: '',
       guest_phone: '',
@@ -261,7 +282,8 @@ export default function CalendarScreen() {
           property_id: p.id,
           property_name: p.name,
           total_price: p.base_price ? String(p.base_price) : '',
-          num_guests: 1,
+          num_guests: defaultGuests,
+          extra_beds: 0,
         },
       ],
     })
@@ -272,6 +294,7 @@ export default function CalendarScreen() {
     if (!propertyId) return
     const p = properties.find((x) => x.id === propertyId)
     if (!p || quickForm.rooms.some((r) => r.property_id === propertyId)) return
+    const defaultGuests = p.base_guests ?? 2
     setQuickForm((f) => ({
       ...f,
       rooms: [
@@ -280,7 +303,8 @@ export default function CalendarScreen() {
           property_id: p.id,
           property_name: p.name,
           total_price: p.base_price ? String(p.base_price) : '',
-          num_guests: 1,
+          num_guests: defaultGuests,
+          extra_beds: 0,
         },
       ],
     }))
@@ -340,6 +364,7 @@ export default function CalendarScreen() {
           rooms: quickForm.rooms.map((r) => ({
             property_id: r.property_id,
             num_guests: r.num_guests,
+            extra_beds: r.extra_beds ?? 0,
             total_price: r.total_price ? parseFloat(r.total_price) : null,
           })),
         }),
@@ -366,7 +391,7 @@ export default function CalendarScreen() {
   const [editForm, setEditForm] = useState<EditForm>({
     id: '', guest_name: '', guest_phone: '',
     check_in: '', check_out: '', platform: 'direct',
-    status: 'confirmed', total_price: '', num_guests: '1',
+    status: 'confirmed', total_price: '', num_guests: '1', extra_beds: '0',
   })
   const [editSaving, setEditSaving] = useState(false)
 
@@ -381,6 +406,7 @@ export default function CalendarScreen() {
       status: bk.status,
       total_price: bk.total_price != null ? String(bk.total_price) : '',
       num_guests: String(bk.num_guests || 1),
+      extra_beds: String(bk.extra_beds ?? 0),
     })
     setEditOpen(true)
   }
@@ -404,6 +430,7 @@ export default function CalendarScreen() {
           status: editForm.status,
           total_price: editForm.total_price ? parseFloat(editForm.total_price) : null,
           num_guests: parseInt(editForm.num_guests) || 1,
+          extra_beds: parseInt(editForm.extra_beds) || 0,
         }),
       })
       const d = await res.json()
@@ -704,7 +731,11 @@ export default function CalendarScreen() {
                     </View>
 
                     <View style={styles.bkMidRow}>
-                      <Text style={styles.bkRoomText}>{bk.properties?.name || '指定房型'}</Text>
+                      <Text style={styles.bkRoomText}>
+                        {bk.properties?.name || '指定房型'}
+                        {bk.num_guests > 1 ? ` · ${bk.num_guests}人` : ''}
+                        {(bk.extra_beds ?? 0) > 0 ? ` · 加${bk.extra_beds}床` : ''}
+                      </Text>
                       <View style={[styles.platBadge, { borderColor: plat.color }]}>
                         <Text style={[styles.platText, { color: plat.color }]}>{plat.label}</Text>
                       </View>
@@ -745,41 +776,124 @@ export default function CalendarScreen() {
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
               {/* 已選房型清單 */}
               <Text style={styles.inputLabel}>已選房型與房價</Text>
-              {quickForm.rooms.map((r) => (
-                <View key={r.property_id} style={styles.roomBox}>
-                  <View style={styles.roomBoxHeader}>
-                    <Text style={styles.roomBoxName}>{r.property_name}</Text>
-                    {quickForm.rooms.length > 1 && (
-                      <TouchableOpacity onPress={() => removeRoomLine(r.property_id)}>
-                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                      </TouchableOpacity>
+              {quickForm.rooms.map((r) => {
+                const prop = properties.find((p) => p.id === r.property_id)
+                const calcNights = (() => {
+                  const ci = new Date(quickForm.check_in + 'T00:00:00')
+                  const co = new Date(quickForm.check_out + 'T00:00:00')
+                  const diff = Math.round((co.getTime() - ci.getTime()) / 86400000)
+                  return diff > 0 ? diff : 1
+                })()
+                const basePrice = prop?.base_price ?? 0
+                const extraGuestFee = prop?.extra_guest_fee ?? 0
+                const extraBedFee = prop?.extra_bed_fee ?? 0
+                const baseGuests = prop?.base_guests ?? 2
+                const feeMode = prop?.extra_fee_mode ?? 'by_guest'
+                const extraPersonCharge =
+                  feeMode === 'by_guest'
+                    ? Math.max(0, r.num_guests - baseGuests) * extraGuestFee * calcNights
+                    : 0
+                const extraBedCharge = (r.extra_beds ?? 0) * extraBedFee * calcNights
+                const calcTotal = basePrice * calcNights + extraPersonCharge + extraBedCharge
+                const maxExtraBeds = prop?.max_extra_beds ?? 0
+
+                return (
+                  <View key={r.property_id} style={styles.roomBox}>
+                    <View style={styles.roomBoxHeader}>
+                      <Text style={styles.roomBoxName}>{r.property_name}</Text>
+                      {quickForm.rooms.length > 1 && (
+                        <TouchableOpacity onPress={() => removeRoomLine(r.property_id)}>
+                          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* 輸入群組：人數、加床、房價 */}
+                    <View style={styles.roomBoxInputs}>
+                      <View style={styles.miniInputGroup}>
+                        <Text style={styles.miniLabel}>
+                          人數{prop?.max_guests ? `(≤${prop.max_guests})` : ''}
+                        </Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          keyboardType="numeric"
+                          value={String(r.num_guests)}
+                          onChangeText={(v) =>
+                            updateRoomLine(r.property_id, {
+                              num_guests: Math.min(
+                                parseInt(v) || 1,
+                                prop?.max_guests ?? 99
+                              ),
+                            })
+                          }
+                        />
+                      </View>
+
+                      {maxExtraBeds > 0 && (
+                        <View style={styles.miniInputGroup}>
+                          <Text style={styles.miniLabel}>
+                            加床{prop?.extra_bed_type === 'double' ? '(雙人)' : '(單人)'}
+                          </Text>
+                          <View style={styles.bedCounterRow}>
+                            <TouchableOpacity
+                              style={styles.bedCounterBtn}
+                              onPress={() =>
+                                updateRoomLine(r.property_id, {
+                                  extra_beds: Math.max(0, (r.extra_beds ?? 0) - 1),
+                                })
+                              }
+                            >
+                              <Text style={styles.bedCounterBtnText}>-</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.bedCountText}>{r.extra_beds ?? 0}</Text>
+                            <TouchableOpacity
+                              style={styles.bedCounterBtn}
+                              onPress={() =>
+                                updateRoomLine(r.property_id, {
+                                  extra_beds: Math.min(
+                                    maxExtraBeds,
+                                    (r.extra_beds ?? 0) + 1
+                                  ),
+                                })
+                              }
+                            >
+                              <Text style={styles.bedCounterBtnText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+
+                      <View style={[styles.miniInputGroup, { flex: 1 }]}>
+                        <Text style={styles.miniLabel}>房價 (NT$)</Text>
+                        <TextInput
+                          style={styles.miniInput}
+                          keyboardType="numeric"
+                          placeholder="金額"
+                          value={r.total_price}
+                          onChangeText={(v) => updateRoomLine(r.property_id, { total_price: v })}
+                        />
+                      </View>
+                    </View>
+
+                    {/* 試算提示與一鍵套用按鈕 */}
+                    {prop && calcTotal > 0 && (
+                      <View style={styles.calcHintRow}>
+                        <Text style={styles.calcHintText} numberOfLines={1}>
+                          底 {basePrice.toLocaleString()}×{calcNights}晚
+                          {extraPersonCharge > 0 ? ` + 加人${extraPersonCharge.toLocaleString()}` : ''}
+                          {extraBedCharge > 0 ? ` + 加床${extraBedCharge.toLocaleString()}` : ''}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.calcApplyBtn}
+                          onPress={() => updateRoomLine(r.property_id, { total_price: String(calcTotal) })}
+                        >
+                          <Text style={styles.calcApplyBtnText}>= NT${calcTotal.toLocaleString()} ↑</Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
                   </View>
-                  <View style={styles.roomBoxInputs}>
-                    <View style={styles.miniInputGroup}>
-                      <Text style={styles.miniLabel}>人數</Text>
-                      <TextInput
-                        style={styles.miniInput}
-                        keyboardType="numeric"
-                        value={String(r.num_guests)}
-                        onChangeText={(v) =>
-                          updateRoomLine(r.property_id, { num_guests: parseInt(v) || 1 })
-                        }
-                      />
-                    </View>
-                    <View style={[styles.miniInputGroup, { flex: 1 }]}>
-                      <Text style={styles.miniLabel}>房價 (NT$)</Text>
-                      <TextInput
-                        style={styles.miniInput}
-                        keyboardType="numeric"
-                        placeholder="金額"
-                        value={r.total_price}
-                        onChangeText={(v) => updateRoomLine(r.property_id, { total_price: v })}
-                      />
-                    </View>
-                  </View>
-                </View>
-              ))}
+                )
+              })}
 
               {/* 整單總額平均分配 */}
               {quickForm.rooms.length > 1 && (
@@ -980,9 +1094,9 @@ export default function CalendarScreen() {
                 </View>
               </View>
 
-              {/* 人數 / 金額 */}
+              {/* 人數 / 加床 / 金額 */}
               <View style={styles.dateRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 6 }]}>
                   <Text style={styles.inputLabel}>人數</Text>
                   <TextInput
                     style={styles.textInput}
@@ -991,7 +1105,16 @@ export default function CalendarScreen() {
                     onChangeText={(v) => setEditForm((f) => ({ ...f, num_guests: v }))}
                   />
                 </View>
-                <View style={[styles.inputGroup, { flex: 2 }]}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 6 }]}>
+                  <Text style={styles.inputLabel}>加床數</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    keyboardType="numeric"
+                    value={editForm.extra_beds}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, extra_beds: v }))}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1.5 }]}>
                   <Text style={styles.inputLabel}>金額 (NT$)</Text>
                   <TextInput
                     style={styles.textInput}
@@ -1525,6 +1648,63 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     fontSize: 13,
     color: '#0F172A',
+  },
+  bedCounterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 6,
+    height: 28,
+  },
+  bedCounterBtn: {
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bedCounterBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  bedCountText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  calcHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 4,
+  },
+  calcHintText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#64748B',
+    marginRight: 6,
+  },
+  calcApplyBtn: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  calcApplyBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563EB',
   },
   orderTotalRow: {
     flexDirection: 'row',

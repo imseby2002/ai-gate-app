@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useFocusEffect } from '@react-navigation/native'
 import { apiFetch } from '../../lib/supabase'
 
 interface DailyRecord {
@@ -41,6 +42,8 @@ interface UnmatchedBooking {
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
+  direct: '直訂',
+  manual: '手動',
   booking_com: 'Booking',
   agoda: 'Agoda',
   trip_com: 'Trip',
@@ -52,8 +55,6 @@ const PLATFORM_LABELS: Record<string, string> = {
   klook: 'Klook',
   kkday: 'KKday',
   easytravel: 'EzTravel',
-  manual: '自來客',
-  direct: '官網',
 }
 
 function getTodayTW() {
@@ -131,6 +132,13 @@ export default function DailyScreen() {
   useEffect(() => {
     fetchDaily(currentDate)
   }, [fetchDaily, currentDate])
+
+  // 切換回此分頁時自動重新整理（確保與日曆訂房雙向即時同步）
+  useFocusEffect(
+    useCallback(() => {
+      fetchDaily(currentDate)
+    }, [fetchDaily, currentDate])
+  )
 
   const shiftDate = (days: number) => {
     const nextDate = addDaysStr(currentDate, days)
