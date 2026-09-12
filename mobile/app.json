@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AI GATE",
+    "name": "ciaohome",
     "slug": "ai-gate-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,11 +22,12 @@
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -47,6 +48,11 @@
       ],
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b637706a-f417-49d2-ac87-c13c2517efd0"
+      }
+    }
   }
 }
