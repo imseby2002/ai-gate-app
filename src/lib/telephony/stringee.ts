@@ -16,12 +16,15 @@ import * as crypto from 'crypto'
 import type { TelephonyProvider, VoiceCallParams, SmsParams } from './types'
 
 function configured() {
-  return !!(process.env.STRINGEE_API_KEY_SID && process.env.STRINGEE_API_KEY_SECRET)
+  return !!(
+    (process.env.STRINGEE_API_KEY_SID || process.env.STRINGEE_ACCOUNT_SID) &&
+    (process.env.STRINGEE_API_KEY_SECRET || process.env.STRINGEE_ACCOUNT_KEY)
+  )
 }
 
 function stringeeJwt(): string | null {
-  const sid = process.env.STRINGEE_API_KEY_SID
-  const secret = process.env.STRINGEE_API_KEY_SECRET
+  const sid = process.env.STRINGEE_API_KEY_SID || process.env.STRINGEE_ACCOUNT_SID
+  const secret = process.env.STRINGEE_API_KEY_SECRET || process.env.STRINGEE_ACCOUNT_KEY
   if (!sid || !secret) return null
 
   const header = Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'HS256', cty: 'stringee-api;v=1' })).toString('base64url')

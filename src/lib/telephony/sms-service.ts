@@ -182,11 +182,11 @@ function createStringeeJwt(sid: string, secret: string): string {
 }
 
 async function sendViaStringee(phone: string, text: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  const sid = process.env.STRINGEE_API_KEY_SID
-  const secret = process.env.STRINGEE_API_KEY_SECRET
+  const sid = process.env.STRINGEE_API_KEY_SID || process.env.STRINGEE_ACCOUNT_SID
+  const secret = process.env.STRINGEE_API_KEY_SECRET || process.env.STRINGEE_ACCOUNT_KEY
   const brandname = process.env.STRINGEE_SMS_BRANDNAME || 'NOTICE'
   if (!sid || !secret) {
-    return { ok: false, error: 'Stringee 未設定（請設定 STRINGEE_API_KEY_SID / STRINGEE_API_KEY_SECRET）' }
+    return { ok: false, error: 'Stringee 未設定（請設定 STRINGEE_ACCOUNT_SID / STRINGEE_ACCOUNT_KEY）' }
   }
 
   try {
