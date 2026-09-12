@@ -154,6 +154,110 @@ function getAgeCategory(age: number): '幼兒' | '小孩' | '成人' {
   return '成人'
 }
 
+// ── 定價計算機：欄位式編輯共用元件 ──────────────────────────────────────────
+// 定義在元件外層（module scope），避免每次 CsWorkspace re-render 都產生新的
+// component 型別造成 input 重新掛載、打字時失焦。
+interface PcConfig {
+  productType: 'tour' | 'accommodation' | 'custom'
+  triggerKeywords: string[]
+  currency?: string
+  schedules?: Array<{ id: string; name: string }>
+  segments?: Array<{ label: string; key: string; weekdayPrice: number; weekendPrice: number }>
+  packages?: Array<{ name: string; price: number; description?: string }>
+  groupDiscounts?: Array<{ minPeople: number; discountPercent: number; note?: string }>
+  rooms?: Array<{ name: string; capacity: number; weekdayPrice: number; weekendPrice: number; holidayPrice?: number; extraPersonFee?: number }>
+  cancellationPolicy?: string
+  notes?: string[]
+  customContent?: string
+  [key: string]: unknown
+}
+
+function TagInput({ value, onChange, placeholder }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+  const [draft, setDraft] = useState('')
+  const commit = () => {
+    const v = draft.trim()
+    if (v && !value.includes(v)) onChange([...value, v])
+    setDraft('')
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5 items-center border rounded-lg px-2 py-1.5 bg-white focus-within:ring-1 focus-within:ring-indigo-400">
+      {value.map((tag, idx) => (
+        <span key={idx} className="inline-flex items-center gap-1 text-[11px] bg-indigo-50 text-indigo-600 rounded-full px-2 py-0.5">
+          {tag}
+          <button type="button" onClick={() => onChange(value.filter((_, i) => i !== idx))} className="hover:text-red-500">✕</button>
+        </span>
+      ))}
+      <input
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commit() }
+          else if (e.key === 'Backspace' && !draft && value.length) onChange(value.slice(0, -1))
+        }}
+        onBlur={commit}
+        placeholder={value.length ? '' : placeholder}
+        className="flex-1 min-w-[80px] text-xs outline-none py-0.5"
+      />
+    </div>
+  )
+}
+
+function StringListEditor({ items, onChange, placeholder, addLabel }: { items: string[]; onChange: (v: string[]) => void; placeholder?: string; addLabel: string }) {
+  return (
+    <div className="space-y-1.5">
+      {items.map((it, idx) => (
+        <div key={idx} className="flex items-center gap-1.5">
+          <input
+            type="text" value={it} placeholder={placeholder}
+            onChange={e => onChange(items.map((v, i) => i === idx ? e.target.value : v))}
+            className="flex-1 text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          />
+          <button type="button" onClick={() => onChange(items.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 text-xs px-1">✕</button>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...items, ''])} className="text-[11px] px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100">+ {addLabel}</button>
+    </div>
+  )
+}
+
+interface RowFieldDef { key: string; label: string; type: 'text' | 'number'; width?: string }
+
+function RowsEditor({ rows, fields, onChange, addLabel }: {
+  rows: Array<Record<string, unknown>>
+  fields: RowFieldDef[]
+  onChange: (rows: Array<Record<string, unknown>>) => void
+  addLabel: string
+}) {
+  const update = (idx: number, key: string, val: unknown) => onChange(rows.map((r, i) => i === idx ? { ...r, [key]: val } : r))
+  const remove = (idx: number) => onChange(rows.filter((_, i) => i !== idx))
+  const add = () => {
+    const blank: Record<string, unknown> = {}
+    fields.forEach(f => { blank[f.key] = f.type === 'number' ? 0 : '' })
+    onChange([...rows, blank])
+  }
+  return (
+    <div className="space-y-1.5">
+      {rows.map((row, idx) => (
+        <div key={idx} className="flex items-center gap-1.5 flex-wrap bg-white border rounded-lg p-1.5">
+          {fields.map(f => (
+            <div key={f.key} className="flex flex-col gap-0.5">
+              <label className="text-[9px] text-gray-400">{f.label}</label>
+              <input
+                type={f.type === 'number' ? 'number' : 'text'}
+                value={(row[f.key] as string | number | undefined) ?? (f.type === 'number' ? 0 : '')}
+                onChange={e => update(idx, f.key, f.type === 'number' ? Number(e.target.value) : e.target.value)}
+                className={`text-xs border rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400 ${f.width ?? (f.type === 'number' ? 'w-20' : 'w-28')}`}
+              />
+            </div>
+          ))}
+          <button type="button" onClick={() => remove(idx)} className="text-red-400 hover:text-red-600 text-xs px-1 self-end mb-1">✕</button>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="text-[11px] px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100">+ {addLabel}</button>
+    </div>
+  )
+}
+
 const DEFAULT_FLOWS: BookingFlowDef[] = [
   {
     id: 'tour',
@@ -605,10 +709,16 @@ function Unit12CustomerService({
 
   // Pricing configs
   const [pricingConfigs, setPricingConfigs] = useState<Array<{ id: string; name: string; enabled: boolean; config: Record<string, unknown> }>>([])
-  const [editingPc, setEditingPc] = useState<{ id: string; name: string; jsonText: string } | null>(null)
+  const [editingPc, setEditingPc] = useState<{ id: string; name: string; config: PcConfig } | null>(null)
   const [savingPc, setSavingPc] = useState(false)
+  const [pcAdvancedOpen, setPcAdvancedOpen] = useState(false)
+  const [pcAdvancedText, setPcAdvancedText] = useState('')
   const [pcJsonError, setPcJsonError] = useState('')
   const [dsFetchFailed, setDsFetchFailed] = useState(false)
+
+  function updatePcConfig(patch: Partial<PcConfig>) {
+    setEditingPc(prev => prev ? { ...prev, config: { ...prev.config, ...patch } } : prev)
+  }
 
   // FAQ 知識庫
   interface FaqItem { id: string; q: string; a: string; keywords: string[]; created_at: string }
@@ -709,33 +819,39 @@ function Unit12CustomerService({
   }
 
   function openAddPc(templateKey?: string) {
-    const template = templateKey ? PRICING_TEMPLATES[templateKey] : PRICING_TEMPLATES.tour
-    setEditingPc({ id: '', name: '', jsonText: JSON.stringify(template, null, 2) })
+    const template = (templateKey && PRICING_TEMPLATES[templateKey] ? PRICING_TEMPLATES[templateKey] : PRICING_TEMPLATES.tour) as unknown as PcConfig
+    setEditingPc({ id: '', name: '', config: JSON.parse(JSON.stringify(template)) })
+    setPcAdvancedOpen(false)
     setPcJsonError('')
   }
 
   function openEditPc(pc: { id: string; name: string; config: Record<string, unknown> }) {
-    setEditingPc({ id: pc.id, name: pc.name, jsonText: JSON.stringify(pc.config, null, 2) })
+    setEditingPc({ id: pc.id, name: pc.name, config: pc.config as unknown as PcConfig })
+    setPcAdvancedOpen(false)
     setPcJsonError('')
+  }
+
+  function applyPcAdvancedJson() {
+    if (!editingPc) return
+    try {
+      const parsed = JSON.parse(pcAdvancedText)
+      setEditingPc(prev => prev ? { ...prev, config: parsed } : prev)
+      setPcJsonError('')
+      setPcAdvancedOpen(false)
+    } catch (e) {
+      setPcJsonError(t('u12.jsonError', { error: String(e) }))
+    }
   }
 
   async function savePc() {
     if (!editingPc) return
-    let parsed: Record<string, unknown>
-    try {
-      parsed = JSON.parse(editingPc.jsonText)
-      setPcJsonError('')
-    } catch (e) {
-      setPcJsonError(t('u12.jsonError', { error: String(e) }))
-      return
-    }
     setSavingPc(true)
     try {
       if (editingPc.id) {
         const r = await fetch(`/api/marketing/cs-datasource/${editingPc.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingPc.name, config: parsed, enabled: true }),
+          body: JSON.stringify({ name: editingPc.name, config: editingPc.config, enabled: true }),
         })
         const d = await r.json()
         if (d.source) setPricingConfigs(prev => prev.map(p => p.id === editingPc.id ? d.source : p))
@@ -743,7 +859,7 @@ function Unit12CustomerService({
         const r = await fetch('/api/marketing/cs-datasource', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: editingPc.name, config: parsed, type: 'json_pricing', industry: ind }),
+          body: JSON.stringify({ name: editingPc.name, config: editingPc.config, type: 'json_pricing', industry: ind }),
         })
         const d = await r.json()
         if (d.source) setPricingConfigs(prev => [...prev, d.source])
@@ -2805,7 +2921,12 @@ function Unit12CustomerService({
 
           {editingPc !== null && (
             <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
-              <div className="font-medium text-sm text-gray-700">{editingPc.id ? t('u12.editPricing') : t('u12.addPricing')}</div>
+              <div className="flex items-center justify-between">
+                <div className="font-medium text-sm text-gray-700">{editingPc.id ? t('u12.editPricing') : t('u12.addPricing')}</div>
+                <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                  {editingPc.config.productType === 'tour' ? t('u12.pcTour') : editingPc.config.productType === 'accommodation' ? t('u12.pcAccommodation') : t('u12.pcCustom')}
+                </span>
+              </div>
 
               <div>
                 <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsName')}</label>
@@ -2818,35 +2939,167 @@ function Unit12CustomerService({
                 />
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10px] text-gray-500">{t('u12.pricingJson')}</label>
-                  <div className="flex gap-1">
-                    {(['tour', 'accommodation', 'custom'] as const).map(k => (
-                      <button key={k} onClick={() => setEditingPc(prev => prev ? { ...prev, jsonText: JSON.stringify(PRICING_TEMPLATES[k], null, 2) } : prev)}
-                        className="text-[10px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
-                        {k === 'tour' ? t('u12.loadTourTpl') : k === 'accommodation' ? t('u12.loadAccTpl') : t('u12.loadCustomTpl')}
-                      </button>
-                    ))}
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">觸發詞（客人訊息含這些字才會套用這份定價）</label>
+                  <TagInput
+                    value={editingPc.config.triggerKeywords ?? []}
+                    onChange={v => updatePcConfig({ triggerKeywords: v })}
+                    placeholder="輸入後按 Enter"
+                  />
                 </div>
-                <textarea
-                  value={editingPc.jsonText}
-                  onChange={e => { setEditingPc(prev => prev ? { ...prev, jsonText: e.target.value } : prev); setPcJsonError('') }}
-                  rows={18}
-                  spellCheck={false}
-                  className={`w-full text-xs border rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 ${pcJsonError ? 'border-red-400' : ''}`}
-                />
-                {pcJsonError && <div className="text-[10px] text-red-500 mt-1">{pcJsonError}</div>}
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">幣別</label>
+                  <select
+                    value={editingPc.config.currency ?? 'TWD'}
+                    onChange={e => updatePcConfig({ currency: e.target.value })}
+                    className="w-full text-xs border rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  >
+                    {['TWD', 'USD', 'JPY', 'CNY', 'EUR'].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-[10px] text-blue-700 space-y-1">
-                <div className="font-medium">{t('u12.jsonFields')}</div>
-                <div>• <code>triggerKeywords</code>{t('u12.jfTrigger')}</div>
-                <div>• <code>weekdayPrice</code> / <code>weekendPrice</code>{t('u12.jfPrice')}</div>
-                <div>• <code>packages</code>{t('u12.jfPackages')}</div>
-                <div>• <code>groupDiscounts</code>{t('u12.jfGroup')}</div>
-                <div>• <code>cancellationPolicy</code>{t('u12.jfCancel')}</div>
+              {editingPc.config.productType === 'tour' && (
+                <>
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">班次</label>
+                    <RowsEditor
+                      rows={(editingPc.config.schedules ?? []) as Array<Record<string, unknown>>}
+                      fields={[{ key: 'name', label: '名稱', type: 'text', width: 'w-40' }]}
+                      onChange={rows => updatePcConfig({
+                        schedules: rows.map((r, i) => ({ id: (r.id as string) || String(i + 1), name: (r.name as string) ?? '' })),
+                      })}
+                      addLabel="新增班次"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">票種與價格</label>
+                    <RowsEditor
+                      rows={(editingPc.config.segments ?? []) as Array<Record<string, unknown>>}
+                      fields={[
+                        { key: 'label', label: '名稱', type: 'text', width: 'w-32' },
+                        { key: 'weekdayPrice', label: '平日價', type: 'number' },
+                        { key: 'weekendPrice', label: '假日價', type: 'number' },
+                      ]}
+                      onChange={rows => updatePcConfig({
+                        segments: rows.map(r => ({
+                          label: (r.label as string) ?? '',
+                          key: ((r.label as string) ?? '').trim() || 'seg',
+                          weekdayPrice: Number(r.weekdayPrice) || 0,
+                          weekendPrice: Number(r.weekendPrice) || 0,
+                        })),
+                      })}
+                      addLabel="新增票種"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">套餐方案</label>
+                    <RowsEditor
+                      rows={(editingPc.config.packages ?? []) as Array<Record<string, unknown>>}
+                      fields={[
+                        { key: 'name', label: '名稱', type: 'text', width: 'w-32' },
+                        { key: 'price', label: '價格', type: 'number' },
+                        { key: 'description', label: '說明', type: 'text', width: 'w-32' },
+                      ]}
+                      onChange={rows => updatePcConfig({ packages: rows as PcConfig['packages'] })}
+                      addLabel="新增套餐"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">團體折扣</label>
+                    <RowsEditor
+                      rows={(editingPc.config.groupDiscounts ?? []) as Array<Record<string, unknown>>}
+                      fields={[
+                        { key: 'minPeople', label: '滿N人', type: 'number' },
+                        { key: 'discountPercent', label: '折扣%', type: 'number' },
+                        { key: 'note', label: '備註', type: 'text', width: 'w-32' },
+                      ]}
+                      onChange={rows => updatePcConfig({ groupDiscounts: rows as PcConfig['groupDiscounts'] })}
+                      addLabel="新增折扣"
+                    />
+                  </div>
+                </>
+              )}
+
+              {editingPc.config.productType === 'accommodation' && (
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">房型與定價</label>
+                  <RowsEditor
+                    rows={(editingPc.config.rooms ?? []) as Array<Record<string, unknown>>}
+                    fields={[
+                      { key: 'name', label: '房名', type: 'text', width: 'w-28' },
+                      { key: 'capacity', label: '可住人數', type: 'number' },
+                      { key: 'weekdayPrice', label: '平日價', type: 'number' },
+                      { key: 'weekendPrice', label: '假日/週末', type: 'number' },
+                      { key: 'holidayPrice', label: '連續假期', type: 'number' },
+                      { key: 'extraPersonFee', label: '加人費', type: 'number' },
+                    ]}
+                    onChange={rows => updatePcConfig({ rooms: rows as PcConfig['rooms'] })}
+                    addLabel="新增房型"
+                  />
+                </div>
+              )}
+
+              {editingPc.config.productType === 'custom' && (
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">定價說明</label>
+                  <textarea
+                    value={editingPc.config.customContent ?? ''}
+                    onChange={e => updatePcConfig({ customContent: e.target.value })}
+                    rows={6}
+                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">取消政策</label>
+                <input
+                  type="text"
+                  value={editingPc.config.cancellationPolicy ?? ''}
+                  onChange={e => updatePcConfig({ cancellationPolicy: e.target.value })}
+                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">注意事項</label>
+                <StringListEditor
+                  items={editingPc.config.notes ?? []}
+                  onChange={v => updatePcConfig({ notes: v })}
+                  addLabel="新增事項"
+                />
+              </div>
+
+              <div className="border-t pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPcAdvancedText(JSON.stringify(editingPc.config, null, 2))
+                    setPcAdvancedOpen(v => !v)
+                    setPcJsonError('')
+                  }}
+                  className="text-[10px] text-gray-400 hover:text-gray-600 underline"
+                >
+                  {pcAdvancedOpen ? '收合進階 JSON' : '進階：直接貼上/編輯 JSON'}
+                </button>
+                {pcAdvancedOpen && (
+                  <div className="mt-2 space-y-1">
+                    <textarea
+                      value={pcAdvancedText}
+                      onChange={e => { setPcAdvancedText(e.target.value); setPcJsonError('') }}
+                      rows={12}
+                      spellCheck={false}
+                      className={`w-full text-xs border rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 ${pcJsonError ? 'border-red-400' : ''}`}
+                    />
+                    {pcJsonError && <div className="text-[10px] text-red-500">{pcJsonError}</div>}
+                    <button type="button" onClick={applyPcAdvancedJson}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
+                      套用 JSON
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-2 pt-1">
@@ -2855,7 +3108,7 @@ function Unit12CustomerService({
                   style={{ background: 'var(--primary)' }}>
                   {savingPc ? t('u12.saving') : t('u12.save')}
                 </button>
-                <button onClick={() => { setEditingPc(null); setPcJsonError('') }}
+                <button onClick={() => { setEditingPc(null); setPcJsonError(''); setPcAdvancedOpen(false) }}
                   className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
                   {t('u12.cancel')}
                 </button>
