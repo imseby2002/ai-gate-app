@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveFeedbackBilling } from '@/lib/feedback/billing'
 import { notifyFeedbackAdmin } from '@/lib/feedback/notify'
+import { runFeedbackAutoFix } from '@/lib/feedback/autofix'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -64,6 +66,9 @@ export async function POST(req: NextRequest) {
         `後台審核：https://www.im-tourist.com/admin/feedback`,
       ]
     )
+  } else if (initialStatus === 'pending') {
+    // 免費/錯誤回報（直接施作等我合併）：由 Claude 3.7 Sonnet 在背景自動分析修改並建 PR
+    after(() => runFeedbackAutoFix(data.id).catch(() => {}))
   }
 
   return NextResponse.json({ feedback: data })

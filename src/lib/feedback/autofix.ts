@@ -1,7 +1,34 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createAnthropic } from '@ai-sdk/anthropic'
+import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { notifyFeedbackAdmin } from '@/lib/feedback/notify'
+
+export const CODE_ENGINE_NAME = 'Claude 3.7 Sonnet'
+
+/**
+ * 取得官方 Claude 3.7 Sonnet 程式碼修復引擎實例
+ * 優先使用 ANTHROPIC_API_KEY 直連官方 claude-3-7-sonnet-20250219
+ * 備用支援 OPENROUTER_API_KEY (anthropic/claude-3.7-sonnet)
+ */
+export function getClaudeSonnetModel() {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim()
+  if (anthropicKey) {
+    const anthropic = createAnthropic({ apiKey: anthropicKey })
+    return anthropic('claude-3-7-sonnet-20250219')
+  }
+
+  const openrouterKey = process.env.OPENROUTER_API_KEY?.trim()
+  if (openrouterKey) {
+    const openrouter = createOpenAI({
+      apiKey: openrouterKey,
+      baseURL: 'https://openrouter.ai/api/v1',
+    })
+    return openrouter.chat('anthropic/claude-3.7-sonnet')
+  }
+
+  throw new Error('未設定 ANTHROPIC_API_KEY 或 OPENROUTER_API_KEY，無法啟動 Claude Sonnet')
+}
 
 const REPO_OWNER = 'imseby2002'
 const REPO_NAME  = 'ai-gate-app'
@@ -116,17 +143,15 @@ interface AiPlan {
 }
 
 async function classifyAndPlan(title: string, description: string, type: string, context: Record<string, string>): Promise<AiPlan> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return { complexity: 'manual', reason: 'API key 未設定', files: [] }
-
-  const anthropic = createAnthropic({ apiKey })
   const contextStr = Object.entries(context).map(([p, c]) => `=== ${p} ===\n${c}`).join('\n\n')
 
-  const { text } = await generateText({
-    model: anthropic('claude-sonnet-4-6'),
-    messages: [{
-      role: 'user',
-      content: `你是一個 Next.js 代碼助手。根據以下使用者回饋，判斷是否可以「自動修改代碼」。
+  try {
+    const model = getClaudeSonnetModel()
+    const { text } = await generateText({
+      model,
+      messages: [{
+        role: 'user',
+        content: `你是一個由 Claude 3.7 Sonnet 驅動的 Next.js/TypeScript 高級架構分析師。根據以下使用者回饋，判斷是否可以「自動修改代碼」。
 
 回饋類型：${type}
 標題：${title}
@@ -154,13 +179,14 @@ ${contextStr.slice(0, 12000)}
   "reason": "一句話說明判斷原因",
   "files": [{"path": "需要修改的檔案路徑", "description": "該檔案要做什麼修改"}]
 }`,
-    }],
-  })
+      }],
+    })
 
-  try {
     const m = text.match(/\{[\s\S]*\}/)
     if (m) return JSON.parse(m[0]) as AiPlan
-  } catch { /* ignore */ }
+  } catch (err) {
+    return { complexity: 'manual', reason: `Claude Sonnet 分析失敗: ${String(err)}`, files: [] }
+  }
   return { complexity: 'manual', reason: '解析失敗', files: [] }
 }
 
@@ -175,19 +201,17 @@ async function generateCodeChanges(
   title: string, description: string, type: string,
   plan: AiPlan, context: Record<string, string>
 ): Promise<FileChange[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return []
-
-  const anthropic = createAnthropic({ apiKey })
   const changes: FileChange[] = []
+  const model = getClaudeSonnetModel()
 
   for (const fileTask of plan.files) {
     const existing = context[fileTask.path] ?? ''
     const { text } = await generateText({
-      model: anthropic('claude-sonnet-4-6'),
+      model,
+      maxOutputTokens: 8192,
       messages: [{
         role: 'user',
-        content: `你是一個 Next.js/TypeScript 代碼助手。根據使用者需求修改以下檔案。
+        content: `你是一個由 Claude 3.7 Sonnet 驅動的 Next.js/TypeScript 專業工程師。根據使用者需求修改以下檔案。
 
 需求類型：${type}
 標題：${title}
@@ -276,9 +300,10 @@ export async function runFeedbackAutoFix(feedbackId: string) {
 
     // Create PR
     const prBody = `## 使用者回饋\n**類型**: ${fb.type}\n**描述**: ${fb.description}\n\n` +
-      `## AI 計畫\n${plan.reason}\n\n` +
+      `## 🤖 程式碼編寫核心\n**${CODE_ENGINE_NAME} (Anthropic 官方)**\n\n` +
+      `## AI 分析計畫\n${plan.reason}\n\n` +
       `## 修改檔案\n${plan.files.map((f: { path: string; description: string }) => `- \`${f.path}\`: ${f.description}`).join('\n')}\n\n` +
-      `⚠️ 此 PR 由 AI 自動產生，合併前請人工審查。`
+      `⚠️ 此 PR 由 ${CODE_ENGINE_NAME} 自動修改產生。請在預覽站點測試無誤後，至後台點擊「確認合併 (Squash Merge)」。`
 
     const pr = await createPR(`[Feedback] ${fb.title}`, prBody, branchName)
     const previewUrl = `https://ai-gate-app-git-${branchName.replace(/\//g, '-')}-imsebys-projects.vercel.app`
@@ -293,8 +318,8 @@ export async function runFeedbackAutoFix(feedbackId: string) {
     }).eq('id', feedbackId)
 
     await notifyFeedbackAdmin(
-      `[意見反映] AI 已修好，待確認合併：${fb.title}`,
-      [`Preview：${previewUrl}`, `GitHub PR：${pr.url}`, `後台確認合併：https://www.im-tourist.com/admin/feedback`]
+      `[意見反映] ${CODE_ENGINE_NAME} 已修好，待確認合併：${fb.title}`,
+      [`Preview 預覽：${previewUrl}`, `GitHub PR：${pr.url}`, `後台一鍵合併：https://www.im-tourist.com/admin/feedback`]
     )
 
     return { ok: true as const, complexity: 'auto' as const, prUrl: pr.url, previewUrl, branchName }
