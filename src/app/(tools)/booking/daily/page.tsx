@@ -24,6 +24,8 @@ interface DailyRecord {
 
 // 平台縮寫（顯示在訂單號碼後）
 const PLATFORM_LABEL: Record<string, string> = {
+  direct:      '直訂',
+  manual:      '手動',
   booking_com: 'Booking',
   agoda:       'Agoda',
   trip_com:    'Trip',
@@ -39,7 +41,7 @@ const PLATFORM_LABEL: Record<string, string> = {
   mafengwo:    'Mafengwo',
 }
 function platformLabel(p: string | null): string | null {
-  if (!p || p === 'other') return null
+  if (!p) return null
   return PLATFORM_LABEL[p] ?? p
 }
 
@@ -200,7 +202,7 @@ function Cell({ row, col, editing, editVal, showPasswords, saving, inputRef, onS
           {t('daily.continueStay')}
         </button>
       )}
-      {col.key === 'order_number' && raw && (
+      {col.key === 'order_number' && (row.order_number || row.guest_name) && (
         isEditingPlatform ? (
           <select
             autoFocus
