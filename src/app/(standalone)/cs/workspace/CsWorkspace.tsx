@@ -608,6 +608,7 @@ function Unit12CustomerService({
   const [editingPc, setEditingPc] = useState<{ id: string; name: string; jsonText: string } | null>(null)
   const [savingPc, setSavingPc] = useState(false)
   const [pcJsonError, setPcJsonError] = useState('')
+  const [dsFetchFailed, setDsFetchFailed] = useState(false)
 
   // FAQ 知識庫
   interface FaqItem { id: string; q: string; a: string; keywords: string[]; created_at: string }
@@ -679,12 +680,15 @@ function Unit12CustomerService({
   const ind = industry ?? 'homestay'
 
   useEffect(() => {
+    setDsFetchFailed(false)
     fetch(`/api/marketing/cs-datasource?industry=${ind}`).then(r => r.json()).then(d => {
       if (d.sources) {
         setDataSources(d.sources.filter((s: { type: string }) => s.type !== 'json_pricing' && s.type !== 'breakfast_webhook' && s.type !== 'source_prefs'))
         setPricingConfigs(d.sources.filter((s: { type: string }) => s.type === 'json_pricing'))
+      } else {
+        setDsFetchFailed(true)
       }
-    }).catch(() => {})
+    }).catch(() => setDsFetchFailed(true))
   }, [ind])
 
   useEffect(() => {
@@ -2587,7 +2591,14 @@ function Unit12CustomerService({
 
           {dsLoading && <div className="text-xs text-gray-400 text-center py-4"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />{t('u12.loadingShort')}</div>}
 
-          {dataSources.length === 0 && !dsLoading && !editingDs && (
+          {dsFetchFailed && !editingDs && (
+            <div className="border-2 border-dashed border-red-200 rounded-xl p-6 text-center space-y-1 bg-red-50">
+              <div className="text-sm text-red-500 font-medium">載入失敗，並非資料被刪除</div>
+              <div className="text-xs text-red-400">請重新整理頁面再試一次；若持續失敗請聯繫客服</div>
+            </div>
+          )}
+
+          {dataSources.length === 0 && !dsLoading && !dsFetchFailed && !editingDs && (
             <div className="border-2 border-dashed rounded-xl p-6 text-center space-y-2">
               <div className="text-sm text-gray-400">{t('u12.noDataSources')}</div>
               <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3 text-left space-y-1">
@@ -2748,7 +2759,14 @@ function Unit12CustomerService({
             )}
           </div>
 
-          {pricingConfigs.length === 0 && !editingPc && (
+          {dsFetchFailed && !editingPc && (
+            <div className="border-2 border-dashed border-red-200 rounded-xl p-8 text-center bg-red-50">
+              <div className="mb-1 text-sm text-red-500 font-medium">載入失敗，並非定價設定被刪除</div>
+              <div className="text-xs text-red-400">請重新整理頁面再試一次；若持續失敗請聯繫客服</div>
+            </div>
+          )}
+
+          {pricingConfigs.length === 0 && !dsFetchFailed && !editingPc && (
             <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
               <div className="mb-2">{t('u12.noPricing')}</div>
               <div className="text-xs">{t('u12.noPricingHint')}</div>
