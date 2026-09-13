@@ -10,6 +10,7 @@ import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/
 import { queryGoogleSheet, type SheetConfig } from '@/lib/cs/sheet-lookup'
 import { buildBookingSystemPrompt, type BookingFlowDef } from '@/lib/cs/booking-prompt'
 import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
+import { buildSellSection, type CsCustomerRow } from '@/lib/cs/sell-section'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -20,14 +21,6 @@ const INTENT_CATEGORIES = [
   '技術支援', '投訴/抱怨', '帳號/登入問題', '一般問候', '法律/合約', '其他',
 ]
 const HIGH_RISK_INTENTS = ['退換貨/退款', '投訴/抱怨', '法律/合約']
-
-type CsCustomerRow = {
-  name: string | null
-  summary: string | null
-  stage: string | null
-  price_ask_count: number
-  message_count: number
-}
 
 // Matches numbers with 8+ digits, not starting with 0, not preceded by +
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
@@ -582,7 +575,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     try {
       const { data } = await supabase
         .from('cs_customers')
-        .select('name, summary, stage, price_ask_count, message_count')
+        .select('name, summary, stage, price_ask_count, message_count, discount_offered_at, facts')
         .eq('user_id', user.id).eq('platform', platform).eq('from_id', fromId).eq('industry', industry)
         .single()
       customer = (data as CsCustomerRow | null) ?? null
@@ -591,22 +584,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   const knownName = (fromName || customer?.name || '').trim()
 
   // 客戶上下文 + 業務模式（只在客人猶豫時才啟動）
-  const HESITATION_RE_CS = /考慮|再想想|比較|猶豫|還沒決定|再看看|回頭|之後再|有點貴|太貴|划算|值得嗎|其他家|別家|下次|想一下|想想看|不確定|先問問/
-  const isHesitating = HESITATION_RE_CS.test(message) || convoPriceAsks >= 2 || customer?.stage === 'negotiating'
-
-  const sellLines: string[] = []
-  if (knownName) sellLines.push(`\n\n客戶稱呼：${knownName}，請自然稱呼對方。`)
-  if (customer?.summary) sellLines.push(`回頭客背景：「${customer.summary}」，勿重問已知資訊。`)
-
-  if (isHesitating) {
-    sellLines.push('\n\n【客戶正在猶豫——此刻才啟動業務模式】同理客戶考量，簡短找出真正顧慮，提供一個具體誘因或解法，用二選一收尾推進決定。語氣溫暖，不施壓，不拖長篇幅。')
-  }
-
-  if (isPriceAskNow && !isHesitating) {
-    sellLines.push('\n\n【報價提醒】報完價後問一個關鍵需求（日期或人數），以便推薦最適方案。')
-  }
-
-  const customerSection = sellLines.join('\n')
+  const customerSection = buildSellSection(customer, convoPriceAsks, isPriceAskNow, message)
 
   // ── Build system prompt ───────────────────────────────────────────────────
   // 免費方案不解鎖 Claude 升級，測試分頁的行為要跟正式客服一致（planFeatures 已於 L1 分流後取得）
