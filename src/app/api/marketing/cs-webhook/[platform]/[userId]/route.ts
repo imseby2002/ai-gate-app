@@ -10,12 +10,12 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText, type LanguageModel } from 'ai'
-import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryGoogleSheet, type SheetConfig, type SheetQueryOpts } from '@/lib/cs/sheet-lookup'
 import { buildBookingSystemPrompt, type BookingFlowDef } from '@/lib/cs/booking-prompt'
+import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -376,8 +376,6 @@ async function setNotifyLineRecipients(userId: string, recipients: string[], ind
 // 的 dispatchHandoffTicket），真實客人在這支路由觸發的工單完全沒有串接，商家設定了
 // Telegram/Webhook 通知也永遠收不到。這裡補上同一套發送邏輯，跟下面的 notifyStaffOrder
 // （LINE OA 綁定專員清單，另一套獨立機制）並存，兩邊都會通知。
-type NotifyWebhook = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
-
 const NOTIFY_PLATFORM_LABELS: Record<string, string> = {
   line: 'LINE', 'line-oa': 'LINE', whatsapp: 'WhatsApp', 'whatsapp-biz': 'WhatsApp',
   'whatsapp-personal': 'WhatsApp', telegram: 'Telegram', zalo: 'Zalo', 'zalo-oa': 'Zalo', wechat: 'WeChat',
@@ -398,59 +396,16 @@ function dispatchTicketNotify(
   const platLabel = NOTIFY_PLATFORM_LABELS[info.platform] ?? info.platform
   const who = info.fromName?.trim() ? `${info.fromName.trim()}（${platLabel}）` : `${platLabel} 客人（${info.customerId}）`
   const link = `${appUrl}/cs/inbox?industry=${encodeURIComponent(info.industry)}&platform=${encodeURIComponent(info.platform)}&to=${encodeURIComponent(info.customerId)}`
-  const notifyMsg = `${body}\n\n客人：${who}\n點此直接回覆客人：${link}`
-  void Promise.allSettled(notifyWebhooks.filter(wh => wh.value?.trim()).map(wh => {
-    if (wh.type === 'line_messaging') {
-      if (!wh.target?.trim()) return Promise.resolve()
-      return fetch('https://api.line.me/v2/bot/message/push', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
-      })
-    } else if (wh.type === 'telegram') {
-      if (!wh.target?.trim()) return Promise.resolve()
-      const escapedBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const escapedWho = who.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      const safeLink = link.replace(/&/g, '&amp;')
-      const tgHtmlText = `${escapedBody}\n\n👤 客人：${escapedWho}\n👉 <a href="${safeLink}">點此直接回覆客人</a>`
-      const inlineButton = { inline_keyboard: [[{ text: '💬 點此開啟對話回覆', url: link }]] }
-      return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: wh.target.trim(),
-          text: tgHtmlText,
-          parse_mode: 'HTML',
-          reply_markup: inlineButton,
-          // 訊息裡有 <a href> 連結時，Telegram 預設會在下方另外貼一張抓取自該網址的
-          // 預覽卡片，卡片上照樣顯示完整長網址——文字部分雖然已經改成短短的
-          // 「點此直接回覆客人」，畫面上還是會看到一長串網址，等於白改。關掉預覽卡片，
-          // 只留文字裡的短連結跟下面的按鈕。
-          link_preview_options: { is_disabled: true },
-        }),
-      }).then(async res => {
-        if (!res.ok) {
-          // HTML 解析若失敗，退回純文字且無長網址，僅以底部按鈕提供連結
-          return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: wh.target.trim(),
-              text: `${body}\n\n👤 客人：${who}`,
-              reply_markup: inlineButton,
-            }),
-          })
-        }
-      })
-    } else {
-      if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
-      return fetch(wh.value.trim(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: notifyMsg }),
-      })
-    }
-  }))
+  const text = `${body}\n\n客人：${who}\n點此直接回覆客人：${link}`
+  const escapedBody = body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const escapedWho = who.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const safeLink = link.replace(/&/g, '&amp;')
+  const telegramHtml = `${escapedBody}\n\n👤 客人：${escapedWho}\n👉 <a href="${safeLink}">點此直接回覆客人</a>`
+  void sendTicketNotification(notifyWebhooks, {
+    text,
+    telegramHtml,
+    telegramReplyMarkup: { inline_keyboard: [[{ text: '💬 點此開啟對話回覆', url: link }]] },
+  })
 }
 
 // 六種工單過去大多只把原始觸發訊息或一句固定罐頭文字（例如「客人要求人工客服」）當

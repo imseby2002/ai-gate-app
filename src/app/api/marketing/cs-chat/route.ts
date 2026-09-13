@@ -9,6 +9,7 @@ import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryGoogleSheet, type SheetConfig } from '@/lib/cs/sheet-lookup'
 import { buildBookingSystemPrompt, type BookingFlowDef } from '@/lib/cs/booking-prompt'
+import { sendTicketNotification, type NotifyWebhook } from '@/lib/cs/ticket-notify'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -30,8 +31,6 @@ type CsCustomerRow = {
 
 // Matches numbers with 8+ digits, not starting with 0, not preceded by +
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
-
-type NotifyWebhook = { type: 'line_messaging' | 'webhook' | 'telegram'; value: string; target?: string }
 
 // 建立人工轉接工單並發送通知（人工客服請求、退換貨/退款皆走這條）。
 // Fire-and-forget 通知（不 await，不擋回覆）。
@@ -67,32 +66,10 @@ async function dispatchHandoffTicket(
   const taiwanNow = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
   const notifyMsg = `\n[AI GATE 工單]\n客人要求：${opts.message.slice(0, 80)}\n工單編號：${ticketNum}\n時間：${taiwanNow}`
 
-  if (opts.notifyWebhooks.length > 0) {
-    void Promise.allSettled(opts.notifyWebhooks.filter(wh => wh.value?.trim()).map(wh => {
-      if (wh.type === 'line_messaging') {
-        if (!wh.target?.trim()) return Promise.resolve()
-        return fetch('https://api.line.me/v2/bot/message/push', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: notifyMsg }] }),
-        })
-      } else if (wh.type === 'telegram') {
-        if (!wh.target?.trim()) return Promise.resolve()
-        return fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: wh.target.trim(), text: notifyMsg }),
-        })
-      } else {
-        if (!isSafeWebhookUrl(wh.value.trim())) return Promise.resolve()  // block SSRF to internal hosts
-        return fetch(wh.value.trim(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: notifyMsg, ticket, ticketNum, customerMessage: opts.message }),
-        })
-      }
-    }))
-  }
+  void sendTicketNotification(opts.notifyWebhooks, {
+    text: notifyMsg,
+    webhookExtra: { ticket, ticketNum, customerMessage: opts.message },
+  })
 
   return { ticket, ticketNum }
 }
