@@ -14,6 +14,7 @@ import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
 import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
+import { queryGoogleSheet, type SheetConfig, type SheetQueryOpts } from '@/lib/cs/sheet-lookup'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -1195,16 +1196,6 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
 
 // ── Google Sheets + JSON Pricing query ───────────────────────────────────────
 
-interface SheetConfig {
-  apiKey: string
-  spreadsheetId: string
-  sheetName: string
-  keyColumn: string
-  returnColumns: string[]
-  triggerKeywords: string[]
-  triggerMode?: 'keyword' | 'numeric' | 'both'
-}
-
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 // 手機號碼（09 開頭，可能有 +886/886 國碼、可能有 -／空白分隔），跟 NUMERIC_ORDER_RE
 // 不會撞在一起（訂單號規則要求開頭 1-9 且無 0），可以放心並存判斷。
@@ -1314,84 +1305,6 @@ async function saveConfirmedFacts(
       last_message_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,platform,from_id,industry' })
   } catch { /* 不中斷主流程 */ }
-}
-
-// Columns gated behind identity verification (prevents IDOR on door codes / room numbers)
-const SENSITIVE_COL_RE = /密碼|password|passcode|\bpin\b|房號|room\s*(no|number|#)?|門鎖|門禁|鎖|鑰匙|\bkey\b|wifi|wi-?fi/i
-const NAME_COL_RE = /姓名|名字|訂房人|訂位人|入住人|旅客|客戶|貴賓|聯絡人|\bname\b|guest|customer/i
-
-interface SheetQueryOpts {
-  conversationText?: string
-  verifyName?: (storedName: string, conversationText: string) => Promise<boolean>
-}
-
-async function queryGoogleSheet(config: SheetConfig, message: string, opts: SheetQueryOpts = {}): Promise<string | null> {
-  const triggerMode = config.triggerMode ?? 'keyword'
-  let triggered = false
-  let exactKey: string | null = null
-
-  if (triggerMode === 'keyword' || triggerMode === 'both') {
-    if (config.triggerKeywords.some(kw => kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase()))) {
-      triggered = true
-    }
-  }
-  if (triggerMode === 'numeric' || triggerMode === 'both') {
-    const numMatch = message.match(NUMERIC_ORDER_RE)
-    if (numMatch) { triggered = true; exactKey = numMatch[0] }
-  }
-  if (!triggered) return null
-
-  try {
-    const range = encodeURIComponent(`${config.sheetName}!A:Z`)
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${config.spreadsheetId}/values/${range}?key=${config.apiKey}`
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const json = await res.json()
-    const rows: string[][] = json.values ?? []
-    if (rows.length < 2) return null
-    const headers = rows[0]
-    const dataRows = rows.slice(1)
-    const keyColIdx = headers.findIndex(h => h.trim() === (config.keyColumn ?? '').trim())
-
-    if (exactKey && keyColIdx >= 0) {
-      const matchedRow = dataRows.find(row => (row[keyColIdx] ?? '').trim() === exactKey!.trim())
-      if (!matchedRow) return `【外部資料表：${config.sheetName}】\n查無符合號碼「${exactKey}」的資料，請確認是否正確。`
-      const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
-      const colIdxs = wantedCols.length > 1
-        ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
-        : headers.map((_, i) => i)
-
-      // ── Identity gate on sensitive columns (door code / room number) ──────
-      const sensitiveIdxs = colIdxs.filter(i => SENSITIVE_COL_RE.test(headers[i] ?? ''))
-      const nameIdx = headers.findIndex(h => NAME_COL_RE.test(h ?? ''))
-      const storedName = nameIdx >= 0 ? (matchedRow[nameIdx] ?? '').trim() : ''
-      let verified = true
-      let gateNote = ''
-      if (sensitiveIdxs.length > 0) {
-        verified = (opts.verifyName && storedName)
-          ? await opts.verifyName(storedName, opts.conversationText ?? '')
-          : false
-        if (!verified) {
-          gateNote = storedName
-            ? `\n（⚠️ 身分未核對：上方密碼/房號/門鎖等敏感欄位已遮蔽。請客人提供「訂房時登記的姓名」，系統會自動核對；核對相符前，嚴禁透露任何密碼、房號、門鎖、鑰匙資訊。）`
-            : `\n（⚠️ 此資料表無可核對的姓名欄位，無法驗證身分。涉及密碼/房號等敏感資訊請改由真人客服協助，嚴禁透露。）`
-        }
-      }
-      const result = colIdxs.map(i => {
-        const masked = !verified && sensitiveIdxs.includes(i)
-        return `${headers[i]}：${masked ? '（需核對姓名後提供）' : (matchedRow[i] ?? '')}`
-      }).join('\n')
-      return `【外部資料表：${config.sheetName}】\n找到「${exactKey}」的資料：\n${result}${gateNote}`
-    }
-
-    const wantedCols = [config.keyColumn, ...(config.returnColumns ?? [])].filter(Boolean)
-    const colIdxs = wantedCols.length > 0
-      ? wantedCols.map(c => headers.findIndex(h => h.trim() === c.trim())).filter(i => i >= 0)
-      : headers.map((_, i) => i)
-    const pickedHeaders = colIdxs.map(i => headers[i])
-    const table = [pickedHeaders, ...dataRows.map(row => colIdxs.map(i => row[i] ?? ''))].map(r => r.join(' | ')).join('\n')
-    return `【外部資料表：${config.sheetName}】\n${table}`
-  } catch { return null }
 }
 
 async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}): Promise<string> {
