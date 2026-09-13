@@ -82,6 +82,9 @@ export async function buildBookingModuleQuote(
   const extra = quote.extraGuestFee > 0 ? `\n  加人費 $${quote.extraGuestFee.toLocaleString()}` : ''
   const warn = quote.warnings.length ? `\n（${quote.warnings.join('；')}）` : ''
 
+  const subsidyAmount = quote.nights >= 2 ? 2000 : 800
+  const subsidyText = quote.nights >= 2 ? '2,000 元（第 1 晚 800 元＋連住第 2 晚 1,200 元）' : '800 元（宜蘭屬一般地區，第 1 晚最多折抵 800 元）'
+
   if (quote.hasPromotionalDiscount) {
     const promoNames = quote.promotionsApplied.join('、') || '早鳥專案特惠'
     return `【系統精算房價（權威資料，請原文引用此金額，禁止自行加減或重算）】
@@ -95,9 +98,9 @@ ${lines}${extra}
 
 【極重要：國旅補助與優惠互斥規定（最高原則，嚴禁重複疊加折扣，嚴禁虛報2,600定價）】
 1. 本民宿 ${prop.name} 的平日一般售價為 $${quote.baseTotal.toLocaleString()} 元（本民宿絕無 2,600 等虛高定價，嚴禁對客人報 2,600 元！）。
-2. 若客人要申請使用【國旅補助】：一律依【一般售價 $${quote.baseTotal.toLocaleString()} 元】計算，入住當天憑身分證正本由管家現場核銷折抵 1,000 元補助款，實付自付額只要【$${Math.max(0, quote.baseTotal - 1000).toLocaleString()} 元】！【絕對嚴禁】在專案特惠價 $${quote.total.toLocaleString()} 上再重複扣除補助（例如不可扣成更低的折上折）！
+2. 若客人要申請使用【國旅補助】：一律依【一般售價 $${quote.baseTotal.toLocaleString()} 元】計算，入住當天憑身分證正本由管家現場核銷折抵 ${subsidyText}，實付自付額只要【$${Math.max(0, quote.baseTotal - subsidyAmount).toLocaleString()} 元】！【絕對嚴禁】在專案特惠價 $${quote.total.toLocaleString()} 上再重複扣除補助（例如不可扣成更低的折上折）！
 3. 若客人選擇享有【${promoNames}】：直接享有專案特惠價 $${quote.total.toLocaleString()} 元，但【恕無法再申請國旅補助】或折抵其他專案！
-4. 當客人詢問價格、或提到國旅補助／早鳥優惠時，請務必主動禮貌說明「優惠與補助恕無法重複併用，需二擇一」，並清楚列出兩種方案供客人評估何者最划算（例如：「方案 A：使用國旅補助，依一般售價 $${quote.baseTotal.toLocaleString()} 折抵 1,000 元補助款，實付只要 $${Math.max(0, quote.baseTotal - 1000).toLocaleString()} 元（更划算！）」vs「方案 B：享有 ${promoNames} 特惠價 $${quote.total.toLocaleString()}」，由客人決定）！${warn}`
+4. 當客人詢問價格、或提到國旅補助／早鳥優惠時，請務必主動禮貌說明「優惠與補助恕無法重複併用，需二擇一」，並清楚列出兩種方案供客人評估何者最划算（例如：「方案 A：使用國旅補助，依一般售價 $${quote.baseTotal.toLocaleString()} 折抵 ${subsidyText}，實付自付額只要 $${Math.max(0, quote.baseTotal - subsidyAmount).toLocaleString()} 元」vs「方案 B：享有 ${promoNames} 特惠價 $${quote.total.toLocaleString()}」，由客人決定）！${warn}`
   }
 
   return `【系統精算房價（權威，與線上訂房同價；請原文引用此金額，禁止自行加減或重算）】
@@ -106,5 +109,5 @@ ${lines}${extra}
 一般售價：$${quote.total.toLocaleString()} ${quote.currency}
 ${lines}${extra}
 ── 總計 $${quote.total.toLocaleString()} ${quote.currency}
-（這是平日一般售價。本民宿無 2,600 等虛報定價，嚴禁報 2,600！若客人欲申請「國旅補助」，以此一般售價 $${quote.total.toLocaleString()} 為基準現場折抵補助款 1,000 元，實付自付額只要 $${Math.max(0, quote.total - 1000).toLocaleString()} 元。促成工具箱優惠恕不與國旅補助重複併用。）${warn}`
+（這是平日一般售價。本民宿無 2,600 等虛報定價，嚴禁報 2,600！若客人欲申請「國旅補助」，以此一般售價 $${quote.total.toLocaleString()} 為基準現場折抵補助款 ${subsidyText}，實付自付額為 $${Math.max(0, quote.total - subsidyAmount).toLocaleString()} 元。促成工具箱優惠恕不與國旅補助重複併用。）${warn}`
 }
