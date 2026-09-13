@@ -6,6 +6,7 @@ import { generateText } from 'ai'
 import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
+import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -167,132 +168,6 @@ async function queryGoogleSheet(config: SheetConfig, message: string, opts: Shee
     // Do not leak internal exception details to the customer-facing context
     return `【外部資料表：${config.sheetName}】\n（系統提示：資料查詢發生異常，請告知客戶稍後再試或聯繫工作人員，禁止捏造任何資料。）`
   }
-}
-
-// ── JSON Pricing Calculator ───────────────────────────────────────────────────
-
-interface PricingSegment {
-  label: string
-  key: string
-  weekdayPrice: number
-  weekendPrice: number
-}
-
-interface PricingRoom {
-  name: string
-  capacity: number
-  weekdayPrice: number
-  weekendPrice: number
-  holidayPrice?: number
-  extraPersonFee?: number
-  extraBedNote?: string
-  description?: string  // bed type / room features shown to AI
-}
-
-interface PricingConfig {
-  productType: 'tour' | 'accommodation' | 'custom'
-  triggerKeywords: string[]
-  currency?: string
-  schedules?: Array<{ id: string; name: string }>
-  segments?: PricingSegment[]
-  packages?: Array<{ name: string; price: number; description?: string }>
-  groupDiscounts?: Array<{ minPeople: number; discountPercent: number; note?: string }>
-  rooms?: PricingRoom[]
-  cancellationPolicy?: string
-  notes?: string[]
-  customContent?: string
-}
-
-// Replace digit*digit (multiplication used in bed sizes) with × to avoid Markdown misparse
-const sanitizeDim = (s: string) => s.replace(/(\d)\*(\d)/g, '$1×$2')
-
-function formatPricingForAI(name: string, cfg: PricingConfig): string {
-  const cur = cfg.currency ?? 'TWD'
-  const lines: string[] = [
-    `【定價計算機：${name}】`,
-    `以下為精確定價資料，計算時請逐步列式、每個數字必須照表使用，禁止估算。`,
-    `報價格式規定：直接輸出各晚最終金額（假日/週末價已含加價，直接查表取值）；禁止在回覆中顯示任何加價乘數（× 1.15、× 1.2 等）；若有折扣優惠才可在總價後標注（例：享9.5折）。`,
-  ]
-
-  if (cfg.productType === 'tour') {
-    if (cfg.schedules?.length) {
-      lines.push('\n可選班次：')
-      cfg.schedules.forEach(s => lines.push(`  ${s.name}`))
-    }
-    if (cfg.segments?.length) {
-      lines.push(`\n票價（${cur}）：`)
-      lines.push('  ▸ 平日（週一至週四）：')
-      cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekdayPrice.toLocaleString()}`))
-      lines.push('  ▸ 假日（週五至週日、例假日）：')
-      cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekendPrice.toLocaleString()}`))
-    }
-    if (cfg.packages?.length) {
-      lines.push('\n套餐方案：')
-      cfg.packages.forEach(p =>
-        lines.push(`  • ${p.name}：$${p.price.toLocaleString()}${p.description ? `（${p.description}）` : ''}`)
-      )
-    }
-    if (cfg.groupDiscounts?.length) {
-      lines.push('\n團體折扣：')
-      cfg.groupDiscounts.forEach(g =>
-        lines.push(`  • ${g.minPeople} 人（含）以上：${100 - g.discountPercent}折${g.note ? `（${g.note}）` : ''}`)
-      )
-    }
-  }
-
-  if (cfg.productType === 'accommodation') {
-    if (cfg.rooms?.length) {
-      lines.push(`\n房型與定價（${cur}）：`)
-      lines.push(`⚠️ 每個房型定價完全獨立，計算時必須逐房型各自使用下方對應數字，嚴禁合併或混用（即使人數相同，價格也可能不同）`)
-      cfg.rooms.forEach(r => {
-        lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
-        if (r.description) lines.push(`      床型：${sanitizeDim(r.description)}`)
-        lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
-        lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
-        if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
-        if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
-        if (r.extraBedNote) lines.push(`      加床說明：${sanitizeDim(r.extraBedNote)}`)
-        if (!r.extraBedNote && !r.extraPersonFee && r.capacity <= 2) lines.push(`      不可加床`)
-      })
-    }
-  }
-
-  if (cfg.productType === 'custom' && cfg.customContent) {
-    lines.push('\n' + cfg.customContent)
-  }
-
-  // Fallback: if none of the structured formatters matched, dump raw JSON for AI to interpret
-  const hasStructuredOutput = lines.length > 2
-  if (!hasStructuredOutput) {
-    const displayData = { ...cfg } as Record<string, unknown>
-    delete displayData['triggerKeywords']
-    delete displayData['productType']
-    delete displayData['currency']
-    lines.push('\n定價資料（JSON）：')
-    lines.push('```json')
-    lines.push(JSON.stringify(displayData, null, 2))
-    lines.push('```')
-    lines.push(`\n貨幣單位：${cur}`)
-  }
-
-  if (cfg.cancellationPolicy) {
-    lines.push(`\n取消政策：${cfg.cancellationPolicy}`)
-  }
-
-  if (cfg.notes?.length) {
-    lines.push('\n注意事項：')
-    cfg.notes.forEach(n => lines.push(`  • ${n}`))
-  }
-
-  return lines.join('\n')
-}
-
-function queryJsonPricing(name: string, config: PricingConfig, message: string): string | null {
-  const triggered = (config.triggerKeywords ?? []).some(kw =>
-    kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase())
-  )
-  if (!triggered) return null
-  return formatPricingForAI(name, config)
 }
 
 interface BookingFlowDef {

@@ -13,6 +13,7 @@ import { generateText, type LanguageModel } from 'ai'
 import { isSafeWebhookUrl } from '@/lib/ssrf'
 import { buildDeterministicQuote } from '@/lib/cs/quote'
 import { buildBookingModuleQuote } from '@/lib/cs/booking-quote'
+import { formatPricingForAI, queryJsonPricing, type PricingConfig } from '@/lib/cs/pricing'
 import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBookingByPhone, noDataFoundSuffix, NAME_VERIFY_ASK_RE, wrapImageDerivedResultForConfirm, looksLikeGuestName, isAffirmativeReply } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
@@ -1204,20 +1205,6 @@ interface SheetConfig {
   triggerMode?: 'keyword' | 'numeric' | 'both'
 }
 
-interface PricingConfig {
-  productType: 'tour' | 'accommodation' | 'custom'
-  triggerKeywords: string[]
-  currency?: string
-  schedules?: Array<{ id: string; name: string }>
-  segments?: Array<{ label: string; key: string; weekdayPrice: number; weekendPrice: number }>
-  packages?: Array<{ name: string; price: number; description?: string }>
-  groupDiscounts?: Array<{ minPeople: number; discountPercent: number; note?: string }>
-  rooms?: Array<{ name: string; capacity: number; weekdayPrice: number; weekendPrice: number; holidayPrice?: number; extraPersonFee?: number }>
-  cancellationPolicy?: string
-  notes?: string[]
-  customContent?: string
-}
-
 const NUMERIC_ORDER_RE = /(?<!\+)\b[1-9]\d{7,}\b/
 // 手機號碼（09 開頭，可能有 +886/886 國碼、可能有 -／空白分隔），跟 NUMERIC_ORDER_RE
 // 不會撞在一起（訂單號規則要求開頭 1-9 且無 0），可以放心並存判斷。
@@ -1405,41 +1392,6 @@ async function queryGoogleSheet(config: SheetConfig, message: string, opts: Shee
     const table = [pickedHeaders, ...dataRows.map(row => colIdxs.map(i => row[i] ?? ''))].map(r => r.join(' | ')).join('\n')
     return `【外部資料表：${config.sheetName}】\n${table}`
   } catch { return null }
-}
-
-function formatPricingForAI(name: string, cfg: PricingConfig): string {
-  const cur = cfg.currency ?? 'TWD'
-  const lines = [`【定價計算機：${name}】`, `計算時請逐步列式、每個數字必須照表使用，禁止估算。`]
-  if (cfg.productType === 'tour') {
-    if (cfg.schedules?.length) { lines.push('\n可選班次：'); cfg.schedules.forEach(s => lines.push(`  ${s.name}`)) }
-    if (cfg.segments?.length) {
-      lines.push(`\n票價（${cur}）：`)
-      lines.push('  ▸ 平日（週一至週四）：'); cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekdayPrice.toLocaleString()}`))
-      lines.push('  ▸ 假日（週五至週日、例假日）：'); cfg.segments.forEach(s => lines.push(`      ${s.label}：$${s.weekendPrice.toLocaleString()}`))
-    }
-    if (cfg.packages?.length) { lines.push('\n套餐方案：'); cfg.packages.forEach(p => lines.push(`  • ${p.name}：$${p.price.toLocaleString()}${p.description ? `（${p.description}）` : ''}`)) }
-    if (cfg.groupDiscounts?.length) { lines.push('\n團體折扣：'); cfg.groupDiscounts.forEach(g => lines.push(`  • ${g.minPeople}人以上：${100 - g.discountPercent}折${g.note ? `（${g.note}）` : ''}`)) }
-  }
-  if (cfg.productType === 'accommodation' && cfg.rooms?.length) {
-    lines.push(`\n房型與定價（${cur}）：`)
-    cfg.rooms.forEach(r => {
-      lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
-      lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
-      lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
-      if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
-      if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
-    })
-  }
-  if (cfg.productType === 'custom' && cfg.customContent) lines.push('\n' + cfg.customContent)
-  if (cfg.cancellationPolicy) lines.push(`\n取消政策：${cfg.cancellationPolicy}`)
-  if (cfg.notes?.length) { lines.push('\n注意事項：'); cfg.notes.forEach(n => lines.push(`  • ${n}`)) }
-  return lines.join('\n')
-}
-
-function queryJsonPricing(name: string, config: PricingConfig, message: string): string | null {
-  const triggered = (config.triggerKeywords ?? []).some(kw => kw.trim() && message.toLowerCase().includes(kw.trim().toLowerCase()))
-  if (!triggered) return null
-  return formatPricingForAI(name, config)
 }
 
 async function queryDataSources(userId: string, message: string, bookingFlowEnabled = false, sheetOpts: SheetQueryOpts = {}): Promise<string> {
