@@ -8,6 +8,7 @@
  */
 import * as crypto from 'crypto'
 import { birdProvider } from './bird'
+import { getTwilioAuth } from './twilio'
 
 export type SmsCountry = 'TW' | 'VN' | 'INTL'
 
@@ -252,31 +253,29 @@ async function sendViaZaloZns(
 
 // ── 3. 國際通道：Twilio (備援 Bird) ──────────────────────────────────────────
 async function sendViaTwilio(phone: string, text: string): Promise<{ ok: boolean; messageId?: string; error?: string }> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
+  const creds = getTwilioAuth()
   const fromNumber = process.env.TWILIO_FROM_NUMBER
 
-  if (!accountSid || !authToken || !fromNumber) {
+  if (!creds || !fromNumber) {
     // 備援：若未設定 Twilio，嘗試以系統內建的 Bird 發送
     if (birdProvider.isConfigured()) {
       const ok = await birdProvider.sendSms({ phone, text })
       return ok ? { ok: true, messageId: 'bird-sent' } : { ok: false, error: 'Bird 國際 SMS 發送失敗' }
     }
-    return { ok: false, error: 'Twilio 未設定（請設定 TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM_NUMBER）' }
+    return { ok: false, error: 'Twilio 未設定（需 TWILIO_ACCOUNT_SID + API Key 或 Auth Token + TWILIO_FROM_NUMBER）' }
   }
 
   try {
-    const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64')
     const bodyParams = new URLSearchParams({
       From: fromNumber,
       To: phone,
       Body: text,
     })
 
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${creds.accountSid}/Messages.json`, {
       method: 'POST',
       headers: {
-        Authorization: `Basic ${auth}`,
+        Authorization: creds.authHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: bodyParams.toString(),
