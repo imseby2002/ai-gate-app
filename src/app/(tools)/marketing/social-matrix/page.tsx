@@ -5,7 +5,7 @@ import {
   Server, ShieldCheck, Activity, Plus, RefreshCw, Trash2, ExternalLink,
   Copy, Check, Sparkles, Send, Users, Layers, AlertCircle, Clock, Zap,
   CheckCircle2, Globe, Lock, Cpu, Play, Terminal, HelpCircle, ArrowUpRight,
-  TrendingUp, Hash, MessageSquare, ShieldAlert
+  TrendingUp, Hash, MessageSquare, ShieldAlert, Pencil
 } from 'lucide-react'
 import {
   SocialProxy, SocialAccount, SocialLog, TargetGroup,
@@ -21,6 +21,8 @@ export default function SocialMatrixPage() {
   // 1. Proxies State
   const [proxies, setProxies] = useState<SocialProxy[]>([])
   const [isAddProxyOpen, setIsAddProxyOpen] = useState(false)
+  const [isEditProxyOpen, setIsEditProxyOpen] = useState(false)
+  const [editingProxy, setEditingProxy] = useState<SocialProxy | null>(null)
   const [testingProxyId, setTestingProxyId] = useState<string | null>(null)
   const [newProxyForm, setNewProxyForm] = useState({
     name: '宜蘭聯禾有線原生靜態 IP',
@@ -160,6 +162,33 @@ export default function SocialMatrixPage() {
       showToast('已移除代理 IP', 'info')
     } catch (err) {
       showToast(`刪除失敗: ${String(err)}`, 'error')
+    }
+  }
+
+  const handleOpenEditProxy = (proxy: SocialProxy) => {
+    setEditingProxy({ ...proxy })
+    setIsEditProxyOpen(true)
+  }
+
+  const handleUpdateProxy = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProxy) return
+    try {
+      const res = await fetch(`/api/marketing/social-matrix/proxies/${editingProxy.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingProxy),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('代理資訊與名稱已成功更新！', 'success')
+        setIsEditProxyOpen(false)
+        setProxies(prev => prev.map(p => p.id === editingProxy.id ? { ...p, ...editingProxy } : p))
+      } else {
+        showToast(data.error || '更新失敗', 'error')
+      }
+    } catch (err) {
+      showToast(`更新失敗: ${String(err)}`, 'error')
     }
   }
 
@@ -525,11 +554,18 @@ export default function SocialMatrixPage() {
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`h-2.5 w-2.5 rounded-full ${proxy.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                          <h4 className="font-bold text-sm text-foreground truncate max-w-[180px]">{proxy.name}</h4>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${proxy.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          <h4 className="font-bold text-sm text-foreground truncate" title={proxy.name}>{proxy.name}</h4>
+                          <button
+                            onClick={() => handleOpenEditProxy(proxy)}
+                            title="修改名稱與設定"
+                            className="p-1 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded transition-colors shrink-0"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
                         </div>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        <span className={`text-[10px] shrink-0 font-semibold px-2 py-0.5 rounded-full ${
                           isHome
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
                             : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
@@ -575,6 +611,13 @@ export default function SocialMatrixPage() {
                       </div>
 
                       <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleOpenEditProxy(proxy)}
+                          title="編輯代理名稱與設定"
+                          className="p-1.5 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           onClick={() => handleTestProxy(proxy)}
                           disabled={isTesting}
@@ -1274,6 +1317,171 @@ export default function SocialMatrixPage() {
                   className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm"
                 >
                   確認新增
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT PROXY */}
+      {isEditProxyOpen && editingProxy && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-indigo-600" />
+                <span>編輯代理節點資訊與名稱</span>
+              </h3>
+              <button onClick={() => setIsEditProxyOpen(false)} className="text-muted-foreground hover:text-foreground text-sm">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateProxy} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="font-bold text-foreground block mb-1">
+                    代理名稱 / 自訂標籤 * <span className="text-[10px] text-indigo-600 font-normal">（可自由更改，例如：我的 IPRoyal 代理、手機 4G 節點）</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProxy.name}
+                    onChange={e => setEditingProxy({ ...editingProxy, name: e.target.value })}
+                    placeholder="例：我的 IPRoyal 住宅代理"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-background font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">代理類型</label>
+                  <select
+                    value={editingProxy.proxy_type}
+                    onChange={e => setEditingProxy({ ...editingProxy, proxy_type: e.target.value as ProxyType })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  >
+                    <option value="home_static">🏠 家用原生靜態 (聯禾/中華)</option>
+                    <option value="residential">🏢 商業靜態住宅 (IPRoyal/Smartproxy)</option>
+                    <option value="mobile_4g">📱 4G/5G 移動基站代理</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">通訊協議</label>
+                  <select
+                    value={editingProxy.protocol}
+                    onChange={e => setEditingProxy({ ...editingProxy, protocol: e.target.value as ProxyProtocol })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background uppercase"
+                  >
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                    <option value="socks5">SOCKS5</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="font-bold text-foreground block mb-1">IP 位址 / 主機 Host *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProxy.host}
+                    onChange={e => setEditingProxy({ ...editingProxy, host: e.target.value })}
+                    placeholder="211.75.142.88 或 geo.iproyal.com"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingProxy.port}
+                    onChange={e => setEditingProxy({ ...editingProxy, port: Number(e.target.value) })}
+                    placeholder="28899"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">帳號 (選填)</label>
+                  <input
+                    type="text"
+                    value={editingProxy.username || ''}
+                    onChange={e => setEditingProxy({ ...editingProxy, username: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">密碼 (選填)</label>
+                  <input
+                    type="password"
+                    value={editingProxy.password || ''}
+                    onChange={e => setEditingProxy({ ...editingProxy, password: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">國家代碼</label>
+                  <input
+                    type="text"
+                    value={editingProxy.country || 'TW'}
+                    onChange={e => setEditingProxy({ ...editingProxy, country: e.target.value })}
+                    placeholder="TW"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">城市地區</label>
+                  <input
+                    type="text"
+                    value={editingProxy.city || ''}
+                    onChange={e => setEditingProxy({ ...editingProxy, city: e.target.value })}
+                    placeholder="宜蘭 / 台北 / 峴港"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                  <input
+                    type="text"
+                    value={editingProxy.isp || ''}
+                    onChange={e => setEditingProxy({ ...editingProxy, isp: e.target.value })}
+                    placeholder="聯禾有線電視 / 中華電信"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-foreground block mb-1">備註說明 (選填)</label>
+                <input
+                  type="text"
+                  value={editingProxy.notes || ''}
+                  onChange={e => setEditingProxy({ ...editingProxy, notes: e.target.value })}
+                  placeholder="例：專用於發布 FB 社團主號"
+                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsEditProxyOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm"
+                >
+                  儲存修改
                 </button>
               </div>
             </form>

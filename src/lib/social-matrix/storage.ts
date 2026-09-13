@@ -214,7 +214,12 @@ export const StorageService = {
     return newProxy
   },
   updateProxy: (id: string, updates: Partial<SocialProxy>) => {
-    globalProxies = globalProxies.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p)
+    globalProxies = globalProxies.map(p => p.id === id ? {
+      ...p,
+      ...updates,
+      port: updates.port !== undefined ? Number(updates.port) : p.port,
+      updated_at: new Date().toISOString()
+    } : p)
     return globalProxies.find(p => p.id === id)
   },
   deleteProxy: (id: string) => {
