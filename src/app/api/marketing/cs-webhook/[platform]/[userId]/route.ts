@@ -419,6 +419,11 @@ function dispatchTicketNotify(
           text: tgHtmlText,
           parse_mode: 'HTML',
           reply_markup: inlineButton,
+          // 訊息裡有 <a href> 連結時，Telegram 預設會在下方另外貼一張抓取自該網址的
+          // 預覽卡片，卡片上照樣顯示完整長網址——文字部分雖然已經改成短短的
+          // 「點此直接回覆客人」，畫面上還是會看到一長串網址，等於白改。關掉預覽卡片，
+          // 只留文字裡的短連結跟下面的按鈕。
+          link_preview_options: { is_disabled: true },
         }),
       }).then(async res => {
         if (!res.ok) {
