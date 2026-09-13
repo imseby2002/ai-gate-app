@@ -1489,6 +1489,7 @@
       "experts": "Custom Experts",
       "logbook": "Marketing Log",
       "offline": "Field Marketing",
+      "socialMatrix": "Social Matrix & Warm-up",
       "brand": "Brand"
     },
     "studio": {
@@ -1707,6 +1708,18 @@
       }
     },
     "features": {
+      "socialMatrix": {
+        "title": "Social Matrix & Warm-up",
+        "desc": "Native home static residential IP binding, 14-day progressive AI warm-up, Mode A (Copilot) & Mode B (Matrix Auto-post), AI Target Radar & Anti-ban copy variations",
+        "badge": "Matrix Growth",
+        "tags": [
+          "Proxy Pool",
+          "AI Warm-up",
+          "Mode A+B",
+          "Anti-Ban",
+          "FB/IG/Threads/TikTok"
+        ]
+      },
       "auto": {
         "title": "Marketing Automation",
         "desc": "End-to-end automated marketing — from data gathering, competitor analysis, copywriting, image/video production, to platform uploads",

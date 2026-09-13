@@ -1489,6 +1489,7 @@
       "experts": "Chuyên gia tùy chỉnh",
       "logbook": "Nhật ký Marketing",
       "offline": "Marketing thực địa",
+      "socialMatrix": "Ma trận & Nuôi nick",
       "brand": "Thương hiệu"
     },
     "geo": {
@@ -1614,6 +1615,18 @@
       }
     },
     "features": {
+      "socialMatrix": {
+        "title": "Ma trận MXH & Nuôi nick tự động",
+        "desc": "Hỗ trợ IP tĩnh dân cư gia đình & proxy pool, nuôi nick AI 14 ngày, Phương án A (Copilot) & Phương án B (Tự động đăng), Radar nhóm mục tiêu & văn mẫu chống khóa nick",
+        "badge": "Ma trận kéo khách",
+        "tags": [
+          "Quản lý Proxy",
+          "AI Nuôi nick",
+          "Phương án A+B",
+          "Chống khóa nick",
+          "FB/IG/Threads/TikTok"
+        ]
+      },
       "auto": {
         "title": "Tự động hóa Marketing",
         "desc": "Marketing tự động đầu-cuối — từ thu thập dữ liệu, phân tích đối thủ, viết nội dung, sản xuất ảnh/video, đến tải lên nền tảng",

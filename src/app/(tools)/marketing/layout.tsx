@@ -2,22 +2,23 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2, Crown, Brain, NotebookPen, MapPin, Fingerprint, GitBranch } from 'lucide-react'
+import { Megaphone, Palette, LayoutDashboard, Phone, Menu, Sparkles, Search, Wand2, Crown, Brain, NotebookPen, MapPin, Fingerprint, GitBranch, Share2 } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV = [
-  { href: '/marketing/brand',            labelKey: 'nav.brand',    icon: Fingerprint },
-  { href: '/marketing-auto',             labelKey: 'nav.auto',     icon: LayoutDashboard },
-  { href: '/marketing-pipeline',         labelKey: 'nav.pipeline', icon: GitBranch },
-  { href: '/marketing/product-designer', labelKey: 'nav.designer', icon: Palette },
-  { href: '/marketing/ai-studio',        labelKey: 'nav.studio',   icon: Wand2 },
-  { href: '/marketing/geo-writer',       labelKey: 'nav.geo',      icon: Search },
-  { href: '/marketing/skills',           labelKey: 'nav.expert',   icon: Sparkles },
-  { href: '/marketing/experts',          labelKey: 'nav.experts',  icon: Brain },
-  { href: '/prospect-call',              labelKey: 'nav.prospect', icon: Phone },
-  { href: '/marketing/offline',          labelKey: 'nav.offline',  icon: MapPin },
-  { href: '/marketing/logbook',          labelKey: 'nav.logbook',  icon: NotebookPen },
-  { href: '/marketing/plan',             labelKey: 'nav.plan',     icon: Crown },
+  { href: '/marketing/social-matrix',    labelKey: 'nav.socialMatrix', icon: Share2 },
+  { href: '/marketing/brand',            labelKey: 'nav.brand',        icon: Fingerprint },
+  { href: '/marketing-auto',             labelKey: 'nav.auto',         icon: LayoutDashboard },
+  { href: '/marketing-pipeline',         labelKey: 'nav.pipeline',     icon: GitBranch },
+  { href: '/marketing/product-designer', labelKey: 'nav.designer',     icon: Palette },
+  { href: '/marketing/ai-studio',        labelKey: 'nav.studio',       icon: Wand2 },
+  { href: '/marketing/geo-writer',       labelKey: 'nav.geo',          icon: Search },
+  { href: '/marketing/skills',           labelKey: 'nav.expert',       icon: Sparkles },
+  { href: '/marketing/experts',          labelKey: 'nav.experts',      icon: Brain },
+  { href: '/prospect-call',              labelKey: 'nav.prospect',     icon: Phone },
+  { href: '/marketing/offline',          labelKey: 'nav.offline',      icon: MapPin },
+  { href: '/marketing/logbook',          labelKey: 'nav.logbook',      icon: NotebookPen },
+  { href: '/marketing/plan',             labelKey: 'nav.plan',         icon: Crown },
 ]
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

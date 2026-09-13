@@ -4,19 +4,20 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   Megaphone, Sparkles, GitBranch, BarChart3,
-  ArrowRight, Zap, Target, Layers, Phone, Search, Wand2,
+  ArrowRight, Zap, Target, Layers, Phone, Search, Wand2, Share2,
 } from 'lucide-react'
 
 const FEATURES = [
-  { key: 'auto',     icon: Megaphone,  href: '/marketing-auto',             color: 'from-violet-500 to-purple-600' },
-  { key: 'designer', icon: Sparkles,   href: '/marketing/product-designer', color: 'from-pink-500 to-rose-600' },
-  { key: 'studio',   icon: Wand2,      href: '/marketing/ai-studio',        color: 'from-fuchsia-500 to-violet-600' },
-  { key: 'geo',      icon: Search,     href: '/marketing/geo-writer',       color: 'from-indigo-500 to-blue-600' },
-  { key: 'pipeline', icon: GitBranch,  href: '/marketing-pipeline',         color: 'from-blue-500 to-cyan-600' },
-  { key: 'prospect', icon: Phone,      href: '/prospect-call',              color: 'from-teal-500 to-emerald-600' },
-  { key: 'swot',     icon: BarChart3,  href: '/marketing-auto',             color: 'from-emerald-500 to-teal-600', secondary: true },
-  { key: 'audience', icon: Target,     href: '/marketing-auto',             color: 'from-orange-500 to-amber-600', secondary: true },
-  { key: 'brand',    icon: Layers,     href: '/marketing/brand',            color: 'from-slate-500 to-gray-600',   secondary: true },
+  { key: 'socialMatrix', icon: Share2,     href: '/marketing/social-matrix',    color: 'from-blue-600 via-indigo-600 to-violet-600' },
+  { key: 'auto',         icon: Megaphone,  href: '/marketing-auto',             color: 'from-violet-500 to-purple-600' },
+  { key: 'designer',     icon: Sparkles,   href: '/marketing/product-designer', color: 'from-pink-500 to-rose-600' },
+  { key: 'studio',       icon: Wand2,      href: '/marketing/ai-studio',        color: 'from-fuchsia-500 to-violet-600' },
+  { key: 'geo',          icon: Search,     href: '/marketing/geo-writer',       color: 'from-indigo-500 to-blue-600' },
+  { key: 'pipeline',     icon: GitBranch,  href: '/marketing-pipeline',         color: 'from-blue-500 to-cyan-600' },
+  { key: 'prospect',     icon: Phone,      href: '/prospect-call',              color: 'from-teal-500 to-emerald-600' },
+  { key: 'swot',         icon: BarChart3,  href: '/marketing-auto',             color: 'from-emerald-500 to-teal-600', secondary: true },
+  { key: 'audience',     icon: Target,     href: '/marketing-auto',             color: 'from-orange-500 to-amber-600', secondary: true },
+  { key: 'brand',        icon: Layers,     href: '/marketing/brand',            color: 'from-slate-500 to-gray-600',   secondary: true },
 ]
 
 export default async function MarketingPage() {
