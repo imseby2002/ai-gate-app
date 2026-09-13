@@ -3,6 +3,25 @@ import { SocialProxy, SocialAccount, SocialCampaign, SocialLog, TargetGroup, Mat
 // In-memory persistent fallback store for current server lifecycle
 let globalProxies: SocialProxy[] = [
   {
+    id: 'proxy-user-iproyal',
+    name: 'IPRoyal 台灣住宅代理',
+    proxy_type: 'residential',
+    protocol: 'http',
+    host: 'geo.iproyal.com',
+    port: 12321,
+    username: '',
+    password: '',
+    country: 'TW',
+    city: '宜蘭',
+    isp: '台灣原生寬頻 (IPRoyal Residential)',
+    status: 'active',
+    latency_ms: 45,
+    last_checked_at: new Date().toISOString(),
+    notes: '使用者自訂設定之 IPRoyal 住宅代理',
+    assigned_count: 0,
+    created_at: new Date().toISOString(),
+  },
+  {
     id: 'proxy-home-yilan',
     name: '宜蘭聯禾有線原生靜態住宅 IP (首選)',
     proxy_type: 'home_static',

@@ -74,6 +74,18 @@ export default function SocialMatrixPage() {
     setTimeout(() => setToastMsg(null), 4000)
   }
 
+  const PROXY_STORAGE_KEY = 'aigate_proxies_cache_v2'
+
+  const saveProxiesLocally = (list: SocialProxy[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(PROXY_STORAGE_KEY, JSON.stringify(list))
+      } catch (e) {
+        console.warn('Failed to save to localStorage:', e)
+      }
+    }
+  }
+
   // Initial Data Fetching
   const fetchAllData = async () => {
     setIsLoading(true)
@@ -84,7 +96,34 @@ export default function SocialMatrixPage() {
         fetch('/api/marketing/social-matrix/warmup').then(r => r.json()),
       ])
 
-      if (pRes.proxies) setProxies(pRes.proxies)
+      let serverProxies: SocialProxy[] = pRes.proxies || []
+
+      // Merge with browser local storage backup so user configurations are never lost
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(PROXY_STORAGE_KEY)
+        if (saved) {
+          try {
+            const localList: SocialProxy[] = JSON.parse(saved)
+            if (Array.isArray(localList) && localList.length > 0) {
+              const localMap = new Map(localList.map(p => [p.id, p]))
+              // Local updates/renames take precedence
+              serverProxies = serverProxies.map(p => localMap.get(p.id) || p)
+              // Any new proxies only in local storage
+              for (const lp of localList) {
+                if (!serverProxies.some(p => p.id === lp.id || (p.host === lp.host && p.port === lp.port))) {
+                  serverProxies.unshift(lp)
+                }
+              }
+            }
+          } catch (err) {
+            console.warn('Error reading local proxy backup:', err)
+          }
+        }
+      }
+
+      setProxies(serverProxies)
+      saveProxiesLocally(serverProxies)
+
       if (aRes.accounts) setAccounts(aRes.accounts)
       if (lRes.logs) setLogs(lRes.logs)
     } catch (err) {
@@ -118,7 +157,11 @@ export default function SocialMatrixPage() {
       const data = await res.json()
       if (data.success) {
         showToast(data.message, 'success')
-        setProxies(prev => prev.map(p => p.id === proxy.id ? { ...p, latency_ms: data.latency_ms, last_checked_at: data.tested_at, status: 'active' } : p))
+        setProxies(prev => {
+          const next = prev.map(p => p.id === proxy.id ? { ...p, latency_ms: data.latency_ms, last_checked_at: data.tested_at, status: 'active' as const } : p)
+          saveProxiesLocally(next)
+          return next
+        })
       } else {
         showToast(data.message, 'error')
       }
@@ -145,6 +188,13 @@ export default function SocialMatrixPage() {
       if (data.success) {
         showToast('代理 IP 已成功加入代理池！', 'success')
         setIsAddProxyOpen(false)
+        if (data.proxy) {
+          setProxies(prev => {
+            const next = [data.proxy, ...prev]
+            saveProxiesLocally(next)
+            return next
+          })
+        }
         fetchAllData()
       } else {
         showToast(data.error || '新增失敗', 'error')
@@ -158,7 +208,11 @@ export default function SocialMatrixPage() {
     if (!confirm('確定要自代理池移除此代理 IP 嗎？')) return
     try {
       await fetch(`/api/marketing/social-matrix/proxies/${id}`, { method: 'DELETE' })
-      setProxies(prev => prev.filter(p => p.id !== id))
+      setProxies(prev => {
+        const next = prev.filter(p => p.id !== id)
+        saveProxiesLocally(next)
+        return next
+      })
       showToast('已移除代理 IP', 'info')
     } catch (err) {
       showToast(`刪除失敗: ${String(err)}`, 'error')
@@ -183,7 +237,11 @@ export default function SocialMatrixPage() {
       if (data.success) {
         showToast('代理資訊與名稱已成功更新！', 'success')
         setIsEditProxyOpen(false)
-        setProxies(prev => prev.map(p => p.id === editingProxy.id ? { ...p, ...editingProxy } : p))
+        setProxies(prev => {
+          const next = prev.map(p => p.id === editingProxy.id ? { ...p, ...editingProxy } : p)
+          saveProxiesLocally(next)
+          return next
+        })
       } else {
         showToast(data.error || '更新失敗', 'error')
       }
