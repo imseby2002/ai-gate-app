@@ -6,14 +6,33 @@ import type { TelephonyProvider, VoiceCallParams, SmsParams } from './types'
 
 const BASE = 'https://api.twilio.com/2010-04-01'
 
-function getTwilioAuth() {
+/**
+ * 取得 Twilio 認證。優先使用 API Key（TWILIO_API_KEY_SID / TWILIO_API_KEY_SECRET），
+ * 未設定時退回 Auth Token（TWILIO_AUTH_TOKEN）。
+ * 注意：兩種方式的 API 路徑都仍需 Account SID（AC 開頭），故 TWILIO_ACCOUNT_SID 為必填。
+ */
+export function getTwilioAuth() {
   const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  if (!accountSid || !authToken) return null
-  return {
-    accountSid,
-    authHeader: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+  if (!accountSid) return null
+
+  const apiKeySid = process.env.TWILIO_API_KEY_SID
+  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET
+  if (apiKeySid && apiKeySecret) {
+    return {
+      accountSid,
+      authHeader: `Basic ${Buffer.from(`${apiKeySid}:${apiKeySecret}`).toString('base64')}`,
+    }
   }
+
+  const authToken = process.env.TWILIO_AUTH_TOKEN
+  if (authToken) {
+    return {
+      accountSid,
+      authHeader: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
+    }
+  }
+
+  return null
 }
 
 /**
@@ -33,12 +52,12 @@ export const twilioProvider: TelephonyProvider = {
   name: 'twilio',
 
   isConfigured() {
-    return !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+    return !!getTwilioAuth()
   },
 
   async call({ phone, audioUrl, callerId, collectDtmf }: VoiceCallParams) {
     const creds = getTwilioAuth()
-    if (!creds) throw new Error('TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN 未設定')
+    if (!creds) throw new Error('Twilio 未設定（需 TWILIO_ACCOUNT_SID + API Key 或 Auth Token）')
 
     const fromNumber = callerId || process.env.TWILIO_FROM_NUMBER
     if (!fromNumber) {

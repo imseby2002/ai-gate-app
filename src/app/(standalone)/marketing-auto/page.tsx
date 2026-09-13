@@ -4339,7 +4339,8 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
         <div className="flex gap-2 flex-wrap text-[11px]">
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">ELEVENLABS_API_KEY</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_ACCOUNT_SID</code>
-          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_AUTH_TOKEN</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_API_KEY_SID</code>
+          <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_API_KEY_SECRET</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">TWILIO_FROM_NUMBER</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SID</code>
           <code className="bg-blue-100 px-1.5 py-0.5 rounded">STRINGEE_API_KEY_SECRET</code>
@@ -4582,7 +4583,8 @@ ${emailRecipients.map(r => r.email).join('\n')}`,
               <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SID</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-teal-700 font-mono">STRINGEE_API_KEY_SECRET</span>
               <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_ACCOUNT_SID</span>
-              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_AUTH_TOKEN</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_API_KEY_SID</span>
+              <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700 font-mono">TWILIO_API_KEY_SECRET</span>
             </div>
           </div>
         </div>
