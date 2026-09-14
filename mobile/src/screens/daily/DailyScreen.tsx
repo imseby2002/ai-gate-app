@@ -324,51 +324,55 @@ export default function DailyScreen() {
     <View style={styles.container}>
       {/* 頂部全域控制列 */}
       <View style={styles.topControlCard}>
-        {/* 大門密碼區塊 (全棟共用) */}
+        {/* 大門密碼區塊 (全棟共用) 與操作按鈕 */}
         <View style={styles.gateRow}>
           <View style={styles.gateLeft}>
-            <Ionicons name="key-outline" size={18} color="#4F46E5" />
-            <Text style={styles.gateLabel}>大門密碼 (全棟共用)：</Text>
+            <Ionicons name="key-outline" size={17} color="#4F46E5" />
+            <Text style={styles.gateLabel}>大門密碼：</Text>
+            <View style={styles.gateInputBox}>
+              <TextInput
+                style={styles.gateInput}
+                secureTextEntry={!showPasswords}
+                value={gatePw}
+                placeholder="填寫密碼"
+                placeholderTextColor="#94A3B8"
+                onChangeText={setGatePw}
+                onBlur={commitGatePassword}
+              />
+              {savingGate && <ActivityIndicator size="small" color="#4F46E5" style={{ marginLeft: 4 }} />}
+            </View>
           </View>
-          <View style={styles.gateInputBox}>
-            <TextInput
-              style={styles.gateInput}
-              secureTextEntry={!showPasswords}
-              value={gatePw}
-              placeholder="點此填寫..."
-              placeholderTextColor="#94A3B8"
-              onChangeText={setGatePw}
-              onBlur={commitGatePassword}
-            />
-            {savingGate && <ActivityIndicator size="small" color="#4F46E5" />}
+
+          {/* 右側迷你按鈕組：眼睛圖標(顯示/遮蔽密碼) + 旋轉圖標(重整) */}
+          <View style={styles.headerIconActions}>
+            <TouchableOpacity
+              style={[styles.miniIconBtn, showPasswords && styles.miniIconBtnActive]}
+              onPress={() => setShowPasswords((v) => !v)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons
+                name={showPasswords ? 'eye-outline' : 'eye-off-outline'}
+                size={18}
+                color={showPasswords ? '#2563EB' : '#64748B'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.miniIconBtn}
+              onPress={onRefresh}
+              disabled={loading}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={18}
+                color="#64748B"
+                style={loading ? styles.rotating : undefined}
+              />
+            </TouchableOpacity>
           </View>
-        </View>
-
-        {/* 密碼顯隱與刷新按鈕 */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity
-            style={styles.togglePwBtn}
-            onPress={() => setShowPasswords((v) => !v)}
-          >
-            <Ionicons
-              name={showPasswords ? 'eye-off-outline' : 'eye-outline'}
-              size={16}
-              color="#475569"
-            />
-            <Text style={styles.togglePwText}>
-              {showPasswords ? '遮蔽密碼' : '顯示密碼'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} disabled={loading}>
-            <Ionicons
-              name="refresh-outline"
-              size={16}
-              color="#475569"
-              style={loading ? styles.rotating : undefined}
-            />
-            <Text style={styles.refreshBtnText}>重整</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -733,44 +737,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  actionRow: {
+  headerIconActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 10,
+    gap: 6,
   },
-  togglePwBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  miniIconBtn: {
+    width: 34,
+    height: 34,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  togglePwText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '500',
-  },
-  refreshBtn: {
-    flexDirection: 'row',
+    borderColor: '#C7D2FE',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    justifyContent: 'center',
   },
-  refreshBtnText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '500',
+  miniIconBtnActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#93C5FD',
   },
   rotating: {
     opacity: 0.5,
