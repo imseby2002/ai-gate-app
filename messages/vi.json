@@ -4213,5 +4213,25 @@
       "msgCompletedAuto": "🎉 Đã đánh dấu tính năng này hoàn thành và đưa lên hệ thống hoạt động!",
       "msgStatusUpdated": "Đã cập nhật trạng thái xét duyệt đề xuất."
     }
+  },
+  "SystemAuth": {
+    "continueWithGoogle": "Tiếp tục với Google",
+    "orWithEmail": "hoặc dùng Email",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Mật khẩu",
+    "passwordPlaceholder": "Ít nhất 6 ký tự",
+    "submitBtn": "Đăng nhập / Đăng ký",
+    "processing": "Đang xử lý…",
+    "footerHint": "Lần đầu dùng Email sẽ tự động đăng ký, cần bấm xác nhận trong hộp thư để đăng nhập.<br />Để vào ngay không cần xác minh, hãy chọn Tiếp tục với Google ở trên.",
+    "currentlyLoggedIn": "Hiện đang đăng nhập: ",
+    "enterSystem": "Vào {name}",
+    "notAllowed": "Tài khoản của bạn chưa được cấp quyền truy cập \"{name}\", vui lòng liên hệ quản trị viên.",
+    "useOtherAccount": "Đăng nhập bằng tài khoản khác",
+    "switchSystemAdmin": "Chuyển hệ thống khác (Quản trị viên)",
+    "registeredCheckEmail": "Đã tạo tài khoản cho bạn! Vui lòng vào hộp thư bấm liên kết xác nhận, sau đó quay lại đăng nhập bằng Email và mật khẩu này (nếu chưa thấy hãy kiểm tra hộp thư rác). Muốn vào ngay có thể chọn Đăng nhập Google ở trên.",
+    "passwordWrong": "Mật khẩu không đúng, vui lòng nhập lại",
+    "loginErrorFallback": "Đăng nhập thất bại, vui lòng kiểm tra email và mật khẩu",
+    "systemErrorFallback": "Xảy ra sự cố khi xác thực, vui lòng thử lại hoặc dùng Google"
   }
 }

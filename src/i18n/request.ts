@@ -1,10 +1,26 @@
 import { getRequestConfig } from 'next-intl/server'
 import { IntlErrorCode } from 'next-intl'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 
 export const locales = ['zh-TW', 'en', 'vi'] as const
 export type Locale = typeof locales[number]
 export const defaultLocale: Locale = 'zh-TW'
+
+export function detectLocaleFromAcceptLanguage(acceptLanguage?: string | null): Locale {
+  if (!acceptLanguage) return defaultLocale
+  const parts = acceptLanguage.split(',').map(part => {
+    const [tag, qPart] = part.trim().split(';')
+    const q = qPart && qPart.startsWith('q=') ? parseFloat(qPart.slice(2)) : 1.0
+    return { tag: tag.toLowerCase(), q: isNaN(q) ? 1.0 : q }
+  }).sort((a, b) => b.q - a.q)
+
+  for (const { tag } of parts) {
+    if (tag.startsWith('vi')) return 'vi'
+    if (tag.startsWith('zh')) return 'zh-TW'
+    if (tag.startsWith('en')) return 'en'
+  }
+  return defaultLocale
+}
 
 // 深度合併：以 base（英文）為底，用當前語系覆蓋。
 // 這樣任一語系若缺某個 key，會自動退回英文，而不會讓 next-intl 丟 MISSING_MESSAGE
@@ -39,9 +55,14 @@ export default getRequestConfig(async () => {
     const cookieLocale = cookieStore.get('locale')?.value
     if (locales.includes(cookieLocale as Locale)) {
       locale = cookieLocale as Locale
+    } else {
+      // 依使用者瀏覽器/系統語言 (Accept-Language) 自動偵測
+      const headerStore = await headers()
+      const acceptLanguage = headerStore.get('accept-language')
+      locale = detectLocaleFromAcceptLanguage(acceptLanguage)
     }
   } catch {
-    // cookies() may not be available in all edge contexts
+    // cookies()/headers() may not be available in all edge contexts
   }
 
   // 英文為 fallback 基底；當前語系覆蓋其上

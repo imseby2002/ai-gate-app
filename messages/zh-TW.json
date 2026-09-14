@@ -4306,5 +4306,25 @@
       "msgCompletedAuto": "🎉 已標記該功能程式改寫完成並上線！",
       "msgStatusUpdated": "已更新提案審核狀態。"
     }
+  },
+  "SystemAuth": {
+    "continueWithGoogle": "使用 Google 繼續",
+    "orWithEmail": "或用 Email",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "密碼",
+    "passwordPlaceholder": "至少 6 碼",
+    "submitBtn": "登入 / 註冊",
+    "processing": "處理中…",
+    "footerHint": "首次使用 Email 會自動註冊，需到信箱點擊驗證信後才能登入。<br />想免驗證、立即進入，請用上方 Google 登入。",
+    "currentlyLoggedIn": "目前登入：",
+    "enterSystem": "進入{name}",
+    "notAllowed": "您的帳號尚未開通「{name}」，請聯絡管理員開通後再使用。",
+    "useOtherAccount": "用其他帳號登入",
+    "switchSystemAdmin": "切換其他系統（管理者）",
+    "registeredCheckEmail": "已為您建立帳號！請到信箱點擊驗證信後，再回來用同一組 Email／密碼登入（沒收到請查看垃圾信匣）。想免驗證可改用上方 Google 登入。",
+    "passwordWrong": "密碼錯誤，請重新輸入",
+    "loginErrorFallback": "登入失敗，請確認帳號密碼後重試",
+    "systemErrorFallback": "系統驗證發生異常，請重試或改用 Google 登入"
   }
 }

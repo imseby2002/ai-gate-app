@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Zap, ArrowLeft } from 'lucide-react'
 import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath } from '@/lib/systems'
 
@@ -13,6 +13,7 @@ interface BackToMenuProps {
 export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const pathname = usePathname()
   const t = useTranslations('Nav')
+  const locale = useLocale()
   const [href, setHref] = useState('/apps')
 
   useEffect(() => {
@@ -91,14 +92,15 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const isCs = pathname.startsWith('/cs')
   const isCsWorkspace = pathname.startsWith('/cs/workspace')
 
-  const titleText = isCs ? 'AI GATE 客服系統' : 'AI GATE'
-  const subText = isCsWorkspace ? '← 返回收件匣' : `← ${t('backToMenu')}`
+  const titleText = isCs ? (locale === 'vi' ? 'AI GATE CS' : locale === 'en' ? 'AI GATE CS' : 'AI GATE 客服系統') : 'AI GATE'
+  const csInboxText = locale === 'vi' ? 'Quay lại Hộp thư' : locale === 'en' ? 'Back to Inbox' : '返回收件匣'
+  const subText = isCsWorkspace ? `← ${csInboxText}` : `← ${t('backToMenu')}`
 
   if (variant === 'tools') {
     return (
       <a href={href} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm transition-colors">
         <ArrowLeft className="h-3.5 w-3.5" />
-        {isCsWorkspace ? '返回收件匣' : t('backHome')}
+        {isCsWorkspace ? csInboxText : t('backHome')}
       </a>
     )
   }

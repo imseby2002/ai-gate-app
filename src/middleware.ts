@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { systemForPath, SUBDOMAIN_SYSTEM, SYSTEM_SUBDOMAIN, isPathAllowedForScope } from '@/lib/systems'
+import { detectLocaleFromAcceptLanguage } from '@/i18n/request'
 
 
 export async function middleware(request: NextRequest) {
@@ -26,6 +27,21 @@ export async function middleware(request: NextRequest) {
     // im-tourist 多子域：auth cookie 設 domain=.im-tourist.com 跨子域共享。localhost/preview 不設。
     const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
     const cookieDomain = host.endsWith('im-tourist.com') ? '.im-tourist.com' : undefined
+
+    // 若瀏覽器/客戶端尚未設定 locale cookie，自動依 Accept-Language 偵測其系統語言並持久化
+    const hasLocaleCookie = request.cookies.has('locale')
+    const detectedLocale = hasLocaleCookie ? null : detectLocaleFromAcceptLanguage(request.headers.get('accept-language'))
+    const attachLocaleCookie = (res: NextResponse) => {
+      if (detectedLocale) {
+        res.cookies.set('locale', detectedLocale, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: 'lax',
+          ...(cookieDomain ? { domain: cookieDomain } : {})
+        })
+      }
+      return res
+    }
 
     // ── 子域名映射 ────────────────────────────────────────────
     // cs.im-tourist.com / → /cs 首頁；功能內 /cs/* 路徑在該子域名下照常運作。
@@ -61,7 +77,7 @@ export async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.hostname = `${targetSub}.im-tourist.com`
         url.port = ''
-        return NextResponse.redirect(url)
+        return attachLocaleCookie(NextResponse.redirect(url))
       }
     }
 
@@ -116,9 +132,9 @@ export async function middleware(request: NextRequest) {
       if (needSubRewrite) {
         const url = request.nextUrl.clone()
         url.pathname = subHome!
-        return NextResponse.rewrite(url, { request })
+        return attachLocaleCookie(NextResponse.rewrite(url, { request }))
       }
-      return NextResponse.next({ request })
+      return attachLocaleCookie(NextResponse.next({ request }))
     }
 
     let supabaseResponse = NextResponse.next({ request })
@@ -163,7 +179,7 @@ export async function middleware(request: NextRequest) {
       redirectUrl.pathname = sys ? `/login/${sys}` : '/login'
       redirectUrl.search = ''
       redirectUrl.searchParams.set('redirectedFrom', pathname)
-      return NextResponse.redirect(redirectUrl)
+      return attachLocaleCookie(NextResponse.redirect(redirectUrl))
     }
 
     // scope guard 已移至 client-side ScopeManager（sessionStorage per-tab）
@@ -237,7 +253,7 @@ export async function middleware(request: NextRequest) {
               const url = request.nextUrl.clone()
               url.pathname = '/apps'
               url.search = '?blocked=' + modules[0]
-              return NextResponse.redirect(url)
+              return attachLocaleCookie(NextResponse.redirect(url))
             }
           }
         }
@@ -250,10 +266,10 @@ export async function middleware(request: NextRequest) {
       url.pathname = subHome!
       const rewriteRes = NextResponse.rewrite(url, { request })
       supabaseResponse.cookies.getAll().forEach((c: { name: string; value: string }) => rewriteRes.cookies.set(c))
-      return rewriteRes
+      return attachLocaleCookie(rewriteRes)
     }
 
-    return supabaseResponse
+    return attachLocaleCookie(supabaseResponse)
   } catch (e) {
     // If proxy throws for any reason, pass through to Next.js
     console.error('[proxy] error:', e)

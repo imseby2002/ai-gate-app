@@ -4306,5 +4306,25 @@
       "msgCompletedAuto": "🎉 Marked as completed and deployed live!",
       "msgStatusUpdated": "Proposal review status updated."
     }
+  },
+  "SystemAuth": {
+    "continueWithGoogle": "Continue with Google",
+    "orWithEmail": "or with Email",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "submitBtn": "Sign In / Sign Up",
+    "processing": "Processing…",
+    "footerHint": "First time using Email will automatically create an account; check inbox to verify. For instant access without verification, continue with Google above.",
+    "currentlyLoggedIn": "Currently signed in as: ",
+    "enterSystem": "Enter {name}",
+    "notAllowed": "Your account does not have access to \"{name}\". Please contact your administrator.",
+    "useOtherAccount": "Sign in with another account",
+    "switchSystemAdmin": "Switch system (Admin)",
+    "registeredCheckEmail": "Account created! Please check your email to verify your account, then log in with this email and password (check spam folder if needed). You can also sign in with Google above for instant access.",
+    "passwordWrong": "Incorrect password, please try again",
+    "loginErrorFallback": "Login failed, please check your credentials",
+    "systemErrorFallback": "Authentication error, please try again or sign in with Google"
   }
 }

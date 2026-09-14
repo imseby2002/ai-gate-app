@@ -22,6 +22,39 @@ export const SYSTEMS: Record<SystemKey, SystemDef> = {
   agent:     { key: 'agent',     label: 'AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
 }
 
+export const SYSTEMS_VI: Record<SystemKey, SystemDef> = {
+  chat:      { key: 'chat',      label: 'AI Trò Chuyện',        desc: 'Hội thoại đa mô hình, trợ lý AI & tạo ảnh / video', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  booking:   { key: 'booking',   label: 'Hệ Thống Đặt Phòng',   desc: 'Quản lý phòng, đơn đặt, định giá & đồng bộ kênh OTA', home: '/booking',        prefixes: ['/booking'] },
+  cs:        { key: 'cs',        label: 'Hệ Thống CSKH',        desc: 'Trợ lý CSKH AI đa kênh và cơ sở dữ liệu tri thức', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
+  marketing: { key: 'marketing', label: 'Trung Tâm Marketing',  desc: 'Tự động hóa tiếp thị, pipeline & sản xuất nội dung', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
+  leads:     { key: 'leads',     label: 'Khai Thác Khách Hàng', desc: 'Tìm kiếm khách hàng tiềm năng và tự động gọi điện', home: '/prospect-call',  prefixes: ['/prospect-call'] },
+  office:    { key: 'office',    label: 'Cổng Công Ty',         desc: 'Hệ thống văn phòng: Nhân sự, Thủ quỹ, R&D, Chi nhánh, Đối ngoại, Kiểm toán, Nhiệm vụ', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store', '/store-reports', '/store-inventory', '/store-bills', '/store-coach', '/repair', '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai', '/audit-logs', '/audit-platform', '/gm', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
+  resume:    { key: 'resume',    label: 'Trợ Lý Nghề Nghiệp',   desc: 'Trợ lý AI toàn diện cho công việc & nghề nghiệp', home: '/resume',         prefixes: ['/resume'] },
+  agent:     { key: 'agent',     label: 'AI Agent',             desc: 'Nhân viên AI tự động: tự nghiên cứu, lập kế hoạch, thực thi công việc', home: '/agent', prefixes: ['/agent'] },
+}
+
+export const SYSTEMS_EN: Record<SystemKey, SystemDef> = {
+  chat:      { key: 'chat',      label: 'AI Chat',             desc: 'Multi-model AI conversations, assistants & media generation', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  booking:   { key: 'booking',   label: 'Booking System',      desc: 'Properties, reservations, pricing, and OTA sync', home: '/booking',        prefixes: ['/booking'] },
+  cs:        { key: 'cs',        label: 'Customer Service',    desc: 'Omnichannel AI customer support & knowledge base', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
+  marketing: { key: 'marketing', label: 'Marketing Center',   desc: 'Marketing content generation & automated pipelines', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
+  leads:     { key: 'leads',     label: 'Lead Generation',     desc: 'Prospect discovery and outreach calls', home: '/prospect-call',  prefixes: ['/prospect-call'] },
+  office:    { key: 'office',    label: 'Company Portal',      desc: 'Office systems: HR, Finance, R&D, Store Operations, Legal, Audit, Tasks', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store', '/store-reports', '/store-inventory', '/store-bills', '/store-coach', '/repair', '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai', '/audit-logs', '/audit-platform', '/gm', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
+  resume:    { key: 'resume',    label: 'Career Assistant',    desc: 'All-in-one AI career & workplace assistant', home: '/resume',         prefixes: ['/resume'] },
+  agent:     { key: 'agent',     label: 'AI Agent',            desc: 'Autonomous AI worker: research, plan, and execute with human approval', home: '/agent', prefixes: ['/agent'] },
+}
+
+export function getLocalizedSystems(locale?: string): Record<SystemKey, SystemDef> {
+  if (locale === 'vi') return SYSTEMS_VI
+  if (locale === 'en') return SYSTEMS_EN
+  return SYSTEMS
+}
+
+export function getLocalizedSystemDef(system: SystemKey, locale?: string): SystemDef {
+  const sysMap = getLocalizedSystems(locale)
+  return sysMap[system] || SYSTEMS[system]
+}
+
 export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)
 
 // 子域名 → 所屬系統（用於未登入登入導向與 OAuth callback 推斷）
