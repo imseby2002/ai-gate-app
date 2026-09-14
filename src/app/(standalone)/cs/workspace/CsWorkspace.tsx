@@ -628,6 +628,8 @@ function Unit12CustomerService({
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
+  // Logs
+  const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
 
   // Sync when savedData loads asynchronously from Supabase
   // Track last savedData ref to avoid overwriting local uploads with stale DB data
@@ -658,6 +660,46 @@ function Unit12CustomerService({
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
 
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  const saveCurrentUnit12 = useCallback((overrides?: Partial<Unit12Data>) => {
+    setSavingSettings(true)
+    const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
+    const data: Unit12Data = {
+      systemPrompt,
+      knowledgeBase,
+      escalationThreshold,
+      replyLanguage,
+      logs,
+      dialogueFiles: filesToSave,
+      bookingFlowEnabled,
+      paymentInfo,
+      bookingFlows,
+      vipList,
+      autoCloseMinutes,
+      notifyWebhooks,
+      discountMaxPct,
+      discountGifts,
+      campaignOffers,
+      contactPhone1,
+      contactPhone2,
+      aiSenderName,
+      aiSenderIconUrl,
+      humanSenderName,
+      humanSenderIconUrl,
+      ...overrides,
+    }
+    onDone(data)
+    setTimeout(() => setSavingSettings(false), 800)
+    return data
+  }, [
+    dialogueFiles, savedData?.dialogueFiles, systemPrompt, knowledgeBase,
+    escalationThreshold, replyLanguage, logs, bookingFlowEnabled, paymentInfo,
+    bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct,
+    discountGifts, campaignOffers, contactPhone1, contactPhone2,
+    aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl, onDone
+  ])
+
   const handleAvatarUpload = async (file: File) => {
     setUploadingAvatar(true)
     const form = new FormData()
@@ -668,6 +710,7 @@ function Unit12CustomerService({
       const data = await res.json()
       if (res.ok && data.url) {
         setAiSenderIconUrl(data.url)
+        saveCurrentUnit12({ aiSenderIconUrl: data.url })
       }
     } finally {
       setUploadingAvatar(false)
@@ -684,13 +727,13 @@ function Unit12CustomerService({
       const data = await res.json()
       if (res.ok && data.url) {
         setHumanSenderIconUrl(data.url)
+        saveCurrentUnit12({ humanSenderIconUrl: data.url })
       }
     } finally {
       setUploadingHumanAvatar(false)
     }
   }
 
-  const [savingSettings, setSavingSettings] = useState(false)
   const [uploadingDialogue, setUploadingDialogue] = useState(false)
   const dialogueInputRef = useRef<HTMLInputElement>(null)
 
@@ -710,7 +753,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl })
+        saveCurrentUnit12({ dialogueFiles: newFiles })
       }
     } finally {
       setUploadingDialogue(false)
@@ -720,7 +763,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl })
+    saveCurrentUnit12({ dialogueFiles: newFiles })
   }
 
   // Test chat
@@ -764,8 +807,6 @@ function Unit12CustomerService({
   const [inboxSending, setInboxSending] = useState(false)
   const [inboxSendError, setInboxSendError] = useState('')
 
-  // Logs
-  const [logs, setLogs] = useState<CsLogEntry[]>(savedData?.logs ?? [])
 
   // Data sources
   const [dataSources, setDataSources] = useState<CsDataSource[]>([])
@@ -1260,11 +1301,7 @@ function Unit12CustomerService({
   }
 
   function saveSettings() {
-    setSavingSettings(true)
-    const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl }
-    onDone(data)
-    setTimeout(() => setSavingSettings(false), 800)
+    saveCurrentUnit12()
   }
 
   async function sendTestMessage() {
@@ -1361,7 +1398,7 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl })
+        saveCurrentUnit12({ logs: updatedLogs })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -2954,24 +2991,31 @@ function Unit12CustomerService({
                 在此設定政府振興補助（如花蓮國旅補助、第1晚折800第2晚折1200）、早鳥折扣或生日券優惠。AI 於對話及報價時會自動核對資格並依規則精確折抵，活動結束隨時停用即可。
               </p>
             </div>
-            {!editingOffer && (
-              <button
-                type="button"
-                onClick={() => setEditingOffer({
-                  id: crypto.randomUUID(),
-                  name: '',
-                  enabled: true,
-                  offerType: 'nights_tiered',
-                  qualification: '本國籍自由行旅客、出示身分證件',
-                  tieredNightDiscounts: [800, 1200],
-                  rulesNote: '第一晚折 $800、連續第二晚再折 $1,200（喬民宿適用）。',
-                })}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
-                style={{ background: 'var(--primary)' }}
-              >
-                <Plus className="h-3.5 w-3.5" /> 新增活動
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {savingSettings && (
+                <span className="text-xs text-amber-600 flex items-center gap-1 font-medium animate-pulse">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> 儲存中...
+                </span>
+              )}
+              {!editingOffer && (
+                <button
+                  type="button"
+                  onClick={() => setEditingOffer({
+                    id: crypto.randomUUID(),
+                    name: '',
+                    enabled: true,
+                    offerType: 'nights_tiered',
+                    qualification: '本國籍自由行旅客、出示身分證件正本',
+                    tieredNightDiscounts: [1000],
+                    rulesNote: '每房每晚補助 1,000 元（限花蓮合法旅宿適用）。',
+                  })}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  <Plus className="h-3.5 w-3.5" /> 新增活動
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 活動清單 */}
@@ -3016,6 +3060,7 @@ function Unit12CustomerService({
                       onClick={() => {
                         const updated = campaignOffers.map(o => o.id === offer.id ? { ...o, enabled: !o.enabled } : o)
                         setCampaignOffers(updated)
+                        saveCurrentUnit12({ campaignOffers: updated })
                       }}
                       className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${offer.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
                     >
@@ -3033,6 +3078,7 @@ function Unit12CustomerService({
                       onClick={() => {
                         const updated = campaignOffers.filter(o => o.id !== offer.id)
                         setCampaignOffers(updated)
+                        saveCurrentUnit12({ campaignOffers: updated })
                       }}
                       className="text-xs px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500"
                     >
@@ -3200,6 +3246,7 @@ function Unit12CustomerService({
                       : [...campaignOffers, editingOffer]
                     setCampaignOffers(updated)
                     setEditingOffer(null)
+                    saveCurrentUnit12({ campaignOffers: updated })
                   }}
                   className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
                   style={{ background: 'var(--primary)' }}
@@ -3216,6 +3263,23 @@ function Unit12CustomerService({
               </div>
             </div>
           )}
+
+          {/* 活動底部儲存列 */}
+          <div className="flex items-center justify-between pt-3 border-t text-xs text-gray-400">
+            <div className="flex items-center gap-1.5 text-emerald-600 font-medium">
+              <CheckCircle2 className="h-4 w-4" /> 活動方案異動時會即時自動儲存至雲端
+            </div>
+            <button
+              type="button"
+              onClick={() => saveCurrentUnit12()}
+              disabled={savingSettings}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 shadow-sm transition-all"
+              style={{ background: 'var(--primary)' }}
+            >
+              {savingSettings ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              儲存活動設定
+            </button>
+          </div>
         </div>
       )}
 
@@ -3525,7 +3589,11 @@ function Unit12CustomerService({
               </div>
               <button
                 type="button"
-                onClick={() => setBookingFlowEnabled(v => !v)}
+                onClick={() => {
+                  const next = !bookingFlowEnabled
+                  setBookingFlowEnabled(next)
+                  saveCurrentUnit12({ bookingFlowEnabled: next })
+                }}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${bookingFlowEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${bookingFlowEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -3545,7 +3613,11 @@ function Unit12CustomerService({
                       <div className="flex gap-1.5">
                         <button onClick={() => setEditingFlow({ ...flow })}
                           className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
-                        <button onClick={() => setBookingFlows(prev => prev.filter((_, i) => i !== fi))}
+                        <button onClick={() => {
+                          const updated = bookingFlows.filter((_, i) => i !== fi)
+                          setBookingFlows(updated)
+                          saveCurrentUnit12({ bookingFlows: updated })
+                        }}
                           className="text-[10px] px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
                       </div>
                     </div>
@@ -3574,10 +3646,26 @@ function Unit12CustomerService({
                   <textarea
                     value={paymentInfo}
                     onChange={e => setPaymentInfo(e.target.value)}
+                    onBlur={() => saveCurrentUnit12({ paymentInfo })}
                     rows={2}
                     placeholder={t('u12.paymentPlaceholder')}
                     className="w-full text-xs border rounded-lg px-3 py-2 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
                   />
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-[11px] text-gray-400">
+                      {savingSettings ? '💾 儲存中...' : '✓ 設定異動自動同步至雲端'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => saveCurrentUnit12({ paymentInfo })}
+                      disabled={savingSettings}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 shadow-sm"
+                      style={{ background: 'var(--primary)' }}
+                    >
+                      {savingSettings ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      儲存預訂與收款設定
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -3690,11 +3778,13 @@ function Unit12CustomerService({
                     className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">{t('u12.cancel')}</button>
                   <button onClick={() => {
                     if (!editingFlow) return
-                    setBookingFlows(prev => {
-                      const idx = prev.findIndex(f => f.id === editingFlow.id)
-                      return idx >= 0 ? prev.map((f, i) => i === idx ? editingFlow : f) : [...prev, editingFlow]
-                    })
+                    const idx = bookingFlows.findIndex(f => f.id === editingFlow.id)
+                    const updated = idx >= 0
+                      ? bookingFlows.map((f, i) => i === idx ? editingFlow : f)
+                      : [...bookingFlows, editingFlow]
+                    setBookingFlows(updated)
                     setEditingFlow(null)
+                    saveCurrentUnit12({ bookingFlows: updated })
                   }} className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
                     style={{ background: 'var(--primary)' }}>
                     {t('u12.saveFlow')}
