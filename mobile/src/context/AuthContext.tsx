@@ -124,15 +124,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     setIsLoading(true)
     try {
-      const redirectUri = makeRedirectUri({
+      const appRedirectUri = makeRedirectUri({
         scheme: 'aigate',
         path: 'auth/callback',
       })
+      // 使用已部署的 Web 中繼網頁，供 Google 與 Supabase 驗證後喚醒 App
+      const webCallbackUri = 'https://www.im-tourist.com/api/auth/mobile-callback'
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUri,
+          redirectTo: webCallbackUri,
           skipBrowserRedirect: true,
         },
       })
@@ -143,14 +145,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri)
+        const result = await WebBrowser.openAuthSessionAsync(data.url, appRedirectUri)
         if (result.type === 'success' && result.url) {
-          // 支援從 URL hash 或 query 萃取 Token
-          const cleanUrl = result.url.replace('#', '?')
-          const parsed = new URL(cleanUrl)
-          const accessToken = parsed.searchParams.get('access_token')
-          const refreshToken = parsed.searchParams.get('refresh_token')
-          const code = parsed.searchParams.get('code')
+          // 支援從 URL hash 或 query 萃取 Token 或 Code
+          let accessToken: string | null = null
+          let refreshToken: string | null = null
+          let code: string | null = null
+
+          if (result.url.includes('#')) {
+            const hashPart = result.url.split('#')[1]
+            const hashParams = new URLSearchParams(hashPart)
+            accessToken = hashParams.get('access_token')
+            refreshToken = hashParams.get('refresh_token')
+          }
+
+          if (result.url.includes('?')) {
+            const queryPart = result.url.split('?')[1].split('#')[0]
+            const queryParams = new URLSearchParams(queryPart)
+            if (!accessToken) accessToken = queryParams.get('access_token')
+            if (!refreshToken) refreshToken = queryParams.get('refresh_token')
+            if (!code) code = queryParams.get('code')
+          }
 
           if (accessToken && refreshToken) {
             const { data: sessData, error: sessErr } = await supabase.auth.setSession({
