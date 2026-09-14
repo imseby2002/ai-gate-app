@@ -25,6 +25,7 @@
     "production": {
       "ios": {
         "appleId": "imseby3@gmail.com",
+        "ascAppId": "6811618445",
         "appleTeamId": "AQ34Z8PHLC",
         "ascApiKeyPath": "./AuthKey_4TU36V725M.p8",
         "ascApiKeyId": "4TU36V725M",
