@@ -15,6 +15,7 @@ import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
+import { type CsCampaignOffer } from '@/app/api/marketing/cs-webhook/[platform]/[userId]/route'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -98,6 +99,7 @@ async function handlePost(req: NextRequest) {
     notifyWebhooks = [] as Array<{ id: string; type: 'line_messaging' | 'webhook'; label: string; value: string; target?: string }>,
     discountMaxPct = 0,
     discountGifts = '',
+    campaignOffers = [] as CsCampaignOffer[],
     imageBase64 = '',    // base64-encoded image from test panel
     imageMimeType = '',  // e.g. 'image/jpeg'
   } = await req.json()
@@ -485,6 +487,33 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     closingToolkitSection = lines.join('\n')
   }
 
+  // ── Active campaign & subsidy offers ─────────────────────────────────────
+  let campaignOffersSection = ''
+  const activeOffers: CsCampaignOffer[] = ((campaignOffers ?? []) as CsCampaignOffer[]).filter((o: CsCampaignOffer) => o.enabled)
+  if (activeOffers.length > 0) {
+    const lines = ['\n\n【現正進行中的促銷／補助活動（嚴格依以下條件計算，客問優惠、補助或計算房價時主動說明與折抵）】']
+    for (const off of activeOffers) {
+      lines.push(`\n▸ 活動名稱：${off.name}`)
+      if (off.qualification) lines.push(`  適用資格與對象：${off.qualification}`)
+      if (off.offerType === 'nights_tiered' && off.tieredNightDiscounts?.length) {
+        const tieredDesc = off.tieredNightDiscounts.map((amt: number, idx: number) => `第 ${idx + 1} 晚折抵 $${amt.toLocaleString()} 元`).join('，')
+        lines.push(`  折扣計算方式：連住每晚階梯折抵（${tieredDesc}）`)
+      } else if (off.offerType === 'percent' && off.discountPercent) {
+        lines.push(`  折扣計算方式：享 ${10 - off.discountPercent / 10} 折優惠（折抵 ${off.discountPercent}%）`)
+      } else if (off.offerType === 'fixed_amount' && off.discountAmount) {
+        lines.push(`  折扣計算方式：單筆固定折抵 $${off.discountAmount.toLocaleString()} 元`)
+      } else {
+        lines.push(`  折扣計算方式：自訂方案`)
+      }
+      if (off.rulesNote) lines.push(`  活動規則與限制：${off.rulesNote}`)
+    }
+    lines.push('\n計算與應對守則：')
+    lines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
+    lines.push('2. 計算總價時，以房價定價為基準，嚴格依照上述折扣方式扣除補助金額，並清楚列出原價、補助折抵金額與客人實付金額。')
+    lines.push('3. 喬民宿適用花蓮振興住宿補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
+    campaignOffersSection = lines.join('\n')
+  }
+
   // ── Top reviews for social proof ─────────────────────────────────────────
   let reviewsSection = ''
   try {
@@ -661,7 +690,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${campaignOffersSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   // Build user turn — multimodal when image is provided
   type MsgContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>

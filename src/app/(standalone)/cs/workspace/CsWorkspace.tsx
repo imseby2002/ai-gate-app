@@ -7,7 +7,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -316,6 +316,23 @@ interface NotifyWebhook {
   target?: string // LINE: User ID 或 Group ID；Telegram: Chat ID
 }
 
+interface CsCampaignOffer {
+  id: string
+  name: string
+  enabled: boolean
+  offerType: 'nights_tiered' | 'percent' | 'fixed_amount' | 'custom'
+  // 適用對象與資格說明（例：本國籍自由行旅客、出示身分證件／生日券）
+  qualification: string
+  // 連續住宿每晚折抵（例：第一晚 800，第二晚 1200）
+  tieredNightDiscounts?: number[]
+  // 折扣百分比（例：10 代表 9 折）
+  discountPercent?: number
+  // 單筆固定折扣金額（例：500）
+  discountAmount?: number
+  // 活動規則詳細說明與限制
+  rulesNote: string
+}
+
 interface Unit12Data {
   systemPrompt?: string
   knowledgeBase?: string
@@ -331,6 +348,7 @@ interface Unit12Data {
   notifyWebhooks?: NotifyWebhook[]
   discountMaxPct?: number
   discountGifts?: string
+  campaignOffers?: CsCampaignOffer[]
   contactPhone1?: string
   contactPhone2?: string
   aiSenderName?: string
@@ -593,6 +611,8 @@ function Unit12CustomerService({
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
   const [discountGifts, setDiscountGifts] = useState(savedData?.discountGifts ?? '')
+  const [campaignOffers, setCampaignOffers] = useState<CsCampaignOffer[]>(savedData?.campaignOffers ?? [])
+  const [editingOffer, setEditingOffer] = useState<CsCampaignOffer | null>(null)
   const [contactPhone1, setContactPhone1] = useState(savedData?.contactPhone1 ?? '')
   const [contactPhone2, setContactPhone2] = useState(savedData?.contactPhone2 ?? '')
   const [aiSenderName, setAiSenderName] = useState(savedData?.aiSenderName ?? '')
@@ -621,6 +641,7 @@ function Unit12CustomerService({
     if (savedData.notifyWebhooks !== undefined) setNotifyWebhooks(savedData.notifyWebhooks)
     if (savedData.discountMaxPct !== undefined) setDiscountMaxPct(savedData.discountMaxPct)
     if (savedData.discountGifts !== undefined) setDiscountGifts(savedData.discountGifts)
+    if (Array.isArray(savedData.campaignOffers)) setCampaignOffers(savedData.campaignOffers)
     if (savedData.contactPhone1 !== undefined) setContactPhone1(savedData.contactPhone1)
     if (savedData.contactPhone2 !== undefined) setContactPhone2(savedData.contactPhone2)
     if (savedData.aiSenderName !== undefined) setAiSenderName(savedData.aiSenderName)
@@ -665,7 +686,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
       }
     } finally {
       setUploadingDialogue(false)
@@ -675,7 +696,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
   }
 
   // Test chat
@@ -1217,7 +1238,7 @@ function Unit12CustomerService({
   function saveSettings() {
     setSavingSettings(true)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -1262,6 +1283,7 @@ function Unit12CustomerService({
           notifyWebhooks,
           discountMaxPct,
           discountGifts,
+          campaignOffers,
           ...(imgSnap ? { imageBase64: imgSnap.base64, imageMimeType: imgSnap.mimeType } : {}),
         }),
       })
@@ -1315,7 +1337,7 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -2456,42 +2478,279 @@ function Unit12CustomerService({
             </div>
           )}
 
-          {/* ── AI 促成優惠權限 ── */}
-          <div className="border rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-semibold text-gray-800">{t('u12.discountTitle')}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">{t('u12.salesTool')}</span>
-            </div>
-            <p className="text-xs text-gray-500">{t('u12.discountDesc')}</p>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">
-                {t('u12.maxDiscount')}　<span className="font-normal text-gray-400">{t('u12.maxDiscountHint')}</span>
-              </label>
+          {/* ── 促銷與補助活動（國旅補助、早鳥優惠、續住加碼等） ── */}
+          <div className="border-2 border-amber-200 rounded-xl p-4 space-y-3 bg-amber-50/20">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <input
-                  type="number" min={0} max={30} step={1}
-                  value={discountMaxPct}
-                  onChange={e => setDiscountMaxPct(Number(e.target.value))}
-                  className="w-20 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400"
-                />
-                <span className="text-sm text-gray-500">%</span>
-                {discountMaxPct > 0 && <span className="text-xs text-purple-600">{t('u12.maxDiscountOk', { pct: discountMaxPct })}</span>}
+                <Tag className="h-4 w-4 text-amber-600" />
+                <span className="text-sm font-semibold text-gray-800">促銷與補助活動（國旅補助、特殊折扣）</span>
+                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">AI 精確試算</span>
               </div>
+              {!editingOffer && (
+                <button
+                  type="button"
+                  onClick={() => setEditingOffer({
+                    id: crypto.randomUUID(),
+                    name: '',
+                    enabled: true,
+                    offerType: 'nights_tiered',
+                    qualification: '本國籍自由行旅客、出示身分證件',
+                    tieredNightDiscounts: [800, 1200],
+                    rulesNote: '第一晚折 $800、連續第二晚再折 $1,200（喬民宿適用）。',
+                  })}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium text-white flex items-center gap-1 transition-colors"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  <Plus className="h-3 w-3" /> 新增活動
+                </button>
+              )}
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-600">
-                {t('u12.giftItems')}　<span className="font-normal text-gray-400">{t('u12.onePerLine')}</span>
-              </label>
-              <textarea
-                value={discountGifts}
-                onChange={e => setDiscountGifts(e.target.value)}
-                rows={4}
-                placeholder={t('u12.giftPlaceholder')}
-                className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-purple-400 resize-none font-mono"
-              />
-              <p className="text-[10px] text-gray-400">{t('u12.giftHint')}</p>
-            </div>
+            <p className="text-xs text-gray-500">
+              在此設定政府振興補助（如花蓮國旅補助、第1晚折800第2晚折1200）、早鳥折扣或生日券優惠。AI 於對話及報價時會自動核對資格並依規則精確折抵，活動結束隨時停用即可。
+            </p>
+
+            {/* 活動清單 */}
+            {campaignOffers.length === 0 && !editingOffer && (
+              <div className="border border-dashed border-amber-200 rounded-lg p-3 text-center text-xs text-gray-400 bg-white/60">
+                尚未設定任何活動方案。點擊上方「+ 新增活動」快速建立（例如：花蓮振興住宿補助）。
+              </div>
+            )}
+
+            {campaignOffers.length > 0 && !editingOffer && (
+              <div className="space-y-2">
+                {campaignOffers.map((offer) => (
+                  <div key={offer.id} className={`bg-white border rounded-xl p-3 flex items-start gap-3 transition-all ${offer.enabled ? 'border-amber-200 shadow-sm' : 'border-gray-200 opacity-60'}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-gray-800">{offer.name || '未命名活動'}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                          {offer.offerType === 'nights_tiered' ? '續住每晚梯次折抵' :
+                           offer.offerType === 'percent' ? `打 ${10 - (offer.discountPercent ?? 0) / 10} 折 (${offer.discountPercent}% off)` :
+                           offer.offerType === 'fixed_amount' ? `折抵 $${offer.discountAmount}` : '自訂規則'}
+                        </span>
+                      </div>
+                      {offer.offerType === 'nights_tiered' && offer.tieredNightDiscounts?.length ? (
+                        <div className="text-xs text-emerald-700 font-semibold mt-1">
+                          💰 折扣：{offer.tieredNightDiscounts.map((d, i) => `第 ${i + 1} 晚折 $${d}`).join('、')}
+                        </div>
+                      ) : null}
+                      {offer.qualification && (
+                        <div className="text-[11px] text-gray-600 mt-1">
+                          👤 資格：{offer.qualification}
+                        </div>
+                      )}
+                      {offer.rulesNote && (
+                        <div className="text-[10px] text-gray-400 mt-0.5">
+                          📝 備註：{offer.rulesNote}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = campaignOffers.map(o => o.id === offer.id ? { ...o, enabled: !o.enabled } : o)
+                          setCampaignOffers(updated)
+                        }}
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${offer.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                      >
+                        {offer.enabled ? '啟用中' : '已停用'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingOffer({ ...offer })}
+                        className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600"
+                      >
+                        編輯
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = campaignOffers.filter(o => o.id !== offer.id)
+                          setCampaignOffers(updated)
+                        }}
+                        className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 編輯 / 新增活動表單 */}
+            {editingOffer && (
+              <div className="bg-white border-2 border-amber-300 rounded-xl p-4 space-y-3 shadow-md">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="font-semibold text-sm text-gray-800">
+                    {campaignOffers.some(o => o.id === editingOffer.id) ? '編輯活動方案' : '新增活動方案'}
+                  </div>
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingOffer.enabled}
+                      onChange={e => setEditingOffer({ ...editingOffer, enabled: e.target.checked })}
+                      className="rounded text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>啟用此活動</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">活動名稱</label>
+                    <input
+                      type="text"
+                      value={editingOffer.name}
+                      onChange={e => setEditingOffer({ ...editingOffer, name: e.target.value })}
+                      placeholder="例：花蓮振興住宿補助、壽星生日券"
+                      className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">折扣模式</label>
+                    <select
+                      value={editingOffer.offerType}
+                      onChange={e => setEditingOffer({ ...editingOffer, offerType: e.target.value as CsCampaignOffer['offerType'] })}
+                      className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    >
+                      <option value="nights_tiered">連續住宿每晚梯次折抵（如第1晚折800, 第2晚折1200）</option>
+                      <option value="fixed_amount">單筆固定金額折抵（如生日券現折 500）</option>
+                      <option value="percent">百分比折扣（如早鳥 9 折）</option>
+                      <option value="custom">自訂說明 / 贈品活動</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 梯次金額輸入 */}
+                {editingOffer.offerType === 'nights_tiered' && (
+                  <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-3 space-y-2">
+                    <label className="text-xs font-semibold text-amber-900 block">各晚折抵金額（元）</label>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {(editingOffer.tieredNightDiscounts ?? [800, 1200]).map((amt, idx) => (
+                        <div key={idx} className="flex items-center gap-1 bg-white border border-amber-300 rounded-lg px-2 py-1">
+                          <span className="text-xs text-gray-600">第 {idx + 1} 晚：$</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={100}
+                            value={amt}
+                            onChange={e => {
+                              const next = [...(editingOffer.tieredNightDiscounts ?? [800, 1200])]
+                              next[idx] = Number(e.target.value)
+                              setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
+                            }}
+                            className="w-16 text-xs font-bold text-emerald-700 outline-none"
+                          />
+                          {(editingOffer.tieredNightDiscounts?.length ?? 0) > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = (editingOffer.tieredNightDiscounts ?? []).filter((_, i) => i !== idx)
+                                setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
+                              }}
+                              className="text-gray-400 hover:text-red-500 ml-1"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = [...(editingOffer.tieredNightDiscounts ?? [800, 1200]), 1000]
+                          setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
+                        }}
+                        className="text-xs text-amber-700 border border-amber-300 bg-white rounded-lg px-2 py-1 hover:bg-amber-100"
+                      >
+                        + 增加下一晚
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 固定金額輸入 */}
+                {editingOffer.offerType === 'fixed_amount' && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">折抵金額（元）</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={editingOffer.discountAmount ?? 500}
+                      onChange={e => setEditingOffer({ ...editingOffer, discountAmount: Number(e.target.value) })}
+                      className="w-32 text-xs border rounded-lg px-2.5 py-1.5 bg-white font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+                )}
+
+                {/* 百分比輸入 */}
+                {editingOffer.offerType === 'percent' && (
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">折扣 %（例如填 10 代表 9 折 / 10% off）</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={90}
+                      value={editingOffer.discountPercent ?? 10}
+                      onChange={e => setEditingOffer({ ...editingOffer, discountPercent: Number(e.target.value) })}
+                      className="w-32 text-xs border rounded-lg px-2.5 py-1.5 bg-white font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">適用對象 / 條件資格</label>
+                  <input
+                    type="text"
+                    value={editingOffer.qualification}
+                    onChange={e => setEditingOffer({ ...editingOffer, qualification: e.target.value })}
+                    placeholder="例：本國籍自由行旅客、出示身分證件／生日券、限平日（週一至週四）"
+                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-0.5">AI 在向客人介紹活動時會主動說明這些資格規定。</p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">活動補充說明 / 限制條款</label>
+                  <textarea
+                    value={editingOffer.rulesNote}
+                    onChange={e => setEditingOffer({ ...editingOffer, rulesNote: e.target.value })}
+                    rows={2}
+                    placeholder="例：限花蓮合法旅宿（喬民宿適用），每人限用一次，預算用罄截止。"
+                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!editingOffer.name.trim()) return
+                      const exists = campaignOffers.some(o => o.id === editingOffer.id)
+                      const updated = exists
+                        ? campaignOffers.map(o => o.id === editingOffer.id ? editingOffer : o)
+                        : [...campaignOffers, editingOffer]
+                      setCampaignOffers(updated)
+                      setEditingOffer(null)
+                    }}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
+                    style={{ background: 'var(--primary)' }}
+                  >
+                    儲存活動
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingOffer(null)}
+                    className="px-4 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── VIP 識別 ── */}
