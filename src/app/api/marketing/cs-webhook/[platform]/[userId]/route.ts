@@ -883,6 +883,8 @@ interface CsKnowledge {
   notifyWebhooks: NotifyWebhook[]
   contactPhone1: string
   contactPhone2: string
+  aiSenderName?: string
+  aiSenderIconUrl?: string
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -908,6 +910,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let notifyWebhooks: NotifyWebhook[] = []
   let contactPhone1 = ''
   let contactPhone2 = ''
+  let aiSenderName = ''
+  let aiSenderIconUrl = ''
   const knowledgeParts: string[] = []
 
   // CS 設定（systemPrompt、付款資訊、訂房流程等）優先採用包含完整知識庫（knowledgeBase）
@@ -950,6 +954,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
         if (unit12.contactPhone1) contactPhone1 = String(unit12.contactPhone1)
         if (unit12.contactPhone2) contactPhone2 = String(unit12.contactPhone2)
+        if (unit12.aiSenderName) aiSenderName = String(unit12.aiSenderName).trim()
+        if (unit12.aiSenderIconUrl) aiSenderIconUrl = String(unit12.aiSenderIconUrl).trim()
         settingsLoaded = true
       }
 
@@ -1076,6 +1082,8 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     notifyWebhooks,
     contactPhone1,
     contactPhone2,
+    aiSenderName: aiSenderName || undefined,
+    aiSenderIconUrl: aiSenderIconUrl || undefined,
   }
 }
 
@@ -2283,14 +2291,39 @@ function extractImageUrls(text: string): { cleanText: string; imageUrls: string[
   return { cleanText, imageUrls }
 }
 
-async function replyLine(replyToken: string, text: string, token: string) {
+async function replyLine(
+  replyToken: string,
+  text: string,
+  token: string,
+  sender?: { name?: string; iconUrl?: string }
+) {
   const { cleanText, imageUrls } = extractImageUrls(text)
+  const validIconUrl = sender?.iconUrl && /^https:\/\//i.test(sender.iconUrl.trim()) ? sender.iconUrl.trim().slice(0, 1000) : undefined
+  const validSenderName = sender?.name?.trim() ? sender.name.trim().slice(0, 20) : undefined
+  const senderObj = (validSenderName || validIconUrl)
+    ? {
+        ...(validSenderName ? { name: validSenderName } : {}),
+        ...(validIconUrl ? { iconUrl: validIconUrl } : {}),
+      }
+    : undefined
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const messages: any[] = []
-  if (cleanText) messages.push({ type: 'text', text: cleanText })
+  if (cleanText) {
+    messages.push({
+      type: 'text',
+      text: cleanText,
+      ...(senderObj ? { sender: senderObj } : {}),
+    })
+  }
   for (const url of imageUrls) {
     if (messages.length >= 5) break  // LINE 一次最多 5 則訊息
-    messages.push({ type: 'image', originalContentUrl: url, previewImageUrl: url })
+    messages.push({
+      type: 'image',
+      originalContentUrl: url,
+      previewImageUrl: url,
+      ...(senderObj ? { sender: senderObj } : {}),
+    })
   }
   if (!messages.length) return
   await fetch('https://api.line.me/v2/bot/message/reply', {
@@ -2451,7 +2484,12 @@ export async function POST(
 
       const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
       const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
-      if (reply && token && replyToken) await replyLine(replyToken, reply, token)
+      if (reply && token && replyToken) {
+        await replyLine(replyToken, reply, token, {
+          name: knowledge.aiSenderName,
+          iconUrl: knowledge.aiSenderIconUrl,
+        })
+      }
       // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
       void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
       await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))

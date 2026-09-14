@@ -7,7 +7,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -333,6 +333,8 @@ interface Unit12Data {
   discountGifts?: string
   contactPhone1?: string
   contactPhone2?: string
+  aiSenderName?: string
+  aiSenderIconUrl?: string
 }
 
 const CS_PLATFORMS = [
@@ -593,6 +595,10 @@ function Unit12CustomerService({
   const [discountGifts, setDiscountGifts] = useState(savedData?.discountGifts ?? '')
   const [contactPhone1, setContactPhone1] = useState(savedData?.contactPhone1 ?? '')
   const [contactPhone2, setContactPhone2] = useState(savedData?.contactPhone2 ?? '')
+  const [aiSenderName, setAiSenderName] = useState(savedData?.aiSenderName ?? '')
+  const [aiSenderIconUrl, setAiSenderIconUrl] = useState(savedData?.aiSenderIconUrl ?? '')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -617,9 +623,27 @@ function Unit12CustomerService({
     if (savedData.discountGifts !== undefined) setDiscountGifts(savedData.discountGifts)
     if (savedData.contactPhone1 !== undefined) setContactPhone1(savedData.contactPhone1)
     if (savedData.contactPhone2 !== undefined) setContactPhone2(savedData.contactPhone2)
+    if (savedData.aiSenderName !== undefined) setAiSenderName(savedData.aiSenderName)
+    if (savedData.aiSenderIconUrl !== undefined) setAiSenderIconUrl(savedData.aiSenderIconUrl)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
+
+  const handleAvatarUpload = async (file: File) => {
+    setUploadingAvatar(true)
+    const form = new FormData()
+    form.append('file', file)
+    form.append('category', 'image')
+    try {
+      const res = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        setAiSenderIconUrl(data.url)
+      }
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
 
   const [savingSettings, setSavingSettings] = useState(false)
   const [uploadingDialogue, setUploadingDialogue] = useState(false)
@@ -641,7 +665,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
       }
     } finally {
       setUploadingDialogue(false)
@@ -651,7 +675,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
   }
 
   // Test chat
@@ -1193,7 +1217,7 @@ function Unit12CustomerService({
   function saveSettings() {
     setSavingSettings(true)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -1284,14 +1308,14 @@ function Unit12CustomerService({
           const cfg = data.bookingFormConfig as BookingFormConfig
           setBookingFormConfig(cfg)
           setBookingParticipants(
-            Array.from({ length: Math.max(1, cfg.headcount) }, () => ({ name: '', birthday: '', idNumber: '' }))
+            Array.from({ length: Math.max(1, Number(cfg.headcount) || 1) }, () => ({ name: '', birthday: '', idNumber: '' }))
           )
           setBookingContactPhone('')
           setBookingFormOpen(true)
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2 })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -2128,6 +2152,107 @@ function Unit12CustomerService({
               <option value="Bahasa Indonesia">Bahasa Indonesia</option>
               <option value="ภาษาไทย">ภาษาไทย（泰語）</option>
             </select>
+          </div>
+
+          {/* AI 客服身分與顯示外觀（LINE 客戶看到的頭像與名稱） */}
+          <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-3 bg-indigo-50/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 text-indigo-600" />
+                <span className="font-medium text-sm text-gray-800">AI 客服顯示身分（LINE 頭像與暱稱）</span>
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">LINE 專屬</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              客人與 LINE 官方帳號對話時，AI 的回覆訊息會使用獨立的「AI 專屬頭像」與「AI 專屬暱稱」展示，讓客人清楚辨識當前回覆是 AI 助理還是真人店長。未填寫時則使用 LINE 官方帳號原有預設頭像與名稱。
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1">
+              {/* AI 暱稱 */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                  <span>AI 顯示暱稱</span>
+                  <span className="text-[10px] text-gray-400 font-normal">（上限 20 字）</span>
+                </label>
+                <input
+                  type="text"
+                  maxLength={20}
+                  value={aiSenderName}
+                  onChange={e => setAiSenderName(e.target.value)}
+                  placeholder="例：AI 助理小喬、小喬客服"
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                <p className="text-[10px] text-gray-400">客人在 LINE 聊天室中看到此回覆的寄件人名稱。</p>
+              </div>
+
+              {/* AI 頭像 */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                  <span>AI 顯示頭像</span>
+                  <span className="text-[10px] text-gray-400 font-normal">（需為 HTTPS 網址）</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="h-10 w-10 rounded-full border border-gray-200 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                    {aiSenderIconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={aiSenderIconUrl}
+                        alt="AI Avatar"
+                        className="h-full w-full object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                      />
+                    ) : (
+                      <UserRound className="h-5 w-5 text-gray-300" />
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    value={aiSenderIconUrl}
+                    onChange={e => setAiSenderIconUrl(e.target.value)}
+                    placeholder="https://...（或點右側上傳）"
+                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-2 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                  <input
+                    type="file"
+                    ref={avatarInputRef}
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={e => {
+                      const f = e.target.files?.[0]
+                      if (f) void handleAvatarUpload(f)
+                      e.target.value = ''
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="shrink-0 px-2.5 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-xs text-gray-700 flex items-center gap-1 transition-colors disabled:opacity-50"
+                    title="上傳圖片作為頭像"
+                  >
+                    {uploadingAvatar ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5 text-gray-500" />
+                        <span>上傳</span>
+                      </>
+                    )}
+                  </button>
+                  {aiSenderIconUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAiSenderIconUrl('')}
+                      className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
+                      title="清除頭像"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-400">建議使用正方形 PNG/JPG 格式（LINE 規格要求 HTTPS 網址）。</p>
+              </div>
+            </div>
           </div>
 
           {/* System Prompt */}
