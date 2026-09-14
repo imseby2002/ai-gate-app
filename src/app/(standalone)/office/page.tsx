@@ -7,10 +7,17 @@ import {
   Users, Wallet, FlaskConical, Store, Briefcase, Wrench, Crown, LayoutGrid, Megaphone,
   Lightbulb, Scale,
 } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { UNIT_AREAS, COMMON_PAGES, UNIT_LABEL, hasUnit } from '@/lib/org-units'
+import {
+  getLocalizedUnitAreas,
+  getLocalizedCommonPages,
+  getLocalizedUnitLabel,
+  hasUnit,
+  type UnitArea,
+} from '@/lib/org-units'
 import { OfficeProposalsPanel } from '@/components/office/OfficeProposalsPanel'
 
 interface Access {
@@ -39,9 +46,14 @@ const UNIT_STYLE: Record<string, { icon: ComponentType<{ className?: string }>; 
 const fallbackStyle = { icon: LayoutGrid, chip: 'bg-primary/10 text-primary', ring: 'hover:border-primary/50' }
 
 export default function OfficePage() {
+  const t = useTranslations('Office')
+  const locale = useLocale()
   const [access, setAccess] = useState<Access | null>(null)
   const [mainTab, setMainTab] = useState<'units' | 'proposals' | 'assign'>('units')
   const [pendingCount, setPendingCount] = useState<number | null>(null)
+
+  const unitAreas = getLocalizedUnitAreas(locale)
+  const commonPages = getLocalizedCommonPages(locale)
 
   const updateUrlTab = (tab: 'units' | 'proposals' | 'assign') => {
     if (typeof window !== 'undefined') {
@@ -85,8 +97,15 @@ export default function OfficePage() {
 
   const canManage = access.canManage ?? access.isAdmin
   const isSuperAdmin = access.isAdmin
-  const roleLabel = access.isAdmin ? '平台總管理者' : access.companyRole === 'owner' ? '公司負責人' : access.isCompanyAdmin ? '公司 IT' : null
-  const visibleAreas = UNIT_AREAS
+  const roleLabel = access.isAdmin
+    ? t('roles.superAdmin')
+    : access.companyRole === 'owner'
+    ? t('roles.owner')
+    : access.isCompanyAdmin
+    ? t('roles.itAdmin')
+    : null
+
+  const visibleAreas = unitAreas
     .filter(a => isSuperAdmin || hasUnit(canManage, access.units, a.key))
     .map(a => ({ ...a, pages: a.pages.filter(p => canManage || !p.adminOnly) }))
     .filter(a => a.pages.length > 0)
@@ -101,17 +120,17 @@ export default function OfficePage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">公司入口</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
               {access.companyName && <Badge variant="secondary" className="font-medium">{access.companyName}</Badge>}
               {roleLabel && <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" />{roleLabel}</Badge>}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              依單位進入各自系統。每位同仁皆可提出系統問題與改進想法，經公司負責人批准後即時啟動程式改寫。
+              {t('subtitle')}
             </p>
-            {COMMON_PAGES.length > 0 && (
+            {commonPages.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium mr-1">全公司共用：</span>
-                {COMMON_PAGES.map(p => {
+                <span className="text-xs text-muted-foreground font-medium mr-1">{t('shared')}</span>
+                {commonPages.map(p => {
                   const isProposals = p.href.includes('tab=proposals')
                   const isSelected = isProposals && mainTab === 'proposals'
                   return (
@@ -158,7 +177,7 @@ export default function OfficePage() {
             }`}
           >
             <Building2 className="h-4 w-4 text-primary" />
-            部門系統入口
+            {t('tabs.units')}
           </button>
           <button
             type="button"
@@ -170,10 +189,10 @@ export default function OfficePage() {
             }`}
           >
             <Lightbulb className="h-4 w-4 text-amber-500" />
-            問題與想法提案
+            {t('tabs.proposals')}
             {pendingCount !== null && pendingCount > 0 && (
               <Badge className="ml-1 bg-amber-500 text-white hover:bg-amber-600 px-1.5 py-0 text-[10px] font-bold">
-                {pendingCount} 待審
+                {t('tabs.pendingReview', { count: pendingCount })}
               </Badge>
             )}
           </button>
@@ -188,7 +207,7 @@ export default function OfficePage() {
               }`}
             >
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
-              成員與權限指派
+              {t('tabs.assign')}
             </button>
           )}
         </div>
@@ -200,7 +219,7 @@ export default function OfficePage() {
             className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold gap-1.5 shadow-sm"
           >
             <Lightbulb className="h-3.5 w-3.5" />
-            提出問題或想法
+            {t('tabs.submitProposal')}
           </Button>
         )}
       </div>
@@ -214,6 +233,7 @@ export default function OfficePage() {
             isAdmin={access.isAdmin}
             isCompanyAdmin={access.isCompanyAdmin}
             companyRole={access.companyRole}
+            unitAreas={unitAreas}
           />
         )
       ) : (
@@ -221,7 +241,7 @@ export default function OfficePage() {
           {/* 各單位卡片 */}
           {visibleAreas.length === 0 ? (
             <Card className="p-10 text-center text-sm text-muted-foreground">
-              尚未指派任何單位，請聯繫公司負責人或 IT 管理員。
+              {t('noUnits')}
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -248,7 +268,7 @@ export default function OfficePage() {
                                 {a.label}
                               </h3>
                               <span className="text-[11px] text-muted-foreground font-medium">
-                                {a.pages.length} 項核心功能
+                                {t('functionCount', { count: a.pages.length })}
                               </span>
                             </div>
                           </div>
@@ -268,9 +288,13 @@ export default function OfficePage() {
 
                       {/* 底部按鈕：進入部門首頁 */}
                       <div className="pt-3 border-t flex items-center justify-between text-xs font-semibold text-primary mt-2">
-                        <span className="group-hover:underline">進入{a.label}首頁</span>
+                        <span className="group-hover:underline">
+                          {locale === 'vi' ? `Vào trang ${a.label}` : locale === 'en' ? `Enter ${a.label}` : `進入${a.label}首頁`}
+                        </span>
                         <div className="flex items-center gap-1 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all">
-                          <span className="text-[11px] font-normal">前往</span>
+                          <span className="text-[11px] font-normal">
+                            {locale === 'vi' ? 'Truy cập' : locale === 'en' ? 'Go' : '前往'}
+                          </span>
                           <ArrowRight className="h-4 w-4" />
                         </div>
                       </div>
@@ -287,6 +311,7 @@ export default function OfficePage() {
                 isAdmin={access.isAdmin}
                 isCompanyAdmin={access.isCompanyAdmin}
                 companyRole={access.companyRole}
+                unitAreas={unitAreas}
               />
             </div>
           )}
@@ -296,11 +321,25 @@ export default function OfficePage() {
   )
 }
 
-function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolean; isCompanyAdmin?: boolean; companyRole?: string | null }) {
+function AssignPanel({
+  isAdmin,
+  isCompanyAdmin,
+  companyRole,
+  unitAreas,
+}: {
+  isAdmin: boolean
+  isCompanyAdmin?: boolean
+  companyRole?: string | null
+  unitAreas: UnitArea[]
+}) {
+  const t = useTranslations('Office.assignPanel')
+  const tRoles = useTranslations('Office.roles')
+  const locale = useLocale()
   const [users, setUsers] = useState<UserRow[]>([])
   const [storeList, setStoreList] = useState<Array<{ code: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -341,42 +380,71 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
     setSaving('')
   }
 
+  const filteredUsers = users.filter(u => {
+    if (!searchTerm.trim()) return true
+    const q = searchTerm.toLowerCase()
+    return (
+      (u.full_name && u.full_name.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.store_code && u.store_code.toLowerCase().includes(q))
+    )
+  })
+
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-4 py-3">
         <div className="text-sm font-semibold flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-emerald-600" />
-          人員名單與單位權限指派
+          {t('title')}
         </div>
         <Link href="/personnel">
           <Button variant="outline" size="sm" className="gap-1 text-xs">
-            人員名冊 / 批次匯入 <ArrowUpRight className="h-3.5 w-3.5" />
+            {locale === 'vi' ? 'Hồ sơ nhân sự / Nhập hàng loạt' : locale === 'en' ? 'Staff Directory / Batch Import' : '人員名冊 / 批次匯入'} <ArrowUpRight className="h-3.5 w-3.5" />
           </Button>
         </Link>
       </div>
       <div className="p-4 space-y-3">
-        <p className="text-xs text-muted-foreground">
-          由公司負責人或 IT 維護人員名單與單位授權；勾選每位帳號可存取的單位。若指定「所屬門市」，該門市人員登入後將自動鎖定為該門市，無法切換或存取其他門市資料。
-          {isCompanyAdmin && `（目前以「${companyRole === 'owner' ? '公司負責人' : '公司 IT'}」身分管理本公司成員）`}
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t('desc')}
+          {isCompanyAdmin && ` (${locale === 'vi' ? 'Đang quản lý với tư cách' : locale === 'en' ? 'Managing as' : '目前以'}「${companyRole === 'owner' ? tRoles('owner') : tRoles('itAdmin')}」)`}
         </p>
+
+        <div className="max-w-xs">
+          <input
+            type="text"
+            placeholder={t('searchPlaceholder')}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full h-8 px-2.5 text-xs rounded-md border bg-background"
+          />
+        </div>
+
         {loading ? <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-          : users.length === 0 ? (
-            <div className="text-center py-8 text-sm text-muted-foreground">本公司尚無其他成員帳號，請前往「人事管理」或設定進行邀請。</div>
+          : filteredUsers.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              {locale === 'vi' ? 'Không tìm thấy thành viên nào.' : locale === 'en' ? 'No members found.' : '本公司尚無其他成員帳號，請前往「人事管理」或設定進行邀請。'}
+            </div>
           ) : <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50 text-left text-muted-foreground border-b">
-                  <th className="py-2.5 px-3 font-medium sticky left-0 bg-muted/50">帳號</th>
-                  <th className="px-3 py-2.5 font-medium whitespace-nowrap text-left">所屬門市 (Store 鎖定)</th>
-                  {UNIT_AREAS.map(a => <th key={a.key} className="px-2 text-center font-medium whitespace-nowrap">{a.label}</th>)}
+                  <th className="py-2.5 px-3 font-medium sticky left-0 bg-muted/50">{t('colName')}</th>
+                  <th className="px-3 py-2.5 font-medium whitespace-nowrap text-left">
+                    {locale === 'vi' ? 'Chi nhánh trực thuộc (Khóa cửa hàng)' : locale === 'en' ? 'Assigned Store (Locked)' : '所屬門市 (Store 鎖定)'}
+                  </th>
+                  {unitAreas.map(a => <th key={a.key} className="px-2 text-center font-medium whitespace-nowrap">{a.label}</th>)}
                 </tr>
               </thead>
-              <tbody>{users.map(u => (
+              <tbody>{filteredUsers.map(u => (
                 <tr key={u.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="py-2 px-3 sticky left-0 bg-card">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium">{u.full_name || u.email || u.id.slice(0, 8)}</span>
-                      {u.user_type === 'admin' && <Badge variant="success" className="px-1.5 py-0 text-[10px]">管理者</Badge>}
+                      {u.user_type === 'admin' && (
+                        <Badge variant="success" className="px-1.5 py-0 text-[10px]">
+                          {locale === 'vi' ? 'Quản trị' : locale === 'en' ? 'Admin' : '管理者'}
+                        </Badge>
+                      )}
                       {saving === u.id && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                     </div>
                     {u.email && <div className="text-[11px] text-muted-foreground">{u.email}</div>}
@@ -388,7 +456,9 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
                       disabled={u.user_type === 'admin' && !isAdmin}
                       className="h-8 rounded-md border bg-background px-2 text-xs font-medium focus:ring-1 focus:ring-primary disabled:opacity-50"
                     >
-                      <option value="">總部 / 全門市（不鎖定）</option>
+                      <option value="">
+                        {locale === 'vi' ? 'Trụ sở chính / Tất cả chi nhánh' : locale === 'en' ? 'HQ / All Stores (Unlocked)' : '總部 / 全門市（不鎖定）'}
+                      </option>
                       {storeList.map(s => (
                         <option key={s.code} value={s.code}>
                           [{s.code}] {s.name}
@@ -396,7 +466,7 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
                       ))}
                     </select>
                   </td>
-                  {UNIT_AREAS.map(a => {
+                  {unitAreas.map(a => {
                     const isMkt = a.key === 'marketing' || a.key === 'mkt'
                     const hasAccess = isMkt
                       ? ((u.units ?? []).includes('marketing') || (u.units ?? []).includes('mkt'))
@@ -407,7 +477,7 @@ function AssignPanel({ isAdmin, isCompanyAdmin, companyRole }: { isAdmin: boolea
                           className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
                           checked={u.user_type === 'admin' || hasAccess}
                           disabled={u.user_type === 'admin' && !isAdmin}
-                          onChange={() => toggle(u, a.key)} title={UNIT_LABEL[a.key]} />
+                          onChange={() => toggle(u, a.key)} title={a.label} />
                       </td>
                     )
                   })}

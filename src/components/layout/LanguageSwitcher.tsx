@@ -21,12 +21,32 @@ export function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
 
   const handleSelect = async (code: string) => {
     setOpen(false)
-    await fetch('/api/locale', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: code }),
-    })
-    startTransition(() => router.refresh())
+    try {
+      if (typeof window !== 'undefined') {
+        const isImTourist = window.location.hostname.endsWith('im-tourist.com')
+        if (isImTourist) {
+          // Clear any conflicting host-only cookie first
+          document.cookie = 'locale=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          // Set domain cookie across all subdomains
+          document.cookie = `locale=${code}; path=/; domain=.im-tourist.com; max-age=31536000; SameSite=Lax`
+        } else {
+          document.cookie = `locale=${code}; path=/; max-age=31536000; SameSite=Lax`
+        }
+      }
+      await fetch('/api/locale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: code }),
+      })
+    } catch (e) {
+      console.error('Failed to set locale cookie:', e)
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.location.reload()
+      } else {
+        startTransition(() => router.refresh())
+      }
+    }
   }
 
   const current = LANGUAGES.find(l => l.code === currentLocale) ?? LANGUAGES[0]

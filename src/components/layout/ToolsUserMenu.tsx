@@ -3,12 +3,24 @@
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard, Building2 } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
 
 export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string; hasCompany?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
+  const t = useTranslations('Header')
+  const locale = useLocale()
+
+  const labels = {
+    settings: t('settings') || (locale === 'vi' ? 'Cài đặt tài khoản' : '帳號設定'),
+    plan: locale === 'vi' ? 'Gói công ty' : locale === 'en' ? 'Company Plan' : '公司方案',
+    credits: locale === 'vi' ? 'Nạp điểm' : locale === 'en' ? 'Buy Credits' : '儲值點數',
+    csHub: locale === 'vi' ? 'Về trang CS' : locale === 'en' ? 'Back to CS' : '返回客服統整頁',
+    signOut: t('signOut') || (locale === 'vi' ? 'Đăng xuất' : '登出'),
+  }
+
   // 儲值頁返回時要回到「進來的那個模組」，帶上目前路徑
   const creditsHref = `/credits?from=${encodeURIComponent(pathname || '/apps')}`
   const [open, setOpen] = useState(false)
@@ -16,7 +28,6 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    // 登出後導回「當下所屬系統」的登入頁，而非通用的全系統選擇頁（比照 Header.tsx）
     const sub = window.location.hostname.split('.')[0]
     const sys = SUBDOMAIN_SYSTEM[sub] ?? systemForPath(pathname ?? '')
     router.push(sys ? `/login/${sys}` : '/login')
@@ -43,7 +54,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors font-medium border-b border-gray-100"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 text-blue-500" />
-                返回客服統整頁
+                {labels.csHub}
               </a>
             )}
             <a
@@ -51,7 +62,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Settings className="h-3.5 w-3.5 text-gray-400" />
-              帳號設定
+              {labels.settings}
             </a>
             {hasCompany && (
               <a
@@ -59,7 +70,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
                 className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                公司方案
+                {labels.plan}
               </a>
             )}
             <a
@@ -67,7 +78,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Wallet className="h-3.5 w-3.5 text-gray-400" />
-              儲值點數
+              {labels.credits}
             </a>
             <div className="my-1 border-t" />
             <button
@@ -75,7 +86,7 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
               className="flex items-center gap-2 w-full px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
-              登出
+              {labels.signOut}
             </button>
           </div>
         </>
