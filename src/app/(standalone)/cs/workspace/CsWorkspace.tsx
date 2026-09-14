@@ -353,6 +353,8 @@ interface Unit12Data {
   contactPhone2?: string
   aiSenderName?: string
   aiSenderIconUrl?: string
+  humanSenderName?: string
+  humanSenderIconUrl?: string
 }
 
 const CS_PLATFORMS = [
@@ -430,7 +432,7 @@ const CS_PLATFORMS = [
   },
 ]
 
-type Cs12Tab = 'platforms' | 'ai-settings' | 'dialogue-files' | 'data-sources' | 'pricing' | 'forms' | 'corrections' | 'test' | 'logs' | 'tickets' | 'inbox'
+type Cs12Tab = 'platforms' | 'campaign-offers' | 'pricing' | 'dialogue-files' | 'ai-settings' | 'data-sources' | 'forms' | 'logs' | 'tickets' | 'inbox' | 'corrections' | 'test'
 
 interface CsDataSource {
   id: string
@@ -617,8 +619,12 @@ function Unit12CustomerService({
   const [contactPhone2, setContactPhone2] = useState(savedData?.contactPhone2 ?? '')
   const [aiSenderName, setAiSenderName] = useState(savedData?.aiSenderName ?? '')
   const [aiSenderIconUrl, setAiSenderIconUrl] = useState(savedData?.aiSenderIconUrl ?? '')
+  const [humanSenderName, setHumanSenderName] = useState(savedData?.humanSenderName ?? '')
+  const [humanSenderIconUrl, setHumanSenderIconUrl] = useState(savedData?.humanSenderIconUrl ?? '')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [uploadingHumanAvatar, setUploadingHumanAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const humanAvatarInputRef = useRef<HTMLInputElement>(null)
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -646,6 +652,8 @@ function Unit12CustomerService({
     if (savedData.contactPhone2 !== undefined) setContactPhone2(savedData.contactPhone2)
     if (savedData.aiSenderName !== undefined) setAiSenderName(savedData.aiSenderName)
     if (savedData.aiSenderIconUrl !== undefined) setAiSenderIconUrl(savedData.aiSenderIconUrl)
+    if (savedData.humanSenderName !== undefined) setHumanSenderName(savedData.humanSenderName)
+    if (savedData.humanSenderIconUrl !== undefined) setHumanSenderIconUrl(savedData.humanSenderIconUrl)
     // Only restore files from DB if local state is empty (don't overwrite user's current session files)
     if (savedData.dialogueFiles?.length) setDialogueFiles(savedData.dialogueFiles)
   }, [savedData])
@@ -663,6 +671,22 @@ function Unit12CustomerService({
       }
     } finally {
       setUploadingAvatar(false)
+    }
+  }
+
+  const handleHumanAvatarUpload = async (file: File) => {
+    setUploadingHumanAvatar(true)
+    const form = new FormData()
+    form.append('file', file)
+    form.append('category', 'image')
+    try {
+      const res = await fetch('/api/marketing/upload-file', { method: 'POST', body: form })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        setHumanSenderIconUrl(data.url)
+      }
+    } finally {
+      setUploadingHumanAvatar(false)
     }
   }
 
@@ -686,7 +710,7 @@ function Unit12CustomerService({
           textContent: data.textContent ?? '',
         }]
         setDialogueFiles(newFiles)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl })
       }
     } finally {
       setUploadingDialogue(false)
@@ -696,7 +720,7 @@ function Unit12CustomerService({
   const removeDialogueFile = (url: string) => {
     const newFiles = dialogueFiles.filter(f => f.url !== url)
     setDialogueFiles(newFiles)
-    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
+    onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: newFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl })
   }
 
   // Test chat
@@ -1238,7 +1262,7 @@ function Unit12CustomerService({
   function saveSettings() {
     setSavingSettings(true)
     const filesToSave = dialogueFiles.length > 0 ? dialogueFiles : (savedData?.dialogueFiles ?? [])
-    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl }
+    const data: Unit12Data = { systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs, dialogueFiles: filesToSave, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl }
     onDone(data)
     setTimeout(() => setSavingSettings(false), 800)
   }
@@ -1337,7 +1361,7 @@ function Unit12CustomerService({
         }
         const updatedLogs = [newEntry, ...logs].slice(0, 100)
         setLogs(updatedLogs)
-        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl })
+        onDone({ systemPrompt, knowledgeBase, escalationThreshold, replyLanguage, logs: updatedLogs, dialogueFiles, bookingFlowEnabled, paymentInfo, bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct, discountGifts, campaignOffers, contactPhone1, contactPhone2, aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl })
         // 保存到統一收件匣
         saveTestMessageToInbox(userMsg, data.reply, data.intent, data.risk, data.latencyMs)
       } else {
@@ -1676,18 +1700,35 @@ function Unit12CustomerService({
               {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
           </div>
-          {(['platforms', 'ai-settings', 'dialogue-files', 'data-sources', 'pricing', 'forms', 'corrections', 'test', 'logs', 'tickets', 'inbox'] as Cs12Tab[]).map(tb => {
+          {(['platforms', 'campaign-offers', 'pricing', 'dialogue-files', 'ai-settings', 'data-sources', 'forms', 'logs', 'tickets', 'inbox', 'corrections'] as Cs12Tab[]).map(tb => {
             const openCount = tickets.filter(tk => tk.status === 'open' || tk.status === 'in_progress').length
             const labels: Record<Cs12Tab, string> = {
-              platforms: t('u12.tabPlatforms'), 'ai-settings': t('u12.tabAiSettings'), 'dialogue-files': t('u12.tabKnowledge'),
-              'data-sources': t('u12.tabDataSources'), pricing: t('u12.tabPricing'), forms: t('u12.tabForms'), corrections: t('u12.tabCorrections'), test: t('u12.tabTest'), logs: t('u12.tabLogs'),
+              platforms: t('u12.tabPlatforms'),
+              'campaign-offers': '活動項目',
+              pricing: '預訂與定價',
+              'dialogue-files': t('u12.tabKnowledge'),
+              'ai-settings': t('u12.tabAiSettings'),
+              'data-sources': t('u12.tabDataSources'),
+              forms: t('u12.tabForms'),
+              logs: t('u12.tabLogs'),
               tickets: `${t('u12.tabTickets')}${openCount > 0 ? ` (${openCount})` : ''}`,
               inbox: t('u12.tabInbox'),
+              corrections: t('u12.tabCorrections'),
+              test: t('u12.tabTest'),
             }
             const icons: Record<Cs12Tab, LucideIcon> = {
-              platforms: MessageSquare, 'ai-settings': Sparkles, 'dialogue-files': BookOpen,
-              'data-sources': Database, pricing: Calculator, forms: FileText, corrections: ShieldCheck, test: FlaskConical, logs: ClipboardList,
-              tickets: Ticket, inbox: Inbox,
+              platforms: MessageSquare,
+              'campaign-offers': Tag,
+              pricing: Calculator,
+              'dialogue-files': BookOpen,
+              'ai-settings': Sparkles,
+              'data-sources': Database,
+              forms: FileText,
+              logs: ClipboardList,
+              tickets: Ticket,
+              inbox: Inbox,
+              corrections: ShieldCheck,
+              test: FlaskConical,
             }
             const Icon = icons[tb]
             const isNew = (tb === 'tickets' || tb === 'inbox') && tab !== tb
@@ -1757,7 +1798,33 @@ function Unit12CustomerService({
 
       {/* ── Tab: Platforms ──────────────────────────────────────────────────── */}
       {tab === 'platforms' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* 對話測試沙盒捷徑 */}
+          <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-indigo-50 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <FlaskConical className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                  <span>對話測試沙盒</span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-medium">即時驗證</span>
+                </div>
+                <div className="text-[11px] text-gray-500 mt-0.5 truncate">
+                  模擬真實客人打字發問，即時檢視 AI 知識庫回答、房價計算機試算與活動項目折抵。
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTab('test')}
+              className="px-3.5 py-2 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
+            >
+              <FlaskConical className="h-3.5 w-3.5" />
+              <span>進入測試沙盒</span>
+            </button>
+          </div>
+
           <p className="text-xs text-gray-500 flex items-start gap-1.5">
             <span>{t('u12.platformsIntro')}</span>
             <HelpTip title="平台連結怎麼設定？" href="/cs/help#channels">
@@ -2176,103 +2243,206 @@ function Unit12CustomerService({
             </select>
           </div>
 
-          {/* AI 客服身分與顯示外觀（LINE 客戶看到的頭像與名稱） */}
-          <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-3 bg-indigo-50/20">
+          {/* 客服身分與顯示外觀（LINE 專屬：智能小喬 AI vs 真人客服） */}
+          <div className="border-2 border-indigo-200 rounded-xl p-4 space-y-4 bg-indigo-50/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <UserRound className="h-4 w-4 text-indigo-600" />
-                <span className="font-medium text-sm text-gray-800">AI 客服顯示身分（LINE 頭像與暱稱）</span>
-                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">LINE 專屬</span>
+                <span className="font-semibold text-sm text-gray-800">客服顯示身分（LINE 頭像與暱稱）</span>
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">LINE 專屬區分</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500">
-              客人與 LINE 官方帳號對話時，AI 的回覆訊息會使用獨立的「AI 專屬頭像」與「AI 專屬暱稱」展示，讓客人清楚辨識當前回覆是 AI 助理還是真人店長。未填寫時則使用 LINE 官方帳號原有預設頭像與名稱。
+            <p className="text-xs text-gray-500 leading-relaxed">
+              客人與 LINE 官方帳號對話時，訊息會依照身分顯示專屬頭像與暱稱。<strong>智能小喬</strong>自動回覆時顯示 AI 頭像；後台人員由<strong>收件匣手動回覆</strong>時，則顯示真人客服頭像，讓客人一眼就能區分是 AI 還是店長真人回覆。
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1">
-              {/* AI 暱稱 */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                  <span>AI 顯示暱稱</span>
-                  <span className="text-[10px] text-gray-400 font-normal">（上限 20 字）</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={20}
-                  value={aiSenderName}
-                  onChange={e => setAiSenderName(e.target.value)}
-                  placeholder="例：AI 助理小喬、小喬客服"
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-                <p className="text-[10px] text-gray-400">客人在 LINE 聊天室中看到此回覆的寄件人名稱。</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+              {/* 卡片 1：🤖 智能小喬（AI 客服身分） */}
+              <div className="bg-white border-2 border-indigo-100 rounded-xl p-3.5 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between pb-1 border-b border-indigo-50">
+                  <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                    <span>🤖 智能小喬（AI 客服）</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">自動回覆時顯示</span>
+                </div>
 
-              {/* AI 頭像 */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                  <span>AI 顯示頭像</span>
-                  <span className="text-[10px] text-gray-400 font-normal">（需為 HTTPS 網址）</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="h-10 w-10 rounded-full border border-gray-200 bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
-                    {aiSenderIconUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={aiSenderIconUrl}
-                        alt="AI Avatar"
-                        className="h-full w-full object-cover"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-                      />
-                    ) : (
-                      <UserRound className="h-5 w-5 text-gray-300" />
-                    )}
-                  </div>
+                {/* AI 暱稱 */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                    <span>AI 顯示暱稱</span>
+                    <span className="text-[10px] text-gray-400 font-normal">（上限 20 字）</span>
+                  </label>
                   <input
-                    type="url"
-                    value={aiSenderIconUrl}
-                    onChange={e => setAiSenderIconUrl(e.target.value)}
-                    placeholder="https://...（或點右側上傳）"
-                    className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-2 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    type="text"
+                    maxLength={20}
+                    value={aiSenderName}
+                    onChange={e => setAiSenderName(e.target.value)}
+                    placeholder="例：智能小喬、AI 助理小喬"
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
                   />
-                  <input
-                    type="file"
-                    ref={avatarInputRef}
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    className="hidden"
-                    onChange={e => {
-                      const f = e.target.files?.[0]
-                      if (f) void handleAvatarUpload(f)
-                      e.target.value = ''
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="shrink-0 px-2.5 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-xs text-gray-700 flex items-center gap-1 transition-colors disabled:opacity-50"
-                    title="上傳圖片作為頭像"
-                  >
-                    {uploadingAvatar ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <>
-                        <Upload className="h-3.5 w-3.5 text-gray-500" />
-                        <span>上傳</span>
-                      </>
-                    )}
-                  </button>
-                  {aiSenderIconUrl && (
+                  <p className="text-[10px] text-gray-400">客人在 LINE 聊天室中看到 AI 回覆時的寄件人名稱。</p>
+                </div>
+
+                {/* AI 頭像 */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                    <span>AI 顯示頭像</span>
+                    <span className="text-[10px] text-gray-400 font-normal">（需為 HTTPS 網址）</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-10 rounded-full border border-indigo-200 bg-indigo-50 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                      {aiSenderIconUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={aiSenderIconUrl}
+                          alt="AI Avatar"
+                          className="h-full w-full object-cover"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <UserRound className="h-5 w-5 text-indigo-300" />
+                      )}
+                    </div>
+                    <input
+                      type="url"
+                      value={aiSenderIconUrl}
+                      onChange={e => setAiSenderIconUrl(e.target.value)}
+                      placeholder="https://...（或點右側上傳）"
+                      className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                    <input
+                      type="file"
+                      ref={avatarInputRef}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        if (f) void handleAvatarUpload(f)
+                        e.target.value = ''
+                      }}
+                    />
                     <button
                       type="button"
-                      onClick={() => setAiSenderIconUrl('')}
-                      className="p-1.5 text-gray-400 hover:text-red-500 rounded transition-colors"
-                      title="清除頭像"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="shrink-0 px-2 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-xs text-gray-700 flex items-center gap-1 transition-colors disabled:opacity-50"
+                      title="上傳圖片作為 AI 頭像"
                     >
-                      <X className="h-4 w-4" />
+                      {uploadingAvatar ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="h-3.5 w-3.5 text-gray-500" />
+                          <span>上傳</span>
+                        </>
+                      )}
                     </button>
-                  )}
+                    {aiSenderIconUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setAiSenderIconUrl('')}
+                        className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors"
+                        title="清除頭像"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[10px] text-gray-400">建議使用正方形 PNG/JPG 格式（LINE 規格要求 HTTPS 網址）。</p>
+              </div>
+
+              {/* 卡片 2：👩‍💼 真人客服（手動回覆身分） */}
+              <div className="bg-white border-2 border-emerald-100 rounded-xl p-3.5 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between pb-1 border-b border-emerald-50">
+                  <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                    <span>👩‍💼 真人客服（店長 / 管家）</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">收件匣手動回覆時顯示</span>
+                </div>
+
+                {/* 真人暱稱 */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                    <span>真人顯示暱稱</span>
+                    <span className="text-[10px] text-gray-400 font-normal">（上限 20 字）</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={20}
+                    value={humanSenderName}
+                    onChange={e => setHumanSenderName(e.target.value)}
+                    placeholder="例：店長小喬、喬民宿 管家"
+                    className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
+                  <p className="text-[10px] text-gray-400">客服專員從後台統一收件匣手動發送時顯示的暱稱。</p>
+                </div>
+
+                {/* 真人頭像 */}
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                    <span>真人顯示頭像</span>
+                    <span className="text-[10px] text-gray-400 font-normal">（需為 HTTPS 網址）</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-10 rounded-full border border-emerald-200 bg-emerald-50 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                      {humanSenderIconUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={humanSenderIconUrl}
+                          alt="Human Avatar"
+                          className="h-full w-full object-cover"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                        />
+                      ) : (
+                        <UserRound className="h-5 w-5 text-emerald-300" />
+                      )}
+                    </div>
+                    <input
+                      type="url"
+                      value={humanSenderIconUrl}
+                      onChange={e => setHumanSenderIconUrl(e.target.value)}
+                      placeholder="https://...（或點右側上傳）"
+                      className="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    />
+                    <input
+                      type="file"
+                      ref={humanAvatarInputRef}
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={e => {
+                        const f = e.target.files?.[0]
+                        if (f) void handleHumanAvatarUpload(f)
+                        e.target.value = ''
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => humanAvatarInputRef.current?.click()}
+                      disabled={uploadingHumanAvatar}
+                      className="shrink-0 px-2 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg text-xs text-gray-700 flex items-center gap-1 transition-colors disabled:opacity-50"
+                      title="上傳圖片作為真人頭像"
+                    >
+                      {uploadingHumanAvatar ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="h-3.5 w-3.5 text-gray-500" />
+                          <span>上傳</span>
+                        </>
+                      )}
+                    </button>
+                    {humanSenderIconUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setHumanSenderIconUrl('')}
+                        className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors"
+                        title="清除頭像"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2291,466 +2461,6 @@ function Unit12CustomerService({
               rows={6}
               placeholder={t('u12.systemPromptPlaceholder')}
               className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-          </div>
-
-          {/* Booking flow toggle + multi-flow config */}
-          <div className="border-2 border-emerald-200 rounded-xl p-4 space-y-3 bg-emerald-50/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium text-sm text-gray-700">{t('u12.bookingFlow')}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{t('u12.bookingFlowHint')}</div>
-              </div>
-              <button
-                onClick={() => setBookingFlowEnabled(v => !v)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${bookingFlowEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${bookingFlowEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-            </div>
-
-            {bookingFlowEnabled && (
-              <div className="space-y-3">
-                {/* Flow list */}
-                {bookingFlows.map((flow, fi) => (
-                  <div key={flow.id} className="bg-white border border-emerald-200 rounded-xl p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-semibold text-gray-700">{flow.name || t('u12.flowN', { n: fi + 1 })}</span>
-                        {flow.simpleMode && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{t('u12.quickBooking')}</span>}
-                      </div>
-                      <div className="flex gap-1.5">
-                        <button onClick={() => setEditingFlow({ ...flow })}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
-                        <button onClick={() => setBookingFlows(prev => prev.filter((_, i) => i !== fi))}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-gray-500">
-                      {t('u12.triggerKw')}<span className="text-emerald-700 font-medium">{flow.triggerKeywords || t('u12.notConfigured')}</span>
-                    </div>
-                    {flow.simpleMode
-                      ? <div className="text-[10px] text-blue-600">{t('u12.simpleModeFlow')}</div>
-                      : <div className="text-[10px] text-gray-500">{t('u12.collectSteps')}{flow.steps.map(s => stepLabel(s)).join(' → ')}</div>
-                    }
-                  </div>
-                ))}
-
-                <button
-                  onClick={() => setEditingFlow({ id: `flow_${Date.now()}`, name: '', triggerKeywords: '', dataHint: '', steps: ['date_depart', 'timeslot', 'headcount', 'phone'], paymentInfo: '' })}
-                  className="w-full py-2 rounded-xl text-xs font-medium border-2 border-dashed border-emerald-300 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" /> {t('u12.addBookingType')}
-                </button>
-
-                {/* Global payment info */}
-                <div>
-                  <div className="text-xs font-medium text-gray-600 mb-1">{t('u12.defaultPayment')}</div>
-                  <textarea
-                    value={paymentInfo}
-                    onChange={e => setPaymentInfo(e.target.value)}
-                    rows={2}
-                    placeholder={t('u12.paymentPlaceholder')}
-                    className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Flow editor modal */}
-          {editingFlow && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditingFlow(null) }}>
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-gray-800">{t('u12.flowEditorTitle')}</h3>
-                  <button onClick={() => setEditingFlow(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
-                </div>
-
-                {/* Name */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">{t('u12.flowName')}</label>
-                  <input value={editingFlow.name} onChange={e => setEditingFlow(f => f ? { ...f, name: e.target.value } : f)}
-                    placeholder={t('u12.flowNamePlaceholder')}
-                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
-                </div>
-
-                {/* Trigger keywords */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">{t('u12.triggerKwLabel')}</label>
-                  <p className="text-[10px] text-gray-400">{t('u12.triggerKwHint')}</p>
-                  <input value={editingFlow.triggerKeywords} onChange={e => setEditingFlow(f => f ? { ...f, triggerKeywords: e.target.value } : f)}
-                    placeholder={t('u12.triggerKwPlaceholder')}
-                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
-                </div>
-
-                {/* Data hint */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">{t('u12.dataHintLabel')}</label>
-                  <p className="text-[10px] text-gray-400">{t.rich('u12.dataHintHint', { br: () => <br /> })}</p>
-                  <input value={editingFlow.dataHint ?? ''} onChange={e => setEditingFlow(f => f ? { ...f, dataHint: e.target.value } : f)}
-                    placeholder={t('u12.dataHintPlaceholder')}
-                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
-                </div>
-
-                {/* Simple mode toggle */}
-                <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editingFlow.simpleMode ?? false}
-                      onChange={e => setEditingFlow(f => f ? { ...f, simpleMode: e.target.checked } : f)}
-                      className="rounded" />
-                    <span className="text-xs font-semibold text-blue-800">{t('u12.simpleMode')}</span>
-                  </label>
-                  <p className="text-[10px] text-blue-600 leading-relaxed">{t('u12.simpleModeHint')}</p>
-                  {editingFlow.simpleMode && (
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={editingFlow.requirePassengerId ?? true}
-                        onChange={e => setEditingFlow(f => f ? { ...f, requirePassengerId: e.target.checked } : f)}
-                        className="rounded" />
-                      <span className="text-xs text-blue-700">{t('u12.requireId')}</span>
-                    </label>
-                  )}
-                </div>
-
-                {/* Steps — hidden in simple mode */}
-                {!editingFlow.simpleMode && (
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600">{t('u12.collectStepsLabel')}</label>
-                  <div className="space-y-1.5">
-                    {BOOKING_STEPS.map(step => {
-                      const checked = editingFlow.steps.includes(step)
-                      const idx = editingFlow.steps.indexOf(step)
-                      return (
-                        <div key={step} className={`flex items-center gap-2.5 p-2.5 rounded-lg border ${checked ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200'}`}>
-                          <input type="checkbox" checked={checked} onChange={e => {
-                            setEditingFlow(f => {
-                              if (!f) return f
-                              const steps = e.target.checked
-                                ? [...f.steps, step]
-                                : f.steps.filter(s => s !== step)
-                              return { ...f, steps }
-                            })
-                          }} className="rounded" />
-                          <span className="text-xs flex-1">{stepLabel(step)}</span>
-                          {checked && (
-                            <div className="flex gap-1">
-                              <button disabled={idx === 0} onClick={() => setEditingFlow(f => {
-                                if (!f) return f
-                                const s = [...f.steps]; [s[idx - 1], s[idx]] = [s[idx], s[idx - 1]]; return { ...f, steps: s }
-                              })} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">↑</button>
-                              <button disabled={idx === editingFlow.steps.length - 1} onClick={() => setEditingFlow(f => {
-                                if (!f) return f
-                                const s = [...f.steps]; [s[idx], s[idx + 1]] = [s[idx + 1], s[idx]]; return { ...f, steps: s }
-                              })} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">↓</button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                )}
-
-                {/* Payment info per flow */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">{t('u12.flowPaymentLabel')}</label>
-                  <textarea value={editingFlow.paymentInfo} onChange={e => setEditingFlow(f => f ? { ...f, paymentInfo: e.target.value } : f)}
-                    rows={2}
-                    placeholder={t('u12.flowPaymentPlaceholder')}
-                    className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <button onClick={() => setEditingFlow(null)}
-                    className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">{t('u12.cancel')}</button>
-                  <button onClick={() => {
-                    if (!editingFlow) return
-                    setBookingFlows(prev => {
-                      const idx = prev.findIndex(f => f.id === editingFlow.id)
-                      return idx >= 0 ? prev.map((f, i) => i === idx ? editingFlow : f) : [...prev, editingFlow]
-                    })
-                    setEditingFlow(null)
-                  }} className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
-                    style={{ background: 'var(--primary)' }}>
-                    {t('u12.saveFlow')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── 促銷與補助活動（國旅補助、早鳥優惠、續住加碼等） ── */}
-          <div className="border-2 border-amber-200 rounded-xl p-4 space-y-3 bg-amber-50/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Tag className="h-4 w-4 text-amber-600" />
-                <span className="text-sm font-semibold text-gray-800">促銷與補助活動（國旅補助、特殊折扣）</span>
-                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">AI 精確試算</span>
-              </div>
-              {!editingOffer && (
-                <button
-                  type="button"
-                  onClick={() => setEditingOffer({
-                    id: crypto.randomUUID(),
-                    name: '',
-                    enabled: true,
-                    offerType: 'nights_tiered',
-                    qualification: '本國籍自由行旅客、出示身分證件',
-                    tieredNightDiscounts: [800, 1200],
-                    rulesNote: '第一晚折 $800、連續第二晚再折 $1,200（喬民宿適用）。',
-                  })}
-                  className="px-2.5 py-1 rounded-lg text-xs font-medium text-white flex items-center gap-1 transition-colors"
-                  style={{ background: 'var(--primary)' }}
-                >
-                  <Plus className="h-3 w-3" /> 新增活動
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              在此設定政府振興補助（如花蓮國旅補助、第1晚折800第2晚折1200）、早鳥折扣或生日券優惠。AI 於對話及報價時會自動核對資格並依規則精確折抵，活動結束隨時停用即可。
-            </p>
-
-            {/* 活動清單 */}
-            {campaignOffers.length === 0 && !editingOffer && (
-              <div className="border border-dashed border-amber-200 rounded-lg p-3 text-center text-xs text-gray-400 bg-white/60">
-                尚未設定任何活動方案。點擊上方「+ 新增活動」快速建立（例如：花蓮振興住宿補助）。
-              </div>
-            )}
-
-            {campaignOffers.length > 0 && !editingOffer && (
-              <div className="space-y-2">
-                {campaignOffers.map((offer) => (
-                  <div key={offer.id} className={`bg-white border rounded-xl p-3 flex items-start gap-3 transition-all ${offer.enabled ? 'border-amber-200 shadow-sm' : 'border-gray-200 opacity-60'}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-gray-800">{offer.name || '未命名活動'}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
-                          {offer.offerType === 'nights_tiered' ? '續住每晚梯次折抵' :
-                           offer.offerType === 'percent' ? `打 ${10 - (offer.discountPercent ?? 0) / 10} 折 (${offer.discountPercent}% off)` :
-                           offer.offerType === 'fixed_amount' ? `折抵 $${offer.discountAmount}` : '自訂規則'}
-                        </span>
-                      </div>
-                      {offer.offerType === 'nights_tiered' && offer.tieredNightDiscounts?.length ? (
-                        <div className="text-xs text-emerald-700 font-semibold mt-1">
-                          💰 折扣：{offer.tieredNightDiscounts.map((d, i) => `第 ${i + 1} 晚折 $${d}`).join('、')}
-                        </div>
-                      ) : null}
-                      {offer.qualification && (
-                        <div className="text-[11px] text-gray-600 mt-1">
-                          👤 資格：{offer.qualification}
-                        </div>
-                      )}
-                      {offer.rulesNote && (
-                        <div className="text-[10px] text-gray-400 mt-0.5">
-                          📝 備註：{offer.rulesNote}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = campaignOffers.map(o => o.id === offer.id ? { ...o, enabled: !o.enabled } : o)
-                          setCampaignOffers(updated)
-                        }}
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${offer.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                      >
-                        {offer.enabled ? '啟用中' : '已停用'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingOffer({ ...offer })}
-                        className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600"
-                      >
-                        編輯
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = campaignOffers.filter(o => o.id !== offer.id)
-                          setCampaignOffers(updated)
-                        }}
-                        className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500"
-                      >
-                        刪除
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* 編輯 / 新增活動表單 */}
-            {editingOffer && (
-              <div className="bg-white border-2 border-amber-300 rounded-xl p-4 space-y-3 shadow-md">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <div className="font-semibold text-sm text-gray-800">
-                    {campaignOffers.some(o => o.id === editingOffer.id) ? '編輯活動方案' : '新增活動方案'}
-                  </div>
-                  <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editingOffer.enabled}
-                      onChange={e => setEditingOffer({ ...editingOffer, enabled: e.target.checked })}
-                      className="rounded text-amber-600 focus:ring-amber-500"
-                    />
-                    <span>啟用此活動</span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">活動名稱</label>
-                    <input
-                      type="text"
-                      value={editingOffer.name}
-                      onChange={e => setEditingOffer({ ...editingOffer, name: e.target.value })}
-                      placeholder="例：花蓮振興住宿補助、壽星生日券"
-                      className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">折扣模式</label>
-                    <select
-                      value={editingOffer.offerType}
-                      onChange={e => setEditingOffer({ ...editingOffer, offerType: e.target.value as CsCampaignOffer['offerType'] })}
-                      className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
-                    >
-                      <option value="nights_tiered">連續住宿每晚梯次折抵（如第1晚折800, 第2晚折1200）</option>
-                      <option value="fixed_amount">單筆固定金額折抵（如生日券現折 500）</option>
-                      <option value="percent">百分比折扣（如早鳥 9 折）</option>
-                      <option value="custom">自訂說明 / 贈品活動</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* 梯次金額輸入 */}
-                {editingOffer.offerType === 'nights_tiered' && (
-                  <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-3 space-y-2">
-                    <label className="text-xs font-semibold text-amber-900 block">各晚折抵金額（元）</label>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {(editingOffer.tieredNightDiscounts ?? [800, 1200]).map((amt, idx) => (
-                        <div key={idx} className="flex items-center gap-1 bg-white border border-amber-300 rounded-lg px-2 py-1">
-                          <span className="text-xs text-gray-600">第 {idx + 1} 晚：$</span>
-                          <input
-                            type="number"
-                            min={0}
-                            step={100}
-                            value={amt}
-                            onChange={e => {
-                              const next = [...(editingOffer.tieredNightDiscounts ?? [800, 1200])]
-                              next[idx] = Number(e.target.value)
-                              setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
-                            }}
-                            className="w-16 text-xs font-bold text-emerald-700 outline-none"
-                          />
-                          {(editingOffer.tieredNightDiscounts?.length ?? 0) > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const next = (editingOffer.tieredNightDiscounts ?? []).filter((_, i) => i !== idx)
-                                setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
-                              }}
-                              className="text-gray-400 hover:text-red-500 ml-1"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = [...(editingOffer.tieredNightDiscounts ?? [800, 1200]), 1000]
-                          setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
-                        }}
-                        className="text-xs text-amber-700 border border-amber-300 bg-white rounded-lg px-2 py-1 hover:bg-amber-100"
-                      >
-                        + 增加下一晚
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 固定金額輸入 */}
-                {editingOffer.offerType === 'fixed_amount' && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">折抵金額（元）</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={editingOffer.discountAmount ?? 500}
-                      onChange={e => setEditingOffer({ ...editingOffer, discountAmount: Number(e.target.value) })}
-                      className="w-32 text-xs border rounded-lg px-2.5 py-1.5 bg-white font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                    />
-                  </div>
-                )}
-
-                {/* 百分比輸入 */}
-                {editingOffer.offerType === 'percent' && (
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">折扣 %（例如填 10 代表 9 折 / 10% off）</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={90}
-                      value={editingOffer.discountPercent ?? 10}
-                      onChange={e => setEditingOffer({ ...editingOffer, discountPercent: Number(e.target.value) })}
-                      className="w-32 text-xs border rounded-lg px-2.5 py-1.5 bg-white font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">適用對象 / 條件資格</label>
-                  <input
-                    type="text"
-                    value={editingOffer.qualification}
-                    onChange={e => setEditingOffer({ ...editingOffer, qualification: e.target.value })}
-                    placeholder="例：本國籍自由行旅客、出示身分證件／生日券、限平日（週一至週四）"
-                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
-                  />
-                  <p className="text-[10px] text-gray-400 mt-0.5">AI 在向客人介紹活動時會主動說明這些資格規定。</p>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">活動補充說明 / 限制條款</label>
-                  <textarea
-                    value={editingOffer.rulesNote}
-                    onChange={e => setEditingOffer({ ...editingOffer, rulesNote: e.target.value })}
-                    rows={2}
-                    placeholder="例：限花蓮合法旅宿（喬民宿適用），每人限用一次，預算用罄截止。"
-                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-1 border-t">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!editingOffer.name.trim()) return
-                      const exists = campaignOffers.some(o => o.id === editingOffer.id)
-                      const updated = exists
-                        ? campaignOffers.map(o => o.id === editingOffer.id ? editingOffer : o)
-                        : [...campaignOffers, editingOffer]
-                      setCampaignOffers(updated)
-                      setEditingOffer(null)
-                    }}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
-                    style={{ background: 'var(--primary)' }}
-                  >
-                    儲存活動
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingOffer(null)}
-                    className="px-4 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ── VIP 識別 ── */}
@@ -3230,282 +2940,769 @@ function Unit12CustomerService({
         </div>
       ))}
 
-      {/* ── Tab: Pricing Calculator ─────────────────────────────────────────── */}
-      {tab === 'pricing' && (csFeatures && !csFeatures.pricingCalculator ? renderLockedUpgrade('報價計算機') : (
+      {/* ── Tab: Campaign Offers (活動項目) ─────────────────────────────────── */}
+      {tab === 'campaign-offers' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                {t('u12.tabPricing')}
-                <HelpTip title="報價計算機怎麼用？" href="/cs/help#pricing">
-                  填入房型/票種的平日價、假日價、團體折扣後，AI 回覆價格時會精確套用這裡的數字計算，不會用猜的。設定完可到「測試」分頁實際問價驗證。
-                </HelpTip>
+              <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <Tag className="h-4 w-4 text-amber-600" />
+                <span>活動項目（國旅補助、折扣折抵、優惠方案）</span>
+                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">AI 精確試算</span>
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">{t('u12.pricingHint')}</div>
+              <p className="text-xs text-gray-500 mt-1">
+                在此設定政府振興補助（如花蓮國旅補助、第1晚折800第2晚折1200）、早鳥折扣或生日券優惠。AI 於對話及報價時會自動核對資格並依規則精確折抵，活動結束隨時停用即可。
+              </p>
             </div>
-            {!editingPc && (
-              <div className="flex gap-1.5 flex-wrap">
-                {(industry && CS_INDUSTRY_TEMPLATES[industry]
-                  ? CS_INDUSTRY_TEMPLATES[industry].pricingButtons
-                  : [{ key: 'tour', label: `+ ${t('u12.pcTour')}` }, { key: 'accommodation', label: `+ ${t('u12.pcAccommodation')}` }, { key: 'custom', label: `+ ${t('u12.pcCustom')}` }]
-                ).map(({ key, label }, idx) => (
-                  <button key={idx} onClick={() => openAddPc(key)}
-                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
-                    style={{ background: 'var(--primary)' }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
+            {!editingOffer && (
+              <button
+                type="button"
+                onClick={() => setEditingOffer({
+                  id: crypto.randomUUID(),
+                  name: '',
+                  enabled: true,
+                  offerType: 'nights_tiered',
+                  qualification: '本國籍自由行旅客、出示身分證件',
+                  tieredNightDiscounts: [800, 1200],
+                  rulesNote: '第一晚折 $800、連續第二晚再折 $1,200（喬民宿適用）。',
+                })}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
+                style={{ background: 'var(--primary)' }}
+              >
+                <Plus className="h-3.5 w-3.5" /> 新增活動
+              </button>
             )}
           </div>
 
-          {dsFetchFailed && !editingPc && (
-            <div className="border-2 border-dashed border-red-200 rounded-xl p-8 text-center bg-red-50">
-              <div className="mb-1 text-sm text-red-500 font-medium">載入失敗，並非定價設定被刪除</div>
-              <div className="text-xs text-red-400">請重新整理頁面再試一次；若持續失敗請聯繫客服</div>
+          {/* 活動清單 */}
+          {campaignOffers.length === 0 && !editingOffer && (
+            <div className="border-2 border-dashed border-amber-200 rounded-xl p-8 text-center text-xs text-gray-400 bg-white/60">
+              尚未設定任何活動方案。點擊右上角「+ 新增活動」快速建立（例如：花蓮振興住宿補助）。
             </div>
           )}
 
-          {pricingConfigs.length === 0 && !dsFetchFailed && !editingPc && (
-            <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
-              <div className="mb-2">{t('u12.noPricing')}</div>
-              <div className="text-xs">{t('u12.noPricingHint')}</div>
-            </div>
-          )}
-
-          {pricingConfigs.length > 0 && !editingPc && (
+          {campaignOffers.length > 0 && !editingOffer && (
             <div className="space-y-2">
-              {pricingConfigs.map((pc) => {
-                const cfg = pc.config as { productType?: string; triggerKeywords?: string[] }
-                const typeLabel = cfg.productType === 'tour' ? t('u12.pcTour') : cfg.productType === 'accommodation' ? t('u12.pcAccommodation') : t('u12.pcCustom')
-                return (
-                  <div key={pc.id} className="border rounded-xl p-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
-                        <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{typeLabel}</span>
-                        <span className="truncate">{pc.name}</span>
-                      </div>
-                      <div className="text-[10px] text-gray-400 mt-0.5 truncate">
-                        觸發詞：{(cfg.triggerKeywords ?? []).join('、') || '（未設定）'}
-                      </div>
+              {campaignOffers.map((offer) => (
+                <div key={offer.id} className={`bg-white border rounded-xl p-3.5 flex items-start gap-3 transition-all ${offer.enabled ? 'border-amber-200 shadow-sm' : 'border-gray-200 opacity-60'}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-800">{offer.name || '未命名活動'}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
+                        {offer.offerType === 'nights_tiered' ? '續住每晚梯次折抵' :
+                         offer.offerType === 'percent' ? `打 ${10 - (offer.discountPercent ?? 0) / 10} 折 (${offer.discountPercent}% off)` :
+                         offer.offerType === 'fixed_amount' ? `折抵 $${offer.discountAmount}` : '自訂規則'}
+                      </span>
                     </div>
-                    <button onClick={() => togglePc(pc)}
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${pc.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {pc.enabled ? '啟用' : '停用'}
-                    </button>
-                    <button onClick={() => openEditPc(pc)}
-                      className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
-                    <button onClick={() => deletePc(pc.id)}
-                      className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
+                    {offer.offerType === 'nights_tiered' && offer.tieredNightDiscounts?.length ? (
+                      <div className="text-xs text-emerald-700 font-semibold mt-1">
+                        💰 折扣：{offer.tieredNightDiscounts.map((d, i) => `第 ${i + 1} 晚折 $${d}`).join('、')}
+                      </div>
+                    ) : null}
+                    {offer.qualification && (
+                      <div className="text-[11px] text-gray-600 mt-1">
+                        👤 資格：{offer.qualification}
+                      </div>
+                    )}
+                    {offer.rulesNote && (
+                      <div className="text-[10px] text-gray-400 mt-0.5">
+                        📝 備註：{offer.rulesNote}
+                      </div>
+                    )}
                   </div>
-                )
-              })}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = campaignOffers.map(o => o.id === offer.id ? { ...o, enabled: !o.enabled } : o)
+                        setCampaignOffers(updated)
+                      }}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${offer.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
+                      {offer.enabled ? '啟用中' : '已停用'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingOffer({ ...offer })}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600"
+                    >
+                      編輯
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = campaignOffers.filter(o => o.id !== offer.id)
+                        setCampaignOffers(updated)
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500"
+                    >
+                      刪除
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
-          {editingPc !== null && (
-            <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="font-medium text-sm text-gray-700">{editingPc.id ? t('u12.editPricing') : t('u12.addPricing')}</div>
-                <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
-                  {editingPc.config.productType === 'tour' ? t('u12.pcTour') : editingPc.config.productType === 'accommodation' ? t('u12.pcAccommodation') : t('u12.pcCustom')}
-                </span>
+          {/* 編輯 / 新增活動表單 */}
+          {editingOffer && (
+            <div className="bg-white border-2 border-amber-300 rounded-xl p-4 space-y-3 shadow-md">
+              <div className="flex items-center justify-between border-b pb-2">
+                <div className="font-semibold text-sm text-gray-800">
+                  {campaignOffers.some(o => o.id === editingOffer.id) ? '編輯活動方案' : '新增活動方案'}
+                </div>
+                <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingOffer.enabled}
+                    onChange={e => setEditingOffer({ ...editingOffer, enabled: e.target.checked })}
+                    className="rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>啟用此活動</span>
+                </label>
               </div>
 
-              <div>
-                <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsName')}</label>
-                <input
-                  type="text"
-                  placeholder={t('u12.pcNamePh')}
-                  value={editingPc.name}
-                  onChange={e => setEditingPc(prev => prev ? { ...prev, name: e.target.value } : prev)}
-                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">觸發詞（客人訊息含這些字才會套用這份定價）</label>
-                  <TagInput
-                    value={editingPc.config.triggerKeywords ?? []}
-                    onChange={v => updatePcConfig({ triggerKeywords: v })}
-                    placeholder="輸入後按 Enter"
+                  <label className="text-xs font-medium text-gray-700 block mb-1">活動名稱</label>
+                  <input
+                    type="text"
+                    value={editingOffer.name}
+                    onChange={e => setEditingOffer({ ...editingOffer, name: e.target.value })}
+                    placeholder="例：花蓮振興住宿補助、壽星生日券"
+                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                 </div>
+
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">幣別</label>
+                  <label className="text-xs font-medium text-gray-700 block mb-1">折扣模式</label>
                   <select
-                    value={editingPc.config.currency ?? 'TWD'}
-                    onChange={e => updatePcConfig({ currency: e.target.value })}
-                    className="w-full text-xs border rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    value={editingOffer.offerType}
+                    onChange={e => setEditingOffer({ ...editingOffer, offerType: e.target.value as CsCampaignOffer['offerType'] })}
+                    className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
                   >
-                    {['TWD', 'USD', 'JPY', 'CNY', 'EUR'].map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value="nights_tiered">連續住宿每晚梯次折抵（如第1晚折800, 第2晚折1200）</option>
+                    <option value="fixed_amount">單筆固定金額折抵（如生日券現折 500）</option>
+                    <option value="percent">百分比折扣（如早鳥 9 折）</option>
+                    <option value="custom">自訂說明 / 贈品活動</option>
                   </select>
                 </div>
               </div>
 
-              {editingPc.config.productType === 'tour' && (
-                <>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">班次</label>
-                    <RowsEditor
-                      rows={(editingPc.config.schedules ?? []) as Array<Record<string, unknown>>}
-                      fields={[{ key: 'name', label: '名稱', type: 'text', width: 'w-40' }]}
-                      onChange={rows => updatePcConfig({
-                        schedules: rows.map((r, i) => ({ id: (r.id as string) || String(i + 1), name: (r.name as string) ?? '' })),
-                      })}
-                      addLabel="新增班次"
-                    />
+              {/* 梯次金額輸入 */}
+              {editingOffer.offerType === 'nights_tiered' && (
+                <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-3 space-y-2">
+                  <label className="text-xs font-semibold text-amber-900 block">各晚折抵金額（元）</label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {(editingOffer.tieredNightDiscounts ?? [800, 1200]).map((amt, idx) => (
+                      <div key={idx} className="flex items-center gap-1 bg-white border border-amber-300 rounded-lg px-2 py-1">
+                        <span className="text-xs text-gray-600">第 {idx + 1} 晚：$</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={100}
+                          value={amt}
+                          onChange={e => {
+                            const next = [...(editingOffer.tieredNightDiscounts ?? [800, 1200])]
+                            next[idx] = Number(e.target.value)
+                            setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
+                          }}
+                          className="w-16 text-xs font-bold text-emerald-700 outline-none"
+                        />
+                        {(editingOffer.tieredNightDiscounts?.length ?? 0) > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = (editingOffer.tieredNightDiscounts ?? []).filter((_, i) => i !== idx)
+                              setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
+                            }}
+                            className="text-gray-400 hover:text-red-500 ml-1"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = [...(editingOffer.tieredNightDiscounts ?? [800, 1200]), 1000]
+                        setEditingOffer({ ...editingOffer, tieredNightDiscounts: next })
+                      }}
+                      className="text-xs text-amber-700 border border-amber-300 bg-white rounded-lg px-2 py-1 hover:bg-amber-100"
+                    >
+                      + 增加下一晚
+                    </button>
                   </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">票種與價格</label>
-                    <RowsEditor
-                      rows={(editingPc.config.segments ?? []) as Array<Record<string, unknown>>}
-                      fields={[
-                        { key: 'label', label: '名稱', type: 'text', width: 'w-32' },
-                        { key: 'weekdayPrice', label: '平日價', type: 'number' },
-                        { key: 'weekendPrice', label: '假日價', type: 'number' },
-                      ]}
-                      onChange={rows => updatePcConfig({
-                        segments: rows.map(r => ({
-                          label: (r.label as string) ?? '',
-                          key: ((r.label as string) ?? '').trim() || 'seg',
-                          weekdayPrice: Number(r.weekdayPrice) || 0,
-                          weekendPrice: Number(r.weekendPrice) || 0,
-                        })),
-                      })}
-                      addLabel="新增票種"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">套餐方案</label>
-                    <RowsEditor
-                      rows={(editingPc.config.packages ?? []) as Array<Record<string, unknown>>}
-                      fields={[
-                        { key: 'name', label: '名稱', type: 'text', width: 'w-32' },
-                        { key: 'price', label: '價格', type: 'number' },
-                        { key: 'description', label: '說明', type: 'text', width: 'w-32' },
-                      ]}
-                      onChange={rows => updatePcConfig({ packages: rows as PcConfig['packages'] })}
-                      addLabel="新增套餐"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">團體折扣</label>
-                    <RowsEditor
-                      rows={(editingPc.config.groupDiscounts ?? []) as Array<Record<string, unknown>>}
-                      fields={[
-                        { key: 'minPeople', label: '滿N人', type: 'number' },
-                        { key: 'discountPercent', label: '折扣%', type: 'number' },
-                        { key: 'note', label: '備註', type: 'text', width: 'w-32' },
-                      ]}
-                      onChange={rows => updatePcConfig({ groupDiscounts: rows as PcConfig['groupDiscounts'] })}
-                      addLabel="新增折扣"
-                    />
-                  </div>
-                </>
+                </div>
               )}
 
-              {editingPc.config.productType === 'accommodation' && (
+              {/* 固定金額輸入 */}
+              {editingOffer.offerType === 'fixed_amount' && (
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">房型與定價</label>
-                  <RowsEditor
-                    rows={(editingPc.config.rooms ?? []) as Array<Record<string, unknown>>}
-                    fields={[
-                      { key: 'name', label: '房名', type: 'text', width: 'w-28' },
-                      { key: 'capacity', label: '可住人數', type: 'number' },
-                      { key: 'weekdayPrice', label: '平日價', type: 'number' },
-                      { key: 'weekendPrice', label: '假日/週末', type: 'number' },
-                      { key: 'holidayPrice', label: '連續假期', type: 'number' },
-                      { key: 'extraPersonFee', label: '加人費', type: 'number' },
-                    ]}
-                    onChange={rows => updatePcConfig({ rooms: rows as PcConfig['rooms'] })}
-                    addLabel="新增房型"
+                  <label className="text-xs font-medium text-gray-700 block mb-1">折抵金額（元）</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editingOffer.discountAmount ?? 500}
+                    onChange={e => setEditingOffer({ ...editingOffer, discountAmount: Number(e.target.value) })}
+                    className="w-32 text-xs border rounded-lg px-2.5 py-1.5 bg-white font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                 </div>
               )}
 
-              {editingPc.config.productType === 'custom' && (
+              {/* 百分比輸入 */}
+              {editingOffer.offerType === 'percent' && (
                 <div>
-                  <label className="text-[10px] text-gray-500 block mb-1">定價說明</label>
-                  <textarea
-                    value={editingPc.config.customContent ?? ''}
-                    onChange={e => updatePcConfig({ customContent: e.target.value })}
-                    rows={6}
-                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  <label className="text-xs font-medium text-gray-700 block mb-1">折扣 %（例如填 10 代表 9 折 / 10% off）</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={editingOffer.discountPercent ?? 10}
+                    onChange={e => setEditingOffer({ ...editingOffer, discountPercent: Number(e.target.value) })}
+                    className="w-32 text-xs border rounded-lg px-2.5 py-1.5 bg-white font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                 </div>
               )}
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">取消政策</label>
+                <label className="text-xs font-medium text-gray-700 block mb-1">適用對象 / 條件資格</label>
                 <input
                   type="text"
-                  value={editingPc.config.cancellationPolicy ?? ''}
-                  onChange={e => updatePcConfig({ cancellationPolicy: e.target.value })}
-                  className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  value={editingOffer.qualification}
+                  onChange={e => setEditingOffer({ ...editingOffer, qualification: e.target.value })}
+                  placeholder="例：本國籍自由行旅客、出示身分證件／生日券、限平日（週一至週四）"
+                  className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
                 />
+                <p className="text-[10px] text-gray-400 mt-0.5">AI 在向客人介紹活動時會主動說明這些資格規定。</p>
               </div>
 
               <div>
-                <label className="text-[10px] text-gray-500 block mb-1">注意事項</label>
-                <StringListEditor
-                  items={editingPc.config.notes ?? []}
-                  onChange={v => updatePcConfig({ notes: v })}
-                  addLabel="新增事項"
+                <label className="text-xs font-medium text-gray-700 block mb-1">活動補充說明 / 限制條款</label>
+                <textarea
+                  value={editingOffer.rulesNote}
+                  onChange={e => setEditingOffer({ ...editingOffer, rulesNote: e.target.value })}
+                  rows={2}
+                  placeholder="例：限花蓮合法旅宿（喬民宿適用），每人限用一次，預算用罄截止。"
+                  className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
                 />
               </div>
 
-              <div className="border-t pt-2">
+              <div className="flex gap-2 pt-1 border-t">
                 <button
                   type="button"
                   onClick={() => {
-                    setPcAdvancedText(JSON.stringify(editingPc.config, null, 2))
-                    setPcAdvancedOpen(v => !v)
-                    setPcJsonError('')
+                    if (!editingOffer.name.trim()) return
+                    const exists = campaignOffers.some(o => o.id === editingOffer.id)
+                    const updated = exists
+                      ? campaignOffers.map(o => o.id === editingOffer.id ? editingOffer : o)
+                      : [...campaignOffers, editingOffer]
+                    setCampaignOffers(updated)
+                    setEditingOffer(null)
                   }}
-                  className="text-[10px] text-gray-400 hover:text-gray-600 underline"
+                  className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white transition-colors"
+                  style={{ background: 'var(--primary)' }}
                 >
-                  {pcAdvancedOpen ? '收合進階 JSON' : '進階：直接貼上/編輯 JSON'}
+                  儲存活動
                 </button>
-                {pcAdvancedOpen && (
-                  <div className="mt-2 space-y-1">
-                    <textarea
-                      value={pcAdvancedText}
-                      onChange={e => { setPcAdvancedText(e.target.value); setPcJsonError('') }}
-                      rows={12}
-                      spellCheck={false}
-                      className={`w-full text-xs border rounded-lg px-3 py-2 bg-white font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 ${pcJsonError ? 'border-red-400' : ''}`}
-                    />
-                    {pcJsonError && <div className="text-[10px] text-red-500">{pcJsonError}</div>}
-                    <button type="button" onClick={applyPcAdvancedJson}
-                      className="text-[10px] px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100">
-                      套用 JSON
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-1">
-                <button onClick={savePc} disabled={savingPc || !editingPc.name.trim()}
-                  className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-70"
-                  style={{ background: 'var(--primary)' }}>
-                  {savingPc ? t('u12.saving') : t('u12.save')}
-                </button>
-                <button onClick={() => { setEditingPc(null); setPcJsonError(''); setPcAdvancedOpen(false) }}
-                  className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
-                  {t('u12.cancel')}
+                <button
+                  type="button"
+                  onClick={() => setEditingOffer(null)}
+                  className="px-4 py-1.5 rounded-lg text-xs border border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  取消
                 </button>
               </div>
             </div>
           )}
+        </div>
+      )}
 
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
-            <div className="font-medium">{t('u12.usageNotes')}</div>
-            <div>• {t('u12.pcUsage1')}</div>
-            <div>• {t('u12.pcUsage2')}</div>
-            <div>• {t('u12.pcUsage3')}</div>
+      {/* ── Tab: Pricing Calculator & Booking Flows (預訂與定價) ───────────────── */}
+      {tab === 'pricing' && (csFeatures && !csFeatures.pricingCalculator ? renderLockedUpgrade('預訂與定價') : (
+        <div className="space-y-6">
+          {/* 區塊一：房型與服務定價計算機 */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <Calculator className="h-4 w-4 text-indigo-600" />
+                  <span>房型與服務定價計算機</span>
+                  <HelpTip title="定價計算機怎麼用？" href="/cs/help#pricing">
+                    填入房型/票種的平日價、假日價、團體折扣後，AI 回覆價格時會精確套用這裡的數字計算，不會用猜的。設定完可到「測試」分頁實際問價驗證。
+                  </HelpTip>
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">{t('u12.pricingHint')}</div>
+              </div>
+              {!editingPc && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {(industry && CS_INDUSTRY_TEMPLATES[industry]
+                    ? CS_INDUSTRY_TEMPLATES[industry].pricingButtons
+                    : [{ key: 'tour', label: `+ ${t('u12.pcTour')}` }, { key: 'accommodation', label: `+ ${t('u12.pcAccommodation')}` }, { key: 'custom', label: `+ ${t('u12.pcCustom')}` }]
+                  ).map(({ key, label }, idx) => (
+                    <button key={idx} onClick={() => openAddPc(key)}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white"
+                      style={{ background: 'var(--primary)' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {dsFetchFailed && !editingPc && (
+              <div className="border-2 border-dashed border-red-200 rounded-xl p-8 text-center bg-red-50">
+                <div className="mb-1 text-sm text-red-500 font-medium">載入失敗，並非定價設定被刪除</div>
+                <div className="text-xs text-red-400">請重新整理頁面再試一次；若持續失敗請聯繫客服</div>
+              </div>
+            )}
+
+            {pricingConfigs.length === 0 && !dsFetchFailed && !editingPc && (
+              <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
+                <div className="mb-2">{t('u12.noPricing')}</div>
+                <div className="text-xs">{t('u12.noPricingHint')}</div>
+              </div>
+            )}
+
+            {pricingConfigs.length > 0 && !editingPc && (
+              <div className="space-y-2">
+                {pricingConfigs.map((pc) => {
+                  const cfg = pc.config as { productType?: string; triggerKeywords?: string[] }
+                  const typeLabel = cfg.productType === 'tour' ? t('u12.pcTour') : cfg.productType === 'accommodation' ? t('u12.pcAccommodation') : t('u12.pcCustom')
+                  return (
+                    <div key={pc.id} className="border rounded-xl p-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+                          <span className="text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{typeLabel}</span>
+                          <span className="truncate">{pc.name}</span>
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-0.5 truncate">
+                          觸發詞：{(cfg.triggerKeywords ?? []).join('、') || '（未設定）'}
+                        </div>
+                      </div>
+                      <button onClick={() => togglePc(pc)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${pc.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {pc.enabled ? '啟用' : '停用'}
+                      </button>
+                      <button onClick={() => openEditPc(pc)}
+                        className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">編輯</button>
+                      <button onClick={() => deletePc(pc.id)}
+                        className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {editingPc !== null && (
+              <div className="border rounded-xl p-4 space-y-3 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-sm text-gray-700">{editingPc.id ? t('u12.editPricing') : t('u12.addPricing')}</div>
+                  <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                    {editingPc.config.productType === 'tour' ? t('u12.pcTour') : editingPc.config.productType === 'accommodation' ? t('u12.pcAccommodation') : t('u12.pcCustom')}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-gray-500 block mb-1">{t('u12.dsName')}</label>
+                  <input
+                    type="text"
+                    placeholder={t('u12.pcNamePh')}
+                    value={editingPc.name}
+                    onChange={e => setEditingPc(prev => prev ? { ...prev, name: e.target.value } : prev)}
+                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">觸發詞（客人訊息含這些字才會套用這份定價）</label>
+                    <TagInput
+                      value={editingPc.config.triggerKeywords ?? []}
+                      onChange={v => updatePcConfig({ triggerKeywords: v })}
+                      placeholder="輸入後按 Enter"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">幣別</label>
+                    <select
+                      value={editingPc.config.currency ?? 'TWD'}
+                      onChange={e => updatePcConfig({ currency: e.target.value })}
+                      className="w-full text-xs border rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    >
+                      {['TWD', 'USD', 'JPY', 'CNY', 'EUR'].map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {editingPc.config.productType === 'tour' && (
+                  <>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">班次</label>
+                      <RowsEditor
+                        rows={(editingPc.config.schedules ?? []) as Array<Record<string, unknown>>}
+                        fields={[{ key: 'name', label: '名稱', type: 'text', width: 'w-40' }]}
+                        onChange={rows => updatePcConfig({
+                          schedules: rows.map((r, i) => ({ id: (r.id as string) || String(i + 1), name: (r.name as string) ?? '' })),
+                        })}
+                        addLabel="新增班次"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">票種與價格</label>
+                      <RowsEditor
+                        rows={(editingPc.config.segments ?? []) as Array<Record<string, unknown>>}
+                        fields={[
+                          { key: 'label', label: '名稱', type: 'text', width: 'w-32' },
+                          { key: 'weekdayPrice', label: '平日價', type: 'number' },
+                          { key: 'weekendPrice', label: '假日價', type: 'number' },
+                        ]}
+                        onChange={rows => updatePcConfig({
+                          segments: rows.map(r => ({
+                            label: (r.label as string) ?? '',
+                            key: ((r.label as string) ?? '').trim() || 'seg',
+                            weekdayPrice: Number(r.weekdayPrice) || 0,
+                            weekendPrice: Number(r.weekendPrice) || 0,
+                          })),
+                        })}
+                        addLabel="新增票種"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">套餐方案</label>
+                      <RowsEditor
+                        rows={(editingPc.config.packages ?? []) as Array<Record<string, unknown>>}
+                        fields={[
+                          { key: 'name', label: '名稱', type: 'text', width: 'w-32' },
+                          { key: 'price', label: '價格', type: 'number' },
+                          { key: 'description', label: '說明', type: 'text', width: 'w-32' },
+                        ]}
+                        onChange={rows => updatePcConfig({ packages: rows as PcConfig['packages'] })}
+                        addLabel="新增套餐"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">團體折扣</label>
+                      <RowsEditor
+                        rows={(editingPc.config.groupDiscounts ?? []) as Array<Record<string, unknown>>}
+                        fields={[
+                          { key: 'minPeople', label: '滿N人', type: 'number' },
+                          { key: 'discountPercent', label: '折扣%', type: 'number' },
+                          { key: 'note', label: '備註', type: 'text', width: 'w-32' },
+                        ]}
+                        onChange={rows => updatePcConfig({ groupDiscounts: rows as PcConfig['groupDiscounts'] })}
+                        addLabel="新增團體折扣"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">退改政策說明</label>
+                      <textarea
+                        rows={2}
+                        value={editingPc.config.cancellationPolicy ?? ''}
+                        onChange={e => updatePcConfig({ cancellationPolicy: e.target.value })}
+                        className="w-full text-xs border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {editingPc.config.productType === 'accommodation' && (
+                  <>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">房型與定價</label>
+                      <RowsEditor
+                        rows={(editingPc.config.rooms ?? []) as Array<Record<string, unknown>>}
+                        fields={[
+                          { key: 'name', label: '房型名稱', type: 'text', width: 'w-28' },
+                          { key: 'capacity', label: '容納人數', type: 'number', width: 'w-16' },
+                          { key: 'weekdayPrice', label: '平日價', type: 'number', width: 'w-20' },
+                          { key: 'weekendPrice', label: '假日價', type: 'number', width: 'w-20' },
+                          { key: 'holidayPrice', label: '連假價', type: 'number', width: 'w-20' },
+                          { key: 'extraPersonFee', label: '加人加價', type: 'number', width: 'w-20' },
+                        ]}
+                        onChange={rows => updatePcConfig({
+                          rooms: rows.map(r => ({
+                            name: (r.name as string) ?? '',
+                            capacity: Number(r.capacity) || 2,
+                            weekdayPrice: Number(r.weekdayPrice) || 0,
+                            weekendPrice: Number(r.weekendPrice) || 0,
+                            holidayPrice: r.holidayPrice ? Number(r.holidayPrice) : undefined,
+                            extraPersonFee: r.extraPersonFee ? Number(r.extraPersonFee) : undefined,
+                          })),
+                        })}
+                        addLabel="新增房型"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-1">入住須知與備註</label>
+                      <StringListEditor
+                        items={editingPc.config.notes ?? []}
+                        onChange={items => updatePcConfig({ notes: items })}
+                        placeholder="例：Check-in 15:00、寵物不可"
+                        addLabel="新增須知"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {editingPc.config.productType === 'custom' && (
+                  <div>
+                    <label className="text-[10px] text-gray-500 block mb-1">自訂定價規則說明（AI 會直接閱讀此內容進行報價計算）</label>
+                    <textarea
+                      rows={5}
+                      placeholder="例：基礎服務費 500 元，每增加 1 小時加收 300 元，超過 4 小時享 85 折優惠..."
+                      value={editingPc.config.customContent ?? ''}
+                      onChange={e => updatePcConfig({ customContent: e.target.value })}
+                      className="w-full text-xs border rounded-lg px-2.5 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                    />
+                  </div>
+                )}
+
+                {/* 進階 JSON 編輯 */}
+                <div className="border-t pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!pcAdvancedOpen) setPcAdvancedText(JSON.stringify(editingPc.config, null, 2))
+                      setPcAdvancedOpen(prev => !prev)
+                    }}
+                    className="text-[11px] text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium"
+                  >
+                    <span>{pcAdvancedOpen ? '收合進階 JSON 編輯' : '進階 JSON 編輯'}</span>
+                  </button>
+                  {pcAdvancedOpen && (
+                    <div className="mt-2 space-y-2">
+                      <textarea
+                        rows={8}
+                        value={pcAdvancedText}
+                        onChange={e => setPcAdvancedText(e.target.value)}
+                        className="w-full font-mono text-[11px] border rounded-lg p-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                      />
+                      {pcJsonError && <div className="text-[11px] text-red-500">{pcJsonError}</div>}
+                      <button
+                        type="button"
+                        onClick={applyPcAdvancedJson}
+                        className="text-xs px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium"
+                      >
+                        套用 JSON
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button onClick={savePc} disabled={savingPc || !editingPc.name.trim()}
+                    className="px-4 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-70"
+                    style={{ background: 'var(--primary)' }}>
+                    {savingPc ? t('u12.saving') : t('u12.save')}
+                  </button>
+                  <button onClick={() => { setEditingPc(null); setPcJsonError(''); setPcAdvancedOpen(false) }}
+                    className="px-4 py-2 rounded-lg text-xs bg-gray-200 text-gray-600">
+                    {t('u12.cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 space-y-1">
+              <div className="font-medium">{t('u12.usageNotes')}</div>
+              <div>• {t('u12.pcUsage1')}</div>
+              <div>• {t('u12.pcUsage2')}</div>
+              <div>• {t('u12.pcUsage3')}</div>
+            </div>
           </div>
+
+          {/* ── 區塊二：客戶預訂引導與收款流程 ── */}
+          <div className="border-2 border-emerald-200 rounded-xl p-4 space-y-3 bg-emerald-50/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-sm text-gray-800 flex items-center gap-1.5">
+                  <span>📝 客戶預訂引導與收款流程</span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-medium">智能引導</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">{t('u12.bookingFlowHint')}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBookingFlowEnabled(v => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${bookingFlowEnabled ? 'bg-emerald-500' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${bookingFlowEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {bookingFlowEnabled && (
+              <div className="space-y-3 pt-1">
+                {/* Flow list */}
+                {bookingFlows.map((flow, fi) => (
+                  <div key={flow.id} className="bg-white border border-emerald-200 rounded-xl p-3 space-y-2 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-semibold text-gray-700">{flow.name || t('u12.flowN', { n: fi + 1 })}</span>
+                        {flow.simpleMode && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">{t('u12.quickBooking')}</span>}
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => setEditingFlow({ ...flow })}
+                          className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600">{t('u12.edit')}</button>
+                        <button onClick={() => setBookingFlows(prev => prev.filter((_, i) => i !== fi))}
+                          className="text-[10px] px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">{t('u12.delete')}</button>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-gray-500">
+                      {t('u12.triggerKw')}<span className="text-emerald-700 font-medium">{flow.triggerKeywords || t('u12.notConfigured')}</span>
+                    </div>
+                    {flow.simpleMode
+                      ? <div className="text-[10px] text-blue-600">{t('u12.simpleModeFlow')}</div>
+                      : <div className="text-[10px] text-gray-500">{t('u12.collectSteps')}{flow.steps.map(s => stepLabel(s)).join(' → ')}</div>
+                    }
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setEditingFlow({ id: `flow_${Date.now()}`, name: '', triggerKeywords: '', dataHint: '', steps: ['date_depart', 'timeslot', 'headcount', 'phone'], paymentInfo: '' })}
+                  className="w-full py-2.5 rounded-xl text-xs font-medium border-2 border-dashed border-emerald-300 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" /> {t('u12.addBookingType')}
+                </button>
+
+                {/* Global payment info */}
+                <div className="pt-2">
+                  <div className="text-xs font-semibold text-gray-700 mb-1">{t('u12.defaultPayment')}</div>
+                  <p className="text-[10px] text-gray-400 mb-1.5">填入銀行代碼、戶名、帳號等。客人完成預訂資料提供後，AI 會自動發送此帳號給客人匯款。</p>
+                  <textarea
+                    value={paymentInfo}
+                    onChange={e => setPaymentInfo(e.target.value)}
+                    rows={2}
+                    placeholder={t('u12.paymentPlaceholder')}
+                    className="w-full text-xs border rounded-lg px-3 py-2 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Flow editor modal */}
+          {editingFlow && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditingFlow(null) }}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-gray-800">{t('u12.flowEditorTitle')}</h3>
+                  <button onClick={() => setEditingFlow(null)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">{t('u12.flowName')}</label>
+                  <input value={editingFlow.name} onChange={e => setEditingFlow(f => f ? { ...f, name: e.target.value } : f)}
+                    placeholder={t('u12.flowNamePlaceholder')}
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                {/* Trigger keywords */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">{t('u12.triggerKwLabel')}</label>
+                  <p className="text-[10px] text-gray-400">{t('u12.triggerKwHint')}</p>
+                  <input value={editingFlow.triggerKeywords} onChange={e => setEditingFlow(f => f ? { ...f, triggerKeywords: e.target.value } : f)}
+                    placeholder={t('u12.triggerKwPlaceholder')}
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                {/* Data hint */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">{t('u12.dataHintLabel')}</label>
+                  <p className="text-[10px] text-gray-400">{t.rich('u12.dataHintHint', { br: () => <br /> })}</p>
+                  <input value={editingFlow.dataHint ?? ''} onChange={e => setEditingFlow(f => f ? { ...f, dataHint: e.target.value } : f)}
+                    placeholder={t('u12.dataHintPlaceholder')}
+                    className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                {/* Simple mode toggle */}
+                <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={editingFlow.simpleMode ?? false}
+                      onChange={e => setEditingFlow(f => f ? { ...f, simpleMode: e.target.checked } : f)}
+                      className="rounded" />
+                    <span className="text-xs font-semibold text-blue-800">{t('u12.simpleMode')}</span>
+                  </label>
+                  <p className="text-[10px] text-blue-600 leading-relaxed">{t('u12.simpleModeHint')}</p>
+                  {editingFlow.simpleMode && (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editingFlow.requirePassengerId ?? true}
+                        onChange={e => setEditingFlow(f => f ? { ...f, requirePassengerId: e.target.checked } : f)}
+                        className="rounded" />
+                      <span className="text-xs text-blue-700">{t('u12.requireId')}</span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Steps — hidden in simple mode */}
+                {!editingFlow.simpleMode && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-gray-600">{t('u12.collectStepsLabel')}</label>
+                  <div className="space-y-1.5">
+                    {BOOKING_STEPS.map(step => {
+                      const checked = editingFlow.steps.includes(step)
+                      const idx = editingFlow.steps.indexOf(step)
+                      return (
+                        <div key={step} className={`flex items-center gap-2.5 p-2.5 rounded-lg border ${checked ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200'}`}>
+                          <input type="checkbox" checked={checked} onChange={e => {
+                            setEditingFlow(f => {
+                              if (!f) return f
+                              const steps = e.target.checked
+                                ? [...f.steps, step]
+                                : f.steps.filter(s => s !== step)
+                              return { ...f, steps }
+                            })
+                          }} className="rounded" />
+                          <span className="text-xs flex-1">{stepLabel(step)}</span>
+                          {checked && (
+                            <div className="flex gap-1">
+                              <button disabled={idx === 0} onClick={() => setEditingFlow(f => {
+                                if (!f) return f
+                                const s = [...f.steps]; [s[idx - 1], s[idx]] = [s[idx], s[idx - 1]]; return { ...f, steps: s }
+                              })} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">↑</button>
+                              <button disabled={idx === editingFlow.steps.length - 1} onClick={() => setEditingFlow(f => {
+                                if (!f) return f
+                                const s = [...f.steps]; [s[idx], s[idx + 1]] = [s[idx + 1], s[idx]]; return { ...f, steps: s }
+                              })} className="text-gray-400 hover:text-gray-600 disabled:opacity-30 text-xs px-1">↓</button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                )}
+
+                {/* Payment info per flow */}
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">{t('u12.flowPaymentLabel')}</label>
+                  <textarea value={editingFlow.paymentInfo} onChange={e => setEditingFlow(f => f ? { ...f, paymentInfo: e.target.value } : f)}
+                    rows={2}
+                    placeholder={t('u12.flowPaymentPlaceholder')}
+                    className="w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setEditingFlow(null)}
+                    className="flex-1 py-2 rounded-xl text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">{t('u12.cancel')}</button>
+                  <button onClick={() => {
+                    if (!editingFlow) return
+                    setBookingFlows(prev => {
+                      const idx = prev.findIndex(f => f.id === editingFlow.id)
+                      return idx >= 0 ? prev.map((f, i) => i === idx ? editingFlow : f) : [...prev, editingFlow]
+                    })
+                    setEditingFlow(null)
+                  }} className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
+                    style={{ background: 'var(--primary)' }}>
+                    {t('u12.saveFlow')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
 
@@ -3514,14 +3711,19 @@ function Unit12CustomerService({
         <CsFormsPanel industry={industry ?? 'homestay'} appUrl={appUrl} />
       )}
 
-      {/* ── Tab: AI 回答修正 ────────────────────────────────────────────────── */}
-      {tab === 'corrections' && (
-        <CsCorrectionsPanel />
-      )}
-
       {/* ── Tab: Test ───────────────────────────────────────────────────────── */}
       {tab === 'test' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between pb-1">
+            <button
+              type="button"
+              onClick={() => setTab('platforms')}
+              className="text-xs text-gray-600 hover:text-gray-900 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors shadow-sm font-medium"
+            >
+              ← 返回平台連結
+            </button>
+            <span className="text-xs text-gray-400 font-medium">對話測試沙盒</span>
+          </div>
           <div className="border rounded-xl overflow-hidden">
             {/* Chat header */}
             <div className="bg-gray-50 border-b px-4 py-2.5 flex items-center gap-2 flex-wrap">
@@ -4442,6 +4644,11 @@ function Unit12CustomerService({
           </div>
         )
       })())}
+
+      {/* ── Tab: AI 回答修正（置於功能表最下方） ──────────────────────────── */}
+      {tab === 'corrections' && (
+        <CsCorrectionsPanel />
+      )}
 
       {/* ── 報名表單 Modal ── */}
       {bookingFormOpen && bookingFormConfig && (
