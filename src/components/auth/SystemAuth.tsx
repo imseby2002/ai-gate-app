@@ -83,9 +83,13 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
         }
       })
       if (signUp.error) {
-        setError(signUp.error.message.includes('already registered')
+        const rawMsg = (signUp.error.message || '').trim()
+        const friendlyMsg = rawMsg.includes('already registered')
           ? '密碼錯誤，請重新輸入'
-          : signUp.error.message)
+          : rawMsg === '{}' || !rawMsg
+          ? '系統驗證發生異常，請重試或改用 Google 登入'
+          : rawMsg
+        setError(friendlyMsg)
         setLoading(false)
         return
       }
@@ -102,7 +106,8 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
       return
     }
 
-    setError(signIn.error.message)
+    const rawMsg = (signIn.error.message || '').trim()
+    setError(rawMsg === '{}' || !rawMsg ? '登入失敗，請確認帳號密碼後重試' : rawMsg)
     setLoading(false)
   }
 
