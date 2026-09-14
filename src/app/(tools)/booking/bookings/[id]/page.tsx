@@ -347,6 +347,30 @@ export default function BookingDetailPage() {
             )
           })}
         </div>
+
+        {/* 備註與需求：搬到房型明細卡片內，日期下方原本的空白處，不用再往下滑到最底才看得到 */}
+        <div className="pt-2 border-t grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-0.5">
+            <div className="text-xs text-gray-400">{t('detail.specialRequests')}</div>
+            {editingOrder ? (
+              <textarea value={(orderForm.special_requests ?? '') as string} rows={3}
+                onChange={e => setOrderForm(p => ({ ...p, special_requests: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            ) : (
+              <div className="text-sm text-gray-900 whitespace-pre-wrap">{order?.special_requests || '—'}</div>
+            )}
+          </div>
+          <div className="space-y-0.5">
+            <div className="text-xs text-gray-400">{t('detail.internalNotes')}</div>
+            {editingOrder ? (
+              <textarea value={(orderForm.notes ?? '') as string} rows={3}
+                onChange={e => setOrderForm(p => ({ ...p, notes: e.target.value }))}
+                className="w-full text-sm border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            ) : (
+              <div className="text-sm text-gray-900 whitespace-pre-wrap">{order?.notes || '—'}</div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -445,33 +469,6 @@ export default function BookingDetailPage() {
           {ofi(t('detail.idNumber'), 'guest_id_number')}
           {ofi(t('detail.address'), 'guest_address')}
           {ofi(t('detail.arrivalTime'), 'arrival_time')}
-        </div>
-      </div>
-
-      {/* Notes & Requests */}
-      <div className="bg-white rounded-xl border p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800 pb-1 border-b">{t('detail.notesSection')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-0.5">
-            <div className="text-xs text-gray-400">{t('detail.specialRequests')}</div>
-            {editingOrder ? (
-              <textarea value={(orderForm.special_requests ?? '') as string} rows={4}
-                onChange={e => setOrderForm(p => ({ ...p, special_requests: e.target.value }))}
-                className="w-full text-sm border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            ) : (
-              <div className="text-sm text-gray-900 whitespace-pre-wrap">{order?.special_requests || '—'}</div>
-            )}
-          </div>
-          <div className="space-y-0.5">
-            <div className="text-xs text-gray-400">{t('detail.internalNotes')}</div>
-            {editingOrder ? (
-              <textarea value={(orderForm.notes ?? '') as string} rows={4}
-                onChange={e => setOrderForm(p => ({ ...p, notes: e.target.value }))}
-                className="w-full text-sm border rounded-lg px-2.5 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            ) : (
-              <div className="text-sm text-gray-900 whitespace-pre-wrap">{order?.notes || '—'}</div>
-            )}
-          </div>
         </div>
       </div>
     </div>
