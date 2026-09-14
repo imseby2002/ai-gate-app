@@ -44,6 +44,10 @@ export function GlobalFeedbackWidget() {
   const isPublicPage = PUBLIC_PREFIXES.some(p => pathname?.startsWith(p))
   if (!loggedIn || isPublicPage) return null
 
+  // 客服收件匣手機版底部固定回覆列跟這顆浮動按鈕會疊在同一個右下角，擋住送出鍵——
+  // 手機寬度時把按鈕往上挪，桌機（有足夠邊距不會撞到）維持原位。
+  const isCsInbox = pathname?.startsWith('/cs/inbox')
+
   async function submit() {
     if (!title.trim() || !description.trim()) return
     setSubmitting(true)
@@ -77,7 +81,7 @@ export function GlobalFeedbackWidget() {
         type="button"
         onClick={() => setOpen(true)}
         title="意見反映"
-        className="fixed bottom-5 right-5 z-40 h-11 w-11 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 transition-transform"
+        className={`fixed right-5 z-40 h-11 w-11 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 transition-transform ${isCsInbox ? 'bottom-24 md:bottom-5' : 'bottom-5'}`}
         style={{ background: 'var(--primary)' }}
       >
         <MessageSquarePlus className="h-5 w-5" />

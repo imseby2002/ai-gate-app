@@ -196,8 +196,9 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   return (
     <div className="h-[100dvh] min-h-[100dvh] bg-slate-50/50 dark:bg-background">
       <div className="max-w-6xl mx-auto h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card/60">
+        {/* Header：手機版開啟對話時隱藏，下面對話本身的 header 已有返回鍵，
+            兩層 header 疊在一起在小螢幕上太佔空間 */}
+        <div className={`${active ? 'hidden md:flex' : 'flex'} items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card/60`}>
           <div className="flex items-center gap-3">
             <Link href="/cs" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
             <div className="flex items-center gap-2">
