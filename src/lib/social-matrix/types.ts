@@ -20,9 +20,52 @@ export interface SocialProxy {
   last_checked_at?: string
   notes?: string
   assigned_count?: number
+  source?: 'custom' | 'official_leased'
+  lease_id?: string
+  official_proxy_id?: string
+  monthly_price_twd?: number
+  expires_at?: string
   created_at?: string
   updated_at?: string
 }
+
+export type OfficialProxyStatus = 'available' | 'rented_out' | 'maintenance'
+
+export interface OfficialRentableProxy {
+  id: string
+  name: string
+  proxy_type: ProxyType
+  protocol: ProxyProtocol
+  host: string
+  port: number
+  username?: string
+  password?: string
+  country: string
+  city?: string
+  isp?: string
+  latency_ms: number
+  monthly_price_twd: number
+  max_tenants: number // 1 = 專屬獨享
+  current_tenants_count: number
+  status: OfficialProxyStatus
+  is_active?: boolean
+  notes?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProxyLease {
+  id: string
+  user_id?: string
+  official_proxy_id: string
+  status: 'active' | 'expired' | 'canceled'
+  rented_at: string
+  expires_at: string
+  official_proxy?: OfficialRentableProxy
+  created_at?: string
+  updated_at?: string
+}
+
 
 export type SocialPlatform = 'facebook' | 'instagram' | 'threads' | 'tiktok' | 'dcard' | 'x'
 export type AccountStatus = 'warming' | 'mature' | 'cooling' | 'banned' | 'idle'
