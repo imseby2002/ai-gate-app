@@ -349,6 +349,7 @@ interface Unit12Data {
   discountMaxPct?: number
   discountGifts?: string
   campaignOffers?: CsCampaignOffer[]
+  campaignOfferSource?: 'cs' | 'booking' | 'both'
   contactPhone1?: string
   contactPhone2?: string
   aiSenderName?: string
@@ -614,6 +615,7 @@ function Unit12CustomerService({
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
   const [discountGifts, setDiscountGifts] = useState(savedData?.discountGifts ?? '')
   const [campaignOffers, setCampaignOffers] = useState<CsCampaignOffer[]>(savedData?.campaignOffers ?? [])
+  const [campaignOfferSource, setCampaignOfferSource] = useState<'cs' | 'booking' | 'both'>(savedData?.campaignOfferSource ?? 'both')
   const [editingOffer, setEditingOffer] = useState<CsCampaignOffer | null>(null)
   const [contactPhone1, setContactPhone1] = useState(savedData?.contactPhone1 ?? '')
   const [contactPhone2, setContactPhone2] = useState(savedData?.contactPhone2 ?? '')
@@ -625,6 +627,26 @@ function Unit12CustomerService({
   const [uploadingHumanAvatar, setUploadingHumanAvatar] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const humanAvatarInputRef = useRef<HTMLInputElement>(null)
+
+  // Booking module activities (早鳥/晚鳥規則 + 促銷優惠碼)
+  const [bookingRules, setBookingRules] = useState<Array<{ id: string; name: string; rule_type: string; enabled: boolean; adjustment_type: string; adjustment_value: number; conditions: Record<string, unknown> }>>([])
+  const [bookingPromos, setBookingPromos] = useState<Array<{ id: string; code: string; name: string; type: string; value: number; min_nights: number; enabled: boolean }>>([])
+  const [loadingBookingActivities, setLoadingBookingActivities] = useState(false)
+
+  useEffect(() => {
+    if (tab === 'campaign-offers') {
+      setLoadingBookingActivities(true)
+      Promise.all([
+        fetch('/api/booking/pricing/rules').then(r => r.ok ? r.json() : { rules: [] }).catch(() => ({ rules: [] })),
+        fetch('/api/booking/promos').then(r => r.ok ? r.json() : { promos: [] }).catch(() => ({ promos: [] })),
+      ]).then(([rulesData, promosData]) => {
+        setBookingRules(rulesData.rules ?? [])
+        setBookingPromos(promosData.promos ?? [])
+      }).finally(() => {
+        setLoadingBookingActivities(false)
+      })
+    }
+  }, [tab])
 
   // Dialogue files
   const [dialogueFiles, setDialogueFiles] = useState<CsDialogueFile[]>(savedData?.dialogueFiles ?? [])
@@ -650,6 +672,7 @@ function Unit12CustomerService({
     if (savedData.discountMaxPct !== undefined) setDiscountMaxPct(savedData.discountMaxPct)
     if (savedData.discountGifts !== undefined) setDiscountGifts(savedData.discountGifts)
     if (Array.isArray(savedData.campaignOffers)) setCampaignOffers(savedData.campaignOffers)
+    if (savedData.campaignOfferSource) setCampaignOfferSource(savedData.campaignOfferSource)
     if (savedData.contactPhone1 !== undefined) setContactPhone1(savedData.contactPhone1)
     if (savedData.contactPhone2 !== undefined) setContactPhone2(savedData.contactPhone2)
     if (savedData.aiSenderName !== undefined) setAiSenderName(savedData.aiSenderName)
@@ -681,6 +704,7 @@ function Unit12CustomerService({
       discountMaxPct,
       discountGifts,
       campaignOffers,
+      campaignOfferSource,
       contactPhone1,
       contactPhone2,
       aiSenderName,
@@ -696,7 +720,7 @@ function Unit12CustomerService({
     dialogueFiles, savedData?.dialogueFiles, systemPrompt, knowledgeBase,
     escalationThreshold, replyLanguage, logs, bookingFlowEnabled, paymentInfo,
     bookingFlows, vipList, autoCloseMinutes, notifyWebhooks, discountMaxPct,
-    discountGifts, campaignOffers, contactPhone1, contactPhone2,
+    discountGifts, campaignOffers, campaignOfferSource, contactPhone1, contactPhone2,
     aiSenderName, aiSenderIconUrl, humanSenderName, humanSenderIconUrl, onDone
   ])
 
@@ -1345,6 +1369,7 @@ function Unit12CustomerService({
           discountMaxPct,
           discountGifts,
           campaignOffers,
+          campaignOfferSource,
           ...(imgSnap ? { imageBase64: imgSnap.base64, imageMimeType: imgSnap.mimeType } : {}),
         }),
       })
@@ -2997,7 +3022,7 @@ function Unit12CustomerService({
                   <Loader2 className="h-3.5 w-3.5 animate-spin" /> 儲存中...
                 </span>
               )}
-              {!editingOffer && (
+              {!editingOffer && (campaignOfferSource !== 'booking') && (
                 <button
                   type="button"
                   onClick={() => setEditingOffer({
@@ -3012,8 +3037,182 @@ function Unit12CustomerService({
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
                   style={{ background: 'var(--primary)' }}
                 >
-                  <Plus className="h-3.5 w-3.5" /> 新增活動
+                  <Plus className="h-3.5 w-3.5" /> 新增 CS 活動
                 </button>
+              )}
+            </div>
+          </div>
+
+          {/* ── 核心功能：活動來源切換開關 ── */}
+          <div className="bg-gradient-to-r from-amber-50/80 via-orange-50/40 to-indigo-50/60 border border-amber-200/90 rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                  <span>🎯 AI 活動與促銷資料來源開關</span>
+                  <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-bold">即時生效</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  決定客服 AI 對客人在詢問優惠、補助或計算房價時，採用哪裡的活動規則。
+                </p>
+              </div>
+
+              {/* 3 態切換開關 */}
+              <div className="inline-flex rounded-xl border border-gray-200 bg-white/95 p-1 shadow-xs shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCampaignOfferSource('cs')
+                    saveCurrentUnit12({ campaignOfferSource: 'cs' })
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    campaignOfferSource === 'cs'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>🏷️ 僅用 CS 自訂活動</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCampaignOfferSource('booking')
+                    saveCurrentUnit12({ campaignOfferSource: 'booking' })
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    campaignOfferSource === 'booking'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>🏨 僅連動 Booking 訂房活動</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCampaignOfferSource('both')
+                    saveCurrentUnit12({ campaignOfferSource: 'both' })
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    (campaignOfferSource ?? 'both') === 'both'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>🔄 同時啟用兩者 (推薦)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 當前模式說明 */}
+            <div className="text-xs text-gray-600 bg-white/80 border border-amber-100 rounded-xl p-2.5 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-700">當前狀態：</span>
+                {campaignOfferSource === 'cs' && (
+                  <span className="text-amber-800 font-medium">
+                    ✅ 目前僅採用下方「CS 客服自訂活動」（如花蓮國旅補助、專案折扣），不連動 Booking 訂房系統動態規則。
+                  </span>
+                )}
+                {campaignOfferSource === 'booking' && (
+                  <span className="text-indigo-800 font-medium">
+                    ✅ 目前僅連動「Booking 訂房系統」（早鳥／晚鳥規則、優惠碼），暫停下方 CS 自訂活動。
+                  </span>
+                )}
+                {(campaignOfferSource ?? 'both') === 'both' && (
+                  <span className="text-emerald-800 font-medium">
+                    🌟 雙向整合：同時連動 Booking 訂房早晚鳥特惠 ＋ CS 專案活動（國旅補助、折扣折抵），AI 自動為客人試算最佳優惠！
+                  </span>
+                )}
+              </div>
+              <a
+                href="/booking/promos"
+                target="_blank"
+                className="text-xs text-indigo-600 hover:underline flex items-center gap-1 font-medium shrink-0 ml-auto"
+              >
+                前往 Booking 促銷設定 ↗
+              </a>
+            </div>
+          </div>
+
+          {/* Booking 訂房系統活動預覽區（當模式為 booking 或 both 時顯示） */}
+          {(campaignOfferSource === 'booking' || (campaignOfferSource ?? 'both') === 'both') && (
+            <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-indigo-900 flex items-center gap-2">
+                  <span>🏨 Booking 訂房系統連動中活動</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 font-semibold">
+                    {loadingBookingActivities ? '載入中...' : `${bookingRules.filter(r => r.enabled).length} 個定價規則 / ${bookingPromos.filter(p => p.enabled).length} 組優惠碼`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="/booking/pricing"
+                    target="_blank"
+                    className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1 font-medium"
+                  >
+                    編輯 Booking 定價規則 ↗
+                  </a>
+                  <a
+                    href="/booking/promos"
+                    target="_blank"
+                    className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1 font-medium"
+                  >
+                    編輯 Booking 優惠碼 ↗
+                  </a>
+                </div>
+              </div>
+
+              {loadingBookingActivities ? (
+                <div className="text-xs text-gray-400 py-3 text-center flex items-center justify-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" /> 正在讀取 Booking 訂房活動資料...
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {bookingRules.filter(r => r.enabled).map(r => (
+                    <div key={r.id} className="bg-white border border-indigo-100 rounded-lg p-2.5 text-xs shadow-2xs">
+                      <div className="flex items-center justify-between font-semibold text-gray-800">
+                        <span>{r.name}</span>
+                        <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-bold">
+                          {r.adjustment_type === 'percent' ? `折抵 ${r.adjustment_value}% (${10 - r.adjustment_value / 10} 折)` : `現折 $${r.adjustment_value}`}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-1">
+                        {r.rule_type === 'early_bird' ? `早鳥優惠：入住前 ${(r.conditions as Record<string, unknown>)?.days_before ?? 0} 天以上預訂` :
+                         r.rule_type === 'advance_booking' ? `特定預訂：入住前 ${(r.conditions as Record<string, unknown>)?.days_before ?? 0} 天預訂` :
+                         '動態定價規則'}
+                      </div>
+                    </div>
+                  ))}
+                  {bookingPromos.filter(p => p.enabled).map(p => (
+                    <div key={p.id} className="bg-white border border-indigo-100 rounded-lg p-2.5 text-xs shadow-2xs">
+                      <div className="flex items-center justify-between font-semibold text-gray-800">
+                        <span className="font-mono text-indigo-700 font-bold">{p.code}</span>
+                        <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                          {p.type === 'percent' ? `享 ${10 - p.value / 10} 折` : `折抵 $${p.value}`}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-1">
+                        {p.name ? `${p.name} · ` : ''}{p.min_nights > 1 ? `需滿 ${p.min_nights} 晚` : '不限天數'}
+                      </div>
+                    </div>
+                  ))}
+                  {bookingRules.filter(r => r.enabled).length === 0 && bookingPromos.filter(p => p.enabled).length === 0 && (
+                    <div className="col-span-2 text-center text-xs text-gray-400 py-3 bg-white/60 rounded-lg border border-dashed border-indigo-200">
+                      Booking 訂房系統目前尚未建立動態定價規則或優惠碼。<a href="/booking/pricing" target="_blank" className="text-indigo-600 underline ml-1">點此前往建立</a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CS 自訂活動標題 */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+              <span>🏷️ CS 客服專案與國旅補助活動</span>
+              {campaignOfferSource === 'booking' && (
+                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">目前暫停採用中（僅用 Booking 活動）</span>
               )}
             </div>
           </div>
@@ -3021,12 +3220,12 @@ function Unit12CustomerService({
           {/* 活動清單 */}
           {campaignOffers.length === 0 && !editingOffer && (
             <div className="border-2 border-dashed border-amber-200 rounded-xl p-8 text-center text-xs text-gray-400 bg-white/60">
-              尚未設定任何活動方案。點擊右上角「+ 新增活動」快速建立（例如：花蓮振興住宿補助）。
+              尚未設定任何 CS 活動方案。點擊右上角「+ 新增 CS 活動」快速建立（例如：花蓮振興住宿補助）。
             </div>
           )}
 
           {campaignOffers.length > 0 && !editingOffer && (
-            <div className="space-y-2">
+            <div className={`space-y-2 ${campaignOfferSource === 'booking' ? 'opacity-50' : ''}`}>
               {campaignOffers.map((offer) => (
                 <div key={offer.id} className={`bg-white border rounded-xl p-3.5 flex items-start gap-3 transition-all ${offer.enabled ? 'border-amber-200 shadow-sm' : 'border-gray-200 opacity-60'}`}>
                   <div className="flex-1 min-w-0">

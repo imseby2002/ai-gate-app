@@ -100,6 +100,7 @@ async function handlePost(req: NextRequest) {
     discountMaxPct = 0,
     discountGifts = '',
     campaignOffers = [] as CsCampaignOffer[],
+    campaignOfferSource = 'both' as 'cs' | 'booking' | 'both',
     imageBase64 = '',    // base64-encoded image from test panel
     imageMimeType = '',  // e.g. 'image/jpeg'
   } = await req.json()
@@ -487,31 +488,65 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     closingToolkitSection = lines.join('\n')
   }
 
-  // ── Active campaign & subsidy offers ─────────────────────────────────────
+  // ── Active campaign & subsidy offers (CS 自訂活動 vs Booking 訂房活動) ─────
   let campaignOffersSection = ''
-  const activeOffers: CsCampaignOffer[] = ((campaignOffers ?? []) as CsCampaignOffer[]).filter((o: CsCampaignOffer) => o.enabled)
-  if (activeOffers.length > 0) {
-    const lines = ['\n\n【現正進行中的促銷／補助活動（嚴格依以下條件計算，客問優惠、補助或計算房價時主動說明與折抵）】']
-    for (const off of activeOffers) {
-      lines.push(`\n▸ 活動名稱：${off.name}`)
-      if (off.qualification) lines.push(`  適用資格與對象：${off.qualification}`)
-      if (off.offerType === 'nights_tiered' && off.tieredNightDiscounts?.length) {
-        const tieredDesc = off.tieredNightDiscounts.map((amt: number, idx: number) => `第 ${idx + 1} 晚折抵 $${amt.toLocaleString()} 元`).join('，')
-        lines.push(`  折扣計算方式：連住每晚階梯折抵（${tieredDesc}）`)
-      } else if (off.offerType === 'percent' && off.discountPercent) {
-        lines.push(`  折扣計算方式：享 ${10 - off.discountPercent / 10} 折優惠（折抵 ${off.discountPercent}%）`)
-      } else if (off.offerType === 'fixed_amount' && off.discountAmount) {
-        lines.push(`  折扣計算方式：單筆固定折抵 $${off.discountAmount.toLocaleString()} 元`)
-      } else {
-        lines.push(`  折扣計算方式：自訂方案`)
+  const offerLines: string[] = []
+
+  // 1. CS 客服自訂活動 (當模式為 'cs' 或 'both')
+  if (campaignOfferSource === 'cs' || campaignOfferSource === 'both') {
+    const activeOffers: CsCampaignOffer[] = ((campaignOffers ?? []) as CsCampaignOffer[]).filter((o: CsCampaignOffer) => o.enabled)
+    if (activeOffers.length > 0) {
+      offerLines.push('【CS 客服促銷／補助活動（若客問優惠、補助或計算房價時主動說明與折抵）】')
+      for (const off of activeOffers) {
+        offerLines.push(`▸ 活動名稱：${off.name}`)
+        if (off.qualification) offerLines.push(`  適用資格與對象：${off.qualification}`)
+        if (off.offerType === 'nights_tiered' && off.tieredNightDiscounts?.length) {
+          const tieredDesc = off.tieredNightDiscounts.map((amt: number, idx: number) => `第 ${idx + 1} 晚折抵 $${amt.toLocaleString()} 元`).join('，')
+          offerLines.push(`  折扣計算方式：連住每晚階梯折抵（${tieredDesc}）`)
+        } else if (off.offerType === 'percent' && off.discountPercent) {
+          offerLines.push(`  折扣計算方式：享 ${10 - off.discountPercent / 10} 折優惠（折抵 ${off.discountPercent}%）`)
+        } else if (off.offerType === 'fixed_amount' && off.discountAmount) {
+          offerLines.push(`  折扣計算方式：單筆固定折抵 $${off.discountAmount.toLocaleString()} 元`)
+        } else {
+          offerLines.push(`  折扣計算方式：自訂方案`)
+        }
+        if (off.rulesNote) offerLines.push(`  活動規則與限制：${off.rulesNote}`)
       }
-      if (off.rulesNote) lines.push(`  活動規則與限制：${off.rulesNote}`)
     }
-    lines.push('\n計算與應對守則：')
-    lines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
-    lines.push('2. 計算總價時，以房價定價為基準，嚴格依照上述折扣方式扣除補助金額，並清楚列出原價、補助折抵金額與客人實付金額。')
-    lines.push('3. 喬民宿適用花蓮振興住宿補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
-    campaignOffersSection = lines.join('\n')
+  }
+
+  // 2. Booking 訂房系統活動 (當模式為 'booking' 或 'both')
+  if (campaignOfferSource === 'booking' || campaignOfferSource === 'both') {
+    try {
+      const [rulesRes, promosRes] = await Promise.all([
+        supabase.from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions').eq('user_id', user.id).eq('enabled', true),
+        supabase.from('promo_codes').select('code, name, type, value, min_nights').eq('user_id', user.id).eq('enabled', true),
+      ])
+      const bRules = rulesRes.data ?? []
+      const bPromos = promosRes.data ?? []
+      if (bRules.length > 0 || bPromos.length > 0) {
+        offerLines.push('\n【Booking 訂房系統動態優惠（早鳥／晚鳥與促銷代碼）】')
+        for (const r of bRules) {
+          const adj = r.adjustment_type === 'percent' ? `享 ${10 - (r.adjustment_value / 10)} 折（折 ${r.adjustment_value}%）` : `折抵 $${r.adjustment_value} 元`
+          const cond = (r.conditions as Record<string, unknown>)?.days_before != null ? `（入住前 ${(r.conditions as Record<string, unknown>).days_before} 天以上預訂）` : ''
+          offerLines.push(`▸ 訂房特惠：${r.name} - ${adj} ${cond}`)
+        }
+        for (const p of bPromos) {
+          const discount = p.type === 'percent' ? `享 ${10 - (p.value / 10)} 折` : `折抵 $${p.value} 元`
+          offerLines.push(`▸ 訂房優惠碼：【${p.code}】${p.name ? `（${p.name}）` : ''} - ${discount}${p.min_nights > 1 ? `，需滿 ${p.min_nights} 晚` : ''}`)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (offerLines.length > 0) {
+    offerLines.push('\n計算與應對守則：')
+    offerLines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
+    offerLines.push('2. 計算總價時，以房價定價為基準，嚴格依照上述規則扣除補助或折抵金額，並清楚列出原價、折抵金額與客人實付金額。')
+    offerLines.push('3. 喬民宿適用花蓮振興住宿補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
+    campaignOffersSection = '\n\n' + offerLines.join('\n')
   }
 
   // ── Top reviews for social proof ─────────────────────────────────────────
