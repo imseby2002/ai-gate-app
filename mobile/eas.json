@@ -15,10 +15,21 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "simulator": false
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "imseby3@gmail.com",
+        "appleTeamId": "AQ34Z8PHLC",
+        "ascApiKeyPath": "./AuthKey_4TU36V725M.p8",
+        "ascApiKeyId": "4TU36V725M",
+        "ascApiKeyIssuerId": "093d02c6-13fa-462f-906f-56d621cee4c7"
+      }
+    }
   }
 }
