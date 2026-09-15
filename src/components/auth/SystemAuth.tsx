@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, ArrowRight, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
@@ -18,7 +17,6 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   const t = useTranslations('SystemAuth')
   const locale = useLocale()
   const def = getLocalizedSystemDef(system, locale)
-  const router = useRouter()
 
   const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [email, setEmail] = useState('')
@@ -77,7 +75,11 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
       return
     }
     if (!isAdmin) setScope(system)
-    router.push(def.home)
+    // 用整頁導航而非 router.push()：同一個分頁若曾經在未登入狀態訪問過
+    // def.home（例如 /apps），Next.js 的 client-side Router Cache 會把那次
+    // 「被導回 /login」的結果快取住，之後 router.push 都直接命中舊快取，
+    // 完全不會真的再問一次伺服器，導致登入後點「進入」又立刻被導回 /login。
+    window.location.href = def.home
   }
 
   async function handleSubmit(e: React.FormEvent) {
