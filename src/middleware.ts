@@ -204,9 +204,12 @@ export async function middleware(request: NextRequest) {
     )
 
     if (needsProfileCheck) {
+      // 公司的 enabled_modules 分開查，不用 PostgREST 的 embed：companies 與 profiles
+      // 之間有三條外鍵，embed 無法判斷該走哪一條，會回 PGRST201 讓整個查詢失敗、
+      // profile 變成 null——底下的模組權限檢查會被整段跳過，非管理者因此拿到預設模組。
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_type, enabled_modules, units, company_id, companies(enabled_modules)')
+        .select('user_type, enabled_modules, units, company_id')
         .eq('id', user.id)
         .single()
 
@@ -231,7 +234,16 @@ export async function middleware(request: NextRequest) {
       // Module guard — 檢查 enabled_modules 與單位權限 units，總管理員(admin)跳過
       // 員工或公司負責人，皆受限於其個人或所屬公司的 enabled_modules
       if (profile && !isAdmin) {
-        const effectiveModules: string[] = (profile.companies as any)?.enabled_modules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+        let companyModules: string[] | undefined
+        if (profile.company_id) {
+          const { data: company } = await supabase
+            .from('companies')
+            .select('enabled_modules')
+            .eq('id', profile.company_id)
+            .single()
+          companyModules = company?.enabled_modules ?? undefined
+        }
+        const effectiveModules: string[] = companyModules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
         const units: string[] = profile.units ?? []
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing':      ['marketing', 'mkt'],
