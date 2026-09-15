@@ -13,12 +13,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const fetchProfile = () => supabase
     .from('profiles')
     .select('*, companies(enabled_modules)')
     .eq('id', user.id)
     .single()
 
+  // middleware 已確認 user 存在，理論上一定有對應的 profiles 資料列；這裡查不到
+  // 多半是暫時性的（連線抖動、PostgREST 快取尚未跟上），不是真的未登入。過去直接
+  // redirect('/login') 會讓已登入使用者被誤導回登入頁，而 /login 的
+  // AutoRedirectIfAuthed 一看 session 還在又立刻導回來，形成與 /login 之間來回跳轉。
+  // 重試一次，真的失敗才視為異常。
+  let { data: profile } = await fetchProfile()
+  if (!profile) {
+    ;({ data: profile } = await fetchProfile())
+  }
   if (!profile) redirect('/login')
 
   // Get recent conversations for sidebar
