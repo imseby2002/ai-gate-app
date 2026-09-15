@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, ArrowRight, KeyRound, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowRight, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalizedSystemDef, SCOPE_SESSION_KEY, type SystemKey } from '@/lib/systems'
@@ -32,6 +32,7 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [allowed, setAllowed] = useState(true)
   const [checking, setChecking] = useState(true)
+  const [showPassword, setShowPassword] = useState(false)
 
   // 檢查並依使用者瀏覽器/系統語言 (navigator.language) 自動持久化 cookie
   useEffect(() => {
@@ -302,8 +303,14 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
                       {t('forgotPassword')}
                     </button>
                   </div>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
-                    className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2" placeholder={t('passwordPlaceholder')} />
+                  <div className="relative">
+                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+                      className="w-full h-10 pl-3 pr-10 rounded-lg border text-sm outline-none focus:ring-2" placeholder={t('passwordPlaceholder')} />
+                    <button type="button" onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
                 {info && <div className="p-3 rounded-lg text-sm text-emerald-700 bg-emerald-50 border border-emerald-200">{info}</div>}
