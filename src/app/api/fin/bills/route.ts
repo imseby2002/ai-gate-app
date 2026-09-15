@@ -3,14 +3,14 @@ import { getUnitContextAny } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['finance', 'store'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null as string | null }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode ?? null }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null as string | null , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode ?? null , status: ctx.status }
 }
 
 // 月度費用格：門市 × 科目。query: year, month, store_code
 export async function GET(req: NextRequest) {
-  const { user, supabase, storeCode } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, storeCode , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const sp = new URL(req.url).searchParams
   const year = parseInt(sp.get('year') ?? '') || new Date().getFullYear()
   const month = parseInt(sp.get('month') ?? '') || (new Date().getMonth() + 1)
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
 
 // 更新單格。body: { store_code, year, month, category_code, amount, source?, note? }
 export async function POST(req: NextRequest) {
-  const { user, supabase, storeCode } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, storeCode , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const b = await req.json().catch(() => ({}))
   const store_code = String(b.store_code ?? '').trim()
   const category_code = String(b.category_code ?? '').trim()

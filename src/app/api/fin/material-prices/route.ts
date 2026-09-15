@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['finance', 'rd', 'store', 'audit'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -21,8 +21,8 @@ const num = (v: unknown) => {
 
 // GET /api/fin/material-prices?category=all&q=
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { searchParams } = new URL(req.url)
   const category = s(searchParams.get('category'))
@@ -78,8 +78,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/fin/material-prices (新增品項定價)
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const body = await req.json().catch(() => ({}))
   const code = s(body.material_code)
@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/fin/material-prices (編輯品項定價)
 export async function PATCH(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const body = await req.json().catch(() => ({}))
   const id = s(body.id)
@@ -145,8 +145,8 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE /api/fin/material-prices (刪除品項)
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const body = await req.json().catch(() => ({}))
   const id = s(body.id)

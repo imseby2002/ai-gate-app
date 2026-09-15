@@ -26,7 +26,7 @@ function snapshotToText(s: MktSnapshot): string {
 
 export async function POST(req: NextRequest) {
   const c = await getUnitContext('mkt')
-  if (!c.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   const kind = b.kind === 'monthly' ? '月報' : '週報'
   const snap = await buildMktSnapshot(c.admin, c.ownerId)

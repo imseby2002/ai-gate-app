@@ -4,8 +4,8 @@ import { similarity, FUZZY_MATCH_THRESHOLD } from '@/lib/fin/fuzzy-match'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 const s = (v: unknown) => String(v ?? '').trim()
@@ -22,8 +22,8 @@ interface PurchaseRow {
 // 內部比價建議：以品項關鍵字模糊比對歷史採購紀錄，按廠商分組列出最新／最低／平均單價。
 // 僅供內部參考，不代表正式報價，實際下單金額仍須向廠商確認。
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const q = s(new URL(req.url).searchParams.get('q'))
   if (!q) return NextResponse.json({ error: '請輸入要比價的品項關鍵字' }, { status: 400 })

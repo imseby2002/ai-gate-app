@@ -6,8 +6,8 @@ import type { PosTerminal } from './types'
 // 回傳 service-role client 與公司 owner id（呼叫端沿用 supabase/userId，不需改動）。
 export async function getPosOwner() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return null
-  return { supabase: ctx.admin, userId: ctx.ownerId, isAdmin: ctx.isAdmin }
+  if (!ctx.ok) return { ok: false as const, status: ctx.status }
+  return { ok: true as const, status: 200 as const, supabase: ctx.admin, userId: ctx.ownerId, isAdmin: ctx.isAdmin }
 }
 
 export async function resolveTerminal(deviceKey: string): Promise<(PosTerminal & { store_name: string }) | null> {

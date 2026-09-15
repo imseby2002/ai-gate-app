@@ -8,8 +8,8 @@ const CHUNK = 1000
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 type Admin = Awaited<ReturnType<typeof getAdminUser>>['supabase']
@@ -31,8 +31,8 @@ async function ensureAccounts(admin: Admin, ownerId: string, names: string[]): P
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   // 上傳路徑是以「實際登入者」的 auth uid 為資料夾（storage RLS 也是如此判斷），
   // 與 user.id（單位資料歸屬的 ownerId，公司 IT 時會是負責人 id）不同，需分開驗證。

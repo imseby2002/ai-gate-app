@@ -7,12 +7,12 @@ const PRIORITY = ['low', 'normal', 'high', 'urgent']
 const STATUS = ['reported', 'assigned', 'in_progress', 'done', 'cancelled']
 
 // 報修（門市）與維修（管理）皆可讀取；門市可建立
-async function readCtx() { const c = await getUnitContextAny(['repair', 'store']); return c.ok ? c : null }
-async function manageCtx() { const c = await getUnitContext('repair'); return c.ok ? c : null }
+async function readCtx() { const c = await getUnitContextAny(['repair', 'store']); return c }
+async function manageCtx() { const c = await getUnitContext('repair'); return c }
 
 // 工單清單。?store= ?status= 篩選
 export async function GET(req: NextRequest) {
-  const c = await readCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await readCtx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const sp = new URL(req.url).searchParams
   const store = c.storeCode || s(sp.get('store'))
   const status = s(sp.get('status'))
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 // 建立報修單（門市或維修單位）
 export async function POST(req: NextRequest) {
-  const c = await readCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await readCtx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   const title = s(b.title)
   if (!title) return NextResponse.json({ error: '問題標題必填' }, { status: 400 })
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
 // 派工／更新狀態／記錄費用（限維修單位）
 export async function PATCH(req: NextRequest) {
-  const c = await manageCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await manageCtx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -114,7 +114,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const c = await manageCtx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await manageCtx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await c.admin.from('repair_orders').delete().eq('id', s(id)).eq('owner_id', c.ownerId)

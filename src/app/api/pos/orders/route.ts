@@ -6,7 +6,7 @@ import { calcCartTotal, type PosCartLine, type PosOrderType } from '@/lib/pos/ty
 
 export async function GET(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const { searchParams } = new URL(req.url)
   const storeId = searchParams.get('store_id')
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     terminalId = terminal.id
   } else {
     const ctx = await getPosOwner()
-    if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
     if (!body.store_id || !body.terminal_id) {
       return NextResponse.json({ error: 'store_id, terminal_id 或 device_key 必填' }, { status: 400 })
     }

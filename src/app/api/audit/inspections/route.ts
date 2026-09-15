@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function ctx() {
   const c = await getUnitContextAny(['audit', 'store'])
-  return c.ok ? c : null
+  return c
 }
 
 // 現場巡檢紀錄清單或單筆明細
 export async function GET(req: NextRequest) {
   const c = await ctx()
-  if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')?.trim()
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 // 建立或更新現場巡檢紀錄（主表 + 項目）
 export async function POST(req: NextRequest) {
   const c = await ctx()
-  if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
 
   const b = await req.json().catch(() => ({}))
   const store = String(b.store ?? '').trim()
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const c = await ctx()
-  if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
 
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

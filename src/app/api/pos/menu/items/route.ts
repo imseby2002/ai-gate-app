@@ -5,7 +5,7 @@ import { DEFAULT_MODIFIER_GROUPS } from '@/lib/pos/types'
 
 export async function POST(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const { category_id, name, price_cents, store_id, barcode, modifiers, description, image_url } = await req.json()
   if (!category_id || !name?.trim()) return NextResponse.json({ error: 'category_id, name 必填' }, { status: 400 })
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const { id, ...patch } = await req.json()
   if (!id) return NextResponse.json({ error: 'id 必填' }, { status: 400 })
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id 必填' }, { status: 400 })

@@ -6,7 +6,7 @@ export const maxDuration = 30
 
 export async function GET() {
   const c = await getUnitContext('mkt')
-  if (!c.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const snap = await buildMktSnapshot(c.admin, c.ownerId)
   return NextResponse.json(snap)
 }
