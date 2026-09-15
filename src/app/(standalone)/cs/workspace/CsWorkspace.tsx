@@ -3027,12 +3027,12 @@ function Unit12CustomerService({
                   type="button"
                   onClick={() => setEditingOffer({
                     id: crypto.randomUUID(),
-                    name: '',
+                    name: '國旅補助2026',
                     enabled: true,
                     offerType: 'nights_tiered',
                     qualification: '本國籍自由行旅客、出示身分證件正本',
-                    tieredNightDiscounts: [1000],
-                    rulesNote: '每房每晚補助 1,000 元（限花蓮合法旅宿適用）。',
+                    tieredNightDiscounts: [800, 1200],
+                    rulesNote: '平日住宿獎助：期限至 115 年 11 月 30 日止（限週日至週四，不含國定假日）。每人身分證限使用一次，現場核銷折抵。與其他特價/早鳥專案二擇一使用，預算用罄截止。',
                   })}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-sm shrink-0"
                   style={{ background: 'var(--primary)' }}
@@ -3220,7 +3220,7 @@ function Unit12CustomerService({
           {/* 活動清單 */}
           {campaignOffers.length === 0 && !editingOffer && (
             <div className="border-2 border-dashed border-amber-200 rounded-xl p-8 text-center text-xs text-gray-400 bg-white/60">
-              尚未設定任何 CS 活動方案。點擊右上角「+ 新增 CS 活動」快速建立（例如：花蓮振興住宿補助）。
+              尚未設定任何 CS 活動方案。點擊右上角「+ 新增 CS 活動」快速建立（例如：國旅補助2026）。
             </div>
           )}
 
@@ -3314,7 +3314,7 @@ function Unit12CustomerService({
                     type="text"
                     value={editingOffer.name}
                     onChange={e => setEditingOffer({ ...editingOffer, name: e.target.value })}
-                    placeholder="例：花蓮振興住宿補助、壽星生日券"
+                    placeholder="例：國旅補助2026、壽星生日券"
                     className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
                   />
                 </div>

@@ -1341,7 +1341,7 @@ async function buildSalesContext(
     offerLines.push('\n計算與應對守則：')
     offerLines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
     offerLines.push('2. 計算總價時，以房價定價為基準，嚴格依照上述規則扣除補助或折抵金額，並清楚列出原價、折抵金額與客人實付金額。')
-    offerLines.push('3. 喬民宿適用花蓮振興住宿補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
+    offerLines.push('3. 喬民宿適用當期國旅補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
     sections.push(offerLines.join('\n'))
   }
 
