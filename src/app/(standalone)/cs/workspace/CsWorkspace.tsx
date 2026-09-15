@@ -3723,16 +3723,30 @@ function Unit12CustomerService({
                 {editingPc.config.productType === 'accommodation' && (
                   <>
                     <div>
-                      <label className="text-[10px] text-gray-500 block mb-1">房型與定價</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-gray-500 font-medium">房型與定價（雙人入住基準價）</label>
+                      </div>
+
+                      <div className="text-[11px] text-amber-800 bg-amber-50/90 border border-amber-200/80 rounded-lg p-2.5 mb-2.5 space-y-1">
+                        <div className="font-semibold flex items-center gap-1.5 text-amber-900">
+                          <span>💡</span> 房型計價與容納人數規則說明：
+                        </div>
+                        <div className="text-gray-600 leading-relaxed text-[11px] space-y-0.5">
+                          <p>• <strong>基礎價格皆為雙人入住</strong>：表格內的平日價、假日價、連假價均為【雙人入住價格】（基準 2 人）。</p>
+                          <p>• <strong>最多人數（上限）</strong>：設定為 <strong>2 人</strong> 代表「不可加人／不可加床」；設定為 <strong>3~4 人</strong> 代表「最多可加人／加床至 3~4 人」。</p>
+                          <p>• <strong>連續住宿第2晚折扣、小孩加人費、複雜階梯規則</strong>：上方表格若填寫加人價為基礎參考值（若無固定值可填 0）；若您在下方<strong>「入住須知與備註」</strong>詳細規定了連續住宿第二晚價格、小孩與加床差異收費等步驟，AI 客服於對話報價時會<strong>優先嚴格依據下方備註的詳細步驟逐步列式計算</strong>！</p>
+                        </div>
+                      </div>
+
                       <RowsEditor
                         rows={(editingPc.config.rooms ?? []) as Array<Record<string, unknown>>}
                         fields={[
                           { key: 'name', label: '房型名稱', type: 'text', width: 'w-28' },
-                          { key: 'capacity', label: '容納人數', type: 'number', width: 'w-16' },
+                          { key: 'capacity', label: '最多人數', type: 'number', width: 'w-16' },
                           { key: 'weekdayPrice', label: '平日價', type: 'number', width: 'w-20' },
                           { key: 'weekendPrice', label: '假日價', type: 'number', width: 'w-20' },
                           { key: 'holidayPrice', label: '連假價', type: 'number', width: 'w-20' },
-                          { key: 'extraPersonFee', label: '加人加價', type: 'number', width: 'w-20' },
+                          { key: 'extraPersonFee', label: '加人價/晚', type: 'number', width: 'w-20' },
                         ]}
                         onChange={rows => updatePcConfig({
                           rooms: rows.map(r => ({
