@@ -1490,7 +1490,15 @@
       "logbook": "行銷日誌",
       "offline": "實體行銷",
       "socialMatrix": "社群矩陣與養號",
-      "brand": "品牌資料"
+      "brand": "品牌資料",
+      "aiExpert": "AI 專家"
+    },
+    "section": {
+      "create": "製作",
+      "distribute": "投放",
+      "track": "追蹤",
+      "settings": "設定",
+      "collab": "跨部門協作"
     },
     "studio": {
       "title": "AI 視覺工坊",

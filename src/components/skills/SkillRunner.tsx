@@ -24,6 +24,7 @@ interface SkillInfo {
   category: string
   priceCredits: number
   fields: SkillField[]
+  hasKnowledge?: boolean
 }
 
 interface KnowledgeSource {
@@ -232,14 +233,20 @@ export function SkillRunner({ module, title }: { module: string; title: string }
         <div className="grid sm:grid-cols-2 gap-3">
           {skills.map(s => (
             <button key={s.id} onClick={() => openSkill(s)}
-              className="text-left p-4 rounded-xl border bg-white hover:border-indigo-400 hover:shadow-sm transition-all">
+              className={cn('text-left p-4 rounded-xl border bg-white hover:shadow-sm transition-all',
+                s.hasKnowledge ? 'border-amber-300 ring-1 ring-amber-100 hover:border-amber-400' : 'hover:border-indigo-400')}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-medium text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
                   {CATEGORY_LABEL[s.category] ?? s.category}
                 </span>
                 <span className="text-xs text-gray-400">{s.priceCredits} 點起</span>
               </div>
-              <div className="font-semibold text-gray-800 text-sm">{s.label}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-gray-800 text-sm">{s.label}</span>
+                {s.hasKnowledge
+                  ? <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">🔥 專屬知識庫</span>
+                  : <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Prompt</span>}
+              </div>
               <div className="text-xs text-gray-500 mt-1 leading-relaxed">{s.description}</div>
             </button>
           ))}
