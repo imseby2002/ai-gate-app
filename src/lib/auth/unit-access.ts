@@ -23,8 +23,11 @@ const DENY_403: UnitContext = { ok: false, status: 403, userId: '', ownerId: '',
 // 解析公司 owner 的帳號 id
 async function resolveCompanyOwner(admin: Admin, companyId: string | null): Promise<string | null> {
   if (!companyId) return null
-  const { data } = await admin.from('company_members')
+  const { data, error } = await admin.from('company_members')
     .select('member_id').eq('company_id', companyId).eq('role', 'owner').eq('status', 'active').maybeSingle()
+  // 查詢失敗時會退回使用者自己當 ownerId，整個資料範圍跑掉（使用者會看到空資料），
+  // 而且過程完全無聲。行為維持不變，但一定要留下錯誤才追得到。
+  if (error) console.error('[unit-access] company_members(owner) 查詢失敗', { companyId, error })
   return data?.member_id ?? null
 }
 
@@ -35,18 +38,22 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   if (!user) return DENY_401
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id, department').eq('id', user.id).single()
+  const { data: profile, error: profileErr } = await admin.from('profiles').select('user_type, units, company_id, department').eq('id', user.id).single()
+  // 查詢失敗時 profile 是 null，底下會因為 units 為空而回 403——使用者被擋在外面，
+  // 卻沒有任何線索可查。權限判斷維持 fail-closed（該擋還是擋），但錯誤要留下來。
+  if (profileErr) console.error('[unit-access] profiles 查詢失敗', { userId: user.id, error: profileErr })
   const isSuperAdmin = isSuperAdminUser(user, profile)
 
   // 檢查是否為公司負責人 (owner) 或公司 IT (admin)
   let isCompanyAdmin = false
   if (profile?.company_id) {
-    const { data: m } = await admin.from('company_members')
+    const { data: m, error: memberErr } = await admin.from('company_members')
       .select('role')
       .eq('company_id', profile.company_id)
       .eq('member_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
+    if (memberErr) console.error('[unit-access] company_members(role) 查詢失敗', { userId: user.id, companyId: profile.company_id, error: memberErr })
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }
@@ -86,17 +93,21 @@ export async function getCompanyContext(): Promise<UnitContext> {
   if (!user) return DENY_401
 
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type, units, company_id, department').eq('id', user.id).single()
+  const { data: profile, error: profileErr } = await admin.from('profiles').select('user_type, units, company_id, department').eq('id', user.id).single()
+  // 查詢失敗時 profile 是 null，底下會因為 units 為空而回 403——使用者被擋在外面，
+  // 卻沒有任何線索可查。權限判斷維持 fail-closed（該擋還是擋），但錯誤要留下來。
+  if (profileErr) console.error('[unit-access] profiles 查詢失敗', { userId: user.id, error: profileErr })
   const isSuperAdmin = isSuperAdminUser(user, profile)
 
   let isCompanyAdmin = false
   if (profile?.company_id) {
-    const { data: m } = await admin.from('company_members')
+    const { data: m, error: memberErr } = await admin.from('company_members')
       .select('role')
       .eq('company_id', profile.company_id)
       .eq('member_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
+    if (memberErr) console.error('[unit-access] company_members(role) 查詢失敗', { userId: user.id, companyId: profile.company_id, error: memberErr })
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }

@@ -13,11 +13,13 @@ export async function getPosOwner() {
 export async function resolveTerminal(deviceKey: string): Promise<(PosTerminal & { store_name: string }) | null> {
   if (!deviceKey?.trim()) return null
   const admin = createAdminClient()
-  const { data } = await admin
+  const { data, error } = await admin
     .from('pos_terminals')
     .select('*, pos_stores!inner(name, is_active)')
     .eq('device_key', deviceKey.trim())
     .single()
+  // 查詢失敗與「查無此機台」都會走到 return null、POS 一律被拒絕登入，兩者要分得出來。
+  if (error && error.code !== 'PGRST116') console.error('[pos-auth] pos_terminals 查詢失敗', error)
   if (!data) return null
   const store = data.pos_stores as { name: string; is_active: boolean }
   if (!store.is_active) return null
