@@ -2,6 +2,7 @@
 // 每個 skill = 一份定義：UI 表單欄位 + 計價（點數）+ run()。
 // run() 透過 ctx 取得模型呼叫與圖片生成能力，與既有 marketing 基礎一致。
 import pptxgen from 'pptxgenjs'
+import { getSkillKnowledge } from './knowledge'
 
 export type SkillCategory = 'copywriting' | 'video' | 'illustration' | 'research' | 'audio' | 'presentation' | 'social'
 
@@ -685,11 +686,15 @@ export function listSkills(module?: string) {
   return Object.values(SKILLS)
     .filter(s => !module || s.module === module)
     .map(s => ({
-    id: s.id,
-    label: s.label,
-    description: s.description,
-    category: s.category,
-    priceCredits: s.priceCredits,
-    fields: s.fields,
-  }))
+      id: s.id,
+      label: s.label,
+      description: s.description,
+      category: s.category,
+      priceCredits: s.priceCredits,
+      fields: s.fields,
+      // 是否內建真正的專業知識庫（非純提示詞）
+      hasKnowledge: !!getSkillKnowledge(s.id),
+    }))
+    // 有內建知識庫的專家置頂（例如短影音爆款腳本）
+    .sort((a, b) => Number(b.hasKnowledge) - Number(a.hasKnowledge))
 }

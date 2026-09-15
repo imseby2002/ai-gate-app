@@ -1490,7 +1490,15 @@
       "logbook": "Marketing Log",
       "offline": "Field Marketing",
       "socialMatrix": "Social Matrix & Warm-up",
-      "brand": "Brand"
+      "brand": "Brand",
+      "aiExpert": "AI Experts"
+    },
+    "section": {
+      "create": "Create",
+      "distribute": "Distribute",
+      "track": "Track",
+      "settings": "Settings",
+      "collab": "Cross-team"
     },
     "studio": {
       "title": "AI Visual Studio",

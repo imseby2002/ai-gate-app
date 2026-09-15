@@ -1490,7 +1490,15 @@
       "logbook": "Nhật ký Marketing",
       "offline": "Marketing thực địa",
       "socialMatrix": "Ma trận & Nuôi nick",
-      "brand": "Thương hiệu"
+      "brand": "Thương hiệu",
+      "aiExpert": "Chuyên gia AI"
+    },
+    "section": {
+      "create": "Sáng tạo",
+      "distribute": "Phân phối",
+      "track": "Theo dõi",
+      "settings": "Cài đặt",
+      "collab": "Liên phòng ban"
     },
     "geo": {
       "title": "Cây bút nội dung GEO",
