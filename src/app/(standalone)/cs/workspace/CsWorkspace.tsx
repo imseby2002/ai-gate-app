@@ -3413,24 +3413,27 @@ function Unit12CustomerService({
 
               <div>
                 <label className="text-xs font-medium text-gray-700 block mb-1">適用對象 / 條件資格</label>
-                <input
-                  type="text"
+                <textarea
+                  rows={2}
                   value={editingOffer.qualification}
                   onChange={e => setEditingOffer({ ...editingOffer, qualification: e.target.value })}
                   placeholder="例：本國籍自由行旅客、出示身分證件／生日券、限平日（週一至週四）"
-                  className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-y"
                 />
                 <p className="text-[10px] text-gray-400 mt-0.5">AI 在向客人介紹活動時會主動說明這些資格規定。</p>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-gray-700 block mb-1">活動補充說明 / 限制條款</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-700">活動補充說明 / 限制條款</label>
+                  <span className="text-[10px] text-gray-400">可拖曳右下角自由調整高度</span>
+                </div>
                 <textarea
                   value={editingOffer.rulesNote}
                   onChange={e => setEditingOffer({ ...editingOffer, rulesNote: e.target.value })}
-                  rows={2}
-                  placeholder="例：限花蓮合法旅宿（喬民宿適用），每人限用一次，預算用罄截止。"
-                  className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+                  rows={7}
+                  placeholder="例：平日住宿獎助：期限至 115 年 11 月 30 日止（限週日至週四，不含國定假日）。獎助預算用罄時提前停止。每人身分證限使用一次，現場核銷折抵。"
+                  className="w-full text-xs border rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-y min-h-[160px] leading-relaxed"
                 />
               </div>
 
