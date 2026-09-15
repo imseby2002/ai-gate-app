@@ -204,36 +204,38 @@ export async function computeStayPrice(
           const nonStackable = applicablePromos.filter(r => !r.can_stack)
 
           // 決定要套用的促銷集合
+          // 正數＝加價，負數＝折扣（跟調整值輸入框的說明一致）；「最優」指最後
+          // 售價最低（對旅客最有利），不再假設一定是折扣。
+          const delta = (r: RuleRow) => r.adjustment_type === 'percent'
+            ? baseDailyPrice * (Number(r.adjustment_value) / 100)
+            : Number(r.adjustment_value)
+
           let rulesToApply: (RuleRow & { name?: string })[] = []
           if (stackable.length > 0) {
             // 可疊加者全數套用，另外如果還有不可疊加的最優者也可併入或單獨套用
-            const bestNonStack = nonStackable.length ? nonStackable.reduce((best, cur) => {
-              const bestVal = best.adjustment_type === 'percent' ? baseDailyPrice * (Math.abs(best.adjustment_value) / 100) : Math.abs(best.adjustment_value)
-              const curVal = cur.adjustment_type === 'percent' ? baseDailyPrice * (Math.abs(cur.adjustment_value) / 100) : Math.abs(cur.adjustment_value)
-              return curVal > bestVal ? cur : best
-            }) : null
+            const bestNonStack = nonStackable.length ? nonStackable.reduce((best, cur) =>
+              delta(cur) < delta(best) ? cur : best
+            ) : null
             rulesToApply = bestNonStack ? [bestNonStack, ...stackable] : stackable
           } else if (nonStackable.length > 0) {
             // 全不可疊加，採二擇一最優原則
-            const bestNonStack = nonStackable.reduce((best, cur) => {
-              const bestVal = best.adjustment_type === 'percent' ? baseDailyPrice * (Math.abs(best.adjustment_value) / 100) : Math.abs(best.adjustment_value)
-              const curVal = cur.adjustment_type === 'percent' ? baseDailyPrice * (Math.abs(cur.adjustment_value) / 100) : Math.abs(cur.adjustment_value)
-              return curVal > bestVal ? cur : best
-            })
+            const bestNonStack = nonStackable.reduce((best, cur) =>
+              delta(cur) < delta(best) ? cur : best
+            )
             rulesToApply = [bestNonStack]
           }
 
           let currentPrice = baseDailyPrice
           for (const promoRule of rulesToApply) {
+            const value = Number(promoRule.adjustment_value)
             if (promoRule.adjustment_type === 'percent') {
-              const discountPct = Math.abs(Number(promoRule.adjustment_value))
-              currentPrice = Math.max(0, Math.round(currentPrice * (1 - discountPct / 100)))
-              const label = promoRule.name || (promoRule.rule_type === 'early_bird' ? `早鳥優惠 (${(10 - discountPct / 10).toFixed(discountPct % 10 === 0 ? 0 : 1)}折)` : `晚鳥特惠 (${(10 - discountPct / 10).toFixed(discountPct % 10 === 0 ? 0 : 1)}折)`)
+              currentPrice = Math.max(0, Math.round(currentPrice * (1 + value / 100)))
+              const kind = value >= 0 ? '加價' : '折扣'
+              const label = promoRule.name || (promoRule.rule_type === 'early_bird' ? `早鳥${kind} (${Math.abs(value)}%)` : `晚鳥${kind} (${Math.abs(value)}%)`)
               appliedPromotionsSet.add(label)
             } else {
-              const discountAmt = Math.abs(Number(promoRule.adjustment_value))
-              currentPrice = Math.max(0, Math.round(currentPrice - discountAmt))
-              const label = promoRule.name || `特惠折抵 $${discountAmt}`
+              currentPrice = Math.max(0, Math.round(currentPrice + value))
+              const label = promoRule.name || (value >= 0 ? `特惠加價 $${value}` : `特惠折抵 $${Math.abs(value)}`)
               appliedPromotionsSet.add(label)
             }
           }

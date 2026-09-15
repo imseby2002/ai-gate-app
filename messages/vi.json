@@ -693,6 +693,7 @@
       "dynamicTag": "⚡Động",
       "dynamicToggle": "Bật định giá động",
       "basePriceLabel": "Giá gốc",
+      "defaultPriceHint": " (dùng khi chưa đặt giá riêng cho ngày đó)",
       "notSet": "Chưa đặt",
       "dynamicOn": "Đang định giá động",
       "rulesNote": "Quy tắc chỉ áp dụng cho loại phòng đã bật định giá động",

@@ -693,6 +693,7 @@
       "dynamicTag": "⚡動態",
       "dynamicToggle": "動態定價開關",
       "basePriceLabel": "基本價",
+      "defaultPriceHint": "（未設每日定價使用）",
       "notSet": "未設定",
       "dynamicOn": "動態定價中",
       "rulesNote": "規則僅對已開啟動態定價的房型生效",

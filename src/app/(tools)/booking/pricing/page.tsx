@@ -745,7 +745,7 @@ function PricingContent() {
                     <div>
                       <div className="font-semibold text-sm text-gray-900">{p.name}</div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        {t('pricing.basePriceLabel')} NT$ {p.base_price ? Number(p.base_price).toLocaleString() : t('pricing.notSet')}
+                        NT$ {p.base_price ? Number(p.base_price).toLocaleString() : t('pricing.notSet')}{t('pricing.defaultPriceHint')}
                       </div>
                       {p.dynamic_pricing_enabled && (
                         <div className="flex items-center gap-1 mt-1">
