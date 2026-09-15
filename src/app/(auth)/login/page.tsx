@@ -1,10 +1,9 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { ArrowRight, Zap } from 'lucide-react'
 import { getLocale } from 'next-intl/server'
-import { createClient } from '@/lib/supabase/server'
 import { getLocalizedSystems, type SystemDef } from '@/lib/systems'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { AutoRedirectIfAuthed } from '@/components/auth/AutoRedirectIfAuthed'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,17 +14,6 @@ export default async function LoginChooser({
   searchParams: Promise<{ error?: string }>
 }) {
   const { error: authError } = await searchParams
-  const supabase = await createClient()
-  // 過期/失效的 refresh token（殘留的無效 session cookie）會讓 getUser() 拋出例外，
-  // 沒有 try/catch 會直接讓這個 server component 掛掉；當作未登入處理即可。
-  let user = null
-  try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
-  } catch { /* 視為未登入 */ }
-  if (user) {
-    redirect('/apps')
-  }
 
   const locale = await getLocale()
   const systems: SystemDef[] = Object.values(getLocalizedSystems(locale))
@@ -50,6 +38,7 @@ export default async function LoginChooser({
 
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-10">
+      <AutoRedirectIfAuthed />
       <div className="absolute top-4 right-4 z-20">
         <LanguageSwitcher currentLocale={locale} />
       </div>
