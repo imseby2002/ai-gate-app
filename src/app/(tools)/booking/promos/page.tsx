@@ -11,6 +11,7 @@ interface Promo {
   min_nights: number; min_amount: number | null
   valid_from: string | null; valid_to: string | null
   max_uses: number | null; used_count: number; enabled: boolean
+  can_stack?: boolean
   created_at: string
 }
 
@@ -18,6 +19,7 @@ const EMPTY_FORM = {
   code: '', name: '', type: 'percent' as 'percent' | 'fixed',
   value: '', min_nights: 1, min_amount: '',
   valid_from: '', valid_to: '', max_uses: '', enabled: true,
+  can_stack: false,
 }
 
 export default function PromosPage() {
@@ -44,6 +46,7 @@ export default function PromosPage() {
       min_nights: p.min_nights, min_amount: p.min_amount ? String(p.min_amount) : '',
       valid_from: p.valid_from ?? '', valid_to: p.valid_to ?? '',
       max_uses: p.max_uses ? String(p.max_uses) : '', enabled: p.enabled,
+      can_stack: p.can_stack ?? false,
     })
   }
 
@@ -171,7 +174,12 @@ export default function PromosPage() {
                 return (
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <div className="font-mono font-bold text-gray-900 text-sm">{p.code}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-gray-900 text-sm">{p.code}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${p.can_stack ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600'}`}>
+                          {p.can_stack ? '可疊加' : '單獨使用'}
+                        </span>
+                      </div>
                       {p.name && <div className="text-xs text-gray-400 mt-0.5">{p.name}</div>}
                       <div className="sm:hidden text-xs text-gray-500 mt-0.5">
                         {p.type === 'percent' ? t('promos.percentOff', { value: p.value }) : t('promos.fixedOff', { value: p.value })}
@@ -298,6 +306,28 @@ export default function PromosPage() {
                   placeholder={t('promos.form.blankUnlimited')}
                   className="w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
               </div>
+            </div>
+
+            {/* 疊加折扣開關 */}
+            <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-xl p-3">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.can_stack}
+                  onChange={e => setForm(f => ({ ...f, can_stack: e.target.checked }))}
+                  className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <div>
+                  <div className="text-xs font-semibold text-gray-800">
+                    允許與其他活動/早鳥折扣疊加使用
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                    {form.can_stack
+                      ? '🟢 已開啟疊加：可與早鳥優惠或特殊活動專案同時合併折抵。'
+                      : '⚪ 關閉疊加（預設）：採二擇一最優原則，不可與其他折扣合併使用。'}
+                  </div>
+                </div>
+              </label>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer">

@@ -520,8 +520,8 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   if (campaignOfferSource === 'booking' || campaignOfferSource === 'both') {
     try {
       const [rulesRes, promosRes] = await Promise.all([
-        supabase.from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions').eq('user_id', user.id).eq('enabled', true),
-        supabase.from('promo_codes').select('code, name, type, value, min_nights').eq('user_id', user.id).eq('enabled', true),
+        supabase.from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions, can_stack').eq('user_id', user.id).eq('enabled', true),
+        supabase.from('promo_codes').select('code, name, type, value, min_nights, can_stack').eq('user_id', user.id).eq('enabled', true),
       ])
       const bRules = rulesRes.data ?? []
       const bPromos = promosRes.data ?? []
@@ -530,11 +530,13 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
         for (const r of bRules) {
           const adj = r.adjustment_type === 'percent' ? `享 ${10 - (r.adjustment_value / 10)} 折（折 ${r.adjustment_value}%）` : `折抵 $${r.adjustment_value} 元`
           const cond = (r.conditions as Record<string, unknown>)?.days_before != null ? `（入住前 ${(r.conditions as Record<string, unknown>).days_before} 天以上預訂）` : ''
-          offerLines.push(`▸ 訂房特惠：${r.name} - ${adj} ${cond}`)
+          const stackNote = r.can_stack ? '【可與其他優惠/代碼疊加】' : '【單獨適用，不可疊加】'
+          offerLines.push(`▸ 訂房特惠：${r.name} - ${adj} ${cond} ${stackNote}`)
         }
         for (const p of bPromos) {
           const discount = p.type === 'percent' ? `享 ${10 - (p.value / 10)} 折` : `折抵 $${p.value} 元`
-          offerLines.push(`▸ 訂房優惠碼：【${p.code}】${p.name ? `（${p.name}）` : ''} - ${discount}${p.min_nights > 1 ? `，需滿 ${p.min_nights} 晚` : ''}`)
+          const stackNote = p.can_stack ? '【可與其他優惠疊加】' : '【單獨適用，不可疊加】'
+          offerLines.push(`▸ 訂房優惠碼：【${p.code}】${p.name ? `（${p.name}）` : ''} - ${discount}${p.min_nights > 1 ? `，需滿 ${p.min_nights} 晚` : ''} ${stackNote}`)
         }
       }
     } catch {

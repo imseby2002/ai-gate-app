@@ -631,8 +631,8 @@ function Unit12CustomerService({
   const humanAvatarInputRef = useRef<HTMLInputElement>(null)
 
   // Booking module activities (早鳥/晚鳥規則 + 促銷優惠碼)
-  const [bookingRules, setBookingRules] = useState<Array<{ id: string; name: string; rule_type: string; enabled: boolean; adjustment_type: string; adjustment_value: number; conditions: Record<string, unknown> }>>([])
-  const [bookingPromos, setBookingPromos] = useState<Array<{ id: string; code: string; name: string; type: string; value: number; min_nights: number; enabled: boolean }>>([])
+  const [bookingRules, setBookingRules] = useState<Array<{ id: string; name: string; rule_type: string; enabled: boolean; adjustment_type: string; adjustment_value: number; can_stack?: boolean; conditions: Record<string, unknown> }>>([])
+  const [bookingPromos, setBookingPromos] = useState<Array<{ id: string; code: string; name: string; type: string; value: number; min_nights: number; enabled: boolean; can_stack?: boolean }>>([])
   const [loadingBookingActivities, setLoadingBookingActivities] = useState(false)
 
   useEffect(() => {
@@ -3174,8 +3174,13 @@ function Unit12CustomerService({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {bookingRules.filter(r => r.enabled).map(r => (
                     <div key={r.id} className="bg-white border border-indigo-100 rounded-lg p-2.5 text-xs shadow-2xs">
-                      <div className="flex items-center justify-between font-semibold text-gray-800">
-                        <span>{r.name}</span>
+                      <div className="flex items-center justify-between font-semibold text-gray-800 flex-wrap gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span>{r.name}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${r.can_stack ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600'}`}>
+                            {r.can_stack ? '可疊加' : '單獨適用'}
+                          </span>
+                        </div>
                         <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded font-bold">
                           {r.adjustment_type === 'percent' ? `折抵 ${r.adjustment_value}% (${10 - r.adjustment_value / 10} 折)` : `現折 $${r.adjustment_value}`}
                         </span>
@@ -3189,8 +3194,13 @@ function Unit12CustomerService({
                   ))}
                   {bookingPromos.filter(p => p.enabled).map(p => (
                     <div key={p.id} className="bg-white border border-indigo-100 rounded-lg p-2.5 text-xs shadow-2xs">
-                      <div className="flex items-center justify-between font-semibold text-gray-800">
-                        <span className="font-mono text-indigo-700 font-bold">{p.code}</span>
+                      <div className="flex items-center justify-between font-semibold text-gray-800 flex-wrap gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-indigo-700 font-bold">{p.code}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${p.can_stack ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600'}`}>
+                            {p.can_stack ? '可疊加' : '單獨適用'}
+                          </span>
+                        </div>
                         <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
                           {p.type === 'percent' ? `享 ${10 - p.value / 10} 折` : `折抵 $${p.value}`}
                         </span>
@@ -3534,6 +3544,9 @@ function Unit12CustomerService({
                   </HelpTip>
                 </div>
                 <div className="text-xs text-gray-400 mt-0.5">{t('u12.pricingHint')}</div>
+                <div className="mt-1.5 text-[11px] text-indigo-700 bg-indigo-50/70 border border-indigo-100 rounded-lg px-2.5 py-1.5 flex items-center gap-2">
+                  <span>📌 <strong>功能分工說明</strong>：本計算機提供<strong>常態基礎房價（平日/假日價）</strong>；若有<strong>早鳥、特定天數預訂、折扣碼或振興補助</strong>，請至「Booking 折扣與優惠碼」或左側「活動項目」設定，可自由控制「是否允許疊加折抵」。</span>
+                </div>
               </div>
               {!editingPc && (
                 <div className="flex gap-1.5 flex-wrap">
@@ -3748,7 +3761,9 @@ function Unit12CustomerService({
 
                 {editingPc.config.productType === 'custom' && (
                   <div>
-                    <label className="text-[10px] text-gray-500 block mb-1">自訂定價規則說明（AI 會直接閱讀此內容進行報價計算）</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] text-gray-500">自訂定價規則說明（非住宿服務或特殊收費計算法，AI 會直接閱讀此內容進行報價計算）</label>
+                    </div>
                     <textarea
                       rows={5}
                       placeholder="例：基礎服務費 500 元，每增加 1 小時加收 300 元，超過 4 小時享 85 折優惠..."
@@ -3756,6 +3771,9 @@ function Unit12CustomerService({
                       onChange={e => updatePcConfig({ customContent: e.target.value })}
                       className="w-full text-xs border rounded-lg px-2.5 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
                     />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      💡 提示：若為民宿住宿的早鳥、特定預訂折扣，建議直接在「Booking 折扣與優惠碼」或左側「活動項目」建立，AI 將能自動支援是否疊加計算。
+                    </p>
                   </div>
                 )}
 
