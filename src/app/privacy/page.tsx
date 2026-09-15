@@ -11,7 +11,7 @@ export default function PrivacyPage() {
 
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-3 text-gray-800">2. Facebook / Meta 資料使用</h2>
-        <p>當您授權本服務存取您的 Facebook 粉絲專頁或 Instagram 帳號時，本服務僅使用所獲得的權限執行您指定的行銷自動化功能（例如發佈貼文、上傳影片），不會讀取或儲存超出此範圍的 Meta 資料。</p>
+        <p>當您授權本服務存取您的 Facebook 粉絲專頁或 Instagram 帳號時，本服務僅使用所獲得的權限執行您指定的行銷流水線功能（例如發佈貼文、上傳影片），不會讀取或儲存超出此範圍的 Meta 資料。</p>
       </section>
 
       <section className="mb-8">

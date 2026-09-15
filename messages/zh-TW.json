@@ -138,7 +138,7 @@
         "desc": "多模型與多角色 AI 專家會議、交叉論述與自動總結"
       },
       "marketing": {
-        "label": "行銷自動化",
+        "label": "行銷流水線",
         "desc": "內容生成、圖片影片、流程自動化"
       },
       "cs": {
@@ -1479,7 +1479,7 @@
     "integratedFeatures": "整合功能",
     "enter": "進入",
     "nav": {
-      "auto": "行銷自動化",
+      "auto": "行銷流水線",
       "pipeline": "行銷流水線",
       "designer": "產品設計師",
       "studio": "AI 視覺工坊",
@@ -1730,7 +1730,7 @@
         ]
       },
       "auto": {
-        "title": "行銷自動化",
+        "title": "行銷流水線",
         "desc": "從資料蒐集、競品分析、文案生成、圖片影片製作，到平台上傳的全流程自動化行銷系統",
         "badge": "完整功能",
         "tags": [
@@ -1798,7 +1798,7 @@
       "swot": {
         "title": "市場競品分析",
         "desc": "SWOT 分析、競爭對手監控、消費者行為洞察，AI 深度分析讓決策更有依據",
-        "badge": "整合於行銷自動化",
+        "badge": "整合於行銷流水線",
         "tags": [
           "SWOT 分析",
           "競品監控",
@@ -1809,7 +1809,7 @@
       "audience": {
         "title": "目標客群模擬",
         "desc": "多維度消費者模擬引擎，預測行銷活動對不同受眾群體的反應與轉換率",
-        "badge": "整合於行銷自動化",
+        "badge": "整合於行銷流水線",
         "tags": [
           "受眾模擬",
           "轉換預測",
@@ -2398,7 +2398,7 @@
     }
   },
   "Pipeline": {
-    "backToAuto": "返回行銷自動化",
+    "backToAuto": "返回行銷流水線",
     "title": "自動化流程",
     "subtitle": "勾選要執行的步驟，一鍵全自動",
     "loadingCampaign": "載入專案資料中…",
@@ -2448,7 +2448,7 @@
     "confirmHint": "確認結果後點擊繼續。",
     "confirmContinue": "確認繼續",
     "logEmpty": "勾選步驟後點擊「開始執行」",
-    "logEmptyHint": "所有設定已從行銷自動化專案帶入",
+    "logEmptyHint": "所有設定已從行銷流水線專案帶入",
     "statDone": "{count} 完成",
     "statError": "{count} 失敗",
     "statPending": "{count} 待執行",
@@ -2460,7 +2460,7 @@
       },
       "2": {
         "name": "公司資料",
-        "desc": "來自行銷自動化專案"
+        "desc": "基礎資料 · 專案設定與快取"
       },
       "3": {
         "name": "分析資料",
@@ -2538,7 +2538,7 @@
       "videoDone": "影片生成完成",
       "videoFailed": "影片生成失敗",
       "videoTimeout": "影片生成逾時",
-      "noUploadPlatforms": "無上傳平台設定，請在行銷自動化中設定 Unit 9 平台",
+      "noUploadPlatforms": "無上傳平台設定，請在行銷流水線中設定 Unit 9 平台",
       "uploadFailed": "上傳失敗",
       "waitAnchorUpload": "{platforms}（等待主播影片生成後上傳）",
       "uploadDone": "上傳完成",
@@ -2548,9 +2548,9 @@
       "defaultEmailSubject": "行銷訊息",
       "emailResult": "Email：{success}/{total} 成功",
       "emailFailed": "Email 失敗：{error}",
-      "noLeadsList": "無電話或 Email 名單，請在行銷自動化中設定 Unit 10",
+      "noLeadsList": "無電話或 Email 名單，請在行銷流水線中設定 Unit 10",
       "leadsDone": "潛在客戶行銷完成",
-      "noAnchorConfig": "無主播設定，請在行銷自動化中設定 Unit 11 Avatar & Voice ID",
+      "noAnchorConfig": "無主播設定，請在行銷流水線中設定 Unit 11 Avatar & Voice ID",
       "defaultAnchorStyle": "專業親切",
       "anchorScriptGenFailed": "主播腳本自動生成失敗：{error}",
       "unknownError": "未知錯誤",
@@ -2699,7 +2699,7 @@
       "title": "Step 3 — 距離設定",
       "enable": "啟用距離篩選",
       "enableHint": "關閉時不依距離淘汰，仍顯示最近門市距離",
-      "noBranches": "尚未設定門市。請前往「行銷自動化 → 公司資料 → 門市/分公司」新增。",
+      "noBranches": "尚未設定門市。請前往「行銷流水線 → 公司資料 → 門市/分公司」新增。",
       "branchesLoaded": "已載入 <b>{total}</b> 個門市，其中 <b>{coords}</b> 個有經緯度可計算距離。",
       "maxDist": "距離上限（km）",
       "maxDistPlaceholder": "例如：5",
@@ -3089,10 +3089,10 @@
           "desc": "文案風格趨勢、訴求點、關鍵字"
         }
       },
-      "unit1": "單元1 蒐集資料",
+      "unit1": "步驟 1 蒐集資訊",
       "loaded": "已載入",
       "notRun": "尚未執行",
-      "unit2": "單元2 公司資料",
+      "unit2": "📌 公司資料（必讀）",
       "notFilled": "尚未填寫",
       "extraTitle": "補充參考資料（選填）",
       "extraHint": "上傳企劃案、新聞文章、競品報告等，AI 分析時會一併參考",
@@ -3959,7 +3959,7 @@
       "createProject": "建立專案",
       "underConstruction": "建設中",
       "otherTools": "其他工具",
-      "automation": "自動化流程",
+      "automation": "行銷流水線",
       "linked": "串接中",
       "companySettings": "公司資料設定"
     }

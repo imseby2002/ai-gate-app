@@ -138,7 +138,7 @@
         "desc": "Multi-model & multi-role AI expert discussion and auto-synthesis"
       },
       "marketing": {
-        "label": "Marketing Auto",
+        "label": "Marketing Pipeline",
         "desc": "Content creation, images, videos, workflow automation"
       },
       "cs": {
@@ -1479,7 +1479,7 @@
     "integratedFeatures": "Integrated Features",
     "enter": "Enter",
     "nav": {
-      "auto": "Marketing Automation",
+      "auto": "Marketing Pipeline",
       "pipeline": "Marketing Pipeline",
       "designer": "Product Designer",
       "studio": "AI Visual Studio",
@@ -1730,7 +1730,7 @@
         ]
       },
       "auto": {
-        "title": "Marketing Automation",
+        "title": "Marketing Pipeline",
         "desc": "End-to-end automated marketing — from data gathering, competitor analysis, copywriting, image/video production, to platform uploads",
         "badge": "Full Feature",
         "tags": [
@@ -1798,7 +1798,7 @@
       "swot": {
         "title": "Market & Competitor Analysis",
         "desc": "SWOT analysis, competitor monitoring, consumer behavior insights — AI deep analysis for data-driven decisions",
-        "badge": "In Marketing Automation",
+        "badge": "In Marketing Pipeline",
         "tags": [
           "SWOT",
           "Competitor Monitoring",
@@ -1809,7 +1809,7 @@
       "audience": {
         "title": "Target Audience Simulation",
         "desc": "Multi-dimensional consumer simulation engine predicting how different audiences respond and convert",
-        "badge": "In Marketing Automation",
+        "badge": "In Marketing Pipeline",
         "tags": [
           "Audience Simulation",
           "Conversion Prediction",
@@ -2398,7 +2398,7 @@
     }
   },
   "Pipeline": {
-    "backToAuto": "Back to Marketing Automation",
+    "backToAuto": "Back to Marketing Pipeline",
     "title": "Automation Flow",
     "subtitle": "Check the steps to run, fully automated in one click",
     "loadingCampaign": "Loading campaign data…",
@@ -2448,7 +2448,7 @@
     "confirmHint": "Confirm the result, then click continue.",
     "confirmContinue": "Confirm & Continue",
     "logEmpty": "Check steps then click \"Start\"",
-    "logEmptyHint": "All settings are imported from the marketing automation campaign",
+    "logEmptyHint": "All settings are imported from the marketing pipeline campaign",
     "statDone": "{count} done",
     "statError": "{count} failed",
     "statPending": "{count} pending",
@@ -2460,7 +2460,7 @@
       },
       "2": {
         "name": "Company Data",
-        "desc": "From marketing automation project"
+        "desc": "Prerequisite · Company Settings & Cache"
       },
       "3": {
         "name": "Analyze Data",
@@ -2538,7 +2538,7 @@
       "videoDone": "Video generation done",
       "videoFailed": "Video generation failed",
       "videoTimeout": "Video generation timed out",
-      "noUploadPlatforms": "No upload platforms set; configure Unit 9 platforms in marketing automation",
+      "noUploadPlatforms": "No upload platforms set; configure Unit 9 platforms in marketing pipeline",
       "uploadFailed": "Upload failed",
       "waitAnchorUpload": "{platforms} (upload after anchor video is generated)",
       "uploadDone": "Upload done",
@@ -2548,9 +2548,9 @@
       "defaultEmailSubject": "Marketing Message",
       "emailResult": "Email: {success}/{total} succeeded",
       "emailFailed": "Email failed: {error}",
-      "noLeadsList": "No phone or email list; configure Unit 10 in marketing automation",
+      "noLeadsList": "No phone or email list; configure Unit 10 in marketing pipeline",
       "leadsDone": "Prospect marketing done",
-      "noAnchorConfig": "No anchor config; set Unit 11 Avatar & Voice ID in marketing automation",
+      "noAnchorConfig": "No anchor config; set Unit 11 Avatar & Voice ID in marketing pipeline",
       "defaultAnchorStyle": "professional & friendly",
       "anchorScriptGenFailed": "Anchor script auto-generation failed: {error}",
       "unknownError": "Unknown error",
@@ -2699,7 +2699,7 @@
       "title": "Step 3 — Distance",
       "enable": "Enable distance filter",
       "enableHint": "When off, no elimination by distance; still shows nearest store distance",
-      "noBranches": "No stores set up. Add them via \"Marketing Automation → Company Data → Stores/Branches\".",
+      "noBranches": "No stores set up. Add them via \"Marketing Pipeline → Company Data → Stores/Branches\".",
       "branchesLoaded": "Loaded <b>{total}</b> stores, of which <b>{coords}</b> have coordinates for distance calculation.",
       "maxDist": "Max distance (km)",
       "maxDistPlaceholder": "e.g. 5",
@@ -3089,10 +3089,10 @@
           "desc": "Copy style trends, appeal points, keywords"
         }
       },
-      "unit1": "Unit 1 Collected Data",
+      "unit1": "Step 1 Collected Data",
       "loaded": "loaded",
       "notRun": "not run yet",
-      "unit2": "Unit 2 Company Data",
+      "unit2": "📌 Company Data (Required)",
       "notFilled": "not filled yet",
       "extraTitle": "Extra Reference Material (optional)",
       "extraHint": "Upload proposals, news articles, competitor reports, etc.; AI will reference them during analysis",
@@ -3959,7 +3959,7 @@
       "createProject": "Create project",
       "underConstruction": "Under construction",
       "otherTools": "Other tools",
-      "automation": "Automation pipeline",
+      "automation": "Marketing Pipeline",
       "linked": "Linked",
       "companySettings": "Company Data Settings"
     }

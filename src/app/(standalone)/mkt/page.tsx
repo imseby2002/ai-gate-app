@@ -55,7 +55,7 @@ export default function MktPage() {
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-pink-600 shrink-0" />
           <span className="text-slate-700 dark:text-slate-200">
-            行銷部門專用子域名 <code className="font-mono bg-white dark:bg-black/30 px-1.5 py-0.5 rounded text-pink-600 font-bold">marketing.im-tourist.com</code>：包含行銷自動化、AI 視覺工坊、流水線與潛在客戶外呼開發。
+            行銷部門專用子域名 <code className="font-mono bg-white dark:bg-black/30 px-1.5 py-0.5 rounded text-pink-600 font-bold">marketing.im-tourist.com</code>：包含行銷流水線、AI 視覺工坊與潛在客戶外呼開發。
           </span>
         </div>
         <a

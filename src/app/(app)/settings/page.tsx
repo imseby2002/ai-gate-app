@@ -44,7 +44,7 @@ export default async function SettingsPage() {
           <div className="mb-6">
             <h2 className="text-lg font-bold">品牌與行銷資料庫</h2>
             <p className="text-muted-foreground text-sm mt-1">
-              管理品牌資料與素材，供行銷自動化模組使用。填寫後點擊「一鍵轉檔」生成 AI 快取。
+              管理品牌資料與素材，供行銷流水線模組使用。填寫後點擊「一鍵轉檔」生成 AI 快取。
             </p>
           </div>
           <CompanyDataForm />

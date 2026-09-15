@@ -96,9 +96,9 @@ export const UNIT_AREAS: UnitArea[] = [
     key: 'marketing',
     label: '行銷',
     homeHref: '/mkt',
-    description: '品牌中樞・視覺庫・外送平台與行銷自動化',
+    description: '品牌中樞・視覺庫・外送平台與行銷流水線',
     pages: [
-      { href: '/marketing', label: '行銷中心 (marketing.im-tourist.com)', description: '行銷自動化、AI 視覺工坊、流水線與潛在客戶外呼開發' },
+      { href: '/marketing', label: '行銷中心 (marketing.im-tourist.com)', description: '行銷流水線、AI 視覺工坊與潛在客戶外呼開發' },
       { href: '/marketing/logbook', label: '行銷日誌', description: '行銷活動計畫、社群發布紀錄與效益追蹤' },
       { href: '/mkt', label: '門市實體行銷與外送平台', description: '品牌視覺庫、各分店專屬行銷活動與外送平台整合' },
     ],

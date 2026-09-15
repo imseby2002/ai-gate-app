@@ -7,7 +7,7 @@ import { formatCost } from '@/lib/utils/format'
 
 const ALL_MODULES = [
   { id: 'chat',      label: 'AI 對話' },
-  { id: 'marketing', label: '行銷自動化' },
+  { id: 'marketing', label: '行銷流水線' },
   { id: 'cs',        label: '客服系統' },
   { id: 'leads',     label: '潛在客戶' },
   { id: 'resume',    label: '職場助手' },

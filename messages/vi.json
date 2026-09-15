@@ -138,7 +138,7 @@
         "desc": "Hội nghị chuyên gia AI đa mô hình & đa vai trò, phản biện và tổng hợp tự động"
       },
       "marketing": {
-        "label": "Marketing Tự Động",
+        "label": "Quy trình Marketing",
         "desc": "Tạo nội dung, hình ảnh, video, tự động hóa quy trình"
       },
       "cs": {
@@ -1479,7 +1479,7 @@
     "integratedFeatures": "Tính năng tích hợp",
     "enter": "Vào",
     "nav": {
-      "auto": "Tự động hóa Marketing",
+      "auto": "Quy trình Marketing",
       "pipeline": "Quy trình Marketing",
       "designer": "Nhà thiết kế sản phẩm",
       "studio": "Xưởng hình ảnh AI",
@@ -1637,7 +1637,7 @@
         ]
       },
       "auto": {
-        "title": "Tự động hóa Marketing",
+        "title": "Quy trình Marketing",
         "desc": "Marketing tự động đầu-cuối — từ thu thập dữ liệu, phân tích đối thủ, viết nội dung, sản xuất ảnh/video, đến tải lên nền tảng",
         "badge": "Đầy đủ tính năng",
         "tags": [
@@ -1705,7 +1705,7 @@
       "swot": {
         "title": "Phân tích thị trường & đối thủ",
         "desc": "Phân tích SWOT, giám sát đối thủ, hiểu hành vi người tiêu dùng — AI phân tích sâu cho quyết định có cơ sở",
-        "badge": "Trong Tự động hóa Marketing",
+        "badge": "Trong Quy trình Marketing",
         "tags": [
           "SWOT",
           "Giám sát đối thủ",
@@ -1716,7 +1716,7 @@
       "audience": {
         "title": "Mô phỏng nhóm khách mục tiêu",
         "desc": "Engine mô phỏng người tiêu dùng đa chiều, dự đoán phản ứng và tỷ lệ chuyển đổi của các nhóm khách khác nhau",
-        "badge": "Trong Tự động hóa Marketing",
+        "badge": "Trong Quy trình Marketing",
         "tags": [
           "Mô phỏng khách",
           "Dự đoán chuyển đổi",
@@ -2305,7 +2305,7 @@
     }
   },
   "Pipeline": {
-    "backToAuto": "Về Tự động hóa Marketing",
+    "backToAuto": "Về Quy trình Marketing",
     "title": "Quy trình tự động",
     "subtitle": "Chọn các bước cần chạy, tự động hoàn toàn chỉ một nhấp",
     "loadingCampaign": "Đang tải dữ liệu chiến dịch…",
@@ -2355,7 +2355,7 @@
     "confirmHint": "Xác nhận kết quả rồi nhấn tiếp tục.",
     "confirmContinue": "Xác nhận & Tiếp tục",
     "logEmpty": "Chọn bước rồi nhấn \"Bắt đầu\"",
-    "logEmptyHint": "Mọi cài đặt được nhập từ chiến dịch tự động hóa marketing",
+    "logEmptyHint": "Mọi cài đặt được nhập từ chiến dịch quy trình marketing",
     "statDone": "{count} xong",
     "statError": "{count} thất bại",
     "statPending": "{count} chờ chạy",
@@ -2367,7 +2367,7 @@
       },
       "2": {
         "name": "Dữ liệu công ty",
-        "desc": "Từ dự án tự động hóa marketing"
+        "desc": "Dữ liệu cơ sở · Cài đặt công ty & Bộ nhớ đệm"
       },
       "3": {
         "name": "Phân tích dữ liệu",
@@ -2445,7 +2445,7 @@
       "videoDone": "Tạo video xong",
       "videoFailed": "Tạo video thất bại",
       "videoTimeout": "Tạo video quá hạn",
-      "noUploadPlatforms": "Chưa cài nền tảng tải lên; cấu hình nền tảng Đơn vị 9 trong tự động hóa marketing",
+      "noUploadPlatforms": "Chưa cài nền tảng tải lên; cấu hình nền tảng Đơn vị 9 trong quy trình marketing",
       "uploadFailed": "Tải lên thất bại",
       "waitAnchorUpload": "{platforms} (tải lên sau khi tạo video người dẫn)",
       "uploadDone": "Tải lên xong",
@@ -2455,9 +2455,9 @@
       "defaultEmailSubject": "Thông điệp marketing",
       "emailResult": "Email: {success}/{total} thành công",
       "emailFailed": "Email thất bại: {error}",
-      "noLeadsList": "Không có danh sách điện thoại hoặc Email; cấu hình Đơn vị 10 trong tự động hóa marketing",
+      "noLeadsList": "Không có danh sách điện thoại hoặc Email; cấu hình Đơn vị 10 trong quy trình marketing",
       "leadsDone": "Marketing khách tiềm năng xong",
-      "noAnchorConfig": "Chưa cài người dẫn; đặt Avatar & Voice ID Đơn vị 11 trong tự động hóa marketing",
+      "noAnchorConfig": "Chưa cài người dẫn; đặt Avatar & Voice ID Đơn vị 11 trong quy trình marketing",
       "defaultAnchorStyle": "chuyên nghiệp & thân thiện",
       "anchorScriptGenFailed": "Tự tạo kịch bản người dẫn thất bại: {error}",
       "unknownError": "Lỗi không xác định",
@@ -2606,7 +2606,7 @@
       "title": "Bước 3 — Khoảng cách",
       "enable": "Bật lọc theo khoảng cách",
       "enableHint": "Khi tắt, không loại theo khoảng cách; vẫn hiện khoảng cách cửa hàng gần nhất",
-      "noBranches": "Chưa thiết lập cửa hàng. Hãy thêm tại \"Tự động hóa tiếp thị → Dữ liệu công ty → Cửa hàng/Chi nhánh\".",
+      "noBranches": "Chưa thiết lập cửa hàng. Hãy thêm tại \"Quy trình Marketing → Dữ liệu công ty → Cửa hàng/Chi nhánh\".",
       "branchesLoaded": "Đã tải <b>{total}</b> cửa hàng, trong đó <b>{coords}</b> có tọa độ để tính khoảng cách.",
       "maxDist": "Khoảng cách tối đa (km)",
       "maxDistPlaceholder": "VD: 5",
@@ -2996,10 +2996,10 @@
           "desc": "Xu hướng phong cách, điểm thu hút, từ khóa"
         }
       },
-      "unit1": "Đơn vị 1 Dữ liệu thu thập",
+      "unit1": "Bước 1 Thu thập thông tin",
       "loaded": "đã tải",
       "notRun": "chưa chạy",
-      "unit2": "Đơn vị 2 Dữ liệu công ty",
+      "unit2": "📌 Dữ liệu công ty (Bắt buộc)",
       "notFilled": "chưa điền",
       "extraTitle": "Tài liệu tham khảo bổ sung (tùy chọn)",
       "extraHint": "Tải lên đề án, bài báo, báo cáo đối thủ, v.v.; AI sẽ tham khảo khi phân tích",
@@ -3866,7 +3866,7 @@
       "createProject": "Tạo dự án",
       "underConstruction": "Đang xây dựng",
       "otherTools": "Công cụ khác",
-      "automation": "Quy trình tự động",
+      "automation": "Quy trình Marketing",
       "linked": "Đang liên kết",
       "companySettings": "Cài đặt dữ liệu công ty"
     }

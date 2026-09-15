@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 
 export const ALL_MODULES = [
   { id: 'chat',      label: 'AI 對話',     desc: '多模型智能對話與知識庫' },
-  { id: 'marketing', label: '行銷自動化',   desc: '社群內容自動生成與發布' },
+  { id: 'marketing', label: '行銷流水線',   desc: '社群內容自動生成與發布' },
   { id: 'cs',        label: '客服系統',     desc: '全通路 AI 智能客服與分流' },
   { id: 'leads',     label: '潛在客戶',     desc: '自動化名單追蹤與商機管理' },
   { id: 'resume',    label: '職場助手',     desc: '履歷優化與面試輔導' },

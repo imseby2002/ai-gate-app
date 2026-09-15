@@ -18,7 +18,7 @@ export const MODULES = [
   },
   {
     id: 'marketing',
-    label: '行銷自動化',
+    label: '行銷流水線',
     desc: '內容生成、圖片影片、流程自動化',
     href: '/marketing-auto',
     emoji: '🚀',

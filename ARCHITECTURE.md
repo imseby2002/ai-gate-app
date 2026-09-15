@@ -1,6 +1,6 @@
 # AI GATE — 架構文檔
 
-企業內部 AI 服務平台，支援多模型對話、RAG 知識庫助理、行銷自動化流程與訂閱計費。
+企業內部 AI 服務平台，支援多模型對話、RAG 知識庫助理、行銷流水線流程與訂閱計費。
 
 ## 技術棧
 
@@ -24,13 +24,13 @@ src/
 │   ├── (admin)/           # 後台管理（role: admin）
 │   ├── (app)/             # 主應用（已登入用戶）
 │   ├── (auth)/            # 登入 / 註冊 / OAuth callback
-│   ├── (standalone)/      # 行銷自動化獨立功能頁
+│   ├── (standalone)/      # 行銷流水線獨立功能頁
 │   └── api/               # 所有 API 路由
 ├── components/
 │   ├── admin/             # 後台 UI
 │   ├── assistants/        # RAG 助理 UI
 │   ├── chat/              # 對話介面
-│   ├── marketing/         # 行銷自動化 UI
+│   ├── marketing/         # 行銷流水線 UI
 │   └── ui/                # shadcn 基礎元件
 ├── lib/
 │   ├── ai/
@@ -69,7 +69,7 @@ src/
 - 每則訊息記錄：input_tokens + output_tokens + cost_usd + latency_ms
 - 信用異動走 `credit_transactions` 帳本
 
-### 5. 行銷自動化流水線 (`src/app/api/marketing/`)
+### 5. 行銷流水線 (`src/app/api/marketing/`)
 - 步驟：collect → analyze → copy → generate-image → generate-video → script → publish
 - 每步驟支援 Telegram 審核回饋
 - Vercel Cron 每日 UTC 08:00 執行 `/api/cron/pipeline`

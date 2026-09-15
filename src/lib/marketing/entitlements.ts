@@ -12,7 +12,7 @@ export type ProspectMarketingAccess = 'collectOnly' | 'email' | 'full'
 export interface MarketingPlanFeatures {
   campaignLimit: number
   collaboratorLimit: number
-  // 行銷自動化（marketing-auto）各單元
+  // 行銷流水線（marketing-auto）各單元
   copywritingUnlimited: boolean   // 單元4 文案產出：false = 有限次數
   imageGen: boolean               // 單元6 圖片產出（點數扣款）
   uploadPlatforms: boolean        // 單元9 上傳平台
