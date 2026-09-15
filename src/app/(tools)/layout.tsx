@@ -13,7 +13,11 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) redirect('/login')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name, company_id').eq('id', user.id).single()
+  // 查不到時下面會退回用 email 顯示，畫面不會壞；但查詢失敗要留下錯誤，
+  // 否則同樣是無聲失敗、事後完全無從查起。
+  const { data: profile, error: profileErr } = await supabase.from('profiles').select('display_name, company_id').eq('id', user.id).single()
+  if (profileErr) console.error('[tools-layout] profile 查詢失敗', profileErr)
+
   const locale = await getLocale()
 
   return (

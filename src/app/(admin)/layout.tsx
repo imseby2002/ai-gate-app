@@ -11,13 +11,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return null
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from('profiles')
     .select('user_type, email, full_name')
     .eq('id', user.id)
     .single()
 
-  if (profile?.user_type !== 'admin') redirect('/apps')
+  // 查詢出錯時 profile 也會是 null。若直接當成「不是管理者」，管理者會被無聲踢出後台，
+  // 而且完全看不到原因——把查詢失敗和「確實不是管理者」分開，前者留下錯誤才追得到。
+  if (!profile) {
+    console.error('[admin-layout] profile 查詢失敗，導回 /apps', profileErr)
+    redirect('/apps')
+  }
+
+  if (profile.user_type !== 'admin') redirect('/apps')
 
   const navItems = [
     { href: '/admin', label: '總覽', icon: BarChart3 },
