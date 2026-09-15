@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
 import {
   MessageSquare, Bot, BarChart3, TrendingUp, Lock,
@@ -24,7 +24,7 @@ const STAT_STYLES = [
 
 export default async function AppsPage({ searchParams }: { searchParams: Promise<{ blocked?: string }> }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
   const t = await getTranslations('Dashboard')

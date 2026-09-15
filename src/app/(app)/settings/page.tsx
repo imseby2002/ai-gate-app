@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { SettingsForm } from '@/components/settings/SettingsForm'
 import { CompanyDataForm } from '@/components/settings/CompanyDataForm'
 import { CompanyMembershipSection } from '@/components/settings/CompanyMembershipSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) {
     redirect('/login')
     return null
