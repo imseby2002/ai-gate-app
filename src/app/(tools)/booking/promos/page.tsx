@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { createPortal } from 'react-dom'
-import { Plus, Edit2, Trash2, Percent, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Edit2, Trash2, Percent, ToggleLeft, ToggleRight, Zap, ArrowRight, Tag } from 'lucide-react'
 
 interface Promo {
   id: string; code: string; name: string
@@ -104,6 +105,35 @@ export default function PromosPage() {
 
   return (
     <div className="p-4 md:p-6 pb-16 space-y-5 max-w-4xl">
+      {/* 整合分頁導航：優惠碼 vs 早鳥與動態折扣規則 */}
+      <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-2">
+        <div className="flex rounded-lg border bg-gray-100/80 p-1 text-xs font-medium">
+          <button
+            type="button"
+            className="px-3 py-1.5 rounded-md bg-white text-indigo-700 font-bold shadow-xs flex items-center gap-1.5"
+          >
+            <Percent className="h-3.5 w-3.5 text-indigo-600" />
+            <span>促銷優惠碼</span>
+          </button>
+          <Link
+            href="/booking/pricing?tab=rules"
+            className="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1.5"
+          >
+            <Zap className="h-3.5 w-3.5 text-amber-500" />
+            <span>早鳥與動態折扣規則</span>
+            <ArrowRight className="h-3 w-3 text-gray-400" />
+          </Link>
+        </div>
+
+        <Link
+          href="/booking/pricing?tab=rules"
+          className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100"
+        >
+          <Tag className="h-3.5 w-3.5" />
+          前往動態定價與早鳥折扣設定 ↗
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">{t('promos.title')}</h1>

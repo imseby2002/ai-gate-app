@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Edit2, X, Zap, CalendarRange } from 'lucide-react'
 import { createPortal } from 'react-dom'
@@ -85,14 +86,24 @@ function computeEffectivePrice(
 }
 
 // ── Page ─────────────────────────────────────────────────────
-export default function PricingPage() {
+function PricingContent() {
   const t = useTranslations('Booking')
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const queryTab = searchParams.get('tab')
+  const initialTab = (queryTab === 'rules' || queryTab === 'calendar' || queryTab === 'compare') ? queryTab : 'daily'
+
   const DOW = [0,1,2,3,4,5,6].map(i => t(`roomgrid.day.${i}`))
   const statusLabel = (s: BookingStatus) => t(STATUS_KEY[s])
   const ruleCfg = (type: RuleType) => ({ icon: RULE_TYPE_ICON[type], label: t(`pricing.ruleTypes.${type}`) })
   const now = new Date()
-  const [tab, setTab] = useState<'daily' | 'calendar' | 'rules' | 'compare'>('daily')
+  const [tab, setTab] = useState<'daily' | 'calendar' | 'rules' | 'compare'>(initialTab)
+
+  useEffect(() => {
+    if (queryTab === 'rules' || queryTab === 'calendar' || queryTab === 'compare' || queryTab === 'daily') {
+      setTab(queryTab)
+    }
+  }, [queryTab])
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const [filterProp, setFilterProp] = useState('')
@@ -710,7 +721,15 @@ export default function PricingPage() {
       ) : tab === 'rules' ? (
         /* ── Tab 2: 動態定價規則 ── */
         <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-6">
-          <div className="flex justify-end"><ViewSwitcher /></div>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <a
+              href="/booking/promos"
+              className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium bg-white px-3 py-1.5 rounded-lg border shadow-2xs hover:bg-indigo-50/50 transition-colors"
+            >
+              <span>🎫 前往優惠碼管理 ↗</span>
+            </a>
+            <ViewSwitcher />
+          </div>
           {/* Dynamic pricing toggle per property */}
           <div>
             <h2 className="font-bold text-gray-900 mb-3">{t('pricing.dynamicToggle')}</h2>
@@ -1563,5 +1582,13 @@ export default function PricingPage() {
         document.body
       )}
     </div>
+  )
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-gray-400">載入中...</div>}>
+      <PricingContent />
+    </Suspense>
   )
 }

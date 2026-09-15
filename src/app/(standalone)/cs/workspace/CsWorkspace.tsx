@@ -329,6 +329,8 @@ interface CsCampaignOffer {
   discountPercent?: number
   // 單筆固定折扣金額（例：500）
   discountAmount?: number
+  // 是否可與其他折扣／早鳥優惠疊加使用（預設 false 為不可疊加/二擇一）
+  canStack?: boolean
   // 活動規則詳細說明與限制
   rulesNote: string
 }
@@ -3013,7 +3015,7 @@ function Unit12CustomerService({
                 <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">AI 精確試算</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                在此設定政府振興補助（如花蓮國旅補助、第1晚折800第2晚折1200）、早鳥折扣或生日券優惠。AI 於對話及報價時會自動核對資格並依規則精確折抵，活動結束隨時停用即可。
+                在此設定特殊活動（如國旅補助）、早鳥折扣或生日券優惠。AI 於對話及報價時會自動核對資格並依規則精確折抵，活動結束隨時停用即可。
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -3029,6 +3031,7 @@ function Unit12CustomerService({
                     id: crypto.randomUUID(),
                     name: '國旅補助2026',
                     enabled: true,
+                    canStack: false,
                     offerType: 'nights_tiered',
                     qualification: '本國籍自由行旅客、出示身分證件正本',
                     tieredNightDiscounts: [800, 1200],
@@ -3147,11 +3150,11 @@ function Unit12CustomerService({
                 </div>
                 <div className="flex items-center gap-3">
                   <a
-                    href="/booking/pricing"
+                    href="/booking/pricing?tab=rules"
                     target="_blank"
                     className="text-[11px] text-indigo-600 hover:underline flex items-center gap-1 font-medium"
                   >
-                    編輯 Booking 定價規則 ↗
+                    編輯 Booking 折扣規則 ↗
                   </a>
                   <a
                     href="/booking/promos"
@@ -3199,7 +3202,7 @@ function Unit12CustomerService({
                   ))}
                   {bookingRules.filter(r => r.enabled).length === 0 && bookingPromos.filter(p => p.enabled).length === 0 && (
                     <div className="col-span-2 text-center text-xs text-gray-400 py-3 bg-white/60 rounded-lg border border-dashed border-indigo-200">
-                      Booking 訂房系統目前尚未建立動態定價規則或優惠碼。<a href="/booking/pricing" target="_blank" className="text-indigo-600 underline ml-1">點此前往建立</a>
+                      Booking 訂房系統目前尚未建立動態定價規則或優惠碼。<a href="/booking/pricing?tab=rules" target="_blank" className="text-indigo-600 underline ml-1">點此前往建立</a>
                     </div>
                   )}
                 </div>
@@ -3210,7 +3213,7 @@ function Unit12CustomerService({
           {/* CS 自訂活動標題 */}
           <div className="flex items-center justify-between pt-2">
             <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-              <span>🏷️ CS 客服專案與國旅補助活動</span>
+              <span>🏷️ CS 客服專案活動</span>
               {campaignOfferSource === 'booking' && (
                 <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">目前暫停採用中（僅用 Booking 活動）</span>
               )}
@@ -3229,13 +3232,22 @@ function Unit12CustomerService({
               {campaignOffers.map((offer) => (
                 <div key={offer.id} className={`bg-white border rounded-xl p-3.5 flex items-start gap-3 transition-all ${offer.enabled ? 'border-amber-200 shadow-sm' : 'border-gray-200 opacity-60'}`}>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-bold text-gray-800">{offer.name || '未命名活動'}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">
                         {offer.offerType === 'nights_tiered' ? '續住每晚梯次折抵' :
                          offer.offerType === 'percent' ? `打 ${10 - (offer.discountPercent ?? 0) / 10} 折 (${offer.discountPercent}% off)` :
                          offer.offerType === 'fixed_amount' ? `折抵 $${offer.discountAmount}` : '自訂規則'}
                       </span>
+                      {offer.canStack ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium border border-emerald-200">
+                          可與其他優惠疊加
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium border border-gray-200">
+                          單獨使用（不疊加）
+                        </span>
+                      )}
                     </div>
                     {offer.offerType === 'nights_tiered' && offer.tieredNightDiscounts?.length ? (
                       <div className="text-xs text-emerald-700 font-semibold mt-1">
@@ -3421,6 +3433,28 @@ function Unit12CustomerService({
                   className="w-full text-xs border rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-400 resize-y"
                 />
                 <p className="text-[10px] text-gray-400 mt-0.5">AI 在向客人介紹活動時會主動說明這些資格規定。</p>
+              </div>
+
+              {/* 優惠疊加設定 */}
+              <div className="bg-amber-50/50 border border-amber-200/80 rounded-lg p-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingOffer.canStack ?? false}
+                    onChange={e => setEditingOffer({ ...editingOffer, canStack: e.target.checked })}
+                    className="mt-0.5 rounded text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <div className="text-xs font-semibold text-gray-800">
+                      允許與其他活動 / 早鳥折扣同時疊加使用
+                    </div>
+                    <div className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
+                      {editingOffer.canStack
+                        ? '🟢 已開啟疊加：AI 計算時可與早鳥優惠、特價促銷或優惠碼同時累加折抵。'
+                        : '⚪ 關閉疊加（預設）：採二擇一最優原則，不可與其他折扣專案合併使用。'}
+                    </div>
+                  </div>
+                </label>
               </div>
 
               <div>

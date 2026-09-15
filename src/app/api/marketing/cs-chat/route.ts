@@ -498,7 +498,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     if (activeOffers.length > 0) {
       offerLines.push('【CS 客服促銷／補助活動（若客問優惠、補助或計算房價時主動說明與折抵）】')
       for (const off of activeOffers) {
-        offerLines.push(`▸ 活動名稱：${off.name}`)
+        offerLines.push(`▸ 活動名稱：${off.name}（${off.canStack ? '可與其他優惠/早鳥疊加併用' : '不可疊加，採二擇一最優原則'}）`)
         if (off.qualification) offerLines.push(`  適用資格與對象：${off.qualification}`)
         if (off.offerType === 'nights_tiered' && off.tieredNightDiscounts?.length) {
           const tieredDesc = off.tieredNightDiscounts.map((amt: number, idx: number) => `第 ${idx + 1} 晚折抵 $${amt.toLocaleString()} 元`).join('，')
@@ -510,6 +510,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
         } else {
           offerLines.push(`  折扣計算方式：自訂方案`)
         }
+        offerLines.push(`  優惠疊加原則：${off.canStack ? '本活動允許與其他促銷折扣、早鳥特惠或折扣碼同時累加折抵' : '本活動不可與其他早鳥或促銷折扣同時併用（客人可選最優惠的一種專案）'}`)
         if (off.rulesNote) offerLines.push(`  活動規則與限制：${off.rulesNote}`)
       }
     }
@@ -544,7 +545,7 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   if (offerLines.length > 0) {
     offerLines.push('\n計算與應對守則：')
     offerLines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
-    offerLines.push('2. 計算總價時，以房價定價為基準，嚴格依照上述規則扣除補助或折抵金額，並清楚列出原價、折抵金額與客人實付金額。')
+    offerLines.push('2. 計算總價時，以房價定價為基準，嚴格依照各活動設定之折抵金額與「是否可疊加」規則進行計算：若標註「可疊加」則可合併折抵；若標註「不可疊加」則採二擇一最優惠金額折抵，並清楚向客人列出原價、各項折抵與實付金額。')
     offerLines.push('3. 喬民宿適用當期國旅補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
     campaignOffersSection = '\n\n' + offerLines.join('\n')
   }
