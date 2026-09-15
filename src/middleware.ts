@@ -207,11 +207,14 @@ export async function middleware(request: NextRequest) {
       // 公司的 enabled_modules 分開查，不用 PostgREST 的 embed：companies 與 profiles
       // 之間有三條外鍵，embed 無法判斷該走哪一條，會回 PGRST201 讓整個查詢失敗、
       // profile 變成 null——底下的模組權限檢查會被整段跳過，非管理者因此拿到預設模組。
-      const { data: profile } = await supabase
+      const { data: profile, error: profileErr } = await supabase
         .from('profiles')
         .select('user_type, enabled_modules, units, company_id')
         .eq('id', user.id)
         .single()
+      // 查詢失敗時 profile 是 null，底下的模組權限檢查會被整段跳過（`if (profile && ...)`），
+      // 等於權限形同虛設而且完全無聲。行為維持不變，但要留下錯誤。
+      if (profileErr) console.error('[middleware] profiles 查詢失敗', { userId: user.id, pathname, error: profileErr })
 
       const isAdmin = profile?.user_type === 'admin' ||
         user.email?.toLowerCase() === 'imseby@gmail.com' ||
@@ -236,11 +239,13 @@ export async function middleware(request: NextRequest) {
       if (profile && !isAdmin) {
         let companyModules: string[] | undefined
         if (profile.company_id) {
-          const { data: company } = await supabase
+          const { data: company, error: companyErr } = await supabase
             .from('companies')
             .select('enabled_modules')
             .eq('id', profile.company_id)
             .single()
+          // 失敗時會退回個人的 enabled_modules，權限範圍默默變成另一組。
+          if (companyErr) console.error('[middleware] companies 查詢失敗', { companyId: profile.company_id, error: companyErr })
           companyModules = company?.enabled_modules ?? undefined
         }
         const effectiveModules: string[] = companyModules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']

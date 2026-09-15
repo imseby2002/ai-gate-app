@@ -27,18 +27,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   // Get recent conversations for sidebar
-  const { data: conversations } = await supabase
+  const { data: conversations, error: conversationsErr } = await supabase
     .from('conversations')
     .select('id, title, updated_at, pinned')
     .eq('user_id', user.id)
     .order('pinned', { ascending: false })
     .order('updated_at', { ascending: false })
     .limit(20)
+  // 失敗時側邊欄只是空的、畫面不會壞，但看起來就像「對話紀錄不見了」，要查得到原因。
+  if (conversationsErr) console.error('[app-layout] conversations 查詢失敗', conversationsErr)
 
   // Get credit balance for external users
   let creditBalance: number | undefined
   if (profile.user_type === 'external') {
-    const { data } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
+    const { data, error: creditErr } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
+    // 失敗時餘額會顯示成 0，跟「真的沒錢」看起來一模一樣——這是跟錢有關的數字，不能無聲。
+    if (creditErr) console.error('[app-layout] get_credit_balance 失敗', { userId: user.id, error: creditErr })
     creditBalance = data ?? 0
   }
 
@@ -58,11 +62,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // 的使用者當成查無資料導回 /login，與 /login 之間來回跳轉。
   let companyModules: string[] | undefined
   if (profile.company_id) {
-    const { data: company } = await supabase
+    const { data: company, error: companyErr } = await supabase
       .from('companies')
       .select('enabled_modules')
       .eq('id', profile.company_id)
       .single()
+    // 失敗時會退回個人的 enabled_modules，使用者看到的可用模組默默變成另一組。
+    if (companyErr) console.error('[app-layout] companies 查詢失敗', { companyId: profile.company_id, error: companyErr })
     companyModules = company?.enabled_modules ?? undefined
   }
 

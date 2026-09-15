@@ -9,11 +9,14 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug } = await params
   const admin = createAdminClient()
-  const { data: p } = await admin
+  const { data: p, error } = await admin
     .from('bnb_profiles')
     .select('name, seo_title, seo_description, description, images')
     .eq('slug', slug)
     .single()
+  // PGRST116 是「網址打錯／查無此民宿」的正常情況（公開網址會被爬蟲亂打），不記錄；
+  // 其餘是真的查詢失敗，會讓存在的民宿顯示成找不到。
+  if (error && error.code !== 'PGRST116') console.error('[bnb-public] bnb_profiles 查詢失敗', { slug, error })
   if (!p) return { title: '找不到此民宿' }
   const title = p.seo_title || p.name
   const description = p.seo_description || p.description || ''
@@ -38,11 +41,13 @@ export default async function BnbPublicLayout({
 }) {
   const { slug } = await params
   const admin = createAdminClient()
-  const { data: profile } = await admin
+  const { data: profile, error } = await admin
     .from('bnb_profiles')
     .select('name, theme_color, template_id, custom_design, slug')
     .eq('slug', slug)
     .single()
+  // 查詢失敗會讓實際存在的民宿對客人顯示成 404，跟「網址打錯」看起來一模一樣。
+  if (error && error.code !== 'PGRST116') console.error('[bnb-public] bnb_profiles 查詢失敗', { slug, error })
 
   if (!profile) notFound()
   const design = resolveDesign(profile)
