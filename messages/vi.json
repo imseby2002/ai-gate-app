@@ -4232,6 +4232,14 @@
     "registeredCheckEmail": "Đã tạo tài khoản cho bạn! Vui lòng vào hộp thư bấm liên kết xác nhận, sau đó quay lại đăng nhập bằng Email và mật khẩu này (nếu chưa thấy hãy kiểm tra hộp thư rác). Muốn vào ngay có thể chọn Đăng nhập Google ở trên.",
     "passwordWrong": "Mật khẩu không đúng, vui lòng nhập lại",
     "loginErrorFallback": "Đăng nhập thất bại, vui lòng kiểm tra email và mật khẩu",
-    "systemErrorFallback": "Xảy ra sự cố khi xác thực, vui lòng thử lại hoặc dùng Google"
+    "systemErrorFallback": "Xảy ra sự cố khi xác thực, vui lòng thử lại hoặc dùng Google",
+    "forgotPassword": "Quên mật khẩu?",
+    "resetPasswordTitle": "Đặt lại mật khẩu",
+    "resetPasswordDesc": "Vui lòng nhập email đã đăng ký, hệ thống sẽ gửi liên kết đặt lại mật khẩu đến hộp thư của bạn.",
+    "sendResetEmailBtn": "Gửi email đặt lại mật khẩu",
+    "sending": "Đang gửi…",
+    "backToLogin": "Quay lại đăng nhập",
+    "resetEmailSent": "Email đặt lại mật khẩu đã được gửi! Vui lòng kiểm tra hộp thư và nhấp vào liên kết (kiểm tra hộp thư rác nếu cần).",
+    "emailRequired": "Vui lòng nhập email"
   }
 }

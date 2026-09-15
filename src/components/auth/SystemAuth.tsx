@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Loader2, ArrowRight, KeyRound, ArrowLeft } from 'lucide-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { getLocalizedSystemDef, SCOPE_SESSION_KEY, type SystemKey } from '@/lib/systems'
@@ -20,9 +20,11 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
   const def = getLocalizedSystemDef(system, locale)
   const router = useRouter()
 
+  const [mode, setMode] = useState<'login' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -134,6 +136,29 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
     if (error) { setError(error.message); setGoogleLoading(false) }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email.trim()) {
+      setError(t('emailRequired'))
+      return
+    }
+    setResetLoading(true)
+    setError('')
+    setInfo('')
+    const supabase = createClient()
+    const redirectUrl = `${window.location.origin}/callback?next=/reset-password&system=${system}`
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: redirectUrl,
+    })
+    setResetLoading(false)
+    if (resetErr) {
+      const rawMsg = (resetErr.message || '').trim()
+      setError(rawMsg === '{}' || !rawMsg ? t('systemErrorFallback') : rawMsg)
+      return
+    }
+    setInfo(t('resetEmailSent'))
+  }
+
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-8">
       {/* 右上角語系切換器 */}
@@ -178,6 +203,58 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
                 </div>
               )}
             </div>
+          ) : mode === 'forgot' ? (
+            <div className="space-y-4">
+              <div className="text-center mb-2">
+                <div className="h-10 w-10 mx-auto mb-2 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <KeyRound className="h-5 w-5" />
+                </div>
+                <h3 className="font-bold text-base text-gray-900">{t('resetPasswordTitle')}</h3>
+                <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  {t('resetPasswordDesc')}
+                </p>
+              </div>
+
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">{t('emailLabel')}</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2"
+                    placeholder={t('emailPlaceholder')}
+                  />
+                </div>
+
+                {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
+                {info && <div className="p-3 rounded-lg text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 leading-relaxed">{info}</div>}
+
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {resetLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {resetLoading ? t('sending') : t('sendResetEmailBtn')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login')
+                    setError('')
+                    setInfo('')
+                  }}
+                  className="w-full text-center text-xs text-gray-500 hover:text-gray-800 font-medium py-1.5 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>{t('backToLogin')}</span>
+                </button>
+              </form>
+            </div>
           ) : (
             <>
               <button type="button" onClick={handleGoogle} disabled={googleLoading || loading}
@@ -205,14 +282,27 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
                     className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2" placeholder={t('emailPlaceholder')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">{t('passwordLabel')}</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium">{t('passwordLabel')}</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot')
+                        setError('')
+                        setInfo('')
+                      }}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline font-medium transition-colors cursor-pointer"
+                    >
+                      {t('forgotPassword')}
+                    </button>
+                  </div>
                   <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
                     className="w-full h-10 px-3 rounded-lg border text-sm outline-none focus:ring-2" placeholder={t('passwordPlaceholder')} />
                 </div>
                 {error && <div className="p-3 rounded-lg text-sm text-red-700 bg-red-50 border border-red-200">{error}</div>}
                 {info && <div className="p-3 rounded-lg text-sm text-emerald-700 bg-emerald-50 border border-emerald-200">{info}</div>}
                 <button type="submit" disabled={loading || googleLoading}
-                  className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60"
+                  className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
                   style={{ background: 'var(--primary)' }}>
                   {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                   {loading ? t('processing') : t('submitBtn')}

@@ -4325,6 +4325,14 @@
     "registeredCheckEmail": "已為您建立帳號！請到信箱點擊驗證信後，再回來用同一組 Email／密碼登入（沒收到請查看垃圾信匣）。想免驗證可改用上方 Google 登入。",
     "passwordWrong": "密碼錯誤，請重新輸入",
     "loginErrorFallback": "登入失敗，請確認帳號密碼後重試",
-    "systemErrorFallback": "系統驗證發生異常，請重試或改用 Google 登入"
+    "systemErrorFallback": "系統驗證發生異常，請重試或改用 Google 登入",
+    "forgotPassword": "忘記密碼？",
+    "resetPasswordTitle": "重設您的密碼",
+    "resetPasswordDesc": "請輸入您的註冊 Email，系統將寄送重設密碼連結至您的信箱。",
+    "sendResetEmailBtn": "發送重設密碼信",
+    "sending": "發送中…",
+    "backToLogin": "返回登入",
+    "resetEmailSent": "重設密碼信已寄出！請前往信箱點擊信中連結設定新密碼（若沒收到請查看垃圾信件匣）。",
+    "emailRequired": "請輸入電子郵件"
   }
 }

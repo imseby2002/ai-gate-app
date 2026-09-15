@@ -4325,6 +4325,14 @@
     "registeredCheckEmail": "Account created! Please check your email to verify your account, then log in with this email and password (check spam folder if needed). You can also sign in with Google above for instant access.",
     "passwordWrong": "Incorrect password, please try again",
     "loginErrorFallback": "Login failed, please check your credentials",
-    "systemErrorFallback": "Authentication error, please try again or sign in with Google"
+    "systemErrorFallback": "Authentication error, please try again or sign in with Google",
+    "forgotPassword": "Forgot password?",
+    "resetPasswordTitle": "Reset your password",
+    "resetPasswordDesc": "Enter your registered email and we will send you a password reset link.",
+    "sendResetEmailBtn": "Send Password Reset Link",
+    "sending": "Sending...",
+    "backToLogin": "Back to Sign In",
+    "resetEmailSent": "Password reset email sent! Please check your inbox and click the link to set a new password (check spam folder if needed).",
+    "emailRequired": "Please enter your email"
   }
 }
