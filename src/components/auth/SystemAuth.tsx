@@ -146,7 +146,13 @@ export default function SystemAuth({ system }: { system: SystemKey }) {
     setError('')
     setInfo('')
     const supabase = createClient()
-    const redirectUrl = `${window.location.origin}/callback?next=/reset-password&system=${system}`
+    // 注意：重設密碼信用的是 Supabase 的 hash-token（#access_token=...&type=recovery）
+    // 格式，不是 OAuth 的 ?code= PKCE 格式，不能繞去 /callback——/callback 只認
+    // ?code=，收到 recovery 連結時會找不到 code、直接把整個 hash 帶著導去 /login，
+    // 而 /login（系統選擇頁）完全沒有建立 Supabase client，hash 裡的 token 就這樣
+    // 被丟掉，使用者永遠卡在選單頁。必須直接導到 /reset-password，讓該頁自己的
+    // Supabase client 處理 hash、建立 recovery session。
+    const redirectUrl = `${window.location.origin}/reset-password?system=${system}`
     const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: redirectUrl,
     })
