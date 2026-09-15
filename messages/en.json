@@ -693,6 +693,8 @@
       "dynamicTag": "⚡Dynamic",
       "dynamicToggle": "Dynamic Pricing Toggle",
       "basePriceLabel": "Base price",
+      "defaultPriceLabel": "Default price",
+      "defaultPriceHint": "(used only when no daily override is set)",
       "notSet": "Not set",
       "dynamicOn": "Dynamic pricing on",
       "rulesNote": "Rules only apply to room types with dynamic pricing enabled",
