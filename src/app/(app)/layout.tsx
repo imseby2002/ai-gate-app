@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
 import { AppShell } from '@/components/layout/AppShell'
@@ -10,8 +10,18 @@ export const dynamic = 'force-dynamic'
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
 
-  const { data: { user } } = await getCachedUser()
-  if (!user) redirect('/login')
+  // TODO(暫時診斷用，問題定位後移除)：middleware 已放行（否則會導到 /login/<system>），
+  // 但這裡卻把已登入使用者導回 bare /login，形成與 /login 之間的來回跳轉。
+  // 先把「是哪一個判斷失敗」寫進 log，才能對症下藥。
+  const { data: { user }, error: userErr } = await getCachedUser()
+  if (!user) {
+    const cookieNames = (await cookies()).getAll().map(c => c.name).join(',')
+    console.error('[app-layout] no user →/login', {
+      userErr: userErr?.message,
+      cookieNames,
+    })
+    redirect('/login')
+  }
 
   const fetchProfile = () => supabase
     .from('profiles')
@@ -24,11 +34,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // redirect('/login') 會讓已登入使用者被誤導回登入頁，而 /login 的
   // AutoRedirectIfAuthed 一看 session 還在又立刻導回來，形成與 /login 之間來回跳轉。
   // 重試一次，真的失敗才視為異常。
-  let { data: profile } = await fetchProfile()
+  let { data: profile, error: profileErr } = await fetchProfile()
   if (!profile) {
-    ;({ data: profile } = await fetchProfile())
+    ;({ data: profile, error: profileErr } = await fetchProfile())
   }
-  if (!profile) redirect('/login')
+  if (!profile) {
+    console.error('[app-layout] no profile →/login', {
+      userId: user.id,
+      code: profileErr?.code,
+      message: profileErr?.message,
+      details: profileErr?.details,
+    })
+    redirect('/login')
+  }
 
   // Get recent conversations for sidebar
   const { data: conversations } = await supabase
