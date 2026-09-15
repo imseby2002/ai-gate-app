@@ -8,8 +8,8 @@ async function getAdminUser() {
 }
 
 export async function GET() {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const { data, error } = await supabase
     .from('hr_employees')
@@ -22,8 +22,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json()
   const {
@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json()
   const { id, ...updates } = body
@@ -79,8 +79,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

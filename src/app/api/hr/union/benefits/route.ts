@@ -8,8 +8,8 @@ async function getAdminUser() {
 }
 
 export async function GET(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const { data, error } = await supabase
     .from('hr_union_benefits')
@@ -27,8 +27,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json().catch(() => ({}))
   const { member_id, benefit_type, amount, request_date, notes, proof_doc_path } = body
@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
+  const { user, supabase , status: authStatus } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: authStatus === 401 ? 'Unauthorized' : 'Forbidden' }, { status: authStatus })
 
   const body = await req.json().catch(() => ({}))
   const { id, status, approved_by, notes } = body
