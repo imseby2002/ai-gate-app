@@ -71,6 +71,18 @@ export async function POST(req: NextRequest) {
   if (!role || !ROLES.includes(role)) return NextResponse.json({ error: '角色錯誤' }, { status: 400 })
 
   const admin = createAdminClient()
+
+  // 僅能邀請已在本公司員工名單 (employee_whitelist) 中的 Email，避免邀進非本公司人員。
+  const { data: whitelisted } = await admin
+    .from('employee_whitelist')
+    .select('id')
+    .eq('company_id', company.companyId)
+    .eq('email', normEmail)
+    .maybeSingle()
+  if (!whitelisted) {
+    return NextResponse.json({ error: '此 Email 尚未列於本公司員工名單，請先於「員工名單」新增後再邀請' }, { status: 400 })
+  }
+
   const { error } = await admin.from('company_members').upsert({
     company_id: company.companyId,
     invited_email: normEmail,
