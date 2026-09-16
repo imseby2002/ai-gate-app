@@ -3,6 +3,8 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 import { createClient } from '@/lib/supabase/server'
 import { parseZeroMdb, type ZeroTransaction } from '@/lib/fin/zero-import'
 
+export const maxDuration = 60
+
 const BUCKET = 'fin-zero-import'
 const CHUNK = 1000
 
@@ -69,12 +71,27 @@ export async function POST(req: NextRequest) {
 
   if (mode === 'preview') return NextResponse.json({ preview: summary })
 
-  // commit：補帳戶 → 分批 upsert（以 external_ref 去重，可重複執行不會重覆匯入）
+  // commit：補帳戶 → 依 external_ref 排除已匯入過的紀錄 → 分批寫入（可重複執行不會重覆匯入）。
+  // hr_cashflow_owner_external_ref_uidx 是 partial unique index（僅限 external_ref <> ''），
+  // PostgREST 的 upsert onConflict 語法無法對應 partial index，故改為應用層先查已存在的
+  // external_ref 再過濾，只插入新的一批（一般手動/匯入資料 external_ref 為空，不受影響）。
   try {
     const { map: accountMap, created: accountsCreated } = await ensureAccounts(supabase, user.id, parsed.accountNames)
+
+    // 分頁抓取全部既有 external_ref（PostgREST 預設每次查詢有筆數上限，資料量大時不能只查一次）
+    const existingSet = new Set<string>()
+    for (let from = 0; ; from += 1000) {
+      const { data: page } = await supabase.from('hr_cashflow')
+        .select('external_ref').eq('owner_id', user.id).neq('external_ref', '')
+        .range(from, from + 999)
+      for (const r of page ?? []) existingSet.add(r.external_ref)
+      if (!page || page.length < 1000) break
+    }
+    const newTransactions = parsed.transactions.filter(tx => !existingSet.has(tx.external_ref))
+
     let imported = 0
-    for (let i = 0; i < parsed.transactions.length; i += CHUNK) {
-      const chunk = parsed.transactions.slice(i, i + CHUNK)
+    for (let i = 0; i < newTransactions.length; i += CHUNK) {
+      const chunk = newTransactions.slice(i, i + CHUNK)
       const rows = chunk.map((tx: ZeroTransaction) => ({
         owner_id: user.id,
         type: tx.type,
@@ -92,8 +109,7 @@ export async function POST(req: NextRequest) {
         external_ref: tx.external_ref,
         source: 'zero_import',
       }))
-      const { error, count } = await supabase.from('hr_cashflow')
-        .upsert(rows, { onConflict: 'owner_id,external_ref', ignoreDuplicates: true, count: 'exact' })
+      const { error, count } = await supabase.from('hr_cashflow').insert(rows, { count: 'exact' })
       if (error) return NextResponse.json({ error: `匯入中斷（已匯入 ${imported} 筆）：${error.message}` }, { status: 500 })
       imported += count ?? 0
     }
@@ -102,6 +118,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true, imported, skipped: parsed.skipped,
+      alreadyImported: existingSet.size > 0 ? parsed.transactions.length - newTransactions.length : 0,
       accountsCreated,
       totalParsed: parsed.transactions.length,
     })
