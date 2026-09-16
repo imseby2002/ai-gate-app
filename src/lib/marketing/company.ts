@@ -11,17 +11,21 @@ export async function marketingCompany(): Promise<MktCompany | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('user_type, is_active, enabled_modules, units, company_id').eq('id', user.id).single()
+  const { data: profile, error: profileErr } = await admin.from('profiles').select('user_type, is_active, enabled_modules, units, company_id').eq('id', user.id).single()
+  // 查詢失敗與「查無此人／帳號停用」都會走到 return null、呼叫端一律當成沒權限，
+  // 兩者要分得出來。行為維持 fail-closed，但錯誤要留下。
+  if (profileErr) console.error('[marketing-company] profiles 查詢失敗', { userId: user.id, error: profileErr })
   if (!profile || profile.is_active === false) return null
   const isSuperAdmin = profile.user_type === 'admin'
   let isCompanyAdmin = false
   if (profile.company_id) {
-    const { data: m } = await admin.from('company_members')
+    const { data: m, error: memberErr } = await admin.from('company_members')
       .select('role')
       .eq('company_id', profile.company_id)
       .eq('member_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
+    if (memberErr) console.error('[marketing-company] company_members(role) 查詢失敗', { userId: user.id, companyId: profile.company_id, error: memberErr })
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }
@@ -37,8 +41,10 @@ export async function marketingCompany(): Promise<MktCompany | null> {
   let ownerId = user.id
   let memberIds: string[] = [user.id]
   if (profile.company_id) {
-    const { data: members } = await admin.from('company_members')
+    const { data: members, error: membersErr } = await admin.from('company_members')
       .select('member_id, role').eq('company_id', profile.company_id).eq('status', 'active')
+    // 查詢失敗會讓 ownerId 退回使用者自己，資料範圍整個跑掉（會看到空資料）而且無聲。
+    if (membersErr) console.error('[marketing-company] company_members 查詢失敗', { companyId: profile.company_id, error: membersErr })
     const rows = members ?? []
     const owner = rows.find(m => m.role === 'owner')?.member_id
     if (owner) ownerId = owner
