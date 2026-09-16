@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   ShieldAlert,
   Scale,
@@ -61,6 +62,8 @@ interface ChatMessage {
 }
 
 export default function AuditPlatformPage() {
+  const t = useTranslations('AuditPlatform')
+  const locale = useLocale()
   const [activeTab, setActiveTab] = useState<PlatformTab>('material')
   const [loading, setLoading] = useState(false)
   const [targetStore, setTargetStore] = useState('胡志明一號旗艦店 (HCM-01)')
@@ -252,7 +255,7 @@ export default function AuditPlatformPage() {
       role: 'user',
       content: textToSend,
       mode: copilotMode,
-      timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW', { hour: '2-digit', minute: '2-digit' }),
     }
 
     setChatMessages(prev => [...prev, userMsg])
@@ -284,7 +287,7 @@ export default function AuditPlatformPage() {
           role: 'assistant',
           content: data.reply,
           mode: copilotMode,
-          timestamp: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date().toLocaleTimeString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW', { hour: '2-digit', minute: '2-digit' }),
           suggestion: data.suggestion_card,
         }
         setChatMessages(prev => [...prev, assistantMsg])
@@ -313,7 +316,7 @@ export default function AuditPlatformPage() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              COMPANY KNOWLEDGE CORE 共享企業知識底層連動中
+              {t('knowledgeCoreStatus')}
             </span>
           </div>
 
@@ -323,12 +326,12 @@ export default function AuditPlatformPage() {
               className="px-2.5 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 transition-colors flex items-center gap-1.5"
             >
               <Database className="w-3.5 h-3.5 text-cyan-400" />
-              <span>R&D AI 研發中樞 (配方 V1/V2)</span>
+              <span>{t('hubRdAi')}</span>
             </Link>
             <span className="text-slate-600">↔</span>
             <div className="px-2.5 py-1 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 font-semibold">
               <Scale className="w-3.5 h-3.5 text-indigo-400" />
-              <span>AUDIT AI 稽核智慧平台 (本中樞)</span>
+              <span>{t('hubAuditAi')}</span>
             </div>
             <span className="text-slate-600">↔</span>
             <Link
@@ -336,7 +339,7 @@ export default function AuditPlatformPage() {
               className="px-2.5 py-1 rounded-md bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 transition-colors flex items-center gap-1.5"
             >
               <Coffee className="w-3.5 h-3.5 text-amber-400" />
-              <span>STORE AI 門市教練 (現場執行)</span>
+              <span>{t('hubStoreAi')}</span>
             </Link>
           </div>
         </div>
@@ -354,11 +357,11 @@ export default function AuditPlatformPage() {
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-2.5">
                   AI Audit Intelligence Platform
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-normal">
-                    企業稽核智慧平台
+                    {t('pageBadge')}
                   </span>
                 </h1>
                 <p className="text-sm text-slate-400">
-                  四來源交叉推算 (IPOS × IVT × 出納定價 × R&D版本配方) ➔ 商品組合修正模型 ➔ 人機協同規則進化 ➔ Audit Copilot
+                  {t('pageSubtitle')}
                 </p>
               </div>
             </div>
@@ -373,11 +376,11 @@ export default function AuditPlatformPage() {
               className="bg-slate-900/60 border-slate-700 hover:bg-slate-800 text-slate-200 gap-1.5 text-xs"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              重新計算推算引擎
+              {t('recalculate')}
             </Button>
             <Link href="/audit">
               <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white text-xs">
-                返回傳統四來源表單
+                {t('backToClassicForm')}
               </Button>
             </Link>
           </div>
@@ -387,37 +390,37 @@ export default function AuditPlatformPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">稽核門市：</span>
+              <span className="text-slate-400">{t('auditStoreLabel')}</span>
               <span className="font-semibold text-indigo-300 bg-indigo-950/60 px-3 py-1 rounded-md border border-indigo-500/30">
                 {targetStore}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">分析基準日：</span>
+              <span className="text-slate-400">{t('analysisDateLabel')}</span>
               <span className="font-mono text-slate-200 bg-slate-800 px-3 py-1 rounded-md border border-slate-700">
                 {targetDate}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">有效配方版本：</span>
+              <span className="text-slate-400">{t('activeRecipeVersionLabel')}</span>
               <span className="font-mono text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded border border-emerald-500/30 text-xs">
-                V2 (2026/05 生效)
+                {t('recipeVersionValue')}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3 text-xs">
             <div className="text-right">
-              <div className="text-slate-400">原始表觀損失</div>
+              <div className="text-slate-400">{t('rawLossLabel')}</div>
               <div className="text-rose-400 font-bold font-mono text-sm">
-                {totalRawLoss.toLocaleString()} VND
+                {totalRawLoss.toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')} VND
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-600" />
             <div className="text-right">
-              <div className="text-slate-400">組合規則修正後損失</div>
+              <div className="text-slate-400">{t('adjustedLossLabel')}</div>
               <div className="text-emerald-400 font-bold font-mono text-sm">
-                {totalAdjustedLoss.toLocaleString()} VND
+                {totalAdjustedLoss.toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')} VND
               </div>
             </div>
           </div>
@@ -434,7 +437,7 @@ export default function AuditPlatformPage() {
             }`}
           >
             <Scale className="w-4 h-4" />
-            <span>📊 原料耗用推算引擎</span>
+            <span>{t('tabMaterial')}</span>
             <span className="text-xs px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">Phase 1</span>
           </button>
 
@@ -447,8 +450,8 @@ export default function AuditPlatformPage() {
             }`}
           >
             <Bot className="w-4 h-4" />
-            <span>🤖 Audit Copilot (稽核副駕駛)</span>
-            <span className="text-xs px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-200">4 模式</span>
+            <span>{t('tabCopilot')}</span>
+            <span className="text-xs px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-200">{t('fourModes')}</span>
           </button>
 
           <button
@@ -460,8 +463,8 @@ export default function AuditPlatformPage() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>⚖️ 人機協同規則庫 (Rule Engine)</span>
-            <span className="text-xs px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">{rules.length} 條</span>
+            <span>{t('tabRules')}</span>
+            <span className="text-xs px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300">{t('ruleCount', { n: rules.length })}</span>
           </button>
 
           <button
@@ -473,7 +476,7 @@ export default function AuditPlatformPage() {
             }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>🧬 商品加料組合排擠模型</span>
+            <span>{t('tabComposition')}</span>
           </button>
 
           <button
@@ -485,8 +488,8 @@ export default function AuditPlatformPage() {
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            <span>🛡️ 六大稽核模組看板</span>
-            <span className="text-xs px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Jetson 連動</span>
+            <span>{t('tabModules')}</span>
+            <span className="text-xs px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">{t('jetsonLinked')}</span>
           </button>
 
           <button
@@ -498,7 +501,7 @@ export default function AuditPlatformPage() {
             }`}
           >
             <History className="w-4 h-4" />
-            <span>📜 稽核日誌與知識圖譜</span>
+            <span>{t('tabLogs')}</span>
           </button>
         </div>
 
@@ -509,12 +512,9 @@ export default function AuditPlatformPage() {
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs sm:text-sm flex items-start gap-3">
               <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-1 leading-relaxed">
-                <span className="font-semibold text-amber-300">【原料消耗推算引擎核心思維】</span>
+                <span className="font-semibold text-amber-300">{t('materialCoreConceptTitle')}</span>
                 <p>
-                  不能直接以「100杯 × 配方 = 理論奶茶量」。今日 IPOS 銷售紀錄中，珍珠奶茶共 100 杯（珍珠 80 份、椰果 30 份）。
-                  其中「無加料」與「加 2 種加料 (2 toppings)」出杯時的基底茶與奶精實際理論耗用完全不同！
-                  系統已啟用 Product Composition Model 與已核准之 <span className="font-mono text-white underline">RULE-00038 (+18ml)</span>，
-                  將原本看似異常的 +8.7% 偏差收斂至 <span className="text-emerald-400 font-bold">+0.7% 工藝公差</span>！
+                  {t.rich('materialCoreConceptDesc', { rule: (chunks) => <span className="font-mono text-white underline">{chunks}</span>, tolerance: (chunks) => <span className="text-emerald-400 font-bold">{chunks}</span> })}
                 </p>
               </div>
             </div>
@@ -524,20 +524,20 @@ export default function AuditPlatformPage() {
               <div className="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-indigo-400" />
-                  <h3 className="font-semibold text-white">原物料合理性推算比對表 (Consumption Variance)</h3>
+                  <h3 className="font-semibold text-white">{t('varianceTableTitle')}</h3>
                 </div>
                 <div className="text-xs text-slate-400 flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> 正常 (±4%)
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> {t('legendNormal')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span> 輕微偏差 (4-8%)
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span> {t('legendMinor')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span> 高風險 (8-15%)
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span> {t('legendHighRisk')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> 嚴重損失 (&gt;15%)
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> {t('legendCritical')}
                   </span>
                 </div>
               </div>
@@ -546,16 +546,16 @@ export default function AuditPlatformPage() {
                 <table className="w-full text-left text-xs sm:text-sm">
                   <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800 font-mono">
                     <tr>
-                      <th className="py-3 px-4">原料名稱 / 代碼</th>
-                      <th className="py-3 px-4">規格</th>
-                      <th className="py-3 px-4">純配方標準</th>
-                      <th className="py-3 px-4 text-indigo-300">組合修正理論值</th>
-                      <th className="py-3 px-4 text-cyan-300">IVT 當月實耗</th>
-                      <th className="py-3 px-4">實用與修正差額</th>
-                      <th className="py-3 px-4">誤差率 %</th>
-                      <th className="py-3 px-4 text-right">金額損失 (VND)</th>
-                      <th className="py-3 px-4">套用規則</th>
-                      <th className="py-3 px-4 text-center">操作</th>
+                      <th className="py-3 px-4">{t('colMaterialNameCode')}</th>
+                      <th className="py-3 px-4">{t('colSpec')}</th>
+                      <th className="py-3 px-4">{t('colPureRecipeStandard')}</th>
+                      <th className="py-3 px-4 text-indigo-300">{t('colCompositionAdjusted')}</th>
+                      <th className="py-3 px-4 text-cyan-300">{t('colIvtActual')}</th>
+                      <th className="py-3 px-4">{t('colDiffQty')}</th>
+                      <th className="py-3 px-4">{t('colErrorRate')}</th>
+                      <th className="py-3 px-4 text-right">{t('colMoneyLossVnd')}</th>
+                      <th className="py-3 px-4">{t('colAppliedRules')}</th>
+                      <th className="py-3 px-4 text-center">{t('colActions')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -594,7 +594,7 @@ export default function AuditPlatformPage() {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right font-bold text-slate-200">
-                            {row.money_loss > 0 ? `${row.money_loss.toLocaleString()}` : '0'}
+                            {row.money_loss > 0 ? `${row.money_loss.toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')}` : '0'}
                           </td>
                           <td className="py-3 px-4 text-xs font-sans">
                             {row.applied_rules && row.applied_rules.length > 0 ? (
@@ -606,7 +606,7 @@ export default function AuditPlatformPage() {
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-slate-600">無修正</span>
+                              <span className="text-slate-600">{t('noAdjustment')}</span>
                             )}
                           </td>
                           <td className="py-3 px-4 text-center">
@@ -615,12 +615,12 @@ export default function AuditPlatformPage() {
                               variant="outline"
                               onClick={() => {
                                 setActiveTab('copilot')
-                                handleSendMessage(`請針對【${row.material_name}】耗用偏差 (${row.diff_pct}%) 與金額損失 (${row.money_loss} VND) 進行深入探討。`)
+                                handleSendMessage(t('deepAnalysisPrompt', { name: row.material_name, pct: row.diff_pct ?? 0, loss: row.money_loss }))
                               }}
                               className="text-xs h-7 bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-indigo-300 border-indigo-500/30 gap-1"
                             >
                               <Bot className="w-3.5 h-3.5" />
-                              深入分析
+                              {t('deepAnalysis')}
                             </Button>
                           </td>
                         </tr>
@@ -639,7 +639,7 @@ export default function AuditPlatformPage() {
             {/* 模式切換按鈕組 (討論 / 導引 / 建議 / 答案) */}
             <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium">Copilot 互動模式：</span>
+                <span className="text-xs text-slate-400 font-medium">{t('copilotModeLabel')}</span>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     onClick={() => setCopilotMode('discuss')}
@@ -649,7 +649,7 @@ export default function AuditPlatformPage() {
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
                   >
-                    💬 討論模式 (探討本質・不急著給答案)
+                    {t('modeDiscuss')}
                   </button>
 
                   <button
@@ -660,7 +660,7 @@ export default function AuditPlatformPage() {
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
                   >
-                    🧭 導引模式 (結構化推進・三步檢查)
+                    {t('modeGuide')}
                   </button>
 
                   <button
@@ -671,7 +671,7 @@ export default function AuditPlatformPage() {
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
                   >
-                    💡 建議模式 (左探討・右側產出正式建議卡)
+                    {t('modeSuggest')}
                   </button>
 
                   <button
@@ -682,18 +682,18 @@ export default function AuditPlatformPage() {
                         : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                     }`}
                   >
-                    🎯 答案模式 (直接給定論・證據鏈精算)
+                    {t('modeAnswer')}
                   </button>
                 </div>
               </div>
 
               <div className="text-xs text-slate-400">
-                當前模式特色：
+                {t('currentModeFeature')}
                 <span className="text-indigo-300 font-medium ml-1">
-                  {copilotMode === 'discuss' && '啟發式提問，帶著稽核員共同釐清利弊真相'}
-                  {copilotMode === 'guide' && '第一步核對、第二步查證、第三步安全規範'}
-                  {copilotMode === 'suggest' && '對話分析並同步在右側生成建議卡片'}
-                  {copilotMode === 'answer' && '確鑿數據判定，輸出精準計算與證據'}
+                  {copilotMode === 'discuss' && t('modeDiscussDesc')}
+                  {copilotMode === 'guide' && t('modeGuideDesc')}
+                  {copilotMode === 'suggest' && t('modeSuggestDesc')}
+                  {copilotMode === 'answer' && t('modeAnswerDesc')}
                 </span>
               </div>
             </div>
@@ -705,7 +705,7 @@ export default function AuditPlatformPage() {
                 <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Bot className="w-4 h-4 text-indigo-400" />
-                    <span className="font-semibold text-sm text-white">對話協同作業區</span>
+                    <span className="font-semibold text-sm text-white">{t('chatAreaTitle')}</span>
                   </div>
                   <span className="text-xs px-2 py-0.5 rounded bg-indigo-950/60 text-indigo-300 border border-indigo-500/30">
                     Human-in-the-loop Active
@@ -746,7 +746,7 @@ export default function AuditPlatformPage() {
                         <Bot className="w-4 h-4 animate-spin" />
                       </div>
                       <div className="bg-slate-800/80 p-3 rounded-xl text-xs text-slate-400 flex items-center gap-2">
-                        <span>AI 正在整合 IPOS、IVT 與配方庫計算中...</span>
+                        <span>{t('aiCalculating')}</span>
                       </div>
                     </div>
                   )}
@@ -755,31 +755,31 @@ export default function AuditPlatformPage() {
 
                 {/* 快速提問標籤 */}
                 <div className="px-4 py-2 border-t border-slate-800/60 bg-slate-950/40 flex flex-wrap gap-2 text-xs">
-                  <span className="text-slate-500 self-center">快速情境：</span>
+                  <span className="text-slate-500 self-center">{t('quickPromptsLabel')}</span>
                   <button
-                    onClick={() => handleSendMessage('為什麼 A 店紅茶使用量比理論高 8.7%？')}
+                    onClick={() => handleSendMessage(t('quickPrompt1Text'))}
                     className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
                   >
-                    紅茶超耗 8.7% 診斷
+                    {t('quickPrompt1')}
                   </button>
                   <button
-                    onClick={() => handleSendMessage('珍珠奶茶加 2 個 topping 時，基底茶增加多少合理？')}
+                    onClick={() => handleSendMessage(t('quickPrompt2Text'))}
                     className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
                   >
-                    雙料基底茶補量假說
+                    {t('quickPrompt2')}
                   </button>
                   <button
-                    onClick={() => handleSendMessage('這個計算方式以後全部門市都這樣算，請建立為正式規則。')}
+                    onClick={() => handleSendMessage(t('quickPrompt3Text'))}
                     className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30 transition-colors"
                   >
-                    建立為正式 Approved 規則
+                    {t('quickPrompt3')}
                   </button>
                 </div>
 
                 {/* 輸入框 */}
                 <div className="p-3 border-t border-slate-800 flex gap-2">
                   <Input
-                    placeholder="輸入您的疑問，或與 AI 討論現場抽查發現..."
+                    placeholder={t('chatInputPlaceholder')}
                     value={inputMsg}
                     onChange={e => setInputMsg(e.target.value)}
                     onKeyDown={e => {
@@ -796,7 +796,7 @@ export default function AuditPlatformPage() {
                     className="bg-indigo-600 hover:bg-indigo-500 text-white shrink-0 gap-1.5"
                   >
                     <Send className="w-4 h-4" />
-                    發送
+                    {t('send')}
                   </Button>
                 </div>
               </div>
@@ -807,11 +807,11 @@ export default function AuditPlatformPage() {
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-amber-400" />
-                      <h4 className="font-semibold text-white text-sm">AI 稽核建議看板</h4>
+                      <h4 className="font-semibold text-white text-sm">{t('aiSuggestionBoardTitle')}</h4>
                     </div>
                     {currentSuggestion && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold">
-                        AI 信心：{currentSuggestion.ai_confidence}%
+                        {t('aiConfidence', { n: currentSuggestion.ai_confidence })}
                       </span>
                     )}
                   </div>
@@ -819,7 +819,7 @@ export default function AuditPlatformPage() {
                   {currentSuggestion ? (
                     <div className="space-y-4 text-xs">
                       <div>
-                        <div className="text-slate-400 font-medium mb-1">鎖定問題：</div>
+                        <div className="text-slate-400 font-medium mb-1">{t('lockedIssueLabel')}</div>
                         <div className="text-sm font-semibold text-white bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
                           {currentSuggestion.issue_title}
                         </div>
@@ -827,7 +827,7 @@ export default function AuditPlatformPage() {
 
                       {/* 可能原因 */}
                       <div className="space-y-2">
-                        <div className="text-slate-400 font-medium">可能原因推論：</div>
+                        <div className="text-slate-400 font-medium">{t('possibleCausesLabel')}</div>
                         {currentSuggestion.possible_causes.map((c, idx) => (
                           <div key={idx} className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1">
                             <div className="flex items-center justify-between text-slate-200 font-medium">
@@ -841,7 +841,7 @@ export default function AuditPlatformPage() {
 
                       {/* 依據資料源 */}
                       <div className="space-y-1.5">
-                        <div className="text-slate-400 font-medium">依據數據來源：</div>
+                        <div className="text-slate-400 font-medium">{t('evidenceSourceLabel')}</div>
                         <div className="grid grid-cols-2 gap-1.5">
                           {currentSuggestion.evidence.map((ev, i) => (
                             <div key={i} className="p-2 rounded bg-slate-800/50 border border-slate-700/50">
@@ -856,22 +856,22 @@ export default function AuditPlatformPage() {
                       {currentSuggestion.candidate_rule && (
                         <div className="p-3 rounded-lg bg-indigo-950/40 border border-indigo-500/40 space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold text-indigo-300">建議建立或升級之規則：</span>
+                            <span className="font-semibold text-indigo-300">{t('candidateRuleLabel')}</span>
                             <span className="font-mono text-emerald-400 font-bold">
                               {currentSuggestion.candidate_rule.code}
                             </span>
                           </div>
                           <div className="space-y-1 text-slate-300 font-mono">
-                            <div>適用：{currentSuggestion.candidate_rule.target_product}</div>
-                            <div>條件：{currentSuggestion.candidate_rule.condition}</div>
-                            <div>調校：{currentSuggestion.candidate_rule.adjustment_value}</div>
+                            <div>{t('applicableLabel')}{currentSuggestion.candidate_rule.target_product}</div>
+                            <div>{t('conditionLabel')}{currentSuggestion.candidate_rule.condition}</div>
+                            <div>{t('adjustmentLabel')}{currentSuggestion.candidate_rule.adjustment_value}</div>
                           </div>
                         </div>
                       )}
                     </div>
                   ) : (
                     <div className="text-center py-12 text-slate-500">
-                      尚未產生建議卡，請發送提問開始分析
+                      {t('noSuggestionYet')}
                     </div>
                   )}
                 </div>
@@ -887,14 +887,14 @@ export default function AuditPlatformPage() {
                             handlePromoteRule(
                               currentSuggestion.candidate_rule.code,
                               'approved',
-                              '稽核員於 Copilot 討論後正式採用此修正係數'
+                              t('adoptedNote')
                             )
                           }
                         }}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1"
                       >
                         <Check className="w-3.5 h-3.5" />
-                        採用建議
+                        {t('adoptSuggestion')}
                       </Button>
 
                       <Button
@@ -905,14 +905,14 @@ export default function AuditPlatformPage() {
                             handlePromoteRule(
                               currentSuggestion.candidate_rule.code,
                               'hard_rule',
-                              '稽核主管審核通過，直接列為最高等級 Hard Rule'
+                              t('upgradeHardRuleNote')
                             )
                           }
                         }}
                         className="bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border-indigo-500/40 text-xs gap-1"
                       >
                         <Flame className="w-3.5 h-3.5 text-rose-400" />
-                        升級 Hard Rule
+                        {t('upgradeToHardRule')}
                       </Button>
                     </div>
 
@@ -920,10 +920,10 @@ export default function AuditPlatformPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleSendMessage('請針對此項建議進行更深一層的交叉檢驗與同儕店對比。')}
+                        onClick={() => handleSendMessage(t('continueAnalysisPrompt'))}
                         className="bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 text-xs"
                       >
-                        繼續分析
+                        {t('continueAnalysis')}
                       </Button>
 
                       <Button
@@ -932,7 +932,7 @@ export default function AuditPlatformPage() {
                         onClick={() => setCurrentSuggestion(null)}
                         className="text-slate-500 hover:text-slate-400 text-xs"
                       >
-                        忽略
+                        {t('dismiss')}
                       </Button>
                     </div>
                   </div>
@@ -960,9 +960,9 @@ export default function AuditPlatformPage() {
                   <HelpCircle className="w-4 h-4 text-cyan-400" />
                 </div>
                 <div className="text-xl font-bold text-white">
-                  {rules.filter(r => r.status === 'hypothesis').length} 條
+                  {t('ruleCountUnit', { n: rules.filter(r => r.status === 'hypothesis').length })}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">AI 自行推測，不可直接作為懲處標準</p>
+                <p className="text-[11px] text-slate-500 mt-1">{t('hypothesisDesc')}</p>
               </div>
 
               <div
@@ -978,9 +978,9 @@ export default function AuditPlatformPage() {
                   <Sparkles className="w-4 h-4 text-yellow-400" />
                 </div>
                 <div className="text-xl font-bold text-white">
-                  {rules.filter(r => r.status === 'suggested').length} 條
+                  {t('ruleCountUnit', { n: rules.filter(r => r.status === 'suggested').length })}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">AI 主動建議建立，等待稽核人員確認</p>
+                <p className="text-[11px] text-slate-500 mt-1">{t('suggestedDesc')}</p>
               </div>
 
               <div
@@ -996,9 +996,9 @@ export default function AuditPlatformPage() {
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div className="text-xl font-bold text-white">
-                  {rules.filter(r => r.status === 'approved').length} 條
+                  {t('ruleCountUnit', { n: rules.filter(r => r.status === 'approved').length })}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">稽核主管核准，納入正式數理推算</p>
+                <p className="text-[11px] text-slate-500 mt-1">{t('approvedDesc')}</p>
               </div>
 
               <div
@@ -1014,9 +1014,9 @@ export default function AuditPlatformPage() {
                   <Flame className="w-4 h-4 text-rose-400" />
                 </div>
                 <div className="text-xl font-bold text-white">
-                  {rules.filter(r => r.status === 'hard_rule').length} 條
+                  {t('ruleCountUnit', { n: rules.filter(r => r.status === 'hard_rule').length })}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">最高等級，直接作為正式稽核硬性判定指標</p>
+                <p className="text-[11px] text-slate-500 mt-1">{t('hardRuleDesc')}</p>
               </div>
             </div>
 
@@ -1029,7 +1029,7 @@ export default function AuditPlatformPage() {
                     ruleStatusFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'
                   }`}
                 >
-                  全部 ({rules.length})
+                  {t('allWithCount', { n: rules.length })}
                 </button>
                 <button
                   onClick={() => setRuleStatusFilter('hard_rule')}
@@ -1066,7 +1066,7 @@ export default function AuditPlatformPage() {
               </div>
 
               <div className="text-xs text-slate-400">
-                點選規則卡可查看「Rule Change History (歷史版本軌跡)」
+                {t('ruleCardHint')}
               </div>
             </div>
 
@@ -1102,19 +1102,19 @@ export default function AuditPlatformPage() {
 
                   <div className="grid grid-cols-2 gap-2 text-xs bg-slate-950/60 p-3 rounded-lg font-mono">
                     <div>
-                      <span className="text-slate-500">適用商品：</span>
+                      <span className="text-slate-500">{t('applicableLabel')}</span>
                       <span className="text-slate-200">{rule.target_product}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500">條件：</span>
+                      <span className="text-slate-500">{t('conditionLabel')}</span>
                       <span className="text-slate-200">{rule.condition_desc}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500">調校參數：</span>
+                      <span className="text-slate-500">{t('adjustmentParamLabel')}</span>
                       <span className="text-amber-400 font-bold">{rule.adjustment_value}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500">生效日：</span>
+                      <span className="text-slate-500">{t('effectiveDateLabel')}</span>
                       <span className="text-slate-300">{rule.effective_from}</span>
                     </div>
                   </div>
@@ -1125,7 +1125,7 @@ export default function AuditPlatformPage() {
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
                     <span className="text-slate-500">
-                      審核：{rule.approved_by || '等待稽核人員確認'}
+                      {t('reviewedByLabel', { name: rule.approved_by || t('waitingForAuditor') })}
                     </span>
 
                     {/* 升級操作按鈕 */}
@@ -1134,30 +1134,30 @@ export default function AuditPlatformPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handlePromoteRule(rule.rule_code, 'suggested', '升級為建議規則')}
+                          onClick={() => handlePromoteRule(rule.rule_code, 'suggested', t('promoteToSuggestedNote'))}
                           className="text-[11px] h-6 px-2 bg-yellow-950/40 text-yellow-300 border-yellow-500/30"
                         >
-                          轉為 Suggested
+                          {t('promoteToSuggested')}
                         </Button>
                       )}
                       {rule.status === 'suggested' && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handlePromoteRule(rule.rule_code, 'approved', '稽核主管正式核准')}
+                          onClick={() => handlePromoteRule(rule.rule_code, 'approved', t('approveNote'))}
                           className="text-[11px] h-6 px-2 bg-emerald-950/40 text-emerald-300 border-emerald-500/30"
                         >
-                          核准 Approved
+                          {t('approveRule')}
                         </Button>
                       )}
                       {rule.status === 'approved' && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handlePromoteRule(rule.rule_code, 'hard_rule', '升級為硬性標準')}
+                          onClick={() => handlePromoteRule(rule.rule_code, 'hard_rule', t('promoteToHardRuleNote'))}
                           className="text-[11px] h-6 px-2 bg-rose-950/40 text-rose-300 border-rose-500/30"
                         >
-                          升為 Hard Rule
+                          {t('promoteToHardRule')}
                         </Button>
                       )}
                     </div>
@@ -1174,7 +1174,7 @@ export default function AuditPlatformPage() {
                     <div>
                       <h3 className="text-lg font-bold text-white flex items-center gap-2 font-mono">
                         {selectedRuleForHistory.rule_code}
-                        <span className="text-xs font-normal text-slate-400 font-sans">版本變更軌跡</span>
+                        <span className="text-xs font-normal text-slate-400 font-sans">{t('versionHistoryLabel')}</span>
                       </h3>
                       <p className="text-xs text-slate-400">{selectedRuleForHistory.title}</p>
                     </div>
@@ -1192,21 +1192,21 @@ export default function AuditPlatformPage() {
                       .map((ver, idx) => (
                         <div key={ver.id || idx} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs font-mono">
                           <div className="flex items-center justify-between text-indigo-300 font-bold">
-                            <span>版本：{ver.version}</span>
+                            <span>{t('versionLabel')}{ver.version}</span>
                             <span className="text-amber-400">{ver.adjustment_value}</span>
                           </div>
                           <div className="text-slate-400">
-                            生效區間：{ver.effective_from} ~ {ver.effective_to || '持續有效'}
+                            {t('effectiveRangeLabel')}{ver.effective_from} ~ {ver.effective_to || t('ongoing')}
                           </div>
                           <div className="text-slate-300 font-sans">{ver.change_note}</div>
                           <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-900">
-                            審核人：{ver.approved_by}
+                            {t('approverLabel')}{ver.approved_by}
                           </div>
                         </div>
                       ))}
                     {ruleVersions.filter(v => v.rule_code === selectedRuleForHistory.rule_code).length === 0 && (
                       <div className="text-center py-6 text-slate-500 text-xs font-sans">
-                        目前為初版初始建立紀錄，尚未有後續修訂歷史。
+                        {t('noVersionHistory')}
                       </div>
                     )}
                   </div>
@@ -1217,7 +1217,7 @@ export default function AuditPlatformPage() {
                       onClick={() => setSelectedRuleForHistory(null)}
                       className="bg-slate-800 hover:bg-slate-700 text-white text-xs"
                     >
-                      關閉歷程
+                      {t('closeHistory')}
                     </Button>
                   </div>
                 </div>
@@ -1232,47 +1232,44 @@ export default function AuditPlatformPage() {
             <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-xs sm:text-sm leading-relaxed space-y-2">
               <h4 className="font-semibold text-white flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-indigo-400" />
-                Product Composition Model (商品組合耗用排擠原理)
+                {t('compositionModelTitle')}
               </h4>
               <p>
-                傳統計算僅有單一標準配方：100 杯珍珠奶茶 = 22L 茶湯。
-                然而顧客點單包含不同組合：0 topping、1 topping、2 toppings、3 toppings。
-                當加料超過 2 種時，杯內液體空間被料體排擠（約排擠 40-50ml），但現場調茶員雪克搖勻後，往往會補茶或補鮮奶至杯緣防漏，
-                因此「銷售組合」必須經過此模型的補償修正，才能得出真正客觀的「理論耗用量」。
+                {t('compositionModelDesc')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                <div className="text-xs text-indigo-400 font-semibold font-mono">0 TOPPING (純基底)</div>
-                <div className="text-lg font-bold text-white">標準無加料飲品</div>
+                <div className="text-xs text-indigo-400 font-semibold font-mono">{t('topping0Label')}</div>
+                <div className="text-lg font-bold text-white">{t('topping0Title')}</div>
                 <ul className="text-xs text-slate-400 space-y-1.5 font-mono">
-                  <li>• 茶湯用量：220 ml (標準)</li>
-                  <li>• 奶精/鮮奶：38g (標準)</li>
-                  <li>• 冰量空間：正常充填 (200g)</li>
-                  <li>• 組合修正值：0 ml</li>
+                  <li>• {t('topping0Tea')}</li>
+                  <li>• {t('topping0Cream')}</li>
+                  <li>• {t('topping0Ice')}</li>
+                  <li>• {t('topping0Adjustment')}</li>
                 </ul>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-                <div className="text-xs text-indigo-400 font-semibold font-mono">1 TOPPING (單料加料)</div>
-                <div className="text-lg font-bold text-white">標準珍珠奶茶</div>
+                <div className="text-xs text-indigo-400 font-semibold font-mono">{t('topping1Label')}</div>
+                <div className="text-lg font-bold text-white">{t('topping1Title')}</div>
                 <ul className="text-xs text-slate-400 space-y-1.5 font-mono">
-                  <li>• 珍珠粉圓：1 份 (約 50g)</li>
-                  <li>• 體積排擠：約 30ml 冰塊位移</li>
-                  <li>• 茶湯標準：220 ml</li>
-                  <li>• 組合修正值：0 ml (配方已吸收)</li>
+                  <li>• {t('topping1Pearl')}</li>
+                  <li>• {t('topping1Displacement')}</li>
+                  <li>• {t('topping1Tea')}</li>
+                  <li>• {t('topping1Adjustment')}</li>
                 </ul>
               </div>
 
               <div className="p-5 rounded-xl bg-slate-900 border border-indigo-500/40 space-y-3 bg-indigo-950/20">
-                <div className="text-xs text-emerald-400 font-semibold font-mono">2 TOPPINGS (雙料加料) ⭐</div>
-                <div className="text-lg font-bold text-white">珍珠 + 椰果雙料組合</div>
+                <div className="text-xs text-emerald-400 font-semibold font-mono">{t('topping2Label')}</div>
+                <div className="text-lg font-bold text-white">{t('topping2Title')}</div>
                 <ul className="text-xs text-slate-300 space-y-1.5 font-mono">
-                  <li>• 加料總重：約 90g</li>
-                  <li>• 物理排擠：強烈排擠雪克空間</li>
-                  <li>• 出杯補償：平均補茶 <span className="text-emerald-400 font-bold">+18 ml</span></li>
-                  <li>• 套用規則：<span className="text-indigo-300 font-bold">RULE-00038</span> (Hard Rule)</li>
+                  <li>• {t('topping2Weight')}</li>
+                  <li>• {t('topping2Displacement')}</li>
+                  <li>• {t('topping2Compensation')} <span className="text-emerald-400 font-bold">+18 ml</span></li>
+                  <li>• {t('topping2AppliedRule')}<span className="text-indigo-300 font-bold">RULE-00038</span> (Hard Rule)</li>
                 </ul>
               </div>
             </div>
@@ -1288,15 +1285,15 @@ export default function AuditPlatformPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Scale className="w-5 h-5 text-indigo-400" />
-                    <h4 className="font-semibold text-white">1. 原物料合理性</h4>
+                    <h4 className="font-semibold text-white">{t('module1Title')}</h4>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono">Phase 1 運作中</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono">{t('module1Badge')}</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  結合 IPOS 銷量、IVT 進銷存、出納定價與 R&D 版本配方，透過數理推算引擎精算真實現場所需耗用。
+                  {t('module1Desc')}
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-mono">
-                  異常品項：2 項 ｜ 修正後損耗：0 VND
+                  {t('module1Stat')}
                 </div>
               </div>
 
@@ -1305,15 +1302,15 @@ export default function AuditPlatformPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Eye className="w-5 h-5 text-cyan-400" />
-                    <h4 className="font-semibold text-white">2. 環境・衛生・擺設</h4>
+                    <h4 className="font-semibold text-white">{t('module2Title')}</h4>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">CV 影像審計</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">{t('module2Badge')}</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  電腦視覺物件偵測 + 門市動線距離規範。主動預警「清潔抹布距離食品區小於 60cm」等交叉污染風險。
+                  {t('module2Desc')}
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-mono">
-                  目前 5S 評分：87 分 ｜ 交叉污染風險：1 項
+                  {t('module2Stat')}
                 </div>
               </div>
 
@@ -1322,15 +1319,15 @@ export default function AuditPlatformPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <UserCheck className="w-5 h-5 text-amber-400" />
-                    <h4 className="font-semibold text-white">3. 服務態度・行為</h4>
+                    <h4 className="font-semibold text-white">{t('module3Title')}</h4>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">客觀指標</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">{t('module3Badge')}</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  摒棄「員工愛不愛笑」主觀偏見，聚焦「客人進門 5 秒眼神招呼率」與「30 秒無條件免費重調」標準落實。
+                  {t('module3Desc')}
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-mono">
-                  5秒迎賓合規率：94.2% ｜ 觀察樣本：120 次
+                  {t('module3Stat')}
                 </div>
               </div>
 
@@ -1339,15 +1336,15 @@ export default function AuditPlatformPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Coffee className="w-5 h-5 text-purple-400" />
-                    <h4 className="font-semibold text-white">4. 食品品質 (AI + 授權)</h4>
+                    <h4 className="font-semibold text-white">{t('module4Title')}</h4>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">雙重確認</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono">{t('module4Badge')}</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  AI 輔助分析珍珠色澤、稠度與外觀，並由授權巡檢人員勾選「正常 / 異常 / 需申報」，AI 是助手而非最終裁判。
+                  {t('module4Desc')}
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-slate-300 font-mono">
-                  珍珠外觀：標準琥珀色 ｜ 待確認抽驗：0 項
+                  {t('module4Stat')}
                 </div>
               </div>
 
@@ -1356,15 +1353,15 @@ export default function AuditPlatformPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ShieldAlert className="w-5 h-5 text-rose-400" />
-                    <h4 className="font-semibold text-white">5. 原料安全管控</h4>
+                    <h4 className="font-semibold text-white">{t('module5Title')}</h4>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">高壓紅線</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-mono">{t('module5Badge')}</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  交叉比對 IVT 作廢物料與當日領料。若原料已登記作廢卻仍在門市出杯，AI 立即觸發 Material Safety Alert！
+                  {t('module5Desc')}
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-emerald-400 font-mono font-bold">
-                  作廢物料非法使用：0 違規
+                  {t('module5Stat')}
                 </div>
               </div>
 
@@ -1373,15 +1370,15 @@ export default function AuditPlatformPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-yellow-400" />
-                    <h4 className="font-semibold text-white">6. 缺補料智能預警</h4>
+                    <h4 className="font-semibold text-white">{t('module6Title')}</h4>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-mono">4 色警示燈</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-300 font-mono">{t('module6Badge')}</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  依據銷量速度、交貨前置天數與現有庫存，預測缺料剩餘天數，在門市斷料前主動警示叫貨。
+                  {t('module6Desc')}
                 </p>
                 <div className="pt-2 border-t border-slate-800 text-xs text-amber-300 font-mono">
-                  🟡 黑糖珍珠粉圓預計 1.4 天後不足
+                  {t('module6Stat')}
                 </div>
               </div>
             </div>
@@ -1391,15 +1388,14 @@ export default function AuditPlatformPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Cpu className="w-5 h-5 text-cyan-400" />
-                  <h4 className="font-semibold text-white">Phase 5: NVIDIA Jetson 門市邊緣計算整合架構</h4>
+                  <h4 className="font-semibold text-white">{t('jetsonTitle')}</h4>
                 </div>
                 <span className="text-xs px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-mono">
                   Edge AI Ready
                 </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                針對未來各門市部署之 NVIDIA Jetson Orin Nano 設備，系統已完成特徵向量上傳與事件通報管道預留。
-                邊緣端本地運行姿態識別與工作站擺放偵測，嚴格遵循員工隱私保護政策（僅傳輸事件中繼資料，不保存未去識別化影像）。
+                {t('jetsonDesc')}
               </p>
             </div>
           </div>
@@ -1412,9 +1408,9 @@ export default function AuditPlatformPage() {
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <History className="w-5 h-5 text-indigo-400" />
-                  <h4 className="font-semibold text-white">Audit Knowledge Log (稽核決策與知識日誌)</h4>
+                  <h4 className="font-semibold text-white">{t('logsTitle')}</h4>
                 </div>
-                <span className="text-xs text-slate-400">不只存聊天紀錄，而是留下企業決策資產</span>
+                <span className="text-xs text-slate-400">{t('logsSubtitle')}</span>
               </div>
 
               <div className="space-y-3">
@@ -1439,18 +1435,18 @@ export default function AuditPlatformPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-400 font-mono">
-                      <div>稽核人員：{log.auditor_name}</div>
-                      <div>門市：{log.store}</div>
-                      <div>對話探討次數：{log.chat_count} 次</div>
+                      <div>{t('auditorLabel')}{log.auditor_name}</div>
+                      <div>{t('storeLabel')}{log.store}</div>
+                      <div>{t('chatCountLabel', { n: log.chat_count })}</div>
                     </div>
 
                     <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                      <span className="font-semibold text-indigo-300">發現與依據：</span>
+                      <span className="font-semibold text-indigo-300">{t('findingsLabel')}</span>
                       <p className="text-slate-300 leading-relaxed">{log.findings}</p>
                     </div>
 
                     <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
-                      <span className="font-semibold text-emerald-300">採用方案與關聯規則：</span>
+                      <span className="font-semibold text-emerald-300">{t('solutionLabel')}</span>
                       <p className="text-slate-300 leading-relaxed">
                         {log.solution_adopted}
                         {log.related_rule_code && (
