@@ -44,10 +44,10 @@ interface Props {
   upgradeNudge?: UpgradeNudge | null
 }
 
-const NUDGE_TEXT: Record<UpgradeNudge['reason'], string> = {
-  image: '客人傳送了照片，目前方案未開放 AI 圖片辨識。',
-  complaint: '客人提出了客訴，目前方案未開放 AI 客訴進階處理。',
-}
+const getNudgeText = (t: (key: string) => string): Record<UpgradeNudge['reason'], string> => ({
+  image: t('nudgeImage'),
+  complaint: t('nudgeComplaint'),
+})
 
 export function CsDashboard({ industry, todayMessages, openTickets, connectedPlatforms, hasMessages, upgradeNudge }: Props) {
   const t = useTranslations('CsDashboard')
@@ -59,19 +59,19 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
   const hasConnectedChannel = connectedPlatforms.length > 0
   const onboardingDone = hasConnectedChannel && hasMessages
   const onboardingSteps = [
-    { label: '選擇產業並建立客服設定', done: true, href: csUrl },
-    { label: '綁定第一個客服頻道（LINE / WhatsApp / Telegram）', done: hasConnectedChannel, href: '/cs/settings' },
-    { label: '收到第一則顧客訊息，確認 AI 能自動回覆', done: hasMessages, href: `${csUrl}` },
+    { label: t('onboardStep1'), done: true, href: csUrl },
+    { label: t('onboardStep2'), done: hasConnectedChannel, href: '/cs/settings' },
+    { label: t('onboardStep3'), done: hasMessages, href: `${csUrl}` },
   ]
 
   const quickActions = [
-    { icon: Sparkles,      label: '升級方案',      desc: '解鎖多平台、工單、報價計算機',      href: '/cs/plan', color: 'bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-400' },
+    { icon: Sparkles,      label: t('actionUpgradeLabel'), desc: t('actionUpgradeDesc'),      href: '/cs/plan', color: 'bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-400' },
     { icon: MessageSquare, label: t('actionUnifiedInboxLabel'), desc: t('actionUnifiedInboxDesc'), href: `/cs/inbox?industry=${industry}`, color: 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400' },
     { icon: Inbox,       label: t('actionInboxLabel'),     desc: t('actionInboxDesc'),     href: csUrl, color: 'bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400' },
     { icon: FlaskConical,label: t('actionTestLabel'),      desc: t('actionTestDesc'),      href: csUrl, color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' },
     { icon: Users,       label: t('actionCustomersLabel'), desc: t('actionCustomersDesc'), href: `/cs/customers?industry=${industry}`, color: 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400' },
     { icon: UserPlus,    label: t('actionCollabLabel'),    desc: t('actionCollabDesc'),    href: '/team?scope=cs', color: 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400' },
-    { icon: Settings,    label: '頻道綁定', desc: '綁定 LINE / WhatsApp / Telegram', href: '/cs/settings', color: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400' },
+    { icon: Settings,    label: t('actionChannelLabel'), desc: t('actionChannelDesc'), href: '/cs/settings', color: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400' },
     { icon: Database,    label: t('actionDsLabel'),        desc: t('actionDsDesc'),        href: csUrl, color: 'bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400' },
     { icon: BarChart3,   label: t('actionAnalyticsLabel'), desc: t('actionAnalyticsDesc'), href: csUrl, color: 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' },
   ]
@@ -87,10 +87,10 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
         <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white">
           <div className="flex items-center gap-2 text-lg sm:text-xl font-extrabold">
             <Sparkles className="h-5 w-5 shrink-0" />
-            不限則數，不怕用量爆表加價
+            {t('bannerTitle')}
           </div>
           <p className="text-white/85 text-xs sm:text-sm mt-1">
-            對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
+            {t('bannerDesc')}
           </p>
         </div>
 
@@ -99,10 +99,10 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-5 py-4">
             <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
             <p className="flex-1 text-sm text-amber-900 dark:text-amber-200">
-              {NUDGE_TEXT[upgradeNudge.reason]}升級 CORE 即可讓 AI 直接處理。
+              {getNudgeText(t)[upgradeNudge.reason]}{t('nudgeUpgradeHint')}
             </p>
             <Link href="/cs/plan" className="shrink-0 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors text-center">
-              查看方案
+              {t('viewPlan')}
             </Link>
           </div>
         )}
@@ -128,7 +128,7 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <InstallInboxButton label="安裝手機" iosHint="點瀏覽器分享圖示 → 加入主畫面，把客服收件夾當 App 用。" />
+              <InstallInboxButton label={t('installMobile')} iosHint={t('installIosHint')} />
               <Link href="/cs?select=1" className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors text-sm font-medium">
                 <RefreshCw className="h-3.5 w-3.5" />
                 {t('changeIndustry')}
@@ -147,9 +147,9 @@ export function CsDashboard({ industry, todayMessages, openTickets, connectedPla
           <div className="bg-card rounded-2xl border p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-4 w-4 text-primary" />
-              <h2 className="font-semibold text-sm">新手上路：3 步驟開始使用</h2>
+              <h2 className="font-semibold text-sm">{t('onboardTitle')}</h2>
             </div>
-            <p className="text-xs text-muted-foreground mb-4">完成以下步驟，體驗 AI 客服自動回覆的效果。</p>
+            <p className="text-xs text-muted-foreground mb-4">{t('onboardDesc')}</p>
             <div className="space-y-2">
               {onboardingSteps.map(step => (
                 <Link key={step.label} href={step.href}

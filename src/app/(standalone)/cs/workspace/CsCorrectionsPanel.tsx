@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Plus, Loader2, Undo2, ShieldCheck, ShieldOff } from 'lucide-react'
 
 interface Correction {
@@ -15,7 +16,12 @@ interface Correction {
   reverted_at: string | null
 }
 
+const formatDateTime = (iso: string, locale: string) =>
+  new Date(iso).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+
 export function CsCorrectionsPanel() {
+  const t = useTranslations('CsCorrectionsPanel')
+  const locale = useLocale()
   const [corrections, setCorrections] = useState<Correction[]>([])
   const [authors, setAuthors] = useState<Record<string, string>>({})
   const [canCorrectAi, setCanCorrectAi] = useState(false)
@@ -50,9 +56,9 @@ export function CsCorrectionsPanel() {
   }
 
   const submit = async () => {
-    if (!situation.trim()) { setError('請描述客人問了什麼／當時的情境'); return }
-    if (!wrongReply.trim()) { setError('請貼上 AI 錯誤的回覆內容'); return }
-    if (!correctGuidance.trim()) { setError('請說明正確做法'); return }
+    if (!situation.trim()) { setError(t('errSituation')); return }
+    if (!wrongReply.trim()) { setError(t('errWrongReply')); return }
+    if (!correctGuidance.trim()) { setError(t('errCorrectGuidance')); return }
     setSaving(true); setError('')
     try {
       const res = await fetch('/api/marketing/cs-ai-corrections', {
@@ -60,7 +66,7 @@ export function CsCorrectionsPanel() {
         body: JSON.stringify({ situation, wrongReply, correctGuidance }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '送出失敗')
+      if (!res.ok) throw new Error(data.error || t('submitFailed'))
       resetForm()
       await load()
     } catch (e) {
@@ -71,7 +77,7 @@ export function CsCorrectionsPanel() {
   }
 
   const revert = async (id: string) => {
-    if (!confirm('確定要撤銷這筆修正？撤銷後 AI 就不會再套用這條規則。')) return
+    if (!confirm(t('confirmRevert'))) return
     setRevertingId(id)
     try {
       await fetch(`/api/marketing/cs-ai-corrections/${id}`, { method: 'PATCH' })
@@ -87,60 +93,59 @@ export function CsCorrectionsPanel() {
   return (
     <div className="space-y-5">
       <div className="bg-white border rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-700 mb-1">AI 回答修正</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-1">{t('title')}</h2>
         <p className="text-xs text-gray-500 mb-4">
-          發現 AI 回答錯誤、漏做事情、或卡在無限循環時，把當時的情境、AI 的錯誤回覆、正確做法貼在這裡，
-          送出後立即生效，AI 之後遇到類似情境會照這條規則回答，不用每次都等擁有者處理。
+          {t('intro')}
         </p>
 
         {!canCorrectAi ? (
           <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
             <ShieldOff className="h-3.5 w-3.5 shrink-0" />
-            你目前沒有提交修正的權限，請擁有者到「協作成員」頁面為你開啟「可修正 AI」。
+            {t('noPermission')}
           </div>
         ) : creating ? (
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">情境（客人問了什麼／當時發生什麼事）</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('situationLabel')}</label>
               <textarea value={situation} onChange={e => setSituation(e.target.value)} rows={2}
-                placeholder="例如：客人已經確認訂房姓名「對對！」，AI 卻沒有繼續給密碼，一直繞圈問其他問題"
+                placeholder={t('situationPlaceholder')}
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">AI 錯誤的回覆（直接貼上）</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('wrongReplyLabel')}</label>
               <textarea value={wrongReply} onChange={e => setWrongReply(e.target.value)} rows={3}
-                placeholder="把 AI 當時實際回覆的內容貼在這裡"
+                placeholder={t('wrongReplyPlaceholder')}
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">正確做法</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('correctGuidanceLabel')}</label>
               <textarea value={correctGuidance} onChange={e => setCorrectGuidance(e.target.value)} rows={2}
-                placeholder="例如：客人確認姓名後（不管用什麼字回覆「是」），下一則回覆就要直接照系統資料給密碼，不能再問其他問題"
+                placeholder={t('correctGuidancePlaceholder')}
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex gap-2">
               <button onClick={submit} disabled={saving}
                 className="flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}送出，立即生效
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}{t('submitButton')}
               </button>
-              <button onClick={resetForm} className="px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-lg">取消</button>
+              <button onClick={resetForm} className="px-4 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-lg">{t('cancel')}</button>
             </div>
           </div>
         ) : (
           <button onClick={() => setCreating(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
-            <Plus className="h-4 w-4" />回報一筆修正
+            <Plus className="h-4 w-4" />{t('addButton')}
           </button>
         )}
       </div>
 
       <div className="bg-white border rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">生效中的修正（{active.length}）</h2>
+        <h2 className="text-sm font-semibold text-gray-700 mb-3">{t('activeTitle', { count: active.length })}</h2>
         {loading ? (
-          <div className="text-sm text-gray-400 py-6 text-center">載入中…</div>
+          <div className="text-sm text-gray-400 py-6 text-center">{t('loading')}</div>
         ) : active.length === 0 ? (
-          <div className="text-sm text-gray-400 py-6 text-center">目前沒有生效中的修正紀錄</div>
+          <div className="text-sm text-gray-400 py-6 text-center">{t('noActive')}</div>
         ) : (
           <div className="divide-y">
             {active.map(c => (
@@ -150,14 +155,14 @@ export function CsCorrectionsPanel() {
                   {isOwner && (
                     <button onClick={() => revert(c.id)} disabled={revertingId === c.id}
                       className="shrink-0 flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 disabled:opacity-50">
-                      {revertingId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}撤銷
+                      {revertingId === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}{t('revert')}
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-400">錯誤回覆：{c.wrong_reply}</p>
-                <p className="text-xs text-emerald-600">正確做法：{c.correct_guidance}</p>
+                <p className="text-xs text-gray-400">{t('wrongReplyPrefix')}{c.wrong_reply}</p>
+                <p className="text-xs text-emerald-600">{t('correctGuidancePrefix')}{c.correct_guidance}</p>
                 <p className="text-[11px] text-gray-300">
-                  {authors[c.created_by] ?? '未知'} · {new Date(c.created_at).toLocaleString('zh-TW')}
+                  {authors[c.created_by] ?? t('unknown')} · {formatDateTime(c.created_at, locale)}
                 </p>
               </div>
             ))}
@@ -167,13 +172,13 @@ export function CsCorrectionsPanel() {
 
       {reverted.length > 0 && (
         <div className="bg-white border rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-gray-400 mb-3">已撤銷（{reverted.length}）</h2>
+          <h2 className="text-sm font-semibold text-gray-400 mb-3">{t('revertedTitle', { count: reverted.length })}</h2>
           <div className="divide-y opacity-60">
             {reverted.map(c => (
               <div key={c.id} className="py-3 space-y-1">
                 <p className="text-sm text-gray-500 line-through">{c.situation}</p>
                 <p className="text-[11px] text-gray-300">
-                  由 {authors[c.reverted_by ?? ''] ?? '未知'} 於 {c.reverted_at ? new Date(c.reverted_at).toLocaleString('zh-TW') : ''} 撤銷
+                  {t('revertedByPrefix', { name: authors[c.reverted_by ?? ''] ?? t('unknown'), time: c.reverted_at ? formatDateTime(c.reverted_at, locale) : '' })}
                 </p>
               </div>
             ))}

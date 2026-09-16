@@ -20,10 +20,10 @@ const PLATFORM_LABELS: Record<string, { name: string; emoji: string }> = {
 }
 const plat = (p: string) => PLATFORM_LABELS[p] ?? { name: p, emoji: '🔗' }
 
-function formatCustomerName(name: string | null | undefined, fromId: string): string {
+function formatCustomerName(name: string | null | undefined, fromId: string, t: (key: string, values?: Record<string, string>) => string): string {
   if (name && name.trim()) return name.trim()
   if (fromId.startsWith('U') && fromId.length === 33) {
-    return `LINE 客戶 (${fromId.slice(1, 6)})`
+    return t('lineCustomerFallback', { id: fromId.slice(1, 6) })
   }
   return fromId
 }
@@ -207,7 +207,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <InstallInboxButton label="安裝手機" iosHint="點瀏覽器分享圖示 → 加入主畫面，即可像 App 一樣開啟收件夾回覆客戶。" />
+            <InstallInboxButton label={t('installMobile')} iosHint={t('installIosHintInbox')} />
             <button onClick={() => { loadList(); if (active) loadThread(active) }}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
               <RefreshCw className={`h-4 w-4 ${loadingList ? 'animate-spin' : ''}`} /> {t('refresh')}
@@ -236,7 +236,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="text-base shrink-0">{p.emoji}</span>
-                        <span className="font-medium truncate">{formatCustomerName(c.name, c.from_id)}</span>
+                        <span className="font-medium truncate">{formatCustomerName(c.name, c.from_id, t)}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">{fmtTime(c.lastMessageAt)}</span>
                     </div>
@@ -247,11 +247,11 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                       )}
                       {c.takeover ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 inline-flex items-center gap-0.5">
-                          <UserRound className="h-2.5 w-2.5" /> 真人接管(AI靜音)
+                          <UserRound className="h-2.5 w-2.5" /> {t('humanTakeoverBadge')}
                         </span>
                       ) : (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400 inline-flex items-center gap-0.5">
-                          <Bot className="h-2.5 w-2.5" /> AI 運行中
+                          <Bot className="h-2.5 w-2.5" /> {t('aiRunningBadge')}
                         </span>
                       )}
                     </div>
@@ -276,14 +276,14 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <button onClick={() => setActive(null)} className="md:hidden text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button>
                     <span className="text-base">{plat(active.platform).emoji}</span>
                     <div className="min-w-0">
-                      <div className="font-semibold truncate">{formatCustomerName(active.name, active.from_id)}</div>
+                      <div className="font-semibold truncate">{formatCustomerName(active.name, active.from_id, t)}</div>
                       <div className="text-[11px] text-muted-foreground">{plat(active.platform).name} · {active.from_id}</div>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={toggleTakeover}
-                    title={takeover ? '目前真人接管中（AI 靜音）。點擊恢復 AI 自動回覆。' : '目前 AI 自動回覆中。點擊立即暫停 AI（讓 AI 閉嘴），真人接管。'}
+                    title={takeover ? t('takeoverTooltipOn') : t('takeoverTooltipOff')}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border shadow-xs transition-all cursor-pointer ${
                       takeover
                         ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-800'
@@ -301,17 +301,17 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     {takeover ? (
                       <span className="flex items-center gap-1.5">
                         <UserRound className="h-3.5 w-3.5 text-amber-600" />
-                        <span className="font-semibold">真人接管中 (AI 已靜音)</span>
+                        <span className="font-semibold">{t('humanTakeoverActive')}</span>
                         <span className="ml-1 px-2 py-0.5 rounded-md bg-amber-200/80 dark:bg-amber-900/80 text-[11px] font-bold text-amber-900 dark:text-amber-100 hover:underline">
-                          恢復 AI 🤖
+                          {t('resumeAiButton')}
                         </span>
                       </span>
                     ) : (
                       <span className="flex items-center gap-1.5">
                         <Bot className="h-3.5 w-3.5 text-emerald-600" />
-                        <span className="font-semibold">AI 自動回覆中</span>
+                        <span className="font-semibold">{t('aiAutoReplying')}</span>
                         <span className="ml-1 px-2 py-0.5 rounded-md bg-emerald-200/80 dark:bg-emerald-900/80 text-[11px] font-bold text-emerald-900 dark:text-emerald-100 hover:underline">
-                          暫停 AI 🛑
+                          {t('pauseAiButton')}
                         </span>
                       </span>
                     )}
@@ -354,28 +354,28 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     <div className="flex items-center justify-between text-[11px] bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900 rounded-lg px-3 py-1.5 mb-2 text-amber-900 dark:text-amber-200">
                       <span className="flex items-center gap-1.5">
                         <UserRound className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                        <span>目前為<strong>真人接管</strong>，AI 已靜音不會自動插嘴。談話結束後可點擊右上角隨時恢復 AI。</span>
+                        <span>{t.rich('takeoverActiveHint', { b: (chunks) => <strong>{chunks}</strong> })}</span>
                       </span>
                       <button
                         type="button"
                         onClick={toggleTakeover}
                         className="underline font-bold text-amber-700 hover:text-amber-900 dark:text-amber-300 shrink-0 ml-2 cursor-pointer"
                       >
-                        恢復 AI 接手
+                        {t('resumeAiTakeoverButton')}
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-lg px-3 py-1.5 mb-2 text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                        <span>目前 <strong>AI 自動回覆中</strong>。若您在此發送訊息，系統將自動暫停 AI 並切換為真人接管。</span>
+                        <span>{t.rich('aiReplyingHint', { b: (chunks) => <strong>{chunks}</strong> })}</span>
                       </span>
                       <button
                         type="button"
                         onClick={toggleTakeover}
                         className="underline text-amber-600 dark:text-amber-400 font-bold hover:text-amber-800 shrink-0 ml-2 cursor-pointer"
                       >
-                        讓 AI 閉嘴 (手動接手)
+                        {t('silenceAiButton')}
                       </button>
                     </div>
                   )}
@@ -384,7 +384,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                       value={draft}
                       onChange={e => setDraft(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !window.matchMedia('(pointer: coarse)').matches) { e.preventDefault(); send() } }}
-                      placeholder={t('replyPlaceholder', { name: formatCustomerName(active.name, active.from_id) })}
+                      placeholder={t('replyPlaceholder', { name: formatCustomerName(active.name, active.from_id, t) })}
                       rows={1}
                       className="flex-1 resize-none rounded-xl border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 max-h-32"
                     />

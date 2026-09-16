@@ -88,10 +88,10 @@ export function CsLanding() {
         <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white text-center">
           <div className="inline-flex items-center gap-2 text-lg sm:text-2xl font-extrabold">
             <Sparkles className="h-5 w-5 shrink-0" />
-            不限則數，不怕用量爆表加價
+            {t('bannerTitle')}
           </div>
           <p className="text-white/85 text-xs sm:text-sm mt-1">
-            對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
+            {t('bannerDesc')}
           </p>
         </div>
       </div>
@@ -121,7 +121,7 @@ export function CsLanding() {
       </div>
 
       <div className="flex justify-center px-6 -mt-2 mb-6">
-        <InstallInboxButton label="安裝手機" iosHint="點瀏覽器分享圖示 → 加入主畫面，把客服收件夾當 App 用。" />
+        <InstallInboxButton label={t('installMobile')} iosHint={t('installIosHint')} />
       </div>
       {/* ── Industry Templates ── */}
       <div className="px-6 pb-10 max-w-5xl mx-auto">

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   ArrowLeft, Save, Loader2, Wifi, WifiOff, Copy, Check, ExternalLink, Lock, LifeBuoy, Send, Sparkles, ChevronRight,
 } from 'lucide-react'
@@ -19,10 +20,10 @@ type Platform = {
 
 // 平台定義與憑證欄位 — 與 marketing-auto?module=cs 的綁定一致，
 // 共用同一支 API（/api/social/credentials）與同一張表（social_platform_credentials）。
-const PLATFORMS: Platform[] = [
+const getPlatforms = (t: (key: string) => string): Platform[] => [
   {
     id: 'line', name: 'LINE OA', color: '#00B900', showWebhook: true,
-    note: 'LINE Developers Console → Messaging API → 填入下方 Webhook URL，並開啟 Use webhook、關閉自動回應訊息。',
+    note: t('platformLineNote'),
     docUrl: 'https://developers.line.biz/en/docs/messaging-api/getting-started/',
     fields: [
       { key: 'line_channel_access_token', label: 'Channel Access Token', placeholder: 'U...', secret: true },
@@ -31,47 +32,47 @@ const PLATFORMS: Platform[] = [
   },
   {
     id: 'whatsapp', name: 'WhatsApp Business', color: '#25D366', showWebhook: true,
-    note: 'Meta Developer → WhatsApp → Configuration → 填入下方 Webhook URL 與 Verify Token。',
+    note: t('platformWhatsappNote'),
     docUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',
     fields: [
       { key: 'whatsapp_phone_number_id', label: 'Phone Number ID', placeholder: '1234567890', secret: false },
       { key: 'whatsapp_access_token', label: 'Access Token', placeholder: 'EAA...', secret: true },
-      { key: 'whatsapp_verify_token', label: 'Verify Token（自訂任意字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
-      { key: 'whatsapp_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
+      { key: 'whatsapp_verify_token', label: t('fieldVerifyTokenLabel'), placeholder: 'my_verify_token', secret: false },
+      { key: 'whatsapp_app_secret', label: t('fieldAppSecretLabel'), placeholder: '...', secret: true },
     ],
   },
   {
     id: 'messenger', name: 'FB Messenger', color: '#0084FF', showWebhook: true,
-    note: 'Meta Developer → App → Messenger → Webhooks → 填入下方 Webhook URL 與 Verify Token，並訂閱粉專的 messages 事件。需通過 App Review 的 pages_messaging 才能對非測試者回覆。',
+    note: t('platformMessengerNote'),
     docUrl: 'https://developers.facebook.com/docs/messenger-platform/getting-started',
     fields: [
       { key: 'fb_page_access_token', label: 'Page Access Token', placeholder: 'EAA...', secret: true },
-      { key: 'fb_verify_token', label: 'Verify Token（自訂任意字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
-      { key: 'fb_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
+      { key: 'fb_verify_token', label: t('fieldVerifyTokenLabel'), placeholder: 'my_verify_token', secret: false },
+      { key: 'fb_app_secret', label: t('fieldAppSecretLabel'), placeholder: '...', secret: true },
     ],
   },
   {
     id: 'instagram', name: 'Instagram Direct', color: '#E1306C', showWebhook: true,
-    note: 'IG 需為商業/創作者帳號並綁定 FB 粉專。Meta Developer → App → Instagram → Webhooks → 填入下方 Webhook URL 與 Verify Token。需通過 App Review 的 instagram_manage_messages。',
+    note: t('platformInstagramNote'),
     docUrl: 'https://developers.facebook.com/docs/messenger-platform/instagram',
     fields: [
-      { key: 'ig_access_token', label: 'Access Token（同綁定粉專的 Page Access Token）', placeholder: 'EAA...', secret: true },
-      { key: 'ig_verify_token', label: 'Verify Token（自訂任意字串，與 Meta 後台一致）', placeholder: 'my_verify_token', secret: false },
-      { key: 'ig_app_secret', label: 'App Secret（Meta App 密鑰）', placeholder: '...', secret: true },
+      { key: 'ig_access_token', label: t('fieldIgAccessTokenLabel'), placeholder: 'EAA...', secret: true },
+      { key: 'ig_verify_token', label: t('fieldVerifyTokenLabel'), placeholder: 'my_verify_token', secret: false },
+      { key: 'ig_app_secret', label: t('fieldAppSecretLabel'), placeholder: '...', secret: true },
     ],
   },
   {
     id: 'telegram', name: 'Telegram', color: '#2AABEE', showWebhook: false,
-    note: '向 @BotFather 建立 Bot 取得 Token；儲存後系統會自動註冊 webhook，免手動設定。',
+    note: t('platformTelegramNote'),
     docUrl: 'https://core.telegram.org/bots/tutorial',
     fields: [
       { key: 'telegram_bot_token', label: 'Bot Token', placeholder: '123456789:AAF...', secret: true },
-      { key: 'telegram_admin_chat_id', label: '管理員 Chat ID（選填）', placeholder: '123456789', secret: false },
+      { key: 'telegram_admin_chat_id', label: t('fieldAdminChatIdLabel'), placeholder: '123456789', secret: false },
     ],
   },
   {
     id: 'zalo', name: 'Zalo OA', color: '#0068FF', showWebhook: true,
-    note: 'Zalo for Business → Official Account → Webhook → 填入下方 Webhook URL。',
+    note: t('platformZaloNote'),
     docUrl: 'https://developers.zalo.me/docs/official-account',
     fields: [
       { key: 'zalo_oa_access_token', label: 'OA Access Token', placeholder: '...', secret: true },
@@ -86,6 +87,8 @@ interface PlatformState {
 }
 
 export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boolean }) {
+  const t = useTranslations('CsChannels')
+  const PLATFORMS = useMemo(() => getPlatforms(t), [t])
   const [status, setStatus] = useState<Record<string, PlatformState>>({})
   const [inputs, setInputs] = useState<Record<string, Record<string, string>>>({})
   const [loading, setLoading] = useState(true)
@@ -148,7 +151,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
       })
     } catch { /* noop */ }
     finally { setLoading(false) }
-  }, [])
+  }, [PLATFORMS])
 
   useEffect(() => { load() }, [load])
 
@@ -164,9 +167,9 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         body: JSON.stringify({ platform: pid, credentials: inputs[pid] ?? {} }),
       })
       const data = await res.json()
-      if (!res.ok) setMsg(`${pid}：${data.error ?? '儲存失敗'}`)
-      else { setMsg(`${pid} 已儲存`); load() }
-    } catch { setMsg(`${pid}：網路錯誤`) }
+      if (!res.ok) setMsg(`${pid}：${data.error ?? t('saveFailed')}`)
+      else { setMsg(`${pid} ${t('saved')}`); load() }
+    } catch { setMsg(`${pid}：${t('networkError')}`) }
     finally { setSaving(null); setTimeout(() => setMsg(null), 3000) }
   }
 
@@ -183,9 +186,9 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
       if (res.ok) {
         setHelpSent(true); setHelpContact(''); setHelpNote('')
         setHelpPriceUsd(data.isFree ? 0 : (data.priceUsd ?? null))
-      } else setHelpError(data.error ?? '送出失敗，請稍後再試')
+      } else setHelpError(data.error ?? t('requestFailed'))
     } catch {
-      setHelpError('網路錯誤，請稍後再試')
+      setHelpError(t('networkErrorRetry'))
     } finally { setHelpSending(false) }
   }
 
@@ -200,9 +203,9 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
           <Link href="/cs" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
-          <h1 className="text-lg sm:text-xl font-bold">客服頻道綁定</h1>
+          <h1 className="text-lg sm:text-xl font-bold">{t('pageTitle')}</h1>
           <Link href="/cs/help#channels" target="_blank" className="ml-auto text-xs text-primary font-medium hover:underline whitespace-nowrap">
-            查看設定教學 →
+            {t('setupGuideLink')}
           </Link>
         </div>
 
@@ -211,8 +214,8 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
             className="mb-5 flex items-center gap-3 rounded-xl border bg-card p-4 hover:bg-muted/50 transition-colors">
             <Sparkles className="h-5 w-5 text-primary shrink-0" />
             <div className="flex-1">
-              <div className="text-sm font-semibold">訂閱方案</div>
-              <div className="text-xs text-muted-foreground mt-0.5">查看方案內容、升級解鎖多平台、工單、報價計算機</div>
+              <div className="text-sm font-semibold">{t('subscribePlan')}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{t('subscribePlanDesc')}</div>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </Link>
@@ -221,7 +224,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         {!isOwner && (
           <div className="mb-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>頻道綁定需由<strong>民宿擁有者本人</strong>操作才會生效（憑證以登入帳號儲存，協作者綁定不會套用到此民宿）。如需綁定請改用擁有者帳號登入。</span>
+            <span>{t.rich('ownerOnlyNotice', { b: (chunks) => <strong>{chunks}</strong> })}</span>
           </div>
         )}
 
@@ -234,34 +237,33 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
           {helpSent ? (
             <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
               <Check className="h-4 w-4" />
-              已送出，我們會盡快聯繫你協助設定。
-              {helpPriceUsd != null && (helpPriceUsd > 0 ? `（本次協助費用 $${helpPriceUsd} 美元）` : '（本次為免費額度內）')}
+              {t('helpSentPrefix')}
+              {helpPriceUsd != null && (helpPriceUsd > 0 ? t('helpPricePaid', { price: helpPriceUsd }) : t('helpPriceFree'))}
             </div>
           ) : !helpOpen ? (
             <button onClick={() => setHelpOpen(true)}
               className="flex items-center gap-2 text-sm font-medium text-primary hover:underline">
-              <LifeBuoy className="h-4 w-4" /> 不會設定？找人幫我設定
+              <LifeBuoy className="h-4 w-4" /> {t('helpFindSomeone')}
             </button>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <LifeBuoy className="h-4 w-4 text-primary" /> 找人幫我設定
+                <LifeBuoy className="h-4 w-4 text-primary" /> {t('helpFindSomeoneTitle')}
               </div>
-              <p className="text-xs text-muted-foreground">留下聯絡方式，我們會主動聯繫，協助你綁定頻道與設定客服內容。</p>
+              <p className="text-xs text-muted-foreground">{t('helpDesc')}</p>
               <p className="text-xs text-muted-foreground/80">
-                協助範圍：站內所有設定（資料來源、報價計算機等）與各平台串接皆包含在內；
-                <strong className="text-foreground">不包含</strong>知識庫內容建立、各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
+                {t.rich('helpScope', { b: (chunks) => <strong className="text-foreground">{chunks}</strong> })}
               </p>
               <input
                 value={helpContact}
                 onChange={e => setHelpContact(e.target.value)}
-                placeholder="聯絡方式（電話 / LINE ID，方便我們聯繫你）"
+                placeholder={t('contactPlaceholder')}
                 className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
               <textarea
                 value={helpNote}
                 onChange={e => setHelpNote(e.target.value)}
-                placeholder="想說明的需求（選填）"
+                placeholder={t('notePlaceholder')}
                 rows={2}
                 className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
@@ -269,10 +271,10 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                 <button onClick={sendHelpRequest} disabled={helpSending}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
                   {helpSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  送出請求
+                  {t('submitRequest')}
                 </button>
                 <button onClick={() => setHelpOpen(false)} className="px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground">
-                  取消
+                  {t('cancel')}
                 </button>
               </div>
               {helpError && <p className="text-xs text-red-500">{helpError}</p>}
@@ -284,9 +286,9 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
         <div className="mb-5 rounded-xl border bg-card p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <div className="text-sm font-semibold">自動跟進私訊</div>
+              <div className="text-sm font-semibold">{t('autoFollowupTitle')}</div>
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                客人在 Messenger / Instagram / WhatsApp 私訊詢問後就沒下文時，24 小時內自動送一則貼心跟進（每人只送一次；已下單或轉真人則不打擾）。LINE 不納入以免消耗推播則數。
+                {t('autoFollowupDesc')}
               </p>
             </div>
             <button
@@ -300,7 +302,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
               <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${followupOn ? 'translate-x-5' : ''}`} />
             </button>
           </div>
-          {!isOwner && <p className="text-[11px] text-amber-600 mt-2">需擁有者本人開啟。</p>}
+          {!isOwner && <p className="text-[11px] text-amber-600 mt-2">{t('ownerOnlyToggleNote')}</p>}
         </div>
 
         {loading ? (
@@ -320,7 +322,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                       <span className="font-semibold">{p.name}</span>
                     </div>
                     <span className={`flex items-center gap-1.5 text-xs font-medium ${connected ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                      {connected ? <><Wifi className="h-3.5 w-3.5" /> 已連線</> : <><WifiOff className="h-3.5 w-3.5" /> 未綁定</>}
+                      {connected ? <><Wifi className="h-3.5 w-3.5" /> {t('connected')}</> : <><WifiOff className="h-3.5 w-3.5" /> {t('notConnected')}</>}
                     </span>
                   </div>
 
@@ -329,14 +331,14 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                     {p.note}
                     <a href={p.docUrl} target="_blank" rel="noopener noreferrer"
                       className="inline-flex items-center gap-0.5 ml-1 text-primary hover:underline">
-                      官方文件 <ExternalLink className="h-3 w-3" />
+                      {t('officialDocs')} <ExternalLink className="h-3 w-3" />
                     </a>
                   </p>
 
                   {/* Webhook URL */}
                   {p.showWebhook && (
                     <div className="mb-3">
-                      <label className="text-[11px] font-medium text-muted-foreground">Webhook URL（貼到平台後台）</label>
+                      <label className="text-[11px] font-medium text-muted-foreground">{t('webhookUrlLabel')}</label>
                       <div className="mt-1 flex items-center gap-2">
                         <code className="flex-1 text-[11px] bg-muted rounded-lg px-2.5 py-2 break-all">{url}</code>
                         <button onClick={() => copy(url, p.id)}
@@ -351,7 +353,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                   <div className="space-y-3">
                     {p.fields.map(f => {
                       const masked = st?.preview?.[f.key]
-                      const ph = f.secret && masked ? `已設定 ${masked}（留空不變更）` : f.placeholder
+                      const ph = f.secret && masked ? t('alreadySetPlaceholder', { masked }) : f.placeholder
                       return (
                         <div key={f.key}>
                           <label className="text-[11px] font-medium text-muted-foreground">{f.label}</label>
@@ -375,7 +377,7 @@ export function CsChannels({ ownerId, isOwner }: { ownerId: string; isOwner: boo
                       <button onClick={() => save(p.id)} disabled={saving === p.id}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 hover:opacity-90 transition-opacity">
                         {saving === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        儲存
+                        {t('save')}
                       </button>
                     </div>
                   )}
