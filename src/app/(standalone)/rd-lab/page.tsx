@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   FlaskConical, Layers, Scale, DollarSign, ShieldCheck, Sparkles,
   BookOpen, Plus, Trash2, Search, CheckCircle2, AlertTriangle,
@@ -12,9 +13,11 @@ import { Button } from '@/components/ui/button'
 import { calculateRecipe, type RecipeIngredientInput } from '@/lib/rd/formula-engine'
 import { checkLegalCompliance } from '@/lib/rd/legal-engine'
 
-const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
+const fmt = (n: number, locale: string) => Math.round(Number(n) || 0).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 
 export default function RdLabPage() {
+  const t = useTranslations('RdLab')
+  const locale = useLocale()
   const [tab, setTab] = useState<'recipes' | 'ingredients' | 'calculator' | 'experiments' | 'competitors' | 'knowledge' | 'agents'>('recipes')
   const [loading, setLoading] = useState(true)
   const [forbidden, setForbidden] = useState(false)
@@ -121,10 +124,10 @@ export default function RdLabPage() {
         setExtUrl('')
         setExtTitle('')
         setExtText('')
-        setExtNotice('外部研發知識已成功萃取並歸入研發庫！')
+        setExtNotice(t('ingestSuccess'))
         loadData()
       } else {
-        alert('匯入失敗')
+        alert(t('ingestFailed'))
       }
     } finally {
       setIngesting(false)
@@ -152,7 +155,7 @@ export default function RdLabPage() {
       if (res.ok) {
         setAgentReply(data.reply)
       } else {
-        setAgentReply(`錯誤：${data.error || '請確認 API 金鑰'}`)
+        setAgentReply(t('agentError', { msg: data.error || t('agentErrorFallback') }))
       }
     } finally {
       setAgentRunning(false)
@@ -164,7 +167,7 @@ export default function RdLabPage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertTriangle className="h-12 w-12 mx-auto text-amber-500" />
-          <p className="font-semibold text-lg">需具備研發單位權限才能使用 Feeling Tea AI R&D Lab</p>
+          <p className="font-semibold text-lg">{t('forbidden')}</p>
         </div>
       </div>
     )
@@ -182,11 +185,11 @@ export default function RdLabPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight text-gray-900">Feeling Tea AI R&D Lab</h1>
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold border border-purple-200">
-                研發數位大腦
+                {t('badge')}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-              結構化配方計算 + 原料庫 + 感官評估 + 成本模型 + 越南糖稅法規 + 實驗管理 + 6 Agent 跨界創新
+              {t('subtitle')}
             </p>
           </div>
         </div>
@@ -195,19 +198,19 @@ export default function RdLabPage() {
           <Link href="/rd">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" />
-              配方
+              {t('navRecipes')}
             </Button>
           </Link>
           <Link href="/rd-logs">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs">
               <BookOpen className="h-3.5 w-3.5" />
-              研發日誌
+              {t('navLogs')}
             </Button>
           </Link>
           <Link href="/rd-ai">
             <Button size="sm" className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs">
               <Bot className="h-3.5 w-3.5" />
-              研發討論AI
+              {t('navAi')}
             </Button>
           </Link>
         </div>
@@ -225,7 +228,7 @@ export default function RdLabPage() {
           }`}
         >
           <Layers className="h-4 w-4 shrink-0" />
-          <span>結構化配方與版本</span>
+          <span>{t('tabRecipes')}</span>
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
             tab === 'recipes' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
           }`}>
@@ -243,7 +246,7 @@ export default function RdLabPage() {
           }`}
         >
           <Coffee className="h-4 w-4 shrink-0" />
-          <span>原料庫與供應商矩陣</span>
+          <span>{t('tabIngredients')}</span>
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
             tab === 'ingredients' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
           }`}>
@@ -261,7 +264,7 @@ export default function RdLabPage() {
           }`}
         >
           <Scale className="h-4 w-4 shrink-0" />
-          <span>配方計算器與糖稅檢查</span>
+          <span>{t('tabCalculator')}</span>
         </button>
 
         <button
@@ -274,7 +277,7 @@ export default function RdLabPage() {
           }`}
         >
           <Compass className="h-4 w-4 shrink-0" />
-          <span>實驗管理與 9 軸感官</span>
+          <span>{t('tabExperiments')}</span>
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
             tab === 'experiments' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
           }`}>
@@ -292,7 +295,7 @@ export default function RdLabPage() {
           }`}
         >
           <TrendingUp className="h-4 w-4 shrink-0" />
-          <span>競品庫與食品添加物</span>
+          <span>{t('tabCompetitors')}</span>
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
             tab === 'competitors' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
           }`}>
@@ -310,7 +313,7 @@ export default function RdLabPage() {
           }`}
         >
           <Video className="h-4 w-4 shrink-0" />
-          <span>外部研發知識庫</span>
+          <span>{t('tabKnowledge')}</span>
           <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
             tab === 'knowledge' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
           }`}>
@@ -328,7 +331,7 @@ export default function RdLabPage() {
           }`}
         >
           <Sparkles className="h-4 w-4 shrink-0 text-amber-400" />
-          <span>研發 6 大 Agent 創意實驗室</span>
+          <span>{t('tabAgents')}</span>
         </button>
       </div>
 
@@ -343,14 +346,14 @@ export default function RdLabPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-gray-800">配方產品列表</h3>
-                  <span className="text-xs text-gray-500">共 {recipes.length} 款產品</span>
+                  <h3 className="font-bold text-sm text-gray-800">{t('recipeListTitle')}</h3>
+                  <span className="text-xs text-gray-500">{t('recipeListCount', { n: recipes.length })}</span>
                 </div>
                 <div className="relative">
                   <Search className="h-4 w-4 absolute left-3 top-2.5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="搜尋產品名稱..."
+                    placeholder={t('recipeSearchPlaceholder')}
                     value={recipeSearch}
                     onChange={e => setRecipeSearch(e.target.value)}
                     className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 bg-white text-xs"
@@ -360,7 +363,7 @@ export default function RdLabPage() {
                 <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                   {recipes.length === 0 ? (
                     <div className="p-8 text-center text-xs text-gray-400 border border-dashed rounded-xl">
-                      尚未建立結構化配方。可至配方計算器試算並儲存。
+                      {t('recipeEmpty')}
                     </div>
                   ) : (
                     recipes
@@ -383,15 +386,15 @@ export default function RdLabPage() {
                               </span>
                               {r.is_current_active && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-semibold flex items-center gap-0.5">
-                                  <Check className="h-2.5 w-2.5" /> 門市現行
+                                  <Check className="h-2.5 w-2.5" /> {t('recipeInUse')}
                                 </span>
                               )}
                             </div>
                           </div>
                           <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
                             <span>{r.cup_size_ml} ml</span>
-                            <span>每杯成本 NT$ {fmt(r.cogs_amount)}</span>
-                            <span>毛利 {r.gross_margin_pct}%</span>
+                            <span>{t('recipeCostPerCup', { n: fmt(r.cogs_amount, locale) })}</span>
+                            <span>{t('recipeMargin', { n: r.gross_margin_pct })}</span>
                           </div>
                         </div>
                       ))
@@ -411,12 +414,12 @@ export default function RdLabPage() {
                           </span>
                           {selectedRecipe.is_current_active && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
-                              目前全門市正式使用版本 (Production)
+                              {t('recipeProduction')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          標準容量：{selectedRecipe.cup_size_ml} ml | 分類：{selectedRecipe.category}
+                          {t('recipeMeta', { size: selectedRecipe.cup_size_ml, category: selectedRecipe.category })}
                         </p>
                       </div>
 
@@ -424,12 +427,12 @@ export default function RdLabPage() {
                         {selectedRecipe.sugar_per_100ml > 5.0 ? (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 text-red-700 text-xs font-semibold border border-red-200">
                             <AlertTriangle className="h-3.5 w-3.5" />
-                            含糖量 {selectedRecipe.sugar_per_100ml}g/100ml（落入越南糖稅 10% 範圍）
+                            {t('sugarTaxApplies', { n: selectedRecipe.sugar_per_100ml })}
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
                             <CheckCircle2 className="h-3.5 w-3.5" />
-                            含糖量 {selectedRecipe.sugar_per_100ml}g/100ml（免課徵糖稅）
+                            {t('sugarTaxExempt', { n: selectedRecipe.sugar_per_100ml })}
                           </div>
                         )}
                       </div>
@@ -437,44 +440,44 @@ export default function RdLabPage() {
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="text-xs text-gray-500">成品總重</span>
+                        <span className="text-xs text-gray-500">{t('totalWeight')}</span>
                         <div className="text-lg font-bold text-gray-900 mt-0.5">{selectedRecipe.total_weight_g || 500} g</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="text-xs text-gray-500">加權糖度 (°Brix)</span>
+                        <span className="text-xs text-gray-500">{t('weightedBrix')}</span>
                         <div className="text-lg font-bold text-gray-900 mt-0.5">{selectedRecipe.estimated_brix || 6.5} °Bx</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="text-xs text-gray-500">每杯 COGS 成本</span>
-                        <div className="text-lg font-bold text-indigo-700 mt-0.5">{fmt(selectedRecipe.cogs_amount)} VND</div>
+                        <span className="text-xs text-gray-500">{t('cogsPerCup')}</span>
+                        <div className="text-lg font-bold text-indigo-700 mt-0.5">{fmt(selectedRecipe.cogs_amount, locale)} VND</div>
                       </div>
                       <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="text-xs text-gray-500">毛利率</span>
+                        <span className="text-xs text-gray-500">{t('grossMargin')}</span>
                         <div className="text-lg font-bold text-emerald-600 mt-0.5">{selectedRecipe.gross_margin_pct || 68.5}%</div>
                       </div>
                     </div>
 
                     <div>
                       <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                        結構化成分配比清單 (Structured Formulation)
+                        {t('structuredFormulation')}
                       </h4>
                       <div className="rounded-xl border border-gray-200 overflow-hidden">
                         <table className="w-full text-xs text-left">
                           <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
                             <tr>
-                              <th className="p-2.5">原料成分</th>
-                              <th className="p-2.5">分類</th>
-                              <th className="p-2.5 text-right">用量 (g)</th>
-                              <th className="p-2.5 text-right">比例 (%)</th>
-                              <th className="p-2.5 text-right">原料糖度</th>
-                              <th className="p-2.5 text-right">成本 (VND)</th>
+                              <th className="p-2.5">{t('colIngredient')}</th>
+                              <th className="p-2.5">{t('colCategory')}</th>
+                              <th className="p-2.5 text-right">{t('colQty')}</th>
+                              <th className="p-2.5 text-right">{t('colRatio')}</th>
+                              <th className="p-2.5 text-right">{t('colBrix')}</th>
+                              <th className="p-2.5 text-right">{t('colCostVnd')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
                             {(selectedRecipe.rd_recipe_ingredients || []).length === 0 ? (
                               <tr>
                                 <td colSpan={6} className="p-4 text-center text-gray-400">
-                                  暫無原料明細，可在「配方計算器」中組配。
+                                  {t('ingredientsEmpty')}
                                 </td>
                               </tr>
                             ) : (
@@ -485,7 +488,7 @@ export default function RdLabPage() {
                                   <td className="p-2.5 text-right font-bold text-gray-800">{it.qty_g} g</td>
                                   <td className="p-2.5 text-right text-gray-600">{it.ratio_pct}%</td>
                                   <td className="p-2.5 text-right text-gray-600">{it.brix}°Bx</td>
-                                  <td className="p-2.5 text-right text-indigo-600 font-medium">{fmt(it.cost_amount)}</td>
+                                  <td className="p-2.5 text-right text-indigo-600 font-medium">{fmt(it.cost_amount, locale)}</td>
                                 </tr>
                               ))
                             )}
@@ -496,7 +499,7 @@ export default function RdLabPage() {
                   </div>
                 ) : (
                   <div className="p-16 text-center text-sm text-gray-400 border border-dashed rounded-2xl">
-                    請從左側選取一款配方查看結構詳情
+                    {t('selectRecipeHint')}
                   </div>
                 )}
               </div>
@@ -511,7 +514,7 @@ export default function RdLabPage() {
                   <Search className="h-4 w-4 absolute left-3 top-2.5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="搜尋原料名稱、供應商或編號..."
+                    placeholder={t('ingSearchPlaceholder')}
                     value={ingSearch}
                     onChange={e => setIngSearch(e.target.value)}
                     className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 bg-white text-xs"
@@ -522,20 +525,20 @@ export default function RdLabPage() {
                   onChange={e => setIngCategoryFilter(e.target.value)}
                   className="h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs text-gray-700"
                 >
-                  <option value="all">全部分類</option>
-                  <option value="tea">茶葉 / 茶湯 (Tea)</option>
-                  <option value="dairy">乳品 / 奶粉 (Dairy)</option>
-                  <option value="syrup">糖漿 / 砂糖 (Syrup)</option>
-                  <option value="juice">果汁 / 果醬 (Juice)</option>
-                  <option value="topping">配料 (Topping)</option>
-                  <option value="additive">添加物 (Additive)</option>
+                  <option value="all">{t('catAll')}</option>
+                  <option value="tea">{t('catTea')}</option>
+                  <option value="dairy">{t('catDairy')}</option>
+                  <option value="syrup">{t('catSyrup')}</option>
+                  <option value="juice">{t('catJuice')}</option>
+                  <option value="topping">{t('catTopping')}</option>
+                  <option value="additive">{t('catAdditive')}</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {ingredients.length === 0 ? (
                   <div className="col-span-3 p-12 text-center text-xs text-gray-400 border border-dashed rounded-2xl">
-                    尚未建立原料資料卡。
+                    {t('ingEmpty')}
                   </div>
                 ) : (
                   ingredients
@@ -553,7 +556,7 @@ export default function RdLabPage() {
                           <div>
                             <span className="text-[10px] font-mono text-gray-400">{ing.code || 'ING-000'}</span>
                             <h3 className="font-bold text-base text-gray-900">{ing.name}</h3>
-                            <span className="text-xs text-purple-600 font-medium">{ing.supplier_name || '原物料供應商'}</span>
+                            <span className="text-xs text-purple-600 font-medium">{ing.supplier_name || t('defaultSupplier')}</span>
                           </div>
                           <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
                             {ing.category}
@@ -570,23 +573,23 @@ export default function RdLabPage() {
                             <div className="font-bold text-gray-800">{ing.ph || 7.0}</div>
                           </div>
                           <div>
-                            <span className="text-gray-400">成本</span>
-                            <div className="font-bold text-indigo-600">{fmt(ing.cost_per_kg)}</div>
+                            <span className="text-gray-400">{t('cost')}</span>
+                            <div className="font-bold text-indigo-600">{fmt(ing.cost_per_kg, locale)}</div>
                           </div>
                           <div>
-                            <span className="text-gray-400">保存</span>
-                            <div className="font-bold text-gray-800">{ing.shelf_life_days}天</div>
+                            <span className="text-gray-400">{t('shelfLife')}</span>
+                            <div className="font-bold text-gray-800">{t('shelfLifeDays', { n: ing.shelf_life_days })}</div>
                           </div>
                         </div>
 
                         <div className="space-y-1 text-xs">
-                          <div className="text-[11px] font-semibold text-gray-500 mb-1">感官風味評分 (1-10)：</div>
+                          <div className="text-[11px] font-semibold text-gray-500 mb-1">{t('sensoryScore')}</div>
                           <div className="flex items-center justify-between text-[11px] text-gray-600">
-                            <span>香氣: <b>{ing.aroma || 5}</b></span>
-                            <span>茶感: <b>{ing.body || 5}</b></span>
-                            <span>回甘: <b>{ing.aftertaste || 5}</b></span>
-                            <span>澀度: <b>{ing.astringency || 5}</b></span>
-                            <span>苦味: <b>{ing.bitterness || 5}</b></span>
+                            <span>{t('aroma')}: <b>{ing.aroma || 5}</b></span>
+                            <span>{t('body')}: <b>{ing.body || 5}</b></span>
+                            <span>{t('aftertaste')}: <b>{ing.aftertaste || 5}</b></span>
+                            <span>{t('astringency')}: <b>{ing.astringency || 5}</b></span>
+                            <span>{t('bitterness')}: <b>{ing.bitterness || 5}</b></span>
                           </div>
                         </div>
 
@@ -609,17 +612,17 @@ export default function RdLabPage() {
                 <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-bold text-base text-gray-900">配方成分即時微調器</h3>
-                      <p className="text-xs text-gray-500">純數學演算法確定性計算，即時反應 Brix、糖克數與成本</p>
+                      <h3 className="font-bold text-base text-gray-900">{t('calcTitle')}</h3>
+                      <p className="text-xs text-gray-500">{t('calcSubtitle')}</p>
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setCalcItems([...calcItems, { name: '新成分', category: 'topping', qty_g: 30, cost_per_kg: 20000, brix: 10 }])}
+                      onClick={() => setCalcItems([...calcItems, { name: t('newIngredient'), category: 'topping', qty_g: 30, cost_per_kg: 20000, brix: 10 }])}
                       className="gap-1 text-xs"
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      加入成分
+                      {t('addIngredient')}
                     </Button>
                   </div>
 
@@ -635,7 +638,7 @@ export default function RdLabPage() {
                             setCalcItems(next)
                           }}
                           className="w-36 h-8 px-2 rounded-md border border-gray-200 bg-white font-medium"
-                          placeholder="成分名稱"
+                          placeholder={t('ingredientNamePlaceholder')}
                         />
                         <select
                           value={item.category}
@@ -646,14 +649,14 @@ export default function RdLabPage() {
                           }}
                           className="h-8 px-2 rounded-md border border-gray-200 bg-white"
                         >
-                          <option value="tea">茶湯 (Tea)</option>
-                          <option value="milk">乳品 (Milk)</option>
-                          <option value="syrup">糖漿 (Syrup)</option>
-                          <option value="water">水 (Water)</option>
-                          <option value="ice">冰塊 (Ice)</option>
-                          <option value="foam">奶蓋 (Foam)</option>
-                          <option value="juice">果汁 (Juice)</option>
-                          <option value="topping">配料 (Topping)</option>
+                          <option value="tea">{t('calcCatTea')}</option>
+                          <option value="milk">{t('calcCatMilk')}</option>
+                          <option value="syrup">{t('calcCatSyrup')}</option>
+                          <option value="water">{t('calcCatWater')}</option>
+                          <option value="ice">{t('calcCatIce')}</option>
+                          <option value="foam">{t('calcCatFoam')}</option>
+                          <option value="juice">{t('calcCatJuice')}</option>
+                          <option value="topping">{t('calcCatTopping')}</option>
                         </select>
                         <div className="flex items-center gap-1">
                           <input
@@ -669,7 +672,7 @@ export default function RdLabPage() {
                           <span className="text-gray-400">g</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <span className="text-gray-400">糖度</span>
+                          <span className="text-gray-400">{t('brix')}</span>
                           <input
                             type="number"
                             value={item.brix ?? 0}
@@ -683,7 +686,7 @@ export default function RdLabPage() {
                           <span className="text-gray-400">°</span>
                         </div>
                         <div className="flex items-center gap-1 ml-auto">
-                          <span className="text-gray-400">成本/kg</span>
+                          <span className="text-gray-400">{t('costPerKg')}</span>
                           <input
                             type="number"
                             value={item.cost_per_kg ?? 0}
@@ -707,7 +710,7 @@ export default function RdLabPage() {
 
                   <div className="pt-2 flex items-center justify-between gap-4 text-xs border-t border-gray-100">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">每杯包材成本 (杯+膜+吸管+袋)：</span>
+                      <span className="text-gray-500">{t('packagingCost')}</span>
                       <input
                         type="number"
                         value={calcPackaging}
@@ -717,7 +720,7 @@ export default function RdLabPage() {
                       <span>VND</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-500">門市建議售價：</span>
+                      <span className="text-gray-500">{t('suggestedPrice')}</span>
                       <input
                         type="number"
                         value={calcTargetPrice}
@@ -740,12 +743,12 @@ export default function RdLabPage() {
                     {activeLegal.sugar_tax_applies ? (
                       <>
                         <AlertTriangle className="h-5 w-5 text-red-600" />
-                        越南特別消費稅（糖稅）警示
+                        {t('taxWarningTitle')}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                        越南特別消費稅：免稅合規
+                        {t('taxExemptTitle')}
                       </>
                     )}
                   </div>
@@ -759,10 +762,10 @@ export default function RdLabPage() {
                   </p>
 
                   <div className="mt-3 pt-3 border-t border-black/10 text-[11px] space-y-1 text-gray-600">
-                    <div><b>法規依據：</b>{activeLegal.tax_statute}</div>
-                    <div><b>法條引用：</b>{activeLegal.citation}</div>
+                    <div><b>{t('taxStatute')}</b>{activeLegal.tax_statute}</div>
+                    <div><b>{t('taxCitation')}</b>{activeLegal.citation}</div>
                     <div className="mt-2 p-2 bg-white/80 rounded-lg text-gray-800">
-                      <b>💡 研發減糖優化指引：</b>{activeLegal.reformulation_suggestion}
+                      <b>{t('reformulationSuggestion')}</b>{activeLegal.reformulation_suggestion}
                     </div>
                   </div>
                 </div>
@@ -770,32 +773,32 @@ export default function RdLabPage() {
                 <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
                   <h4 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
                     <DollarSign className="h-4 w-4 text-indigo-600" />
-                    成本與毛利模型精算
+                    {t('costMarginModel')}
                   </h4>
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-500">成品總重 / 體積</span>
+                      <span className="text-gray-500">{t('totalWeightVolume')}</span>
                       <span className="font-bold">{activeCalculation.total_weight_g} g / {activeCalculation.total_volume_ml} ml</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-500">加權糖度 (°Brix)</span>
+                      <span className="text-gray-500">{t('weightedBrix')}</span>
                       <span className="font-bold">{activeCalculation.estimated_brix} °Bx</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-500">原料成本</span>
-                      <span>{fmt(activeCalculation.ingredient_cogs)} VND</span>
+                      <span className="text-gray-500">{t('ingredientCost')}</span>
+                      <span>{fmt(activeCalculation.ingredient_cogs, locale)} VND</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-50">
-                      <span className="text-gray-500">包材成本</span>
-                      <span>{fmt(activeCalculation.packaging_cogs)} VND</span>
+                      <span className="text-gray-500">{t('packagingCostLabel')}</span>
+                      <span>{fmt(activeCalculation.packaging_cogs, locale)} VND</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-50 text-indigo-700 font-bold">
-                      <span>每杯 COGS 總成本</span>
-                      <span>{fmt(activeCalculation.total_cogs)} VND</span>
+                      <span>{t('totalCogsPerCup')}</span>
+                      <span>{fmt(activeCalculation.total_cogs, locale)} VND</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-50 text-emerald-600 font-bold text-sm">
-                      <span>毛利率 (Gross Margin)</span>
+                      <span>{t('grossMarginLabel')}</span>
                       <span>{activeCalculation.gross_margin_pct}%</span>
                     </div>
                   </div>
@@ -809,15 +812,15 @@ export default function RdLabPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-base text-gray-900">研發實驗紀錄 (Experiment Protocols)</h3>
-                  <p className="text-xs text-gray-500">對照組 vs A/B/C 變因試驗、9 大維度感官品評雷達與評審回饋</p>
+                  <h3 className="font-bold text-base text-gray-900">{t('experimentsTitle')}</h3>
+                  <p className="text-xs text-gray-500">{t('experimentsSubtitle')}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {experiments.length === 0 ? (
                   <div className="col-span-2 p-12 text-center text-xs text-gray-400 border border-dashed rounded-2xl">
-                    尚未有實驗紀錄。可在「6 大 Agent」中點選「Idea-to-Experiment」直接產出標準實驗協議。
+                    {t('experimentsEmpty')}
                   </div>
                 ) : (
                   experiments.map(exp => (
@@ -832,26 +835,26 @@ export default function RdLabPage() {
                       </div>
 
                       <h4 className="font-bold text-base text-gray-900">{exp.product_name}</h4>
-                      <p className="text-xs text-gray-600"><b>實驗目的：</b>{exp.objective}</p>
+                      <p className="text-xs text-gray-600"><b>{t('objective')}</b>{exp.objective}</p>
 
                       <div className="p-3 bg-gray-50 rounded-xl space-y-1 text-xs">
-                        <div className="font-semibold text-gray-500 text-[11px]">9 軸感官評分 (1-10)：</div>
+                        <div className="font-semibold text-gray-500 text-[11px]">{t('sensory9Score')}</div>
                         <div className="grid grid-cols-3 gap-1.5 text-[11px] text-gray-700">
-                          <span>甜度: <b>7.0</b></span>
-                          <span>茶香: <b>8.5</b></span>
-                          <span>茶感: <b>8.0</b></span>
-                          <span>奶感: <b>6.5</b></span>
-                          <span>澀度: <b>4.0</b></span>
-                          <span>苦味: <b>3.0</b></span>
-                          <span>回甘: <b>8.5</b></span>
-                          <span>口感: <b>8.0</b></span>
-                          <span>綜合: <b>8.2</b></span>
+                          <span>{t('sweetness')}: <b>7.0</b></span>
+                          <span>{t('teaAroma')}: <b>8.5</b></span>
+                          <span>{t('body')}: <b>8.0</b></span>
+                          <span>{t('milkiness')}: <b>6.5</b></span>
+                          <span>{t('astringency')}: <b>4.0</b></span>
+                          <span>{t('bitterness')}: <b>3.0</b></span>
+                          <span>{t('aftertaste')}: <b>8.5</b></span>
+                          <span>{t('mouthfeel')}: <b>8.0</b></span>
+                          <span>{t('overall')}: <b>8.2</b></span>
                         </div>
                       </div>
 
                       {exp.conclusion && (
                         <div className="p-2.5 bg-purple-50/50 rounded-lg text-xs text-purple-900 border border-purple-100">
-                          <b>結論：</b>{exp.conclusion}
+                          <b>{t('conclusion')}</b>{exp.conclusion}
                         </div>
                       )}
                     </div>
@@ -867,12 +870,12 @@ export default function RdLabPage() {
               <div className="space-y-3">
                 <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-indigo-600" />
-                  越南市場競品情報 (Competitor DB)
+                  {t('competitorDbTitle')}
                 </h3>
                 <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                   {competitors.length === 0 ? (
                     <div className="p-8 text-center text-xs text-gray-400 border border-dashed rounded-xl">
-                      暫無競品資料。
+                      {t('competitorsEmpty')}
                     </div>
                   ) : (
                     competitors.map(c => (
@@ -882,9 +885,9 @@ export default function RdLabPage() {
                           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold">{c.brand_name}</span>
                         </div>
                         <div className="flex items-center justify-between text-gray-600">
-                          <span>售價：{fmt(c.price_vnd)} VND</span>
-                          <span>容量：{c.cup_size_ml} ml</span>
-                          <span>甜度：{c.sweetness_level}</span>
+                          <span>{t('priceLabel', { n: fmt(c.price_vnd, locale) })}</span>
+                          <span>{t('capacityLabel', { n: c.cup_size_ml })}</span>
+                          <span>{t('sweetnessLabel', { n: c.sweetness_level })}</span>
                         </div>
                         {c.notes && <p className="text-gray-500 text-[11px] pt-1 border-t border-gray-50">{c.notes}</p>}
                       </div>
@@ -896,7 +899,7 @@ export default function RdLabPage() {
               <div className="space-y-3">
                 <h3 className="font-bold text-base text-gray-900 flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  食品添加物合規資料庫 (INS Reference)
+                  {t('additiveDbTitle')}
                 </h3>
                 <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                   {additives.map(a => (
@@ -905,9 +908,9 @@ export default function RdLabPage() {
                         <span className="font-bold text-gray-900">{a.name}</span>
                         <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold">{a.ins_number}</span>
                       </div>
-                      <div className="text-gray-600">功能作用：{a.function}</div>
-                      <div className="text-gray-600">最大使用量：{a.max_usage}</div>
-                      <div className="text-[11px] text-gray-400">法規依據：{a.regulatory_source}</div>
+                      <div className="text-gray-600">{t('functionLabel')}{a.function}</div>
+                      <div className="text-gray-600">{t('maxUsageLabel')}{a.max_usage}</div>
+                      <div className="text-[11px] text-gray-400">{t('regulatorySourceLabel')}{a.regulatory_source}</div>
                     </div>
                   ))}
                 </div>
@@ -921,17 +924,17 @@ export default function RdLabPage() {
               <form onSubmit={handleIngestKnowledge} className="p-5 bg-gradient-to-br from-purple-50/50 to-indigo-50/40 rounded-2xl border border-purple-200 space-y-3 shadow-sm">
                 <div className="flex items-center gap-2 font-bold text-sm text-purple-900">
                   <Video className="h-4 w-4 text-red-600" />
-                  外部研發知識學習器 (YouTube / 論文 / 專利 / 專家技術)
+                  {t('knowledgeLearnerTitle')}
                 </div>
                 <p className="text-xs text-gray-500">
-                  貼上 YouTube 影片、食品科學網址或論文摘要，AI 自動進行技術萃取、原理分析並賦予 Evidence Level (A~E 實證等級)。
+                  {t('knowledgeLearnerDesc')}
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div className="sm:col-span-2">
                     <input
                       type="text"
-                      placeholder="YouTube 網址、論文 DOI 或文章 URL..."
+                      placeholder={t('extUrlPlaceholder')}
                       value={extUrl}
                       onChange={e => setExtUrl(e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs"
@@ -940,7 +943,7 @@ export default function RdLabPage() {
                   <div>
                     <input
                       type="text"
-                      placeholder="技術主題 / 標題..."
+                      placeholder={t('extTitlePlaceholder')}
                       value={extTitle}
                       onChange={e => setExtTitle(e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs"
@@ -952,17 +955,17 @@ export default function RdLabPage() {
                       onChange={e => setExtType(e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs text-gray-700"
                     >
-                      <option value="youtube">YouTube 萃取</option>
-                      <option value="paper">學術論文 (Level A)</option>
-                      <option value="patent">食品專利 (Level B)</option>
-                      <option value="expert">專家文章 (Level C)</option>
-                      <option value="article">網路文章 (Level D)</option>
+                      <option value="youtube">{t('extTypeYoutube')}</option>
+                      <option value="paper">{t('extTypePaper')}</option>
+                      <option value="patent">{t('extTypePatent')}</option>
+                      <option value="expert">{t('extTypeExpert')}</option>
+                      <option value="article">{t('extTypeArticle')}</option>
                     </select>
                   </div>
                 </div>
 
                 <textarea
-                  placeholder="可貼上影片重點 Transcript、萃取操作方法或論文技術摘要..."
+                  placeholder={t('extTextPlaceholder')}
                   rows={3}
                   value={extText}
                   onChange={e => setExtText(e.target.value)}
@@ -978,7 +981,7 @@ export default function RdLabPage() {
                     className="ml-auto bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
                   >
                     {ingesting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                    開始學習並轉入知識庫
+                    {t('startLearning')}
                   </Button>
                 </div>
               </form>
@@ -986,7 +989,7 @@ export default function RdLabPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {knowledge.length === 0 ? (
                   <div className="col-span-2 p-12 text-center text-xs text-gray-400 border border-dashed rounded-2xl">
-                    尚未匯入外部知識。可輸入 YouTube 或技術論文以充實 Feeling Tea 研發大腦。
+                    {t('knowledgeEmpty')}
                   </div>
                 ) : (
                   knowledge.map(k => (
@@ -1000,7 +1003,7 @@ export default function RdLabPage() {
                             ? 'bg-blue-100 text-blue-800 border-blue-300'
                             : 'bg-amber-100 text-amber-800 border-amber-300'
                         }`}>
-                          Level {k.evidence_level}
+                          {t('levelLabel', { level: k.evidence_level })}
                         </span>
                       </div>
 
@@ -1028,12 +1031,12 @@ export default function RdLabPage() {
             <div className="space-y-5">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 {[
-                  { id: 'knowledge', label: 'Agent 1: 知識大腦', icon: BookOpen, desc: '歷史配方與科學證據' },
-                  { id: 'recipe', label: 'Agent 2: 配方工程師', icon: Layers, desc: '比例平衡與感官結構' },
-                  { id: 'cost', label: 'Agent 3: 成本精算師', icon: DollarSign, desc: '換料降本10%試算' },
-                  { id: 'regulatory', label: 'Agent 4: 法規與稅務', icon: ShieldCheck, desc: '特別消費稅與添加物' },
-                  { id: 'experiment', label: 'Agent 5: 實驗品評師', icon: Compass, desc: 'A/B/C對照與感官雷達' },
-                  { id: 'innovation', label: 'Agent 6: 跨界創新總監', icon: Sparkles, desc: 'Idea-to-Experiment' },
+                  { id: 'knowledge', label: t('agent1Label'), icon: BookOpen, desc: t('agent1Desc') },
+                  { id: 'recipe', label: t('agent2Label'), icon: Layers, desc: t('agent2Desc') },
+                  { id: 'cost', label: t('agent3Label'), icon: DollarSign, desc: t('agent3Desc') },
+                  { id: 'regulatory', label: t('agent4Label'), icon: ShieldCheck, desc: t('agent4Desc') },
+                  { id: 'experiment', label: t('agent5Label'), icon: Compass, desc: t('agent5Desc') },
+                  { id: 'innovation', label: t('agent6Label'), icon: Sparkles, desc: t('agent6Desc') },
                 ].map(ag => {
                   const Icon = ag.icon
                   const active = agentType === ag.id
@@ -1058,9 +1061,9 @@ export default function RdLabPage() {
               <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-gray-900">
-                    向 {agentType === 'innovation' ? 'Agent 6 (跨界創新總監)' : agentType} 提出研發指令
+                    {t('agentPromptTo', { agent: agentType === 'innovation' ? t('agent6Full') : agentType })}
                   </h3>
-                  <span className="text-xs text-gray-400">已自動串接當前配方與原料庫上下文</span>
+                  <span className="text-xs text-gray-400">{t('agentContextHint')}</span>
                 </div>
 
                 <div className="relative">
@@ -1070,10 +1073,10 @@ export default function RdLabPage() {
                     onChange={e => setAgentPrompt(e.target.value)}
                     placeholder={
                       agentType === 'innovation'
-                        ? '例如：幫我開發一款越南市場夏天的芒果烏龍冷萃奶蓋飲品，售價 45,000 VND 以下，並給予跨界風味搭配原理與一鍵實驗協議。'
+                        ? t('agentPlaceholderInnovation')
                         : agentType === 'cost'
-                        ? '例如：我要降低當前配方 10% 成本，有哪些原料可以替換？對風味會造成什麼影響？'
-                        : '請輸入您想向研發大腦諮詢的問題...'
+                        ? t('agentPlaceholderCost')
+                        : t('agentPlaceholderDefault')
                     }
                     className="w-full p-3 rounded-xl border border-gray-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
@@ -1086,7 +1089,7 @@ export default function RdLabPage() {
                     className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
                   >
                     {agentRunning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    執行 Agent 分析
+                    {t('runAgentAnalysis')}
                   </Button>
                 </div>
 
@@ -1095,7 +1098,7 @@ export default function RdLabPage() {
                     <div className="flex items-center justify-between text-xs font-bold text-purple-900">
                       <span className="flex items-center gap-1.5">
                         <Sparkles className="h-4 w-4 text-purple-600" />
-                        Agent 研發分析報告
+                        {t('agentReportTitle')}
                       </span>
                     </div>
                     <div className="text-xs sm:text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-white p-4 rounded-lg border border-purple-100 font-sans">
