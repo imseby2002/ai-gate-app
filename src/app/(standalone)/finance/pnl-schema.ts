@@ -111,9 +111,9 @@ export const PNL_LINES: PnlLine[] = [
 
 export const PNL_LINE_MAP: Record<string, PnlLine> = Object.fromEntries(PNL_LINES.map(l => [l.code, l]))
 
-export const STORE_KIND_LABEL: Record<string, string> = {
-  store: '門市', warehouse: '倉庫', office: '辦公室', group: '彙總',
-}
+export const getStoreKindLabel = (t: (key: string) => string): Record<string, string> => ({
+  store: t('kindStore'), warehouse: t('kindWarehouse'), office: t('kindOffice'), group: t('kindGroup'),
+})
 
 // 匯入比對用：越文／中文別名 → line_code（小寫、去空白標點後比對）
 export function buildLineAlias(): Record<string, string> {
