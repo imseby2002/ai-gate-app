@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, ReactNode, type ChangeEvent } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import { Users, DollarSign, Calendar, Plus, Pencil, Trash2, Check, X, ChevronDown, ChevronUp, Loader2, AlertCircle, Building2, Phone, Mail, Briefcase, CreditCard, Zap, Wallet, Upload, Shield, Clock, Download, UserPlus, ArrowRight, ClipboardCheck, Store, Video, FileSpreadsheet, HeartHandshake, Send, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -53,8 +54,8 @@ function suggestInsurance(staffCategory: string, monthlySalary: number, s: InsSe
 
 const STAFF_CATEGORIES = ['fulltime', 'hourly']
 const INS_STATUSES = ['none', 'pending', 'enrolled']
-const STAFF_LABEL: Record<string, string> = { fulltime: '正職', hourly: '工讀' }
-const INS_STATUS_LABEL: Record<string, string> = { none: '不需投保', pending: '待投保', enrolled: '已投保' }
+const getStaffLabel = (t: (key: string) => string): Record<string, string> => ({ fulltime: t('staffFulltime'), hourly: t('staffHourly') })
+const getInsStatusLabel = (t: (key: string) => string): Record<string, string> => ({ none: t('insNone'), pending: t('insPending'), enrolled: t('insEnrolled') })
 
 interface EvalSummary { bonus: number; reward: number; penalty: number }
 
@@ -104,17 +105,17 @@ const EMPTY_EMP: Omit<Employee, 'id' | 'created_at'> = {
   hourly_rate: 0, attendance_no: '', store: '', bank_name: '',
 }
 
-const LABELS: Record<string, string> = {
-  'full-time': '全職', 'part-time': '兼職', 'contract': '約聘', 'intern': '實習',
-  'active': '在職', 'inactive': '停職', 'resigned': '離職',
-  'annual': '特休', 'sick': '病假', 'personal': '事假', 'maternity': '產假',
-  'paternity': '陪產假', 'unpaid': '無薪假', 'other': '其他',
-  'pending': '待審核', 'approved': '已核准', 'rejected': '已拒絕',
-  'paid': '已發放',
-}
+const getLabels = (t: (key: string) => string): Record<string, string> => ({
+  'full-time': t('empFullTime'), 'part-time': t('empPartTime'), 'contract': t('empContract'), 'intern': t('empIntern'),
+  'active': t('empActive'), 'inactive': t('empInactive'), 'resigned': t('empResigned'),
+  'annual': t('leaveAnnual'), 'sick': t('leaveSick'), 'personal': t('leavePersonal'), 'maternity': t('leaveMaternity'),
+  'paternity': t('leavePaternity'), 'unpaid': t('leaveUnpaid'), 'other': t('leaveOther'),
+  'pending': t('statusPending'), 'approved': t('statusApproved'), 'rejected': t('statusRejected'),
+  'paid': t('statusPaid'),
+})
 
-const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
-const fmtDate = (s?: string | null) => s ? new Date(s).toLocaleDateString('zh-TW') : '—'
+const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+const fmtDate = (s: string | null | undefined, locale: string) => s ? new Date(s).toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW') : '—'
 
 // ─── 批次匯入欄位設定 ─────────────────────────────────────────
 const EMPLOYEE_IMPORT_COLUMNS: ImportColumn[] = [
@@ -196,7 +197,8 @@ const LEAVE_IMPORT_COLUMNS: ImportColumn[] = [
 
 // ─── Helpers ─────────────────────────────────────────────────────
 function StatusBadge({ value, kind }: { value: string; kind: 'emp' | 'leave' | 'payroll' }) {
-  const label = LABELS[value] ?? value
+  const t = useTranslations('HrPage')
+  const label = getLabels(t)[value] ?? value
   const green = kind === 'emp' ? 'active' : kind === 'leave' ? 'approved' : 'paid'
   const red = kind === 'emp' ? 'resigned' : kind === 'leave' ? 'rejected' : ''
   const variant = value === green ? 'success' : value === red ? 'destructive' : 'secondary'
@@ -240,6 +242,11 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
   saving: boolean
   settings: InsSettings
 }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
+  const LABELS = getLabels(t)
+  const STAFF_LABEL = getStaffLabel(t)
+  const INS_STATUS_LABEL = getInsStatusLabel(t)
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number | boolean | null) => setD(prev => ({ ...prev, [k]: v }))
   const suggested = suggestInsurance(d.staff_category, Number(d.base_salary) || 0, settings)
@@ -247,28 +254,28 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="姓名 *"><InputEl value={d.name} onChange={v => set('name', v)} placeholder="王小明" disabled={saving} /></Field>
-        <Field label="部門"><InputEl value={d.department} onChange={v => set('department', v)} placeholder="業務部" disabled={saving} /></Field>
-        <Field label="職稱"><InputEl value={d.position} onChange={v => set('position', v)} placeholder="業務專員" disabled={saving} /></Field>
-        <Field label="類別 *">
+        <Field label={t('nameLabel')}><InputEl value={d.name} onChange={v => set('name', v)} placeholder={t('namePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('departmentLabel')}><InputEl value={d.department} onChange={v => set('department', v)} placeholder={t('departmentPlaceholder')} disabled={saving} /></Field>
+        <Field label={t('positionLabel')}><InputEl value={d.position} onChange={v => set('position', v)} placeholder={t('positionPlaceholder')} disabled={saving} /></Field>
+        <Field label={t('categoryRequiredLabel')}>
           <SelectEl value={d.staff_category} onChange={v => set('staff_category', v)}
-            options={STAFF_CATEGORIES.map(t => ({ value: t, label: STAFF_LABEL[t] }))} disabled={saving} />
+            options={STAFF_CATEGORIES.map(c => ({ value: c, label: STAFF_LABEL[c] }))} disabled={saving} />
         </Field>
-        <Field label="僱用類型">
+        <Field label={t('employmentTypeLabel')}>
           <SelectEl value={d.employment_type} onChange={v => set('employment_type', v)}
-            options={EMPLOYMENT_TYPES.map(t => ({ value: t, label: LABELS[t] ?? t }))} disabled={saving} />
+            options={EMPLOYMENT_TYPES.map(et => ({ value: et, label: LABELS[et] ?? et }))} disabled={saving} />
         </Field>
-        <Field label="電子郵件"><InputEl value={d.email} onChange={v => set('email', v)} type="email" placeholder="email@company.com" disabled={saving} /></Field>
-        <Field label="電話"><InputEl value={d.phone} onChange={v => set('phone', v)} placeholder="0912345678" disabled={saving} /></Field>
-        <Field label="到職日期"><InputEl value={d.hire_date ?? ''} onChange={v => set('hire_date', v || null)} type="date" disabled={saving} /></Field>
-        <Field label="本薪（月）"><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
-        <Field label={d.staff_category === 'hourly' ? '時薪 ★' : '時薪'}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder="工讀計時用" disabled={saving} /></Field>
-        <Field label="門市"><InputEl value={d.store} onChange={v => set('store', v)} placeholder="對應考勤門市，如 giang vo" disabled={saving} /></Field>
-        <Field label="考勤工号"><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder="考勤機編號" disabled={saving} /></Field>
-        <Field label="銀行帳號"><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder="銀行代碼＋帳號" disabled={saving} /></Field>
-        <Field label="收款銀行"><InputEl value={d.bank_name} onChange={v => set('bank_name', v)} placeholder="留空＝預設 TPBank" disabled={saving} /></Field>
-        <Field label="身分證字號"><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
-        <Field label="在職狀態">
+        <Field label={t('emailLabel')}><InputEl value={d.email} onChange={v => set('email', v)} type="email" placeholder="email@company.com" disabled={saving} /></Field>
+        <Field label={t('phoneLabel')}><InputEl value={d.phone} onChange={v => set('phone', v)} placeholder="0912345678" disabled={saving} /></Field>
+        <Field label={t('hireDateLabel')}><InputEl value={d.hire_date ?? ''} onChange={v => set('hire_date', v || null)} type="date" disabled={saving} /></Field>
+        <Field label={t('baseSalaryMonthlyLabel')}><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" placeholder="45000" disabled={saving} /></Field>
+        <Field label={d.staff_category === 'hourly' ? t('hourlyRateStarLabel') : t('hourlyRateLabel')}><InputEl value={d.hourly_rate} onChange={v => set('hourly_rate', Number(v) || 0)} type="number" placeholder={t('hourlyRatePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('storeLabel')}><InputEl value={d.store} onChange={v => set('store', v)} placeholder={t('storePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('attendanceNoLabel')}><InputEl value={d.attendance_no} onChange={v => set('attendance_no', v)} placeholder={t('attendanceNoPlaceholder')} disabled={saving} /></Field>
+        <Field label={t('bankAccountLabel')}><InputEl value={d.bank_account} onChange={v => set('bank_account', v)} placeholder={t('bankAccountPlaceholder')} disabled={saving} /></Field>
+        <Field label={t('bankNameLabel')}><InputEl value={d.bank_name} onChange={v => set('bank_name', v)} placeholder={t('bankNamePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('idNumberLabel')}><InputEl value={d.id_number} onChange={v => set('id_number', v)} placeholder="A123456789" disabled={saving} /></Field>
+        <Field label={t('empStatusLabel')}>
           <SelectEl value={d.status} onChange={v => set('status', v)}
             options={EMP_STATUS.map(s => ({ value: s, label: LABELS[s] ?? s }))} disabled={saving} />
         </Field>
@@ -279,37 +286,37 @@ function EmployeeForm({ initial, onSave, onCancel, saving, settings }: {
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-1.5 text-sm font-medium">
             <input type="checkbox" checked={d.insurance_required} onChange={e => set('insurance_required', e.target.checked)} disabled={saving} className="h-4 w-4" />
-            需投保
+            {t('needInsurance')}
           </label>
           <span className="text-xs text-gray-500">
-            （建議：{suggested ? '需要' : '不需要'}{d.staff_category === 'hourly' && settings.insurance_mode === 'threshold' ? `　工讀月薪 > ${fmt(settings.insurance_threshold)} ${settings.insurance_currency} 才需投保` : d.staff_category === 'fulltime' ? '　正職即刻投保' : ''}）
+            {t('insuranceSuggestion', { need: suggested ? t('needed') : t('notNeeded'), extra: d.staff_category === 'hourly' && settings.insurance_mode === 'threshold' ? t('hourlyInsuranceHint', { threshold: fmt(settings.insurance_threshold, locale), currency: settings.insurance_currency }) : d.staff_category === 'fulltime' ? t('fulltimeInsuranceHint') : '' })}
           </span>
           {d.insurance_required !== suggested && (
             <Button variant="outline" size="sm" className="h-6 px-2 text-xs" disabled={saving}
-              onClick={() => set('insurance_required', suggested)}>套用建議</Button>
+              onClick={() => set('insurance_required', suggested)}>{t('applySuggestion')}</Button>
           )}
         </div>
         {d.insurance_required && (
           <div className="grid grid-cols-3 gap-3">
-            <Field label="保險狀態">
+            <Field label={t('insuranceStatusLabel')}>
               <SelectEl value={d.insurance_status} onChange={v => set('insurance_status', v)}
                 options={INS_STATUSES.map(s => ({ value: s, label: INS_STATUS_LABEL[s] }))} disabled={saving} />
             </Field>
-            <Field label="保險編號"><InputEl value={d.insurance_number} onChange={v => set('insurance_number', v)} placeholder="社保號" disabled={saving} /></Field>
-            <Field label="投保薪資"><InputEl value={d.insurance_salary} onChange={v => set('insurance_salary', Number(v) || 0)} type="number" placeholder="0" disabled={saving} /></Field>
+            <Field label={t('insuranceNumberLabel')}><InputEl value={d.insurance_number} onChange={v => set('insurance_number', v)} placeholder={t('insuranceNumberPlaceholder')} disabled={saving} /></Field>
+            <Field label={t('insuranceSalaryLabel')}><InputEl value={d.insurance_salary} onChange={v => set('insurance_salary', Number(v) || 0)} type="number" placeholder="0" disabled={saving} /></Field>
           </div>
         )}
       </div>
 
-      <Field label="備註">
+      <Field label={t('notesLabel')}>
         <textarea value={d.notes} onChange={e => set('notes', e.target.value)} disabled={saving} rows={2}
-          placeholder="其他說明..." className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
+          placeholder={t('otherNotesPlaceholder')} className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
       </Field>
       <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>取消</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
         <Button size="sm" onClick={() => onSave(d)} disabled={!d.name.trim() || saving}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          儲存
+          {t('save')}
         </Button>
       </div>
     </div>
@@ -326,6 +333,8 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
   attHours: Record<string, number>
   evals: Record<string, EvalSummary>
 }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
   const net = d.base_salary + d.allowances + d.bonus - d.deductions
@@ -339,33 +348,33 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="員工 *">
+        <Field label={t('employeeRequiredLabel')}>
           <SelectEl value={d.employee_id} onChange={v => {
             const emp = employees.find(e => e.id === v)
             setD(prev => ({ ...prev, employee_id: v, base_salary: emp?.base_salary ?? prev.base_salary }))
           }}
-            options={[{ value: '', label: '請選擇員工' }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: `${e.name}（${e.department || '無部門'}）` }))]}
+            options={[{ value: '', label: t('selectEmployee') }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: t('empDeptOption', { name: e.name, dept: e.department || t('noDepartment') }) }))]}
             disabled={saving} />
         </Field>
-        <Field label="年份 / 月份">
+        <Field label={t('yearMonthLabel')}>
           <div className="flex gap-1">
             <InputEl value={d.year} onChange={v => set('year', Number(v) || 0)} type="number" placeholder="2026" disabled={saving} />
             <SelectEl value={String(d.month)} onChange={v => set('month', Number(v))}
-              options={Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` }))}
+              options={Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: t('monthOption', { m: i + 1 }) }))}
               disabled={saving} />
           </div>
         </Field>
-        <Field label="本薪（元）"><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" disabled={saving} /></Field>
-        <Field label="補貼（元）"><InputEl value={d.allowances} onChange={v => set('allowances', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label={t('baseSalaryYuanLabel')}><InputEl value={d.base_salary} onChange={v => set('base_salary', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label={t('allowancesYuanLabel')}><InputEl value={d.allowances} onChange={v => set('allowances', Number(v) || 0)} type="number" disabled={saving} /></Field>
       </div>
 
       {d.employee_id && (hours > 0 || rate > 0) && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-white px-3 py-2 text-sm dark:bg-gray-900/40">
           <Clock className="h-4 w-4 text-gray-400" />
-          <span className="text-gray-600">本月考勤時數 <b className="tabular-nums">{hours}</b>{rate > 0 && <> × 時薪 <b className="tabular-nums">{fmt(rate)}</b> = <b className="tabular-nums text-green-600">{fmt(byHours)}</b></>}</span>
+          <span className="text-gray-600">{t('monthlyAttendanceHours')} <b className="tabular-nums">{hours}</b>{rate > 0 && <> {t.rich('hourlyRateCalc', { rate: fmt(rate, locale), total: fmt(byHours, locale), b: (chunks) => <b className="tabular-nums text-green-600">{chunks}</b> })}</>}</span>
           {rate > 0
-            ? <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" disabled={saving} onClick={() => set('base_salary', byHours)}>帶入本薪</Button>
-            : <span className="text-xs text-amber-600">（此員工未設時薪，請到員工管理填「時薪」）</span>}
+            ? <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" disabled={saving} onClick={() => set('base_salary', byHours)}>{t('applyToBaseSalary')}</Button>
+            : <span className="text-xs text-amber-600">{t('noHourlyRateSet')}</span>}
         </div>
       )}
 
@@ -373,29 +382,29 @@ function PayrollForm({ employees, initial, onSave, onCancel, saving, attHours, e
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-white px-3 py-2 text-sm dark:bg-gray-900/40">
           <ClipboardCheck className="h-4 w-4 text-gray-400" />
           <span className="text-gray-600">
-            評估：獎金 <b className="tabular-nums">{fmt(ev.bonus)}</b>　獎勵 <b className="tabular-nums text-emerald-600">{fmt(ev.reward)}</b>　懲罰 <b className="tabular-nums text-red-500">{fmt(ev.penalty)}</b>　＝ 淨 <b className="tabular-nums">{fmt(evNet)}</b>
+            {t('evalSummary', { bonus: fmt(ev.bonus, locale), reward: fmt(ev.reward, locale), penalty: fmt(ev.penalty, locale), net: fmt(evNet, locale) })}
           </span>
-          <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" disabled={saving} onClick={() => set('bonus', evNet)}>帶入評估獎懲</Button>
+          <Button variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs" disabled={saving} onClick={() => set('bonus', evNet)}>{t('applyEvalBonus')}</Button>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="扣款（勞健保等，元）"><InputEl value={d.deductions} onChange={v => set('deductions', Number(v) || 0)} type="number" disabled={saving} /></Field>
-        <Field label="獎金（含評估獎懲，元）"><InputEl value={d.bonus} onChange={v => set('bonus', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label={t('deductionsInclInsLabel')}><InputEl value={d.deductions} onChange={v => set('deductions', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label={t('bonusInclEvalLabel')}><InputEl value={d.bonus} onChange={v => set('bonus', Number(v) || 0)} type="number" disabled={saving} /></Field>
       </div>
       <div className="flex items-center justify-between rounded-lg bg-white border px-4 py-2.5">
-        <span className="text-sm font-medium text-gray-600">實發金額</span>
-        <span className={`text-lg font-bold ${net < 0 ? 'text-red-600' : 'text-green-600'}`}>NT$ {fmt(net)}</span>
+        <span className="text-sm font-medium text-gray-600">{t('netPayAmountLabel')}</span>
+        <span className={`text-lg font-bold ${net < 0 ? 'text-red-600' : 'text-green-600'}`}>NT$ {fmt(net, locale)}</span>
       </div>
-      <Field label="備註">
+      <Field label={t('notesLabel')}>
         <textarea value={d.notes} onChange={e => set('notes', e.target.value)} disabled={saving} rows={2}
-          placeholder="備註..." className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
+          placeholder={t('notesPlaceholder')} className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
       </Field>
       <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>取消</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
         <Button size="sm" onClick={() => onSave(d)} disabled={!d.employee_id || !d.year || !d.month || saving}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          儲存
+          {t('save')}
         </Button>
       </div>
     </div>
@@ -410,38 +419,40 @@ function LeaveForm({ employees, initial, onSave, onCancel, saving }: {
   onCancel: () => void
   saving: boolean
 }) {
+  const t = useTranslations('HrPage')
+  const LABELS = getLabels(t)
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
 
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="員工 *">
+        <Field label={t('employeeRequiredLabel')}>
           <SelectEl value={d.employee_id} onChange={v => set('employee_id', v)}
-            options={[{ value: '', label: '請選擇員工' }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: `${e.name}（${e.department || '無部門'}）` }))]}
+            options={[{ value: '', label: t('selectEmployee') }, ...employees.filter(e => e.status === 'active').map(e => ({ value: e.id, label: t('empDeptOption', { name: e.name, dept: e.department || t('noDepartment') }) }))]}
             disabled={saving} />
         </Field>
-        <Field label="假別">
+        <Field label={t('leaveTypeLabel')}>
           <SelectEl value={d.leave_type} onChange={v => set('leave_type', v)}
-            options={LEAVE_TYPES.map(t => ({ value: t, label: LABELS[t] ?? t }))} disabled={saving} />
+            options={LEAVE_TYPES.map(lt => ({ value: lt, label: LABELS[lt] ?? lt }))} disabled={saving} />
         </Field>
-        <Field label="開始日期"><InputEl value={d.start_date} onChange={v => set('start_date', v)} type="date" disabled={saving} /></Field>
-        <Field label="結束日期"><InputEl value={d.end_date} onChange={v => set('end_date', v)} type="date" disabled={saving} /></Field>
-        <Field label="天數"><InputEl value={d.days} onChange={v => set('days', Number(v) || 0)} type="number" disabled={saving} /></Field>
-        <Field label="狀態">
+        <Field label={t('startDateLabel')}><InputEl value={d.start_date} onChange={v => set('start_date', v)} type="date" disabled={saving} /></Field>
+        <Field label={t('endDateLabel')}><InputEl value={d.end_date} onChange={v => set('end_date', v)} type="date" disabled={saving} /></Field>
+        <Field label={t('daysLabel')}><InputEl value={d.days} onChange={v => set('days', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label={t('statusLabel')}>
           <SelectEl value={d.status} onChange={v => set('status', v)}
             options={LEAVE_STATUS.map(s => ({ value: s, label: LABELS[s] ?? s }))} disabled={saving} />
         </Field>
       </div>
-      <Field label="請假原因">
+      <Field label={t('leaveReasonLabel')}>
         <textarea value={d.reason} onChange={e => set('reason', e.target.value)} disabled={saving} rows={2}
-          placeholder="請假事由..." className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
+          placeholder={t('leaveReasonPlaceholder')} className="w-full rounded-md border px-3 py-2 text-sm resize-none outline-none disabled:opacity-50" />
       </Field>
       <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>取消</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
         <Button size="sm" onClick={() => onSave(d)} disabled={!d.employee_id || !d.start_date || !d.end_date || saving}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          儲存
+          {t('save')}
         </Button>
       </div>
     </div>
@@ -454,6 +465,7 @@ function InsuranceSettingsPanel({ settings, onSaved, onClose }: {
   onSaved: (s: InsSettings) => void
   onClose: () => void
 }) {
+  const t = useTranslations('HrPage')
   const [d, setD] = useState(settings)
   const [saving, setSaving] = useState(false)
   async function save() {
@@ -473,27 +485,27 @@ function InsuranceSettingsPanel({ settings, onSaved, onClose }: {
   return (
     <div className="space-y-3 rounded-xl border bg-gray-50 p-4 dark:bg-gray-900/40">
       <div className="flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-sm font-semibold"><Shield className="h-4 w-4" />保險政策</p>
+        <p className="flex items-center gap-1.5 text-sm font-semibold"><Shield className="h-4 w-4" />{t('insurancePolicyTitle')}</p>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
       </div>
-      <p className="text-xs text-gray-500">正職一律即刻投保；此設定決定「工讀」何時需投保。</p>
+      <p className="text-xs text-gray-500">{t('insurancePolicyDesc')}</p>
       <div className="grid grid-cols-3 gap-3">
-        <Field label="工讀投保條件">
+        <Field label={t('hourlyInsuranceConditionLabel')}>
           <SelectEl value={d.insurance_mode} onChange={v => setD(p => ({ ...p, insurance_mode: v }))}
-            options={[{ value: 'threshold', label: '超過門檻才投保' }, { value: 'all', label: '全員投保' }]} disabled={saving} />
+            options={[{ value: 'threshold', label: t('overThresholdOnly') }, { value: 'all', label: t('allStaffInsured') }]} disabled={saving} />
         </Field>
-        <Field label="門檻金額">
+        <Field label={t('thresholdAmountLabel')}>
           <InputEl value={d.insurance_threshold} onChange={v => setD(p => ({ ...p, insurance_threshold: Number(v) || 0 }))}
             type="number" disabled={saving || d.insurance_mode === 'all'} />
         </Field>
-        <Field label="幣別">
+        <Field label={t('currencyLabel')}>
           <InputEl value={d.insurance_currency} onChange={v => setD(p => ({ ...p, insurance_currency: v }))} placeholder="VND" disabled={saving} />
         </Field>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>取消</Button>
+        <Button variant="ghost" size="sm" onClick={onClose} disabled={saving}>{t('cancel')}</Button>
         <Button size="sm" onClick={save} disabled={saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}儲存
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}{t('save')}
         </Button>
       </div>
     </div>
@@ -505,6 +517,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
   employees: Employee[]; loading: boolean; onRefresh: () => void
   settings: InsSettings; onSettingsChange: (s: InsSettings) => void
 }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
+  const LABELS = getLabels(t)
+  const STAFF_LABEL = getStaffLabel(t)
+  const INS_STATUS_LABEL = getInsStatusLabel(t)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Employee | null>(null)
   const [saving, setSaving] = useState(false)
@@ -519,13 +536,13 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
     setErr(''); setExportingIns(true)
     try {
       const res = await fetch('/api/hr/insurance-export')
-      if (!res.ok) { setErr('匯出失敗'); return }
+      if (!res.ok) { setErr(t('exportFailed')); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `insurance_application_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.xlsx`
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
-    } catch { setErr('匯出失敗') } finally { setExportingIns(false) }
+    } catch { setErr(t('exportFailed')) } finally { setExportingIns(false) }
   }
 
   const save = async (data: Omit<Employee, 'id' | 'created_at'>) => {
@@ -537,11 +554,11 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
         await fetch('/api/hr/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       }
       setShowForm(false); setEditing(null); onRefresh()
-    } catch { setErr('儲存失敗') } finally { setSaving(false) }
+    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 
   const remove = async (id: string) => {
-    if (!confirm('確定刪除此員工？相關薪資與請假記錄也將一併刪除。')) return
+    if (!confirm(t('confirmDeleteEmployee'))) return
     await fetch('/api/hr/employees', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     onRefresh()
   }
@@ -553,21 +570,21 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
       <div className="flex items-center gap-2">
         {['all', 'active', 'inactive', 'resigned'].map(s => (
           <Button key={s} size="sm" variant={statusFilter === s ? 'default' : 'ghost'} onClick={() => setStatusFilter(s)}>
-            {s === 'all' ? `全部 (${employees.length})` : `${LABELS[s] ?? s} (${employees.filter(e => e.status === s).length})`}
+            {s === 'all' ? t('allWithCount', { n: employees.length }) : t('labelWithCount', { label: LABELS[s] ?? s, n: employees.filter(e => e.status === s).length })}
           </Button>
         ))}
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowSettings(v => !v)}>
-            <Shield className="h-4 w-4" />保險設定
+            <Shield className="h-4 w-4" />{t('insuranceSettings')}
           </Button>
-          <Button size="sm" variant="outline" className="gap-1" onClick={exportInsurance} disabled={exportingIns} title="匯出需投保員工名單（保險申請單）">
-            {exportingIns ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}保險申請單
+          <Button size="sm" variant="outline" className="gap-1" onClick={exportInsurance} disabled={exportingIns} title={t('exportInsuranceListTitle')}>
+            {exportingIns ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('insuranceApplicationForm')}
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
           </Button>
           <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-            <Plus className="h-4 w-4" />新增員工
+            <Plus className="h-4 w-4" />{t('addEmployee')}
           </Button>
         </div>
       </div>
@@ -606,7 +623,7 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">尚無員工資料</p>
+          <p className="text-sm">{t('noEmployeeData')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -624,13 +641,13 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
                     <StatusBadge value={emp.status} kind="emp" />
                     <Badge variant={emp.staff_category === 'hourly' ? 'secondary' : 'default'}>{STAFF_LABEL[emp.staff_category] ?? emp.staff_category}</Badge>
                     {emp.insurance_required
-                      ? <Badge variant={emp.insurance_status === 'enrolled' ? 'success' : 'destructive'} className="gap-1"><Shield className="h-3 w-3" />{INS_STATUS_LABEL[emp.insurance_status] ?? '待投保'}</Badge>
-                      : <Badge variant="secondary" className="text-gray-400">免保</Badge>}
+                      ? <Badge variant={emp.insurance_status === 'enrolled' ? 'success' : 'destructive'} className="gap-1"><Shield className="h-3 w-3" />{INS_STATUS_LABEL[emp.insurance_status] ?? t('insPending')}</Badge>
+                      : <Badge variant="secondary" className="text-gray-400">{t('exempt')}</Badge>}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     {emp.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{emp.email}</span>}
-                    {emp.hire_date && <span>到職：{fmtDate(emp.hire_date)}</span>}
-                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />本薪 NT$ {fmt(emp.base_salary)}</span>
+                    {emp.hire_date && <span>{t('hireDatePrefix')}{fmtDate(emp.hire_date, locale)}</span>}
+                    <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{t('baseSalaryPrefix')} NT$ {fmt(emp.base_salary, locale)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -651,15 +668,15 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 
               {expandedId === emp.id && !editing && (
                 <div className="border-t px-4 py-3 bg-gray-50 grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
-                  <span className="text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />電話</span>
+                  <span className="text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{t('phoneLabel')}</span>
                   <span>{emp.phone || '—'}</span>
-                  <span className="text-gray-400 flex items-center gap-1"><CreditCard className="h-3 w-3" />銀行帳號</span>
+                  <span className="text-gray-400 flex items-center gap-1"><CreditCard className="h-3 w-3" />{t('bankAccountLabel')}</span>
                   <span>{emp.bank_account || '—'}</span>
-                  <span className="text-gray-400">身分證</span>
+                  <span className="text-gray-400">{t('idNumberShortLabel')}</span>
                   <span>{emp.id_number || '—'}</span>
-                  <span className="text-gray-400 flex items-center gap-1"><Shield className="h-3 w-3" />保險</span>
-                  <span>{emp.insurance_required ? `${INS_STATUS_LABEL[emp.insurance_status] ?? '待投保'}${emp.insurance_number ? `（${emp.insurance_number}）` : ''}${emp.insurance_salary ? `　投保薪資 ${fmt(emp.insurance_salary)}` : ''}` : '免投保'}</span>
-                  {emp.notes && <><span className="text-gray-400">備註</span><span className="whitespace-pre-wrap">{emp.notes}</span></>}
+                  <span className="text-gray-400 flex items-center gap-1"><Shield className="h-3 w-3" />{t('insuranceLabel')}</span>
+                  <span>{emp.insurance_required ? t('insuranceDetail', { status: INS_STATUS_LABEL[emp.insurance_status] ?? t('insPending'), number: emp.insurance_number ? t('insuranceNumberSuffix', { n: emp.insurance_number }) : '', salary: emp.insurance_salary ? t('insuranceSalarySuffix', { n: fmt(emp.insurance_salary, locale) }) : '' }) : t('insuranceExempt')}</span>
+                  {emp.notes && <><span className="text-gray-400">{t('notesLabel')}</span><span className="whitespace-pre-wrap">{emp.notes}</span></>}
                 </div>
               )}
             </Card>
@@ -672,6 +689,8 @@ function EmployeesTab({ employees, loading, onRefresh, settings, onSettingsChang
 
 // ─── Payroll Tab ──────────────────────────────────────────────────
 function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: Employee[]; loading: boolean; onRefresh: () => void }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -729,7 +748,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
         await fetch('/api/hr/payroll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       }
       setShowForm(false); setEditing(null); load()
-    } catch { setErr('儲存失敗') } finally { setSaving(false) }
+    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 
   const markPaid = async (id: string) => {
@@ -738,7 +757,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
   }
 
   const remove = async (id: string) => {
-    if (!confirm('確定刪除此薪資記錄？')) return
+    if (!confirm(t('confirmDeletePayroll'))) return
     await fetch('/api/hr/payroll', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     load()
   }
@@ -749,18 +768,18 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
     setErr(''); setExporting(true)
     try {
       const res = await fetch(`/api/hr/payroll/tpbank-export?year=${year}&month=${month}`)
-      if (!res.ok) { setErr('匯出失敗'); return }
+      if (!res.ok) { setErr(t('exportFailed')); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url; a.download = `TPBank_Salary_T${month}_${year}.xlsx`
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)
-    } catch { setErr('匯出失敗') } finally { setExporting(false) }
+    } catch { setErr(t('exportFailed')) } finally { setExporting(false) }
   }
 
   async function sendPayslips() {
     if (payroll.length === 0) return
-    if (!confirm(`確定要透過 Zalo OA 與 Email 向本月 ${payroll.length} 位員工私密發送個人電子薪資條？`)) return
+    if (!confirm(t('confirmSendPayslips', { n: payroll.length }))) return
     setSendingPayslips(true)
     try {
       const res = await fetch('/api/hr/payroll/send-payslip', {
@@ -769,8 +788,8 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
         body: JSON.stringify({ payroll_ids: payroll.map(p => p.id) }),
       })
       const d = await res.json()
-      if (res.ok) alert(`🎉 已成功發送 ${d.sentCount} 則電子薪資條！員工可點擊專屬連結在手機線上確認簽收回執。`)
-      else alert(d.error ?? '發送失敗')
+      if (res.ok) alert(t('payslipsSentSuccess', { n: d.sentCount }))
+      else alert(d.error ?? t('sendFailed'))
     } catch (e: any) {
       alert(e.message)
     }
@@ -785,7 +804,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
       {/* Header controls */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 border rounded-lg px-3 py-1.5">
-          <span className="text-sm text-gray-500">{year}年</span>
+          <span className="text-sm text-gray-500">{t('yearSuffix', { y: year })}</span>
           <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} className="w-16 text-sm text-center outline-none bg-transparent" />
         </div>
         <div className="flex gap-0.5">
@@ -797,17 +816,17 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1 bg-indigo-50/70 border-indigo-200 text-indigo-700 hover:bg-indigo-100" onClick={sendPayslips} disabled={sendingPayslips || payroll.length === 0} title="透過 Zalo OA / Email 發送個人專屬電子薪資條">
-            {sendingPayslips ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}發送電子薪資條 (Zalo/Email)
+          <Button size="sm" variant="outline" className="gap-1 bg-indigo-50/70 border-indigo-200 text-indigo-700 hover:bg-indigo-100" onClick={sendPayslips} disabled={sendingPayslips || payroll.length === 0} title={t('sendPayslipTitle')}>
+            {sendingPayslips ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{t('sendPayslipButton')}
           </Button>
-          <Button size="sm" variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportBank} disabled={exporting || payroll.length === 0} title="一鍵下載符合 TPBank 官方格式之企業網銀薪資檔 (Chuyển tiền chi lương)">
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}下載 TPBank 專用薪資表
+          <Button size="sm" variant="outline" className="gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100" onClick={exportBank} disabled={exporting || payroll.length === 0} title={t('downloadTpbankTitle')}>
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('downloadTpbankButton')}
           </Button>
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(v => !v)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
           </Button>
           <Button size="sm" className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => { setShowForm(true); setEditing(null) }}>
-            <Plus className="h-4 w-4" />新增薪資單
+            <Plus className="h-4 w-4" />{t('addPayroll')}
           </Button>
         </div>
       </div>
@@ -836,15 +855,15 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
       {payroll.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           <Card className="p-3">
-            <p className="text-xs text-gray-500 mb-1">本月薪資人數</p>
-            <p className="text-xl font-bold">{payroll.length} 人</p>
+            <p className="text-xs text-gray-500 mb-1">{t('payrollCountLabel')}</p>
+            <p className="text-xl font-bold">{t('peopleCount', { n: payroll.length })}</p>
           </Card>
           <Card className="p-3">
-            <p className="text-xs text-gray-500 mb-1">總薪資金額</p>
-            <p className="text-xl font-bold">NT$ {fmt(totalNet)}</p>
+            <p className="text-xs text-gray-500 mb-1">{t('totalPayrollLabel')}</p>
+            <p className="text-xl font-bold">NT$ {fmt(totalNet, locale)}</p>
           </Card>
           <Card className="p-3">
-            <p className="text-xs text-gray-500 mb-1">發放進度</p>
+            <p className="text-xs text-gray-500 mb-1">{t('paymentProgressLabel')}</p>
             <p className="text-xl font-bold text-green-600">{paidCount} / {payroll.length}</p>
           </Card>
         </div>
@@ -860,20 +879,20 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
       ) : payroll.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <DollarSign className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">{year}年{month}月尚無薪資資料</p>
+          <p className="text-sm">{t('noPayrollDataForMonth', { year, month })}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-xs text-gray-400">
-                <th className="text-left py-2 pr-4 font-medium">員工</th>
-                <th className="text-right py-2 px-3 font-medium">本薪</th>
-                <th className="text-right py-2 px-3 font-medium">補貼</th>
-                <th className="text-right py-2 px-3 font-medium">扣款</th>
-                <th className="text-right py-2 px-3 font-medium">獎金</th>
-                <th className="text-right py-2 px-3 font-medium">實發</th>
-                <th className="text-center py-2 px-3 font-medium">狀態</th>
+                <th className="text-left py-2 pr-4 font-medium">{t('employeeLabel')}</th>
+                <th className="text-right py-2 px-3 font-medium">{t('baseSalaryLabel')}</th>
+                <th className="text-right py-2 px-3 font-medium">{t('allowancesLabel')}</th>
+                <th className="text-right py-2 px-3 font-medium">{t('deductionsLabel')}</th>
+                <th className="text-right py-2 px-3 font-medium">{t('bonusLabel')}</th>
+                <th className="text-right py-2 px-3 font-medium">{t('netPayLabel')}</th>
+                <th className="text-center py-2 px-3 font-medium">{t('statusLabel')}</th>
                 <th className="py-2" />
               </tr>
             </thead>
@@ -887,18 +906,18 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                         {(() => {
                           const emp = employees.find(e => e.id === p.employee_id)
                           if (emp?.staff_category === 'hourly' && (p.net_pay ?? 0) >= 5000000) {
-                            return <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold" title="越南社保法：兼職單月薪資滿500萬需強制加保">🚨 需加保</span>
+                            return <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold" title={t('insuranceWarningTitle')}>{t('insuranceWarningBadge')}</span>
                           }
                           return null
                         })()}
                       </div>
                       <div className="text-xs text-gray-400">{p.hr_employees?.department} {p.hr_employees?.position}</div>
                     </td>
-                    <td className="text-right py-2.5 px-3 tabular-nums">{fmt(p.base_salary)}</td>
-                    <td className="text-right py-2.5 px-3 tabular-nums text-blue-600">{p.allowances > 0 ? `+${fmt(p.allowances)}` : '—'}</td>
-                    <td className="text-right py-2.5 px-3 tabular-nums text-red-500">{p.deductions > 0 ? `-${fmt(p.deductions)}` : '—'}</td>
-                    <td className="text-right py-2.5 px-3 tabular-nums text-green-600">{p.bonus > 0 ? `+${fmt(p.bonus)}` : '—'}</td>
-                    <td className="text-right py-2.5 px-3 tabular-nums font-bold">{fmt(p.net_pay)}</td>
+                    <td className="text-right py-2.5 px-3 tabular-nums">{fmt(p.base_salary, locale)}</td>
+                    <td className="text-right py-2.5 px-3 tabular-nums text-blue-600">{p.allowances > 0 ? `+${fmt(p.allowances, locale)}` : '—'}</td>
+                    <td className="text-right py-2.5 px-3 tabular-nums text-red-500">{p.deductions > 0 ? `-${fmt(p.deductions, locale)}` : '—'}</td>
+                    <td className="text-right py-2.5 px-3 tabular-nums text-green-600">{p.bonus > 0 ? `+${fmt(p.bonus, locale)}` : '—'}</td>
+                    <td className="text-right py-2.5 px-3 tabular-nums font-bold">{fmt(p.net_pay, locale)}</td>
                     <td className="text-center py-2.5 px-3">
                       <StatusBadge value={p.status} kind="payroll" />
                     </td>
@@ -906,7 +925,7 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
                       <div className="flex items-center gap-1">
                         {p.status === 'pending' && (
                           <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-green-600 hover:text-green-700" onClick={() => markPaid(p.id)}>
-                            <Check className="h-3 w-3 mr-1" />發放
+                            <Check className="h-3 w-3 mr-1" />{t('markPaid')}
                           </Button>
                         )}
                         <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(p); setShowForm(false) }}>
@@ -937,6 +956,9 @@ function PayrollTab({ employees, loading: empLoading, onRefresh }: { employees: 
 
 // ─── Leave Tab ────────────────────────────────────────────────────
 function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; loading: boolean }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
+  const LABELS = getLabels(t)
   const [leaves, setLeaves] = useState<Leave[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -968,11 +990,11 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
         await fetch('/api/hr/leave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       }
       setShowForm(false); setEditing(null); load()
-    } catch { setErr('儲存失敗') } finally { setSaving(false) }
+    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 
   const remove = async (id: string) => {
-    if (!confirm('確定刪除此請假記錄？')) return
+    if (!confirm(t('confirmDeleteLeave'))) return
     await fetch('/api/hr/leave', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     load()
   }
@@ -989,16 +1011,16 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
       <div className="flex items-center gap-2 flex-wrap">
         {['all', 'pending', 'approved', 'rejected'].map(s => (
           <Button key={s} size="sm" variant={statusFilter === s ? 'default' : 'ghost'} onClick={() => setStatusFilter(s)}>
-            {s === 'all' ? '全部' : LABELS[s] ?? s}
+            {s === 'all' ? t('all') : LABELS[s] ?? s}
             {s === 'pending' && pendingCount > 0 && <span className="ml-1 bg-amber-500 text-white text-[10px] rounded-full px-1.5">{pendingCount}</span>}
           </Button>
         ))}
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
           </Button>
           <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-            <Plus className="h-4 w-4" />新增請假
+            <Plus className="h-4 w-4" />{t('addLeave')}
           </Button>
         </div>
       </div>
@@ -1033,7 +1055,7 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
       ) : leaves.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Calendar className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">尚無請假記錄</p>
+          <p className="text-sm">{t('noLeaveRecords')}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -1045,20 +1067,20 @@ function LeaveTab({ employees, loading: empLoading }: { employees: Employee[]; l
                     <span className="font-semibold text-sm">{l.hr_employees?.name ?? '—'}</span>
                     <Badge variant="secondary">{LABELS[l.leave_type] ?? l.leave_type}</Badge>
                     <StatusBadge value={l.status} kind="leave" />
-                    <span className="text-xs text-gray-400">{l.days} 天</span>
+                    <span className="text-xs text-gray-400">{t('daysCount', { n: l.days })}</span>
                   </div>
                   <div className="text-xs text-gray-400 mt-0.5">
-                    {fmtDate(l.start_date)} ~ {fmtDate(l.end_date)}
+                    {fmtDate(l.start_date, locale)} ~ {fmtDate(l.end_date, locale)}
                     {l.reason && <span className="ml-2 text-gray-500">{l.reason}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {l.status === 'pending' && (
                     <>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600 hover:text-green-700" onClick={() => updateStatus(l.id, 'approved')} title="核准">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-600 hover:text-green-700" onClick={() => updateStatus(l.id, 'approved')} title={t('approve')}>
                         <Check className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => updateStatus(l.id, 'rejected')} title="拒絕">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-600" onClick={() => updateStatus(l.id, 'rejected')} title={t('reject')}>
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </>
@@ -1094,9 +1116,10 @@ interface Attendance {
   machine_hours: number; work_days: number; adjust_hours: number; adjust_note: string
 }
 const hrs = (n: number) => Math.round((Number(n) || 0) * 100) / 100
-const attTypeLabel = (t: string) => (t.includes('计时') || t.includes('計時') ? '時薪' : t.includes('正常') ? '正職' : (t || '—'))
+const attTypeLabel = (type: string, t: (key: string) => string) => (type.includes('计时') || type.includes('計時') ? t('staffHourly') : type.includes('正常') ? t('staffFulltime') : (type || '—'))
 
 function AttendanceTab() {
+  const t = useTranslations('HrPage')
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -1127,11 +1150,11 @@ function AttendanceTab() {
       if (store.trim()) fd.append('store', store.trim())
       const res = await fetch('/api/hr/attendance/import', { method: 'POST', body: fd })
       const d = await res.json()
-      if (!res.ok) { setErr(d.error ?? '匯入失敗'); return }
+      if (!res.ok) { setErr(d.error ?? t('importFailed')); return }
       setYear(d.year); setMonth(d.month)
-      setMsg(`已匯入 ${d.year}年${d.month}月 ${d.imported} 人（門市：${(d.stores ?? []).join('、') || '—'}）`)
+      setMsg(t('attendanceImportedMsg', { year: d.year, month: d.month, n: d.imported, stores: (d.stores ?? []).join('、') || '—' }))
       await load()
-    } catch (e2) { setErr('匯入失敗：' + String(e2)) } finally { setImporting(false) }
+    } catch (e2) { setErr(t('importFailedWith', { msg: String(e2) })) } finally { setImporting(false) }
   }
 
   async function saveAdjust(row: Attendance, adjust_hours: number, adjust_note: string) {
@@ -1147,13 +1170,13 @@ function AttendanceTab() {
       {/* 考勤機來源端與雙軌制說明卡片 */}
       <div className="p-3 bg-slate-50 border rounded-xl flex items-center justify-between text-xs flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-700">考勤機後台來源端：</span>
+          <span className="font-bold text-slate-700">{t('attendanceMachineSourceLabel')}</span>
           <a href="http://222.252.17.12/" target="_blank" rel="noreferrer" className="bg-white px-2 py-0.5 rounded border text-indigo-600 font-mono hover:underline">
             http://222.252.17.12/
           </a>
-          <span className="text-slate-500">· 帳號密碼預存於設定，支援月中/月底排程匯出與手動上傳 bcc yl t7.xls</span>
+          <span className="text-slate-500">{t('attendanceMachineHint')}</span>
         </div>
-        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">雙軌同步已啟用</span>
+        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">{t('dualSyncEnabled')}</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -1165,16 +1188,16 @@ function AttendanceTab() {
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <InputEl value={store} onChange={setStore} placeholder="門市（如 YL）" />
+          <InputEl value={store} onChange={setStore} placeholder={t('storeYlPlaceholder')} />
           <Button size="sm" className="gap-1" disabled={importing} onClick={() => fileRef.current?.click()}>
-            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}上傳考勤 .xls
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{t('uploadAttendanceXls')}
           </Button>
         </div>
         <input ref={fileRef} type="file" accept=".xls" className="hidden" onChange={onFile} />
       </div>
 
       <p className="text-xs text-gray-500">
-        每個檔案為單一門市：請先填「門市」（與員工資料、POS 一致，如 YL），再選該門市當月考勤機匯出檔（.xls）。系統彙總每人月時數（＝每日實際工作小時數相加）；未填門市才退回用檔案「部门」欄。重複上傳會更新機器時數，手動補登會保留。
+        {t('attendanceUploadHint')}
       </p>
       {msg && <p className="text-sm text-green-600">{msg}</p>}
       {err && <p className="text-sm text-red-500">{err}</p>}
@@ -1184,22 +1207,22 @@ function AttendanceTab() {
       ) : list.length === 0 ? (
         <div className="py-12 text-center text-gray-400">
           <Clock className="mx-auto mb-2 h-10 w-10 opacity-30" />
-          <p className="text-sm">{year}年{month}月尚無考勤資料，請上傳考勤機 .xls</p>
+          <p className="text-sm">{t('noAttendanceData', { year, month })}</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50 text-xs text-gray-500 dark:bg-gray-900/40">
-                <th className="px-3 py-2 text-left">門市</th>
-                <th className="px-3 py-2 text-left">姓名</th>
-                <th className="px-3 py-2 text-left">工号</th>
-                <th className="px-3 py-2 text-left">類型</th>
-                <th className="px-3 py-2 text-right">天數</th>
-                <th className="px-3 py-2 text-right">機器時數</th>
-                <th className="px-3 py-2 text-right">補登</th>
-                <th className="px-3 py-2 text-right">合計</th>
-                <th className="px-3 py-2 text-left">補登備註</th>
+                <th className="px-3 py-2 text-left">{t('storeLabel')}</th>
+                <th className="px-3 py-2 text-left">{t('nameColLabel')}</th>
+                <th className="px-3 py-2 text-left">{t('attendanceNoColLabel')}</th>
+                <th className="px-3 py-2 text-left">{t('typeColLabel')}</th>
+                <th className="px-3 py-2 text-right">{t('workDaysColLabel')}</th>
+                <th className="px-3 py-2 text-right">{t('machineHoursColLabel')}</th>
+                <th className="px-3 py-2 text-right">{t('adjustColLabel')}</th>
+                <th className="px-3 py-2 text-right">{t('totalColLabel')}</th>
+                <th className="px-3 py-2 text-left">{t('adjustNoteColLabel')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1208,7 +1231,7 @@ function AttendanceTab() {
                   <td className="px-3 py-2 text-gray-500">{a.store || '—'}</td>
                   <td className="px-3 py-2 font-medium">{a.name || '—'}</td>
                   <td className="px-3 py-2 text-gray-500">{a.attendance_no}</td>
-                  <td className="px-3 py-2"><Badge variant="secondary">{attTypeLabel(a.att_type)}</Badge></td>
+                  <td className="px-3 py-2"><Badge variant="secondary">{attTypeLabel(a.att_type, t)}</Badge></td>
                   <td className="px-3 py-2 text-right tabular-nums">{a.work_days}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{hrs(a.machine_hours)}</td>
                   <td className="px-3 py-2 text-right">
@@ -1218,7 +1241,7 @@ function AttendanceTab() {
                   </td>
                   <td className="px-3 py-2 text-right font-bold tabular-nums">{hrs(a.machine_hours + a.adjust_hours)}</td>
                   <td className="px-3 py-2">
-                    <input type="text" defaultValue={a.adjust_note} placeholder="忘打卡簽單…"
+                    <input type="text" defaultValue={a.adjust_note} placeholder={t('adjustNotePlaceholder')}
                       onBlur={e => { if (e.target.value !== a.adjust_note) saveAdjust(a, a.adjust_hours, e.target.value) }}
                       className="h-7 w-full min-w-[8rem] rounded border px-2 text-sm outline-none" />
                   </td>
@@ -1261,32 +1284,32 @@ interface CheckItem { doc_key: string; original_received: boolean; copy_received
 interface HRNotif { id: string; kind: string; title: string; body: string; candidate_id: string | null; is_read: boolean; created_at: string }
 
 // 通知應徵者常用範本
-const NOTIFY_TEMPLATES: { label: string; subject: string; message: string }[] = [
-  { label: '邀請面試', subject: '面試邀請', message: '您好，我們已收到您的應徵，誠摯邀請您前來面試。請與我們聯繫確認時間。' },
-  { label: '錄取可上班', subject: '錄取通知', message: '恭喜您通過面試，歡迎加入！請攜帶所需文件（含正本）至辦公室辦理報到手續。' },
-  { label: '請補件', subject: '文件補件通知', message: '您好，您的應徵文件尚有缺漏，請登入您的專屬連結補齊文件，謝謝。' },
+const getNotifyTemplates = (t: (key: string) => string): { label: string; subject: string; message: string }[] => [
+  { label: t('templateInviteInterview'), subject: t('templateInviteInterviewSubject'), message: t('templateInviteInterviewMsg') },
+  { label: t('templateHired'), subject: t('templateHiredSubject'), message: t('templateHiredMsg') },
+  { label: t('templateNeedDocs'), subject: t('templateNeedDocsSubject'), message: t('templateNeedDocsMsg') },
 ]
 
 // 完整文件目錄（與後端 DOC_CATALOG 對齊）
-const HR_DOC_CATALOG: { type: string; label: string; copy: string; needOriginal: boolean }[] = [
-  { type: 'resume', label: '履歷（公證正本）', copy: '正本', needOriginal: true },
-  { type: 'id_card', label: '公民身分證(CCCD)', copy: '影印本', needOriginal: false },
-  { type: 'application', label: '求職申請書', copy: '正本', needOriginal: true },
-  { type: 'cv', label: 'CV', copy: '影印本', needOriginal: false },
-  { type: 'diploma', label: '學歷／證照／成績單', copy: '影印本', needOriginal: false },
-  { type: 'student_card', label: '學生證', copy: '影印本', needOriginal: false },
-  { type: 'health', label: '健康檢查（正本）', copy: '正本', needOriginal: true },
-  { type: 'birth', label: '出生證明', copy: '影印本', needOriginal: false },
-  { type: 'vneid', label: 'VNEID（電子身分）', copy: '影印本', needOriginal: false },
-  { type: 'residence', label: '居住證明', copy: '影印本', needOriginal: false },
-  { type: 'other', label: '其他', copy: '影印本', needOriginal: false },
+const getDocCatalog = (t: (key: string) => string): { type: string; label: string; copy: string; needOriginal: boolean }[] => [
+  { type: 'resume', label: t('docResume'), copy: t('copyOriginal'), needOriginal: true },
+  { type: 'id_card', label: t('docIdCard'), copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'application', label: t('docApplication'), copy: t('copyOriginal'), needOriginal: true },
+  { type: 'cv', label: 'CV', copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'diploma', label: t('docDiploma'), copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'student_card', label: t('docStudentCard'), copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'health', label: t('docHealth'), copy: t('copyOriginal'), needOriginal: true },
+  { type: 'birth', label: t('docBirth'), copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'vneid', label: t('docVneid'), copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'residence', label: t('docResidence'), copy: t('copyPhotocopy'), needOriginal: false },
+  { type: 'other', label: t('docOther'), copy: t('copyPhotocopy'), needOriginal: false },
 ]
 
 const CAND_STAGES = ['new', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected'] as const
-const CAND_STAGE_LABEL: Record<string, string> = {
-  new: '新應徵', screening: '篩選中', interview_scheduled: '已排面試',
-  interviewed: '已面試', offered: '已錄取', hired: '已轉員工', rejected: '未錄取',
-}
+const getCandStageLabel = (t: (key: string) => string): Record<string, string> => ({
+  new: t('stageNew'), screening: t('stageScreening'), interview_scheduled: t('stageInterviewScheduled'),
+  interviewed: t('stageInterviewed'), offered: t('stageOffered'), hired: t('stageHired'), rejected: t('stageRejected'),
+})
 const CAND_STAGE_COLOR: Record<string, string> = {
   new: '#3b82f6', screening: '#8b5cf6', interview_scheduled: '#f59e0b',
   interviewed: '#0ea5e9', offered: '#10b981', hired: '#059669', rejected: '#9ca3af',
@@ -1298,6 +1321,11 @@ const emptyCandidate = (): Partial<Candidate> => ({
 })
 
 function RecruitmentTab({ onHired }: { onHired: () => void }) {
+  const t = useTranslations('HrPage')
+  const CAND_STAGE_LABEL = getCandStageLabel(t)
+  const NOTIFY_TEMPLATES = getNotifyTemplates(t)
+  const HR_DOC_CATALOG = getDocCatalog(t)
+  const STAFF_LABEL = getStaffLabel(t)
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<Candidate> | null>(null)
@@ -1368,8 +1396,8 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
     })
     setBusy(false)
     const d = await res.json().catch(() => ({}))
-    if (res.ok) { alert(`已透過 ${d.channel === 'zalo' ? 'ZALO' : 'Email'} 送出`); setNotifyTarget(null) }
-    else alert(d.error ?? '發送失敗')
+    if (res.ok) { alert(t('sentViaChannel', { channel: d.channel === 'zalo' ? 'ZALO' : 'Email' })); setNotifyTarget(null) }
+    else alert(d.error ?? t('sendFailed'))
   }
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
@@ -1425,7 +1453,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
     })
     setBusy(false)
     if (res.ok) { setEditing(null); load() }
-    else alert((await res.json()).error ?? '儲存失敗')
+    else alert((await res.json()).error ?? t('saveFailed'))
   }
 
   const setStage = async (c: Candidate, stage: string) => {
@@ -1437,7 +1465,7 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
   }
 
   const remove = async (c: Candidate) => {
-    if (!confirm(`確定刪除應徵者「${c.name}」？\n此動作將一併刪除該應徵者的所有資料與文件紀錄，無法復原。`)) return
+    if (!confirm(t('confirmDeleteCandidate', { name: c.name }))) return
     const res = await fetch('/api/hr/candidates', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
     })
@@ -1445,19 +1473,19 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
       load()
     } else {
       const d = await res.json().catch(() => ({}))
-      alert(d.error ?? '刪除失敗')
+      alert(d.error ?? t('deleteFailed'))
     }
   }
 
   const hire = async (c: Candidate) => {
-    if (!confirm(`將「${c.name}」轉為${STAFF_LABEL[c.staff_category] || '（未分類）'}員工？\n請先於編輯視窗選好「錄取分類」。`)) return
+    if (!confirm(t('confirmHire', { name: c.name, category: STAFF_LABEL[c.staff_category] || t('uncategorized') }))) return
     setBusy(true)
     const res = await fetch('/api/hr/candidates/hire', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }),
     })
     setBusy(false)
     if (res.ok) { load(); onHired() }
-    else alert((await res.json()).error ?? '轉員工失敗')
+    else alert((await res.json()).error ?? t('hireFailed'))
   }
 
   const byStage = (s: string) => candidates.filter(c => c.stage === s)
@@ -1466,8 +1494,8 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold">應徵管理</h3>
-          <p className="text-sm text-gray-500">應徵 → 面試 → 錄取 → 一鍵轉員工</p>
+          <h3 className="font-semibold">{t('recruitmentTitle')}</h3>
+          <p className="text-sm text-gray-500">{t('recruitmentFlow')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowNotifs(v => !v)}
@@ -1478,10 +1506,10 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
             )}
           </button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setEditing(emptyCandidate())}>
-            <Plus className="h-4 w-4" />新增應徵者
+            <Plus className="h-4 w-4" />{t('addCandidate')}
           </Button>
         </div>
       </div>
@@ -1509,21 +1537,21 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
       {showNotifs && (
         <div className="rounded-lg border bg-white p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">站內通知</span>
-            {unreadCount > 0 && <button onClick={markNotifsRead} className="text-xs text-primary hover:underline">全部標為已讀</button>}
+            <span className="text-sm font-medium">{t('inAppNotifications')}</span>
+            {unreadCount > 0 && <button onClick={markNotifsRead} className="text-xs text-primary hover:underline">{t('markAllRead')}</button>}
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-600 bg-gray-50 rounded-md px-2.5 py-1.5">
-            <span className="text-gray-400">同步通知到：</span>
+            <span className="text-gray-400">{t('syncNotifyTo')}</span>
             <label className="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" checked={notifyPrefs.telegram} onChange={() => toggleNotifyPref('telegram')} />Telegram
             </label>
             <label className="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" checked={notifyPrefs.email} onChange={() => toggleNotifyPref('email')} />Email
             </label>
-            <span className="text-gray-300 ml-auto">（Token 於客服平台設定）</span>
+            <span className="text-gray-300 ml-auto">{t('tokenSetInCsHint')}</span>
           </div>
           {notifs.length === 0 ? (
-            <p className="text-xs text-gray-400 py-2 text-center">目前沒有通知</p>
+            <p className="text-xs text-gray-400 py-2 text-center">{t('noNotifications')}</p>
           ) : (
             <div className="space-y-1.5 max-h-64 overflow-y-auto">
               {notifs.map(n => (
@@ -1540,17 +1568,17 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
 
       {applyUrl && (
         <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-sm">
-          <span className="text-blue-700 font-medium whitespace-nowrap">公開應徵連結</span>
+          <span className="text-blue-700 font-medium whitespace-nowrap">{t('publicApplyLink')}</span>
           <code className="flex-1 truncate text-xs text-blue-900">{applyUrl}</code>
-          <button onClick={() => copy(applyUrl, '已複製應徵連結')}
-            className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">複製</button>
+          <button onClick={() => copy(applyUrl, t('applyLinkCopied'))}
+            className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700 whitespace-nowrap">{t('copy')}</button>
         </div>
       )}
 
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
       ) : candidates.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 text-sm">尚無應徵者，點「新增應徵者」開始</div>
+        <div className="text-center py-10 text-gray-400 text-sm">{t('noCandidatesYet')}</div>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {CAND_STAGES.map(stage => {
@@ -1576,27 +1604,27 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                           <button onClick={() => remove(c)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
                         </div>
                       </div>
-                      {c.store && <div className="text-xs text-gray-500">門市：{c.store}</div>}
+                      {c.store && <div className="text-xs text-gray-500">{t('storeColonLabel')}{c.store}</div>}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {c.staff_category && <Badge variant="outline" className="text-[10px]">{STAFF_LABEL[c.staff_category]}</Badge>}
                         <Badge variant="outline" className={`text-[10px] ${c.identity_locked ? 'text-amber-600 border-amber-300' : 'text-gray-400'}`}>
-                          {c.identity_locked ? '🔒 已鎖定' : '可修改'}
+                          {c.identity_locked ? t('locked') : t('editable')}
                         </Badge>
                       </div>
                       {c.phone && <div className="text-xs text-gray-400 flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</div>}
 
                       {c.docs_submitted_complete && (
-                        <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />文件繳交完成</div>
+                        <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />{t('docsSubmittedComplete')}</div>
                       )}
                       <div className="flex flex-wrap gap-1 text-[10px]">
-                        <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">文件</button>
-                        <button onClick={() => openNotify(c)} className="px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700">通知</button>
+                        <button onClick={() => openDocs(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{t('documents')}</button>
+                        <button onClick={() => openNotify(c)} className="px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700">{t('notify')}</button>
                         <button onClick={() => toggleLock(c)} className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
-                          {c.identity_locked ? '開放修改' : '鎖定資料'}
+                          {c.identity_locked ? t('unlockEdit') : t('lockData')}
                         </button>
                         {c.apply_token && (
-                          <button onClick={() => copy(`${origin}/apply/edit/${c.apply_token}`, '已複製應徵者專屬連結')}
-                            className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">應徵者連結</button>
+                          <button onClick={() => copy(`${origin}/apply/edit/${c.apply_token}`, t('candidateLinkCopied'))}
+                            className="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{t('candidateLink')}</button>
                         )}
                       </div>
 
@@ -1610,11 +1638,11 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                           ))}
                           <button onClick={() => hire(c)} disabled={busy}
                             className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 flex items-center gap-0.5">
-                            <ArrowRight className="h-3 w-3" />轉員工
+                            <ArrowRight className="h-3 w-3" />{t('convertToEmployee')}
                           </button>
                         </div>
                       )}
-                      {c.stage === 'hired' && <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />已建立員工資料</div>}
+                      {c.stage === 'hired' && <div className="text-[10px] text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" />{t('employeeRecordCreated')}</div>}
                     </div>
                   ))}
                 </div>
@@ -1628,29 +1656,29 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setNotifyTarget(null)}>
           <div className="bg-white rounded-xl w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">通知 {notifyTarget.name}</h3>
+              <h3 className="font-semibold">{t('notifyPrefix')} {notifyTarget.name}</h3>
               <button onClick={() => setNotifyTarget(null)}><X className="h-5 w-5 text-gray-400" /></button>
             </div>
             <p className="text-xs text-gray-500">
-              將以應徵者設定的方式發送：
+              {t('sendViaCandidatePref')}
               <span className="font-medium text-gray-700">{notifyTarget.notify_channel === 'zalo' ? ' ZALO' : ' Email'}</span>
               {notifyTarget.notify_channel !== 'zalo' && notifyTarget.email ? `（${notifyTarget.email}）` : ''}
             </p>
             <div className="flex flex-wrap gap-1">
-              {NOTIFY_TEMPLATES.map(t => (
-                <button key={t.label} onClick={() => setNotifyMsg({ subject: t.subject, message: t.message })}
-                  className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{t.label}</button>
+              {NOTIFY_TEMPLATES.map(tpl => (
+                <button key={tpl.label} onClick={() => setNotifyMsg({ subject: tpl.subject, message: tpl.message })}
+                  className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">{tpl.label}</button>
               ))}
             </div>
-            <Field label="主旨"><Input value={notifyMsg.subject} onChange={e => setNotifyMsg({ ...notifyMsg, subject: e.target.value })} /></Field>
-            <Field label="內容">
+            <Field label={t('subjectLabel')}><Input value={notifyMsg.subject} onChange={e => setNotifyMsg({ ...notifyMsg, subject: e.target.value })} /></Field>
+            <Field label={t('contentLabel')}>
               <textarea value={notifyMsg.message} onChange={e => setNotifyMsg({ ...notifyMsg, message: e.target.value })}
                 className="w-full rounded-md border px-2 py-1.5 text-sm" rows={5} />
             </Field>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setNotifyTarget(null)}>取消</Button>
+              <Button variant="outline" size="sm" onClick={() => setNotifyTarget(null)}>{t('cancel')}</Button>
               <Button size="sm" onClick={sendNotify} disabled={busy || !notifyMsg.subject.trim() || !notifyMsg.message.trim()}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '發送'}
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('send')}
               </Button>
             </div>
           </div>
@@ -1661,17 +1689,17 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDocsFor(null)}>
           <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{docsFor.name} 的文件與繳交</h3>
+              <h3 className="font-semibold">{t('candidateDocsTitle', { name: docsFor.name })}</h3>
               <button onClick={() => setDocsFor(null)}><X className="h-5 w-5 text-gray-400" /></button>
             </div>
 
             <label className="flex items-center gap-2 text-sm bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 cursor-pointer">
               <input type="checkbox" checked={docsFor.docs_submitted_complete} onChange={() => toggleSubmitComplete(docsFor)} />
-              <span className="font-medium text-emerald-700">紙本已全部繳交到辦公室（完成）</span>
+              <span className="font-medium text-emerald-700">{t('allDocsSubmitted')}</span>
             </label>
 
             <div className="text-xs text-gray-400 flex gap-3 px-1">
-              <span>上傳＝掃描檔</span><span>正/影＝紙本收到勾選</span>
+              <span>{t('uploadMeansScan')}</span><span>{t('origCopyMeansReceived')}</span>
             </div>
 
             <div className="space-y-2">
@@ -1683,23 +1711,23 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <span className="font-medium">{spec.label}</span>
-                        <span className={`text-[11px] ml-1.5 ${spec.needOriginal ? 'text-amber-600' : 'text-gray-400'}`}>紙本：{spec.copy}</span>
+                        <span className={`text-[11px] ml-1.5 ${spec.needOriginal ? 'text-amber-600' : 'text-gray-400'}`}>{t('paperCopyLabel')}{spec.copy}</span>
                       </div>
                       {uploaded.length > 0
-                        ? <span className="text-[11px] text-emerald-600 whitespace-nowrap flex items-center gap-0.5"><Check className="h-3 w-3" />已上傳 {uploaded.length}</span>
-                        : <span className="text-[11px] text-gray-300 whitespace-nowrap">未上傳</span>}
+                        ? <span className="text-[11px] text-emerald-600 whitespace-nowrap flex items-center gap-0.5"><Check className="h-3 w-3" />{t('uploadedCount', { n: uploaded.length })}</span>
+                        : <span className="text-[11px] text-gray-300 whitespace-nowrap">{t('notUploaded')}</span>}
                     </div>
                     {uploaded.map(d => (
                       <a key={d.id} href={d.url} target="_blank" rel="noreferrer" className="block text-xs text-primary hover:underline truncate">📎 {d.file_name}</a>
                     ))}
                     <div className="flex items-center gap-3 pt-0.5">
-                      {spec.copy.includes('正本') && (
+                      {spec.needOriginal && (
                         <label className="flex items-center gap-1 text-xs cursor-pointer">
-                          <input type="checkbox" checked={chk.original_received} onChange={e => setCheck(spec.type, { original_received: e.target.checked })} />正本已繳
+                          <input type="checkbox" checked={chk.original_received} onChange={e => setCheck(spec.type, { original_received: e.target.checked })} />{t('originalSubmitted')}
                         </label>
                       )}
                       <label className="flex items-center gap-1 text-xs cursor-pointer">
-                        <input type="checkbox" checked={chk.copy_received} onChange={e => setCheck(spec.type, { copy_received: e.target.checked })} />影印本已繳
+                        <input type="checkbox" checked={chk.copy_received} onChange={e => setCheck(spec.type, { copy_received: e.target.checked })} />{t('photocopySubmitted')}
                       </label>
                     </div>
                   </div>
@@ -1714,30 +1742,30 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
           <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{editing.id ? '編輯應徵者' : '新增應徵者'}</h3>
+              <h3 className="font-semibold">{editing.id ? t('editCandidate') : t('addCandidate')}</h3>
               <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Field label="姓名 *"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
-              <Field label="應徵職位"><Input value={editing.position ?? ''} onChange={e => setEditing({ ...editing, position: e.target.value })} /></Field>
-              <Field label="電話"><Input value={editing.phone ?? ''} onChange={e => setEditing({ ...editing, phone: e.target.value })} /></Field>
+              <Field label={t('nameLabel')}><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
+              <Field label={t('applyingPositionLabel')}><Input value={editing.position ?? ''} onChange={e => setEditing({ ...editing, position: e.target.value })} /></Field>
+              <Field label={t('phoneLabel')}><Input value={editing.phone ?? ''} onChange={e => setEditing({ ...editing, phone: e.target.value })} /></Field>
               <Field label="Email"><Input value={editing.email ?? ''} onChange={e => setEditing({ ...editing, email: e.target.value })} /></Field>
-              <Field label="門市"><Input value={editing.store ?? ''} onChange={e => setEditing({ ...editing, store: e.target.value })} /></Field>
-              <Field label="錄取分類">
+              <Field label={t('storeLabel')}><Input value={editing.store ?? ''} onChange={e => setEditing({ ...editing, store: e.target.value })} /></Field>
+              <Field label={t('hireCategoryLabel')}>
                 <select value={editing.staff_category ?? ''} onChange={e => setEditing({ ...editing, staff_category: e.target.value })}
                   className="w-full h-9 rounded-md border px-2 text-sm">
-                  <option value="">未定</option>
-                  <option value="fulltime">正職</option>
-                  <option value="hourly">工讀</option>
+                  <option value="">{t('undetermined')}</option>
+                  <option value="fulltime">{t('staffFulltime')}</option>
+                  <option value="hourly">{t('staffHourly')}</option>
                 </select>
               </Field>
-              <Field label="身分證字號"><Input value={editing.id_number ?? ''} onChange={e => setEditing({ ...editing, id_number: e.target.value })} /></Field>
-              <Field label="生日"><Input type="date" value={editing.birthday ?? ''} onChange={e => setEditing({ ...editing, birthday: e.target.value })} /></Field>
-              <Field label="面試時間"><Input type="datetime-local" value={editing.interview_at ?? ''} onChange={e => setEditing({ ...editing, interview_at: e.target.value })} /></Field>
-              <Field label="來源"><Input value={editing.source ?? ''} onChange={e => setEditing({ ...editing, source: e.target.value })} /></Field>
+              <Field label={t('idNumberLabel')}><Input value={editing.id_number ?? ''} onChange={e => setEditing({ ...editing, id_number: e.target.value })} /></Field>
+              <Field label={t('birthdayLabel')}><Input type="date" value={editing.birthday ?? ''} onChange={e => setEditing({ ...editing, birthday: e.target.value })} /></Field>
+              <Field label={t('interviewTimeLabel')}><Input type="datetime-local" value={editing.interview_at ?? ''} onChange={e => setEditing({ ...editing, interview_at: e.target.value })} /></Field>
+              <Field label={t('sourceLabel')}><Input value={editing.source ?? ''} onChange={e => setEditing({ ...editing, source: e.target.value })} /></Field>
             </div>
-            <Field label="地址"><Input value={editing.address ?? ''} onChange={e => setEditing({ ...editing, address: e.target.value })} /></Field>
-            <Field label="備註">
+            <Field label={t('addressLabel')}><Input value={editing.address ?? ''} onChange={e => setEditing({ ...editing, address: e.target.value })} /></Field>
+            <Field label={t('notesLabel')}>
               <textarea value={editing.notes ?? ''} onChange={e => setEditing({ ...editing, notes: e.target.value })}
                 className="w-full rounded-md border px-2 py-1.5 text-sm" rows={2} />
             </Field>
@@ -1752,13 +1780,13 @@ function RecruitmentTab({ onHired }: { onHired: () => void }) {
                     setEditing(null)
                   }}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />刪除應徵者
+                  <Trash2 className="h-3.5 w-3.5" />{t('deleteCandidate')}
                 </Button>
               ) : <div />}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
+                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t('cancel')}</Button>
                 <Button size="sm" onClick={save} disabled={busy || !editing.name?.trim()}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}
                 </Button>
               </div>
             </div>
@@ -1779,6 +1807,8 @@ interface Evaluation {
 const RATINGS = ['', '優', '佳', '普', '待改進']
 
 function EvaluationTab({ employees, loading }: { employees: Employee[]; loading: boolean }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -1826,7 +1856,7 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
     })
     setBusy(false)
     if (res.ok) { setEditing(null); load() }
-    else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+    else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
 
   const setDraft = (patch: Partial<Evaluation>) => setEditing(e => e ? { ...e, draft: { ...e.draft, ...patch } } : e)
@@ -1846,18 +1876,18 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className="font-semibold">人員評估表</h3>
-          <p className="text-sm text-gray-500">由管理／主管填寫；獎金、獎勵、懲罰將帶入薪資彙整</p>
+          <h3 className="font-semibold">{t('evaluationTitle')}</h3>
+          <p className="text-sm text-gray-500">{t('evaluationDesc')}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
           </Button>
           <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
-            {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}
+            {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{t('yearSuffix', { y })}</option>)}
           </select>
           <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('monthOption', { m })}</option>)}
           </select>
         </div>
       </div>
@@ -1885,15 +1915,15 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
       ) : active.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 text-sm">尚無在職員工</div>
+        <div className="text-center py-10 text-gray-400 text-sm">{t('noActiveEmployees')}</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-2">姓名</th><th className="pr-2">門市</th><th className="pr-2">評等</th>
-                <th className="pr-2 text-right">獎金</th><th className="pr-2 text-right">獎勵</th>
-                <th className="pr-2 text-right">懲罰</th><th className="pr-2 text-right">淨獎懲</th><th></th>
+                <th className="py-2 pr-2">{t('nameColLabel')}</th><th className="pr-2">{t('storeLabel')}</th><th className="pr-2">{t('ratingLabel')}</th>
+                <th className="pr-2 text-right">{t('bonusLabel')}</th><th className="pr-2 text-right">{t('rewardLabel')}</th>
+                <th className="pr-2 text-right">{t('penaltyLabel')}</th><th className="pr-2 text-right">{t('netRewardPenaltyLabel')}</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -1905,13 +1935,13 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
                     <td className="py-2 pr-2 font-medium">{emp.name}</td>
                     <td className="pr-2 text-gray-500">{emp.store || '—'}</td>
                     <td className="pr-2">{ev?.rating || '—'}</td>
-                    <td className="pr-2 text-right">{ev ? fmt(Number(ev.bonus)) : '—'}</td>
-                    <td className="pr-2 text-right text-emerald-600">{ev ? fmt(Number(ev.reward_total)) : '—'}</td>
-                    <td className="pr-2 text-right text-red-500">{ev ? fmt(Number(ev.penalty_total)) : '—'}</td>
-                    <td className="pr-2 text-right font-semibold">{ev ? fmt(net) : '—'}</td>
+                    <td className="pr-2 text-right">{ev ? fmt(Number(ev.bonus), locale) : '—'}</td>
+                    <td className="pr-2 text-right text-emerald-600">{ev ? fmt(Number(ev.reward_total), locale) : '—'}</td>
+                    <td className="pr-2 text-right text-red-500">{ev ? fmt(Number(ev.penalty_total), locale) : '—'}</td>
+                    <td className="pr-2 text-right font-semibold">{ev ? fmt(net, locale) : '—'}</td>
                     <td className="text-right">
                       <button onClick={() => openEdit(emp)} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-600">
-                        {ev ? '編輯' : '填寫'}
+                        {ev ? t('edit') : t('fillIn')}
                       </button>
                     </td>
                   </tr>
@@ -1923,57 +1953,57 @@ function EvaluationTab({ employees, loading }: { employees: Employee[]; loading:
       )}
 
       {editing && (() => {
-        const t = draftTotals(editing.draft)
+        const totals = draftTotals(editing.draft)
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
             <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">{editing.emp.name}　{year}/{month} 評估</h3>
+                <h3 className="font-semibold">{t('evalModalTitle', { name: editing.emp.name, year, month })}</h3>
                 <button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="評等">
+                <Field label={t('ratingLabel')}>
                   <select value={editing.draft.rating ?? ''} onChange={e => setDraft({ rating: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-                    {RATINGS.map(r => <option key={r} value={r}>{r || '（未評）'}</option>)}
+                    {RATINGS.map(r => <option key={r} value={r}>{r || t('notRatedYet')}</option>)}
                   </select>
                 </Field>
-                <Field label="獎金"><Input type="number" value={String(editing.draft.bonus ?? 0)} onChange={e => setDraft({ bonus: Number(e.target.value) || 0 })} /></Field>
-                <Field label="填寫者（主管）"><Input value={editing.draft.evaluator ?? ''} onChange={e => setDraft({ evaluator: e.target.value })} /></Field>
+                <Field label={t('bonusLabel')}><Input type="number" value={String(editing.draft.bonus ?? 0)} onChange={e => setDraft({ bonus: Number(e.target.value) || 0 })} /></Field>
+                <Field label={t('evaluatorLabel')}><Input value={editing.draft.evaluator ?? ''} onChange={e => setDraft({ evaluator: e.target.value })} /></Field>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">獎勵／懲罰明細</span>
+                  <span className="text-sm font-medium">{t('rewardPenaltyDetailLabel')}</span>
                   <div className="flex gap-1">
-                    <button onClick={() => addItem('reward')} className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">＋獎勵</button>
-                    <button onClick={() => addItem('penalty')} className="text-xs px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200">＋懲罰</button>
+                    <button onClick={() => addItem('reward')} className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">{t('addReward')}</button>
+                    <button onClick={() => addItem('penalty')} className="text-xs px-2 py-1 rounded bg-red-100 text-red-600 hover:bg-red-200">{t('addPenalty')}</button>
                   </div>
                 </div>
-                {(editing.draft.items ?? []).length === 0 && <p className="text-xs text-gray-400">尚無項目</p>}
+                {(editing.draft.items ?? []).length === 0 && <p className="text-xs text-gray-400">{t('noItemsYet')}</p>}
                 {(editing.draft.items ?? []).map((it, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <span className={`text-[11px] px-1.5 py-0.5 rounded ${it.kind === 'reward' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                      {it.kind === 'reward' ? '獎勵' : '懲罰'}
+                      {it.kind === 'reward' ? t('rewardLabel') : t('penaltyLabel')}
                     </span>
-                    <Input value={it.label} onChange={e => setItem(i, { label: e.target.value })} placeholder="項目說明" />
-                    <Input type="number" value={String(it.amount)} onChange={e => setItem(i, { amount: Number(e.target.value) || 0 })} placeholder="金額" />
+                    <Input value={it.label} onChange={e => setItem(i, { label: e.target.value })} placeholder={t('itemDescPlaceholder')} />
+                    <Input type="number" value={String(it.amount)} onChange={e => setItem(i, { amount: Number(e.target.value) || 0 })} placeholder={t('amountPlaceholder')} />
                     <button onClick={() => removeItem(i)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 ))}
               </div>
 
-              <Field label="備註">
+              <Field label={t('notesLabel')}>
                 <textarea value={editing.draft.notes ?? ''} onChange={e => setDraft({ notes: e.target.value })} className="w-full rounded-md border px-2 py-1.5 text-sm" rows={2} />
               </Field>
 
               <div className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
-                <span className="text-gray-500">獎勵 {fmt(t.reward)}　懲罰 {fmt(t.penalty)}</span>
-                <span className="font-semibold">淨獎懲：{fmt(t.net)}</span>
+                <span className="text-gray-500">{t('rewardColonAmount', { n: fmt(totals.reward, locale) })}　{t('penaltyColonAmount', { n: fmt(totals.penalty, locale) })}</span>
+                <span className="font-semibold">{t('netRewardPenaltyColon')}{fmt(totals.net, locale)}</span>
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button>
-                <Button size="sm" onClick={saveEdit} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}</Button>
+                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t('cancel')}</Button>
+                <Button size="sm" onClick={saveEdit} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button>
               </div>
             </div>
           </div>
@@ -1990,6 +2020,10 @@ interface InsRow {
 }
 
 function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
+  const t = useTranslations('HrPage')
+  const locale = useLocale()
+  const staffLabel = getStaffLabel(t)
+  const insStatusLabel = getInsStatusLabel(t)
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -2020,7 +2054,7 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
     setBusy(false)
     if (res.ok) {
       const d = await res.json()
-      alert(d.newly_count > 0 ? `新增 ${d.newly_count} 人需投保：${d.newly.join('、')}，已通知人事。` : '沒有新增需投保人員。')
+      alert(d.newly_count > 0 ? t('insNewlyRequired', { n: d.newly_count, names: d.newly.join('、') }) : t('insNoNewlyRequired'))
       load(); onRefresh()
     }
   }
@@ -2037,7 +2071,7 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
     setExporting(true)
     try {
       const res = await fetch(`/api/hr/insurance-export?mode=${mode}`)
-      if (!res.ok) { alert('匯出失敗'); return }
+      if (!res.ok) { alert(t('exportFailed')); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -2055,35 +2089,35 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 className="font-semibold">社會保險管理與合規通報 (BHXH / BHYT / BHTN)</h3>
+          <h3 className="font-semibold">{t('insTitle')}</h3>
           <p className="text-sm text-gray-500">
-            越南《社會保險法》合規：正職一律投保；兼職單月薪資 ≥ 5,000,000 VND 自動觸發加保預警。支援對接 VssID 與社保軟體。
+            {t('insDesc')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
-            {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}
+            {[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{t('yearUnit', { y })}</option>)}
           </select>
           <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}
+            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('monthUnit', { m })}</option>)}
           </select>
         </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <Button size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={aggregate} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}依當月薪資重新檢核（500萬加保預警）
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}{t('insRecheck')}
         </Button>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('insBatchImport')}
         </Button>
         <Button size="sm" variant="outline" className="gap-1.5 border-emerald-300 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100" onClick={() => exportList('d02lt')} disabled={exporting}>
-          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出 Mẫu D02-LT (VNPT/Viettel-BHXH)
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('insExportD02lt')}
         </Button>
         <Button size="sm" variant="outline" className="gap-1.5 border-blue-300 text-blue-700 bg-blue-50/50 hover:bg-blue-100" onClick={() => exportList('tk1ts')} disabled={exporting}>
-          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}匯出 Mẫu TK1-TS (新進參保清冊)
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{t('insExportTk1ts')}
         </Button>
-        <span className="text-sm text-gray-500 ml-1">需投保 <b>{needCount}</b> 人，待處理 <b className="text-amber-600">{gapCount}</b> 人</span>
+        <span className="text-sm text-gray-500 ml-1">{t('insNeedLabel')} <b>{needCount}</b> {t('personUnit')}，{t('insPendingLabel')} <b className="text-amber-600">{gapCount}</b> {t('personUnit')}</span>
       </div>
 
       {showImport && (
@@ -2109,37 +2143,37 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
       {loading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
       ) : rows.length === 0 ? (
-        <div className="text-center py-10 text-gray-400 text-sm">尚無在職員工</div>
+        <div className="text-center py-10 text-gray-400 text-sm">{t('insNoActiveEmployees')}</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-2">姓名</th><th className="pr-2">類別</th><th className="pr-2">門市</th>
-                <th className="pr-2 text-right">當月薪資</th><th className="pr-2 text-center">判定</th>
-                <th className="pr-2 text-center">投保狀態</th><th></th>
+                <th className="py-2 pr-2">{t('colName')}</th><th className="pr-2">{t('colCategory')}</th><th className="pr-2">{t('colStore')}</th>
+                <th className="pr-2 text-right">{t('insColMonthlyPay')}</th><th className="pr-2 text-center">{t('insColJudgment')}</th>
+                <th className="pr-2 text-center">{t('insColStatus')}</th><th></th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
                 <tr key={r.id} className="border-b last:border-0">
                   <td className="py-2 pr-2 font-medium">{r.name}</td>
-                  <td className="pr-2">{STAFF_LABEL[r.staff_category] ?? r.staff_category}</td>
+                  <td className="pr-2">{staffLabel[r.staff_category] ?? r.staff_category}</td>
                   <td className="pr-2 text-gray-500">{r.store || '—'}</td>
-                  <td className="pr-2 text-right tabular-nums">{fmt(r.monthly)}</td>
+                  <td className="pr-2 text-right tabular-nums">{fmt(r.monthly, locale)}</td>
                   <td className="pr-2 text-center">
-                    {r.need ? <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">需投保</Badge>
+                    {r.need ? <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">{t('insNeedBadge')}</Badge>
                       : <span className="text-gray-300 text-xs">—</span>}
                   </td>
                   <td className="pr-2 text-center">
                     <select value={r.insurance_status || 'none'} onChange={e => setStatus(r, e.target.value)}
                       className="h-8 rounded-md border px-1.5 text-xs">
-                      {INS_STATUSES.map(s => <option key={s} value={s}>{INS_STATUS_LABEL[s]}</option>)}
+                      {INS_STATUSES.map(s => <option key={s} value={s}>{insStatusLabel[s]}</option>)}
                     </select>
                   </td>
                   <td className="text-right">
                     {r.need && r.insurance_status !== 'enrolled' && (
-                      <button onClick={() => setStatus(r, 'enrolled')} className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">標記已投保</button>
+                      <button onClick={() => setStatus(r, 'enrolled')} className="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700 hover:bg-emerald-200">{t('insMarkEnrolled')}</button>
                     )}
                   </td>
                 </tr>
@@ -2153,6 +2187,7 @@ function InsuranceTab({ onRefresh }: { onRefresh: () => void }) {
 }
 
 export default function HRPage() {
+  const t = useTranslations('HrPage')
   const [tab, setTab] = useState<Tab>('recruitment')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [empLoading, setEmpLoading] = useState(true)
@@ -2184,15 +2219,15 @@ export default function HRPage() {
   useEffect(() => { loadEmployees() }, [loadEmployees])
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: 'recruitment', label: '1. 應徵入職', icon: <UserPlus className="h-4 w-4" /> },
-    { id: 'attendance',  label: '2. 考勤工時', icon: <Clock className="h-4 w-4" /> },
-    { id: 'payroll',     label: '3. 薪資發薪 (TPBank)', icon: <DollarSign className="h-4 w-4" /> },
-    { id: 'evaluation',  label: '4. 考核評分', icon: <ClipboardCheck className="h-4 w-4" /> },
-    { id: 'contracts',   label: '5. 勞動合同', icon: <FileText className="h-4 w-4" /> },
-    { id: 'insurance',   label: '6. 社會保險', icon: <Shield className="h-4 w-4" /> },
-    { id: 'union',       label: '7. 工會系統', icon: <HeartHandshake className="h-4 w-4 text-red-600" /> },
-    { id: 'employees',   label: '員工名冊', icon: <Users className="h-4 w-4" /> },
-    { id: 'leave',       label: '請假記錄', icon: <Calendar className="h-4 w-4" /> },
+    { id: 'recruitment', label: t('tabRecruitment'), icon: <UserPlus className="h-4 w-4" /> },
+    { id: 'attendance',  label: t('tabAttendance'), icon: <Clock className="h-4 w-4" /> },
+    { id: 'payroll',     label: t('tabPayroll'), icon: <DollarSign className="h-4 w-4" /> },
+    { id: 'evaluation',  label: t('tabEvaluation'), icon: <ClipboardCheck className="h-4 w-4" /> },
+    { id: 'contracts',   label: t('tabContracts'), icon: <FileText className="h-4 w-4" /> },
+    { id: 'insurance',   label: t('tabInsurance'), icon: <Shield className="h-4 w-4" /> },
+    { id: 'union',       label: t('tabUnion'), icon: <HeartHandshake className="h-4 w-4 text-red-600" /> },
+    { id: 'employees',   label: t('tabEmployees'), icon: <Users className="h-4 w-4" /> },
+    { id: 'leave',       label: t('tabLeave'), icon: <Calendar className="h-4 w-4" /> },
   ]
 
   if (isAdmin === false) {
@@ -2200,8 +2235,8 @@ export default function HRPage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold">僅人事單位可使用人事管理功能</p>
-          <p className="text-sm text-gray-400">請以管理者帳號登入後再試</p>
+          <p className="font-semibold">{t('forbiddenTitle')}</p>
+          <p className="text-sm text-gray-400">{t('forbiddenDesc')}</p>
         </div>
       </div>
     )
@@ -2215,16 +2250,16 @@ export default function HRPage() {
           <Building2 className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">人事部門・人力資源管理系統</h1>
-          <p className="text-sm text-gray-500">應徵入職、考勤工時、薪資與 TPBank 發薪、勞動合同、社會保險、工會系統</p>
+          <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
+          <p className="text-sm text-gray-500">{t('pageSubtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-gray-400 mr-1">
-            共 <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> 名在職員工
+            {t('activeEmployeesPrefix')} <span className="font-semibold text-gray-700">{employees.filter(e => e.status === 'active').length}</span> {t('activeEmployeesSuffix')}
           </span>
           <Link href="/personnel">
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Users className="h-4 w-4" />人員資料
+              <Users className="h-4 w-4" />{t('personnelDataLink')}
             </Button>
           </Link>
         </div>
@@ -2232,11 +2267,11 @@ export default function HRPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit flex-wrap">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+        {TABS.map(tb => (
+          <button key={tb.id} onClick={() => setTab(tb.id)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all"
-            style={tab === t.id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
-            {t.icon}{t.label}
+            style={tab === tb.id ? { background: 'white', color: 'var(--primary)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } : { color: '#6b7280' }}>
+            {tb.icon}{tb.label}
           </button>
         ))}
       </div>
