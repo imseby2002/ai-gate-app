@@ -620,7 +620,7 @@ export default function FinancePage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">IMT 出納系統</h1>
+              <h1 className="text-xl font-bold">IMT ERP 出納系統</h1>
             </div>
           </div>
         </div>

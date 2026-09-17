@@ -4602,7 +4602,7 @@
   },
   "Gm": {
     "adminOnly": "Only GM Office can use this",
-    "title": "IMT Executive Office",
+    "title": "IMT ERP Executive Office",
     "subtitle": "Company-wide summary・Anomaly flags・AI business briefing",
     "tabDashboard": "Dashboard",
     "tabReports": "Daily Briefing",
@@ -4650,7 +4650,7 @@
     "channels": "Sent via: {channels}"
   },
   "Store": {
-    "title": "IMT Store Operations",
+    "title": "IMT ERP Store Operations",
     "badge": "Store Department Home",
     "lockedBadge": "🔒 Store-only [{store}]",
     "subtitle": "Full store operations system: performance reports, inventory & ordering, daily utility expenses, repair requests, staff scheduling and counter ordering",
@@ -4978,7 +4978,7 @@
     "tabBalance": "IVT Inventory",
     "tabPrices": "Purchase Prices",
     "tabRecipes": "Recipes",
-    "title": "IMT Audit",
+    "title": "IMT ERP Audit",
     "subtitle": "Combines 4 sources: IPOS sales volume, IVT inventory, central kitchen purchase price, R&D recipes",
     "auditPlatform": "Enterprise Audit Intelligence Platform",
     "inspection": "On-site Inspection",
@@ -5078,7 +5078,7 @@
   },
   "Repair": {
     "adminOnly": "Only Repair/Store units can use this",
-    "title": "IMT Maintenance",
+    "title": "IMT ERP Maintenance",
     "subtitle": "Repair tickets, dual-mode maintenance AI assistant, equipment manual RAG knowledge base, and asset ledger",
     "tabOrders": "Repair Tickets",
     "tabAi": "Maintenance AI Assistant (dual mode)",
@@ -5614,7 +5614,7 @@
   },
   "Affairs": {
     "adminOnly": "Only General Affairs and company management can use this",
-    "title": "IMT Affairs",
+    "title": "IMT ERP Affairs",
     "subtitle": "Store leases, store sanitation certificates, company licenses, patent certificates, and contract expiry/payment stage reminders",
     "companyPortal": "Company Portal",
     "tabDocs": "Documents & Contracts",
@@ -5966,7 +5966,7 @@
     "tabPrices": "Finance-Approved Price List (Read-only)",
     "tabMapping": "POS Product Mapping",
     "tabVariance": "Usage Verification (Variance Analysis)",
-    "pageTitle": "IMT R&D",
+    "pageTitle": "IMT ERP R&D",
     "pageBadge": "Store Distribution Pricing System",
     "pageSubtitle": "Recipe design, store cost per cup (core value from Finance's \"store sell price\"), factory purchase price and dealer wholesale price calculation",
     "navFinancePricing": "Finance Material Pricing (Authority)",
@@ -6256,7 +6256,7 @@
   },
   "MktPage": {
     "forbidden": "Only Marketing unit can use this",
-    "pageTitle": "IMT Marketing",
+    "pageTitle": "IMT ERP Marketing",
     "pageSubtitle": "Brand hub, store & product visual library, cross-platform content scheduling",
     "openMarketingCenter": "Open Marketing Center (marketing.im-tourist.com)",
     "marketingLog": "Marketing Log",
@@ -6810,7 +6810,7 @@
     "tabLeave": "Leave records",
     "forbiddenTitle": "Only HR staff can access HR management features",
     "forbiddenDesc": "Please log in with an admin account and try again",
-    "pageTitle": "IMT HR",
+    "pageTitle": "IMT ERP HR",
     "pageSubtitle": "Recruitment, attendance, payroll & TPBank disbursement, labor contracts, social insurance, union system",
     "activeEmployeesPrefix": "Total",
     "activeEmployeesSuffix": "active employees",

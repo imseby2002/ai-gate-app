@@ -117,7 +117,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           href="/office"
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors"
         >
-          公司入口 (OFFICE) ↗
+          IMT ERP ↗
         </Link>
       </div>
     </>
