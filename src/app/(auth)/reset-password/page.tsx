@@ -97,7 +97,7 @@ function ResetPasswordForm() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 mb-1.5">
             <Zap className="h-6 w-6 text-indigo-600" />
-            <span className="text-xl font-bold tracking-tight">AI GATE</span>
+            <span className="text-xl font-bold tracking-tight">IMT</span>
           </div>
           {sysDef ? (
             <div className="text-sm font-semibold text-gray-700">{sysDef.label} · 密碼重設</div>

@@ -36,7 +36,6 @@ export default function MktPage() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Megaphone className="h-5 w-5 text-primary" /></div>
         <div>
           <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
-          <p className="text-sm text-muted-foreground">{t('pageSubtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <a

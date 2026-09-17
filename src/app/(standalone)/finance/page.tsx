@@ -620,9 +620,8 @@ export default function FinancePage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">出納總務系統</h1>
+              <h1 className="text-xl font-bold">IMT 出納系統</h1>
             </div>
-            <p className="text-2xs text-muted-foreground">流水帳記帳、樹狀科目、MDB 匯入診斷與物料報表</p>
           </div>
         </div>
 

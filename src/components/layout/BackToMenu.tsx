@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
 import { Zap, ArrowLeft } from 'lucide-react'
-import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath } from '@/lib/systems'
+import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
 interface BackToMenuProps {
   variant?: 'standalone' | 'tools'
@@ -92,7 +92,8 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const isCs = pathname.startsWith('/cs')
   const isCsWorkspace = pathname.startsWith('/cs/workspace')
 
-  const titleText = isCs ? (locale === 'vi' ? 'AI GATE CS' : locale === 'en' ? 'AI GATE CS' : 'AI GATE 客服系統') : 'AI GATE'
+  const titleSys = isCs ? 'cs' : systemForPath(pathname)
+  const titleText = titleSys ? getLocalizedSystemDef(titleSys, locale).label : 'IMT'
   const csInboxText = locale === 'vi' ? 'Quay lại Hộp thư' : locale === 'en' ? 'Back to Inbox' : '返回收件匣'
   const subText = isCsWorkspace ? `← ${csInboxText}` : `← ${t('backToMenu')}`
 

@@ -49,10 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
             <Zap className="h-4 w-4 text-white" />
           </div>
-          <div>
-            <div className="font-bold text-sm">AI GATE</div>
-            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">管理後台</div>
-          </div>
+          <div className="font-bold text-sm">IMT 管理後台</div>
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">

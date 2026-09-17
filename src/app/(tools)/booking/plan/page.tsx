@@ -87,7 +87,7 @@ const COPY: Record<Locale, Copy> = {
       { label: '人工協助設置（超額單價 $20）', values: ['0 次/月', '0 次/月', '1 次/月', '2 次/月'] },
     ],
     compareTitle: '為什麼比市場同類系統划算',
-    compareUsLabel: 'AI GATE',
+    compareUsLabel: 'IMT',
     compareMarketLabel: '市場同類系統常見狀況',
     compareItems: [
       { label: '官網 AI 設計', market: '通常另外加購' },
@@ -139,7 +139,7 @@ const COPY: Record<Locale, Copy> = {
       { label: 'Setup assist (overage $20/session)', values: ['0/month', '0/month', '1/month', '2/month'] },
     ],
     compareTitle: 'Why we\'re better value than comparable systems',
-    compareUsLabel: 'AI GATE',
+    compareUsLabel: 'IMT',
     compareMarketLabel: 'Typical for comparable systems',
     compareItems: [
       { label: 'AI website design', market: 'Usually a paid add-on' },
@@ -191,7 +191,7 @@ const COPY: Record<Locale, Copy> = {
       { label: 'Hỗ trợ cài đặt (vượt hạn mức $20/lần)', values: ['0 lần/tháng', '0 lần/tháng', '1 lần/tháng', '2 lần/tháng'] },
     ],
     compareTitle: 'Vì sao đáng giá hơn các hệ thống tương tự trên thị trường',
-    compareUsLabel: 'AI GATE',
+    compareUsLabel: 'IMT',
     compareMarketLabel: 'Tình trạng thường thấy ở hệ thống tương tự',
     compareItems: [
       { label: 'Thiết kế website AI', market: 'Thường phải mua thêm' },

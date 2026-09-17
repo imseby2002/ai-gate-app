@@ -4509,7 +4509,7 @@
   },
   "Gm": {
     "adminOnly": "Chỉ Văn phòng Tổng Giám Đốc được sử dụng",
-    "title": "Văn phòng Tổng Giám Đốc",
+    "title": "IMT Văn Phòng Tổng Giám Đốc",
     "subtitle": "Tổng hợp toàn công ty・Cờ báo bất thường・Bản tin kinh doanh AI",
     "tabDashboard": "Bảng điều khiển",
     "tabReports": "Bản tin hàng ngày",
@@ -4557,7 +4557,7 @@
     "channels": "Gửi qua: {channels}"
   },
   "Store": {
-    "title": "Trung tâm Vận hành Cửa hàng",
+    "title": "IMT Vận Hành Cửa Hàng",
     "badge": "Trang chủ bộ phận cửa hàng",
     "lockedBadge": "🔒 Riêng cửa hàng [{store}]",
     "subtitle": "Hệ thống vận hành toàn diện cửa hàng: báo cáo kinh doanh, kiểm kê & đặt hàng nguyên liệu, chi phí tiện ích hàng ngày, báo sửa chữa, lịch làm việc nhân viên và đặt hàng tại quầy",
@@ -4885,7 +4885,7 @@
     "tabBalance": "Tồn kho IVT",
     "tabPrices": "Giá nhập hàng",
     "tabRecipes": "Công thức",
-    "title": "Kiểm toán・Hợp lý nguyên liệu",
+    "title": "IMT Kiểm Toán",
     "subtitle": "Tổng hợp 4 nguồn: sản lượng bán IPOS, tồn kho IVT, giá nhập bếp trung tâm, công thức R&D",
     "auditPlatform": "Nền tảng thông minh kiểm toán doanh nghiệp",
     "inspection": "Kiểm tra hiện trường",
@@ -4985,7 +4985,7 @@
   },
   "Repair": {
     "adminOnly": "Chỉ bộ phận sửa chữa／cửa hàng được sử dụng",
-    "title": "Quản lý bảo trì & AI cơ điện",
+    "title": "IMT Bảo Trì",
     "subtitle": "Phiếu báo sửa, trợ lý AI bảo trì (2 chế độ), kho kiến thức RAG sổ tay thiết bị và sổ tài sản",
     "tabOrders": "Phiếu báo sửa",
     "tabAi": "Trợ lý AI bảo trì (2 chế độ)",
@@ -5521,7 +5521,7 @@
   },
   "Affairs": {
     "adminOnly": "Chỉ bộ phận Tổng vụ và quản lý công ty được sử dụng",
-    "title": "Bộ phận Tổng vụ・Quản lý hợp đồng thuê & chứng chỉ",
+    "title": "IMT Hành Chính",
     "subtitle": "Hợp đồng thuê cửa hàng, giấy chứng nhận vệ sinh, giấy phép công ty, chứng nhận bằng sáng chế và nhắc nhở hết hạn／giai đoạn thanh toán hợp đồng",
     "companyPortal": "Cổng công ty",
     "tabDocs": "Tài liệu & Hợp đồng",
@@ -5873,7 +5873,7 @@
     "tabPrices": "Bảng giá do Tài vụ duyệt (Chỉ đọc)",
     "tabMapping": "Đối chiếu sản phẩm POS",
     "tabVariance": "Kiểm tra mức sử dụng (Phân tích chênh lệch)",
-    "pageTitle": "Công thức",
+    "pageTitle": "IMT Nghiên Cứu & Phát Triển",
     "pageBadge": "Hệ thống định giá xuất hàng cửa hàng",
     "pageSubtitle": "Thiết kế công thức, chi phí mỗi ly tại cửa hàng (dựa trên \"giá bán cho cửa hàng\" của Tài vụ), giá mua nhà máy và tính giá bán buôn đại lý",
     "navFinancePricing": "Định giá nguyên liệu (Tài vụ)",
@@ -6163,7 +6163,7 @@
   },
   "MktPage": {
     "forbidden": "Chỉ bộ phận Marketing mới có thể sử dụng",
-    "pageTitle": "Thương hiệu・Marketing",
+    "pageTitle": "IMT Marketing",
     "pageSubtitle": "Trung tâm thương hiệu, kho hình ảnh cửa hàng & sản phẩm, lên lịch nội dung đa nền tảng",
     "openMarketingCenter": "Mở Trung tâm Marketing (marketing.im-tourist.com)",
     "marketingLog": "Nhật ký Marketing",
@@ -6717,7 +6717,7 @@
     "tabLeave": "Bản ghi nghỉ phép",
     "forbiddenTitle": "Chỉ bộ phận nhân sự mới có thể sử dụng tính năng quản lý nhân sự",
     "forbiddenDesc": "Vui lòng đăng nhập bằng tài khoản quản trị viên rồi thử lại",
-    "pageTitle": "Phòng Nhân sự · Hệ thống Quản lý Nhân sự",
+    "pageTitle": "IMT Nhân Sự",
     "pageSubtitle": "Tuyển dụng, chấm công, lương & chi trả qua TPBank, hợp đồng lao động, bảo hiểm xã hội, hệ thống công đoàn",
     "activeEmployeesPrefix": "Tổng",
     "activeEmployeesSuffix": "nhân viên đang làm việc",

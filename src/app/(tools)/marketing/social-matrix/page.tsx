@@ -620,7 +620,7 @@ export default function SocialMatrixPage() {
             <div>
               <div className="flex items-center gap-2 text-indigo-200 text-xs font-semibold uppercase tracking-wider mb-2">
                 <ShieldCheck className="h-4 w-4 text-emerald-300" />
-                <span>AI GATE 社群矩陣與自動養號行銷系統</span>
+                <span>IMT 社群矩陣與自動養號行銷系統</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
                 社群矩陣發文與擬人化養號中心
@@ -791,10 +791,10 @@ export default function SocialMatrixPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-white">想省去設定 Wi-Fi 路由器與電腦 Proxy 服務的繁複步驟？</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold uppercase">AI-GATE 官方直供</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold uppercase">IMT 官方直供</span>
                       </div>
                       <p className="text-xs text-indigo-100 mt-0.5 max-w-2xl">
-                        AI-GATE 直供「台灣宜蘭聯禾原生住宅寬頻」與「中華電信 4G 行動基站代理」，純淨專屬獨立、絕非公共機房 IP，最抗演算法封號，點擊即可一鍵專屬租用！
+                        IMT 直供「台灣宜蘭聯禾原生住宅寬頻」與「中華電信 4G 行動基站代理」，純淨專屬獨立、絕非公共機房 IP，最抗演算法封號，點擊即可一鍵專屬租用！
                       </p>
                     </div>
                   </div>
@@ -978,14 +978,14 @@ export default function SocialMatrixPage() {
                     <div>
                       <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
                         <BadgeCheck className="h-4 w-4" />
-                        <span>AI-GATE 官方直供・純天然原生乾淨 IP 庫存</span>
+                        <span>IMT 官方直供・純天然原生乾淨 IP 庫存</span>
                       </div>
                       <h2 className="text-xl md:text-2xl font-extrabold tracking-tight">
                         社群抗風控專屬原生住宅與 4G 行動基地台 IP
                       </h2>
                       <p className="text-indigo-100 text-xs md:text-sm mt-1 max-w-2xl leading-relaxed">
                         Facebook、Instagram、Threads、TikTok、Dcard 的演算法對公共機房 IP 風控極為嚴苛。
-                        AI-GATE 官方直供 100% 乾淨原生家用寬頻與實體行動基站，一對一專屬獨享、免技術設定、一鍵即租即用！
+                        IMT 官方直供 100% 乾淨原生家用寬頻與實體行動基站，一對一專屬獨享、免技術設定、一鍵即租即用！
                       </p>
                     </div>
 
@@ -1082,7 +1082,7 @@ export default function SocialMatrixPage() {
 
                           {/* Description */}
                           <p className="text-xs text-muted-foreground leading-relaxed">
-                            💡 {offProxy.notes || 'AI-GATE 原廠測試乾淨原生住宅 IP，具備極高演算法信任權重，主號養號防封首選。'}
+                            💡 {offProxy.notes || 'IMT 原廠測試乾淨原生住宅 IP，具備極高演算法信任權重，主號養號防封首選。'}
                           </p>
                         </div>
 
@@ -1147,7 +1147,7 @@ export default function SocialMatrixPage() {
                         <span>👑 平台管理者專區（Admin Portal）</span>
                       </div>
                       <h3 className="text-lg font-bold">
-                        AI-GATE 官方供租用 IP 資源庫維護
+                        IMT 官方供租用 IP 資源庫維護
                       </h3>
                       <p className="text-xs text-slate-300 mt-1 max-w-2xl">
                         管理者可在此錄入、定價並維護官方代理伺服器。在此上架的節點會立即顯示於「🏢 官方原生 IP 租賃市場」供平台所有客戶一鍵租用。

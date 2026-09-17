@@ -2251,7 +2251,6 @@ export default function HRPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
-          <p className="text-sm text-gray-500">{t('pageSubtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-gray-400 mr-1">

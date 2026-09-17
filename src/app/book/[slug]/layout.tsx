@@ -59,7 +59,7 @@ export default async function BnbPublicLayout({
       <BnbPublicNav profile={{ name: profile.name, theme_color: profile.theme_color, template_id: profile.template_id, custom_design: profile.custom_design, slug: profile.slug }} />
       <main className="flex-1">{children}</main>
       <footer className="border-t py-6 text-center text-xs text-gray-300">
-        Powered by AI GATE
+        Powered by IMT
       </footer>
     </div>
   )

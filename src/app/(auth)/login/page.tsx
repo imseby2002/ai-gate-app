@@ -47,7 +47,7 @@ export default async function LoginChooser({
         <div className="text-center mb-7">
           <div className="inline-flex items-center gap-2 mb-2">
             <Zap className="h-7 w-7" style={{ color: 'var(--primary)' }} />
-            <span className="text-2xl font-bold">AI GATE</span>
+            <span className="text-2xl font-bold">IMT</span>
           </div>
           <p className="text-gray-500 text-sm">{titleDesc}</p>
         </div>
@@ -64,7 +64,6 @@ export default async function LoginChooser({
               className="flex items-center justify-between gap-3 bg-white rounded-xl border p-4 hover:border-indigo-300 hover:shadow-sm transition-all group">
               <div className="min-w-0">
                 <div className="font-semibold text-gray-900">{s.label}</div>
-                <div className="text-xs text-gray-500 truncate">{s.desc}</div>
               </div>
               <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-indigo-500 shrink-0" />
             </Link>

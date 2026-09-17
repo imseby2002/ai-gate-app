@@ -4602,7 +4602,7 @@
   },
   "Gm": {
     "adminOnly": "僅總經理室可使用",
-    "title": "總經理室",
+    "title": "IMT 總經理室",
     "subtitle": "全公司彙整・異常紅旗・AI 經營快報",
     "tabDashboard": "經營儀表板",
     "tabReports": "每日快報",
@@ -4650,7 +4650,7 @@
     "channels": "推播：{channels}"
   },
   "Store": {
-    "title": "門市營運中心",
+    "title": "IMT 門市系統",
     "badge": "門市部門首頁",
     "lockedBadge": "🔒 本店專屬 [{store}]",
     "subtitle": "門市營運全方位作業系統：經營報表、原物料盤點訂貨、日常公用費用、故障報修、員工排班與前台點單",
@@ -4978,7 +4978,7 @@
     "tabBalance": "IVT 進銷存",
     "tabPrices": "進貨價",
     "tabRecipes": "配方",
-    "title": "稽核・原物料合理性",
+    "title": "IMT 稽核系統",
     "subtitle": "整併四來源：IPOS 銷售量、IVT 進銷存、中央廚房進貨價、研發配方",
     "auditPlatform": "企業稽核智慧平台",
     "inspection": "現場巡檢",
@@ -5078,7 +5078,7 @@
   },
   "Repair": {
     "adminOnly": "僅維修／門市單位可使用",
-    "title": "維修管理與機電 AI",
+    "title": "IMT 維修系統",
     "subtitle": "報修工單、維修 AI 助理 (雙模式)、設備手冊 RAG 知識庫與資產台帳",
     "tabOrders": "報修工單",
     "tabAi": "維修 AI 助理 (雙模式)",
@@ -5614,7 +5614,7 @@
   },
   "Affairs": {
     "adminOnly": "僅外務單位與公司主管可使用外務管理",
-    "title": "外務部門・租約與證書管理",
+    "title": "IMT 外務系統",
     "subtitle": "門市租約、門市衛生證、公司執照、專利證書與合約到期／繳費階段提醒",
     "companyPortal": "公司入口",
     "tabDocs": "文件與合約",
@@ -5966,7 +5966,7 @@
     "tabPrices": "出納核定物料價表 (唯讀參考)",
     "tabMapping": "POS 成品對照",
     "tabVariance": "使用量檢驗 (差異分析)",
-    "pageTitle": "配方",
+    "pageTitle": "IMT 研發系統",
     "pageBadge": "門市出貨定價體系",
     "pageSubtitle": "配方設計、門市每杯成本（核心取自出納【賣給門市價格】）、工廠進價與經銷批發價試算",
     "navFinancePricing": "出納物料定價 (權責維護)",
@@ -6256,7 +6256,7 @@
   },
   "MktPage": {
     "forbidden": "僅行銷單位可使用",
-    "pageTitle": "品牌・行銷",
+    "pageTitle": "IMT 行銷系統",
     "pageSubtitle": "品牌中樞、門市與產品視覺庫、跨平台內容排程",
     "openMarketingCenter": "開啟行銷中心 (marketing.im-tourist.com)",
     "marketingLog": "行銷日誌",
@@ -6810,7 +6810,7 @@
     "tabLeave": "請假記錄",
     "forbiddenTitle": "僅人事單位可使用人事管理功能",
     "forbiddenDesc": "請以管理者帳號登入後再試",
-    "pageTitle": "人事部門・人力資源管理系統",
+    "pageTitle": "IMT 人事系統",
     "pageSubtitle": "應徵入職、考勤工時、薪資與 TPBank 發薪、勞動合同、社會保險、工會系統",
     "activeEmployeesPrefix": "共",
     "activeEmployeesSuffix": "名在職員工",

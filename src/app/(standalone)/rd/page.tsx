@@ -305,7 +305,6 @@ export default function RdPage() {
               <h1 className="text-2xl font-bold tracking-tight">{t('pageTitle')}</h1>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-medium">{t('pageBadge')}</span>
             </div>
-            <p className="text-sm text-muted-foreground">{t('pageSubtitle')}</p>
           </div>
         </div>
 

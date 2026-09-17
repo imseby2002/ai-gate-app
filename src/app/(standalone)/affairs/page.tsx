@@ -121,7 +121,6 @@ export default function AffairsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="text-sm text-gray-500">{t('subtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Link href="/office">

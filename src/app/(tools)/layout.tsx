@@ -30,7 +30,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
           <div className="h-5 w-5 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
             <Zap className="h-3 w-3 text-white" />
           </div>
-          <span className="text-xs font-bold text-gray-800">AI GATE</span>
+          <span className="text-xs font-bold text-gray-800">IMT</span>
         </div>
         <div className="flex-1" />
         <LanguageSwitcher currentLocale={locale} />

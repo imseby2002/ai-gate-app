@@ -63,7 +63,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: tgChatId.trim(),
-          text: '✅ AI GATE 行銷流水線 Telegram 設定成功！\n\n您將在此收到行銷流程的審核通知。',
+          text: '✅ IMT 行銷流水線 Telegram 設定成功！\n\n您將在此收到行銷流程的審核通知。',
           parse_mode: 'HTML',
         }),
       })

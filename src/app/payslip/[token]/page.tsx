@@ -204,7 +204,7 @@ export default function PublicPayslipPage({ params }: { params: Promise<{ token:
         </Card>
 
         <p className="text-center text-xs text-slate-400">
-          Hệ thống Quản lý Nhân sự AI GATE • Mọi thắc mắc xin liên hệ quản lý trực tiếp
+          Hệ thống Quản lý Nhân sự IMT • Mọi thắc mắc xin liên hệ quản lý trực tiếp
         </p>
       </div>
     </div>

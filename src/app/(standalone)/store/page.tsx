@@ -134,9 +134,6 @@ export default function StoreDepartmentHubPage() {
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {t('subtitle')}
-            </p>
           </div>
         </div>
 

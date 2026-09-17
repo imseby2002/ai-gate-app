@@ -145,7 +145,7 @@ export function Sidebar({ userType, enabledModules, scope: scopeProp, conversati
             <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-violet-600 flex items-center justify-center shadow-sm">
               <Zap className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-base tracking-tight">AI GATE</span>
+            <span className="font-bold text-base tracking-tight">IMT</span>
           </Link>
         ) : (
           <Link href="/apps" className="hover:opacity-80 transition-opacity">

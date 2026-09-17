@@ -279,11 +279,6 @@ export default function OfficePage() {
                             </span>
                           )}
                         </div>
-
-                        {/* 部門核心職責與範疇簡述 */}
-                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-4">
-                          {a.description}
-                        </p>
                       </div>
 
                       {/* 底部按鈕：進入部門首頁 */}

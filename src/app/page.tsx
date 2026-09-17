@@ -25,7 +25,7 @@ export default async function LandingPage() {
       <header className="flex items-center justify-between px-4 sm:px-8 py-4 border-b bg-white/80 backdrop-blur">
         <div className="flex items-center gap-2">
           <Zap className="h-6 w-6 sm:h-7 sm:w-7 text-primary" style={{ color: 'var(--primary)' }} />
-          <span className="text-xl sm:text-2xl font-bold tracking-tight">AI GATE</span>
+          <span className="text-xl sm:text-2xl font-bold tracking-tight">IMT</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageSwitcher currentLocale={locale} />
