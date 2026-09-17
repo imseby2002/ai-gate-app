@@ -107,9 +107,9 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
         <Card className="w-full max-w-lg p-5 space-y-4 max-h-[85vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between border-b pb-3">
             <div>
-              <h3 className="font-semibold text-base">從 Zero 匯入流水帳與科目（.mdb）</h3>
+              <h3 className="font-semibold text-base">匯入流水帳與科目（.mdb）</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                上傳 Zero.Net 記帳資料庫，系統將自動建置樹狀科目主檔並去重匯入交易。
+                上傳記帳資料庫，系統將自動建置樹狀科目主檔並去重匯入交易。
               </p>
             </div>
             <button onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground">
@@ -121,7 +121,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
             <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-8 cursor-pointer hover:bg-muted/50 text-sm text-muted-foreground transition-colors">
               <Upload className="h-8 w-8 text-primary" />
               <span className="font-medium text-foreground">{busy ? '正在解析資料庫中…' : '點擊選擇 .mdb 檔案'}</span>
-              <span className="text-xs text-muted-foreground">支援帳務小管家 Zero.Net 之 MymoneyData.mdb</span>
+              <span className="text-xs text-muted-foreground">支援 MymoneyData.mdb 記帳資料庫</span>
               <input ref={fileRef} type="file" accept=".mdb" className="hidden" disabled={busy} onChange={onFile} />
             </label>
           )}

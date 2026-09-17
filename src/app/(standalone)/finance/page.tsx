@@ -621,7 +621,6 @@ export default function FinancePage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold">出納總務系統</h1>
-              <Badge variant="outline" className="font-mono text-2xs">Zero.Net 模式</Badge>
             </div>
             <p className="text-2xs text-muted-foreground">流水帳記帳、樹狀科目、MDB 匯入診斷與物料報表</p>
           </div>
@@ -763,7 +762,7 @@ export default function FinancePage() {
                   onClick={() => setShowZeroImport(true)}
                 >
                   <Upload className="h-3.5 w-3.5 text-primary" />
-                  從 Zero 匯入 (.mdb)
+                  匯入記帳檔 (.mdb)
                 </Button>
 
                 {totalErrors > 0 && (

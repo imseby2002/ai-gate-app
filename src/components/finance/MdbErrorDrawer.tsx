@@ -66,7 +66,7 @@ export function MdbErrorDrawer({
 
   const handleCopyReport = () => {
     const text = [
-      `=== Zero.Net MDB 匯入錯誤診斷報告 ===`,
+      `=== MDB 匯入錯誤診斷報告 ===`,
       `帳本: ${bookName} | 檔案: ${filename || 'MymoneyData.mdb'}`,
       `總錯誤數: ${errorCount} 筆 | 總警告數: ${warningCount} 筆`,
       `產生時間: ${new Date().toLocaleString('zh-TW')}`,
@@ -101,7 +101,7 @@ export function MdbErrorDrawer({
               <Badge variant="outline" className="text-xs font-mono">帳本: {bookName}</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              列出每筆異常分錄的流水號、涉及項目與詳細原因，方便您在 Zero.Net 或系統中比對修改。
+              列出每筆異常分錄的流水號、涉及項目與詳細原因，方便您在資料庫或系統中比對修改。
             </p>
           </div>
           <button
