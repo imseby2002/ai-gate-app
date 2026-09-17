@@ -31,7 +31,7 @@ export const UNIT_AREAS: UnitArea[] = [
   },
   {
     key: 'finance',
-    label: '出納・總務・會計',
+    label: '總務',
     homeHref: '/finance',
     description: '出納帳務・門市收支・物料定價與廠商管理',
     pages: [
