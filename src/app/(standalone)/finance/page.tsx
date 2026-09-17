@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactNode } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -63,10 +64,10 @@ interface Account {
 }
 
 // ─── Constants ───────────────────────────────────────────────────
-const LABELS: Record<string, string> = {
-  'income': '收入', 'expense': '支出', 'transfer': '轉帳',
-  'cash': '現金', 'bank': '銀行', 'credit': '信用卡', 'ewallet': '電子錢包', 'other': '其他',
-}
+const getLabels = (t: (key: string) => string): Record<string, string> => ({
+  'income': t('income'), 'expense': t('expense'), 'transfer': t('transfer'),
+  'cash': t('cash'), 'bank': t('bank'), 'credit': t('credit'), 'ewallet': t('ewallet'), 'other': t('other'),
+})
 
 const INCOME_CATEGORIES = ['銷售收入', '服務費', '租金收入', '利息收入', '其他收入']
 const EXPENSE_CATEGORIES = ['薪資支出', '辦公費', '差旅費', '廣告費', '水電費', '租金支出', '採購費', '其他支出']
@@ -78,8 +79,8 @@ function AccountIcon({ kind, className }: { kind: Account['kind']; className?: s
   return <Cmp className={className} />
 }
 
-const fmt = (n: number) => n.toLocaleString('zh-TW')
-const fmtDate = (s?: string | null) => s ? new Date(s).toLocaleDateString('zh-TW') : '—'
+const fmt = (n: number, locale: string) => n.toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+const fmtDate = (s: string | null | undefined, locale: string) => s ? new Date(s).toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW') : '—'
 
 // ─── Helpers ─────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -119,12 +120,13 @@ function CashflowForm({ initial, accounts, onSave, onCancel, saving }: {
   onCancel: () => void
   saving: boolean
 }) {
+  const t = useTranslations('FinancePage')
   const [d, setD] = useState(initial)
   const [uploading, setUploading] = useState(false)
   const set = (k: keyof typeof d, v: string | number | null) => setD(prev => ({ ...prev, [k]: v }))
   const cats = d.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
   const isTransfer = d.type === 'transfer'
-  const acctOpts = [{ value: '', label: '— 未指定 —' }, ...accounts.map(a => ({ value: a.id, label: a.name }))]
+  const acctOpts = [{ value: '', label: t('unspecifiedOption') }, ...accounts.map(a => ({ value: a.id, label: a.name }))]
 
   const uploadReceipt = async (file: File) => {
     setUploading(true)
@@ -142,61 +144,61 @@ function CashflowForm({ initial, accounts, onSave, onCancel, saving }: {
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="類型 *">
+        <Field label={t('typeRequiredLabel')}>
           <SelectEl value={d.type} onChange={v => set('type', v)}
-            options={[{ value: 'income', label: '收入' }, { value: 'expense', label: '支出' }, { value: 'transfer', label: '轉帳' }]}
+            options={[{ value: 'income', label: t('income') }, { value: 'expense', label: t('expense') }, { value: 'transfer', label: t('transfer') }]}
             disabled={saving} />
         </Field>
         {!isTransfer ? (
-          <Field label="分類">
+          <Field label={t('categoryLabel')}>
             <div className="flex gap-1">
               <SelectEl value={cats.includes(d.category) ? d.category : '__custom__'}
                 onChange={v => set('category', v === '__custom__' ? '' : v)}
-                options={[...cats.map(c => ({ value: c, label: c })), { value: '__custom__', label: '自訂...' }]}
+                options={[...cats.map(c => ({ value: c, label: c })), { value: '__custom__', label: t('customEllipsis') }]}
                 disabled={saving} />
               {!cats.includes(d.category) && (
-                <InputEl value={d.category} onChange={v => set('category', v)} placeholder="自訂分類" disabled={saving} />
+                <InputEl value={d.category} onChange={v => set('category', v)} placeholder={t('customCategoryPlaceholder')} disabled={saving} />
               )}
             </div>
           </Field>
         ) : <div />}
-        <Field label={isTransfer ? '轉出帳戶 *' : '帳戶'}>
+        <Field label={isTransfer ? t('fromAccountRequiredLabel') : t('accountLabel')}>
           <SelectEl value={d.account_id ?? ''} onChange={v => set('account_id', v || null)} options={acctOpts} disabled={saving} />
         </Field>
         {isTransfer && (
-          <Field label="轉入帳戶 *">
+          <Field label={t('toAccountRequiredLabel')}>
             <SelectEl value={d.to_account_id ?? ''} onChange={v => set('to_account_id', v || null)} options={acctOpts} disabled={saving} />
           </Field>
         )}
-        <Field label="金額（元）*">
+        <Field label={t('amountYuanRequiredLabel')}>
           <InputEl value={d.amount} onChange={v => set('amount', Number(v) || 0)} type="number" placeholder="0" disabled={saving} />
         </Field>
-        <Field label="日期 *">
+        <Field label={t('dateRequiredLabel')}>
           <InputEl value={d.date} onChange={v => set('date', v)} type="date" disabled={saving} />
         </Field>
-        <Field label="摘要" >
-          <InputEl value={d.description} onChange={v => set('description', v)} placeholder="說明用途" disabled={saving} />
+        <Field label={t('descriptionLabel')} >
+          <InputEl value={d.description} onChange={v => set('description', v)} placeholder={t('descriptionPlaceholder')} disabled={saving} />
         </Field>
-        <Field label="備註">
-          <InputEl value={d.notes} onChange={v => set('notes', v)} placeholder="其他補充" disabled={saving} />
+        <Field label={t('notesLabel')}>
+          <InputEl value={d.notes} onChange={v => set('notes', v)} placeholder={t('otherSupplementPlaceholder')} disabled={saving} />
         </Field>
       </div>
 
       {/* 收據附件 */}
-      <Field label="收據／發票">
+      <Field label={t('receiptInvoiceLabel')}>
         {d.receipt_url ? (
           <div className="flex items-center gap-2">
             <a href={d.receipt_url} target="_blank" rel="noreferrer" className="shrink-0">
-              <img src={d.receipt_url} alt="收據" className="h-14 w-14 rounded-md border object-cover" />
+              <img src={d.receipt_url} alt={t('receiptAlt')} className="h-14 w-14 rounded-md border object-cover" />
             </a>
             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-500" onClick={() => set('receipt_url', '')} disabled={saving}>
-              <X className="h-3.5 w-3.5" />移除
+              <X className="h-3.5 w-3.5" />{t('remove')}
             </Button>
           </div>
         ) : (
           <label className="inline-flex items-center gap-2 h-8 px-3 rounded-md border bg-background text-sm cursor-pointer hover:bg-gray-100 w-fit">
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            上傳圖片
+            {t('uploadImage')}
             <input type="file" accept="image/*" className="hidden" disabled={saving || uploading}
               onChange={e => { const f = e.target.files?.[0]; if (f) uploadReceipt(f) }} />
           </label>
@@ -204,10 +206,10 @@ function CashflowForm({ initial, accounts, onSave, onCancel, saving }: {
       </Field>
 
       <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>取消</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
         <Button size="sm" onClick={() => onSave(d)} disabled={!d.amount || !d.date || saving || uploading || transferInvalid}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          儲存
+          {t('save')}
         </Button>
       </div>
     </div>
@@ -216,6 +218,8 @@ function CashflowForm({ initial, accounts, onSave, onCancel, saving }: {
 
 // ─── Cashflow Tab ─────────────────────────────────────────────────
 function CashflowTab() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -266,11 +270,11 @@ function CashflowTab() {
         await fetch('/api/hr/cashflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       }
       setShowForm(false); setEditing(null); load(); loadAccounts()
-    } catch { setErr('儲存失敗') } finally { setSaving(false) }
+    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 
   const remove = async (id: string) => {
-    if (!confirm('確定刪除此筆記錄？')) return
+    if (!confirm(t('confirmDeleteRecord'))) return
     await fetch('/api/hr/cashflow', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     load(); loadAccounts()
   }
@@ -285,7 +289,7 @@ function CashflowTab() {
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1 border rounded-lg px-2 py-1">
           <button onClick={() => setYear(y => y - 1)} className="text-gray-400 hover:text-gray-700 px-1">‹</button>
-          <span className="text-sm font-medium w-12 text-center">{year}年</span>
+          <span className="text-sm font-medium w-12 text-center">{t('yearSuffix', { y: year })}</span>
           <button onClick={() => setYear(y => y + 1)} className="text-gray-400 hover:text-gray-700 px-1">›</button>
         </div>
         <div className="flex gap-0.5">
@@ -297,20 +301,20 @@ function CashflowTab() {
           ))}
         </div>
         <div className="flex gap-1">
-          {(['all', 'income', 'expense', 'transfer'] as const).map(t => (
-            <Button key={t} size="sm" variant={typeFilter === t ? 'default' : 'ghost'} onClick={() => setTypeFilter(t)}>
-              {t === 'all' ? '全部' : t === 'income' ? '收入' : t === 'expense' ? '支出' : '轉帳'}
+          {(['all', 'income', 'expense', 'transfer'] as const).map(tf => (
+            <Button key={tf} size="sm" variant={typeFilter === tf ? 'default' : 'ghost'} onClick={() => setTypeFilter(tf)}>
+              {tf === 'all' ? t('all') : tf === 'income' ? t('income') : tf === 'expense' ? t('expense') : t('transfer')}
             </Button>
           ))}
         </div>
         <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setShowZeroImport(true)}>
-          <Upload className="h-4 w-4 text-primary" />從 Zero 匯入 (.mdb)
+          <Upload className="h-4 w-4 text-primary" />{t('importFromZero')}
         </Button>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
         </Button>
         <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-          <Plus className="h-4 w-4" />新增記錄
+          <Plus className="h-4 w-4" />{t('addRecord')}
         </Button>
       </div>
 
@@ -356,32 +360,32 @@ function CashflowTab() {
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
             <ArrowUpCircle className="h-4 w-4 text-green-500" />
-            <span className="text-xs text-gray-500">本月收入</span>
+            <span className="text-xs text-gray-500">{t('monthIncome')}</span>
           </div>
-          <p className="text-xl font-bold text-green-600">NT$ {fmt(totalIncome)}</p>
+          <p className="text-xl font-bold text-green-600">NT$ {fmt(totalIncome, locale)}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
             <ArrowDownCircle className="h-4 w-4 text-red-500" />
-            <span className="text-xs text-gray-500">本月支出</span>
+            <span className="text-xs text-gray-500">{t('monthExpense')}</span>
           </div>
-          <p className="text-xl font-bold text-red-500">NT$ {fmt(totalExpense)}</p>
+          <p className="text-xl font-bold text-red-500">NT$ {fmt(totalExpense, locale)}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
             {net >= 0 ? <TrendingUp className="h-4 w-4 text-blue-500" /> : <TrendingDown className="h-4 w-4 text-orange-500" />}
-            <span className="text-xs text-gray-500">淨收支</span>
+            <span className="text-xs text-gray-500">{t('netCashflow')}</span>
           </div>
           <p className={`text-xl font-bold ${net >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>
-            {net >= 0 ? '+' : ''}NT$ {fmt(net)}
+            {net >= 0 ? '+' : ''}NT$ {fmt(net, locale)}
           </p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
             <Wallet className="h-4 w-4 text-primary" />
-            <span className="text-xs text-gray-500">帳戶總資產</span>
+            <span className="text-xs text-gray-500">{t('accountTotalAssets')}</span>
           </div>
-          <p className="text-xl font-bold text-gray-800">NT$ {fmt(accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}</p>
+          <p className="text-xl font-bold text-gray-800">NT$ {fmt(accounts.reduce((s, a) => s + (a.balance ?? 0), 0), locale)}</p>
         </Card>
       </div>
 
@@ -395,7 +399,7 @@ function CashflowTab() {
       ) : records.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Wallet className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">{year}年{month}月尚無出納記錄</p>
+          <p className="text-sm">{t('noCashflowDataForMonth', { year, month })}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -413,20 +417,20 @@ function CashflowTab() {
                 </div>
                 {r.receipt_url && (
                   <a href={r.receipt_url} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={r.receipt_url} alt="收據" className="h-9 w-9 rounded border object-cover" />
+                    <img src={r.receipt_url} alt={t('receiptAlt')} className="h-9 w-9 rounded border object-cover" />
                   </a>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm">{r.description || r.category || (r.type === 'transfer' ? '轉帳' : '—')}</span>
+                    <span className="font-semibold text-sm">{r.description || r.category || (r.type === 'transfer' ? t('transfer') : '—')}</span>
                     {r.type !== 'transfer' && r.category && <Badge variant="secondary">{r.category}</Badge>}
-                    <span className="text-xs text-gray-400">{fmtDate(r.date)}</span>
+                    <span className="text-xs text-gray-400">{fmtDate(r.date, locale)}</span>
                   </div>
                   <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
                     {r.type === 'transfer' ? (
                       <span className="inline-flex items-center gap-1">
-                        <Wallet className="h-3 w-3" />{acctName(r.account_id) || '未指定'}
-                        <ArrowLeftRight className="h-3 w-3" />{acctName(r.to_account_id) || '未指定'}
+                        <Wallet className="h-3 w-3" />{acctName(r.account_id) || t('unspecified')}
+                        <ArrowLeftRight className="h-3 w-3" />{acctName(r.to_account_id) || t('unspecified')}
                       </span>
                     ) : r.account_id ? (
                       <span className="inline-flex items-center gap-1"><Wallet className="h-3 w-3" />{acctName(r.account_id)}</span>
@@ -436,7 +440,7 @@ function CashflowTab() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className={`font-bold tabular-nums ${amtColor}`}>
-                    {sign}NT$ {fmt(r.amount)}
+                    {sign}NT$ {fmt(r.amount, locale)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -471,24 +475,26 @@ function AccountForm({ initial, onSave, onCancel, saving }: {
   onCancel: () => void
   saving: boolean
 }) {
+  const t = useTranslations('FinancePage')
+  const LABELS = getLabels(t)
   const [d, setD] = useState(initial)
   const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
   return (
     <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="帳戶名稱 *"><InputEl value={d.name} onChange={v => set('name', v)} placeholder="例：台新銀行、零用金" disabled={saving} /></Field>
-        <Field label="類型">
+        <Field label={t('accountNameRequiredLabel')}><InputEl value={d.name} onChange={v => set('name', v)} placeholder={t('accountNamePlaceholder')} disabled={saving} /></Field>
+        <Field label={t('typeLabel')}>
           <SelectEl value={d.kind} onChange={v => set('kind', v)}
             options={ACCOUNT_KINDS.map(k => ({ value: k, label: LABELS[k] ?? k }))} disabled={saving} />
         </Field>
-        <Field label="期初餘額（元）"><InputEl value={d.opening_balance} onChange={v => set('opening_balance', Number(v) || 0)} type="number" disabled={saving} /></Field>
-        <Field label="幣別"><InputEl value={d.currency} onChange={v => set('currency', v)} placeholder="TWD" disabled={saving} /></Field>
-        <div className="col-span-2"><Field label="備註"><InputEl value={d.note} onChange={v => set('note', v)} placeholder="其他補充" disabled={saving} /></Field></div>
+        <Field label={t('openingBalanceYuanLabel')}><InputEl value={d.opening_balance} onChange={v => set('opening_balance', Number(v) || 0)} type="number" disabled={saving} /></Field>
+        <Field label={t('currencyLabel')}><InputEl value={d.currency} onChange={v => set('currency', v)} placeholder="TWD" disabled={saving} /></Field>
+        <div className="col-span-2"><Field label={t('notesLabel')}><InputEl value={d.note} onChange={v => set('note', v)} placeholder={t('otherSupplementPlaceholder')} disabled={saving} /></Field></div>
       </div>
       <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>取消</Button>
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
         <Button size="sm" onClick={() => onSave(d)} disabled={!d.name || saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}儲存
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}{t('save')}
         </Button>
       </div>
     </div>
@@ -497,6 +503,9 @@ function AccountForm({ initial, onSave, onCancel, saving }: {
 
 // ─── Accounts Tab ─────────────────────────────────────────────────
 function AccountsTab() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
+  const LABELS = getLabels(t)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -525,13 +534,13 @@ function AccountsTab() {
         await fetch('/api/hr/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       }
       setShowForm(false); setEditing(null); load()
-    } catch { setErr('儲存失敗') } finally { setSaving(false) }
+    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
   }
 
   const remove = async (id: string) => {
-    if (!confirm('確定刪除此帳戶？')) return
+    if (!confirm(t('confirmDeleteAccount'))) return
     const res = await fetch('/api/hr/accounts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    if (!res.ok) { const j = await res.json(); alert(j.error || '刪除失敗'); return }
+    if (!res.ok) { const j = await res.json(); alert(j.error || t('deleteFailed')); return }
     load()
   }
 
@@ -543,16 +552,16 @@ function AccountsTab() {
         <Card className="p-4 flex-1 min-w-[200px]">
           <div className="flex items-center gap-2 mb-1">
             <Wallet className="h-4 w-4 text-primary" />
-            <span className="text-xs text-gray-500">總資產（所有帳戶結餘）</span>
+            <span className="text-xs text-gray-500">{t('totalAssetsAllAccounts')}</span>
           </div>
-          <p className="text-2xl font-bold text-gray-800">NT$ {fmt(total)}</p>
+          <p className="text-2xl font-bold text-gray-800">NT$ {fmt(total, locale)}</p>
         </Card>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入帳戶 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImportAccounts')}
           </Button>
           <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-            <Plus className="h-4 w-4" />新增帳戶
+            <Plus className="h-4 w-4" />{t('addAccount')}
           </Button>
         </div>
       </div>
@@ -585,7 +594,7 @@ function AccountsTab() {
       ) : accounts.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Wallet className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">尚無帳戶，先新增一個帳戶吧</p>
+          <p className="text-sm">{t('noAccountsYet')}</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-3">
@@ -600,8 +609,8 @@ function AccountsTab() {
                     <span className="font-semibold">{a.name}</span>
                     <Badge variant="secondary">{LABELS[a.kind] ?? a.kind}</Badge>
                   </div>
-                  <p className="text-xl font-bold tabular-nums mt-1">{a.currency} {fmt(a.balance ?? 0)}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">期初 {fmt(a.opening_balance)}{a.note ? ` · ${a.note}` : ''}</p>
+                  <p className="text-xl font-bold tabular-nums mt-1">{a.currency} {fmt(a.balance ?? 0, locale)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{t('openingPrefix')} {fmt(a.opening_balance, locale)}{a.note ? ` · ${a.note}` : ''}</p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(a); setShowForm(false) }}>
@@ -628,6 +637,8 @@ function AccountsTab() {
 
 // ─── Reports Tab ──────────────────────────────────────────────────
 function ReportsTab() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [records, setRecords] = useState<Cashflow[]>([])
@@ -654,7 +665,7 @@ function ReportsTab() {
 
   // 支出分類佔比
   const byCat = new Map<string, number>()
-  for (const r of expense) { const k = r.category || '未分類'; byCat.set(k, (byCat.get(k) ?? 0) + r.amount) }
+  for (const r of expense) { const k = r.category || t('uncategorized'); byCat.set(k, (byCat.get(k) ?? 0) + r.amount) }
   const catRows = [...byCat.entries()].sort((a, b) => b[1] - a[1])
   const catMax = catRows.length ? catRows[0][1] : 1
 
@@ -670,7 +681,7 @@ function ReportsTab() {
     <div className="space-y-4">
       <div className="flex items-center gap-1 border rounded-lg px-2 py-1 w-fit">
         <button onClick={() => setYear(y => y - 1)} className="text-gray-400 hover:text-gray-700 px-1">‹</button>
-        <span className="text-sm font-medium w-12 text-center">{year}年</span>
+        <span className="text-sm font-medium w-12 text-center">{t('yearSuffix', { y: year })}</span>
         <button onClick={() => setYear(y => y + 1)} className="text-gray-400 hover:text-gray-700 px-1">›</button>
       </div>
 
@@ -679,43 +690,43 @@ function ReportsTab() {
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="p-4"><span className="text-xs text-gray-500">年度收入</span><p className="text-xl font-bold text-green-600 mt-1">NT$ {fmt(totalIncome)}</p></Card>
-            <Card className="p-4"><span className="text-xs text-gray-500">年度支出</span><p className="text-xl font-bold text-red-500 mt-1">NT$ {fmt(totalExpense)}</p></Card>
-            <Card className="p-4"><span className="text-xs text-gray-500">年度淨額</span><p className={`text-xl font-bold mt-1 ${net >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>{net >= 0 ? '+' : ''}NT$ {fmt(net)}</p></Card>
-            <Card className="p-4"><span className="text-xs text-gray-500">總資產</span><p className="text-xl font-bold text-gray-800 mt-1">NT$ {fmt(accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}</p></Card>
+            <Card className="p-4"><span className="text-xs text-gray-500">{t('annualIncome')}</span><p className="text-xl font-bold text-green-600 mt-1">NT$ {fmt(totalIncome, locale)}</p></Card>
+            <Card className="p-4"><span className="text-xs text-gray-500">{t('annualExpense')}</span><p className="text-xl font-bold text-red-500 mt-1">NT$ {fmt(totalExpense, locale)}</p></Card>
+            <Card className="p-4"><span className="text-xs text-gray-500">{t('annualNet')}</span><p className={`text-xl font-bold mt-1 ${net >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>{net >= 0 ? '+' : ''}NT$ {fmt(net, locale)}</p></Card>
+            <Card className="p-4"><span className="text-xs text-gray-500">{t('totalAssets')}</span><p className="text-xl font-bold text-gray-800 mt-1">NT$ {fmt(accounts.reduce((s, a) => s + (a.balance ?? 0), 0), locale)}</p></Card>
           </div>
 
           {/* 月趨勢 */}
           <Card className="p-4">
-            <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">月收支趨勢</span></div>
+            <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">{t('monthlyTrendTitle')}</span></div>
             <div className="flex items-end gap-1.5 h-40">
               {months.map(m => (
                 <div key={m.m} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex items-end justify-center gap-0.5 flex-1">
-                    <div className="w-1/2 bg-green-400 rounded-t" style={{ height: `${(m.inc / monthMax) * 100}%` }} title={`收入 ${fmt(m.inc)}`} />
-                    <div className="w-1/2 bg-red-400 rounded-t" style={{ height: `${(m.exp / monthMax) * 100}%` }} title={`支出 ${fmt(m.exp)}`} />
+                    <div className="w-1/2 bg-green-400 rounded-t" style={{ height: `${(m.inc / monthMax) * 100}%` }} title={t('incomeAmountTitle', { n: fmt(m.inc, locale) })} />
+                    <div className="w-1/2 bg-red-400 rounded-t" style={{ height: `${(m.exp / monthMax) * 100}%` }} title={t('expenseAmountTitle', { n: fmt(m.exp, locale) })} />
                   </div>
                   <span className="text-[10px] text-gray-400">{m.m}</span>
                 </div>
               ))}
             </div>
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-400" />收入</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" />支出</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-400" />{t('income')}</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" />{t('expense')}</span>
             </div>
           </Card>
 
           <div className="grid md:grid-cols-2 gap-3">
             {/* 支出分類佔比 */}
             <Card className="p-4">
-              <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-red-500" /><span className="text-sm font-semibold">支出分類佔比</span></div>
-              {catRows.length === 0 ? <p className="text-sm text-gray-400 py-6 text-center">無支出記錄</p> : (
+              <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-red-500" /><span className="text-sm font-semibold">{t('expenseCategoryShareTitle')}</span></div>
+              {catRows.length === 0 ? <p className="text-sm text-gray-400 py-6 text-center">{t('noExpenseRecords')}</p> : (
                 <div className="space-y-2">
                   {catRows.map(([cat, amt]) => (
                     <div key={cat}>
                       <div className="flex justify-between text-xs mb-0.5">
                         <span className="text-gray-600">{cat}</span>
-                        <span className="tabular-nums text-gray-500">{fmt(amt)}（{totalExpense ? Math.round(amt / totalExpense * 100) : 0}%）</span>
+                        <span className="tabular-nums text-gray-500">{t('amountWithPct', { amt: fmt(amt, locale), pct: totalExpense ? Math.round(amt / totalExpense * 100) : 0 })}</span>
                       </div>
                       <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
                         <div className="h-full bg-red-400 rounded-full" style={{ width: `${(amt / catMax) * 100}%` }} />
@@ -728,14 +739,14 @@ function ReportsTab() {
 
             {/* 帳戶餘額表 */}
             <Card className="p-4">
-              <div className="flex items-center gap-2 mb-3"><Wallet className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">各帳戶結餘</span></div>
-              {accounts.length === 0 ? <p className="text-sm text-gray-400 py-6 text-center">無帳戶</p> : (
+              <div className="flex items-center gap-2 mb-3"><Wallet className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">{t('accountBalancesTitle')}</span></div>
+              {accounts.length === 0 ? <p className="text-sm text-gray-400 py-6 text-center">{t('noAccounts')}</p> : (
                 <div className="space-y-2">
                   {accounts.map(a => (
                     <div key={a.id} className="flex items-center gap-2 text-sm">
                       <AccountIcon kind={a.kind} className="h-4 w-4 text-gray-400 shrink-0" />
                       <span className="flex-1 truncate">{a.name}</span>
-                      <span className="tabular-nums font-medium">{a.currency} {fmt(a.balance ?? 0)}</span>
+                      <span className="tabular-nums font-medium">{a.currency} {fmt(a.balance ?? 0, locale)}</span>
                     </div>
                   ))}
                 </div>
@@ -791,6 +802,8 @@ function normAmount(s: string): number {
 
 // ─── Import Tab ───────────────────────────────────────────────────
 function ImportTab() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [fileName, setFileName] = useState('')
   const [headers, setHeaders] = useState<string[]>([])
@@ -821,7 +834,7 @@ function ImportTab() {
     const firstLine = text.replace(/^﻿/, '').split(/\r?\n/)[0] || ''
     const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ','
     const all = parseCSV(text, delim)
-    if (all.length < 2) { setErr('檔案沒有資料列'); return }
+    if (all.length < 2) { setErr(t('noDataRows')); return }
     setFileName(file.name)
     setHeaders(all[0])
     setDataRows(all.slice(1))
@@ -833,8 +846,8 @@ function ImportTab() {
   }
 
   const colOpts = (allowNone: boolean) => [
-    ...(allowNone ? [{ value: '-1', label: '— 不使用 —' }] : []),
-    ...headers.map((h, i) => ({ value: String(i), label: h || `欄位${i + 1}` })),
+    ...(allowNone ? [{ value: '-1', label: t('notUsedOption') }] : []),
+    ...headers.map((h, i) => ({ value: String(i), label: h || t('columnN', { n: i + 1 }) })),
   ]
 
   const isIncome = (v: string) => /收|income|thu|\+|bán|doanh thu/i.test(v) && !/支|expense|chi/i.test(v)
@@ -858,10 +871,10 @@ function ImportTab() {
         body: JSON.stringify({ records: validRows.map(m => ({ type: m.type, category: m.category, amount: m.amount, date: m.date, description: m.description, account_id: m.account_id })) }),
       })
       const j = await res.json()
-      if (!res.ok) { setErr(j.error || '匯入失敗'); return }
+      if (!res.ok) { setErr(j.error || t('importFailed')); return }
       setResult({ imported: j.imported, skipped: j.skipped })
       setHeaders([]); setDataRows([]); setFileName('')
-    } catch { setErr('匯入失敗') } finally { setImporting(false) }
+    } catch { setErr(t('importFailed')) } finally { setImporting(false) }
   }
 
   const reset = () => { setHeaders([]); setDataRows([]); setFileName(''); setResult(null); setErr('') }
@@ -869,14 +882,14 @@ function ImportTab() {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border bg-blue-50/50 p-4 text-sm text-gray-600 space-y-1">
-        <p className="font-medium text-gray-800">從 iPOS 報表匯入</p>
-        <p>在 iPOS（POS／進銷存）匯出報表，存成 <b>CSV</b>（Excel 檔請「另存新檔 → CSV」），上傳後對應欄位即可批次寫入出納帳務。</p>
-        <p className="text-xs text-gray-400">支援逗號或分號分隔；日期支援 yyyy-mm-dd 與 dd/mm/yyyy；金額自動去除貨幣符號與千分位。</p>
+        <p className="font-medium text-gray-800">{t('importFromIposTitle')}</p>
+        <p>{t.rich('importFromIposDesc', { b: (chunks) => <b>{chunks}</b> })}</p>
+        <p className="text-xs text-gray-400">{t('importFromIposHint')}</p>
       </div>
 
       {result && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
-          <p className="font-medium text-green-700">✓ 匯入完成：成功 {result.imported} 筆{result.skipped > 0 ? `，略過 ${result.skipped} 筆（缺日期或金額）` : ''}</p>
+          <p className="font-medium text-green-700">{t('importCompleteSummary', { n: result.imported })}{result.skipped > 0 ? t('importSkippedSummary', { n: result.skipped }) : ''}</p>
         </div>
       )}
       {err && <p className="text-sm text-red-500">{err}</p>}
@@ -884,7 +897,7 @@ function ImportTab() {
       {headers.length === 0 ? (
         <label className="flex flex-col items-center justify-center gap-2 py-12 rounded-xl border-2 border-dashed cursor-pointer hover:bg-gray-50 text-gray-400">
           <Upload className="h-8 w-8" />
-          <span className="text-sm">點此選擇 CSV 檔案</span>
+          <span className="text-sm">{t('clickToSelectCsv')}</span>
           <input type="file" accept=".csv,text/csv" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
         </label>
@@ -892,64 +905,64 @@ function ImportTab() {
         <>
           <div className="flex items-center gap-2 text-sm">
             <Badge variant="secondary">{fileName}</Badge>
-            <span className="text-gray-400">共 {dataRows.length} 列</span>
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>重新選檔</Button>
+            <span className="text-gray-400">{t('rowsCount', { n: dataRows.length })}</span>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>{t('reselectFile')}</Button>
           </div>
 
           {/* 欄位對應 */}
           <div className="grid md:grid-cols-2 gap-3 p-4 rounded-xl border bg-gray-50">
-            <Field label="日期欄位 *">
+            <Field label={t('dateColRequiredLabel')}>
               <SelectEl value={String(dateCol)} onChange={v => setDateCol(Number(v))} options={colOpts(true)} />
             </Field>
-            <Field label="金額欄位 *">
+            <Field label={t('amountColRequiredLabel')}>
               <SelectEl value={String(amountCol)} onChange={v => setAmountCol(Number(v))} options={colOpts(true)} />
             </Field>
-            <Field label="類型">
+            <Field label={t('typeLabel')}>
               <div className="flex gap-1">
                 <SelectEl value={typeMode} onChange={v => setTypeMode(v as 'fixed' | 'column')}
-                  options={[{ value: 'fixed', label: '固定' }, { value: 'column', label: '依欄位' }]} />
+                  options={[{ value: 'fixed', label: t('fixedOption') }, { value: 'column', label: t('byColumnOption') }]} />
                 {typeMode === 'fixed'
-                  ? <SelectEl value={fixedType} onChange={v => setFixedType(v as 'income' | 'expense')} options={[{ value: 'income', label: '收入' }, { value: 'expense', label: '支出' }]} />
+                  ? <SelectEl value={fixedType} onChange={v => setFixedType(v as 'income' | 'expense')} options={[{ value: 'income', label: t('income') }, { value: 'expense', label: t('expense') }]} />
                   : <SelectEl value={String(typeCol)} onChange={v => setTypeCol(Number(v))} options={colOpts(true)} />}
               </div>
             </Field>
-            <Field label="記入帳戶">
+            <Field label={t('recordToAccountLabel')}>
               <SelectEl value={accountId} onChange={setAccountId}
-                options={[{ value: '', label: '— 不指定 —' }, ...accounts.map(a => ({ value: a.id, label: a.name }))]} />
+                options={[{ value: '', label: t('unspecifiedOption') }, ...accounts.map(a => ({ value: a.id, label: a.name }))]} />
             </Field>
-            <Field label="分類">
+            <Field label={t('categoryLabel')}>
               <div className="flex gap-1">
                 <SelectEl value={catMode} onChange={v => setCatMode(v as 'none' | 'fixed' | 'column')}
-                  options={[{ value: 'none', label: '無' }, { value: 'fixed', label: '固定' }, { value: 'column', label: '依欄位' }]} />
-                {catMode === 'fixed' && <InputEl value={fixedCat} onChange={setFixedCat} placeholder="例：POS營收" />}
+                  options={[{ value: 'none', label: t('noneOption') }, { value: 'fixed', label: t('fixedOption') }, { value: 'column', label: t('byColumnOption') }]} />
+                {catMode === 'fixed' && <InputEl value={fixedCat} onChange={setFixedCat} placeholder={t('fixedCategoryPlaceholder')} />}
                 {catMode === 'column' && <SelectEl value={String(catCol)} onChange={v => setCatCol(Number(v))} options={colOpts(true)} />}
               </div>
             </Field>
-            <Field label="摘要欄位">
+            <Field label={t('descColLabel')}>
               <SelectEl value={String(descCol)} onChange={v => setDescCol(Number(v))} options={colOpts(true)} />
             </Field>
           </div>
 
           {/* 預覽 */}
           <div className="space-y-2">
-            <p className="text-sm text-gray-500">預覽（有效 <b className="text-gray-800">{validRows.length}</b> / {dataRows.length} 列）</p>
+            <p className="text-sm text-gray-500">{t.rich('previewValidCount', { n: validRows.length, total: dataRows.length, b: (chunks) => <b className="text-gray-800">{chunks}</b> })}</p>
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 text-gray-500">
                   <tr>
-                    <th className="px-2 py-1.5 text-left">日期</th>
-                    <th className="px-2 py-1.5 text-left">類型</th>
-                    <th className="px-2 py-1.5 text-right">金額</th>
-                    <th className="px-2 py-1.5 text-left">分類</th>
-                    <th className="px-2 py-1.5 text-left">摘要</th>
+                    <th className="px-2 py-1.5 text-left">{t('dateColHeader')}</th>
+                    <th className="px-2 py-1.5 text-left">{t('typeColHeader')}</th>
+                    <th className="px-2 py-1.5 text-right">{t('amountColHeader')}</th>
+                    <th className="px-2 py-1.5 text-left">{t('categoryColHeader')}</th>
+                    <th className="px-2 py-1.5 text-left">{t('descColHeader')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {mapped.slice(0, 10).map((m, i) => (
                     <tr key={i} className={`border-t ${m.valid ? '' : 'bg-red-50 text-red-400'}`}>
-                      <td className="px-2 py-1.5">{m.date || '✕ 無效'}</td>
-                      <td className="px-2 py-1.5">{m.type === 'income' ? '收入' : '支出'}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums">{fmt(m.amount)}</td>
+                      <td className="px-2 py-1.5">{m.date || t('invalidMark')}</td>
+                      <td className="px-2 py-1.5">{m.type === 'income' ? t('income') : t('expense')}</td>
+                      <td className="px-2 py-1.5 text-right tabular-nums">{fmt(m.amount, locale)}</td>
                       <td className="px-2 py-1.5">{m.category || '—'}</td>
                       <td className="px-2 py-1.5 truncate max-w-[200px]">{m.description || '—'}</td>
                     </tr>
@@ -957,13 +970,13 @@ function ImportTab() {
                 </tbody>
               </table>
             </div>
-            {dataRows.length > 10 && <p className="text-xs text-gray-400">（僅顯示前 10 列）</p>}
+            {dataRows.length > 10 && <p className="text-xs text-gray-400">{t('onlyFirst10RowsShown')}</p>}
           </div>
 
           <div className="flex justify-end">
             <Button onClick={doImport} disabled={importing || dateCol < 0 || amountCol < 0 || validRows.length === 0} className="gap-1.5">
               {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              匯入 {validRows.length} 筆
+              {t('importCountRows', { n: validRows.length })}
             </Button>
           </div>
         </>
@@ -974,6 +987,7 @@ function ImportTab() {
 
 // ─── Main Page ────────────────────────────────────────────────────
 export default function FinancePage() {
+  const t = useTranslations('FinancePage')
   const [tab, setTab] = useState<Tab>('cashflow')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
 
@@ -988,12 +1002,12 @@ export default function FinancePage() {
   }, [])
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: 'cashflow',  label: '出納帳務', icon: <Wallet className="h-4 w-4" /> },
-    { id: 'accounts',  label: '帳戶管理', icon: <Landmark className="h-4 w-4" /> },
-    { id: 'pricing',   label: '物料定價', icon: <Package className="h-4 w-4 text-emerald-600" /> },
-    { id: 'reports',   label: '財務報表', icon: <BarChart3 className="h-4 w-4" /> },
-    { id: 'pnl',       label: '業績報表', icon: <TrendingUp className="h-4 w-4" /> },
-    { id: 'import',    label: '資料匯入', icon: <Upload className="h-4 w-4" /> },
+    { id: 'cashflow',  label: t('tabCashflow'), icon: <Wallet className="h-4 w-4" /> },
+    { id: 'accounts',  label: t('tabAccounts'), icon: <Landmark className="h-4 w-4" /> },
+    { id: 'pricing',   label: t('tabPricing'), icon: <Package className="h-4 w-4 text-emerald-600" /> },
+    { id: 'reports',   label: t('tabReports'), icon: <BarChart3 className="h-4 w-4" /> },
+    { id: 'pnl',       label: t('tabPnl'), icon: <TrendingUp className="h-4 w-4" /> },
+    { id: 'import',    label: t('tabImport'), icon: <Upload className="h-4 w-4" /> },
   ]
 
   if (isAdmin === false) {
@@ -1001,8 +1015,8 @@ export default function FinancePage() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center space-y-2">
           <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold">僅出納總務單位可使用出納總務功能</p>
-          <p className="text-sm text-gray-400">請以管理者帳號登入後再試</p>
+          <p className="font-semibold">{t('forbiddenTitle')}</p>
+          <p className="text-sm text-gray-400">{t('forbiddenDesc')}</p>
         </div>
       </div>
     )
@@ -1016,18 +1030,18 @@ export default function FinancePage() {
           <Wallet className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">出納總務</h1>
-          <p className="text-sm text-gray-500">出納帳務、帳戶管理、物料定價（原料/設備/耗材）、財務報表</p>
+          <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
+          <p className="text-sm text-gray-500">{t('pageSubtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Link href="/store-expenses">
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Store className="h-4 w-4" />門市費用
+              <Store className="h-4 w-4" />{t('storeExpensesLink')}
             </Button>
           </Link>
           <Link href="/vendors">
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Truck className="h-4 w-4" />廠商資料
+              <Truck className="h-4 w-4" />{t('vendorsLink')}
             </Button>
           </Link>
         </div>
@@ -1035,10 +1049,10 @@ export default function FinancePage() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === t.id ? 'bg-card text-primary shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'}`}>
-            {t.icon}{t.label}
+        {TABS.map(tb => (
+          <button key={tb.id} onClick={() => setTab(tb.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === tb.id ? 'bg-card text-primary shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'}`}>
+            {tb.icon}{tb.label}
           </button>
         ))}
       </div>

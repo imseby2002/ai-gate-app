@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import {
   FileText, Upload, Loader2, AlertCircle, Plus, Trash2, X, Bell,
   Building2, CalendarClock, ExternalLink, FileSpreadsheet, Sparkles,
@@ -74,14 +75,14 @@ interface AffairSettings {
   default_pay_stage2_days: number
 }
 
-const TYPE_CONFIG: Record<string, { label: string; color: string; badge: string }> = {
-  lease:           { label: '門市租約',   color: 'text-blue-600',    badge: 'bg-blue-50 text-blue-700 border-blue-200' },
-  sanitary_cert:   { label: '門市衛生證', color: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  company_license: { label: '公司執照',   color: 'text-purple-600',  badge: 'bg-purple-50 text-purple-700 border-purple-200' },
-  patent_cert:     { label: '專利證書',   color: 'text-amber-600',   badge: 'bg-amber-50 text-amber-700 border-amber-200' },
-  contract:        { label: '廠商合約',   color: 'text-cyan-600',    badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-  license:         { label: '門市衛生證', color: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  other:           { label: '其他文書',   color: 'text-slate-600',   badge: 'bg-slate-50 text-slate-700 border-slate-200' },
+const TYPE_COLOR: Record<string, { color: string; badge: string }> = {
+  lease:           { color: 'text-blue-600',    badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+  sanitary_cert:   { color: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  company_license: { color: 'text-purple-600',  badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+  patent_cert:     { color: 'text-amber-600',   badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+  contract:        { color: 'text-cyan-600',    badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  license:         { color: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  other:           { color: 'text-slate-600',   badge: 'bg-slate-50 text-slate-700 border-slate-200' },
 }
 
 const TYPE_ORDER = ['lease', 'sanitary_cert', 'company_license', 'patent_cert', 'contract', 'other']
@@ -95,6 +96,7 @@ function daysUntil(d: string | null): number | null {
 }
 
 export default function AffairsPage() {
+  const t = useTranslations('Affairs')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('docs')
 
@@ -106,7 +108,7 @@ export default function AffairsPage() {
     <div className="flex h-full items-center justify-center p-8">
       <div className="text-center space-y-2">
         <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-        <p className="font-semibold">僅外務單位與公司主管可使用外務管理</p>
+        <p className="font-semibold">{t('adminOnly')}</p>
       </div>
     </div>
   )
@@ -118,20 +120,20 @@ export default function AffairsPage() {
           <FileText className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">外務部門・租約與證書管理</h1>
-          <p className="text-sm text-gray-500">門市租約、門市衛生證、公司執照、專利證書與合約到期／繳費階段提醒</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-gray-500">{t('subtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Link href="/office">
             <Button variant="outline" size="sm" className="gap-1.5">
-              <Building2 className="h-4 w-4" />公司入口
+              <Building2 className="h-4 w-4" />{t('companyPortal')}
             </Button>
           </Link>
         </div>
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
-        {([['docs', '文件與合約', <FileText key="a" className="h-4 w-4" />], ['settings', '通知管道與提醒天數設定', <Bell key="b" className="h-4 w-4" />]] as [Tab, string, ReactNode][]).map(([id, label, icon]) => (
+        {([['docs', t('tabDocs'), <FileText key="a" className="h-4 w-4" />], ['settings', t('tabSettings'), <Bell key="b" className="h-4 w-4" />]] as [Tab, string, ReactNode][]).map(([id, label, icon]) => (
           <button
             key={id}
             onClick={() => setTab(id)}
@@ -150,6 +152,10 @@ export default function AffairsPage() {
 
 // ── 文件列表 Tab ──
 function DocsTab() {
+  const t = useTranslations('Affairs')
+  const TYPE_CONFIG: Record<string, { label: string; color: string; badge: string }> = Object.fromEntries(
+    TYPE_ORDER.map(k => [k, { label: t(`type_${k}`), ...TYPE_COLOR[k] }])
+  )
   const [docs, setDocs] = useState<Doc[]>([])
   const [stores, setStores] = useState<StoreOpt[]>([])
   const [loading, setLoading] = useState(true)
@@ -157,7 +163,7 @@ function DocsTab() {
   const [editing, setEditing] = useState<Partial<Doc> | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [tick, setTick] = useState(0)
-  const reload = () => setTick(t => t + 1)
+  const reload = () => setTick(x => x + 1)
 
   useEffect(() => {
     setLoading(true)
@@ -190,15 +196,15 @@ function DocsTab() {
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
         <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-9 rounded-lg border px-3 text-sm bg-card">
-          <option value="">全部類別</option>
-          {TYPE_ORDER.map(t => <option key={t} value={t}>{TYPE_CONFIG[t]?.label ?? t}</option>)}
+          <option value="">{t('allTypes')}</option>
+          {TYPE_ORDER.map(tk => <option key={tk} value={tk}>{TYPE_CONFIG[tk]?.label ?? tk}</option>)}
         </select>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImport')}
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setEditing({ doc_type: 'lease', remind_days_before: 30, remind_days_stage2: 15, remind_days_urgent: 7, pay_remind_days_before: 3, pay_remind_days_2: 1 })}>
-            <Plus className="h-4 w-4" />新增租約／證書
+            <Plus className="h-4 w-4" />{t('newDocument')}
           </Button>
         </div>
       </div>
@@ -228,9 +234,9 @@ function DocsTab() {
           <div className="text-sm font-bold text-amber-900 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4 text-amber-600" />
-              合約／證書即將到期追蹤（{upcoming.length} 筆）
+              {t('upcomingTracking', { n: upcoming.length })}
             </div>
-            <span className="text-xs text-amber-700 font-normal">多階梯自動提醒（30天 / 15天 / 7天緊急）</span>
+            <span className="text-xs text-amber-700 font-normal">{t('multiStageReminder')}</span>
           </div>
           <div className="grid gap-1.5">
             {upcoming.slice(0, 8).map(({ d, exd }) => {
@@ -239,12 +245,12 @@ function DocsTab() {
               return (
                 <div key={d.id} className="text-xs flex items-center gap-2 p-1.5 bg-white/80 rounded border border-amber-200">
                   <span className={`px-2 py-0.5 rounded border text-[11px] font-medium ${cfg.badge}`}>{cfg.label}</span>
-                  <span className="font-semibold text-slate-800">{d.title || '（未命名）'}</span>
+                  <span className="font-semibold text-slate-800">{d.title || t('unnamed')}</span>
                   {d.store_code && <span className="text-slate-500">[{storeName(d.store_code)}]</span>}
                   {d.counterparty && <span className="text-slate-400">· {d.counterparty}</span>}
-                  {d.is_renewed && <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-medium">已續約</span>}
+                  {d.is_renewed && <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-medium">{t('renewed')}</span>}
                   <span className={`ml-auto tabular-nums font-bold ${exd !== null && exd < 0 ? 'text-red-700' : isUrgent ? 'text-red-600 animate-pulse' : 'text-amber-700'}`}>
-                    {exd !== null && exd < 0 ? `已逾期 ${-exd} 天` : isUrgent ? `🚨 僅剩 ${exd} 天（緊急）` : `剩餘 ${exd} 天`}
+                    {exd !== null && exd < 0 ? t('overdueDays', { n: -exd }) : isUrgent ? t('urgentDaysLeft', { n: exd! }) : t('daysLeft', { n: exd! })}
                   </span>
                 </div>
               )
@@ -256,7 +262,7 @@ function DocsTab() {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-gray-400" /></div>
       ) : docs.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm border-2 border-dashed rounded-xl">尚無任何合約或證書。點擊右上「新增租約／證書」上傳並自動辨識。</div>
+        <div className="text-center py-12 text-gray-400 text-sm border-2 border-dashed rounded-xl">{t('noDocsYet')}</div>
       ) : (
         <div className="grid gap-2.5">
           {docs.map(d => {
@@ -271,47 +277,47 @@ function DocsTab() {
                       <span className={`px-2 py-0.5 rounded border text-xs font-semibold ${cfg.badge}`}>
                         {cfg.label}
                       </span>
-                      <span className="font-bold text-slate-900 text-sm">{d.title || '（未命名）'}</span>
+                      <span className="font-bold text-slate-900 text-sm">{d.title || t('unnamed')}</span>
                       {d.store_code && (
                         <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
                           {storeName(d.store_code)}
                         </span>
                       )}
                       {d.is_renewed ? (
-                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">已完成續約</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">{t('renewedFull')}</span>
                       ) : d.status === 'archived' ? (
-                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">已封存</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">{t('archived')}</span>
                       ) : null}
                     </div>
 
                     <div className="text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1 pt-1">
-                      {d.counterparty && <span><b>簽約方/房東：</b>{d.counterparty}</span>}
-                      {d.effective_date && <span><b>起日：</b>{d.effective_date}</span>}
+                      {d.counterparty && <span><b>{t('counterpartyLabel')}</b>{d.counterparty}</span>}
+                      {d.effective_date && <span><b>{t('effectiveDateLabel')}</b>{d.effective_date}</span>}
                       {d.expiry_date && (
                         <span className={isUrgent ? 'text-red-600 font-bold' : exd !== null && exd <= (d.remind_days_before || 30) ? 'text-amber-600 font-medium' : ''}>
-                          <b>到期日：</b>{d.expiry_date}{exd !== null ? ` (${exd < 0 ? `逾期${-exd}天` : `剩${exd}天`})` : ''}
+                          <b>{t('expiryDateLabel')}</b>{d.expiry_date}{exd !== null ? ` (${exd < 0 ? t('overdueDaysShort', { n: -exd }) : t('daysLeftShort', { n: exd })})` : ''}
                         </span>
                       )}
                       {d.doc_type === 'lease' && (
                         <>
-                          {d.monthly_rent && <span><b>月租金：</b>NT$ {Number(d.monthly_rent).toLocaleString()}</span>}
-                          {d.deposit && <span><b>押金：</b>NT$ {Number(d.deposit).toLocaleString()}</span>}
-                          {d.payment_day && <span><b>每月付款日：</b>每月 {d.payment_day} 號 (提前 3 天/1 天通知出納)</span>}
+                          {d.monthly_rent && <span><b>{t('monthlyRentLabel')}</b>NT$ {Number(d.monthly_rent).toLocaleString()}</span>}
+                          {d.deposit && <span><b>{t('depositLabel')}</b>NT$ {Number(d.deposit).toLocaleString()}</span>}
+                          {d.payment_day && <span><b>{t('paymentDayLabel')}</b>{t('paymentDayValue', { day: d.payment_day })}</span>}
                         </>
                       )}
                     </div>
 
-                    {d.note && <div className="text-xs text-slate-400 mt-0.5">備註：{d.note}</div>}
+                    {d.note && <div className="text-xs text-slate-400 mt-0.5">{t('noteLabel')}{d.note}</div>}
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
                     {d.url && (
-                      <a href={d.url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 p-1.5 rounded hover:bg-slate-100" title="檢視檔案">
+                      <a href={d.url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600 p-1.5 rounded hover:bg-slate-100" title={t('viewFile')}>
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
                     <Button size="sm" variant="outline" onClick={() => setEditing(d)} className="text-xs h-8">
-                      編輯
+                      {t('edit')}
                     </Button>
                   </div>
                 </div>
@@ -335,6 +341,10 @@ function DocsTab() {
 
 // ── 編輯 / 新增合約 Modal ──
 function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores: StoreOpt[]; onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations('Affairs')
+  const TYPE_CONFIG: Record<string, { label: string; color: string; badge: string }> = Object.fromEntries(
+    TYPE_ORDER.map(k => [k, { label: t(`type_${k}`), ...TYPE_COLOR[k] }])
+  )
   const isNew = !doc.id
   const [f, setF] = useState<Partial<Doc>>({ ...doc })
   const [file, setFile] = useState<File | null>(null)
@@ -349,7 +359,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
   // 🤖 AI 自動辨識
   const handleAiExtract = async () => {
     if (!file) {
-      alert('請先點選「選擇檔案」上傳合約或證件照片／PDF！')
+      alert(t('selectFileFirst'))
       fileRef.current?.click()
       return
     }
@@ -360,7 +370,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
       fd.append('file', file)
       const res = await fetch('/api/affairs/documents/ai-extract', { method: 'POST', body: fd })
       const json = await res.json()
-      if (!res.ok || !json.ok) throw new Error(json.error ?? 'AI 辨識失敗')
+      if (!res.ok || !json.ok) throw new Error(json.error ?? t('aiExtractFailed'))
       const d = json.data
       set({
         title: d.title || f.title || file.name.replace(/\.[^/.]+$/, ''),
@@ -374,7 +384,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         contract_text: d.contract_text || f.contract_text,
         note: d.note ? (f.note ? `${f.note}；${d.note}` : d.note) : f.note,
       })
-      alert('🎉 AI 已自動萃取合約資料！請核對各欄位無誤後儲存。')
+      alert(t('aiExtractSuccess'))
     } catch (e: any) {
       setErr(e.message)
     }
@@ -405,7 +415,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
 
         const res = await fetch('/api/affairs/documents', { method: 'POST', body: fd })
         const json = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(json.error ?? '儲存失敗')
+        if (!res.ok) throw new Error(json.error ?? t('saveFailed'))
         onSaved()
       } else {
         const res = await fetch('/api/affairs/documents', {
@@ -434,7 +444,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
           }),
         })
         const json = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(json.error ?? '更新失敗')
+        if (!res.ok) throw new Error(json.error ?? t('updateFailed'))
         onSaved()
       }
     } catch (e: any) {
@@ -444,7 +454,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
   }
 
   const remove = async () => {
-    if (!confirm('確定要刪除此文件（含附件檔案）？此操作無法復原。')) return
+    if (!confirm(t('confirmDeleteDoc'))) return
     await fetch('/api/affairs/documents', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -460,8 +470,8 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
       <div className="bg-white rounded-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto p-6 space-y-4 shadow-2xl border" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b pb-3">
           <div>
-            <h3 className="font-bold text-lg text-slate-900">{isNew ? '新增外務合約／證書' : '編輯合約／證書'}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">支援合約影像掃描與 AI 自動萃取文字合約</p>
+            <h3 className="font-bold text-lg text-slate-900">{isNew ? t('newDocModalTitle') : t('editDocModalTitle')}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('modalSubtitle')}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
         </div>
@@ -472,7 +482,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
             <div className="flex items-center gap-2">
               <input ref={fileRef} type="file" hidden onChange={(e: ChangeEvent<HTMLInputElement>) => setFile(e.target.files?.[0] ?? null)} accept=".pdf,.png,.jpg,.jpeg,.webp" />
               <Button variant="outline" size="sm" className="gap-1.5 bg-white" onClick={() => fileRef.current?.click()}>
-                <Upload className="h-4 w-4" />{file ? file.name : '選擇合約掃描檔 (PDF/圖片)'}
+                <Upload className="h-4 w-4" />{file ? file.name : t('selectScanFile')}
               </Button>
             </div>
             <Button
@@ -482,7 +492,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
               className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm shrink-0"
             >
               {aiAnalyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              AI 自動萃取資料
+              {t('aiExtractButton')}
             </Button>
           </div>
         )}
@@ -490,55 +500,55 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         <div className="space-y-3 text-sm">
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">文件類別 *</span>
+              <span className="text-xs font-semibold text-gray-700">{t('docTypeRequired')}</span>
               <select value={f.doc_type ?? 'lease'} onChange={e => set({ doc_type: e.target.value })} className="w-full h-9 rounded-lg border px-2 text-sm bg-background">
-                {TYPE_ORDER.map(t => <option key={t} value={t}>{TYPE_CONFIG[t]?.label ?? t}</option>)}
+                {TYPE_ORDER.map(tk => <option key={tk} value={tk}>{TYPE_CONFIG[tk]?.label ?? tk}</option>)}
               </select>
             </label>
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">所屬門市（可空＝全公司）</span>
+              <span className="text-xs font-semibold text-gray-700">{t('storeOptional')}</span>
               <select value={f.store_code ?? ''} onChange={e => set({ store_code: e.target.value })} className="w-full h-9 rounded-lg border px-2 text-sm bg-background">
-                <option value="">— 全公司級 —</option>
+                <option value="">{t('companyWideOption')}</option>
                 {stores.map(s => <option key={s.code} value={s.code}>{s.name || s.code}</option>)}
               </select>
             </label>
           </div>
 
           <label className="block space-y-1">
-            <span className="text-xs font-semibold text-gray-700">文件標題 *</span>
-            <Input value={f.title ?? ''} onChange={e => set({ title: e.target.value })} placeholder="例如：台北忠孝門市房屋租賃契約書" />
+            <span className="text-xs font-semibold text-gray-700">{t('docTitleRequired')}</span>
+            <Input value={f.title ?? ''} onChange={e => set({ title: e.target.value })} placeholder={t('docTitlePlaceholder')} />
           </label>
 
           <label className="block space-y-1">
-            <span className="text-xs font-semibold text-gray-700">簽約對方／房東／發證機關</span>
-            <Input value={f.counterparty ?? ''} onChange={e => set({ counterparty: e.target.value })} placeholder="例如：房東 王大明 / 台北市衛生局" />
+            <span className="text-xs font-semibold text-gray-700">{t('counterpartyFieldLabel')}</span>
+            <Input value={f.counterparty ?? ''} onChange={e => set({ counterparty: e.target.value })} placeholder={t('counterpartyPlaceholder')} />
           </label>
 
           {/* 租約專屬：租金、押金與付款日 */}
           {isLease && (
             <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-gray-700">每月租金 (NT$)</span>
-                <Input type="number" value={f.monthly_rent ? String(f.monthly_rent) : ''} onChange={e => set({ monthly_rent: Number(e.target.value) || undefined })} placeholder="例如 50000" />
+                <span className="text-xs font-semibold text-gray-700">{t('monthlyRentField')}</span>
+                <Input type="number" value={f.monthly_rent ? String(f.monthly_rent) : ''} onChange={e => set({ monthly_rent: Number(e.target.value) || undefined })} placeholder="50000" />
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-gray-700">押金保證金 (NT$)</span>
-                <Input type="number" value={f.deposit ? String(f.deposit) : ''} onChange={e => set({ deposit: Number(e.target.value) || undefined })} placeholder="例如 100000" />
+                <span className="text-xs font-semibold text-gray-700">{t('depositField')}</span>
+                <Input type="number" value={f.deposit ? String(f.deposit) : ''} onChange={e => set({ deposit: Number(e.target.value) || undefined })} placeholder="100000" />
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-gray-700">每月繳費日 (1-31)</span>
-                <Input type="number" value={f.payment_day ? String(f.payment_day) : ''} onChange={e => set({ payment_day: Number(e.target.value) || undefined })} placeholder="例如 5 號" />
+                <span className="text-xs font-semibold text-gray-700">{t('paymentDayField')}</span>
+                <Input type="number" value={f.payment_day ? String(f.payment_day) : ''} onChange={e => set({ payment_day: Number(e.target.value) || undefined })} placeholder="5" />
               </label>
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">生效起日</span>
+              <span className="text-xs font-semibold text-gray-700">{t('effectiveDateField')}</span>
               <Input type="date" value={f.effective_date ?? ''} onChange={e => set({ effective_date: e.target.value })} />
             </label>
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-700">到期截止日 *</span>
+              <span className="text-xs font-semibold text-gray-700">{t('expiryDateFieldRequired')}</span>
               <Input type="date" value={f.expiry_date ?? ''} onChange={e => set({ expiry_date: e.target.value })} />
             </label>
           </div>
@@ -552,7 +562,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
                 onChange={e => set({ is_renewed: e.target.checked })}
                 className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
-              <span>該地點已完成續約（若勾選，到期前半個月將不再向總經理室發送緊急通報）</span>
+              <span>{t('renewedCheckboxLabel')}</span>
             </label>
           </div>
 
@@ -563,31 +573,31 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
               onClick={() => setShowAdvancedDays(!showAdvancedDays)}
               className="w-full flex items-center justify-between text-xs font-semibold text-slate-700 hover:text-indigo-600"
             >
-              <span>⚙️ 自訂個別提醒天數（預設：到期 30/15/7 天；繳費 3/1 天）</span>
+              <span>⚙️ {t('customReminderDays')}</span>
               {showAdvancedDays ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {showAdvancedDays && (
               <div className="grid grid-cols-2 gap-2 pt-2 text-xs border-t">
                 <label className="space-y-1">
-                  <span className="text-gray-500">到期第 1 階通知外務／總務（天）</span>
+                  <span className="text-gray-500">{t('expiryStage1Label')}</span>
                   <Input type="number" value={String(f.remind_days_before ?? 30)} onChange={e => set({ remind_days_before: Number(e.target.value) || 0 })} />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-gray-500">到期第 2 階追蹤外務／總務（天）</span>
+                  <span className="text-gray-500">{t('expiryStage2Label')}</span>
                   <Input type="number" value={String(f.remind_days_stage2 ?? 15)} onChange={e => set({ remind_days_stage2: Number(e.target.value) || 0 })} />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-gray-500">到期第 3 階緊急通報（天）</span>
+                  <span className="text-gray-500">{t('expiryStage3Label')}</span>
                   <Input type="number" value={String(f.remind_days_urgent ?? 7)} onChange={e => set({ remind_days_urgent: Number(e.target.value) || 0 })} />
                 </label>
                 {isLease && (
                   <>
                     <label className="space-y-1">
-                      <span className="text-gray-500">繳費第 1 次通知出納（天）</span>
+                      <span className="text-gray-500">{t('payStage1Label')}</span>
                       <Input type="number" value={String(f.pay_remind_days_before ?? 3)} onChange={e => set({ pay_remind_days_before: Number(e.target.value) || 0 })} />
                     </label>
                     <label className="space-y-1">
-                      <span className="text-gray-500">繳費第 2 次通知出納（天）</span>
+                      <span className="text-gray-500">{t('payStage2Label')}</span>
                       <Input type="number" value={String(f.pay_remind_days_2 ?? 1)} onChange={e => set({ pay_remind_days_2: Number(e.target.value) || 0 })} />
                     </label>
                   </>
@@ -597,8 +607,8 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
           </div>
 
           <label className="block space-y-1">
-            <span className="text-xs font-semibold text-gray-700">備註摘要</span>
-            <Input value={f.note ?? ''} onChange={e => set({ note: e.target.value })} placeholder="例如：水電自付、需在到期前兩個月寄發存證信函等" />
+            <span className="text-xs font-semibold text-gray-700">{t('noteSummaryField')}</span>
+            <Input value={f.note ?? ''} onChange={e => set({ note: e.target.value })} placeholder={t('noteSummaryPlaceholder')} />
           </label>
 
           {/* 完整文字合約（AI 萃取後儲存） */}
@@ -608,7 +618,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
               onClick={() => setShowContractText(!showContractText)}
               className="w-full flex items-center justify-between text-xs font-semibold text-slate-700 hover:text-indigo-600"
             >
-              <span>📜 完整文字合約／條款內文 {f.contract_text ? '(已擷取文字)' : '(可留空)'}</span>
+              <span>📜 {t('fullContractText')} {f.contract_text ? t('textExtracted') : t('canBeEmpty')}</span>
               {showContractText ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {showContractText && (
@@ -616,7 +626,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
                 value={f.contract_text ?? ''}
                 onChange={e => set({ contract_text: e.target.value })}
                 rows={6}
-                placeholder="AI 自動轉成之文字合約，或手動貼上條款內文以利日後搜尋..."
+                placeholder={t('contractTextPlaceholder')}
                 className="w-full p-2 text-xs rounded-lg border font-mono bg-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
             )}
@@ -628,13 +638,13 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         <div className="flex justify-between items-center pt-3 border-t">
           {!isNew ? (
             <button onClick={remove} className="text-red-500 hover:text-red-700 flex items-center gap-1 text-xs">
-              <Trash2 className="h-4 w-4" />刪除文件
+              <Trash2 className="h-4 w-4" />{t('deleteDocument')}
             </button>
           ) : <span />}
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
+            <Button variant="outline" size="sm" onClick={onClose}>{t('cancel')}</Button>
             <Button size="sm" onClick={save} disabled={busy || aiAnalyzing} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '確認儲存'}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('confirmSave')}
             </Button>
           </div>
         </div>
@@ -645,6 +655,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
 
 // ── 通知設定 Tab ──
 function SettingsTab() {
+  const t = useTranslations('Affairs')
   const [cfg, setCfg] = useState<AffairSettings | null>(null)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -672,10 +683,10 @@ function SettingsTab() {
   const set = (patch: Partial<AffairSettings>) => setCfg(c => c ? { ...c, ...patch } : c)
 
   const roles: [string, keyof AffairSettings, keyof AffairSettings, keyof AffairSettings, string][] = [
-    ['外務', 'external_telegram', 'external_email', 'external_zalo', '接收合約到期第 1 階（30天）與第 2 階（15天）洽談續約通知，及第 3 階緊急通報'],
-    ['總務', 'general_telegram', 'general_email', 'general_zalo', '與外務同步接收合約到期三階段通知（30天／15天／7天緊急）'],
-    ['出納', 'cashier_telegram', 'cashier_email', 'cashier_zalo', '接收門市租約繳費前 3 天、前 1 天付款通知'],
-    ['總經理室', 'gm_telegram', 'gm_email', 'gm_zalo', '接收合約到期前一週（7天）尚未更新合約之最高緊急通報'],
+    [t('roleExternal'), 'external_telegram', 'external_email', 'external_zalo', t('roleExternalHint')],
+    [t('roleGeneral'), 'general_telegram', 'general_email', 'general_zalo', t('roleGeneralHint')],
+    [t('roleCashier'), 'cashier_telegram', 'cashier_email', 'cashier_zalo', t('roleCashierHint')],
+    [t('roleGm'), 'gm_telegram', 'gm_email', 'gm_zalo', t('roleGmHint')],
   ]
 
   return (
@@ -683,10 +694,10 @@ function SettingsTab() {
       <div className="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 text-xs text-indigo-900 space-y-1">
         <p className="font-bold flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-indigo-600" />
-          多管道全自動提醒通知機制（Telegram / Email / ZALO OA 個人）
+          {t('multiChannelTitle')}
         </p>
-        <p>• <b>ZALO 個人</b>：輸入對應人員的 Zalo User ID，系統將在觸發提醒時透過 Zalo OA 官方帳號主動推播訊息至該人員手機。</p>
-        <p>• <b>自訂預設天數</b>：可在下方隨意更改預設天數；所有合約與證書亦可在建立時獨立自訂。</p>
+        <p>• <b>{t('zaloPersonalLabel')}</b>：{t('zaloPersonalDesc')}</p>
+        <p>• <b>{t('customDefaultDaysLabel')}</b>：{t('customDefaultDaysDesc')}</p>
       </div>
 
       {/* 角色管道設定 */}
@@ -702,15 +713,15 @@ function SettingsTab() {
             <div className="grid md:grid-cols-3 gap-2 text-xs">
               <label className="space-y-1">
                 <span className="text-gray-500 font-medium">Telegram Chat ID</span>
-                <Input value={String(cfg[tgKey] ?? '')} onChange={e => set({ [tgKey]: e.target.value } as Partial<AffairSettings>)} placeholder="例如 123456789" />
+                <Input value={String(cfg[tgKey] ?? '')} onChange={e => set({ [tgKey]: e.target.value } as Partial<AffairSettings>)} placeholder="123456789" />
               </label>
               <label className="space-y-1">
                 <span className="text-gray-500 font-medium">Email</span>
                 <Input value={String(cfg[emailKey] ?? '')} onChange={e => set({ [emailKey]: e.target.value } as Partial<AffairSettings>)} placeholder="user@example.com" />
               </label>
               <label className="space-y-1">
-                <span className="text-indigo-600 font-semibold">🔵 ZALO 個人 (User ID)</span>
-                <Input value={String(cfg[zaloKey] ?? '')} onChange={e => set({ [zaloKey]: e.target.value } as Partial<AffairSettings>)} placeholder="Zalo OA 用戶 ID" />
+                <span className="text-indigo-600 font-semibold">🔵 {t('zaloPersonalField')}</span>
+                <Input value={String(cfg[zaloKey] ?? '')} onChange={e => set({ [zaloKey]: e.target.value } as Partial<AffairSettings>)} placeholder={t('zaloUserIdPlaceholder')} />
               </label>
             </div>
           </Card>
@@ -721,36 +732,36 @@ function SettingsTab() {
       <Card className="p-4 space-y-3">
         <div className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
           <CalendarClock className="h-4 w-4 text-indigo-600" />
-          全域預設提醒天數調整
+          {t('globalDefaultDaysTitle')}
         </div>
         <div className="grid sm:grid-cols-2 gap-3 text-xs">
           <div className="p-3 bg-slate-50 rounded-lg space-y-2 border">
-            <div className="font-semibold text-slate-700">💰 租約繳費通知出納（天數）：</div>
+            <div className="font-semibold text-slate-700">💰 {t('leasePaymentNoticeDays')}</div>
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1">
-                <span className="text-gray-500">第 1 次提前天數</span>
+                <span className="text-gray-500">{t('firstAdvanceDays')}</span>
                 <Input type="number" value={String(cfg.default_pay_stage1_days ?? 3)} onChange={e => set({ default_pay_stage1_days: Number(e.target.value) || 0 })} />
               </label>
               <label className="space-y-1">
-                <span className="text-gray-500">第 2 次即時天數</span>
+                <span className="text-gray-500">{t('secondImmediateDays')}</span>
                 <Input type="number" value={String(cfg.default_pay_stage2_days ?? 1)} onChange={e => set({ default_pay_stage2_days: Number(e.target.value) || 0 })} />
               </label>
             </div>
           </div>
 
           <div className="p-3 bg-slate-50 rounded-lg space-y-2 border">
-            <div className="font-semibold text-slate-700">📄 合約到期追蹤階梯（天數）：</div>
+            <div className="font-semibold text-slate-700">📄 {t('expiryTrackingStages')}</div>
             <div className="grid grid-cols-3 gap-2">
               <label className="space-y-1">
-                <span className="text-gray-500">第 1 階 (洽談)</span>
+                <span className="text-gray-500">{t('stage1Negotiate')}</span>
                 <Input type="number" value={String(cfg.default_expiry_stage1_days ?? 30)} onChange={e => set({ default_expiry_stage1_days: Number(e.target.value) || 0 })} />
               </label>
               <label className="space-y-1">
-                <span className="text-gray-500">第 2 階 (追蹤)</span>
+                <span className="text-gray-500">{t('stage2Track')}</span>
                 <Input type="number" value={String(cfg.default_expiry_stage2_days ?? 15)} onChange={e => set({ default_expiry_stage2_days: Number(e.target.value) || 0 })} />
               </label>
               <label className="space-y-1">
-                <span className="text-gray-500">第 3 階 (緊急)</span>
+                <span className="text-gray-500">{t('stage3Urgent')}</span>
                 <Input type="number" value={String(cfg.default_expiry_urgent_days ?? 7)} onChange={e => set({ default_expiry_urgent_days: Number(e.target.value) || 0 })} />
               </label>
             </div>
@@ -761,7 +772,7 @@ function SettingsTab() {
       <div className="flex items-center justify-between pt-2">
         <RunRemindersButton />
         <Button size="sm" onClick={save} disabled={busy} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? '已儲存成功 ✓' : '儲存通知設定'}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? t('savedSuccess') : t('saveNotificationSettings')}
         </Button>
       </div>
     </div>
@@ -769,6 +780,7 @@ function SettingsTab() {
 }
 
 function RunRemindersButton() {
+  const t = useTranslations('Affairs')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -777,14 +789,14 @@ function RunRemindersButton() {
     const res = await fetch('/api/affairs/run-reminders', { method: 'POST' })
     setBusy(false)
     const d = await res.json().catch(() => ({}))
-    setMsg(res.ok ? `執行完成！已送出：到期提醒 ${d.expiry ?? 0} 則、繳款提醒 ${d.payment ?? 0} 則（已發過的不重覆發送）。` : (d.error ?? '執行失敗'))
+    setMsg(res.ok ? t('remindersRunComplete', { expiry: d.expiry ?? 0, payment: d.payment ?? 0 }) : (d.error ?? t('runFailed')))
   }
 
   return (
     <div className="flex items-center gap-2">
       <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={run} disabled={busy}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
-        立即檢查並發送提醒
+        {t('checkAndSendNow')}
       </Button>
       {msg && <span className="text-xs text-slate-600">{msg}</span>}
     </div>

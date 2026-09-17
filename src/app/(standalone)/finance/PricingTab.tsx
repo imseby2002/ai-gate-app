@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Package, Plus, Search, Upload, Download, Trash2, Edit3,
   CheckCircle2, AlertCircle, Loader2, DollarSign,
@@ -11,7 +12,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
-const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
+const fmt = (n: number, locale: string) => Math.round(Number(n) || 0).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 
 export interface MaterialPriceItem {
   id?: string
@@ -25,15 +26,18 @@ export interface MaterialPriceItem {
   updated_at?: string
 }
 
-const CATEGORIES = [
-  { id: 'all', label: '全部品項', icon: Layers, color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
-  { id: '原料', label: '原物料', icon: Coffee, color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' },
-  { id: '設備', label: '機器設備', icon: Wrench, color: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300' },
-  { id: '耗材', label: '杯袋耗材', icon: ShoppingBag, color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' },
-  { id: '道具', label: '吧台道具', icon: Package, color: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300' },
+const getCategories = (t: (key: string) => string) => [
+  { id: 'all', label: t('catAll'), icon: Layers, color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' },
+  { id: '原料', label: t('catRaw'), icon: Coffee, color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' },
+  { id: '設備', label: t('catEquipment'), icon: Wrench, color: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300' },
+  { id: '耗材', label: t('catConsumable'), icon: ShoppingBag, color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' },
+  { id: '道具', label: t('catTool'), icon: Package, color: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300' },
 ]
 
 export default function PricingTab() {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
+  const CATEGORIES = getCategories(t)
   const [items, setItems] = useState<MaterialPriceItem[]>([])
   const [counts, setCounts] = useState({ all: 0, raw: 0, equipment: 0, consumable: 0, tool: 0 })
   const [loading, setLoading] = useState(true)
@@ -59,11 +63,11 @@ export default function PricingTab() {
         setCounts(d.counts ?? { all: 0, raw: 0, equipment: 0, consumable: 0, tool: 0 })
       }
     } catch {
-      setMsg({ text: '載入物料定價資料失敗', type: 'error' })
+      setMsg({ text: t('loadPricingFailed'), type: 'error' })
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     loadData()
@@ -84,13 +88,13 @@ export default function PricingTab() {
       const res = await fetch('/api/inv/import/prices', { method: 'POST', body: fd })
       const d = await res.json()
       if (res.ok) {
-        setMsg({ text: `成功匯入 ${d.imported} 筆標準定價！研發配方門市成本已同步更新。`, type: 'success' })
+        setMsg({ text: t('importPricesSuccess', { n: d.imported }), type: 'success' })
         loadData()
       } else {
-        setMsg({ text: d.error ?? '匯入失敗', type: 'error' })
+        setMsg({ text: d.error ?? t('importFailed'), type: 'error' })
       }
     } catch (err) {
-      setMsg({ text: `匯入發生錯誤：${err instanceof Error ? err.message : err}`, type: 'error' })
+      setMsg({ text: t('importErrorWith', { msg: err instanceof Error ? err.message : String(err) }), type: 'error' })
     } finally {
       setUploading(false)
     }
@@ -120,11 +124,11 @@ export default function PricingTab() {
   const handleSaveItem = async () => {
     if (!editingItem) return
     if (!editingItem.material_code.trim()) {
-      alert('請輸入品項代碼')
+      alert(t('enterItemCode'))
       return
     }
     if (!editingItem.material_name.trim()) {
-      alert('請輸入品項名稱')
+      alert(t('enterItemName'))
       return
     }
 
@@ -138,14 +142,14 @@ export default function PricingTab() {
       if (res.ok) {
         setModalOpen(false)
         setEditingItem(null)
-        setMsg({ text: '品項定價儲存成功！研發配方門市成本已自動連動。', type: 'success' })
+        setMsg({ text: t('itemPriceSaved'), type: 'success' })
         loadData()
       } else {
         const d = await res.json().catch(() => ({}))
-        alert(d.error || '儲存失敗')
+        alert(d.error || t('saveFailed'))
       }
     } catch {
-      alert('儲存失敗，請檢查網路連線')
+      alert(t('saveFailedCheckNetwork'))
     } finally {
       setSaving(false)
     }
@@ -153,7 +157,7 @@ export default function PricingTab() {
 
   // 刪除品項
   const handleDeleteItem = async (item: MaterialPriceItem) => {
-    if (!confirm(`確定要刪除「${item.material_name} (${item.material_code})」的定價資料嗎？`)) return
+    if (!confirm(t('confirmDeleteItem', { name: item.material_name, code: item.material_code }))) return
     try {
       const res = await fetch('/api/fin/material-prices', {
         method: 'DELETE',
@@ -161,13 +165,13 @@ export default function PricingTab() {
         body: JSON.stringify({ id: item.id, material_code: item.material_code }),
       })
       if (res.ok) {
-        setMsg({ text: `已刪除「${item.material_name}」定價`, type: 'success' })
+        setMsg({ text: t('itemDeleted', { name: item.material_name }), type: 'success' })
         loadData()
       } else {
-        alert('刪除失敗')
+        alert(t('deleteFailed'))
       }
     } catch {
-      alert('刪除失敗，請檢查網路連線')
+      alert(t('deleteFailedCheckNetwork'))
     }
   }
 
@@ -214,24 +218,23 @@ export default function PricingTab() {
         <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
         <div className="text-xs space-y-1.5 leading-relaxed text-gray-800 dark:text-gray-200">
           <p className="font-bold text-sm text-emerald-900 dark:text-emerald-300">
-            物料三層定價管理規範（原料／設備／耗材／道具）：
+            {t('bannerTitle')}
           </p>
           <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
             <li>
-              <b>工廠進貨價 (Đơn giá nhập)</b>：總部/工廠向供應商採購此原料、設備或耗材之進貨單價。
+              {t.rich('bannerPurchasePrice', { b: (chunks) => <b>{chunks}</b> })}
             </li>
             <li>
               <span className="font-bold text-purple-700 dark:text-purple-300">
-                賣給直營門市價格 (Đơn giá xuất CH)
+                {t('bannerExportPriceLabel')}
               </span>
-              ：<b>研發部門【配方】計算每杯飲品門市成本之直接數據源！</b>
-              出納在此處更新門市售價，研發配方與門市點單成本即時自動同步重算。
+              {t.rich('bannerExportPriceDesc', { b: (chunks) => <b>{chunks}</b> })}
             </li>
             <li>
-              <b>賣給非直營門市 (經銷商/加盟店) 價格 (Đơn giá xuất Đại lý)</b>：經銷通路與加盟門市之出貨批發定價。
+              {t.rich('bannerDealerPrice', { b: (chunks) => <b>{chunks}</b> })}
             </li>
             <li>
-              出納同仁可隨時進行<b>單筆價格微調</b>，亦可點擊右上方<b>「匯入標準定價表 (.xlsx)」</b>整批更新全公司物料價目表。
+              {t.rich('bannerAdjustHint', { b: (chunks) => <b>{chunks}</b> })}
             </li>
           </ul>
         </div>
@@ -244,8 +247,8 @@ export default function PricingTab() {
             <Coffee className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[11px] text-muted-foreground font-medium">原料品項</p>
-            <p className="text-lg font-bold">{counts.raw} <span className="text-xs font-normal text-muted-foreground">項</span></p>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('statRawItems')}</p>
+            <p className="text-lg font-bold">{counts.raw} <span className="text-xs font-normal text-muted-foreground">{t('itemUnit')}</span></p>
           </div>
         </Card>
 
@@ -254,8 +257,8 @@ export default function PricingTab() {
             <Wrench className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[11px] text-muted-foreground font-medium">設備機器</p>
-            <p className="text-lg font-bold">{counts.equipment} <span className="text-xs font-normal text-muted-foreground">項</span></p>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('statEquipment')}</p>
+            <p className="text-lg font-bold">{counts.equipment} <span className="text-xs font-normal text-muted-foreground">{t('itemUnit')}</span></p>
           </div>
         </Card>
 
@@ -264,8 +267,8 @@ export default function PricingTab() {
             <ShoppingBag className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[11px] text-muted-foreground font-medium">杯袋耗材</p>
-            <p className="text-lg font-bold">{counts.consumable} <span className="text-xs font-normal text-muted-foreground">項</span></p>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('statConsumable')}</p>
+            <p className="text-lg font-bold">{counts.consumable} <span className="text-xs font-normal text-muted-foreground">{t('itemUnit')}</span></p>
           </div>
         </Card>
 
@@ -274,8 +277,8 @@ export default function PricingTab() {
             <Layers className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-[11px] text-muted-foreground font-medium">全部建檔品項</p>
-            <p className="text-lg font-bold">{counts.all} <span className="text-xs font-normal text-muted-foreground">項</span></p>
+            <p className="text-[11px] text-muted-foreground font-medium">{t('statAllItems')}</p>
+            <p className="text-lg font-bold">{counts.all} <span className="text-xs font-normal text-muted-foreground">{t('itemUnit')}</span></p>
           </div>
         </Card>
       </div>
@@ -318,7 +321,7 @@ export default function PricingTab() {
             className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
           >
             <Plus className="h-3.5 w-3.5" />
-            新增品項
+            {t('addItem')}
           </Button>
 
           <Button
@@ -329,7 +332,7 @@ export default function PricingTab() {
             className="gap-1.5 text-xs h-8"
           >
             {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            匯入標準定價表 (.xlsx)
+            {t('importStandardPriceTable')}
           </Button>
 
           <Button
@@ -338,7 +341,7 @@ export default function PricingTab() {
             onClick={loadData}
             disabled={loading}
             className="h-8 w-8 p-0"
-            title="重新整理"
+            title={t('refresh')}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -352,12 +355,12 @@ export default function PricingTab() {
           <Input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="搜尋品項代碼 (如 TEA-01)、品項名稱 (如 錫蘭紅茶)..."
+            placeholder={t('searchPlaceholder')}
             className="pl-9 h-9 text-xs"
           />
         </div>
         <span className="text-xs text-muted-foreground shrink-0 font-mono">
-          符合 {filtered.length} 筆
+          {t('matchCount', { n: filtered.length })}
         </span>
       </div>
 
@@ -365,19 +368,19 @@ export default function PricingTab() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground space-y-2">
           <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-          <p className="text-xs">正在載入物料三層定價庫...</p>
+          <p className="text-xs">{t('loadingPricingDb')}</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground space-y-3 border rounded-xl bg-card/40">
           <Package className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600" />
           <div className="space-y-1">
-            <p className="font-semibold text-sm">尚無「{categoryFilter === 'all' ? '物料' : categoryFilter}」定價資料</p>
+            <p className="font-semibold text-sm">{t('noPricingDataFor', { cat: categoryFilter === 'all' ? t('materialWord') : categoryFilter })}</p>
             <p className="text-xs text-gray-400">
-              點擊上方「新增品項」手動新增，或點擊「匯入標準定價表 (.xlsx)」整批上傳中央廚房進價／門市價表。
+              {t('emptyStateHint')}
             </p>
           </div>
           <Button size="sm" onClick={handleOpenAdd} className="gap-1.5 text-xs bg-emerald-600 text-white">
-            <Plus className="h-3.5 w-3.5" />立即新增第一筆品項
+            <Plus className="h-3.5 w-3.5" />{t('addFirstItem')}
           </Button>
         </div>
       ) : (
@@ -385,18 +388,18 @@ export default function PricingTab() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b bg-muted/50 text-muted-foreground text-left">
-                <th className="py-2.5 px-3 font-semibold">品類</th>
-                <th className="px-3 font-semibold">品項代碼</th>
-                <th className="px-3 font-semibold">品項名稱</th>
-                <th className="px-3 font-semibold text-center">單位</th>
-                <th className="px-3 text-right font-semibold">工廠進貨價 (ĐGN)</th>
+                <th className="py-2.5 px-3 font-semibold">{t('colCategory')}</th>
+                <th className="px-3 font-semibold">{t('colItemCode')}</th>
+                <th className="px-3 font-semibold">{t('colItemName')}</th>
+                <th className="px-3 font-semibold text-center">{t('colUnit')}</th>
+                <th className="px-3 text-right font-semibold">{t('colPurchasePrice')}</th>
                 <th className="px-3 text-right font-semibold text-purple-700 dark:text-purple-300 bg-purple-50/50 dark:bg-purple-950/20">
-                  賣給門市價格 (ĐGX CH)
-                  <span className="block text-[10px] font-normal text-purple-600/80">📌 配方表成本依據</span>
+                  {t('colExportPrice')}
+                  <span className="block text-[10px] font-normal text-purple-600/80">{t('colExportPriceHint')}</span>
                 </th>
-                <th className="px-3 text-right font-semibold">賣給經銷商 (ĐGX Đại lý)</th>
-                <th className="px-3 text-right font-semibold">出貨毛利 (門市價 - 進價)</th>
-                <th className="py-2.5 px-3 text-center font-semibold">操作</th>
+                <th className="px-3 text-right font-semibold">{t('colDealerPrice')}</th>
+                <th className="px-3 text-right font-semibold">{t('colMargin')}</th>
+                <th className="py-2.5 px-3 text-center font-semibold">{t('colActions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -419,17 +422,17 @@ export default function PricingTab() {
                     <td className="px-3 font-semibold text-gray-900 dark:text-gray-100">{it.material_name}</td>
                     <td className="px-3 text-center text-muted-foreground">{it.unit || '—'}</td>
                     <td className="px-3 text-right font-mono tabular-nums text-muted-foreground">
-                      {fmt(it.purchase_price)} ₫
+                      {fmt(it.purchase_price, locale)} ₫
                     </td>
                     <td className="px-3 text-right font-mono tabular-nums font-bold text-purple-700 dark:text-purple-300 bg-purple-50/30 dark:bg-purple-950/10">
-                      {fmt(it.export_price)} ₫
+                      {fmt(it.export_price, locale)} ₫
                     </td>
                     <td className="px-3 text-right font-mono tabular-nums text-muted-foreground">
-                      {fmt(it.dealer_price)} ₫
+                      {fmt(it.dealer_price, locale)} ₫
                     </td>
                     <td className="px-3 text-right tabular-nums">
                       <span className={`font-medium ${margin >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}`}>
-                        {margin >= 0 ? '+' : ''}{fmt(margin)} ₫
+                        {margin >= 0 ? '+' : ''}{fmt(margin, locale)} ₫
                       </span>
                       <span className="block text-[10px] text-muted-foreground">
                         {marginPct.toFixed(1)}%
@@ -440,14 +443,14 @@ export default function PricingTab() {
                         <button
                           onClick={() => handleOpenEdit(it)}
                           className="p-1 rounded hover:bg-muted text-gray-500 hover:text-emerald-600 transition-colors"
-                          title="編輯定價"
+                          title={t('editPricing')}
                         >
                           <Edit3 className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteItem(it)}
                           className="p-1 rounded hover:bg-muted text-gray-400 hover:text-rose-600 transition-colors"
-                          title="刪除品項"
+                          title={t('deleteItem')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -471,7 +474,7 @@ export default function PricingTab() {
                   <DollarSign className="h-4 w-4" />
                 </div>
                 <h3 className="font-bold text-base">
-                  {editingItem.id ? '編輯物料定價' : '新增物料定價品項'}
+                  {editingItem.id ? t('editMaterialPricing') : t('addMaterialPricingItem')}
                 </h3>
               </div>
               <button
@@ -485,26 +488,26 @@ export default function PricingTab() {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <label className="space-y-1 block">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">品類分類 *</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{t('categoryRequiredLabel')}</span>
                   <select
                     value={editingItem.category}
                     onChange={e => setEditingItem({ ...editingItem, category: e.target.value })}
                     className="w-full h-9 rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
-                    <option value="原料">原物料 (原料)</option>
-                    <option value="設備">機器設備 (設備)</option>
-                    <option value="耗材">杯袋包材 (耗材)</option>
-                    <option value="道具">吧台器具 (道具)</option>
+                    <option value="原料">{t('optRaw')}</option>
+                    <option value="設備">{t('optEquipment')}</option>
+                    <option value="耗材">{t('optConsumable')}</option>
+                    <option value="道具">{t('optTool')}</option>
                   </select>
                 </label>
 
                 <label className="space-y-1 block">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">單位 *</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{t('unitRequiredLabel')}</span>
                   <input
                     type="text"
                     value={editingItem.unit}
                     onChange={e => setEditingItem({ ...editingItem, unit: e.target.value })}
-                    placeholder="如: kg, g, 台, 個, 箱, 包"
+                    placeholder={t('unitPlaceholder')}
                     className="w-full h-9 rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </label>
@@ -512,23 +515,23 @@ export default function PricingTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="space-y-1 block">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">品項代碼 *</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{t('itemCodeRequiredLabel')}</span>
                   <input
                     type="text"
                     value={editingItem.material_code}
                     onChange={e => setEditingItem({ ...editingItem, material_code: e.target.value })}
-                    placeholder="如: TEA-001"
+                    placeholder={t('itemCodePlaceholder')}
                     className="w-full h-9 rounded-md border bg-background px-3 text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </label>
 
                 <label className="space-y-1 block">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">品項名稱 *</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{t('itemNameRequiredLabel')}</span>
                   <input
                     type="text"
                     value={editingItem.material_name}
                     onChange={e => setEditingItem({ ...editingItem, material_name: e.target.value })}
-                    placeholder="如: 特選阿薩姆紅茶"
+                    placeholder={t('itemNamePlaceholder')}
                     className="w-full h-9 rounded-md border bg-background px-3 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </label>
@@ -537,12 +540,12 @@ export default function PricingTab() {
               <div className="border-t pt-3 space-y-3">
                 <p className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
                   <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
-                  三層價格設定 (VND / ₫)
+                  {t('threeTierPricingTitle')}
                 </p>
 
                 <label className="space-y-1 block">
                   <span className="font-semibold text-gray-700 dark:text-gray-300">
-                    1. 工廠進貨價 (Đơn giá nhập)
+                    {t('purchasePriceModalLabel')}
                   </span>
                   <div className="relative">
                     <input
@@ -554,14 +557,14 @@ export default function PricingTab() {
                     />
                     <span className="absolute right-3 top-2 text-[11px] text-gray-400">₫</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">總部或工廠向原物料供應商進貨的採購成本。</span>
+                  <span className="text-[10px] text-gray-400">{t('purchasePriceHint')}</span>
                 </label>
 
                 <label className="space-y-1 block p-2.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200/70">
                   <span className="font-bold text-purple-900 dark:text-purple-200 flex items-center justify-between">
-                    <span>2. 賣給門市價格 (Đơn giá xuất CH) *</span>
+                    <span>{t('exportPriceModalLabel')}</span>
                     <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-700 border-purple-300 font-semibold">
-                      📌 配方表門市成本來源
+                      {t('exportPriceBadge')}
                     </Badge>
                   </span>
                   <div className="relative">
@@ -575,13 +578,13 @@ export default function PricingTab() {
                     <span className="absolute right-3 top-2 text-[11px] text-purple-500">₫</span>
                   </div>
                   <span className="text-[10px] text-purple-800 dark:text-purple-300 font-medium">
-                    研發部門【配方】計算飲品每杯門市成本之直接單價，修改後將即時連動所有配方！
+                    {t('exportPriceHint')}
                   </span>
                 </label>
 
                 <label className="space-y-1 block">
                   <span className="font-semibold text-gray-700 dark:text-gray-300">
-                    3. 賣給非直營門市 / 經銷商價格 (Đơn giá xuất Đại lý)
+                    {t('dealerPriceModalLabel')}
                   </span>
                   <div className="relative">
                     <input
@@ -593,7 +596,7 @@ export default function PricingTab() {
                     />
                     <span className="absolute right-3 top-2 text-[11px] text-gray-400">₫</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">批發經銷商或加盟門市之物料出貨價。</span>
+                  <span className="text-[10px] text-gray-400">{t('dealerPriceHint')}</span>
                 </label>
               </div>
             </div>
@@ -606,7 +609,7 @@ export default function PricingTab() {
                 disabled={saving}
                 className="text-xs"
               >
-                取消
+                {t('cancel')}
               </Button>
               <Button
                 size="sm"
@@ -615,7 +618,7 @@ export default function PricingTab() {
                 className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                確認儲存定價
+                {t('confirmSavePricing')}
               </Button>
             </div>
           </div>

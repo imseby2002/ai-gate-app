@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Plus, Trash2, Copy, Check, Loader2, ChevronDown, ChevronUp, ExternalLink, RefreshCw } from 'lucide-react'
 import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
 
@@ -20,7 +21,8 @@ interface CsForm {
 // route.ts 那份是伺服器端模組（依賴 next/headers），client component 只能拿型別，
 // 不能連值一起 import，不然整個伺服器端模組會被打包進前端 bundle 導致建置失敗。
 const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6]
-const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
+const WEEKDAY_KEYS = ['wd0', 'wd1', 'wd2', 'wd3', 'wd4', 'wd5', 'wd6']
+const getWeekdayLabels = (t: (key: string) => string) => WEEKDAY_KEYS.map(k => t(k))
 
 interface CsFormSubmission {
   id: string
@@ -34,12 +36,12 @@ interface CsFormSubmission {
   notify_error: string | null
 }
 
-const FIELD_TYPES: { value: CsFormField['type']; label: string }[] = [
-  { value: 'text', label: '單行文字' },
-  { value: 'textarea', label: '多行文字' },
-  { value: 'select', label: '下拉選單' },
-  { value: 'radio', label: '單選按鈕' },
-  { value: 'number', label: '數字' },
+const getFieldTypes = (t: (key: string) => string): { value: CsFormField['type']; label: string }[] => [
+  { value: 'text', label: t('fieldTypeText') },
+  { value: 'textarea', label: t('fieldTypeTextarea') },
+  { value: 'select', label: t('fieldTypeSelect') },
+  { value: 'radio', label: t('fieldTypeRadio') },
+  { value: 'number', label: t('fieldTypeNumber') },
 ]
 
 function emptyField(): CsFormField {
@@ -50,7 +52,14 @@ function emptyNotifyTarget(): CsFormNotifyTarget {
   return { platform: '', to: '', batchMode: 'daily', batchTime: '08:00' }
 }
 
+const formatDateTime = (iso: string, locale: string) =>
+  new Date(iso).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+
 export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: string }) {
+  const t = useTranslations('CsFormsPanel')
+  const locale = useLocale()
+  const WEEKDAY_LABELS = getWeekdayLabels(t)
+  const FIELD_TYPES = getFieldTypes(t)
   const [forms, setForms] = useState<CsForm[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -105,10 +114,10 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   }
 
   const save = async () => {
-    if (!name.trim()) { setError('請輸入表單名稱'); return }
+    if (!name.trim()) { setError(t('errFormName')); return }
     const cleanFields = fields.filter(f => f.label.trim())
-    if (!cleanFields.length) { setError('至少需要一個欄位'); return }
-    if (!availableWeekdays.length) { setError('至少要選一個開放的星期'); return }
+    if (!cleanFields.length) { setError(t('errAtLeastOneField')); return }
+    if (!availableWeekdays.length) { setError(t('errAtLeastOneWeekday')); return }
     setSaving(true); setError('')
     try {
       const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays, confirmBeforeFields }
@@ -120,7 +129,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
           })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || '儲存失敗'); return }
+      if (!res.ok) { setError(data.error || t('saveFailed')); return }
       resetEditor()
       loadForms()
     } finally {
@@ -129,7 +138,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   }
 
   const remove = async (id: string) => {
-    if (!confirm('確定刪除這份表單？相關的提交紀錄也會一併刪除。')) return
+    if (!confirm(t('confirmDeleteForm'))) return
     await fetch(`/api/marketing/cs-forms/${id}`, { method: 'DELETE' })
     loadForms()
   }
@@ -161,7 +170,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   }
 
   const handleManualNotify = async (formId: string, subId: string) => {
-    if (!confirm('確定已核對款項，並將此筆報名名單推播至通知群組？')) return
+    if (!confirm(t('confirmManualNotify'))) return
     setNotifyingId(subId)
     try {
       const res = await fetch(`/api/marketing/cs-forms/${formId}/submissions/${subId}/notify`, {
@@ -169,12 +178,12 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
       })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || '推播失敗')
+        alert(data.error || t('notifyFailedAlert'))
         return
       }
       setSubs(prev => prev.map(s => s.id === subId ? { ...s, notified_at: data.notified_at, notify_error: null } : s))
     } catch (e) {
-      alert(e instanceof Error ? e.message : '推播連線失敗')
+      alert(e instanceof Error ? e.message : t('notifyConnFailedAlert'))
     } finally {
       setNotifyingId(null)
     }
@@ -190,14 +199,14 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm font-medium text-gray-700">自建表單</div>
-          <div className="text-xs text-gray-400 mt-0.5">客人掃碼或點連結即可填寫送出，送出結果會通知到您指定的對象</div>
+          <div className="text-sm font-medium text-gray-700">{t('selfBuiltForms')}</div>
+          <div className="text-xs text-gray-400 mt-0.5">{t('selfBuiltFormsDesc')}</div>
         </div>
         {!editorOpen && (
           <button onClick={startCreate}
             className="px-3 py-1.5 rounded-lg text-xs font-medium text-white flex items-center gap-1"
             style={{ background: 'var(--primary)' }}>
-            <Plus className="h-3.5 w-3.5" />新增表單
+            <Plus className="h-3.5 w-3.5" />{t('addForm')}
           </button>
         )}
       </div>
@@ -205,34 +214,34 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
       {editorOpen && (
         <div className="border rounded-xl p-4 space-y-3 bg-gray-50/50">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">表單名稱</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{t('formNameLabel')}</label>
             <input value={name} onChange={e => setName(e.target.value)}
-              placeholder="例如：早餐訂購表單"
+              placeholder={t('formNamePlaceholder')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-gray-500" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">觸發關鍵字（CS 對話中提到時會主動詢問，逗號分隔，選填）</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{t('triggerKeywordsLabel')}</label>
             <input value={triggerKeywords} onChange={e => setTriggerKeywords(e.target.value)}
-              placeholder="例如：早餐,早餐訂購"
+              placeholder={t('triggerKeywordsPlaceholder')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-gray-500" />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-gray-500">表單欄位</label>
+            <label className="block text-xs font-medium text-gray-500">{t('formFieldsLabel')}</label>
             {fields.map((f, idx) => (
               <div key={f.id} className="border rounded-lg p-2.5 bg-white space-y-2">
                 <div className="flex items-center gap-2">
                   <input value={f.label} onChange={e => updateField(idx, { label: e.target.value })}
-                    placeholder="欄位名稱，例如：早餐選擇"
+                    placeholder={t('fieldNamePlaceholder')}
                     className="flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
                   <select value={f.type} onChange={e => updateField(idx, { type: e.target.value as CsFormField['type'] })}
                     className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
-                    {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    {FIELD_TYPES.map(ft => <option key={ft.value} value={ft.value}>{ft.label}</option>)}
                   </select>
                   <label className="flex items-center gap-1 text-xs text-gray-500 shrink-0">
                     <input type="checkbox" checked={f.required} onChange={e => updateField(idx, { required: e.target.checked })} />
-                    必填
+                    {t('required')}
                   </label>
                   <button onClick={() => setFields(prev => prev.filter((_, i) => i !== idx))}
                     className="text-gray-400 hover:text-red-500 shrink-0">
@@ -242,19 +251,19 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                 {(f.type === 'select' || f.type === 'radio') && (
                   <input value={(f.options ?? []).join(',')}
                     onChange={e => updateField(idx, { options: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-                    placeholder="選項，逗號分隔，例如：麥當勞,早餐直送"
+                    placeholder={t('optionsPlaceholder')}
                     className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
                 )}
               </div>
             ))}
             <button onClick={() => setFields(prev => [...prev, emptyField()])}
               className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
-              <Plus className="h-3 w-3" />新增欄位
+              <Plus className="h-3 w-3" />{t('addField')}
             </button>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">開放的星期（指客人「可以送出表單」的那一天，不是服務當天——例如早餐直送是前一天22:00前下單、隔天才送達，若週三、週四不送早餐，要取消勾選的是週二、週三，不是週三、週四）</label>
+            <label className="block text-xs font-medium text-gray-500 mb-1">{t('availableWeekdaysLabel')}</label>
             <div className="flex gap-1.5">
               {WEEKDAY_LABELS.map((label, d) => (
                 <button key={d} type="button" onClick={() => toggleWeekday(d)}
@@ -269,41 +278,41 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
           <label className="flex items-start gap-2 text-xs text-gray-600">
             <input type="checkbox" className="mt-0.5" checked={confirmBeforeFields}
               onChange={e => setConfirmBeforeFields(e.target.checked)} />
-            <span>詢問欄位前，若知識庫另外列了替代方案，先跟客人確認要選哪一個（取消勾選＝客人一提到關鍵字就直接開始問欄位，不確認）</span>
+            <span>{t('confirmBeforeFieldsLabel')}</span>
           </label>
 
           <div className="border rounded-lg p-2.5 bg-white space-y-2">
-            <label className="block text-xs font-medium text-gray-500">送出後通知</label>
+            <label className="block text-xs font-medium text-gray-500">{t('notifyAfterSubmitLabel')}</label>
             <div className="flex gap-2">
               <select value={notifyTarget.platform}
                 onChange={e => setNotifyTarget(prev => ({ ...prev, platform: e.target.value as CsFormNotifyTarget['platform'] }))}
                 className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm">
-                <option value="">不通知</option>
-                <option value="line">LINE（個人或群組）</option>
-                <option value="telegram">Telegram（個人或群組）</option>
-                <option value="email">Email</option>
-                <option value="webhook">Webhook（例如既有的 Google Apps Script）</option>
+                <option value="">{t('notifyNone')}</option>
+                <option value="line">{t('notifyLine')}</option>
+                <option value="telegram">{t('notifyTelegram')}</option>
+                <option value="email">{t('notifyEmail')}</option>
+                <option value="webhook">{t('notifyWebhook')}</option>
               </select>
               {notifyTarget.platform && (
                 <input value={notifyTarget.to} onChange={e => setNotifyTarget(prev => ({ ...prev, to: e.target.value }))}
-                  placeholder={notifyTarget.platform === 'line' ? 'LINE 使用者或群組 ID' : notifyTarget.platform === 'telegram' ? 'Telegram Chat ID（個人或群組）' : notifyTarget.platform === 'email' ? 'Email 地址' : 'https://...'}
+                  placeholder={notifyTarget.platform === 'line' ? t('notifyToLinePlaceholder') : notifyTarget.platform === 'telegram' ? t('notifyToTelegramPlaceholder') : notifyTarget.platform === 'email' ? t('notifyToEmailPlaceholder') : t('notifyToWebhookPlaceholder')}
                   className="flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:border-gray-500" />
               )}
             </div>
             {notifyTarget.platform === 'line' && (
               <div>
                 <input value={notifyTarget.lineToken ?? ''} onChange={e => setNotifyTarget(prev => ({ ...prev, lineToken: e.target.value }))}
-                  placeholder="這個表單專用的 LINE Channel Access Token（選填）"
+                  placeholder={t('lineTokenPlaceholder')}
                   className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
-                <div className="text-[10px] text-gray-400 mt-0.5">留空則用「平台」分頁設定的預設 OA 帳號；要用不同的 OA 帳號通知這個表單（例如早餐店自己的群組），才需要填這裡，且該 OA 帳號必須已加入上面填的群組</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{t('lineTokenHint')}</div>
               </div>
             )}
             {notifyTarget.platform === 'telegram' && (
               <div>
                 <input value={notifyTarget.telegramBotToken ?? ''} onChange={e => setNotifyTarget(prev => ({ ...prev, telegramBotToken: e.target.value }))}
-                  placeholder="這個表單專用的 Telegram Bot Token（選填）"
+                  placeholder={t('telegramTokenPlaceholder')}
                   className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
-                <div className="text-[10px] text-gray-400 mt-0.5">留空則用「平台」分頁設定的預設 Bot；要用不同的 Bot 通知這個表單，才需要填這裡，且該 Bot 必須已加入上面填的群組</div>
+                <div className="text-[10px] text-gray-400 mt-0.5">{t('telegramTokenHint')}</div>
               </div>
             )}
             {notifyTarget.platform && (
@@ -312,17 +321,17 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                   <label className="flex items-center gap-1 cursor-pointer">
                     <input type="radio" checked={notifyTarget.batchMode === 'immediate'}
                       onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'immediate' }))} />
-                    每筆立即通知
+                    {t('batchImmediate')}
                   </label>
                   <label className="flex items-center gap-1 cursor-pointer">
                     <input type="radio" checked={notifyTarget.batchMode === 'manual'}
                       onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'manual' }))} />
-                    <span className="font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">💰 待確認收款後手動推播（推薦給賞鯨/出海等需劃位行程）</span>
+                    <span className="font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">{t('batchManual')}</span>
                   </label>
                   <label className="flex items-center gap-1 cursor-pointer">
                     <input type="radio" checked={notifyTarget.batchMode === 'daily'}
                       onChange={() => setNotifyTarget(prev => ({ ...prev, batchMode: 'daily' }))} />
-                    每日彙整一次
+                    {t('batchDaily')}
                   </label>
                   {notifyTarget.batchMode === 'daily' && (
                     <input type="time" value={notifyTarget.batchTime}
@@ -332,7 +341,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                 </div>
                 {notifyTarget.batchMode === 'manual' && (
                   <p className="text-[11px] text-gray-500 bg-emerald-50/60 p-2 rounded-lg border border-emerald-100">
-                    💡 啟用「手動推播」後，客人完成填單時<strong>不會</strong>立即送出到外部群組；待客人完成匯款、管家核對入帳後，可在提交紀錄上點擊<strong>【確認入帳並推播至群組】</strong>，名單才會送達船公司。
+                    {t.rich('batchManualHint', { b: (chunks) => <strong>{chunks}</strong> })}
                   </p>
                 )}
               </div>
@@ -345,21 +354,21 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
             <button onClick={save} disabled={saving}
               className="px-3 py-1.5 rounded-lg text-xs font-medium text-white disabled:opacity-50"
               style={{ background: 'var(--primary)' }}>
-              {saving ? '儲存中...' : '儲存'}
+              {saving ? t('savingEllipsis') : t('save')}
             </button>
             <button onClick={resetEditor} className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-100">
-              取消
+              {t('cancel')}
             </button>
           </div>
         </div>
       )}
 
-      {loading && <div className="flex items-center gap-2 text-sm text-gray-400"><Loader2 className="h-4 w-4 animate-spin" />載入中...</div>}
+      {loading && <div className="flex items-center gap-2 text-sm text-gray-400"><Loader2 className="h-4 w-4 animate-spin" />{t('loadingEllipsis')}</div>}
 
       {!loading && forms.length === 0 && !editorOpen && (
         <div className="border-2 border-dashed rounded-xl p-8 text-center text-sm text-gray-400">
-          <div className="mb-2">還沒有自建表單</div>
-          <div className="text-xs">建立表單後可以生成公開連結，客人掃碼或點連結即可填寫送出</div>
+          <div className="mb-2">{t('noFormsYet')}</div>
+          <div className="text-xs">{t('noFormsHint')}</div>
         </div>
       )}
 
@@ -370,10 +379,10 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-700">{f.name}</span>
-                  {!f.enabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 border">已停用</span>}
+                  {!f.enabled && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 border">{t('disabledBadge')}</span>}
                   {f.available_weekdays?.length > 0 && f.available_weekdays.length < 7 && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200">
-                      每週{f.available_weekdays.map(d => WEEKDAY_LABELS[d]).join('、')}開放
+                      {t('weeklyOpenBadge', { days: f.available_weekdays.map(d => WEEKDAY_LABELS[d]).join('、') })}
                     </span>
                   )}
                 </div>
@@ -381,52 +390,52 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                   <button onClick={() => copyLink(f.slug)}
                     className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">
                     {copiedSlug === f.slug ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                    複製連結
+                    {t('copyLink')}
                   </button>
                   <a href={`/f/${f.slug}`} target="_blank" rel="noreferrer"
                     className="text-gray-400 hover:text-gray-600 p-1"><ExternalLink className="h-3.5 w-3.5" /></a>
                   <button onClick={() => toggleEnabled(f)}
                     className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">
-                    {f.enabled ? '停用' : '啟用'}
+                    {f.enabled ? t('disable') : t('enable')}
                   </button>
-                  <button onClick={() => startEdit(f)} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">編輯</button>
+                  <button onClick={() => startEdit(f)} className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-50">{t('edit')}</button>
                   <button onClick={() => remove(f.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
 
               <button onClick={() => toggleSubs(f.id)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
                 {expandedSubs === f.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                查看提交紀錄
+                {t('viewSubmissions')}
               </button>
 
               {expandedSubs === f.id && (
                 <div className="border-t pt-2 space-y-1.5">
-                  {subsLoading && <div className="text-xs text-gray-400">載入中...</div>}
-                  {!subsLoading && subs.length === 0 && <div className="text-xs text-gray-400">尚無提交紀錄</div>}
+                  {subsLoading && <div className="text-xs text-gray-400">{t('loadingEllipsis')}</div>}
+                  {!subsLoading && subs.length === 0 && <div className="text-xs text-gray-400">{t('noSubmissionsYet')}</div>}
                   {!subsLoading && subs.map(s => (
                     <div key={s.id} className="text-xs bg-gray-50 rounded-lg p-2.5 space-y-2 border">
                       <div className="flex items-center gap-2 text-gray-400 flex-wrap">
-                        <span>{new Date(s.created_at).toLocaleString('zh-TW')}</span>
+                        <span>{formatDateTime(s.created_at, locale)}</span>
                         {s.updated_at && (
                           <span className="px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-600">
-                            已更新：{new Date(s.updated_at).toLocaleString('zh-TW')}
+                            {t('updatedPrefix', { time: formatDateTime(s.updated_at, locale) })}
                           </span>
                         )}
-                        {s.room_ref && <span className="px-1.5 py-0.5 rounded bg-gray-100 border">房號/訂單：{s.room_ref}</span>}
-                        <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{s.source === 'public_form' ? '掃碼填寫' : 'CS 對話'}</span>
+                        {s.room_ref && <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{t('roomRefPrefix', { value: s.room_ref })}</span>}
+                        <span className="px-1.5 py-0.5 rounded bg-gray-100 border">{s.source === 'public_form' ? t('sourcePublicForm') : t('sourceCsChat')}</span>
                         {s.notify_error && (
                           <span className="px-1.5 py-0.5 rounded bg-red-50 border border-red-200 text-red-600" title={s.notify_error}>
-                            通知失敗：{s.notify_error.slice(0, 40)}
+                            {t('notifyFailedPrefix', { msg: s.notify_error.slice(0, 40) })}
                           </span>
                         )}
                         {!s.notify_error && s.notified_at && (
                           <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">
-                            已推播群組：{new Date(s.notified_at).toLocaleString('zh-TW')}
+                            {t('notifiedPrefix', { time: formatDateTime(s.notified_at, locale) })}
                           </span>
                         )}
                         {!s.notify_error && !s.notified_at && (
                           <span className="px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700 font-medium">
-                            待核款推播
+                            {t('pendingNotify')}
                           </span>
                         )}
                         {f.notify_target?.platform && (
@@ -437,10 +446,10 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                                 onClick={() => handleManualNotify(f.id, s.id)}
                                 disabled={notifyingId === s.id}
                                 className="px-2 py-0.5 rounded border border-gray-200 text-[11px] text-gray-500 hover:bg-white hover:text-gray-700 flex items-center gap-1 disabled:opacity-50 transition-colors"
-                                title="重新發送此報名資料至通知管道"
+                                title={t('resendNotifyTitle')}
                               >
                                 {notifyingId === s.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                                重新推播
+                                {t('resendNotify')}
                               </button>
                             ) : (
                               <button
@@ -450,7 +459,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
                                 className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center gap-1 shadow-xs transition-colors disabled:opacity-50"
                               >
                                 {notifyingId === s.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span>💰</span>}
-                                確認入帳並推播至群組
+                                {t('confirmAndNotify')}
                               </button>
                             )}
                           </div>

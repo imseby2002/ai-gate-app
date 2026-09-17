@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import { Building2, ArrowLeft, Loader2, AlertCircle, Plus, Trash2, Save, Store, Search, FileSpreadsheet, Camera, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,15 +10,8 @@ import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
-const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
-const UNIT_TYPES: { value: string; label: string }[] = [
-  { value: 'store', label: '門市' }, { value: 'office', label: '辦公室' }, { value: 'factory', label: '工廠' },
-  { value: 'kitchen', label: '央廚' }, { value: 'gm', label: '總經理室' }, { value: 'rd', label: '研發' },
-  { value: 'audit', label: '稽核' }, { value: 'cashier', label: '出納' }, { value: 'affairs', label: '外務' },
-  { value: 'marketing', label: '行銷' }, { value: 'general', label: '總務' }, { value: 'accounting', label: '會計' },
-  { value: 'hr', label: '人事' }, { value: 'repair', label: '維修' },
-]
-const TYPE_LABEL = Object.fromEntries(UNIT_TYPES.map(t => [t.value, t.label]))
+const fmt = (n: number, locale: string) => Math.round(Number(n) || 0).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+const UNIT_TYPE_VALUES = ['store', 'office', 'factory', 'kitchen', 'gm', 'rd', 'audit', 'cashier', 'affairs', 'marketing', 'general', 'accounting', 'hr', 'repair']
 
 const UNIT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'code', label: '單位編號', required: true, example: 'YL', aliases: ['code', '編號', '代碼', '門市代碼'] },
@@ -38,6 +32,10 @@ interface Unit {
 }
 
 export default function UnitsPage() {
+  const t = useTranslations('Units')
+  const locale = useLocale()
+  const UNIT_TYPES = UNIT_TYPE_VALUES.map(value => ({ value, label: t(`type_${value}`) }))
+  const TYPE_LABEL = Object.fromEntries(UNIT_TYPES.map(u => [u.value, u.label]))
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [units, setUnits] = useState<Unit[]>([])
   const [defaultRate, setDefaultRate] = useState(0)
@@ -57,7 +55,7 @@ export default function UnitsPage() {
 
   if (isAdmin === false) return (
     <div className="flex h-full items-center justify-center p-8">
-      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">請先登入或確認公司成員權限以使用單位資料</p></div>
+      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">{t('needLogin')}</p></div>
     </div>
   )
   const selected = units.find(u => u.id === sel) ?? null
@@ -73,10 +71,10 @@ export default function UnitsPage() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Building2 className="h-5 w-5 text-primary" /></div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">單位資料</h1>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">全公司架構</span>
+            <h1 className="text-2xl font-bold">{t('title')}</h1>
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{t('badge')}</span>
           </div>
-          <p className="text-sm text-gray-500">全公司營運據點與部門架構（門市／辦公室／工廠／央廚／各部門基本資料與基本時薪）</p>
+          <p className="text-sm text-gray-500">{t('subtitle')}</p>
         </div>
       </div>
 
@@ -105,17 +103,17 @@ export default function UnitsPage() {
         : (
           <div className="space-y-3">
             <Card className="p-3 flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm"><span className="text-gray-500">全公司基本時薪（兼職）</span>
+              <label className="flex items-center gap-2 text-sm"><span className="text-gray-500">{t('defaultRateLabel')}</span>
                 <Input type="number" defaultValue={String(defaultRate)} onBlur={e => saveDefault(Number(e.target.value) || 0)} className="w-28 h-9" /></label>
-              <span className="text-xs text-gray-400">各單位可覆寫；單位填 0＝用此預設</span>
+              <span className="text-xs text-gray-400">{t('defaultRateHint')}</span>
             </Card>
             <div className="flex items-center gap-2 flex-wrap">
               <select value={filterType} onChange={e => setFilterType(e.target.value)} className="h-9 rounded-md border px-2 text-sm">
-                <option value="">全部類型</option>{UNIT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                <option value="">{t('allTypes')}</option>{UNIT_TYPES.map(ut => <option key={ut.value} value={ut.value}>{ut.label}</option>)}
               </select>
-              <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder="搜尋名稱或編號…" className="pl-9" /></div>
+              <div className="relative flex-1 min-w-[200px]"><Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><Input value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchPlaceholder')} className="pl-9" /></div>
               <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setShowImport(true)}>
-                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入 (Excel/CSV)
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImport')}
               </Button>
               <NewUnitButton onCreated={id => { reload(); setSel(id) }} />
             </div>
@@ -126,28 +124,28 @@ export default function UnitsPage() {
                     <div className="flex items-center gap-2"><span className="font-medium">{u.name || u.code}</span>
                       <span className="text-xs text-gray-400">{u.code}</span>
                       <span className="text-[11px] px-1.5 rounded bg-gray-100 text-gray-500">{TYPE_LABEL[u.unit_type] ?? u.unit_type}</span>
-                      {!u.active && <span className="text-xs text-red-400">停用</span>}
+                      {!u.active && <span className="text-xs text-red-400">{t('inactive')}</span>}
                     </div>
-                    <div className="text-xs text-gray-400">{u.region ? `${u.region}・` : ''}{u.address || '（未填地址）'}</div>
+                    <div className="text-xs text-gray-400">{u.region ? `${u.region}・` : ''}{u.address || t('noAddress')}</div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-gray-400">時薪 {fmt(u.base_hourly_rate || defaultRate)}</span>
+                    <span className="text-xs text-gray-400">{t('hourlyRate', { amount: fmt(u.base_hourly_rate || defaultRate, locale) })}</span>
                     {u.unit_type === 'store' && (
                       <Link
                         href="/mkt"
                         onClick={e => e.stopPropagation()}
                         className="text-[11px] font-medium text-pink-600 dark:text-pink-400 hover:text-pink-700 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/40 px-2 py-1 rounded-md flex items-center gap-1 border border-pink-200/60 dark:border-pink-800/40"
-                        title="前往行銷中心檢視/編輯此門市照片與行銷圖文"
+                        title={t('marketingLinkTitle')}
                       >
                         <Camera className="h-3 w-3" />
-                        <span>行銷圖文</span>
+                        <span>{t('marketingLink')}</span>
                       </Link>
                     )}
                   </div>
                 </Card>
               </button>
             ))}
-            {units.length === 0 && <div className="text-center py-10 text-gray-400 text-sm">尚無單位</div>}
+            {units.length === 0 && <div className="text-center py-10 text-gray-400 text-sm">{t('empty')}</div>}
           </div>
         )}
     </div>
@@ -155,19 +153,23 @@ export default function UnitsPage() {
 }
 
 function NewUnitButton({ onCreated }: { onCreated: (id: string) => void }) {
+  const t = useTranslations('Units')
   const [busy, setBusy] = useState(false)
   const add = async () => {
-    const code = prompt('新單位編號（如 YL、HQ）'); if (!code) return
+    const code = prompt(t('newUnitPrompt')); if (!code) return
     setBusy(true)
     const res = await fetch('/api/fin/stores', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, name: code, unit_type: 'store' }) })
     setBusy(false)
     const d = await res.json().catch(() => ({}))
-    if (res.ok && d.id) onCreated(d.id); else alert(d.error ?? '新增失敗')
+    if (res.ok && d.id) onCreated(d.id); else alert(d.error ?? t('createFailed'))
   }
-  return <Button size="sm" className="gap-1.5 shrink-0" onClick={add} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}新增單位</Button>
+  return <Button size="sm" className="gap-1.5 shrink-0" onClick={add} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{t('newUnit')}</Button>
 }
 
 function UnitDetail({ unit, defaultRate, onBack, onSaved }: { unit: Unit; defaultRate: number; onBack: () => void; onSaved: () => void }) {
+  const t = useTranslations('Units')
+  const locale = useLocale()
+  const UNIT_TYPES = UNIT_TYPE_VALUES.map(value => ({ value, label: t(`type_${value}`) }))
   const [f, setF] = useState<Unit>({ ...unit })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -176,39 +178,39 @@ function UnitDetail({ unit, defaultRate, onBack, onSaved }: { unit: Unit; defaul
   const save = async () => {
     setSaving(true); setMsg('')
     const res = await fetch('/api/fin/stores', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f) })
-    setSaving(false); setMsg(res.ok ? '已儲存' : (await res.json().catch(() => ({}))).error ?? '儲存失敗'); if (res.ok) onSaved()
+    setSaving(false); setMsg(res.ok ? t('saved') : (await res.json().catch(() => ({}))).error ?? t('saveFailed')); if (res.ok) onSaved()
   }
   const remove = async () => {
-    if (!confirm(`刪除單位「${f.name || f.code}」？（若已有進銷存／費用資料，建議改為停用）`)) return
+    if (!confirm(t('confirmDelete', { name: f.name || f.code }))) return
     const res = await fetch('/api/fin/stores', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: f.id }) })
-    if (res.ok) { onSaved(); onBack() } else alert((await res.json().catch(() => ({}))).error ?? '刪除失敗')
+    if (res.ok) { onSaved(); onBack() } else alert((await res.json().catch(() => ({}))).error ?? t('deleteFailed'))
   }
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"><ArrowLeft className="h-4 w-4" />返回清單</button>
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"><ArrowLeft className="h-4 w-4" />{t('backToList')}</button>
       <Card className="p-4 space-y-3">
-        <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">單位基本資料</h3>
+        <div className="flex items-center justify-between"><h3 className="font-semibold text-sm">{t('basicInfo')}</h3>
           <div className="flex items-center gap-2">{msg && <span className="text-xs text-gray-500">{msg}</span>}
-            <button onClick={remove} className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"><Trash2 className="h-4 w-4" />刪除</button>
-            <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}儲存</Button></div>
+            <button onClick={remove} className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"><Trash2 className="h-4 w-4" />{t('delete')}</button>
+            <Button size="sm" onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{t('save')}</Button></div>
         </div>
         <div className="grid md:grid-cols-3 gap-2">
-          <label className="space-y-1"><span className="text-xs text-gray-500">單位類型</span>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('unitType')}</span>
             <select value={f.unit_type} onChange={e => set({ unit_type: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-              {UNIT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              {UNIT_TYPES.map(ut => <option key={ut.value} value={ut.value}>{ut.label}</option>)}
             </select></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">單位編號</span><Input value={f.code} onChange={e => set({ code: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">名稱</span><Input value={f.name} onChange={e => set({ name: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">簡稱</span><Input value={f.short_name} onChange={e => set({ short_name: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">區域</span><Input value={f.region} onChange={e => set({ region: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">基本時薪（0＝用預設 {fmt(defaultRate)}）</span><Input type="number" value={String(f.base_hourly_rate)} onChange={e => set({ base_hourly_rate: Number(e.target.value) || 0 })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">電號</span><Input value={f.electricity_no} onChange={e => set({ electricity_no: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">水號</span><Input value={f.water_no} onChange={e => set({ water_no: e.target.value })} className="h-9" /></label>
-          <label className="space-y-1"><span className="text-xs text-gray-500">地址</span><Input value={f.address} onChange={e => set({ address: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('unitCode')}</span><Input value={f.code} onChange={e => set({ code: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('name')}</span><Input value={f.name} onChange={e => set({ name: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('shortName')}</span><Input value={f.short_name} onChange={e => set({ short_name: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('region')}</span><Input value={f.region} onChange={e => set({ region: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('baseHourlyRate', { amount: fmt(defaultRate, locale) })}</span><Input type="number" value={String(f.base_hourly_rate)} onChange={e => set({ base_hourly_rate: Number(e.target.value) || 0 })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('electricityNo')}</span><Input value={f.electricity_no} onChange={e => set({ electricity_no: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('waterNo')}</span><Input value={f.water_no} onChange={e => set({ water_no: e.target.value })} className="h-9" /></label>
+          <label className="space-y-1"><span className="text-xs text-gray-500">{t('address')}</span><Input value={f.address} onChange={e => set({ address: e.target.value })} className="h-9" /></label>
         </div>
         <div className="flex items-center justify-between pt-1">
-          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} />啟用</label>
+          <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={f.active} onChange={e => set({ active: e.target.checked })} />{t('active')}</label>
         </div>
 
         {/* 門市行銷圖文跨部門連動提示 */}
@@ -217,15 +219,15 @@ function UnitDetail({ unit, defaultRate, onBack, onSaved }: { unit: Unit; defaul
             <div className="flex items-center gap-2">
               <Camera className="h-4 w-4 text-pink-600 shrink-0" />
               <div>
-                <span className="font-semibold text-pink-950 dark:text-pink-200">門市行銷圖文與對外導航：</span>
-                <span className="text-muted-foreground ml-1">高畫質門面照片、環境氛圍圖、行銷特色簡介與 Google Maps 導航由行銷中心管理。</span>
+                <span className="font-semibold text-pink-950 dark:text-pink-200">{t('marketingHintTitle')}</span>
+                <span className="text-muted-foreground ml-1">{t('marketingHintDesc')}</span>
               </div>
             </div>
             <Link
               href="/mkt"
               className="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded bg-pink-600 text-white hover:bg-pink-700 transition-colors shrink-0 shadow-xs"
             >
-              開啟門市行銷圖文 ↗
+              {t('openMarketing')}
             </Link>
           </div>
         )}

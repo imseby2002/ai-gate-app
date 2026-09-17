@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import { Store, Upload, Loader2, AlertCircle, TrendingUp, Package, Building2, DollarSign, BookOpen, Link2, Scale, Plus, Trash2, X, FlaskConical, ClipboardList, Calendar, Wrench, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 
-const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
-const fmt1 = (n: number) => (Math.round(n * 10) / 10).toLocaleString('zh-TW')
+const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
+const fmt1 = (n: number, locale: string) => (Math.round(n * 10) / 10).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 type Tab = 'report' | 'recipes' | 'mapping' | 'variance'
 
 // ── 型別 ──
@@ -40,6 +41,7 @@ interface Possibility {
 interface InvSettings { variance_threshold: number; cup_code: string; tea_code: string; creamer_code: string; tea_per_cup: number; creamer_per_cup: number }
 
 export default function StoreReportsPage() {
+  const t = useTranslations('StoreReports')
   const now = new Date()
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('report')
@@ -67,15 +69,15 @@ export default function StoreReportsPage() {
 
   if (isAdmin === false) return (
     <div className="flex h-full items-center justify-center p-8">
-      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">僅門市單位可使用門市報表</p></div>
+      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">{t('adminOnly')}</p></div>
     </div>
   )
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: 'report', label: '報表', icon: <TrendingUp className="h-4 w-4" /> },
-    { id: 'recipes', label: '配方', icon: <BookOpen className="h-4 w-4" /> },
-    { id: 'mapping', label: '成品對照', icon: <Link2 className="h-4 w-4" /> },
-    { id: 'variance', label: '差異分析', icon: <Scale className="h-4 w-4" /> },
+    { id: 'report', label: t('tabReport'), icon: <TrendingUp className="h-4 w-4" /> },
+    { id: 'recipes', label: t('tabRecipes'), icon: <BookOpen className="h-4 w-4" /> },
+    { id: 'mapping', label: t('tabMapping'), icon: <Link2 className="h-4 w-4" /> },
+    { id: 'variance', label: t('tabVariance'), icon: <Scale className="h-4 w-4" /> },
   ]
 
   return (
@@ -83,33 +85,33 @@ export default function StoreReportsPage() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Store className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">門市報表</h1>
-          <p className="text-sm text-gray-500">業績、進銷存、配方與差異分析</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-gray-500">{t('subtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/store-inventory">
-              <ClipboardList className="h-4 w-4 text-blue-600" />盤點・訂貨
+              <ClipboardList className="h-4 w-4 text-blue-600" />{t('inventory')}
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/store-bills">
-              <Receipt className="h-4 w-4 text-emerald-600" />水電費用
+              <Receipt className="h-4 w-4 text-emerald-600" />{t('bills')}
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/repair">
-              <Wrench className="h-4 w-4 text-amber-600" />門市報修
+              <Wrench className="h-4 w-4 text-amber-600" />{t('repair')}
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/shift">
-              <Calendar className="h-4 w-4 text-indigo-600" />排班
+              <Calendar className="h-4 w-4 text-indigo-600" />{t('shift')}
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="gap-1.5">
             <Link href="/pos">
-              <Store className="h-4 w-4 text-orange-600" />門市點單
+              <Store className="h-4 w-4 text-orange-600" />{t('pos')}
             </Link>
           </Button>
         </div>
@@ -121,10 +123,10 @@ export default function StoreReportsPage() {
           <div className="flex flex-wrap items-end gap-3">
             <label className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="block text-xs text-gray-500">門市代碼</span>
+                <span className="block text-xs text-gray-500">{t('storeCode')}</span>
                 {lockedStore && (
                   <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                    🔒 本店專屬・不可切換
+                    🔒 {t('lockedNoSwitch')}
                   </span>
                 )}
               </div>
@@ -133,14 +135,14 @@ export default function StoreReportsPage() {
                 value={store}
                 disabled={!!lockedStore}
                 onChange={e => setStore(e.target.value)}
-                placeholder="門市（如 YL）"
+                placeholder={t('storePlaceholder')}
                 className="w-44 disabled:bg-muted/50 disabled:cursor-not-allowed font-semibold"
               />
               {!lockedStore && <datalist id="store-list">{stores.map(s => <option key={s} value={s} />)}</datalist>}
             </label>
-            <label className="space-y-1"><span className="block text-xs text-gray-500">年</span>
+            <label className="space-y-1"><span className="block text-xs text-gray-500">{t('year')}</span>
               <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y}</option>)}</select></label>
-            <label className="space-y-1"><span className="block text-xs text-gray-500">月</span>
+            <label className="space-y-1"><span className="block text-xs text-gray-500">{t('month')}</span>
               <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}</option>)}</select></label>
           </div>
         </Card>
@@ -164,6 +166,8 @@ export default function StoreReportsPage() {
 
 // ── 報表 ──
 function ReportTab({ store, year, month, onImported }: { store: string; year: number; month: number; onImported: () => void }) {
+  const t = useTranslations('StoreReports')
+  const locale = useLocale()
   const [report, setReport] = useState<Report | null>(null)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
@@ -183,13 +187,13 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
   const uploadPos = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = ''
     if (!file) return
-    if (!store.trim()) { setMsg('請先輸入門市'); return }
+    if (!store.trim()) { setMsg(t('enterStoreFirst')); return }
     setUploading('pos'); setMsg('')
     const fd = new FormData(); fd.append('file', file); fd.append('store', store.trim()); fd.append('year', String(year)); fd.append('month', String(month))
     const res = await fetch('/api/inv/import/pos', { method: 'POST', body: fd })
     setUploading('')
     const d = await res.json().catch(() => ({}))
-    if (res.ok) { setMsg(`POS 匯入 ${d.imported} 筆`); onImported(); load() } else setMsg(d.error ?? '匯入失敗')
+    if (res.ok) { setMsg(t('posImported', { n: d.imported })); onImported(); load() } else setMsg(d.error ?? t('importFailed'))
   }
   const uploadInv = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = ''
@@ -199,40 +203,40 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
     const res = await fetch('/api/inv/import/inventory', { method: 'POST', body: fd })
     setUploading('')
     const d = await res.json().catch(() => ({}))
-    if (res.ok) { setMsg(`進銷存匯入：${(d.stores ?? []).map((s: { store: string; count: number }) => `${s.store}(${s.count})`).join('、')}`); onImported(); load() } else setMsg(d.error ?? '匯入失敗')
+    if (res.ok) { setMsg(t('invImported', { list: (d.stores ?? []).map((s: { store: string; count: number }) => `${s.store}(${s.count})`).join('、') })); onImported(); load() } else setMsg(d.error ?? t('importFailed'))
   }
   return (
     <div className="space-y-4">
       <input ref={posRef} type="file" hidden accept=".xls" onChange={uploadPos} />
       <input ref={invRef} type="file" hidden accept=".xlsx" onChange={uploadInv} />
       <div className="flex gap-2 flex-wrap items-center">
-        <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => posRef.current?.click()}>{uploading === 'pos' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入 POS(.xls)</Button>
-        <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => invRef.current?.click()}>{uploading === 'inv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}匯入進銷存(.xlsx)</Button>
-        <span className="text-xs text-gray-400">標準價由「研發」中央維護</span>
+        <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => posRef.current?.click()}>{uploading === 'pos' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{t('importPos')}</Button>
+        <Button size="sm" variant="outline" className="gap-1.5" disabled={!!uploading} onClick={() => invRef.current?.click()}>{uploading === 'inv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}{t('importInv')}</Button>
+        <span className="text-xs text-gray-400">{t('standardPriceNote')}</span>
         {msg && <span className="text-sm text-blue-600 self-center">{msg}</span>}
       </div>
 
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : !report || (report.pos.rows.length === 0 && report.inventory.rows.length === 0) ? <div className="text-center py-10 text-gray-400 text-sm">此門市／月份尚無資料，請先匯入。</div>
+        : !report || (report.pos.rows.length === 0 && report.inventory.rows.length === 0) ? <div className="text-center py-10 text-gray-400 text-sm">{t('noDataYet')}</div>
         : (<>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat icon={<TrendingUp className="h-4 w-4" />} label="營收" value={fmt(report.pos.total_revenue)} tone="green" />
-            <Stat icon={<Package className="h-4 w-4" />} label="總杯數" value={fmt(report.pos.total_qty)} />
-            <Stat icon={<DollarSign className="h-4 w-4" />} label="進貨支出" value={fmt(report.inventory.purchase_value)} tone="red" />
-            <Stat icon={<Package className="h-4 w-4" />} label="期末庫存值" value={fmt(report.inventory.close_value)} />
+            <Stat icon={<TrendingUp className="h-4 w-4" />} label={t('revenue')} value={fmt(report.pos.total_revenue, locale)} tone="green" />
+            <Stat icon={<Package className="h-4 w-4" />} label={t('totalCups')} value={fmt(report.pos.total_qty, locale)} />
+            <Stat icon={<DollarSign className="h-4 w-4" />} label={t('purchaseExpense')} value={fmt(report.inventory.purchase_value, locale)} tone="red" />
+            <Stat icon={<Package className="h-4 w-4" />} label={t('closingInventoryValue')} value={fmt(report.inventory.close_value, locale)} />
           </div>
           <Card className="p-4">
-            <h3 className="font-semibold mb-2">業績明細（{report.pos.product_count} 項）</h3>
+            <h3 className="font-semibold mb-2">{t('salesDetail', { n: report.pos.product_count })}</h3>
             <div className="overflow-x-auto max-h-80">
-              <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">產品</th><th className="pr-2 text-right">杯數</th><th className="pr-2 text-right">營收</th></tr></thead>
-                <tbody>{report.pos.rows.map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1.5 pr-2">{r.product_name || r.product_code}</td><td className="pr-2 text-right tabular-nums">{fmt(r.qty)}</td><td className="pr-2 text-right tabular-nums">{fmt(r.revenue)}</td></tr>)}</tbody></table>
+              <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">{t('product')}</th><th className="pr-2 text-right">{t('cups')}</th><th className="pr-2 text-right">{t('revenue')}</th></tr></thead>
+                <tbody>{report.pos.rows.map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1.5 pr-2">{r.product_name || r.product_code}</td><td className="pr-2 text-right tabular-nums">{fmt(r.qty, locale)}</td><td className="pr-2 text-right tabular-nums">{fmt(r.revenue, locale)}</td></tr>)}</tbody></table>
             </div>
           </Card>
           <Card className="p-4">
-            <h3 className="font-semibold mb-2">進銷存明細（{report.inventory.material_count} 項）</h3>
+            <h3 className="font-semibold mb-2">{t('inventoryDetail', { n: report.inventory.material_count })}</h3>
             <div className="overflow-x-auto max-h-80">
-              <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-right">期初</th><th className="pr-2 text-right">入庫</th><th className="pr-2 text-right">出庫</th><th className="pr-2 text-right">剩餘</th><th className="pr-2 text-right">進貨額</th></tr></thead>
-                <tbody>{report.inventory.rows.map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1.5 pr-2">{r.material_name || r.material_code}</td><td className="pr-2 text-gray-400">{r.unit}</td><td className="pr-2 text-right tabular-nums">{fmt(r.open_qty)}</td><td className="pr-2 text-right tabular-nums text-blue-600">{fmt(r.in_total)}</td><td className="pr-2 text-right tabular-nums text-red-500">{fmt(r.out_total)}</td><td className="pr-2 text-right tabular-nums">{fmt(r.close_qty)}</td><td className="pr-2 text-right tabular-nums">{fmt(r.in_value)}</td></tr>)}</tbody></table>
+              <table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">{t('material')}</th><th className="pr-2">{t('unit')}</th><th className="pr-2 text-right">{t('opening')}</th><th className="pr-2 text-right">{t('stockIn')}</th><th className="pr-2 text-right">{t('stockOut')}</th><th className="pr-2 text-right">{t('remaining')}</th><th className="pr-2 text-right">{t('purchaseValue')}</th></tr></thead>
+                <tbody>{report.inventory.rows.map((r, i) => <tr key={i} className="border-b last:border-0"><td className="py-1.5 pr-2">{r.material_name || r.material_code}</td><td className="pr-2 text-gray-400">{r.unit}</td><td className="pr-2 text-right tabular-nums">{fmt(r.open_qty, locale)}</td><td className="pr-2 text-right tabular-nums text-blue-600">{fmt(r.in_total, locale)}</td><td className="pr-2 text-right tabular-nums text-red-500">{fmt(r.out_total, locale)}</td><td className="pr-2 text-right tabular-nums">{fmt(r.close_qty, locale)}</td><td className="pr-2 text-right tabular-nums">{fmt(r.in_value, locale)}</td></tr>)}</tbody></table>
             </div>
           </Card>
         </>)}
@@ -242,6 +246,8 @@ function ReportTab({ store, year, month, onImported }: { store: string; year: nu
 
 // ── 配方 ──
 function RecipesTab() {
+  const t = useTranslations('StoreReports')
+  const locale = useLocale()
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
@@ -261,10 +267,10 @@ function RecipesTab() {
     setBusy(true)
     const res = await fetch('/api/inv/recipes', { method: editing.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing) })
     setBusy(false)
-    if (res.ok) { setEditing(null); load() } else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+    if (res.ok) { setEditing(null); load() } else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
   const remove = async (r: Recipe) => {
-    if (!confirm(`刪除配方「${r.name}」？`)) return
+    if (!confirm(t('confirmDeleteRecipe', { name: r.name }))) return
     await fetch('/api/inv/recipes', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id }) }); load()
   }
   const addItem = () => setEditing(e => e ? { ...e, items: [...e.items, { material_code: '', material_name: '', qty_per_cup: 0 }] } : e)
@@ -275,19 +281,19 @@ function RecipesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
-          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', note: '', items: [] })}><Plus className="h-4 w-4" />新增配方</Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', note: '', items: [] })}><Plus className="h-4 w-4" />{t('newRecipe')}</Button>
         </div>
       </div>
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : recipes.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無配方</div>
+        : recipes.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">{t('noRecipes')}</div>
         : <div className="grid gap-2">{recipes.map(r => (
           <Card key={r.id} className="p-3 flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="font-medium">{r.name}</div>
-              <div className="text-xs text-gray-500">{r.items.length} 種原料：{r.items.map(i => `${i.material_name || i.material_code}×${fmt1(i.qty_per_cup)}`).join('、') || '（未設定）'}</div>
+              <div className="text-xs text-gray-500">{t('materialCount', { n: r.items.length, list: r.items.map(i => `${i.material_name || i.material_code}×${fmt1(i.qty_per_cup, locale)}`).join('、') || t('notSet') })}</div>
             </div>
             <div className="flex gap-1 shrink-0">
-              <button onClick={() => setEditing({ id: r.id, name: r.name, note: r.note, items: r.items.map(i => ({ ...i })) })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">編輯</button>
+              <button onClick={() => setEditing({ id: r.id, name: r.name, note: r.note, items: r.items.map(i => ({ ...i })) })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('edit')}</button>
               <button onClick={() => remove(r)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
             </div>
           </Card>))}</div>}
@@ -295,23 +301,23 @@ function RecipesTab() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEditing(null)}>
           <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between"><h3 className="font-semibold">{editing.id ? '編輯配方' : '新增配方'}</h3><button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button></div>
-            <label className="block space-y-1"><span className="text-xs text-gray-500">配方名稱</span><Input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} /></label>
+            <div className="flex items-center justify-between"><h3 className="font-semibold">{editing.id ? t('editRecipe') : t('newRecipe')}</h3><button onClick={() => setEditing(null)}><X className="h-5 w-5 text-gray-400" /></button></div>
+            <label className="block space-y-1"><span className="text-xs text-gray-500">{t('recipeName')}</span><Input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} /></label>
             <div className="space-y-2">
-              <div className="flex items-center justify-between"><span className="text-sm font-medium">原料（每杯用量）</span><button onClick={addItem} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">＋原料</button></div>
-              {editing.items.length === 0 && <p className="text-xs text-gray-400">尚無原料</p>}
+              <div className="flex items-center justify-between"><span className="text-sm font-medium">{t('materialsPerCup')}</span><button onClick={addItem} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('addMaterial')}</button></div>
+              {editing.items.length === 0 && <p className="text-xs text-gray-400">{t('noMaterials')}</p>}
               {editing.items.map((it, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <select value={it.material_code} onChange={e => pickMaterial(i, e.target.value)} className="flex-1 h-9 rounded-md border px-2 text-sm">
-                    <option value="">選原料…</option>
+                    <option value="">{t('selectMaterial')}</option>
                     {materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}{m.unit ? `（${m.unit}）` : ''}</option>)}
                   </select>
-                  <Input type="number" value={String(it.qty_per_cup)} onChange={e => setItem(i, { qty_per_cup: Number(e.target.value) || 0 })} placeholder="用量/杯" className="w-24" />
+                  <Input type="number" value={String(it.qty_per_cup)} onChange={e => setItem(i, { qty_per_cup: Number(e.target.value) || 0 })} placeholder={t('qtyPerCup')} className="w-24" />
                   <button onClick={() => setEditing(e => e ? { ...e, items: e.items.filter((_, x) => x !== i) } : e)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => setEditing(null)}>取消</Button><Button size="sm" onClick={save} disabled={busy || !editing.name.trim()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}</Button></div>
+            <div className="flex justify-end gap-2"><Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t('cancel')}</Button><Button size="sm" onClick={save} disabled={busy || !editing.name.trim()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button></div>
           </div>
         </div>
       )}
@@ -321,6 +327,7 @@ function RecipesTab() {
 
 // ── 成品對照 ──
 function MappingTab() {
+  const t = useTranslations('StoreReports')
   const [products, setProducts] = useState<ProductMap[]>([])
   const [recipes, setRecipes] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
@@ -345,26 +352,26 @@ function MappingTab() {
   const mapped = products.filter(p => p.recipe_id).length
   return (
     <div className="space-y-3">
-      <p className="text-sm text-gray-500">把每個 POS 成品綁到一個配方，並標「飲料/加料」。已綁 {mapped}/{products.length}。加料(TOPPING)的配方可用<b>負值</b>填「排擠的基底」（如 −茶、−奶精）。</p>
+      <p className="text-sm text-gray-500">{t('mappingDesc', { mapped, total: products.length })}</p>
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : products.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無 POS 成品，請先於「報表」匯入 POS。</div>
+        : products.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">{t('noProductsYet')}</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">成品碼</th><th className="pr-2">名稱</th><th className="pr-2">類別</th><th className="pr-2">對照配方</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">{t('productCode')}</th><th className="pr-2">{t('name')}</th><th className="pr-2">{t('category')}</th><th className="pr-2">{t('mappedRecipe')}</th></tr></thead>
           <tbody>{products.map(p => (
             <tr key={p.product_code} className="border-b last:border-0">
               <td className="py-1.5 pr-2 tabular-nums text-gray-500">{p.product_code}</td>
               <td className="pr-2">{p.product_name}</td>
               <td className="pr-2">
                 <select value={p.kind || ''} onChange={e => save(p, { kind: e.target.value })} className="h-8 rounded-md border px-1.5 text-xs">
-                  <option value="">未分類</option>
-                  <option value="drink">飲料</option>
-                  <option value="topping">加料</option>
-                  <option value="other">其他</option>
+                  <option value="">{t('unclassified')}</option>
+                  <option value="drink">{t('drink')}</option>
+                  <option value="topping">{t('topping')}</option>
+                  <option value="other">{t('other')}</option>
                 </select>
               </td>
               <td className="pr-2">
                 <select value={p.recipe_id ?? ''} onChange={e => save(p, { recipe_id: e.target.value || null })} className={`h-8 rounded-md border px-1.5 text-xs ${p.recipe_id ? '' : 'text-amber-600 border-amber-300'}`}>
-                  <option value="">（未對照）</option>
+                  <option value="">{t('notMapped')}</option>
                   {recipes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
               </td>
@@ -375,6 +382,8 @@ function MappingTab() {
 
 // ── 差異分析（智能）──
 function VarianceTab({ store, year, month, onGoToMapping }: { store: string; year: number; month: number; onGoToMapping?: () => void }) {
+  const t = useTranslations('StoreReports')
+  const locale = useLocale()
   const [rows, setRows] = useState<VarRow[]>([])
   const [unmapped, setUnmapped] = useState<{ product_code: string; product_name: string; qty: number }[]>([])
   const [cc, setCc] = useState<CrossChecks | null>(null)
@@ -407,7 +416,7 @@ function VarianceTab({ store, year, month, onGoToMapping }: { store: string; yea
     const res = await fetch('/api/inv/variance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ store, year, month }) })
     setNotifying(false)
     const d = await res.json().catch(() => ({}))
-    alert(res.ok ? (d.notified ? `已通知人事（${d.over_count} 項超標）` : '目前無超標項目') : (d.error ?? '通知失敗'))
+    alert(res.ok ? (d.notified ? t('notifiedHr', { n: d.over_count }) : t('noOverItems')) : (d.error ?? t('notifyFailed')))
   }
 
   const saveThreshold = async (v: number) => {
@@ -423,94 +432,94 @@ function VarianceTab({ store, year, month, onGoToMapping }: { store: string; yea
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="flex items-center gap-2 text-sm"><span className="text-gray-500">誤差警示門檻</span>
+        <label className="flex items-center gap-2 text-sm"><span className="text-gray-500">{t('varianceThresholdLabel')}</span>
           <Input type="number" value={String(threshold)} onChange={e => setThreshold(Number(e.target.value) || 0)} onBlur={e => saveThreshold(Number(e.target.value) || 0)} className="w-20" /><span className="text-gray-500">%</span></label>
-        
+
         {rows.length > 0 && (
           overCount === 0 ? (
             <span className="inline-flex items-center gap-1 text-sm text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
-              ✅ 使用量正常
+              ✅ {t('usageNormal')}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 text-sm text-rose-700 font-medium bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
-              ⚠️ 使用量異常（{overCount} 項超標）
+              ⚠️ {t('usageAbnormal', { n: overCount })}
             </span>
           )
         )}
 
-        {totalLoss > 0 && <span className="text-sm text-red-500">估計金額損失 <b>{fmt(totalLoss)}</b></span>}
+        {totalLoss > 0 && <span className="text-sm text-red-500">{t('estimatedLossLabel')} <b>{fmt(totalLoss, locale)}</b></span>}
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setShowCfg(v => !v)}>交叉檢核設定</Button>
+          <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setShowCfg(v => !v)}>{t('crossCheckSettings')}</Button>
           <Button size="sm" variant="outline" className="gap-1.5 text-xs" disabled={notifying || overCount === 0} onClick={notify}>
-            {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}通知人事超標
+            {notifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{t('notifyHrOver')}
           </Button>
         </div>
       </div>
 
-      <p className="text-xs text-gray-500">🔍 稽核用途：比對規定與實耗，檢查門市操作是否有誤或亂賣。</p>
-      <p className="text-xs text-gray-400">規定用量＝IVT「Xuất bán POS」欄（依點單推算的應耗）；實耗＝「lượng dùng tháng（當月使用量）」欄。差額／誤差% 即檔內 chenh／phan tram。配方理論僅作對照。</p>
+      <p className="text-xs text-gray-500">🔍 {t('auditPurposeNote')}</p>
+      <p className="text-xs text-gray-400">{t('varianceFootnote')}</p>
 
       {showCfg && (
         <Card className="p-3 space-y-2">
-          <div className="text-sm font-medium">交叉檢核設定（指定杯子/茶/奶精原料與每杯基準）</div>
+          <div className="text-sm font-medium">{t('crossCheckSettingsTitle')}</div>
           <div className="grid md:grid-cols-3 gap-2 text-xs">
-            <label className="space-y-1"><span className="text-gray-500">杯子原料</span>
+            <label className="space-y-1"><span className="text-gray-500">{t('cupMaterial')}</span>
               <select value={cfg.cup_code} onChange={e => setCfg({ ...cfg, cup_code: e.target.value })} className="w-full h-8 rounded-md border px-1.5"><option value="">—</option>{materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}</option>)}</select></label>
-            <label className="space-y-1"><span className="text-gray-500">茶原料</span>
+            <label className="space-y-1"><span className="text-gray-500">{t('teaMaterial')}</span>
               <select value={cfg.tea_code} onChange={e => setCfg({ ...cfg, tea_code: e.target.value })} className="w-full h-8 rounded-md border px-1.5"><option value="">—</option>{materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}</option>)}</select></label>
-            <label className="space-y-1"><span className="text-gray-500">奶精原料</span>
+            <label className="space-y-1"><span className="text-gray-500">{t('creamerMaterial')}</span>
               <select value={cfg.creamer_code} onChange={e => setCfg({ ...cfg, creamer_code: e.target.value })} className="w-full h-8 rounded-md border px-1.5"><option value="">—</option>{materials.map(m => <option key={m.code} value={m.code}>{m.name || m.code}</option>)}</select></label>
-            <label className="space-y-1"><span className="text-gray-500">每杯茶量（反推用）</span><Input type="number" value={String(cfg.tea_per_cup)} onChange={e => setCfg({ ...cfg, tea_per_cup: Number(e.target.value) || 0 })} className="h-8" /></label>
-            <label className="space-y-1"><span className="text-gray-500">每杯奶精量（反推用）</span><Input type="number" value={String(cfg.creamer_per_cup)} onChange={e => setCfg({ ...cfg, creamer_per_cup: Number(e.target.value) || 0 })} className="h-8" /></label>
+            <label className="space-y-1"><span className="text-gray-500">{t('teaPerCupReverse')}</span><Input type="number" value={String(cfg.tea_per_cup)} onChange={e => setCfg({ ...cfg, tea_per_cup: Number(e.target.value) || 0 })} className="h-8" /></label>
+            <label className="space-y-1"><span className="text-gray-500">{t('creamerPerCupReverse')}</span><Input type="number" value={String(cfg.creamer_per_cup)} onChange={e => setCfg({ ...cfg, creamer_per_cup: Number(e.target.value) || 0 })} className="h-8" /></label>
           </div>
-          <div className="flex justify-end"><Button size="sm" onClick={saveCfg}>儲存</Button></div>
+          <div className="flex justify-end"><Button size="sm" onClick={saveCfg}>{t('save')}</Button></div>
         </Card>
       )}
 
       {cc && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <CcCard label="售出杯數（飲料）" value={fmt(cc.cups_sold)} hint={cc.cups_sold === 0 ? '請到成品對照標「飲料」' : ''} />
-          <CcCard label="杯子對帳" value={cc.cup_used === null ? '—' : fmt(cc.cup_used)}
-            hint={cc.cup_diff === null ? '未設杯子原料' : `差 ${fmt(cc.cup_diff)}`} tone={cc.cup_diff !== null && Math.abs(cc.cup_diff) > cc.cups_sold * 0.05 ? 'red' : undefined} />
-          <CcCard label="茶:奶精 實際" value={cc.ratio_actual === null ? '—' : fmt1(cc.ratio_actual)}
-            hint={cc.ratio_recipe === null ? '未設每杯量' : `配方 ${fmt1(cc.ratio_recipe)}`}
+          <CcCard label={t('cupsSoldDrinks')} value={fmt(cc.cups_sold, locale)} hint={cc.cups_sold === 0 ? t('markAsDrinkHint') : ''} />
+          <CcCard label={t('cupReconciliation')} value={cc.cup_used === null ? '—' : fmt(cc.cup_used, locale)}
+            hint={cc.cup_diff === null ? t('cupMaterialNotSet') : t('diffHint', { amount: fmt(cc.cup_diff, locale) })} tone={cc.cup_diff !== null && Math.abs(cc.cup_diff) > cc.cups_sold * 0.05 ? 'red' : undefined} />
+          <CcCard label={t('teaCreamerActualRatio')} value={cc.ratio_actual === null ? '—' : fmt1(cc.ratio_actual, locale)}
+            hint={cc.ratio_recipe === null ? t('perCupNotSet') : t('recipeHint', { ratio: fmt1(cc.ratio_recipe, locale) })}
             tone={cc.ratio_actual !== null && cc.ratio_recipe !== null && Math.abs(cc.ratio_actual - cc.ratio_recipe) / cc.ratio_recipe > 0.15 ? 'red' : undefined} />
-          <CcCard label="反推等效杯數（茶）" value={cc.implied_cups_tea === null ? '—' : fmt(cc.implied_cups_tea)}
-            hint={cc.implied_cups_tea === null ? '未設每杯茶量' : `售出 ${fmt(cc.cups_sold)}`}
+          <CcCard label={t('impliedCupsTea')} value={cc.implied_cups_tea === null ? '—' : fmt(cc.implied_cups_tea, locale)}
+            hint={cc.implied_cups_tea === null ? t('teaPerCupNotSet') : t('soldHint', { amount: fmt(cc.cups_sold, locale) })}
             tone={cc.implied_cups_tea !== null && cc.cups_sold > 0 && Math.abs(cc.implied_cups_tea - cc.cups_sold) / cc.cups_sold > 0.1 ? 'red' : undefined} />
         </div>
       )}
 
       {poss && poss.configured && (poss.tea || poss.creamer) && (
         <Card className="p-3 space-y-2">
-          <div className="text-sm font-medium flex items-center gap-1.5"><Scale className="h-4 w-4 text-indigo-500" />加料排擠可能性 analysis</div>
-          <p className="text-[11px] text-gray-400">POS 點單只記錄「單一或無 topping」，故規定用量對茶／奶精偏高。客人實際多加 topping 時基底被排擠，實耗會少於規定——此「少用」多半由多加料訂單解釋，而非短少。</p>
+          <div className="text-sm font-medium flex items-center gap-1.5"><Scale className="h-4 w-4 text-indigo-500" />{t('displacementAnalysisTitle')}</div>
+          <p className="text-[11px] text-gray-400">{t('displacementAnalysisDesc')}</p>
           <div className="grid md:grid-cols-2 gap-2">
-            {poss.tea && <GapCard label="茶" info={poss.tea} explainedPct={poss.tea_explained_pct} explained={poss.tea_explained} />}
-            {poss.creamer && <GapCard label="奶精" info={poss.creamer} explainedPct={poss.creamer_explained_pct} explained={poss.creamer_explained} />}
+            {poss.tea && <GapCard label={t('tea')} info={poss.tea} explainedPct={poss.tea_explained_pct} explained={poss.tea_explained} />}
+            {poss.creamer && <GapCard label={t('creamer')} info={poss.creamer} explainedPct={poss.creamer_explained_pct} explained={poss.creamer_explained} />}
           </div>
 
           {poss.toppings.length > 0 && (
             <div className="space-y-1">
-              <div className="text-xs font-medium text-gray-600">各加料實際份數推算（規定份數＝POS，實際＝實耗÷每份用量）</div>
+              <div className="text-xs font-medium text-gray-600">{t('toppingServingsTitle')}</div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
-                  <thead><tr className="text-left text-gray-400 border-b"><th className="py-1 pr-2">加料</th><th className="pr-2 text-right">規定份數</th><th className="pr-2 text-right">實際份數</th><th className="pr-2 text-right">多做份數</th><th className="pr-2 text-right">排擠茶/份</th></tr></thead>
-                  <tbody>{poss.toppings.map(t => (
-                    <tr key={t.material_code} className="border-b last:border-0">
-                      <td className="py-1 pr-2">{t.material_name}</td>
-                      <td className="pr-2 text-right tabular-nums">{fmt(t.servings_expected)}</td>
-                      <td className="pr-2 text-right tabular-nums">{fmt(t.servings_actual)}</td>
-                      <td className={`pr-2 text-right tabular-nums font-medium ${t.extra_servings > 0 ? 'text-indigo-600' : t.extra_servings < 0 ? 'text-red-500' : 'text-gray-400'}`}>{t.extra_servings > 0 ? '+' : ''}{fmt(t.extra_servings)}</td>
-                      <td className="pr-2 text-right tabular-nums text-gray-400">{t.tea_disp ? fmt1(t.tea_disp) : '—'}</td>
+                  <thead><tr className="text-left text-gray-400 border-b"><th className="py-1 pr-2">{t('topping')}</th><th className="pr-2 text-right">{t('expectedServings')}</th><th className="pr-2 text-right">{t('actualServings')}</th><th className="pr-2 text-right">{t('extraServings')}</th><th className="pr-2 text-right">{t('teaDisplacedPerServing')}</th></tr></thead>
+                  <tbody>{poss.toppings.map(tp => (
+                    <tr key={tp.material_code} className="border-b last:border-0">
+                      <td className="py-1 pr-2">{tp.material_name}</td>
+                      <td className="pr-2 text-right tabular-nums">{fmt(tp.servings_expected, locale)}</td>
+                      <td className="pr-2 text-right tabular-nums">{fmt(tp.servings_actual, locale)}</td>
+                      <td className={`pr-2 text-right tabular-nums font-medium ${tp.extra_servings > 0 ? 'text-indigo-600' : tp.extra_servings < 0 ? 'text-red-500' : 'text-gray-400'}`}>{tp.extra_servings > 0 ? '+' : ''}{fmt(tp.extra_servings, locale)}</td>
+                      <td className="pr-2 text-right tabular-nums text-gray-400">{tp.tea_disp ? fmt1(tp.tea_disp, locale) : '—'}</td>
                     </tr>))}</tbody>
                 </table>
               </div>
               <div className="text-[11px] text-gray-500">
-                估計多做加料 <b>{fmt(poss.extra_topping_servings)}</b> 份
+                {t('extraToppingEstimate', { n: fmt(poss.extra_topping_servings, locale) })}
                 {poss.has_displacement
-                  ? <>，可解釋茶少用約 <b>{fmt1(poss.tea_explained)}</b>{poss.creamer_explained > 0.001 ? <>、奶精 <b>{fmt1(poss.creamer_explained)}</b></> : null}。</>
-                  : <>。（加料配方未填「排擠茶／奶精」的負值，無法估算基底排擠量——可到「成品對照／配方」為加料補上 −茶／−奶精。）</>}
+                  ? t('displacementExplained', { tea: fmt1(poss.tea_explained, locale), creamerPart: poss.creamer_explained > 0.001 ? t('creamerExplainedPart', { amount: fmt1(poss.creamer_explained, locale) }) : '' })
+                  : t('displacementNotConfigured')}
               </div>
             </div>
           )}
@@ -519,58 +528,60 @@ function VarianceTab({ store, year, month, onGoToMapping }: { store: string; yea
 
       {unmapped.length > 0 && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-          <span>有 {unmapped.length} 個成品尚未對照配方（不計入理論用量）：{unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、')}{unmapped.length > 8 ? '…' : ''}</span>
-          {onGoToMapping && <button onClick={onGoToMapping} className="text-amber-800 underline font-medium shrink-0">前往成品對照 →</button>}
+          <span>{t('unmappedProducts', { n: unmapped.length, list: unmapped.slice(0, 8).map(u => u.product_name || u.product_code).join('、'), ellipsis: unmapped.length > 8 ? '…' : '' })}</span>
+          {onGoToMapping && <button onClick={onGoToMapping} className="text-amber-800 underline font-medium shrink-0">{t('goToMapping')}</button>}
         </div>
       )}
 
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">無資料。請先匯入 POS＋進銷存、建立配方並完成對照。</div>
+        : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">{t('varianceNoData')}</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">原料</th><th className="pr-2">單位</th><th className="pr-2 text-center">使用狀態</th><th className="pr-2 text-right">規定(POS)</th><th className="pr-2 text-right">實耗</th><th className="pr-2 text-right text-gray-400">配方理論</th><th className="pr-2 text-right">差額</th><th className="pr-2 text-right">誤差%</th><th className="pr-2 text-right">金額損失</th><th className="pr-2 text-right">剩餘</th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b sticky top-0 bg-white"><th className="py-2 pr-2">{t('material')}</th><th className="pr-2">{t('unit')}</th><th className="pr-2 text-center">{t('usageStatus')}</th><th className="pr-2 text-right">{t('expectedPos')}</th><th className="pr-2 text-right">{t('actualUsage')}</th><th className="pr-2 text-right text-gray-400">{t('recipeTheoretical')}</th><th className="pr-2 text-right">{t('difference')}</th><th className="pr-2 text-right">{t('errorPct')}</th><th className="pr-2 text-right">{t('moneyLoss')}</th><th className="pr-2 text-right">{t('remaining')}</th></tr></thead>
           <tbody>{rows.map(r => (
             <tr key={r.material_code} className={`border-b last:border-0 ${r.over ? 'bg-red-50/60' : ''}`}>
               <td className="py-1.5 pr-2 font-medium">{r.material_name}</td>
               <td className="pr-2 text-gray-400">{r.unit}</td>
               <td className="pr-2 text-center">
                 {r.over ? (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">異常超標</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">{t('abnormalOver')}</span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">正常</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">{t('normal')}</span>
                 )}
               </td>
-              <td className="pr-2 text-right tabular-nums">{fmt1(r.expected)}</td>
-              <td className="pr-2 text-right tabular-nums">{fmt1(r.actual)}</td>
-              <td className="pr-2 text-right tabular-nums text-gray-400">{r.recipe_theo ? fmt1(r.recipe_theo) : '—'}</td>
-              <td className={`pr-2 text-right tabular-nums ${r.diff > 0 ? 'text-red-500 font-medium' : 'text-emerald-600'}`}>{fmt1(r.diff)}</td>
-              <td className={`pr-2 text-right tabular-nums font-semibold ${r.over ? 'text-red-600' : 'text-gray-700'}`}>{r.pct === null ? '—' : `${fmt1(r.pct)}%`}</td>
-              <td className={`pr-2 text-right tabular-nums ${r.money_loss > 0 ? 'text-red-500' : 'text-gray-400'}`}>{r.price > 0 ? fmt(r.money_loss) : '—'}</td>
-              <td className="pr-2 text-right tabular-nums text-gray-500">{fmt1(r.remaining)}</td>
+              <td className="pr-2 text-right tabular-nums">{fmt1(r.expected, locale)}</td>
+              <td className="pr-2 text-right tabular-nums">{fmt1(r.actual, locale)}</td>
+              <td className="pr-2 text-right tabular-nums text-gray-400">{r.recipe_theo ? fmt1(r.recipe_theo, locale) : '—'}</td>
+              <td className={`pr-2 text-right tabular-nums ${r.diff > 0 ? 'text-red-500 font-medium' : 'text-emerald-600'}`}>{fmt1(r.diff, locale)}</td>
+              <td className={`pr-2 text-right tabular-nums font-semibold ${r.over ? 'text-red-600' : 'text-gray-700'}`}>{r.pct === null ? '—' : `${fmt1(r.pct, locale)}%`}</td>
+              <td className={`pr-2 text-right tabular-nums ${r.money_loss > 0 ? 'text-red-500' : 'text-gray-400'}`}>{r.price > 0 ? fmt(r.money_loss, locale) : '—'}</td>
+              <td className="pr-2 text-right tabular-nums text-gray-500">{fmt1(r.remaining, locale)}</td>
             </tr>))}</tbody></table></div>}
     </div>
   )
 }
 
 function GapCard({ label, info, explainedPct, explained }: { label: string; info: GapInfo; explainedPct?: number | null; explained?: number }) {
+  const t = useTranslations('StoreReports')
+  const locale = useLocale()
   const less = info.gap > 0 // 實際少用
   const pct = explainedPct ?? null
   const unexplained = less && explained !== undefined ? Math.max(0, info.gap - explained) : null
   return (
     <div className="rounded-lg border p-3 space-y-0.5">
       <div className="text-sm font-medium">{label}</div>
-      <div className="text-xs text-gray-500">規定 {fmt1(info.expected)}　實耗 {fmt1(info.actual)}</div>
+      <div className="text-xs text-gray-500">{t('expectedActual', { expected: fmt1(info.expected, locale), actual: fmt1(info.actual, locale) })}</div>
       <div className={`text-sm font-semibold tabular-nums ${less ? 'text-indigo-600' : info.gap < 0 ? 'text-red-600' : 'text-gray-600'}`}>
-        {less ? '少用' : info.gap < 0 ? '超用' : '持平'} {fmt1(Math.abs(info.gap))}
-        {info.gap_cups !== null && Math.abs(info.gap_cups) >= 1 && <span className="text-gray-400 font-normal">（約 {fmt(Math.abs(info.gap_cups))} 杯份）</span>}
+        {less ? t('underused') : info.gap < 0 ? t('overused') : t('onPar')} {fmt1(Math.abs(info.gap), locale)}
+        {info.gap_cups !== null && Math.abs(info.gap_cups) >= 1 && <span className="text-gray-400 font-normal">{t('approxCups', { n: fmt(Math.abs(info.gap_cups), locale) })}</span>}
       </div>
       {less && pct !== null ? (
         <div className={`text-[11px] ${pct >= 70 ? 'text-emerald-600' : pct >= 30 ? 'text-amber-600' : 'text-red-500'}`}>
-          加料排擠可解釋約 <b>{fmt(pct)}%</b>
-          {unexplained !== null && unexplained > 0.001 ? <>，尚有 <b>{fmt1(unexplained)}</b> 無法解釋{pct < 30 ? '（疑短少／浪費）' : ''}</> : '（大致可解釋）'}
+          {t('displacementExplainsAbout')} <b>{fmt(pct, locale)}%</b>
+          {unexplained !== null && unexplained > 0.001 ? <>{t('unexplainedRemaining', { amount: fmt1(unexplained, locale), suffix: pct < 30 ? t('suspectedShortage') : '' })}</> : t('mostlyExplained')}
         </div>
       ) : (
         <div className="text-[11px] text-gray-400">
-          {less ? '可能由多加料訂單排擠基底，屬正常範圍' : info.gap < 0 ? '實耗高於規定，需查核是否浪費／短少' : '與規定一致'}
+          {less ? t('normalDisplacementRange') : info.gap < 0 ? t('checkWasteOrShortage') : t('matchesExpected')}
         </div>
       )}
     </div>
