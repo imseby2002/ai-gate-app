@@ -462,15 +462,20 @@ export default function RoundtablePage() {
     setRunning(true)
     setWaitingBoss(false)
 
-    // 若是老闆發言，先在前端記錄一條老闆發言
-    if (currentAction !== 'synthesize' && bossInput.trim()) {
+    // 若是老闆發言，先在前端記錄一條老闆發言（結會補充意見亦同）
+    if (bossInput.trim()) {
       const currentMaxRound = blocks.reduce((max, b) => Math.max(max, Number(b.round) || 1), 2)
       setBlocks(prev => [
         ...prev,
         {
           round: currentMaxRound + 1,
           name: '老闆指令',
-          stance: currentAction === 'call_on' ? `點名 ${targetSeat}` : '全體深化',
+          stance:
+            currentAction === 'synthesize'
+              ? '結會補充意見'
+              : currentAction === 'call_on'
+                ? `點名 ${targetSeat}`
+                : '全體深化',
           content: bossInput.trim(),
         },
       ])
@@ -1338,7 +1343,7 @@ export default function RoundtablePage() {
                   {report ? '重新收斂結會 · 更新決策報告' : '討論已足夠 · 呼叫首席幕僚長結會'}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  由首席幕僚長 ({formatModelDisplayName(moderatorModel)}) 綜觀全場包含最新輪次在內的所有分歧，出具最終決策報告
+                  可先補充老闆意見（選填），再由首席幕僚長 ({formatModelDisplayName(moderatorModel)}) 綜觀全場包含最新輪次在內的所有分歧，出具最終決策報告
                 </p>
               </button>
             </div>
@@ -1353,6 +1358,17 @@ export default function RoundtablePage() {
                   <span className="text-[11px] text-muted-foreground">
                     可依本場辯論氛圍，隨時微調主筆模型與收斂風格
                   </span>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">
+                    老闆結會補充意見 (選填) —— 可先提出您的看法或指定收斂重點，再重新結會
+                  </label>
+                  <Textarea
+                    value={bossInput}
+                    onChange={e => setBossInput(e.target.value)}
+                    placeholder="例如：這次報告請以現金流風險為主軸，並直接給出我該不該砍掉 B 方案的明確結論"
+                    rows={2}
+                  />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">

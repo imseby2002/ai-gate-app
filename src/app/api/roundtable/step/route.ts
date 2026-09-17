@@ -128,14 +128,27 @@ export async function POST(req: NextRequest) {
             model: moderatorModel || DEFAULT_MODERATOR.model,
             role: DEFAULT_MODERATOR.role,
           }
+          // 老闆可先提出結會補充意見，再重新收斂報告
+          const synthesisGuidance = (bossGuidance ?? '').trim()
+          if (synthesisGuidance) {
+            emit({ type: 'boss-instruction', round: nextRound, content: synthesisGuidance })
+            newStatements.push({
+              round: nextRound,
+              name: '老闆指令',
+              role: '董事會主席 / 老闆',
+              stance: '結會補充意見',
+              content: synthesisGuidance,
+            })
+          }
           const report = await executeSynthesize(
             session.instruction,
             factBriefing,
-            priorTranscript,
+            [...priorTranscript, ...newStatements],
             moderatorToUse,
             emit,
             synthesisStyle,
             verbosity,
+            synthesisGuidance,
           )
           finalReport = report
         } else {
