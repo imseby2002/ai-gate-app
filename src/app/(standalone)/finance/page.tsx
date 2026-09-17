@@ -1,49 +1,45 @@
 'use client'
 
-import { useState, useEffect, useCallback, ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import Link from 'next/link'
-import { useTranslations, useLocale } from 'next-intl'
-import { Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2, CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank, BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet, Package } from 'lucide-react'
+import {
+  Plus, Pencil, Trash2, Check, X, Loader2, AlertCircle, Building2,
+  CreditCard, Zap, Wallet, TrendingUp, TrendingDown, ArrowUpCircle,
+  ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank,
+  BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet,
+  Package, Search, AlertTriangle, Layers, Calendar, Filter,
+  Settings, ChevronRight, Sparkles
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import { ZeroImportModal } from '@/components/finance/ZeroImportModal'
+import { SubjectTree, type SubjectItem, type SubjectFilter } from '@/components/finance/SubjectTree'
+import { SubjectManagementModal } from '@/components/finance/SubjectManagementModal'
+import { MdbErrorDrawer } from '@/components/finance/MdbErrorDrawer'
 import type { ImportColumn } from '@/lib/excel/universal-import'
+import type { MdbErrorInfo } from '@/lib/fin/zero-import'
 
-const ACCOUNT_IMPORT_COLUMNS: ImportColumn[] = [
-  { key: 'name', label: '帳戶名稱', required: true, example: '主要銀行帳戶', aliases: ['name', '帳戶名稱', '帳戶'] },
-  { key: 'kind', label: '帳戶類型', example: '銀行', aliases: ['kind', '帳戶類型', '類型'] },
-  { key: 'opening_balance', label: '期初餘額', example: 100000, aliases: ['opening_balance', '期初餘額', '餘額'] },
-  { key: 'currency', label: '幣別', example: 'TWD', aliases: ['currency', '幣別'] },
-  { key: 'note', label: '備註', example: '玉山銀行信義分行', aliases: ['note', '備註'] },
-]
-
-const CASHFLOW_IMPORT_COLUMNS: ImportColumn[] = [
-  { key: 'date', label: '日期', required: true, example: '2026-03-01', aliases: ['date', '日期'] },
-  { key: 'type', label: '類型', required: true, example: '支出', aliases: ['type', '類型', '收支'] },
-  { key: 'category', label: '分類', example: '採購費', aliases: ['category', '分類', '科目'] },
-  { key: 'amount', label: '金額', required: true, example: 5000, aliases: ['amount', '金額'] },
-  { key: 'description', label: '摘要', example: '辦公室耗材採購', aliases: ['description', '摘要', '說明'] },
-  { key: 'account_name', label: '帳戶名稱', example: '零用金', aliases: ['account_name', '帳戶名稱', '帳戶'] },
-]
-
-// ─── Types ───────────────────────────────────────────────────────
 import PnlReport from './PnlReport'
 import PricingTab from './PricingTab'
 
-type Tab = 'cashflow' | 'accounts' | 'pricing' | 'reports' | 'pnl' | 'import'
+type MainTab = 'cashflow' | 'pricing' | 'pnl'
+type SubTab = 'journal' | 'today' | 'month' | 'regular' | 'budget_exp' | 'budget_inc' | 'project'
 type FlowType = 'income' | 'expense' | 'transfer'
 
 interface Cashflow {
   id: string
   type: FlowType
   category: string
+  category_parent: string
   amount: number
   date: string
   description: string
   notes: string
+  pay_coll_name: string
+  invoice_no: string
   account_id: string | null
   to_account_id: string | null
   receipt_url: string
@@ -63,26 +59,30 @@ interface Account {
   created_at: string
 }
 
-// ─── Constants ───────────────────────────────────────────────────
-const getLabels = (t: (key: string) => string): Record<string, string> => ({
-  'income': t('income'), 'expense': t('expense'), 'transfer': t('transfer'),
-  'cash': t('cash'), 'bank': t('bank'), 'credit': t('credit'), 'ewallet': t('ewallet'), 'other': t('other'),
-})
+const CASHFLOW_IMPORT_COLUMNS: ImportColumn[] = [
+  { key: 'date', label: '日期', required: true, example: '2026-03-01', aliases: ['date', '日期'] },
+  { key: 'type', label: '類型', required: true, example: '支出', aliases: ['type', '類型', '收支'] },
+  { key: 'category', label: '分類', example: '採購費', aliases: ['category', '分類', '科目'] },
+  { key: 'amount', label: '金額', required: true, example: 5000, aliases: ['amount', '金額'] },
+  { key: 'description', label: '摘要', example: '辦公室耗材採購', aliases: ['description', '摘要', '說明'] },
+  { key: 'account_name', label: '帳戶名稱', example: '零用金', aliases: ['account_name', '帳戶名稱', '帳戶'] },
+  { key: 'pay_coll_name', label: '收付人', example: '陳小明', aliases: ['pay_coll_name', '收付人', '對象'] },
+]
 
-const INCOME_CATEGORIES = ['銷售收入', '服務費', '租金收入', '利息收入', '其他收入']
-const EXPENSE_CATEGORIES = ['薪資支出', '辦公費', '差旅費', '廣告費', '水電費', '租金支出', '採購費', '其他支出']
-const ACCOUNT_KINDS: Account['kind'][] = ['cash', 'bank', 'credit', 'ewallet', 'other']
+const fmt = (n: number) => Math.round(n || 0).toLocaleString('zh-TW')
 
-function AccountIcon({ kind, className }: { kind: Account['kind']; className?: string }) {
-  const Cmp = kind === 'bank' ? Landmark : kind === 'credit' ? CreditCard
-    : kind === 'ewallet' ? Wallet : kind === 'other' ? PiggyBank : Banknote
-  return <Cmp className={className} />
+function fmtDateWithDay(dateStr: string): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  const days = ['日', '一', '二', '三', '四', '五', '六']
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const date = String(d.getDate()).padStart(2, '0')
+  const day = days[d.getDay()]
+  return `${y}/${m}/${date} (${day})`
 }
 
-const fmt = (n: number, locale: string) => n.toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
-const fmtDate = (s: string | null | undefined, locale: string) => s ? new Date(s).toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW') : '—'
-
-// ─── Helpers ─────────────────────────────────────────────────────
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-1">
@@ -101,236 +101,970 @@ function InputEl({ value, onChange, placeholder, type = 'text', disabled }: {
   )
 }
 
-function SelectEl({ value, onChange, options, disabled }: {
-  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; disabled?: boolean
-}) {
-  return (
-    <select value={value} onChange={e => onChange(e.target.value)} disabled={disabled}
-      className="h-8 w-full rounded-md border bg-background px-2 text-sm outline-none disabled:opacity-50">
-      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  )
-}
-
-// ─── Cashflow Form ────────────────────────────────────────────────
-function CashflowForm({ initial, accounts, onSave, onCancel, saving }: {
-  initial: Omit<Cashflow, 'id' | 'created_at'>
+// ─── Cashflow Record Form Modal ───────────────────────────────────
+function CashflowFormModal({
+  initial,
+  accounts,
+  subjects,
+  onSave,
+  onCancel,
+  saving
+}: {
+  initial: Partial<Cashflow>
   accounts: Account[]
-  onSave: (d: Omit<Cashflow, 'id' | 'created_at'>) => void
+  subjects: SubjectItem[]
+  onSave: (d: any) => void
   onCancel: () => void
   saving: boolean
 }) {
-  const t = useTranslations('FinancePage')
-  const [d, setD] = useState(initial)
-  const [uploading, setUploading] = useState(false)
-  const set = (k: keyof typeof d, v: string | number | null) => setD(prev => ({ ...prev, [k]: v }))
-  const cats = d.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
-  const isTransfer = d.type === 'transfer'
-  const acctOpts = [{ value: '', label: t('unspecifiedOption') }, ...accounts.map(a => ({ value: a.id, label: a.name }))]
+  const [type, setType] = useState<FlowType>(initial.type ?? 'expense')
+  const [category, setCategory] = useState(initial.category ?? '')
+  const [categoryParent, setCategoryParent] = useState(initial.category_parent ?? '')
+  const [amount, setAmount] = useState<number>(initial.amount ?? 0)
+  const [date, setDate] = useState(initial.date ?? new Date().toISOString().slice(0, 10))
+  const [description, setDescription] = useState(initial.description ?? '')
+  const [notes, setNotes] = useState(initial.notes ?? '')
+  const [payCollName, setPayCollName] = useState(initial.pay_coll_name ?? '')
+  const [invoiceNo, setInvoiceNo] = useState(initial.invoice_no ?? '')
+  const [accountId, setAccountId] = useState(initial.account_id ?? accounts[0]?.id ?? '')
+  const [toAccountId, setToAccountId] = useState(initial.to_account_id ?? accounts[1]?.id ?? '')
+  const [err, setErr] = useState('')
 
-  const uploadReceipt = async (file: File) => {
-    setUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/hr/receipts', { method: 'POST', body: fd })
-      const j = await res.json()
-      if (j.url) set('receipt_url', j.url)
-    } finally { setUploading(false) }
+  // 根據收支類別篩選可選科目
+  const relevantSubjects = useMemo(() => {
+    const targetClass = type === 'income' ? 'income' : 'expense'
+    return subjects.filter(s => s.class === targetClass)
+  }, [subjects, type])
+
+  const handleCategorySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const catName = e.target.value
+    setCategory(catName)
+    const found = relevantSubjects.find(s => s.name === catName)
+    if (found) setCategoryParent(found.parent_name)
   }
 
-  const transferInvalid = isTransfer && (!d.account_id || !d.to_account_id || d.account_id === d.to_account_id)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!amount || amount <= 0) {
+      setErr('請輸入有效金額')
+      return
+    }
+    if (!date) {
+      setErr('請選擇記帳日期')
+      return
+    }
+    if (type === 'transfer' && (!accountId || !toAccountId || accountId === toAccountId)) {
+      setErr('轉帳需指定不同的轉出與轉入帳戶')
+      return
+    }
+    onSave({
+      type, category, category_parent: categoryParent,
+      amount, date, description, notes,
+      pay_coll_name: payCollName, invoice_no: invoiceNo,
+      account_id: accountId || null,
+      to_account_id: type === 'transfer' ? (toAccountId || null) : null,
+      receipt_url: initial.receipt_url ?? ''
+    })
+  }
 
   return (
-    <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('typeRequiredLabel')}>
-          <SelectEl value={d.type} onChange={v => set('type', v)}
-            options={[{ value: 'income', label: t('income') }, { value: 'expense', label: t('expense') }, { value: 'transfer', label: t('transfer') }]}
-            disabled={saving} />
-        </Field>
-        {!isTransfer ? (
-          <Field label={t('categoryLabel')}>
-            <div className="flex gap-1">
-              <SelectEl value={cats.includes(d.category) ? d.category : '__custom__'}
-                onChange={v => set('category', v === '__custom__' ? '' : v)}
-                options={[...cats.map(c => ({ value: c, label: c })), { value: '__custom__', label: t('customEllipsis') }]}
-                disabled={saving} />
-              {!cats.includes(d.category) && (
-                <InputEl value={d.category} onChange={v => set('category', v)} placeholder={t('customCategoryPlaceholder')} disabled={saving} />
-              )}
-            </div>
-          </Field>
-        ) : <div />}
-        <Field label={isTransfer ? t('fromAccountRequiredLabel') : t('accountLabel')}>
-          <SelectEl value={d.account_id ?? ''} onChange={v => set('account_id', v || null)} options={acctOpts} disabled={saving} />
-        </Field>
-        {isTransfer && (
-          <Field label={t('toAccountRequiredLabel')}>
-            <SelectEl value={d.to_account_id ?? ''} onChange={v => set('to_account_id', v || null)} options={acctOpts} disabled={saving} />
-          </Field>
-        )}
-        <Field label={t('amountYuanRequiredLabel')}>
-          <InputEl value={d.amount} onChange={v => set('amount', Number(v) || 0)} type="number" placeholder="0" disabled={saving} />
-        </Field>
-        <Field label={t('dateRequiredLabel')}>
-          <InputEl value={d.date} onChange={v => set('date', v)} type="date" disabled={saving} />
-        </Field>
-        <Field label={t('descriptionLabel')} >
-          <InputEl value={d.description} onChange={v => set('description', v)} placeholder={t('descriptionPlaceholder')} disabled={saving} />
-        </Field>
-        <Field label={t('notesLabel')}>
-          <InputEl value={d.notes} onChange={v => set('notes', v)} placeholder={t('otherSupplementPlaceholder')} disabled={saving} />
-        </Field>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs" onClick={onCancel}>
+      <Card className="w-full max-w-lg p-6 space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b pb-3">
+          <h3 className="font-bold text-base">
+            {initial.id ? '編輯帳務記錄' : '新增帳務記錄'}
+          </h3>
+          <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-      {/* 收據附件 */}
-      <Field label={t('receiptInvoiceLabel')}>
-        {d.receipt_url ? (
-          <div className="flex items-center gap-2">
-            <a href={d.receipt_url} target="_blank" rel="noreferrer" className="shrink-0">
-              <img src={d.receipt_url} alt={t('receiptAlt')} className="h-14 w-14 rounded-md border object-cover" />
-            </a>
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-500" onClick={() => set('receipt_url', '')} disabled={saving}>
-              <X className="h-3.5 w-3.5" />{t('remove')}
+        {err && (
+          <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive text-xs flex items-center gap-1.5">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{err}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+          {/* 類型切換 */}
+          <div>
+            <label className="block text-2xs font-medium text-muted-foreground mb-1">交易類型</label>
+            <div className="flex gap-1 bg-muted p-1 rounded-lg">
+              {(['expense', 'income', 'transfer'] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`flex-1 py-1.5 rounded-md font-semibold transition-colors ${
+                    type === t
+                      ? t === 'income'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : t === 'expense'
+                        ? 'bg-red-600 text-white shadow-xs'
+                        : 'bg-blue-600 text-white shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t === 'income' ? '收入 (+)' : t === 'expense' ? '支出 (-)' : '轉帳 (⇄)'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">記帳日期 *</label>
+              <Input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                required
+                className="h-8 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">金額 (NT$) *</label>
+              <Input
+                type="number"
+                value={amount || ''}
+                onChange={e => setAmount(Number(e.target.value) || 0)}
+                placeholder="0"
+                required
+                className="h-8 text-xs font-mono font-bold text-foreground"
+              />
+            </div>
+          </div>
+
+          {/* 項目與帳戶 */}
+          {type === 'transfer' ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">轉出帳戶 (從項目) *</label>
+                <select
+                  value={accountId}
+                  onChange={e => setAccountId(e.target.value)}
+                  className="w-full h-8 px-2 border rounded-md bg-background text-xs"
+                >
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (NT$ {fmt(a.balance ?? 0)})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">轉入帳戶 (至項目) *</label>
+                <select
+                  value={toAccountId}
+                  onChange={e => setToAccountId(e.target.value)}
+                  className="w-full h-8 px-2 border rounded-md bg-background text-xs"
+                >
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name} (NT$ {fmt(a.balance ?? 0)})</option>)}
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">
+                  {type === 'income' ? '收款帳戶 (至項目)' : '付款帳戶 (從項目)'}
+                </label>
+                <select
+                  value={accountId}
+                  onChange={e => setAccountId(e.target.value)}
+                  className="w-full h-8 px-2 border rounded-md bg-background text-xs"
+                >
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-2xs font-medium text-muted-foreground mb-1">
+                  {type === 'income' ? '收入科目 (從項目)' : '支出科目 (至項目)'}
+                </label>
+                <select
+                  value={category}
+                  onChange={handleCategorySelect}
+                  className="w-full h-8 px-2 border rounded-md bg-background text-xs"
+                >
+                  <option value="">-- 選擇科目 --</option>
+                  {relevantSubjects.map(s => (
+                    <option key={s.id} value={s.name}>
+                      {s.parent_name ? `${s.parent_name} > ` : ''}{s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">摘要說明</label>
+              <Input
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="例：買茶葉、門市營業額"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">收付人 / 廠商 / 客戶</label>
+              <Input
+                value={payCollName}
+                onChange={e => setPayCollName(e.target.value)}
+                placeholder="例：ha、廠商名稱"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">發票號碼</label>
+              <Input
+                value={invoiceNo}
+                onChange={e => setInvoiceNo(e.target.value)}
+                placeholder="例：AB12345678"
+                className="h-8 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-2xs font-medium text-muted-foreground mb-1">詳細備註</label>
+              <Input
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="其他補充說明"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t">
+            <Button type="button" variant="outline" size="sm" onClick={onCancel} className="h-8 text-xs">
+              取消
+            </Button>
+            <Button type="submit" size="sm" disabled={saving} className="h-8 text-xs gap-1">
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {saving ? '儲存中…' : '確認儲存'}
             </Button>
           </div>
-        ) : (
-          <label className="inline-flex items-center gap-2 h-8 px-3 rounded-md border bg-background text-sm cursor-pointer hover:bg-gray-100 w-fit">
-            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            {t('uploadImage')}
-            <input type="file" accept="image/*" className="hidden" disabled={saving || uploading}
-              onChange={e => { const f = e.target.files?.[0]; if (f) uploadReceipt(f) }} />
-          </label>
-        )}
-      </Field>
-
-      <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
-        <Button size="sm" onClick={() => onSave(d)} disabled={!d.amount || !d.date || saving || uploading || transferInvalid}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          {t('save')}
-        </Button>
-      </div>
+        </form>
+      </Card>
     </div>
   )
 }
 
-// ─── Cashflow Tab ─────────────────────────────────────────────────
-function CashflowTab() {
-  const t = useTranslations('FinancePage')
-  const locale = useLocale()
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all')
+// ─── Main Finance Page ────────────────────────────────────────────
+export default function FinancePage() {
+  const [mainTab, setMainTab] = useState<MainTab>('cashflow')
+  const [subTab, setSubTab] = useState<SubTab>('journal')
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
+
+  // 年月狀態（Zero.Net 風格）
+  const [year, setYear] = useState<number>(2026)
+  const [month, setMonth] = useState<number>(9)
+
+  // 資料狀態
+  const [subjects, setSubjects] = useState<SubjectItem[]>([])
+  const [selectedSubject, setSelectedSubject] = useState<SubjectFilter | null>(null)
   const [records, setRecords] = useState<Cashflow[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
-  const [showImport, setShowImport] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  // 錯誤與診斷日誌
+  const [importLogs, setImportLogs] = useState<any[]>([])
+  const [showErrorDrawer, setShowErrorDrawer] = useState(false)
   const [showZeroImport, setShowZeroImport] = useState(false)
-  const [editing, setEditing] = useState<Cashflow | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
+  const [showExcelImport, setShowExcelImport] = useState(false)
+  const [showSubjectSettings, setShowSubjectSettings] = useState(false)
+  const [showFormModal, setShowFormModal] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<Cashflow | null>(null)
+  const [savingRecord, setSavingRecord] = useState(false)
 
-  const acctName = useCallback((id: string | null) => accounts.find(a => a.id === id)?.name ?? '', [accounts])
+  // 搜尋與篩選
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchMode, setSearchMode] = useState<'all' | 'desc' | 'category' | 'payee' | 'notes'>('all')
 
-  const BLANK: Omit<Cashflow, 'id' | 'created_at'> = {
-    type: 'expense', category: '', amount: 0,
-    date: `${year}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-    description: '', notes: '', account_id: null, to_account_id: null, receipt_url: '',
-  }
+  const acctMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const a of accounts) map.set(a.id, a.name)
+    return map
+  }, [accounts])
 
-  const loadAccounts = useCallback(async () => {
-    const res = await fetch('/api/hr/accounts')
-    const d = await res.json()
-    setAccounts(d.accounts ?? [])
+  const acctName = useCallback((id?: string | null) => (id ? acctMap.get(id) ?? '' : ''), [acctMap])
+
+  // 載入科目主檔
+  const loadSubjects = useCallback(async () => {
+    try {
+      const res = await fetch('/api/fin/subjects?book=FT')
+      if (res.ok) {
+        const d = await res.json()
+        setSubjects(d.subjects ?? [])
+      }
+    } catch { /* ignore */ }
   }, [])
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    const params = new URLSearchParams({ year: String(year), month: String(month) })
-    if (typeFilter !== 'all') params.set('type', typeFilter)
-    const res = await fetch(`/api/hr/cashflow?${params}`)
-    const d = await res.json()
-    setRecords(d.cashflow ?? [])
-    setLoading(false)
-  }, [year, month, typeFilter])
-
-  useEffect(() => { load() }, [load])
-  useEffect(() => { loadAccounts() }, [loadAccounts])
-
-  const save = async (data: Omit<Cashflow, 'id' | 'created_at'>) => {
-    setSaving(true); setErr('')
+  // 載入帳戶
+  const loadAccounts = useCallback(async () => {
     try {
-      if (editing) {
-        await fetch('/api/hr/cashflow', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...data }) })
-      } else {
-        await fetch('/api/hr/cashflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      const res = await fetch('/api/hr/accounts')
+      if (res.ok) {
+        const d = await res.json()
+        setAccounts(d.accounts ?? [])
       }
-      setShowForm(false); setEditing(null); load(); loadAccounts()
-    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
+    } catch { /* ignore */ }
+  }, [])
+
+  // 載入匯入錯誤紀錄
+  const loadImportLogs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/fin/import-logs?book=FT')
+      if (res.ok) {
+        const d = await res.json()
+        setImportLogs(d.logs ?? [])
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  // 載入出納交易流水帳
+  const loadCashflow = useCallback(async () => {
+    setLoading(true)
+    try {
+      let url = `/api/hr/cashflow?year=${year}`
+      if (subTab === 'month' || subTab === 'journal') {
+        url += `&month=${month}`
+      }
+      const res = await fetch(url)
+      if (res.ok) {
+        const d = await res.json()
+        setRecords(d.cashflow ?? [])
+      }
+    } catch { /* ignore */ } finally {
+      setLoading(false)
+    }
+  }, [year, month, subTab])
+
+  useEffect(() => {
+    fetch('/api/hr/accounts').then(res => setIsAdmin(res.status !== 403))
+    loadSubjects()
+    loadAccounts()
+    loadImportLogs()
+  }, [loadSubjects, loadAccounts, loadImportLogs])
+
+  useEffect(() => {
+    loadCashflow()
+  }, [loadCashflow])
+
+  // 計算左側科目樹的即時金額
+  const treeBalances = useMemo(() => {
+    const map: Record<string, number> = {}
+
+    // 資產帳戶結餘（來自 accounts balance）
+    for (const a of accounts) {
+      map[a.name] = a.balance ?? 0
+      map[`asset|${a.name}`] = a.balance ?? 0
+      map[`asset|現金|${a.name}`] = a.balance ?? 0
+      map[`asset|銀行存款|${a.name}`] = a.balance ?? 0
+    }
+
+    // 收支當月金額（來自當月 records）
+    for (const r of records) {
+      const amt = Number(r.amount) || 0
+      if (r.type === 'income') {
+        if (r.category) {
+          map[`income|${r.category_parent}|${r.category}`] = (map[`income|${r.category_parent}|${r.category}`] || 0) + amt
+          map[r.category] = (map[r.category] || 0) + amt
+        }
+      } else if (r.type === 'expense') {
+        if (r.category) {
+          map[`expense|${r.category_parent}|${r.category}`] = (map[`expense|${r.category_parent}|${r.category}`] || 0) + amt
+          map[r.category] = (map[r.category] || 0) + amt
+        }
+      }
+    }
+
+    return map
+  }, [accounts, records])
+
+  // 篩選後交易清單
+  const filteredRecords = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10)
+
+    return records.filter(r => {
+      // 子頁籤模式過濾
+      if (subTab === 'today' && r.date !== todayStr) return false
+
+      // 左側科目樹選取過濾
+      if (selectedSubject) {
+        if (selectedSubject.name) {
+          const matchCat = r.category === selectedSubject.name
+          const matchFromAcct = acctName(r.account_id) === selectedSubject.name
+          const matchToAcct = acctName(r.to_account_id) === selectedSubject.name
+          if (!matchCat && !matchFromAcct && !matchToAcct) return false
+        } else if (selectedSubject.parent_name) {
+          const matchParent = r.category_parent === selectedSubject.parent_name
+          const matchFromAcct = acctName(r.account_id).includes(selectedSubject.parent_name)
+          const matchToAcct = acctName(r.to_account_id).includes(selectedSubject.parent_name)
+          if (!matchParent && !matchFromAcct && !matchToAcct) return false
+        } else if (selectedSubject.class) {
+          if (selectedSubject.class === 'income' && r.type !== 'income') return false
+          if (selectedSubject.class === 'expense' && r.type !== 'expense') return false
+          if (selectedSubject.class === 'asset' && r.type !== 'transfer' && !r.account_id) return false
+        }
+      }
+
+      // 搜尋關鍵字過濾
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim()
+        const fromItem = r.type === 'income' ? r.category : acctName(r.account_id)
+        const toItem = r.type === 'expense' ? r.category : r.type === 'transfer' ? acctName(r.to_account_id) : acctName(r.account_id)
+
+        if (searchMode === 'desc') {
+          return r.description.toLowerCase().includes(q)
+        }
+        if (searchMode === 'category') {
+          return fromItem.toLowerCase().includes(q) || toItem.toLowerCase().includes(q) || r.category.toLowerCase().includes(q)
+        }
+        if (searchMode === 'payee') {
+          return (r.pay_coll_name || '').toLowerCase().includes(q)
+        }
+        if (searchMode === 'notes') {
+          return (r.notes || '').toLowerCase().includes(q) || (r.invoice_no || '').toLowerCase().includes(q)
+        }
+        // all
+        return (
+          r.description.toLowerCase().includes(q) ||
+          fromItem.toLowerCase().includes(q) ||
+          toItem.toLowerCase().includes(q) ||
+          (r.pay_coll_name || '').toLowerCase().includes(q) ||
+          (r.notes || '').toLowerCase().includes(q) ||
+          (r.invoice_no || '').toLowerCase().includes(q) ||
+          String(r.amount).includes(q)
+        )
+      }
+
+      return true
+    })
+  }, [records, subTab, selectedSubject, searchQuery, searchMode, acctName])
+
+  // 統計總和
+  const monthIncome = useMemo(() => records.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0), [records])
+  const monthExpense = useMemo(() => records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0), [records])
+  const monthBalance = monthIncome - monthExpense
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayIncome = useMemo(() => records.filter(r => r.type === 'income' && r.date === todayStr).reduce((s, r) => s + r.amount, 0), [records, todayStr])
+  const todayExpense = useMemo(() => records.filter(r => r.type === 'expense' && r.date === todayStr).reduce((s, r) => s + r.amount, 0), [records, todayStr])
+
+  // 最新匯入紀錄之錯誤
+  const latestLog = importLogs[0]
+  const allErrors: MdbErrorInfo[] = latestLog?.errors || []
+  const totalErrors = allErrors.length
+
+  // 儲存記錄
+  const handleSaveRecord = async (data: any) => {
+    setSavingRecord(true)
+    try {
+      if (editingRecord) {
+        await fetch('/api/hr/cashflow', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingRecord.id, ...data })
+        })
+      } else {
+        await fetch('/api/hr/cashflow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+      }
+      setShowFormModal(false)
+      setEditingRecord(null)
+      loadCashflow()
+      loadAccounts()
+    } catch {
+      alert('儲存失敗')
+    } finally {
+      setSavingRecord(false)
+    }
   }
 
-  const remove = async (id: string) => {
-    if (!confirm(t('confirmDeleteRecord'))) return
-    await fetch('/api/hr/cashflow', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    load(); loadAccounts()
+  // 刪除記錄
+  const handleDeleteRecord = async (id: string) => {
+    if (!confirm('確定刪除此筆記錄？')) return
+    await fetch('/api/hr/cashflow', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+    loadCashflow()
+    loadAccounts()
   }
 
-  const totalIncome  = records.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0)
-  const totalExpense = records.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0)
-  const net = totalIncome - totalExpense
+  if (isAdmin === false) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <div className="text-center space-y-2">
+          <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
+          <p className="font-semibold">僅出納總務單位可使用出納總務功能</p>
+          <p className="text-sm text-gray-400">請以管理者帳號登入後再試</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1 border rounded-lg px-2 py-1">
-          <button onClick={() => setYear(y => y - 1)} className="text-gray-400 hover:text-gray-700 px-1">‹</button>
-          <span className="text-sm font-medium w-12 text-center">{t('yearSuffix', { y: year })}</span>
-          <button onClick={() => setYear(y => y + 1)} className="text-gray-400 hover:text-gray-700 px-1">›</button>
+    <div className="max-w-[1600px] mx-auto px-4 py-4 space-y-4 font-sans">
+      {/* 頂部導航與功能模組切換 */}
+      <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Wallet className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">出納總務系統</h1>
+              <Badge variant="outline" className="font-mono text-2xs">Zero.Net 模式</Badge>
+            </div>
+            <p className="text-2xs text-muted-foreground">流水帳記帳、樹狀科目、MDB 匯入診斷與物料報表</p>
+          </div>
         </div>
-        <div className="flex gap-0.5">
-          {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-            <button key={m} onClick={() => setMonth(m)}
-              className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${month === m ? 'bg-primary text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-              {m}
-            </button>
-          ))}
+
+        {/* 主功能 Tab 切換 (出納帳務、物料定價、業績報表) */}
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-xl">
+          <button
+            onClick={() => setMainTab('cashflow')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              mainTab === 'cashflow' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            出納帳務
+          </button>
+          <button
+            onClick={() => setMainTab('pricing')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              mainTab === 'pricing' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            物料定價
+          </button>
+          <button
+            onClick={() => setMainTab('pnl')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              mainTab === 'pnl' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            業績損益報表
+          </button>
         </div>
-        <div className="flex gap-1">
-          {(['all', 'income', 'expense', 'transfer'] as const).map(tf => (
-            <Button key={tf} size="sm" variant={typeFilter === tf ? 'default' : 'ghost'} onClick={() => setTypeFilter(tf)}>
-              {tf === 'all' ? t('all') : tf === 'income' ? t('income') : tf === 'expense' ? t('expense') : t('transfer')}
+
+        <div className="flex items-center gap-2">
+          <Link href="/store-expenses">
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+              <Store className="h-3.5 w-3.5" />門市費用
             </Button>
-          ))}
+          </Link>
+          <Link href="/vendors">
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+              <Truck className="h-3.5 w-3.5" />廠商資料
+            </Button>
+          </Link>
         </div>
-        <Button size="sm" variant="outline" className="ml-auto gap-1.5" onClick={() => setShowZeroImport(true)}>
-          <Upload className="h-4 w-4 text-primary" />{t('importFromZero')}
-        </Button>
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-          <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImport')}
-        </Button>
-        <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-          <Plus className="h-4 w-4" />{t('addRecord')}
-        </Button>
       </div>
 
-      {showZeroImport && (
-        <ZeroImportModal onClose={() => setShowZeroImport(false)} onDone={() => { load(); loadAccounts() }} />
+      {mainTab === 'pricing' && <PricingTab />}
+      {mainTab === 'pnl' && <PnlReport />}
+
+      {mainTab === 'cashflow' && (
+        <div className="grid grid-cols-1 lg:grid-cols-[310px_1fr] gap-4 items-start">
+          {/* 左側：科目樹狀結構與年月導覽（Zero.Net 左欄） */}
+          <div className="lg:sticky lg:top-4">
+            <SubjectTree
+              subjects={subjects}
+              selected={selectedSubject}
+              onSelect={setSelectedSubject}
+              year={year}
+              setYear={setYear}
+              month={month}
+              setMonth={setMonth}
+              onOpenSubjectSettings={() => setShowSubjectSettings(true)}
+              balances={treeBalances}
+            />
+          </div>
+
+          {/* 右側：帳務小管家核心面板 */}
+          <div className="space-y-3 min-w-0">
+            {/* 上方子標籤（Zero.Net 子功能分頁） */}
+            <div className="flex items-center justify-between gap-2 flex-wrap border-b pb-2">
+              <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg text-xs overflow-x-auto">
+                <button
+                  onClick={() => setSubTab('journal')}
+                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                    subTab === 'journal' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  帳務記錄
+                </button>
+                <button
+                  onClick={() => setSubTab('today')}
+                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                    subTab === 'today' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  本日收支
+                </button>
+                <button
+                  onClick={() => setSubTab('month')}
+                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                    subTab === 'month' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  本月收支
+                </button>
+                <button
+                  onClick={() => { setSubTab('regular'); setSelectedSubject({ parent_name: '定期存款' }) }}
+                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                    subTab === 'regular' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  定期存款
+                </button>
+                <button
+                  onClick={() => setSubTab('project')}
+                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                    subTab === 'project' ? 'bg-card text-foreground font-bold shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  專案記錄
+                </button>
+              </div>
+
+              {/* 頂部操作按鈕組 */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setShowSubjectSettings(true)}
+                >
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                  項目設定
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setShowZeroImport(true)}
+                >
+                  <Upload className="h-3.5 w-3.5 text-primary" />
+                  從 Zero 匯入 (.mdb)
+                </Button>
+
+                {totalErrors > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                    onClick={() => setShowErrorDrawer(true)}
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                    匯入錯誤紀錄 ({totalErrors})
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setShowExcelImport(true)}
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                  批次匯入
+                </Button>
+
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1 font-semibold"
+                  onClick={() => { setEditingRecord(null); setShowFormModal(true) }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  新增記錄
+                </Button>
+              </div>
+            </div>
+
+            {/* 搜尋列（Zero.Net 風格：輸入框 + 多維度按鈕） */}
+            <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-xl border">
+              <span className="text-xs font-medium text-muted-foreground shrink-0">資料搜尋：</span>
+              <div className="relative flex-1 min-w-[150px]">
+                <Input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="輸入搜尋關鍵字..."
+                  className="h-8 text-xs bg-background"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0 overflow-x-auto">
+                {(['all', 'desc', 'category', 'payee', 'notes'] as const).map(m => {
+                  const label = m === 'all' ? '全部' : m === 'desc' ? '摘要' : m === 'category' ? '項目' : m === 'payee' ? '收付人' : '備註發票'
+                  return (
+                    <Button
+                      key={m}
+                      size="sm"
+                      variant={searchMode === m ? 'default' : 'ghost'}
+                      className="h-7 text-2xs px-2"
+                      onClick={() => setSearchMode(m)}
+                    >
+                      {label}搜尋
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 科目篩選指示條 */}
+            {selectedSubject && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 text-xs text-blue-900 dark:text-blue-300">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-3.5 w-3.5 text-blue-600" />
+                  <span>
+                    目前篩選科目：
+                    <b>
+                      {selectedSubject.parent_name ? `${selectedSubject.parent_name} > ` : ''}
+                      {selectedSubject.name || selectedSubject.parent_name || selectedSubject.class}
+                    </b>
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedSubject(null)}
+                  className="text-2xs underline hover:text-blue-700"
+                >
+                  清除篩選（顯示全部）
+                </button>
+              </div>
+            )}
+
+            {/* 核心交易表格（Zero.Net 資料表格佈局） */}
+            <Card className="overflow-hidden border shadow-xs">
+              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="bg-muted/70 text-muted-foreground font-semibold border-b sticky top-0 z-10 backdrop-blur-xs">
+                    <tr>
+                      <th className="w-8 px-2 py-2 text-center"></th>
+                      <th className="px-3 py-2 whitespace-nowrap">日期 / 星期</th>
+                      <th className="px-3 py-2 whitespace-nowrap">從項目</th>
+                      <th className="px-2 py-2 text-center whitespace-nowrap">狀態</th>
+                      <th className="px-3 py-2 whitespace-nowrap">至項目</th>
+                      <th className="px-3 py-2 text-right whitespace-nowrap">金額 (NT$)</th>
+                      <th className="px-3 py-2 whitespace-nowrap">摘要</th>
+                      <th className="px-3 py-2 whitespace-nowrap">收付人</th>
+                      <th className="px-3 py-2 whitespace-nowrap">備註 / 發票</th>
+                      <th className="w-16 px-2 py-2 text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60 font-sans">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                          <span>正在讀取帳務記錄…</span>
+                        </td>
+                      </tr>
+                    ) : filteredRecords.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-16 text-center text-muted-foreground">
+                          <Wallet className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                          <p className="font-medium text-sm">無符合條件的帳務分錄</p>
+                          <p className="text-2xs text-muted-foreground mt-1">請切換年份月份、科目樹篩選或點擊「新增記錄」</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredRecords.map((r, idx) => {
+                        const isIncome = r.type === 'income'
+                        const isExpense = r.type === 'expense'
+                        const isTransfer = r.type === 'transfer'
+
+                        const fromItem = isIncome ? (r.category || '收入') : (acctName(r.account_id) || '現金/銀行')
+                        const toItem = isExpense ? (r.category || '支出') : isTransfer ? (acctName(r.to_account_id) || '轉入帳戶') : (acctName(r.account_id) || '存入帳戶')
+
+                        const typeLabel = isIncome ? '收入' : isExpense ? '支出' : '轉帳'
+                        const typeColor = isIncome
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400'
+                          : isExpense
+                          ? 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
+                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+
+                        const amtColor = isIncome ? 'text-emerald-600 font-bold' : isExpense ? 'text-red-600 font-bold' : 'text-blue-600 font-semibold'
+
+                        return (
+                          <tr
+                            key={r.id}
+                            className="hover:bg-muted/40 transition-colors group cursor-pointer"
+                            onDoubleClick={() => { setEditingRecord(r); setShowFormModal(true) }}
+                          >
+                            {/* 圖示欄位 */}
+                            <td className="px-2 py-2 text-center shrink-0">
+                              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-2xs font-bold ${
+                                isIncome ? 'bg-emerald-500 text-white' : isExpense ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+                              }`}>
+                                {isIncome ? '入' : isExpense ? '支' : '轉'}
+                              </span>
+                            </td>
+
+                            {/* 日期 / 星期 */}
+                            <td className="px-3 py-2 font-mono whitespace-nowrap text-foreground">
+                              {fmtDateWithDay(r.date)}
+                            </td>
+
+                            {/* 從項目 */}
+                            <td className="px-3 py-2 font-medium whitespace-nowrap text-foreground/90">
+                              {fromItem}
+                            </td>
+
+                            {/* 狀態 */}
+                            <td className="px-2 py-2 text-center whitespace-nowrap">
+                              <span className={`px-1.5 py-0.5 rounded text-2xs font-semibold ${typeColor}`}>
+                                {typeLabel}
+                              </span>
+                            </td>
+
+                            {/* 至項目 */}
+                            <td className="px-3 py-2 font-medium whitespace-nowrap text-foreground/90">
+                              {toItem}
+                            </td>
+
+                            {/* 金額 */}
+                            <td className={`px-3 py-2 text-right font-mono tabular-nums text-sm ${amtColor}`}>
+                              {fmt(r.amount)}
+                            </td>
+
+                            {/* 摘要 */}
+                            <td className="px-3 py-2 truncate max-w-[220px]" title={r.description}>
+                              {r.description || '—'}
+                            </td>
+
+                            {/* 收付人 */}
+                            <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">
+                              {r.pay_coll_name || '—'}
+                            </td>
+
+                            {/* 備註 / 發票 */}
+                            <td className="px-3 py-2 text-muted-foreground truncate max-w-[180px]">
+                              {r.invoice_no ? <span className="font-mono text-foreground font-medium mr-1">[{r.invoice_no}]</span> : null}
+                              {r.notes || '—'}
+                            </td>
+
+                            {/* 操作 */}
+                            <td className="px-2 py-2 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 hover:bg-muted"
+                                  onClick={e => { e.stopPropagation(); setEditingRecord(r); setShowFormModal(true) }}
+                                  title="修改記錄"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 hover:bg-red-100 hover:text-destructive"
+                                  onClick={e => { e.stopPropagation(); handleDeleteRecord(r.id) }}
+                                  title="刪除記錄"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* 底部狀態列（Zero.Net 風格） */}
+            <div className="border rounded-xl bg-card p-3 shadow-xs flex items-center justify-between text-xs flex-wrap gap-3 font-sans">
+              <div className="flex items-center gap-4 text-muted-foreground">
+                <span>帳本名稱: <b className="text-foreground">FT</b></span>
+                <span>本日日期: <b className="text-foreground font-mono">{todayStr}</b></span>
+                <span>顯示筆數: <b className="text-foreground font-mono">{filteredRecords.length}</b> 筆</span>
+              </div>
+
+              <div className="flex items-center gap-4 font-mono tabular-nums">
+                <span>本月收入: <b className="text-emerald-600 font-bold">{fmt(monthIncome)}</b></span>
+                <span>本月支出: <b className="text-red-600 font-bold">{fmt(monthExpense)}</b></span>
+                <span>收支餘額: <b className={`${monthBalance >= 0 ? 'text-blue-600' : 'text-orange-500'} font-bold`}>{fmt(monthBalance)}</b></span>
+                <span className="text-muted-foreground">|</span>
+                <span>本日收入: <b className="text-emerald-600">{fmt(todayIncome)}</b></span>
+                <span>本日支出: <b className="text-red-600">{fmt(todayExpense)}</b></span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      {showImport && (
+      {/* 彈出視窗模組 */}
+      {showFormModal && (
+        <CashflowFormModal
+          initial={editingRecord || {}}
+          accounts={accounts}
+          subjects={subjects}
+          onSave={handleSaveRecord}
+          onCancel={() => { setShowFormModal(false); setEditingRecord(null) }}
+          saving={savingRecord}
+        />
+      )}
+
+      {showSubjectSettings && (
+        <SubjectManagementModal
+          open={showSubjectSettings}
+          onClose={() => setShowSubjectSettings(false)}
+          subjects={subjects}
+          onRefresh={() => { loadSubjects(); loadCashflow() }}
+          accountBook="FT"
+        />
+      )}
+
+      {showZeroImport && (
+        <ZeroImportModal
+          onClose={() => setShowZeroImport(false)}
+          onDone={() => {
+            loadSubjects()
+            loadAccounts()
+            loadCashflow()
+            loadImportLogs()
+          }}
+        />
+      )}
+
+      <MdbErrorDrawer
+        open={showErrorDrawer}
+        onClose={() => setShowErrorDrawer(false)}
+        errors={allErrors}
+        bookName="FT"
+        filename={latestLog?.filename}
+      />
+
+      {showExcelImport && (
         <ExcelImportModal
           title="批次匯入出納帳務"
           description="支援 .xlsx, .xls 與 .csv 檔案。請包含日期、類型（收入/支出）、金額等。"
           columns={CASHFLOW_IMPORT_COLUMNS}
           templateFilename="出納帳務範本"
           sheetName="收支紀錄"
-          onClose={() => setShowImport(false)}
-          onSuccess={() => { load(); loadAccounts() }}
+          onClose={() => setShowExcelImport(false)}
+          onSuccess={() => { loadCashflow(); loadAccounts() }}
           onSubmit={async rows => {
             const recordsToImport = rows.map(r => {
               const type = ['收入', 'income', '+'].includes(String(r.type ?? '').trim().toLowerCase()) ? 'income' : 'expense'
@@ -341,6 +1075,7 @@ function CashflowTab() {
                 category: String(r.category ?? '').trim(),
                 amount: Number(r.amount) || 0,
                 description: String(r.description ?? '').trim(),
+                pay_coll_name: String(r.pay_coll_name ?? '').trim(),
                 account_id: acct?.id || null,
               }
             }).filter(r => r.amount > 0 && !!r.date)
@@ -354,718 +1089,6 @@ function CashflowTab() {
           }}
         />
       )}
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <ArrowUpCircle className="h-4 w-4 text-green-500" />
-            <span className="text-xs text-gray-500">{t('monthIncome')}</span>
-          </div>
-          <p className="text-xl font-bold text-green-600">NT$ {fmt(totalIncome, locale)}</p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <ArrowDownCircle className="h-4 w-4 text-red-500" />
-            <span className="text-xs text-gray-500">{t('monthExpense')}</span>
-          </div>
-          <p className="text-xl font-bold text-red-500">NT$ {fmt(totalExpense, locale)}</p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            {net >= 0 ? <TrendingUp className="h-4 w-4 text-blue-500" /> : <TrendingDown className="h-4 w-4 text-orange-500" />}
-            <span className="text-xs text-gray-500">{t('netCashflow')}</span>
-          </div>
-          <p className={`text-xl font-bold ${net >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>
-            {net >= 0 ? '+' : ''}NT$ {fmt(net, locale)}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet className="h-4 w-4 text-primary" />
-            <span className="text-xs text-gray-500">{t('accountTotalAssets')}</span>
-          </div>
-          <p className="text-xl font-bold text-gray-800">NT$ {fmt(accounts.reduce((s, a) => s + (a.balance ?? 0), 0), locale)}</p>
-        </Card>
-      </div>
-
-      {showForm && !editing && (
-        <CashflowForm initial={{ ...BLANK }} accounts={accounts} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />
-      )}
-      {err && <p className="text-sm text-red-500">{err}</p>}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
-      ) : records.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <Wallet className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">{t('noCashflowDataForMonth', { year, month })}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {records.map(r => {
-            const border = r.type === 'income' ? 'border-l-green-400' : r.type === 'expense' ? 'border-l-red-400' : 'border-l-blue-400'
-            const amtColor = r.type === 'income' ? 'text-green-600' : r.type === 'expense' ? 'text-red-500' : 'text-blue-600'
-            const sign = r.type === 'income' ? '+' : r.type === 'expense' ? '-' : ''
-            return (
-            <Card key={r.id} className={`p-3 border-l-4 ${border}`}>
-              <div className="flex items-center gap-3">
-                <div className="shrink-0">
-                  {r.type === 'income' ? <ArrowUpCircle className="h-5 w-5 text-green-500" />
-                    : r.type === 'expense' ? <ArrowDownCircle className="h-5 w-5 text-red-400" />
-                    : <ArrowLeftRight className="h-5 w-5 text-blue-500" />}
-                </div>
-                {r.receipt_url && (
-                  <a href={r.receipt_url} target="_blank" rel="noreferrer" className="shrink-0">
-                    <img src={r.receipt_url} alt={t('receiptAlt')} className="h-9 w-9 rounded border object-cover" />
-                  </a>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm">{r.description || r.category || (r.type === 'transfer' ? t('transfer') : '—')}</span>
-                    {r.type !== 'transfer' && r.category && <Badge variant="secondary">{r.category}</Badge>}
-                    <span className="text-xs text-gray-400">{fmtDate(r.date, locale)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-400 mt-0.5">
-                    {r.type === 'transfer' ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Wallet className="h-3 w-3" />{acctName(r.account_id) || t('unspecified')}
-                        <ArrowLeftRight className="h-3 w-3" />{acctName(r.to_account_id) || t('unspecified')}
-                      </span>
-                    ) : r.account_id ? (
-                      <span className="inline-flex items-center gap-1"><Wallet className="h-3 w-3" />{acctName(r.account_id)}</span>
-                    ) : null}
-                    {r.notes && <span>· {r.notes}</span>}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className={`font-bold tabular-nums ${amtColor}`}>
-                    {sign}NT$ {fmt(r.amount, locale)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(r); setShowForm(false) }}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-500" onClick={() => remove(r.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-              {editing?.id === r.id && (
-                <div className="mt-3">
-                  <CashflowForm accounts={accounts}
-                    initial={{ type: r.type, category: r.category, amount: r.amount, date: r.date, description: r.description, notes: r.notes, account_id: r.account_id, to_account_id: r.to_account_id, receipt_url: r.receipt_url }}
-                    onSave={save} onCancel={() => setEditing(null)} saving={saving} />
-                </div>
-              )}
-            </Card>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Account Form ─────────────────────────────────────────────────
-function AccountForm({ initial, onSave, onCancel, saving }: {
-  initial: Pick<Account, 'name' | 'kind' | 'opening_balance' | 'currency' | 'note'>
-  onSave: (d: Pick<Account, 'name' | 'kind' | 'opening_balance' | 'currency' | 'note'>) => void
-  onCancel: () => void
-  saving: boolean
-}) {
-  const t = useTranslations('FinancePage')
-  const LABELS = getLabels(t)
-  const [d, setD] = useState(initial)
-  const set = (k: keyof typeof d, v: string | number) => setD(prev => ({ ...prev, [k]: v }))
-  return (
-    <div className="space-y-3 p-4 rounded-xl border bg-gray-50">
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={t('accountNameRequiredLabel')}><InputEl value={d.name} onChange={v => set('name', v)} placeholder={t('accountNamePlaceholder')} disabled={saving} /></Field>
-        <Field label={t('typeLabel')}>
-          <SelectEl value={d.kind} onChange={v => set('kind', v)}
-            options={ACCOUNT_KINDS.map(k => ({ value: k, label: LABELS[k] ?? k }))} disabled={saving} />
-        </Field>
-        <Field label={t('openingBalanceYuanLabel')}><InputEl value={d.opening_balance} onChange={v => set('opening_balance', Number(v) || 0)} type="number" disabled={saving} /></Field>
-        <Field label={t('currencyLabel')}><InputEl value={d.currency} onChange={v => set('currency', v)} placeholder="TWD" disabled={saving} /></Field>
-        <div className="col-span-2"><Field label={t('notesLabel')}><InputEl value={d.note} onChange={v => set('note', v)} placeholder={t('otherSupplementPlaceholder')} disabled={saving} /></Field></div>
-      </div>
-      <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving}>{t('cancel')}</Button>
-        <Button size="sm" onClick={() => onSave(d)} disabled={!d.name || saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}{t('save')}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Accounts Tab ─────────────────────────────────────────────────
-function AccountsTab() {
-  const t = useTranslations('FinancePage')
-  const locale = useLocale()
-  const LABELS = getLabels(t)
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [showImport, setShowImport] = useState(false)
-  const [editing, setEditing] = useState<Account | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState('')
-
-  const BLANK = { name: '', kind: 'cash' as Account['kind'], opening_balance: 0, currency: 'TWD', note: '' }
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    const res = await fetch('/api/hr/accounts')
-    const d = await res.json()
-    setAccounts(d.accounts ?? [])
-    setLoading(false)
-  }, [])
-  useEffect(() => { load() }, [load])
-
-  const save = async (data: typeof BLANK) => {
-    setSaving(true); setErr('')
-    try {
-      if (editing) {
-        await fetch('/api/hr/accounts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: editing.id, ...data }) })
-      } else {
-        await fetch('/api/hr/accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-      }
-      setShowForm(false); setEditing(null); load()
-    } catch { setErr(t('saveFailed')) } finally { setSaving(false) }
-  }
-
-  const remove = async (id: string) => {
-    if (!confirm(t('confirmDeleteAccount'))) return
-    const res = await fetch('/api/hr/accounts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
-    if (!res.ok) { const j = await res.json(); alert(j.error || t('deleteFailed')); return }
-    load()
-  }
-
-  const total = accounts.reduce((s, a) => s + (a.balance ?? 0), 0)
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <Card className="p-4 flex-1 min-w-[200px]">
-          <div className="flex items-center gap-2 mb-1">
-            <Wallet className="h-4 w-4 text-primary" />
-            <span className="text-xs text-gray-500">{t('totalAssetsAllAccounts')}</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-800">NT$ {fmt(total, locale)}</p>
-        </Card>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('batchImportAccounts')}
-          </Button>
-          <Button size="sm" className="gap-1" onClick={() => { setShowForm(true); setEditing(null) }}>
-            <Plus className="h-4 w-4" />{t('addAccount')}
-          </Button>
-        </div>
-      </div>
-
-      {showImport && (
-        <ExcelImportModal
-          title="批次匯入 / 更新帳戶"
-          description="支援 .xlsx, .xls 與 .csv 檔案。若帳戶名稱相符將自動更新。"
-          columns={ACCOUNT_IMPORT_COLUMNS}
-          templateFilename="帳戶清單範本"
-          sheetName="帳戶清單"
-          onClose={() => setShowImport(false)}
-          onSuccess={load}
-          onSubmit={async rows => {
-            const res = await fetch('/api/hr/accounts/bulk', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ rows }),
-            })
-            return await res.json()
-          }}
-        />
-      )}
-
-      {showForm && !editing && <AccountForm initial={{ ...BLANK }} onSave={save} onCancel={() => setShowForm(false)} saving={saving} />}
-      {err && <p className="text-sm text-red-500">{err}</p>}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
-      ) : accounts.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <Wallet className="h-10 w-10 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">{t('noAccountsYet')}</p>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 gap-3">
-          {accounts.map(a => (
-            <Card key={a.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <AccountIcon kind={a.kind} className="h-5 w-5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{a.name}</span>
-                    <Badge variant="secondary">{LABELS[a.kind] ?? a.kind}</Badge>
-                  </div>
-                  <p className="text-xl font-bold tabular-nums mt-1">{a.currency} {fmt(a.balance ?? 0, locale)}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{t('openingPrefix')} {fmt(a.opening_balance, locale)}{a.note ? ` · ${a.note}` : ''}</p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => { setEditing(a); setShowForm(false) }}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-500" onClick={() => remove(a.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-              {editing?.id === a.id && (
-                <div className="mt-3">
-                  <AccountForm initial={{ name: a.name, kind: a.kind, opening_balance: a.opening_balance, currency: a.currency, note: a.note }}
-                    onSave={save} onCancel={() => setEditing(null)} saving={saving} />
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Reports Tab ──────────────────────────────────────────────────
-function ReportsTab() {
-  const t = useTranslations('FinancePage')
-  const locale = useLocale()
-  const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [records, setRecords] = useState<Cashflow[]>([])
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    const [r1, r2] = await Promise.all([
-      fetch(`/api/hr/cashflow?year=${year}`).then(r => r.json()),
-      fetch('/api/hr/accounts').then(r => r.json()),
-    ])
-    setRecords(r1.cashflow ?? [])
-    setAccounts(r2.accounts ?? [])
-    setLoading(false)
-  }, [year])
-  useEffect(() => { load() }, [load])
-
-  const income = records.filter(r => r.type === 'income')
-  const expense = records.filter(r => r.type === 'expense')
-  const totalIncome = income.reduce((s, r) => s + r.amount, 0)
-  const totalExpense = expense.reduce((s, r) => s + r.amount, 0)
-  const net = totalIncome - totalExpense
-
-  // 支出分類佔比
-  const byCat = new Map<string, number>()
-  for (const r of expense) { const k = r.category || t('uncategorized'); byCat.set(k, (byCat.get(k) ?? 0) + r.amount) }
-  const catRows = [...byCat.entries()].sort((a, b) => b[1] - a[1])
-  const catMax = catRows.length ? catRows[0][1] : 1
-
-  // 月趨勢
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const inc = income.filter(r => new Date(r.date).getMonth() === i).reduce((s, r) => s + r.amount, 0)
-    const exp = expense.filter(r => new Date(r.date).getMonth() === i).reduce((s, r) => s + r.amount, 0)
-    return { m: i + 1, inc, exp }
-  })
-  const monthMax = Math.max(1, ...months.map(m => Math.max(m.inc, m.exp)))
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-1 border rounded-lg px-2 py-1 w-fit">
-        <button onClick={() => setYear(y => y - 1)} className="text-gray-400 hover:text-gray-700 px-1">‹</button>
-        <span className="text-sm font-medium w-12 text-center">{t('yearSuffix', { y: year })}</span>
-        <button onClick={() => setYear(y => y + 1)} className="text-gray-400 hover:text-gray-700 px-1">›</button>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="p-4"><span className="text-xs text-gray-500">{t('annualIncome')}</span><p className="text-xl font-bold text-green-600 mt-1">NT$ {fmt(totalIncome, locale)}</p></Card>
-            <Card className="p-4"><span className="text-xs text-gray-500">{t('annualExpense')}</span><p className="text-xl font-bold text-red-500 mt-1">NT$ {fmt(totalExpense, locale)}</p></Card>
-            <Card className="p-4"><span className="text-xs text-gray-500">{t('annualNet')}</span><p className={`text-xl font-bold mt-1 ${net >= 0 ? 'text-blue-600' : 'text-orange-500'}`}>{net >= 0 ? '+' : ''}NT$ {fmt(net, locale)}</p></Card>
-            <Card className="p-4"><span className="text-xs text-gray-500">{t('totalAssets')}</span><p className="text-xl font-bold text-gray-800 mt-1">NT$ {fmt(accounts.reduce((s, a) => s + (a.balance ?? 0), 0), locale)}</p></Card>
-          </div>
-
-          {/* 月趨勢 */}
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">{t('monthlyTrendTitle')}</span></div>
-            <div className="flex items-end gap-1.5 h-40">
-              {months.map(m => (
-                <div key={m.m} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex items-end justify-center gap-0.5 flex-1">
-                    <div className="w-1/2 bg-green-400 rounded-t" style={{ height: `${(m.inc / monthMax) * 100}%` }} title={t('incomeAmountTitle', { n: fmt(m.inc, locale) })} />
-                    <div className="w-1/2 bg-red-400 rounded-t" style={{ height: `${(m.exp / monthMax) * 100}%` }} title={t('expenseAmountTitle', { n: fmt(m.exp, locale) })} />
-                  </div>
-                  <span className="text-[10px] text-gray-400">{m.m}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-400" />{t('income')}</span>
-              <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" />{t('expense')}</span>
-            </div>
-          </Card>
-
-          <div className="grid md:grid-cols-2 gap-3">
-            {/* 支出分類佔比 */}
-            <Card className="p-4">
-              <div className="flex items-center gap-2 mb-3"><BarChart3 className="h-4 w-4 text-red-500" /><span className="text-sm font-semibold">{t('expenseCategoryShareTitle')}</span></div>
-              {catRows.length === 0 ? <p className="text-sm text-gray-400 py-6 text-center">{t('noExpenseRecords')}</p> : (
-                <div className="space-y-2">
-                  {catRows.map(([cat, amt]) => (
-                    <div key={cat}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <span className="text-gray-600">{cat}</span>
-                        <span className="tabular-nums text-gray-500">{t('amountWithPct', { amt: fmt(amt, locale), pct: totalExpense ? Math.round(amt / totalExpense * 100) : 0 })}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                        <div className="h-full bg-red-400 rounded-full" style={{ width: `${(amt / catMax) * 100}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* 帳戶餘額表 */}
-            <Card className="p-4">
-              <div className="flex items-center gap-2 mb-3"><Wallet className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">{t('accountBalancesTitle')}</span></div>
-              {accounts.length === 0 ? <p className="text-sm text-gray-400 py-6 text-center">{t('noAccounts')}</p> : (
-                <div className="space-y-2">
-                  {accounts.map(a => (
-                    <div key={a.id} className="flex items-center gap-2 text-sm">
-                      <AccountIcon kind={a.kind} className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="flex-1 truncate">{a.name}</span>
-                      <span className="tabular-nums font-medium">{a.currency} {fmt(a.balance ?? 0, locale)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── CSV 工具 ─────────────────────────────────────────────────────
-function parseCSV(text: string, delim: string): string[][] {
-  const rows: string[][] = []
-  let field = '', row: string[] = [], inQ = false
-  text = text.replace(/^﻿/, '')
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]
-    if (inQ) {
-      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++ } else inQ = false }
-      else field += c
-    } else {
-      if (c === '"') inQ = true
-      else if (c === delim) { row.push(field); field = '' }
-      else if (c === '\r') { /* skip */ }
-      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = '' }
-      else field += c
-    }
-  }
-  if (field.length || row.length) { row.push(field); rows.push(row) }
-  return rows.filter(r => r.some(c => c.trim() !== ''))
-}
-
-const pad2 = (s: string) => s.padStart(2, '0')
-function normDate(s: string): string {
-  s = (s || '').trim().split(' ')[0].split('T')[0]
-  if (!s) return ''
-  let m
-  if ((m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`
-  if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/))) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}` // dd/mm/yyyy
-  if ((m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2})$/))) return `20${m[3]}-${pad2(m[2])}-${pad2(m[1])}`
-  return ''
-}
-function normAmount(s: string): number {
-  const str = String(s ?? '')
-  const neg = str.includes('-')
-  const digits = str.replace(/[^\d]/g, '')
-  if (!digits) return 0
-  const n = parseInt(digits, 10)
-  return neg ? -n : n
-}
-
-// ─── Import Tab ───────────────────────────────────────────────────
-function ImportTab() {
-  const t = useTranslations('FinancePage')
-  const locale = useLocale()
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [fileName, setFileName] = useState('')
-  const [headers, setHeaders] = useState<string[]>([])
-  const [dataRows, setDataRows] = useState<string[][]>([])
-  const [importing, setImporting] = useState(false)
-  const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null)
-  const [err, setErr] = useState('')
-
-  // 對應設定
-  const [dateCol, setDateCol] = useState(-1)
-  const [amountCol, setAmountCol] = useState(-1)
-  const [typeMode, setTypeMode] = useState<'fixed' | 'column'>('fixed')
-  const [fixedType, setFixedType] = useState<'income' | 'expense'>('income')
-  const [typeCol, setTypeCol] = useState(-1)
-  const [catMode, setCatMode] = useState<'none' | 'fixed' | 'column'>('none')
-  const [fixedCat, setFixedCat] = useState('')
-  const [catCol, setCatCol] = useState(-1)
-  const [descCol, setDescCol] = useState(-1)
-  const [accountId, setAccountId] = useState('')
-
-  useEffect(() => {
-    fetch('/api/hr/accounts').then(r => r.json()).then(d => setAccounts(d.accounts ?? []))
-  }, [])
-
-  const onFile = async (file: File) => {
-    setErr(''); setResult(null)
-    const text = await file.text()
-    const firstLine = text.replace(/^﻿/, '').split(/\r?\n/)[0] || ''
-    const delim = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ','
-    const all = parseCSV(text, delim)
-    if (all.length < 2) { setErr(t('noDataRows')); return }
-    setFileName(file.name)
-    setHeaders(all[0])
-    setDataRows(all.slice(1))
-    // 自動猜測欄位
-    const find = (kw: RegExp) => all[0].findIndex(h => kw.test(h))
-    setDateCol(find(/date|ngày|日期|時間|time/i))
-    setAmountCol(find(/amount|total|tổng|tiền|金額|thành tiền|doanh thu/i))
-    setDescCol(find(/desc|note|ghi chú|nội dung|摘要|tên|name/i))
-  }
-
-  const colOpts = (allowNone: boolean) => [
-    ...(allowNone ? [{ value: '-1', label: t('notUsedOption') }] : []),
-    ...headers.map((h, i) => ({ value: String(i), label: h || t('columnN', { n: i + 1 }) })),
-  ]
-
-  const isIncome = (v: string) => /收|income|thu|\+|bán|doanh thu/i.test(v) && !/支|expense|chi/i.test(v)
-
-  const mapped = dataRows.map(r => {
-    const date = normDate(r[dateCol] ?? '')
-    const amount = normAmount(r[amountCol] ?? '')
-    let type: 'income' | 'expense' = fixedType
-    if (typeMode === 'column' && typeCol >= 0) type = isIncome(r[typeCol] ?? '') ? 'income' : 'expense'
-    const category = catMode === 'fixed' ? fixedCat : catMode === 'column' && catCol >= 0 ? (r[catCol] ?? '') : ''
-    const description = descCol >= 0 ? (r[descCol] ?? '') : ''
-    return { type, category, amount, date, description, account_id: accountId || null, valid: !!date && amount !== 0 }
-  })
-  const validRows = mapped.filter(m => m.valid)
-
-  const doImport = async () => {
-    setImporting(true); setErr(''); setResult(null)
-    try {
-      const res = await fetch('/api/hr/cashflow/import', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records: validRows.map(m => ({ type: m.type, category: m.category, amount: m.amount, date: m.date, description: m.description, account_id: m.account_id })) }),
-      })
-      const j = await res.json()
-      if (!res.ok) { setErr(j.error || t('importFailed')); return }
-      setResult({ imported: j.imported, skipped: j.skipped })
-      setHeaders([]); setDataRows([]); setFileName('')
-    } catch { setErr(t('importFailed')) } finally { setImporting(false) }
-  }
-
-  const reset = () => { setHeaders([]); setDataRows([]); setFileName(''); setResult(null); setErr('') }
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-xl border bg-blue-50/50 p-4 text-sm text-gray-600 space-y-1">
-        <p className="font-medium text-gray-800">{t('importFromIposTitle')}</p>
-        <p>{t.rich('importFromIposDesc', { b: (chunks) => <b>{chunks}</b> })}</p>
-        <p className="text-xs text-gray-400">{t('importFromIposHint')}</p>
-      </div>
-
-      {result && (
-        <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm">
-          <p className="font-medium text-green-700">{t('importCompleteSummary', { n: result.imported })}{result.skipped > 0 ? t('importSkippedSummary', { n: result.skipped }) : ''}</p>
-        </div>
-      )}
-      {err && <p className="text-sm text-red-500">{err}</p>}
-
-      {headers.length === 0 ? (
-        <label className="flex flex-col items-center justify-center gap-2 py-12 rounded-xl border-2 border-dashed cursor-pointer hover:bg-gray-50 text-gray-400">
-          <Upload className="h-8 w-8" />
-          <span className="text-sm">{t('clickToSelectCsv')}</span>
-          <input type="file" accept=".csv,text/csv" className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
-        </label>
-      ) : (
-        <>
-          <div className="flex items-center gap-2 text-sm">
-            <Badge variant="secondary">{fileName}</Badge>
-            <span className="text-gray-400">{t('rowsCount', { n: dataRows.length })}</span>
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={reset}>{t('reselectFile')}</Button>
-          </div>
-
-          {/* 欄位對應 */}
-          <div className="grid md:grid-cols-2 gap-3 p-4 rounded-xl border bg-gray-50">
-            <Field label={t('dateColRequiredLabel')}>
-              <SelectEl value={String(dateCol)} onChange={v => setDateCol(Number(v))} options={colOpts(true)} />
-            </Field>
-            <Field label={t('amountColRequiredLabel')}>
-              <SelectEl value={String(amountCol)} onChange={v => setAmountCol(Number(v))} options={colOpts(true)} />
-            </Field>
-            <Field label={t('typeLabel')}>
-              <div className="flex gap-1">
-                <SelectEl value={typeMode} onChange={v => setTypeMode(v as 'fixed' | 'column')}
-                  options={[{ value: 'fixed', label: t('fixedOption') }, { value: 'column', label: t('byColumnOption') }]} />
-                {typeMode === 'fixed'
-                  ? <SelectEl value={fixedType} onChange={v => setFixedType(v as 'income' | 'expense')} options={[{ value: 'income', label: t('income') }, { value: 'expense', label: t('expense') }]} />
-                  : <SelectEl value={String(typeCol)} onChange={v => setTypeCol(Number(v))} options={colOpts(true)} />}
-              </div>
-            </Field>
-            <Field label={t('recordToAccountLabel')}>
-              <SelectEl value={accountId} onChange={setAccountId}
-                options={[{ value: '', label: t('unspecifiedOption') }, ...accounts.map(a => ({ value: a.id, label: a.name }))]} />
-            </Field>
-            <Field label={t('categoryLabel')}>
-              <div className="flex gap-1">
-                <SelectEl value={catMode} onChange={v => setCatMode(v as 'none' | 'fixed' | 'column')}
-                  options={[{ value: 'none', label: t('noneOption') }, { value: 'fixed', label: t('fixedOption') }, { value: 'column', label: t('byColumnOption') }]} />
-                {catMode === 'fixed' && <InputEl value={fixedCat} onChange={setFixedCat} placeholder={t('fixedCategoryPlaceholder')} />}
-                {catMode === 'column' && <SelectEl value={String(catCol)} onChange={v => setCatCol(Number(v))} options={colOpts(true)} />}
-              </div>
-            </Field>
-            <Field label={t('descColLabel')}>
-              <SelectEl value={String(descCol)} onChange={v => setDescCol(Number(v))} options={colOpts(true)} />
-            </Field>
-          </div>
-
-          {/* 預覽 */}
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500">{t.rich('previewValidCount', { n: validRows.length, total: dataRows.length, b: (chunks) => <b className="text-gray-800">{chunks}</b> })}</p>
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 text-gray-500">
-                  <tr>
-                    <th className="px-2 py-1.5 text-left">{t('dateColHeader')}</th>
-                    <th className="px-2 py-1.5 text-left">{t('typeColHeader')}</th>
-                    <th className="px-2 py-1.5 text-right">{t('amountColHeader')}</th>
-                    <th className="px-2 py-1.5 text-left">{t('categoryColHeader')}</th>
-                    <th className="px-2 py-1.5 text-left">{t('descColHeader')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mapped.slice(0, 10).map((m, i) => (
-                    <tr key={i} className={`border-t ${m.valid ? '' : 'bg-red-50 text-red-400'}`}>
-                      <td className="px-2 py-1.5">{m.date || t('invalidMark')}</td>
-                      <td className="px-2 py-1.5">{m.type === 'income' ? t('income') : t('expense')}</td>
-                      <td className="px-2 py-1.5 text-right tabular-nums">{fmt(m.amount, locale)}</td>
-                      <td className="px-2 py-1.5">{m.category || '—'}</td>
-                      <td className="px-2 py-1.5 truncate max-w-[200px]">{m.description || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {dataRows.length > 10 && <p className="text-xs text-gray-400">{t('onlyFirst10RowsShown')}</p>}
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={doImport} disabled={importing || dateCol < 0 || amountCol < 0 || validRows.length === 0} className="gap-1.5">
-              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {t('importCountRows', { n: validRows.length })}
-            </Button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── Main Page ────────────────────────────────────────────────────
-export default function FinancePage() {
-  const t = useTranslations('FinancePage')
-  const [tab, setTab] = useState<Tab>('cashflow')
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    fetch('/api/hr/accounts').then(res => setIsAdmin(res.status !== 403))
-    if (typeof window !== 'undefined') {
-      const p = new URLSearchParams(window.location.search).get('tab')
-      if (p === 'pricing' || p === 'cashflow' || p === 'accounts' || p === 'reports' || p === 'pnl' || p === 'import') {
-        setTab(p as Tab)
-      }
-    }
-  }, [])
-
-  const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: 'cashflow',  label: t('tabCashflow'), icon: <Wallet className="h-4 w-4" /> },
-    { id: 'accounts',  label: t('tabAccounts'), icon: <Landmark className="h-4 w-4" /> },
-    { id: 'pricing',   label: t('tabPricing'), icon: <Package className="h-4 w-4 text-emerald-600" /> },
-    { id: 'reports',   label: t('tabReports'), icon: <BarChart3 className="h-4 w-4" /> },
-    { id: 'pnl',       label: t('tabPnl'), icon: <TrendingUp className="h-4 w-4" /> },
-    { id: 'import',    label: t('tabImport'), icon: <Upload className="h-4 w-4" /> },
-  ]
-
-  if (isAdmin === false) {
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="text-center space-y-2">
-          <AlertCircle className="h-12 w-12 mx-auto text-amber-400" />
-          <p className="font-semibold">{t('forbiddenTitle')}</p>
-          <p className="text-sm text-gray-400">{t('forbiddenDesc')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="max-w-5xl mx-auto px-6 py-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Wallet className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">{t('pageTitle')}</h1>
-          <p className="text-sm text-gray-500">{t('pageSubtitle')}</p>
-        </div>
-        <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <Link href="/store-expenses">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Store className="h-4 w-4" />{t('storeExpensesLink')}
-            </Button>
-          </Link>
-          <Link href="/vendors">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Truck className="h-4 w-4" />{t('vendorsLink')}
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit flex-wrap">
-        {TABS.map(tb => (
-          <button key={tb.id} onClick={() => setTab(tb.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === tb.id ? 'bg-card text-primary shadow-sm font-semibold' : 'text-muted-foreground hover:text-foreground'}`}>
-            {tb.icon}{tb.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <Card className="p-5">
-        {tab === 'cashflow'  && <CashflowTab />}
-        {tab === 'accounts'  && <AccountsTab />}
-        {tab === 'pricing'   && <PricingTab />}
-        {tab === 'reports'   && <ReportsTab />}
-        {tab === 'pnl'       && <PnlReport />}
-        {tab === 'import'    && <ImportTab />}
-      </Card>
     </div>
   )
 }

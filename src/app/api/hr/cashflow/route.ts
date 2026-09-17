@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
     query = query.gte('date', `${year}-01-01`).lt('date', `${Number(year) + 1}-01-01`)
   }
 
-  const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false })
+  const limit = searchParams.get('limit') ? Math.min(Number(searchParams.get('limit')) || 5000, 20000) : 5000
+  const { data, error } = await query.order('date', { ascending: false }).order('created_at', { ascending: false }).limit(limit)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ cashflow: data })
 }

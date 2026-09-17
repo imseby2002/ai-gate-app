@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { createClient } from '@/lib/supabase/server'
-import { parseZeroMdb, type ZeroTransaction } from '@/lib/fin/zero-import'
+import { parseZeroMdb, type ZeroTransaction, type ZeroSubject } from '@/lib/fin/zero-import'
 
 export const maxDuration = 60
 
@@ -10,8 +10,8 @@ const CHUNK = 1000
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, status: ctx.status }
 }
 
 type Admin = Awaited<ReturnType<typeof getAdminUser>>['supabase']
@@ -32,12 +32,42 @@ async function ensureAccounts(admin: Admin, ownerId: string, names: string[]): P
   return { map, created: missing.length }
 }
 
+// 自動建置或更新科目主檔（fin_subjects）
+async function ensureSubjects(admin: Admin, ownerId: string, bookName: string, subjects: ZeroSubject[]): Promise<number> {
+  if (subjects.length === 0) return 0
+  const rows = subjects.map(s => ({
+    owner_id: ownerId,
+    account_book: s.account_book || bookName || 'FT',
+    class: s.class,
+    parent_name: s.parent_name || '',
+    name: s.name,
+    initial_balance: s.initial_balance || 0,
+    sort_order: s.sort_order || 0,
+    style: s.style || '常態性',
+    zero_view: s.zero_view !== false,
+    is_account: s.is_account || false,
+    updated_at: new Date().toISOString(),
+  }))
+
+  let countTotal = 0
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200)
+    const { count, error } = await admin.from('fin_subjects')
+      .upsert(chunk, { onConflict: 'owner_id,account_book,class,parent_name,name', count: 'exact' })
+    if (error) {
+      console.warn('[ensureSubjects] upsert warning:', error.message)
+    } else {
+      countTotal += count ?? chunk.length
+    }
+  }
+  return countTotal
+}
+
 export async function POST(req: NextRequest) {
-  const { user, supabase , status } = await getAdminUser()
+  const { user, supabase, status } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
-  // 上傳路徑是以「實際登入者」的 auth uid 為資料夾（storage RLS 也是如此判斷），
-  // 與 user.id（單位資料歸屬的 ownerId，公司 IT 時會是負責人 id）不同，需分開驗證。
+  // 上傳路徑是以「實際登入者」的 auth uid 為資料夾
   const authSupabase = await createClient()
   const { data: { user: authUser } } = await authSupabase.auth.getUser()
   if (!authUser) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -59,6 +89,7 @@ export async function POST(req: NextRequest) {
   }
 
   const summary = {
+    bookName: parsed.bookName,
     total: parsed.transactions.length,
     skipped: parsed.skipped,
     dateRange: parsed.dateRange,
@@ -67,18 +98,20 @@ export async function POST(req: NextRequest) {
     totalExpense: parsed.totalExpense,
     accountNames: parsed.accountNames,
     bookCount: parsed.bookCount,
+    subjectsCount: parsed.subjects.length,
+    errors: parsed.errors,
+    errorCount: parsed.errorCount,
+    warningCount: parsed.warningCount,
   }
 
   if (mode === 'preview') return NextResponse.json({ preview: summary })
 
-  // commit：補帳戶 → 依 external_ref 排除已匯入過的紀錄 → 分批寫入（可重複執行不會重覆匯入）。
-  // hr_cashflow_owner_external_ref_uidx 是 partial unique index（僅限 external_ref <> ''），
-  // PostgREST 的 upsert onConflict 語法無法對應 partial index，故改為應用層先查已存在的
-  // external_ref 再過濾，只插入新的一批（一般手動/匯入資料 external_ref 為空，不受影響）。
+  // commit：自動建置科目 → 補帳戶 → 依 external_ref 去重 → 分批寫入 → 記錄詳細日誌
   try {
+    const subjectsCreated = await ensureSubjects(supabase, user.id, parsed.bookName, parsed.subjects)
     const { map: accountMap, created: accountsCreated } = await ensureAccounts(supabase, user.id, parsed.accountNames)
 
-    // 分頁抓取全部既有 external_ref（PostgREST 預設每次查詢有筆數上限，資料量大時不能只查一次）
+    // 分頁抓取全部既有 external_ref（PostgREST 預設每次查詢有筆數上限，資料量大時需分頁）
     const existingSet = new Set<string>()
     for (let from = 0; ; from += 1000) {
       const { data: page } = await supabase.from('hr_cashflow')
@@ -109,18 +142,40 @@ export async function POST(req: NextRequest) {
         external_ref: tx.external_ref,
         source: 'zero_import',
       }))
-      const { error, count } = await supabase.from('hr_cashflow').insert(rows, { count: 'exact' })
+      const { error, count } = await supabase.from('hr_cashflow').insert(rows)
       if (error) return NextResponse.json({ error: `匯入中斷（已匯入 ${imported} 筆）：${error.message}` }, { status: 500 })
-      imported += count ?? 0
+      imported += count ?? rows.length
     }
+
+    // 儲存詳細匯入紀錄與錯誤日誌，供使用者後續檢視與校正
+    const fileName = path.split('/').pop() || 'MymoneyData.mdb'
+    await supabase.from('fin_import_logs').insert({
+      owner_id: user.id,
+      account_book: parsed.bookName || 'FT',
+      filename: fileName,
+      total_rows: parsed.transactions.length + parsed.skipped,
+      success_count: imported,
+      error_count: parsed.errorCount,
+      warning_count: parsed.warningCount,
+      subjects_created: subjectsCreated,
+      date_range: parsed.dateRange ? `${parsed.dateRange[0]} ~ ${parsed.dateRange[1]}` : '',
+      errors: parsed.errors,
+    })
 
     await supabase.storage.from(BUCKET).remove([path]).catch(() => {})
 
     return NextResponse.json({
-      ok: true, imported, skipped: parsed.skipped,
+      ok: true,
+      imported,
+      skipped: parsed.skipped,
       alreadyImported: existingSet.size > 0 ? parsed.transactions.length - newTransactions.length : 0,
       accountsCreated,
+      subjectsCreated,
       totalParsed: parsed.transactions.length,
+      bookName: parsed.bookName,
+      errors: parsed.errors,
+      errorCount: parsed.errorCount,
+      warningCount: parsed.warningCount,
     })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
