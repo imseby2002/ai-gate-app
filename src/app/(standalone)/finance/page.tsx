@@ -611,9 +611,9 @@ export default function FinancePage() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-4 space-y-4 font-sans">
+    <div className="max-w-[1600px] mx-auto px-4 py-3 font-sans h-[calc(100vh-65px)] flex flex-col overflow-hidden">
       {/* 頂部導航與功能模組切換 */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-2.5 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
             <Wallet className="h-5 w-5 text-primary" />
@@ -669,13 +669,21 @@ export default function FinancePage() {
         </div>
       </div>
 
-      {mainTab === 'pricing' && <PricingTab />}
-      {mainTab === 'pnl' && <PnlReport />}
+      {mainTab === 'pricing' && (
+        <div className="flex-1 overflow-y-auto min-h-0 pt-2">
+          <PricingTab />
+        </div>
+      )}
+      {mainTab === 'pnl' && (
+        <div className="flex-1 overflow-y-auto min-h-0 pt-2">
+          <PnlReport />
+        </div>
+      )}
 
       {mainTab === 'cashflow' && (
-        <div className="grid grid-cols-1 lg:grid-cols-[310px_1fr] gap-4 items-start">
-          {/* 左側：科目樹狀結構與年月導覽（Zero.Net 左欄） */}
-          <div className="lg:sticky lg:top-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 flex-1 min-h-0 pt-2 items-stretch overflow-hidden">
+          {/* 左側：科目樹狀結構與年月導覽（Zero.Net 左欄） - 獨立上下捲動 */}
+          <div className="h-full min-h-0 overflow-hidden flex flex-col">
             <SubjectTree
               subjects={subjects}
               selected={selectedSubject}
@@ -689,10 +697,10 @@ export default function FinancePage() {
             />
           </div>
 
-          {/* 右側：帳務小管家核心面板 */}
-          <div className="space-y-3 min-w-0">
+          {/* 右側：帳務小管家核心面板 - 獨立上下捲動 */}
+          <div className="h-full min-h-0 min-w-0 flex flex-col space-y-2.5 overflow-hidden">
             {/* 上方子標籤（Zero.Net 子功能分頁） */}
-            <div className="flex items-center justify-between gap-2 flex-wrap border-b pb-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap border-b pb-2 shrink-0">
               <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg text-xs overflow-x-auto">
                 <button
                   onClick={() => setSubTab('journal')}
@@ -792,7 +800,7 @@ export default function FinancePage() {
             </div>
 
             {/* 搜尋列（Zero.Net 風格：輸入框 + 多維度按鈕） */}
-            <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-xl border">
+            <div className="flex items-center gap-2 bg-muted/30 p-2 rounded-xl border shrink-0">
               <span className="text-xs font-medium text-muted-foreground shrink-0">資料搜尋：</span>
               <div className="relative flex-1 min-w-[150px]">
                 <Input
@@ -831,7 +839,7 @@ export default function FinancePage() {
 
             {/* 科目篩選指示條 */}
             {selectedSubject && (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 text-xs text-blue-900 dark:text-blue-300">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 text-xs text-blue-900 dark:text-blue-300 shrink-0">
                 <div className="flex items-center gap-2">
                   <Filter className="h-3.5 w-3.5 text-blue-600" />
                   <span>
@@ -852,8 +860,8 @@ export default function FinancePage() {
             )}
 
             {/* 核心交易表格（Zero.Net 資料表格佈局） */}
-            <Card className="overflow-hidden border shadow-xs">
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border shadow-xs">
+              <div className="flex-1 overflow-x-auto overflow-y-auto min-h-0">
                 <table className="w-full text-xs text-left border-collapse">
                   <thead className="bg-muted/70 text-muted-foreground font-semibold border-b sticky top-0 z-10 backdrop-blur-xs">
                     <tr>
@@ -994,7 +1002,7 @@ export default function FinancePage() {
             </Card>
 
             {/* 底部狀態列（Zero.Net 風格） */}
-            <div className="border rounded-xl bg-card p-3 shadow-xs flex items-center justify-between text-xs flex-wrap gap-3 font-sans">
+            <div className="border rounded-xl bg-card p-2.5 shadow-xs flex items-center justify-between text-xs flex-wrap gap-3 font-sans shrink-0">
               <div className="flex items-center gap-4 text-muted-foreground">
                 <span>帳本名稱: <b className="text-foreground">FT</b></span>
                 <span>本日日期: <b className="text-foreground font-mono">{todayStr}</b></span>

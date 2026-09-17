@@ -153,7 +153,7 @@ export function SubjectTree({
   return (
     <div className="flex flex-col h-full bg-card border rounded-xl overflow-hidden shadow-xs">
       {/* 頂部：年月選擇器（Zero.Net 風格） */}
-      <div className="p-3 border-b bg-muted/40 space-y-2">
+      <div className="p-3 border-b bg-muted/40 space-y-2 shrink-0">
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">年份</span>
@@ -197,7 +197,7 @@ export function SubjectTree({
       </div>
 
       {/* 選單標題與設定按鈕 */}
-      <div className="px-3 py-2 border-b bg-muted/20 flex items-center justify-between">
+      <div className="px-3 py-2 border-b bg-muted/20 flex items-center justify-between shrink-0">
         <button
           onClick={() => onSelect(null)}
           className={`text-xs font-semibold hover:text-primary transition-colors flex items-center gap-1.5 ${
@@ -222,7 +222,7 @@ export function SubjectTree({
       </div>
 
       {/* 科目樹狀視圖（Zero.Net 雙層/三層樹） */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1 text-xs select-none">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 text-xs select-none min-h-0">
         {(['asset', 'liability', 'income', 'expense'] as const).map(clsKey => {
           const cls = treeData[clsKey]
           const isClsOpen = expanded[clsKey] ?? true
@@ -335,7 +335,7 @@ export function SubjectTree({
       </div>
 
       {/* 底部小提示 */}
-      <div className="p-2 border-t bg-muted/20 text-2xs text-muted-foreground text-center">
+      <div className="p-2 border-t bg-muted/20 text-2xs text-muted-foreground text-center shrink-0">
         點擊科目即可快速篩選右側帳務
       </div>
     </div>
