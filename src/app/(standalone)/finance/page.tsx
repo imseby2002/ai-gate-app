@@ -682,6 +682,9 @@ export default function FinancePage() {
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 flex-1 min-h-0 pt-2 items-stretch overflow-hidden">
           {/* 左側：科目樹狀結構與年月導覽（Zero.Net 左欄） - 獨立上下捲動 */}
           <div className="h-full min-h-0 overflow-hidden flex flex-col">
+            <div className="text-2xs font-mono bg-yellow-100 text-yellow-900 px-2 py-1 shrink-0">
+              DEBUG accounts={accounts.length} 保险柜={accounts.find(a => a.name === '保险柜')?.balance ?? 'N/A'} MTHT={accounts.find(a => a.name === 'MTHT')?.balance ?? 'N/A'}
+            </div>
             <SubjectTree
               subjects={subjects}
               selected={selectedSubject}
