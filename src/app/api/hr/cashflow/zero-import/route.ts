@@ -17,14 +17,25 @@ async function getAdminUser() {
 type Admin = Awaited<ReturnType<typeof getAdminUser>>['supabase']
 
 // 依交易中出現的帳戶名稱，補齊 hr_accounts（已存在則沿用、不覆蓋）
-async function ensureAccounts(admin: Admin, ownerId: string, names: string[]): Promise<{ map: Map<string, string>; created: number }> {
+// 新建帳戶的期初餘額，帶入 Zero 科目主檔（ITEM_DATA.BEFORE_MOUNT）中同名科目的金額——
+// 否則期初為 0，畫面上的「結餘」就只剩交易淨額，會跟 Zero 原始餘額對不起來。
+async function ensureAccounts(
+  admin: Admin,
+  ownerId: string,
+  names: string[],
+  openingBalanceByName: Map<string, number>,
+): Promise<{ map: Map<string, string>; created: number }> {
   const { data: existing } = await admin.from('hr_accounts').select('id, name').eq('owner_id', ownerId)
   const map = new Map<string, string>()
   for (const a of existing ?? []) map.set(a.name, a.id)
   const missing = names.filter(n => n && !map.has(n))
   if (missing.length > 0) {
     const { data: created, error } = await admin.from('hr_accounts')
-      .insert(missing.map(name => ({ owner_id: ownerId, name, kind: 'other', opening_balance: 0, note: '匯入自 Zero' })))
+      .insert(missing.map(name => ({
+        owner_id: ownerId, name, kind: 'other',
+        opening_balance: openingBalanceByName.get(name) ?? 0,
+        note: '匯入自 Zero',
+      })))
       .select('id, name')
     if (error) throw new Error(error.message)
     for (const a of created ?? []) map.set(a.name, a.id)
@@ -109,7 +120,11 @@ export async function POST(req: NextRequest) {
   // commit：自動建置科目 → 補帳戶 → 依 external_ref 去重 → 分批寫入 → 記錄詳細日誌
   try {
     const subjectsCreated = await ensureSubjects(supabase, user.id, parsed.bookName, parsed.subjects)
-    const { map: accountMap, created: accountsCreated } = await ensureAccounts(supabase, user.id, parsed.accountNames)
+    const openingBalanceByName = new Map<string, number>()
+    for (const s of parsed.subjects) {
+      if (s.is_account) openingBalanceByName.set(s.name, s.initial_balance)
+    }
+    const { map: accountMap, created: accountsCreated } = await ensureAccounts(supabase, user.id, parsed.accountNames, openingBalanceByName)
 
     // 分頁抓取全部既有 external_ref（PostgREST 預設每次查詢有筆數上限，資料量大時需分頁）
     const existingSet = new Set<string>()
