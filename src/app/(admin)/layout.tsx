@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, ExternalLink, MessageCircle } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, ExternalLink, MessageCircle, Server } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +38,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/usage', label: '使用統計', icon: BarChart3 },
     { href: '/admin/cover-letter-templates', label: '求職信模板', icon: FileText },
     { href: '/admin/links', label: '功能登入連結', icon: Link2 },
+    { href: '/admin/scraper-health', label: 'OTA Scraper 健康檢查', icon: Server },
     { href: 'https://cs.im-tourist.com/tools/line-id-finder', label: 'LINE ID 查詢工具', icon: MessageCircle, external: true },
   ]
 
