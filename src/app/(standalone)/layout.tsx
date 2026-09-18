@@ -24,7 +24,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
       <header className="border-b bg-card px-6 py-3 flex items-center justify-between shrink-0">
-        <BackToMenu variant="standalone" />
+        <BackToMenu />
         <div className="flex items-center gap-3">
           <UpgradePlanBadge />
           <LanguageSwitcher currentLocale={locale} />

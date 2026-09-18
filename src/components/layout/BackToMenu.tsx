@@ -3,14 +3,10 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslations, useLocale } from 'next-intl'
-import { Zap, ArrowLeft } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { SYSTEMS, SCOPE_SESSION_KEY, SUBDOMAIN_SYSTEM, isSystemKey, systemForPath, getLocalizedSystemDef } from '@/lib/systems'
 
-interface BackToMenuProps {
-  variant?: 'standalone' | 'tools'
-}
-
-export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
+export function BackToMenu() {
   const pathname = usePathname()
   const t = useTranslations('Nav')
   const locale = useLocale()
@@ -96,15 +92,6 @@ export function BackToMenu({ variant = 'standalone' }: BackToMenuProps) {
   const titleText = titleSys ? getLocalizedSystemDef(titleSys, locale).label : 'IMT'
   const csInboxText = locale === 'vi' ? 'Quay lại Hộp thư' : locale === 'en' ? 'Back to Inbox' : '返回收件匣'
   const subText = isCsWorkspace ? `← ${csInboxText}` : `← ${t('backToMenu')}`
-
-  if (variant === 'tools') {
-    return (
-      <a href={href} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 text-sm transition-colors">
-        <ArrowLeft className="h-3.5 w-3.5" />
-        {isCsWorkspace ? csInboxText : t('backHome')}
-      </a>
-    )
-  }
 
   return (
     <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
