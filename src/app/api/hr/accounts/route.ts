@@ -11,26 +11,45 @@ export async function GET() {
   const { user, supabase , status } = await getAdminUser()
   if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
-  const [{ data: accounts, error }, { data: flows }] = await Promise.all([
-    supabase.from('hr_accounts').select('*').eq('owner_id', user.id)
-      .order('sort', { ascending: true }).order('created_at', { ascending: true }),
-    supabase.from('hr_cashflow').select('type, amount, account_id, to_account_id').eq('owner_id', user.id),
-  ])
+  const { data: accounts, error } = await supabase.from('hr_accounts').select('*').eq('owner_id', user.id)
+    .order('sort', { ascending: true }).order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // 分頁抓取全部交易——PostgREST 預設每次查詢有筆數上限（1000），帳本量大時
+  // 不分頁會漏掉後面的交易，導致結餘算錯（只算到前 1000 筆）。
+  type Flow = { type: string; amount: number; account_id: string | null; to_account_id: string | null }
+  const flows: Flow[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data: page } = await supabase.from('hr_cashflow')
+      .select('type, amount, account_id, to_account_id').eq('owner_id', user.id)
+      .range(from, from + 999)
+    if (!page || page.length === 0) break
+    flows.push(...page)
+    if (page.length < 1000) break
+  }
+
   // 結餘 = 期初 + 收入(本帳) - 支出(本帳) - 轉出(本帳) + 轉入(目標帳)
-  const withBalance = (accounts ?? []).map(a => {
-    let bal = Number(a.opening_balance) || 0
-    for (const f of flows ?? []) {
-      const amt = Number(f.amount) || 0
-      if (f.account_id === a.id) {
-        if (f.type === 'income') bal += amt
-        else bal -= amt // expense / transfer-out
-      }
-      if (f.type === 'transfer' && f.to_account_id === a.id) bal += amt
+  const deltaByAccount = new Map<string, number>()
+  const addDelta = (id: string | null, delta: number) => {
+    if (!id) return
+    deltaByAccount.set(id, (deltaByAccount.get(id) ?? 0) + delta)
+  }
+  for (const f of flows) {
+    const amt = Number(f.amount) || 0
+    if (f.type === 'transfer') {
+      addDelta(f.account_id, -amt)
+      addDelta(f.to_account_id, amt)
+    } else if (f.type === 'income') {
+      addDelta(f.account_id, amt)
+    } else {
+      addDelta(f.account_id, -amt) // expense
     }
-    return { ...a, balance: bal }
-  })
+  }
+
+  const withBalance = (accounts ?? []).map(a => ({
+    ...a,
+    balance: (Number(a.opening_balance) || 0) + (deltaByAccount.get(a.id) ?? 0),
+  }))
 
   return NextResponse.json({ accounts: withBalance })
 }
