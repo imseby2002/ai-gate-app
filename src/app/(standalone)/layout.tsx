@@ -15,7 +15,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
 
   // 查不到時下面會退回用 email 顯示，畫面不會壞；但查詢失敗要留下錯誤，
   // 否則同樣是無聲失敗、事後完全無從查起。
-  const { data: profile, error: profileErr } = await supabase.from('profiles').select('display_name, company_id').eq('id', user.id).single()
+  const { data: profile, error: profileErr } = await supabase.from('profiles').select('full_name, company_id').eq('id', user.id).single()
   if (profileErr) console.error('[standalone-layout] profile 查詢失敗', profileErr)
 
   const locale = await getLocale()
@@ -28,7 +28,7 @@ export default async function StandaloneLayout({ children }: { children: React.R
         <div className="flex items-center gap-3">
           <UpgradePlanBadge />
           <LanguageSwitcher currentLocale={locale} />
-          <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
+          <ToolsUserMenu displayName={profile?.full_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
         </div>
       </header>
 
