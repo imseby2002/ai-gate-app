@@ -20,9 +20,13 @@ export async function GET() {
   type Flow = { type: string; amount: number; account_id: string | null; to_account_id: string | null }
   const flows: Flow[] = []
   for (let from = 0; ; from += 1000) {
-    const { data: page } = await supabase.from('hr_cashflow')
+    const { data: page, error: flowsError } = await supabase.from('hr_cashflow')
       .select('type, amount, account_id, to_account_id').eq('owner_id', user.id)
       .range(from, from + 999)
+    if (flowsError) {
+      console.error('[hr/accounts] hr_cashflow 分頁查詢失敗', { ownerId: user.id, from, error: flowsError })
+      return NextResponse.json({ error: flowsError.message }, { status: 500 })
+    }
     if (!page || page.length === 0) break
     flows.push(...page)
     if (page.length < 1000) break
@@ -51,6 +55,7 @@ export async function GET() {
     balance: (Number(a.opening_balance) || 0) + (deltaByAccount.get(a.id) ?? 0),
   }))
 
+  console.log(`[hr/accounts] owner=${user.id} accounts=${(accounts ?? []).length} flows=${flows.length} accountsWithDelta=${deltaByAccount.size}`)
   return NextResponse.json({ accounts: withBalance })
 }
 
