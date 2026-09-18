@@ -15,56 +15,23 @@ export async function GET() {
     .order('sort', { ascending: true }).order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 分頁抓取全部交易——PostgREST 預設每次查詢有筆數上限（1000），帳本量大時
-  // 不分頁會漏掉後面的交易，導致結餘算錯（只算到前 1000 筆）。
-  // 先問總筆數，再平行發出所有分頁請求（原本序列等待每一頁，帳本量大時
-  // 累加延遲可達近一分鐘，畫面在此期間只能顯示「期初餘額」造成誤判為算錯）。
-  type Flow = { type: string; amount: number; account_id: string | null; to_account_id: string | null }
-  const { count: flowCount, error: countError } = await supabase.from('hr_cashflow')
-    .select('id', { count: 'exact', head: true }).eq('owner_id', user.id)
-  if (countError) return NextResponse.json({ error: countError.message }, { status: 500 })
-
-  const pageStarts: number[] = []
-  for (let from = 0; from < (flowCount ?? 0); from += 1000) pageStarts.push(from)
-
-  const pages = await Promise.all(pageStarts.map(from =>
-    supabase.from('hr_cashflow')
-      .select('type, amount, account_id, to_account_id').eq('owner_id', user.id)
-      .range(from, from + 999)
-  ))
-  const flows: Flow[] = []
-  for (const { data: page, error: flowsError } of pages) {
-    if (flowsError) {
-      console.error('[hr/accounts] hr_cashflow 分頁查詢失敗', { ownerId: user.id, error: flowsError })
-      return NextResponse.json({ error: flowsError.message }, { status: 500 })
-    }
-    flows.push(...(page ?? []))
-  }
-
   // 結餘 = 期初 + 收入(本帳) - 支出(本帳) - 轉出(本帳) + 轉入(目標帳)
+  // 原本把全部交易抓到 Node process 再逐筆加總，帳本量大（如 26,000+ 筆）時
+  // 就算平行分頁也要好幾秒到近一分鐘。改用 DB 端的聚合函式
+  // fn_hr_account_balances（見 supabase/migrations/20260918_hr_account_balance_rpc.sql），
+  // 只回傳「每個帳戶的異動淨額」這種小結果集，資料庫端用索引即時算完。
+  const { data: deltas, error: deltasError } = await supabase
+    .rpc('fn_hr_account_balances', { p_owner_id: user.id })
+  if (deltasError) return NextResponse.json({ error: deltasError.message }, { status: 500 })
+
   const deltaByAccount = new Map<string, number>()
-  const addDelta = (id: string | null, delta: number) => {
-    if (!id) return
-    deltaByAccount.set(id, (deltaByAccount.get(id) ?? 0) + delta)
-  }
-  for (const f of flows) {
-    const amt = Number(f.amount) || 0
-    if (f.type === 'transfer') {
-      addDelta(f.account_id, -amt)
-      addDelta(f.to_account_id, amt)
-    } else if (f.type === 'income') {
-      addDelta(f.account_id, amt)
-    } else {
-      addDelta(f.account_id, -amt) // expense
-    }
-  }
+  for (const d of deltas ?? []) deltaByAccount.set(d.account_id, Number(d.delta) || 0)
 
   const withBalance = (accounts ?? []).map(a => ({
     ...a,
     balance: (Number(a.opening_balance) || 0) + (deltaByAccount.get(a.id) ?? 0),
   }))
 
-  console.log(`[hr/accounts] owner=${user.id} accounts=${(accounts ?? []).length} flows=${flows.length} accountsWithDelta=${deltaByAccount.size}`)
   return NextResponse.json({ accounts: withBalance })
 }
 
