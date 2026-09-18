@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getLocale } from 'next-intl/server'
-import { Zap } from 'lucide-react'
-import { BackToMenu } from '@/components/layout/BackToMenu'
+import { ToolsBrand } from '@/components/layout/ToolsBrand'
 import { ToolsUserMenu } from '@/components/layout/ToolsUserMenu'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
@@ -24,14 +23,7 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       {/* Minimal top bar */}
       <header className="h-11 shrink-0 bg-white border-b flex items-center px-4 gap-3">
-        <BackToMenu variant="tools" />
-        <div className="h-4 w-px bg-gray-200" />
-        <div className="flex items-center gap-1.5">
-          <div className="h-5 w-5 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-            <Zap className="h-3 w-3 text-white" />
-          </div>
-          <span className="text-xs font-bold text-gray-800">IMT</span>
-        </div>
+        <ToolsBrand />
         <div className="flex-1" />
         <LanguageSwitcher currentLocale={locale} />
         <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
