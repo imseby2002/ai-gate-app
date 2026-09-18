@@ -43,6 +43,7 @@ interface SubjectTreeProps {
   setMonth: (m: number | ((prev: number) => number)) => void
   onOpenSubjectSettings?: () => void
   balances?: Record<string, number> // Map from `${class}|${parent_name}|${name}` or `${name}` to calculated balance
+  accountsLoaded?: boolean // 帳戶結餘（balances）是否已載入完成；未完成前，有對應帳戶的科目不應顯示期初餘額誤導使用者
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
@@ -57,6 +58,7 @@ export function SubjectTree({
   setMonth,
   onOpenSubjectSettings,
   balances = {},
+  accountsLoaded = true,
 }: SubjectTreeProps) {
   // 記錄展開的節點，預設全展開
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -104,7 +106,9 @@ export function SubjectTree({
     for (const sub of subjects) {
       const itemKey = `${sub.class}|${sub.parent_name}|${sub.name}`
       const fallbackKey = sub.name
-      const bal = balances[itemKey] ?? balances[fallbackKey] ?? sub.initial_balance ?? 0
+      // 有對應帳戶（is_account）的科目結餘來自 balances；在 balances 還沒載入完成前
+      // 不能退回顯示 initial_balance（期初餘額），那只是還沒扣交易的誤導數字。
+      const bal = balances[itemKey] ?? balances[fallbackKey] ?? (sub.is_account && !accountsLoaded ? undefined : sub.initial_balance) ?? 0
       totals[itemKey] = bal
     }
 
@@ -124,7 +128,7 @@ export function SubjectTree({
     }
 
     return totals
-  }, [subjects, balances, treeData])
+  }, [subjects, balances, treeData, accountsLoaded])
 
   const handlePrevMonth = () => {
     if (month === 1) {
