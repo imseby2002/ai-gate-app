@@ -83,7 +83,7 @@ export default function RegisterPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
             <Zap className="h-8 w-8" style={{ color: 'var(--primary)' }} />
-            <span className="text-3xl font-bold">AI GATE</span>
+            <span className="text-3xl font-bold">IMT</span>
           </div>
           <p className="text-gray-600 text-sm">{t('subtitle')}</p>
         </div>

@@ -5,7 +5,7 @@ import { DEFAULT_MODIFIER_GROUPS } from '@/lib/pos/types'
 
 export async function POST(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const { rows } = (await req.json()) as { rows?: Record<string, unknown>[] }
   if (!Array.isArray(rows) || rows.length === 0) {

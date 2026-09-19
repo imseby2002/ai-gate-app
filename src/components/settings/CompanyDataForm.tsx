@@ -229,8 +229,8 @@ export function CompanyDataForm() {
             </div>
             <p className="text-xs text-gray-500">
               {compiledChars
-                ? `已編譯 ${compiledChars.toLocaleString()} 字元的公司資料快取，行銷自動化讀取時直接使用，節省 Token 消耗。`
-                : '新增或修改公司資料後，點擊「一鍵轉檔」，行銷自動化模組將使用快取版本，無需每次重新讀取。'}
+                ? `已編譯 ${compiledChars.toLocaleString()} 字元的公司資料快取，行銷流水線讀取時直接使用，節省 Token 消耗。`
+                : '新增或修改公司資料後，點擊「一鍵轉檔」，行銷流水線模組將使用快取版本，無需每次重新讀取。'}
             </p>
             {compiledAt && (
               <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-1">

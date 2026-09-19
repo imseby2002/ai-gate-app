@@ -1,4 +1,5 @@
 import React from 'react'
+import { TouchableOpacity, Text, StyleSheet } from 'react-native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -21,7 +22,7 @@ export default function MainTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ navigation }) => ({
         tabBarActiveTintColor: '#2563EB',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
@@ -46,6 +47,17 @@ export default function MainTabs() {
           fontWeight: '700',
           color: '#0F172A',
         },
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Feedback')}
+            style={styles.headerFeedbackBtn}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chatbox-ellipses-outline" size={16} color="#2563EB" />
+            <Text style={styles.headerFeedbackText}>意見提供</Text>
+          </TouchableOpacity>
+        ),
       })}
     >
       {/* 1. 客服對話收件夾 (首頁) */}
@@ -119,3 +131,23 @@ export default function MainTabs() {
     </Tab.Navigator>
   )
 }
+
+const styles = StyleSheet.create({
+  headerFeedbackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    gap: 4,
+  },
+  headerFeedbackText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+})

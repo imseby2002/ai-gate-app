@@ -17,7 +17,7 @@ function hash(s: string) {
 /** 批次翻譯菜單品名／描述 → { zh-TW, en, vi } */
 export async function POST(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const { name, description } = await req.json()
   if (!name?.trim()) return NextResponse.json({ error: 'name 必填' }, { status: 400 })

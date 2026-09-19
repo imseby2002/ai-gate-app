@@ -149,12 +149,12 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
-    .select('display_name, email, store_code')
+    .select('full_name, email, department')
     .eq('id', user.id)
     .single()
 
-  const storeCode = String(b.store_code || profile?.store_code || '').trim()
-  const authorName = profile?.display_name || profile?.email?.split('@')[0] || '同仁'
+  const storeCode = String(b.store_code || profile?.department || '').trim()
+  const authorName = profile?.full_name || profile?.email?.split('@')[0] || '同仁'
   const authorEmail = profile?.email || ''
 
   const payload: ProposalPayload = {

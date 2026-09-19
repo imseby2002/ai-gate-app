@@ -3,41 +3,41 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getAdminUser() {
   const ctx = await getUnitContext('finance')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
-  const [{ data: accounts, error }, { data: flows }] = await Promise.all([
-    supabase.from('hr_accounts').select('*').eq('owner_id', user.id)
-      .order('sort', { ascending: true }).order('created_at', { ascending: true }),
-    supabase.from('hr_cashflow').select('type, amount, account_id, to_account_id').eq('owner_id', user.id),
-  ])
+  const { data: accounts, error } = await supabase.from('hr_accounts').select('*').eq('owner_id', user.id)
+    .order('sort', { ascending: true }).order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // 結餘 = 期初 + 收入(本帳) - 支出(本帳) - 轉出(本帳) + 轉入(目標帳)
-  const withBalance = (accounts ?? []).map(a => {
-    let bal = Number(a.opening_balance) || 0
-    for (const f of flows ?? []) {
-      const amt = Number(f.amount) || 0
-      if (f.account_id === a.id) {
-        if (f.type === 'income') bal += amt
-        else bal -= amt // expense / transfer-out
-      }
-      if (f.type === 'transfer' && f.to_account_id === a.id) bal += amt
-    }
-    return { ...a, balance: bal }
-  })
+  // 原本把全部交易抓到 Node process 再逐筆加總，帳本量大（如 26,000+ 筆）時
+  // 就算平行分頁也要好幾秒到近一分鐘。改用 DB 端的聚合函式
+  // fn_hr_account_balances（見 supabase/migrations/20260918_hr_account_balance_rpc.sql），
+  // 只回傳「每個帳戶的異動淨額」這種小結果集，資料庫端用索引即時算完。
+  const { data: deltas, error: deltasError } = await supabase
+    .rpc('fn_hr_account_balances', { p_owner_id: user.id })
+  if (deltasError) return NextResponse.json({ error: deltasError.message }, { status: 500 })
+
+  const deltaByAccount = new Map<string, number>()
+  for (const d of deltas ?? []) deltaByAccount.set(d.account_id, Number(d.delta) || 0)
+
+  const withBalance = (accounts ?? []).map(a => ({
+    ...a,
+    balance: (Number(a.opening_balance) || 0) + (deltaByAccount.get(a.id) ?? 0),
+  }))
 
   return NextResponse.json({ accounts: withBalance })
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const body = await req.json()
   const { name, kind, opening_balance, currency, note, sort } = body
@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const body = await req.json()
   const { id, ...updates } = body
@@ -77,8 +77,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

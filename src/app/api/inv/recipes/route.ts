@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 type ItemIn = {
@@ -28,8 +28,8 @@ const cleanItems = (raw: unknown, ownerId: string, recipeId: string) =>
   })).filter(i => i.material_code)
 
 export async function GET() {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const [{ data: recipes }, { data: items }, { data: mats }, { data: prices }] = await Promise.all([
     supabase.from('inv_recipes').select('id, name, note, created_at').eq('owner_id', user.id).order('name'),
@@ -138,8 +138,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const body = await req.json().catch(() => ({}))
   const name = String(body.name ?? '').trim()
   if (!name) return NextResponse.json({ error: '配方名稱必填' }, { status: 400 })
@@ -159,8 +159,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const body = await req.json().catch(() => ({}))
   const id = String(body.id ?? '')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -185,8 +185,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await supabase.from('inv_recipes').delete().eq('id', id).eq('owner_id', user.id)

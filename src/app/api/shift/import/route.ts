@@ -3,13 +3,13 @@ import { getUnitContext } from '@/lib/auth/unit-access'
 
 async function getStoreUser() {
   const ctx = await getUnitContext('store')
-  if (!ctx.ok) return { user: null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getStoreUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getStoreUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { store, period_id, rows } = (await req.json()) as {
     store?: string

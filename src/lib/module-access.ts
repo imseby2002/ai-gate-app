@@ -17,11 +17,14 @@ export async function hasModuleAccess(
   userId: string,
   moduleId: string,
 ): Promise<boolean> {
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from('profiles')
     .select('user_type, enabled_modules, email')
     .eq('id', userId)
     .single()
+  // 查詢失敗與「查無此人」都會 return false、API 一律回拒，兩者要分得出來。
+  // 維持 fail-closed（付費牆該擋還是擋），但錯誤要留下。
+  if (error) console.error('[module-access] profiles 查詢失敗', { userId, moduleId, error })
   if (!profile) return false
   if (profile.user_type === 'admin' || isSuperAdminEmail(profile.email)) return true
   const enabled: string[] = profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']

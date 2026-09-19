@@ -1,7 +1,7 @@
 import { getUnitContext } from '@/lib/auth/unit-access'
 import { NextRequest, NextResponse } from 'next/server'
 
-async function ctx() { const c = await getUnitContext('mkt'); return c.ok ? c : null }
+async function ctx() { const c = await getUnitContext('mkt'); return c }
 const s = (v: unknown) => String(v ?? '').trim()
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0 }
 const int = (v: unknown) => { const t = s(v); if (!t) return null; const n = parseInt(t, 10); return Number.isFinite(n) ? n : null }
@@ -9,7 +9,7 @@ const PLATFORMS = ['grab', 'shopee', 'baemin', 'other']
 const STATUS = ['online', 'offline', 'pending', 'suspended']
 
 export async function GET(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const sp = new URL(req.url).searchParams
   let q = c.admin.from('mkt_delivery')
     .select('id, platform, store, status, url, commission_rate, rating, ranking, period, monthly_orders, monthly_revenue, promo, note')
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   if (!s(b.store)) return NextResponse.json({ error: '門市必填' }, { status: 400 })
   const { data, error } = await c.admin.from('mkt_delivery').insert({
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await c.admin.from('mkt_delivery').delete().eq('id', s(id)).eq('owner_id', c.ownerId)

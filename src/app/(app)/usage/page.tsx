@@ -1,12 +1,12 @@
 ﻿import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { formatCost, formatTokens } from '@/lib/utils/format'
 import { UsageCharts } from '@/components/usage/UsageCharts'
 import { DollarSign, Cpu, MessageSquare } from 'lucide-react'
 
 export default async function UsagePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
   // Last 30 days

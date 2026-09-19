@@ -4,8 +4,8 @@ import { readXlsx, type Cell } from '@/lib/inv/xlsxRead'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['rd', 'store', 'audit', 'finance'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 const num = (v: Cell): number => {
@@ -30,8 +30,8 @@ const normalizeCategory = (val: string): string => {
 // 3. dealer_price: 賣給經銷商或非直營門市價格 (Đơn giá xuất đại lý / nhượng quyền)
 // 4. category: 原料 / 設備 / 道具 / 耗材
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const form = await req.formData().catch(() => null)
   const file = form?.get('file')

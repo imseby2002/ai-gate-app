@@ -8,7 +8,7 @@ export const maxDuration = 60
 
 async function ctx() {
   const c = await getUnitContextAny(['audit', 'store', 'rd'])
-  return c.ok ? c : null
+  return c
 }
 const s = (v: unknown) => String(v ?? '').trim()
 
@@ -62,7 +62,7 @@ async function loadKnowledge(admin: any, ownerId: string): Promise<string> {
 // 稽核 AI 對談。body: { chat_id?, store, message, mode?, suggest?, photo_url?, analysis? }
 export async function POST(req: NextRequest) {
   const c = await ctx()
-  if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
 
   const b = await req.json().catch(() => ({}))

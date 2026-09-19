@@ -206,6 +206,36 @@ export default function TicketsScreen() {
     }
   }
 
+  const formatTicketContent = (item: Ticket) => {
+    // 移除開頭的「摘要：」、「摘要:」或「【摘要】」
+    const cleanDesc = (item.description || '')
+      .replace(/^(?:【摘要】|摘要[:：])\s*/gi, '')
+      .trim()
+
+    if (!cleanDesc) {
+      return item.subject || '無詳細內容'
+    }
+
+    // 系統預設常見的制式主題，若與內文重複或屬制式標題，則無需重疊呈現，直接展示清晰摘要
+    const genericSubjects = [
+      '新訂單待跟進',
+      '客人已匯款，需人工核對並建立/更新訂單',
+      '付款確認待跟進',
+      '發票開立待處理',
+      '客人提供發票抬頭/統一編號，需人工開立發票',
+      '人工客服請求',
+      '手動模式（AI 已暫停）',
+    ]
+
+    const isGeneric = genericSubjects.some((s) => item.subject?.includes(s))
+    if (isGeneric || cleanDesc.includes(item.subject)) {
+      return cleanDesc
+    }
+
+    // 若有自訂的特定主題（例如「冷氣漏水」），自然融入摘要內容
+    return `${item.subject} — ${cleanDesc}`
+  }
+
   const renderTicket = ({ item }: { item: Ticket }) => {
     const isResolved = item.status === 'resolved' || item.status === 'closed'
     const priorityColor = getPriorityColor(item.priority)
@@ -249,13 +279,10 @@ export default function TicketsScreen() {
           </View>
         </View>
 
-        {/* 主旨與描述 */}
-        <Text style={styles.subjectText}>{item.subject}</Text>
-        {item.description ? (
-          <Text style={styles.descText} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
+        {/* 摘要內容：去除「摘要」二字，主題自然融入，完整呈現核心摘要 */}
+        <Text style={styles.mainContentText} numberOfLines={4}>
+          {formatTicketContent(item)}
+        </Text>
 
         {/* 底部操作區：前往收件匣按鈕 + 標記完成 */}
         <View style={styles.cardBottom}>
@@ -515,6 +542,14 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 11,
     color: '#94A3B8',
+  },
+  mainContentText: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#0F172A',
+    lineHeight: 22,
+    marginBottom: 10,
+    marginTop: 2,
   },
   subjectText: {
     fontSize: 15,

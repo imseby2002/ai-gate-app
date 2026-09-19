@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   ScrollText, Loader2, AlertCircle, Search, Store, Calendar,
   Trash2, MessageSquare, ExternalLink, RefreshCw, ClipboardCheck, ArrowLeft, Copy, Check
@@ -22,6 +23,9 @@ interface AuditLog {
 }
 
 export default function AuditLogsPage() {
+  const t = useTranslations('AuditLogs')
+  const locale = useLocale()
+  const dateLocale = locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW'
   const [logs, setLogs] = useState<AuditLog[]>([])
   const [loading, setLoading] = useState(true)
   const [storeFilter, setStoreFilter] = useState('')
@@ -44,7 +48,7 @@ export default function AuditLogsPage() {
   }, [storeFilter])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('確定刪除此則稽核日誌？')) return
+    if (!confirm(t('confirmDelete'))) return
     await fetch('/api/audit/logs', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -75,20 +79,20 @@ export default function AuditLogsPage() {
           <ScrollText className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">稽核日誌</h1>
-          <p className="text-sm text-muted-foreground">由「稽核討論AI」自動摘要萃取之門市巡檢與動線討論日誌</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Link href="/audit-ai">
             <Button size="sm" variant="outline" className="gap-1.5">
               <MessageSquare className="h-4 w-4" />
-              討論AI
+              {t('discussAi')}
             </Button>
           </Link>
           <Link href="/audit-inspection">
             <Button size="sm" variant="outline" className="gap-1.5">
               <ClipboardCheck className="h-4 w-4" />
-              現場巡檢
+              {t('inspection')}
             </Button>
           </Link>
         </div>
@@ -101,7 +105,7 @@ export default function AuditLogsPage() {
           <Input
             value={storeFilter}
             onChange={e => setStoreFilter(e.target.value)}
-            placeholder="過濾門市代碼（如 YL）"
+            placeholder={t('storeFilterPlaceholder')}
             className="w-40 h-8 text-xs"
           />
         </div>
@@ -110,13 +114,13 @@ export default function AuditLogsPage() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="搜尋關鍵字（人體工學、動線、作廢...）"
+            placeholder={t('searchPlaceholder')}
             className="h-8 text-xs flex-1"
           />
         </div>
         <Button size="sm" variant="ghost" className="h-8 text-xs gap-1 ml-auto" onClick={load}>
           <RefreshCw className="h-3.5 w-3.5" />
-          重新整理
+          {t('refresh')}
         </Button>
       </Card>
 
@@ -128,8 +132,8 @@ export default function AuditLogsPage() {
       ) : filtered.length === 0 ? (
         <Card className="p-10 text-center text-muted-foreground space-y-2">
           <ScrollText className="h-8 w-8 mx-auto opacity-40" />
-          <p className="text-sm font-medium">目前尚無稽核日誌</p>
-          <p className="text-xs">在「稽核討論AI」中與專家溝通，系統將自動摘要並匯入此處。</p>
+          <p className="text-sm font-medium">{t('empty')}</p>
+          <p className="text-xs">{t('emptyHint')}</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -140,7 +144,7 @@ export default function AuditLogsPage() {
                   <div className="flex items-center gap-2">
                     {item.store && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
-                        {item.store} 門市
+                        {t('storeSuffix', { store: item.store })}
                       </span>
                     )}
                     <h2 className="text-base font-bold text-foreground">{item.title}</h2>
@@ -148,9 +152,9 @@ export default function AuditLogsPage() {
                   <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {new Date(item.created_at).toLocaleString('zh-TW', { hour12: false })}
+                      {new Date(item.created_at).toLocaleString(dateLocale, { hour12: false })}
                     </span>
-                    <span>對話訊息數：{item.upto_count} 則</span>
+                    <span>{t('messageCount', { n: item.upto_count })}</span>
                   </div>
                 </div>
 
@@ -159,10 +163,10 @@ export default function AuditLogsPage() {
                     size="sm"
                     variant="ghost"
                     className="h-7 text-xs gap-1 text-muted-foreground"
-                    onClick={() => handleCopy(item.id, `【${item.store || ''} 稽核日誌】${item.title}\n\n${item.summary}`)}
+                    onClick={() => handleCopy(item.id, t('copyTemplate', { store: item.store || '', title: item.title, summary: item.summary }))}
                   >
                     {copiedId === item.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                    複製
+                    {t('copy')}
                   </Button>
                   <Button
                     size="sm"

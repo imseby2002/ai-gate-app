@@ -11,7 +11,7 @@ const PERSON_FIELDS = ['name', 'gender', 'native_place', 'birthday', 'id_number'
 
 export async function GET(req: NextRequest) {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
   const id = s(new URL(req.url).searchParams.get('id'))
 
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 // 更新人員基本資料。body: { id, ...fields }
 export async function PATCH(req: NextRequest) {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -87,7 +87,7 @@ export async function PATCH(req: NextRequest) {
 // 刪除應徵者/人員名單。body: { id }
 export async function DELETE(req: NextRequest) {
   const ctx = await getUnitContext('hr')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
   const { admin, ownerId } = ctx
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)

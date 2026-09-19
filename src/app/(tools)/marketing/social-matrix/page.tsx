@@ -5,11 +5,13 @@ import {
   Server, ShieldCheck, Activity, Plus, RefreshCw, Trash2, ExternalLink,
   Copy, Check, Sparkles, Send, Users, Layers, AlertCircle, Clock, Zap,
   CheckCircle2, Globe, Lock, Cpu, Play, Terminal, HelpCircle, ArrowUpRight,
-  TrendingUp, Hash, MessageSquare, ShieldAlert, Pencil
+  TrendingUp, Hash, MessageSquare, ShieldAlert, Pencil, Building2, Store,
+  Tag, CreditCard, Smartphone, CheckCheck, BadgeCheck
 } from 'lucide-react'
 import {
   SocialProxy, SocialAccount, SocialLog, TargetGroup,
-  MatrixCopy, ProxyType, ProxyProtocol, SocialPlatform
+  MatrixCopy, ProxyType, ProxyProtocol, SocialPlatform,
+  OfficialRentableProxy, ProxyLease, OfficialProxyStatus
 } from '@/lib/social-matrix/types'
 
 export default function SocialMatrixPage() {
@@ -39,6 +41,34 @@ export default function SocialMatrixPage() {
     batchText: '',
     isBatch: false,
   })
+
+  // 1.1 Official Rentable Proxies & Leases State (官方供租用 IP 資源庫與租賃狀態)
+  const [proxySubTab, setProxySubTab] = useState<'my_proxies' | 'official_market' | 'admin_manage'>('my_proxies')
+  const [officialProxies, setOfficialProxies] = useState<OfficialRentableProxy[]>([])
+  const [leases, setLeases] = useState<ProxyLease[]>([])
+  const [isAddOfficialOpen, setIsAddOfficialOpen] = useState(false)
+  const [isEditOfficialOpen, setIsEditOfficialOpen] = useState(false)
+  const [editingOfficial, setEditingOfficial] = useState<OfficialRentableProxy | null>(null)
+  const [isLeasingId, setIsLeasingId] = useState<string | null>(null)
+  const [isReleasingId, setIsReleasingId] = useState<string | null>(null)
+
+  const [newOfficialForm, setNewOfficialForm] = useState({
+    name: '🇹🇼 台灣宜蘭聯禾原生住宅 IP #2 (專屬固定)',
+    proxy_type: 'home_static' as ProxyType,
+    protocol: 'http' as ProxyProtocol,
+    host: '211.75.142.99',
+    port: 28899,
+    username: 'gate_admin',
+    password: '',
+    country: 'TW',
+    city: '宜蘭',
+    isp: '聯禾有線電視 (TBC 原生家用住宅寬頻)',
+    latency_ms: 18,
+    monthly_price_twd: 299,
+    max_tenants: 1,
+    notes: '家用原生固定 IP，純天然住宅寬頻，抗封號評級最高',
+  })
+
 
   // 2. Accounts & Warm-up State
   const [accounts, setAccounts] = useState<SocialAccount[]>([])
@@ -90,13 +120,16 @@ export default function SocialMatrixPage() {
   const fetchAllData = async () => {
     setIsLoading(true)
     try {
-      const [pRes, aRes, lRes] = await Promise.all([
-        fetch('/api/marketing/social-matrix/proxies').then(r => r.json()),
-        fetch('/api/marketing/social-matrix/accounts').then(r => r.json()),
-        fetch('/api/marketing/social-matrix/warmup').then(r => r.json()),
+      const [pRes, aRes, lRes, offRes] = await Promise.all([
+        fetch('/api/marketing/social-matrix/proxies').then(r => r.json()).catch(() => ({ proxies: [] })),
+        fetch('/api/marketing/social-matrix/accounts').then(r => r.json()).catch(() => ({ accounts: [] })),
+        fetch('/api/marketing/social-matrix/warmup').then(r => r.json()).catch(() => ({ logs: [] })),
+        fetch('/api/marketing/social-matrix/official-proxies').then(r => r.json()).catch(() => ({ official_proxies: [], leases: [] })),
       ])
 
       let serverProxies: SocialProxy[] = pRes.proxies || []
+      if (offRes.official_proxies) setOfficialProxies(offRes.official_proxies)
+      if (offRes.leases) setLeases(offRes.leases)
 
       // Merge with browser local storage backup so user configurations are never lost
       if (typeof window !== 'undefined') {
@@ -249,6 +282,130 @@ export default function SocialMatrixPage() {
       showToast(`更新失敗: ${String(err)}`, 'error')
     }
   }
+
+  // 1.2 Official Proxies Actions (官方 IP 租用、退租與管理者維護)
+  const handleLeaseOfficial = async (offProxy: OfficialRentableProxy) => {
+    setIsLeasingId(offProxy.id)
+    try {
+      const res = await fetch('/api/marketing/social-matrix/official-proxies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'lease', official_proxy_id: offProxy.id }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast(data.message || '🎉 官方專屬原生 IP 租用成功！', 'success')
+        if (data.proxy) {
+          setProxies(prev => {
+            const next = [data.proxy, ...prev]
+            saveProxiesLocally(next)
+            return next
+          })
+        }
+        await fetchAllData()
+        setProxySubTab('my_proxies')
+      } else {
+        showToast(data.error || '租用失敗', 'error')
+      }
+    } catch (err) {
+      showToast(`租用失敗: ${String(err)}`, 'error')
+    } finally {
+      setIsLeasingId(null)
+    }
+  }
+
+  const handleReleaseLease = async (leaseId: string) => {
+    if (!confirm('確定要解除此官方 IP 租用嗎？解除後該節點將自代理池移除，已綁定帳號需重新選擇代理。')) return
+    setIsReleasingId(leaseId)
+    try {
+      const res = await fetch(`/api/marketing/social-matrix/official-proxies/lease/${leaseId}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast(data.message || '已成功解除租用', 'info')
+        setProxies(prev => {
+          const next = prev.filter(p => p.lease_id !== leaseId && p.id !== `leased-${leaseId}`)
+          saveProxiesLocally(next)
+          return next
+        })
+        await fetchAllData()
+      } else {
+        showToast(data.error || '退租失敗', 'error')
+      }
+    } catch (err) {
+      showToast(`退租異常: ${String(err)}`, 'error')
+    } finally {
+      setIsReleasingId(null)
+    }
+  }
+
+  const handleAddOfficialProxy = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/marketing/social-matrix/official-proxies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'admin_create', ...newOfficialForm }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('👑 官方供租用 IP 已成功上架！', 'success')
+        setIsAddOfficialOpen(false)
+        await fetchAllData()
+      } else {
+        showToast(data.error || '上架失敗', 'error')
+      }
+    } catch (err) {
+      showToast(`新增失敗: ${String(err)}`, 'error')
+    }
+  }
+
+  const handleOpenEditOfficial = (proxy: OfficialRentableProxy) => {
+    setEditingOfficial({ ...proxy })
+    setIsEditOfficialOpen(true)
+  }
+
+  const handleUpdateOfficialProxy = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingOfficial) return
+    try {
+      const res = await fetch(`/api/marketing/social-matrix/official-proxies/${editingOfficial.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingOfficial),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('官方 IP 庫存資訊與定價已成功更新！', 'success')
+        setIsEditOfficialOpen(false)
+        await fetchAllData()
+      } else {
+        showToast(data.error || '更新失敗', 'error')
+      }
+    } catch (err) {
+      showToast(`更新失敗: ${String(err)}`, 'error')
+    }
+  }
+
+  const handleDeleteOfficialProxy = async (id: string) => {
+    if (!confirm('確定要自官方庫存中刪除/下架此供租用 IP 嗎？')) return
+    try {
+      const res = await fetch(`/api/marketing/social-matrix/official-proxies/${id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('已自官方庫存下架該 IP', 'info')
+        await fetchAllData()
+      } else {
+        showToast(data.error || '刪除失敗', 'error')
+      }
+    } catch (err) {
+      showToast(`下架失敗: ${String(err)}`, 'error')
+    }
+  }
+
 
   // 2. Account & Warm-up Actions
   const handleAddAccount = async (e: React.FormEvent) => {
@@ -463,7 +620,7 @@ export default function SocialMatrixPage() {
             <div>
               <div className="flex items-center gap-2 text-indigo-200 text-xs font-semibold uppercase tracking-wider mb-2">
                 <ShieldCheck className="h-4 w-4 text-emerald-300" />
-                <span>AI GATE 社群矩陣與自動養號行銷系統</span>
+                <span>IMT 社群矩陣與自動養號行銷系統</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
                 社群矩陣發文與擬人化養號中心
@@ -542,46 +699,46 @@ export default function SocialMatrixPage() {
         {/* TAB 1: PROXIES MANAGEMENT */}
         {activeTab === 'proxies' && (
           <div className="space-y-6">
-            {/* Guide Card: Home Native Static Residential IP */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-indigo-950/40 border border-blue-200 dark:border-indigo-900/60 rounded-2xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-sm shrink-0">
-                  <Globe className="h-6 w-6" />
-                </div>
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-base text-blue-950 dark:text-blue-200 flex items-center gap-2">
-                      <span>聯禾有線電視 / 中華電信 家用原生靜態 IP 串接教學</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium">抗封號最強首選 (A+)</span>
-                    </h3>
-                  </div>
-                  <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
-                    家用原生寬頻為各大社群演算法（Meta/TikTok/Dcard）認定之最高信譽家用原生住宅 IP，完全零機房黑名單污染。按照以下三步即可直接串入系統：
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                    <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
-                      <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 1：路由器轉發 Port</span>
-                      <span className="text-muted-foreground">進入家中 Wi-Fi 路由器後台，設定 Port Forwarding（通訊埠轉發），將外網 Port (如 28899) 指向內網電腦/NAS/主機。</span>
-                    </div>
-                    <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
-                      <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 2：本機啟動 Proxy 服務</span>
-                      <span className="text-muted-foreground">電腦安裝輕量代理服務（如 <code>gost -L=http://帳號:密碼@:28899</code> 或 3proxy），並設定帳密防護。</span>
-                    </div>
-                    <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
-                      <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 3：後台填入並綁定帳號</span>
-                      <span className="text-muted-foreground">點擊下方「新增代理 IP」，輸入家中靜態 IP (如 211.75.xx.xx) 與 28899，完成測速後即可將主號固定綁定！</span>
-                    </div>
-                  </div>
-                </div>
+            {/* Sub-tab Navigation Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+              <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl">
+                <button
+                  onClick={() => setProxySubTab('my_proxies')}
+                  className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    proxySubTab === 'my_proxies'
+                      ? 'bg-white dark:bg-card text-indigo-700 dark:text-indigo-300 shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Server className="h-3.5 w-3.5" />
+                  <span>我的自用代理池 ({proxies.length})</span>
+                </button>
+                <button
+                  onClick={() => setProxySubTab('official_market')}
+                  className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    proxySubTab === 'official_market'
+                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Building2 className="h-3.5 w-3.5 text-amber-300" />
+                  <span>🏢 官方原生 IP 租賃市場 ({officialProxies.length})</span>
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-bold">免自備</span>
+                </button>
+                <button
+                  onClick={() => setProxySubTab('admin_manage')}
+                  className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+                    proxySubTab === 'admin_manage'
+                      ? 'bg-slate-900 text-amber-300 dark:bg-slate-700 shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
+                  <span>⚙️ 管理者專區：供租用 IP 庫存維護</span>
+                </button>
               </div>
-            </div>
 
-            {/* Actions Bar */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold">已配置代理 IP 清單</h2>
-                <span className="text-xs text-muted-foreground">（共 {proxies.length} 個獨立住宅/商用節點）</span>
-              </div>
+              {/* Quick Actions according to sub-tab */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => fetchAllData()}
@@ -590,115 +747,516 @@ export default function SocialMatrixPage() {
                   <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                   <span>重新整理</span>
                 </button>
-                <button
-                  onClick={() => setIsAddProxyOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>新增代理 IP</span>
-                </button>
+                {proxySubTab === 'my_proxies' && (
+                  <>
+                    <button
+                      onClick={() => setProxySubTab('official_market')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs hover:from-amber-600 hover:to-orange-600 transition-all"
+                    >
+                      <Building2 className="h-3.5 w-3.5" />
+                      <span>🏢 租用官方原生 IP</span>
+                    </button>
+                    <button
+                      onClick={() => setIsAddProxyOpen(true)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>新增自備代理 IP</span>
+                    </button>
+                  </>
+                )}
+                {proxySubTab === 'admin_manage' && (
+                  <button
+                    onClick={() => setIsAddOfficialOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>➕ 管理者新增供租用 IP</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Proxy Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {proxies.map(proxy => {
-                const isTesting = testingProxyId === proxy.id
-                const isHome = proxy.proxy_type === 'home_static'
-                return (
-                  <div
-                    key={proxy.id}
-                    className="bg-white dark:bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${proxy.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                          <h4 className="font-bold text-sm text-foreground truncate" title={proxy.name}>{proxy.name}</h4>
-                          <button
-                            onClick={() => handleOpenEditProxy(proxy)}
-                            title="修改名稱與設定"
-                            className="p-1 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded transition-colors shrink-0"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <span className={`text-[10px] shrink-0 font-semibold px-2 py-0.5 rounded-full ${
-                          isHome
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                            : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                        }`}>
-                          {isHome ? '🏠 家用原生靜態' : '🏢 商業住宅代理'}
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg text-xs font-mono text-muted-foreground mb-3 space-y-1">
-                        <div className="flex justify-between">
-                          <span>位址與端口:</span>
-                          <span className="font-semibold text-foreground">{proxy.host}:{proxy.port}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>通訊協議:</span>
-                          <span className="uppercase">{proxy.protocol}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>所屬 ISP:</span>
-                          <span className="truncate max-w-[130px]">{proxy.isp || '台灣原生寬頻'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>地理位置:</span>
-                          <span>{proxy.country} - {proxy.city || '台灣在地'}</span>
-                        </div>
-                      </div>
-
-                      {proxy.notes && (
-                        <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2 italic">
-                          💡 {proxy.notes}
-                        </p>
-                      )}
+            {/* ==================================================== */}
+            {/* SUB-TAB 1: MY ACTIVE PROXIES (自用代理池)             */}
+            {/* ==================================================== */}
+            {proxySubTab === 'my_proxies' && (
+              <div className="space-y-6">
+                {/* Promo banner to rent official IP */}
+                <div className="bg-gradient-to-r from-indigo-900 via-blue-900 to-violet-900 text-white rounded-2xl p-4 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-indigo-700/50">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 bg-white/10 backdrop-blur-md rounded-xl text-amber-300 shrink-0">
+                      <Sparkles className="h-6 w-6" />
                     </div>
-
-                    <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
+                    <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-medium text-muted-foreground">
-                          延遲: <span className={proxy.latency_ms < 50 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{proxy.latency_ms}ms</span>
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-muted-foreground">
-                          綁定 {proxy.assigned_count || 0} 帳號
-                        </span>
+                        <span className="font-bold text-sm text-white">想省去設定 Wi-Fi 路由器與電腦 Proxy 服務的繁複步驟？</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold uppercase">IMT 官方直供</span>
                       </div>
+                      <p className="text-xs text-indigo-100 mt-0.5 max-w-2xl">
+                        IMT 直供「台灣宜蘭聯禾原生住宅寬頻」與「中華電信 4G 行動基站代理」，純淨專屬獨立、絕非公共機房 IP，最抗演算法封號，點擊即可一鍵專屬租用！
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setProxySubTab('official_market')}
+                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-xs shadow-sm transition-transform active:scale-95 shrink-0 flex items-center gap-1.5"
+                  >
+                    <Store className="h-4 w-4" />
+                    <span>瀏覽官方 IP 租賃市場</span>
+                  </button>
+                </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleOpenEditProxy(proxy)}
-                          title="編輯代理名稱與設定"
-                          className="p-1.5 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleTestProxy(proxy)}
-                          disabled={isTesting}
-                          title="一鍵連線測速"
-                          className="p-1.5 text-xs text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
-                        >
-                          <Activity className={`h-3.5 w-3.5 ${isTesting ? 'animate-spin text-amber-500' : ''}`} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProxy(proxy.id)}
-                          title="刪除代理"
-                          className="p-1.5 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                {/* Self-hosting Guide Card (Collapsed / Informative) */}
+                <details className="group bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-900 dark:to-indigo-950/40 border border-blue-200 dark:border-indigo-900/60 rounded-2xl p-4 transition-all">
+                  <summary className="font-bold text-xs text-blue-950 dark:text-blue-200 cursor-pointer flex items-center justify-between select-none">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-blue-600" />
+                      <span>自備 IP 教學：如何將自家中華電信 / 聯禾有線電視原生靜態 IP 串接至系統？</span>
+                    </div>
+                    <span className="text-xs text-blue-600 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="pt-3 space-y-2 text-xs text-blue-800 dark:text-blue-300 border-t border-blue-200/60 dark:border-indigo-900/60 mt-3">
+                    <p>若您已有自家家用寬頻（固定 IP），可依序設定後加入自備代理池：</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                      <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
+                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 1：路由器轉發 Port</span>
+                        <span className="text-muted-foreground">進入 Wi-Fi 路由器後台，設定 Port Forwarding，將外網 Port (如 28899) 指向內網主機。</span>
+                      </div>
+                      <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
+                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 2：本機啟動 Proxy</span>
+                        <span className="text-muted-foreground">主機安裝 <code>gost -L=http://帳號:密碼@:28899</code>，提供本系統安全連線驗證。</span>
+                      </div>
+                      <div className="bg-white/80 dark:bg-card p-3 rounded-xl border border-blue-100 dark:border-border text-xs">
+                        <span className="font-bold text-blue-700 dark:text-blue-400 block mb-1">步驟 3：填入後台並綁定</span>
+                        <span className="text-muted-foreground">點擊「新增自備代理 IP」，輸入靜態 IP 與 Port，測速通過後即可綁定主號。</span>
                       </div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                </details>
+
+                {/* Proxy Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {proxies.map(proxy => {
+                    const isTesting = testingProxyId === proxy.id
+                    const isOfficial = proxy.source === 'official_leased'
+                    const isHome = proxy.proxy_type === 'home_static'
+                    const isMobile = proxy.proxy_type === 'mobile_4g'
+
+                    return (
+                      <div
+                        key={proxy.id}
+                        className={`bg-white dark:bg-card border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between ${
+                          isOfficial
+                            ? 'border-indigo-300 dark:border-indigo-700/80 bg-gradient-to-b from-indigo-50/40 to-transparent'
+                            : 'border-border'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${proxy.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                              <h4 className="font-bold text-sm text-foreground truncate" title={proxy.name}>{proxy.name}</h4>
+                              {!isOfficial && (
+                                <button
+                                  onClick={() => handleOpenEditProxy(proxy)}
+                                  title="修改名稱與設定"
+                                  className="p-1 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded transition-colors shrink-0"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                            <span className={`text-[10px] shrink-0 font-bold px-2 py-0.5 rounded-full ${
+                              isOfficial
+                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                                : isHome
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                : isMobile
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                            }`}>
+                              {isOfficial ? '🏢 官方專屬租用' : isHome ? '🏠 家用原生靜態' : isMobile ? '📱 4G行動基站' : '🏢 商業住宅代理'}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl text-xs font-mono text-muted-foreground mb-3 space-y-1">
+                            <div className="flex justify-between">
+                              <span>位址與端口:</span>
+                              <span className="font-semibold text-foreground">{proxy.host}:{proxy.port}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>通訊協議:</span>
+                              <span className="uppercase font-semibold">{proxy.protocol}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>所屬 ISP:</span>
+                              <span className="truncate max-w-[130px] font-medium text-foreground">{proxy.isp || '原生寬頻'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>地理位置:</span>
+                              <span>{proxy.country} - {proxy.city || '在地節點'}</span>
+                            </div>
+                            {isOfficial && proxy.expires_at && (
+                              <div className="flex justify-between text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-800">
+                                <span>租期有效至:</span>
+                                <span>{new Date(proxy.expires_at).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {proxy.notes && (
+                            <p className="text-[11px] text-muted-foreground mb-3 line-clamp-2 italic">
+                              💡 {proxy.notes}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="pt-2 border-t border-border flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-medium text-muted-foreground">
+                              延遲: <span className={proxy.latency_ms < 50 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold'}>{proxy.latency_ms}ms</span>
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-muted-foreground">
+                              綁定 {proxy.assigned_count || 0} 帳號
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {!isOfficial && (
+                              <button
+                                onClick={() => handleOpenEditProxy(proxy)}
+                                title="編輯代理名稱與設定"
+                                className="p-1.5 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleTestProxy(proxy)}
+                              disabled={isTesting}
+                              title="一鍵連線測速"
+                              className="p-1.5 text-xs text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
+                            >
+                              <Activity className={`h-3.5 w-3.5 ${isTesting ? 'animate-spin text-amber-500' : ''}`} />
+                            </button>
+                            {isOfficial ? (
+                              <button
+                                onClick={() => handleReleaseLease(proxy.lease_id || proxy.id)}
+                                disabled={isReleasingId === (proxy.lease_id || proxy.id)}
+                                title="退租 / 解除租用"
+                                className="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors border border-rose-200 dark:border-rose-900"
+                              >
+                                {isReleasingId === (proxy.lease_id || proxy.id) ? '處理中...' : '退租'}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleDeleteProxy(proxy.id)}
+                                title="刪除自備代理"
+                                className="p-1.5 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ==================================================== */}
+            {/* SUB-TAB 2: OFFICIAL RENTABLE IP MARKET (官方租賃市場) */}
+            {/* ==================================================== */}
+            {proxySubTab === 'official_market' && (
+              <div className="space-y-6">
+                {/* Official Market Value Proposition Banner */}
+                <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-violet-900 text-white rounded-3xl p-6 shadow-xl border border-indigo-500/30">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                      <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
+                        <BadgeCheck className="h-4 w-4" />
+                        <span>IMT 官方直供・純天然原生乾淨 IP 庫存</span>
+                      </div>
+                      <h2 className="text-xl md:text-2xl font-extrabold tracking-tight">
+                        社群抗風控專屬原生住宅與 4G 行動基地台 IP
+                      </h2>
+                      <p className="text-indigo-100 text-xs md:text-sm mt-1 max-w-2xl leading-relaxed">
+                        Facebook、Instagram、Threads、TikTok、Dcard 的演算法對公共機房 IP 風控極為嚴苛。
+                        IMT 官方直供 100% 乾淨原生家用寬頻與實體行動基站，一對一專屬獨享、免技術設定、一鍵即租即用！
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span>100% 原生住宅寬頻</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span>1對1 專屬獨立獨享</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span>真 4G/5G 行動基站</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <span>免 Termux/路由器設定</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Official Rentable Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-5">
+                  {officialProxies.map(offProxy => {
+                    const isLeasedByMe = proxies.some(
+                      p => p.official_proxy_id === offProxy.id || (p.host === offProxy.host && p.port === offProxy.port)
+                    )
+                    const isAvailable = offProxy.status === 'available' && offProxy.current_tenants_count < offProxy.max_tenants
+                    const isLeasing = isLeasingId === offProxy.id
+
+                    return (
+                      <div
+                        key={offProxy.id}
+                        className="bg-white dark:bg-card border border-border hover:border-indigo-300 dark:hover:border-indigo-700 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          {/* Card Header */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  offProxy.proxy_type === 'home_static'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                                    : offProxy.proxy_type === 'mobile_4g'
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                                }`}>
+                                  {offProxy.proxy_type === 'home_static' ? '🏠 家用原生靜態寬頻' : offProxy.proxy_type === 'mobile_4g' ? '📱 4G/5G 移動基站' : '🏢 商業住宅代理'}
+                                </span>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-muted-foreground uppercase font-mono">
+                                  {offProxy.protocol}
+                                </span>
+                              </div>
+                              <h3 className="font-extrabold text-base text-foreground leading-tight">
+                                {offProxy.name}
+                              </h3>
+                            </div>
+
+                            {/* Status Badge */}
+                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 ${
+                              isLeasedByMe
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200'
+                                : isAvailable
+                                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                            }`}>
+                              <span className={`h-2 w-2 rounded-full ${isLeasedByMe ? 'bg-emerald-500' : isAvailable ? 'bg-indigo-500' : 'bg-slate-400'}`} />
+                              {isLeasedByMe ? '您已專屬租用' : isAvailable ? '可立即租用' : '已專屬租出'}
+                            </span>
+                          </div>
+
+                          {/* Technical Highlights */}
+                          <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl text-xs font-mono">
+                            <div>
+                              <span className="text-muted-foreground block text-[10px]">電信業者 (ISP)</span>
+                              <span className="font-bold text-foreground truncate block">{offProxy.isp || '台灣原生寬頻'}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block text-[10px]">伺服節點位置</span>
+                              <span className="font-bold text-foreground">{offProxy.country} - {offProxy.city || '台灣在地'}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block text-[10px]">延遲評級</span>
+                              <span className="font-bold text-emerald-600">{offProxy.latency_ms}ms (極速低延遲)</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground block text-[10px]">專屬獨享配額</span>
+                              <span className="font-bold text-foreground">1 客戶專屬 ({offProxy.current_tenants_count}/{offProxy.max_tenants})</span>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            💡 {offProxy.notes || 'IMT 原廠測試乾淨原生住宅 IP，具備極高演算法信任權重，主號養號防封首選。'}
+                          </p>
+                        </div>
+
+                        {/* Pricing & CTA */}
+                        <div className="pt-4 mt-3 border-t border-border flex items-center justify-between gap-4">
+                          <div>
+                            <span className="text-[10px] text-muted-foreground block">租賃方案 (30 天專屬獨享)</span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">
+                                NT$ {offProxy.monthly_price_twd}
+                              </span>
+                              <span className="text-xs text-muted-foreground">/ 月</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            {isLeasedByMe ? (
+                              <button
+                                onClick={() => setProxySubTab('my_proxies')}
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 transition-colors"
+                              >
+                                <CheckCheck className="h-4 w-4" />
+                                <span>已在代理池（查看）</span>
+                              </button>
+                            ) : isAvailable ? (
+                              <button
+                                onClick={() => handleLeaseOfficial(offProxy)}
+                                disabled={isLeasing}
+                                className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white shadow-md hover:shadow-indigo-500/25 active:scale-95 transition-all disabled:opacity-50"
+                              >
+                                <Zap className={`h-4 w-4 text-amber-300 ${isLeasing ? 'animate-spin' : ''}`} />
+                                <span>{isLeasing ? '正在開通專屬 IP...' : '⚡ 一鍵立即租用'}</span>
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="px-4 py-2 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-muted-foreground cursor-not-allowed"
+                              >
+                                🔒 專屬名額額滿
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ==================================================== */}
+            {/* SUB-TAB 3: ADMIN INVENTORY MANAGEMENT (管理者後台)    */}
+            {/* ==================================================== */}
+            {proxySubTab === 'admin_manage' && (
+              <div className="space-y-6">
+                {/* Admin Header */}
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-sm border border-slate-700">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-1">
+                        <ShieldCheck className="h-4 w-4" />
+                        <span>👑 平台管理者專區（Admin Portal）</span>
+                      </div>
+                      <h3 className="text-lg font-bold">
+                        IMT 官方供租用 IP 資源庫維護
+                      </h3>
+                      <p className="text-xs text-slate-300 mt-1 max-w-2xl">
+                        管理者可在此錄入、定價並維護官方代理伺服器。在此上架的節點會立即顯示於「🏢 官方原生 IP 租賃市場」供平台所有客戶一鍵租用。
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => setIsAddOfficialOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md transition-all active:scale-95 shrink-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>➕ 管理者新增供租用 IP</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inventory Table */}
+                <div className="bg-white dark:bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                  <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-sm">官方可租用 IP 庫存清單</h4>
+                      <span className="text-xs text-muted-foreground">共 {officialProxies.length} 組官方管理節點</span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-900/60 text-muted-foreground border-b border-border font-bold">
+                        <tr>
+                          <th className="px-4 py-3">節點名稱 / 類型</th>
+                          <th className="px-4 py-3">主機位址 (Host:Port)</th>
+                          <th className="px-4 py-3">協議 / 延遲</th>
+                          <th className="px-4 py-3">電信業者 (ISP) / 城市</th>
+                          <th className="px-4 py-3">月租費 (TWD)</th>
+                          <th className="px-4 py-3">租出配額</th>
+                          <th className="px-4 py-3">狀態</th>
+                          <th className="px-4 py-3 text-right">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {officialProxies.map(p => (
+                          <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-foreground">{p.name}</div>
+                              <span className="text-[10px] text-muted-foreground">
+                                {p.proxy_type === 'home_static' ? '🏠 家用原生' : p.proxy_type === 'mobile_4g' ? '📱 4G行動' : '🏢 商業住宅'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 font-mono">
+                              <span className="font-semibold text-foreground">{p.host}:{p.port}</span>
+                              {p.username && <span className="text-[10px] text-muted-foreground block">帳號: {p.username}</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="uppercase font-semibold block">{p.protocol}</span>
+                              <span className="text-[10px] text-emerald-600 font-bold">{p.latency_ms}ms</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="font-medium text-foreground block">{p.isp || '原生寬頻'}</span>
+                              <span className="text-[10px] text-muted-foreground">{p.country} - {p.city || '在地'}</span>
+                            </td>
+                            <td className="px-4 py-3 font-bold text-indigo-600 dark:text-indigo-400">
+                              NT$ {p.monthly_price_twd}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="font-mono font-semibold">
+                                {p.current_tenants_count} / {p.max_tenants}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                p.status === 'available'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : p.status === 'rented_out'
+                                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              }`}>
+                                {p.status === 'available' ? '開放租用' : p.status === 'rented_out' ? '已租出' : '維護中'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => handleOpenEditOfficial(p)}
+                                  title="編輯定價與資訊"
+                                  className="p-1.5 text-xs text-muted-foreground hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-md transition-colors"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteOfficialProxy(p.id)}
+                                  title="下架刪除"
+                                  className="p-1.5 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-md transition-colors"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
+
 
         {/* TAB 2: ACCOUNTS MATRIX & AUTO WARM-UP */}
         {activeTab === 'accounts' && (
@@ -1611,6 +2169,7 @@ export default function SocialMatrixPage() {
                   <option value="">選擇代理池節點...</option>
                   {proxies.map(p => (
                     <option key={p.id} value={p.id}>
+                      {p.source === 'official_leased' ? '🏢 [官方租用] ' : '👤 [自備] '}
                       {p.name} ({p.host}:{p.port})
                     </option>
                   ))}
@@ -1651,6 +2210,346 @@ export default function SocialMatrixPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL: ADMIN ADD OFFICIAL PROXY (管理者新增供租用 IP) */}
+      {isAddOfficialOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-500/10 text-amber-600 rounded-lg">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-foreground">
+                    管理者：新增官方供租用 IP 庫存
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    此處錄入的代理節點會直接上架至「官方原生 IP 租賃市場」，供客戶一鍵租用
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddOfficialOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-sm p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddOfficialProxy} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-foreground block mb-1">
+                  節點名稱 / 推薦標籤 *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newOfficialForm.name}
+                  onChange={e => setNewOfficialForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="例：🇹🇼 台灣宜蘭聯禾原生住宅 IP #2 (A+ 級防封首選)"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">代理類型 *</label>
+                  <select
+                    value={newOfficialForm.proxy_type}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, proxy_type: e.target.value as ProxyType }))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  >
+                    <option value="home_static">🏠 家用原生靜態 (聯禾/中華)</option>
+                    <option value="mobile_4g">📱 4G/5G 移動基站 (真 SIM 卡)</option>
+                    <option value="residential">🏢 商業靜態住宅 (大帶寬)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">通訊協議 *</label>
+                  <select
+                    value={newOfficialForm.protocol}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, protocol: e.target.value as ProxyProtocol }))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background uppercase"
+                  >
+                    <option value="http">HTTP</option>
+                    <option value="https">HTTPS</option>
+                    <option value="socks5">SOCKS5</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="font-bold text-foreground block mb-1">IP 位址 / 主機 Host *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newOfficialForm.host}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, host: e.target.value }))}
+                    placeholder="211.75.142.99"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                  <input
+                    type="number"
+                    required
+                    value={newOfficialForm.port}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, port: Number(e.target.value) }))}
+                    placeholder="28899"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">連線帳號 (選填)</label>
+                  <input
+                    type="text"
+                    value={newOfficialForm.username}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, username: e.target.value }))}
+                    placeholder="gate_admin"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">連線密碼 (選填)</label>
+                  <input
+                    type="password"
+                    value={newOfficialForm.password}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, password: e.target.value }))}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                  <input
+                    type="text"
+                    value={newOfficialForm.isp}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, isp: e.target.value }))}
+                    placeholder="聯禾有線電視"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">國家 / 城市</label>
+                  <input
+                    type="text"
+                    value={newOfficialForm.city}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, city: e.target.value }))}
+                    placeholder="宜蘭 / 台北"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">延遲毫秒 (ms)</label>
+                  <input
+                    type="number"
+                    value={newOfficialForm.latency_ms}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, latency_ms: Number(e.target.value) }))}
+                    placeholder="18"
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 bg-amber-50/60 dark:bg-amber-950/20 p-3 rounded-xl border border-amber-200 dark:border-amber-900/50">
+                <div>
+                  <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
+                    💰 客戶月租定價 (NTD) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-muted-foreground font-bold">NT$</span>
+                    <input
+                      type="number"
+                      required
+                      value={newOfficialForm.monthly_price_twd}
+                      onChange={e => setNewOfficialForm(p => ({ ...p, monthly_price_twd: Number(e.target.value) }))}
+                      className="w-full pl-10 pr-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold text-amber-700 dark:text-amber-300"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="font-bold text-amber-900 dark:text-amber-300 block mb-1">
+                    🔒 最大可租用人數 (1=專屬獨享) *
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={newOfficialForm.max_tenants}
+                    onChange={e => setNewOfficialForm(p => ({ ...p, max_tenants: Number(e.target.value) }))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-background font-bold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-foreground block mb-1">節點亮點特色 / 備註說明</label>
+                <input
+                  type="text"
+                  value={newOfficialForm.notes}
+                  onChange={e => setNewOfficialForm(p => ({ ...p, notes: e.target.value }))}
+                  placeholder="例：純天然家用寬頻原生固定 IP，權重極高，最抗 Meta / Threads 風控"
+                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOfficialOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm"
+                >
+                  確認上架供租用
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADMIN EDIT OFFICIAL PROXY (管理者編輯供租用 IP) */}
+      {isEditOfficialOpen && editingOfficial && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <h3 className="font-bold text-base flex items-center gap-2">
+                <Pencil className="h-5 w-5 text-amber-600" />
+                <span>管理者：編輯官方 IP 庫存與定價</span>
+              </h3>
+              <button
+                onClick={() => setIsEditOfficialOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateOfficialProxy} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-foreground block mb-1">節點名稱 *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingOfficial.name}
+                  onChange={e => setEditingOfficial({ ...editingOfficial, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-background font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="font-bold text-foreground block mb-1">主機 Host *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingOfficial.host}
+                    onChange={e => setEditingOfficial({ ...editingOfficial, host: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">端口 Port *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingOfficial.port}
+                    onChange={e => setEditingOfficial({ ...editingOfficial, port: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-mono bg-background"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">月租定價 (NTD) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={editingOfficial.monthly_price_twd}
+                    onChange={e => setEditingOfficial({ ...editingOfficial, monthly_price_twd: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border font-bold text-indigo-600 bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">租賃狀態 *</label>
+                  <select
+                    value={editingOfficial.status}
+                    onChange={e => setEditingOfficial({ ...editingOfficial, status: e.target.value as OfficialProxyStatus })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background font-medium"
+                  >
+                    <option value="available">🟢 開放租用 (Available)</option>
+                    <option value="rented_out">🔴 專屬租出中 (Rented Out)</option>
+                    <option value="maintenance">🟡 維護中 (Maintenance)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-foreground block mb-1">電信業者 ISP</label>
+                  <input
+                    type="text"
+                    value={editingOfficial.isp || ''}
+                    onChange={e => setEditingOfficial({ ...editingOfficial, isp: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-foreground block mb-1">城市地區</label>
+                  <input
+                    type="text"
+                    value={editingOfficial.city || ''}
+                    onChange={e => setEditingOfficial({ ...editingOfficial, city: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-foreground block mb-1">特色備註</label>
+                <input
+                  type="text"
+                  value={editingOfficial.notes || ''}
+                  onChange={e => setEditingOfficial({ ...editingOfficial, notes: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-lg border border-border bg-background"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOfficialOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-border hover:bg-slate-100 text-xs"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm"
+                >
+                  儲存修改
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
 
     </div>
   )

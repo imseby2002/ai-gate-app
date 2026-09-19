@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { FileText, Plus, Download, Printer, Shield, Clock, CheckCircle2, AlertCircle, Eye, Loader2, Upload, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -43,7 +44,15 @@ interface ContractRecord {
   created_at: string
 }
 
+const CONTRACT_TYPE_KEYS: Record<ContractTemplateType, string> = {
+  seasonal: 'templateSeasonal',
+  one_year: 'templateOneYear',
+  indefinite: 'templateIndefinite',
+  probation: 'templateProbation',
+}
+
 export function ContractsTab({ employees }: { employees: Employee[] }) {
+  const t = useTranslations('HrPage')
   const [contracts, setContracts] = useState<ContractRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
@@ -130,7 +139,7 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
   }
 
   const handleSaveContract = async () => {
-    if (!selectedEmp) { alert('請選擇簽約員工'); return }
+    if (!selectedEmp) { alert(t('errSelectContractEmployee')); return }
     const emp = employees.find(e => e.id === selectedEmp)
     setBusy(true)
     try {
@@ -145,8 +154,8 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
       if (uploadFile) fd.append('file', uploadFile)
 
       const res = await fetch('/api/hr/contracts', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error('儲存失敗')
-      alert('✅ 勞動合約已成功建立並歸檔！')
+      if (!res.ok) throw new Error(t('saveFailed'))
+      alert(t('contractCreatedAlert'))
       setShowModal(false)
       loadContracts()
     } catch (e: any) {
@@ -167,11 +176,11 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-lg">電子勞動合同管理 (Labor Contracts)</h3>
-          <p className="text-xs text-muted-foreground">多版本越南法定合約範本、線上預審、紙本一式兩份印出簽署與 30 天到期續約提醒</p>
+          <h3 className="font-semibold text-lg">{t('contractsTitle')}</h3>
+          <p className="text-xs text-muted-foreground">{t('contractsSubtitle')}</p>
         </div>
         <Button size="sm" className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => { setShowModal(true); setPreviewText('') }}>
-          <Plus className="h-4 w-4" />建立新勞動合同
+          <Plus className="h-4 w-4" />{t('addContract')}
         </Button>
       </div>
 
@@ -180,7 +189,7 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
         <Card className="p-4 bg-amber-50/80 border-amber-200 space-y-2">
           <div className="flex items-center gap-2 text-sm font-bold text-amber-900">
             <Clock className="h-4 w-4 text-amber-600" />
-            <span>合約即將到期續約提醒（30 天內，共 {upcomingRenewals.length} 筆）</span>
+            <span>{t('renewalReminderTitle', { count: upcomingRenewals.length })}</span>
           </div>
           <div className="grid gap-2 text-xs">
             {upcomingRenewals.map(c => {
@@ -189,12 +198,12 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
               return (
                 <div key={c.id} className="p-2 bg-white rounded border border-amber-200 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-800">{emp?.name || '員工'}</span>
-                    <span className="text-slate-500">[{emp?.store || '總部'}]</span>
-                    <span className="text-slate-400">· 合約號: {c.contract_no}</span>
-                    <span className="text-slate-400">· 到期日: {c.end_date}</span>
+                    <span className="font-bold text-slate-800">{emp?.name || t('employeeFallback')}</span>
+                    <span className="text-slate-500">[{emp?.store || t('headquartersFallback')}]</span>
+                    <span className="text-slate-400">{t('contractNoPrefix', { no: c.contract_no })}</span>
+                    <span className="text-slate-400">{t('endDatePrefix', { date: c.end_date ?? '' })}</span>
                   </div>
-                  <span className="font-bold text-amber-700">剩餘 {days} 天到期，請外務/人事啟動續約</span>
+                  <span className="font-bold text-amber-700">{t('daysRemainingHint', { days })}</span>
                 </div>
               )
             })}
@@ -207,7 +216,7 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
         <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-gray-400" /></div>
       ) : contracts.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm border-2 border-dashed rounded-xl">
-          目前尚無勞動合同記錄。點擊右上「建立新勞動合同」選擇員工並套印範本。
+          {t('noContractsYet')}
         </div>
       ) : (
         <div className="grid gap-2.5">
@@ -218,25 +227,25 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">{emp?.name || '（未指派）'}</span>
+                      <span className="font-bold text-sm text-slate-900">{emp?.name || t('unassigned')}</span>
                       <span className="text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium">
                         {c.contract_no}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
-                        {c.status === 'active' ? '生效中 (Active)' : c.status}
+                        {c.status === 'active' ? t('statusActive') : c.status}
                       </span>
                     </div>
                     <div className="text-xs text-slate-500 flex flex-wrap gap-4 pt-1">
-                      <span><b>生效起日：</b>{c.start_date || '---'}</span>
-                      <span><b>到期日：</b>{c.end_date || '無固定期限 (Vô thời hạn)'}</span>
-                      <span><b>簽署日：</b>{c.sign_date || '---'}</span>
-                      {c.paper_signed && <span className="text-emerald-600 font-medium">✓ 已收回紙本簽章</span>}
+                      <span><b>{t('effectiveDateLabel')}</b>{c.start_date || '---'}</span>
+                      <span><b>{t('contractEndDateColonLabel')}</b>{c.end_date || t('noFixedTerm')}</span>
+                      <span><b>{t('signDateLabel')}</b>{c.sign_date || '---'}</span>
+                      {c.paper_signed && <span className="text-emerald-600 font-medium">{t('paperSignedBadge')}</span>}
                     </div>
-                    {c.note && <div className="text-xs text-slate-400">備註：{c.note}</div>}
+                    {c.note && <div className="text-xs text-slate-400">{t('notePrefix')}{c.note}</div>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" className="text-xs h-8 gap-1" onClick={handlePrintOrDownload}>
-                      <Printer className="h-3.5 w-3.5" />列印 / 預覽
+                      <Printer className="h-3.5 w-3.5" />{t('printPreview')}
                     </Button>
                   </div>
                 </div>
@@ -251,79 +260,79 @@ export function ContractsTab({ employees }: { employees: Employee[] }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-2xl border">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-lg text-slate-900">建立勞動合同 (Hợp đồng lao động)</h3>
+              <h3 className="font-bold text-lg text-slate-900">{t('createContractModalTitle')}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-slate-700">選擇簽約員工 *</span>
+                <span className="text-xs font-semibold text-slate-700">{t('selectContractEmployeeLabel')}</span>
                 <select value={selectedEmp} onChange={e => setSelectedEmp(e.target.value)} className="w-full h-9 rounded-lg border px-2 text-sm bg-background">
-                  <option value="">— 請選擇 —</option>
-                  {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.store || '總部'} - {e.position})</option>)}
+                  <option value="">{t('pleaseSelect')}</option>
+                  {employees.map(e => <option key={e.id} value={e.id}>{e.name} ({e.store || t('headquartersFallback')} - {e.position})</option>)}
                 </select>
               </label>
 
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-slate-700">合約範本類別 *</span>
+                <span className="text-xs font-semibold text-slate-700">{t('templateTypeLabel')}</span>
                 <select value={templateType} onChange={e => setTemplateType(e.target.value as ContractTemplateType)} className="w-full h-9 rounded-lg border px-2 text-sm bg-background">
-                  {(Object.keys(TEMPLATE_NAMES) as ContractTemplateType[]).map(t => (
-                    <option key={t} value={t}>{TEMPLATE_NAMES[t].name}</option>
+                  {(Object.keys(TEMPLATE_NAMES) as ContractTemplateType[]).map(tt => (
+                    <option key={tt} value={tt}>{t(CONTRACT_TYPE_KEYS[tt])}</option>
                   ))}
                 </select>
               </label>
 
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-slate-700">起效起始日 *</span>
+                <span className="text-xs font-semibold text-slate-700">{t('contractStartDateLabel')}</span>
                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
               </label>
 
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-slate-700">到期截止日（全職一年/試用）</span>
-                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="留空為無固定期限" />
+                <span className="text-xs font-semibold text-slate-700">{t('contractEndDateLabel')}</span>
+                <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder={t('endDatePlaceholder')} />
               </label>
 
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-slate-700">合約約定薪資 / 時薪 (VND)</span>
+                <span className="text-xs font-semibold text-slate-700">{t('salaryLabel')}</span>
                 <Input type="number" value={salary ? String(salary) : ''} onChange={e => setSalary(Number(e.target.value) || 0)} />
               </label>
 
               <label className="space-y-1">
-                <span className="text-xs font-semibold text-slate-700">上傳已簽名紙本掃描檔 (選填)</span>
+                <span className="text-xs font-semibold text-slate-700">{t('uploadSignedScanLabel')}</span>
                 <Input type="file" accept=".pdf,.png,.jpg" onChange={e => setUploadFile(e.target.files?.[0] || null)} />
               </label>
             </div>
 
             <label className="block space-y-1 text-sm">
-              <span className="text-xs font-semibold text-slate-700">備註說明</span>
-              <Input value={note} onChange={e => setNote(e.target.value)} placeholder="如：通過試用期續約、特約條款等" />
+              <span className="text-xs font-semibold text-slate-700">{t('noteLabel')}</span>
+              <Input value={note} onChange={e => setNote(e.target.value)} placeholder={t('contractNotePlaceholder')} />
             </label>
 
             {/* 合約預覽區塊 */}
             <div className="border rounded-xl p-3 bg-slate-50 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">合約動態套印內容預覽</span>
+                <span className="text-xs font-bold text-slate-700">{t('previewSectionLabel')}</span>
                 <Button size="sm" variant="outline" className="text-xs h-7" onClick={generatePreview}>
-                  產生並更新預覽
+                  {t('generatePreviewButton')}
                 </Button>
               </div>
               <textarea
                 value={previewText}
                 readOnly
                 rows={6}
-                placeholder="點擊上方「產生並更新預覽」可即時檢視完整雙語勞動合同..."
+                placeholder={t('previewPlaceholder')}
                 className="w-full p-2 text-xs rounded border font-mono bg-white text-slate-700"
               />
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t">
               <Button variant="outline" size="sm" onClick={handlePrintOrDownload} disabled={!selectedEmp} className="gap-1.5">
-                <Printer className="h-4 w-4" />印出一式兩份（紙本簽署蓋指印）
+                <Printer className="h-4 w-4" />{t('printTwoCopiesButton')}
               </Button>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowModal(false)}>取消</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowModal(false)}>{t('cancel')}</Button>
                 <Button size="sm" onClick={handleSaveContract} disabled={busy || !selectedEmp} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '確認建立並歸檔'}
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('confirmCreateContractButton')}
                 </Button>
               </div>
             </div>

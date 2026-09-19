@@ -18,6 +18,7 @@ export interface PricingSegment {
 export interface PricingRoom {
   name: string
   capacity: number
+  baseCapacity?: number
   weekdayPrice: number
   weekendPrice: number
   holidayPrice?: number
@@ -131,15 +132,19 @@ export function computeAccommodation(config: PricingConfig, params: Accommodatio
     }
   }
 
-  // Extra-person fee for guests beyond room capacity
+  // Extra-person fee: Base occupancy is 2 (雙人房基準).
+  // Room capacity is the maximum allowed guests (最多容納人數上限).
+  const baseGuests = room.baseCapacity ?? 2
   if (params.guests > room.capacity) {
-    const extra = params.guests - room.capacity
+    warnings.push(`入住人數 ${params.guests} 超過 ${room.name} 上限 ${room.capacity} 人，該房型最多僅能容納 ${room.capacity} 人。`)
+  } else if (params.guests > baseGuests) {
+    const extra = params.guests - baseGuests
     if (room.extraPersonFee && room.extraPersonFee > 0) {
       const amount = room.extraPersonFee * extra * nights.length
       lines.push({ label: `加人費 $${room.extraPersonFee.toLocaleString()} × ${extra} 人 × ${nights.length} 晚`, amount })
       total += amount
     } else {
-      warnings.push(`入住人數 ${params.guests} 超過 ${room.name} 上限 ${room.capacity} 人，且未設定加人費，請人工確認是否可加床。`)
+      warnings.push(`入住人數 ${params.guests} 人超過雙人基準（2人），請依加人收費規則計費。`)
     }
   }
 
@@ -255,16 +260,23 @@ export function formatPricingForAI(name: string, cfg: PricingConfig): string {
   if (cfg.productType === 'accommodation') {
     if (cfg.rooms?.length) {
       lines.push(`\n房型與定價（${cur}）：`)
-      lines.push(`⚠️ 每個房型定價完全獨立，計算時必須逐房型各自使用下方對應數字，嚴禁合併或混用（即使人數相同，價格也可能不同）`)
+      lines.push(`⚠️ 【核心入住與定價規則】`)
+      lines.push(`   1. 基準定價：所有房型的平日價、假日價、連假價均為【雙人入住價格】（基準人數：2 人）。`)
+      lines.push(`   2. 最多容納人數與加床限制：`)
+      lines.push(`      - 最多 2 人房型：不可加人、不可加床，最多僅能入住 2 人。若客人超過 2 人請明確告知該房型無法加床或無法容納。`)
+      lines.push(`      - 最多 3~4 人房型：基準為雙人入住，最多可加人／加床至該房型標示之最多人數。`)
+      lines.push(`   3. 加人計價與連續住宿（第二晚）折扣：`)
+      lines.push(`      - 若下方「注意事項與備註」中有列出加人詳細計算規則（如連住第1晚/第2晚/第3晚差別收費、大人/小孩/加床/不加床差別收費、連續住宿第二晚優惠等），【必須嚴格優先依據備註中的步驟與詳細規則逐步列式計算】，不得自行簡化！`)
+      lines.push(`⚠️ 每個房型定價完全獨立，計算時必須逐房型各自使用下方對應數字，嚴禁合併或混用：`)
       cfg.rooms.forEach(r => {
-        lines.push(`\n  ▸ 【${r.name}】最多 ${r.capacity} 人`)
+        const canAdd = (r.capacity ?? 2) > 2
+        lines.push(`\n  ▸ 【${r.name}】基準雙人入住，最多容納 ${r.capacity} 人（${canAdd ? `可加人/加床，最多至 ${r.capacity} 人` : '不可加人、不可加床，最多 2 人'}）`)
         if (r.description) lines.push(`      床型：${sanitizeDim(r.description)}`)
-        lines.push(`      平日：$${r.weekdayPrice.toLocaleString()}`)
-        lines.push(`      假日/週末：$${r.weekendPrice.toLocaleString()}`)
-        if (r.holidayPrice) lines.push(`      連續假期：$${r.holidayPrice.toLocaleString()}`)
-        if (r.extraPersonFee) lines.push(`      加人費：$${r.extraPersonFee.toLocaleString()}/人/晚`)
+        lines.push(`      平日（雙人）：$${r.weekdayPrice.toLocaleString()}`)
+        lines.push(`      假日/週末（雙人）：$${r.weekendPrice.toLocaleString()}`)
+        if (r.holidayPrice) lines.push(`      連續假期（雙人）：$${r.holidayPrice.toLocaleString()}`)
+        if (r.extraPersonFee && r.extraPersonFee > 0) lines.push(`      基礎加人費：$${r.extraPersonFee.toLocaleString()}/人/晚（若下方備註有連住折扣或小孩階梯計費，以備註為準）`)
         if (r.extraBedNote) lines.push(`      加床說明：${sanitizeDim(r.extraBedNote)}`)
-        if (!r.extraBedNote && !r.extraPersonFee && r.capacity <= 2) lines.push(`      不可加床`)
       })
     }
   }

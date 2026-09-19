@@ -4,14 +4,14 @@ import { summarizeAuditChat } from '@/lib/audit/summarize'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['audit', 'store', 'rd'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin , status: ctx.status }
 }
 
 // 稽核日誌列表
 export async function GET(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { searchParams } = new URL(req.url)
   const store = searchParams.get('store')?.trim()
@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
 
 // 手動觸發某對話重新摘要為日誌
 export async function POST(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const b = await req.json().catch(() => ({}))
   const chatId = String(b.chat_id ?? '').trim()
@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
 
 // 刪除日誌
 export async function DELETE(req: NextRequest) {
-  const { user, supabase } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })

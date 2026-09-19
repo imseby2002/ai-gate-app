@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const { data, error } = await ctx.supabase
     .from('pos_orders')

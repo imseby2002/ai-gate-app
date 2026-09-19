@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, ExternalLink, MessageCircle } from 'lucide-react'
+import { Zap, Users, BarChart3, Settings, Home, FileText, Link2, Headphones, LifeBuoy, Bot, Building2, MessageSquare, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -11,13 +11,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return null
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileErr } = await supabase
     .from('profiles')
     .select('user_type, email, full_name')
     .eq('id', user.id)
     .single()
 
-  if (profile?.user_type !== 'admin') redirect('/apps')
+  // 查詢出錯時 profile 也會是 null。若直接當成「不是管理者」，管理者會被無聲踢出後台，
+  // 而且完全看不到原因——把查詢失敗和「確實不是管理者」分開，前者留下錯誤才追得到。
+  if (!profile) {
+    console.error('[admin-layout] profile 查詢失敗，導回 /apps', profileErr)
+    redirect('/apps')
+  }
+
+  if (profile.user_type !== 'admin') redirect('/apps')
 
   const navItems = [
     { href: '/admin', label: '總覽', icon: BarChart3 },
@@ -26,12 +33,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/feedback', label: '意見反映（全模組）', icon: MessageSquare },
     { href: '/admin/cs-plans', label: 'CS 方案管理', icon: Headphones },
     { href: '/admin/cs-setup-requests', label: 'CS 協助請求', icon: LifeBuoy },
+    { href: '/admin/notify-settings', label: '通知設定', icon: Bell },
     { href: '/admin/agents', label: 'Agent 管理', icon: Bot },
     { href: '/admin/models', label: '模型設定', icon: Settings },
     { href: '/admin/usage', label: '使用統計', icon: BarChart3 },
     { href: '/admin/cover-letter-templates', label: '求職信模板', icon: FileText },
     { href: '/admin/links', label: '功能登入連結', icon: Link2 },
-    { href: 'https://cs.im-tourist.com/tools/line-id-finder', label: 'LINE ID 查詢工具', icon: MessageCircle, external: true },
   ]
 
   return (
@@ -42,39 +49,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
             <Zap className="h-4 w-4 text-white" />
           </div>
-          <div>
-            <div className="font-bold text-sm">AI GATE</div>
-            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">管理後台</div>
-          </div>
+          <div className="font-bold text-sm">IMT 管理後台</div>
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map(item => (
-            item.external ? (
-              <a
-                key={item.href}
-                href={item.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors group"
-                title="開啟 LINE ID 查詢工具（外部連結）"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <item.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </div>
-                <ExternalLink className="h-3 w-3 opacity-60 group-hover:opacity-100 shrink-0 ml-1" />
-              </a>
-            ) : (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            )
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
           ))}
         </nav>
 

@@ -5298,6 +5298,8 @@ export default function MarketingAutoPage() {
   }, [ensureCampaign, driveFolders])
 
   const currentUnit = UNITS.find(u => u.id === activeUnit) ?? SIDE_TOOLS.find(st => st.id === activeUnit) ?? UNITS[0]
+  const activeUnitIndex = UNITS.findIndex(u => u.id === activeUnit)
+  const activeStepNum = activeUnitIndex !== -1 ? `${activeUnitIndex + 1}. ` : ''
 
   return (
     <div className="flex h-[calc(100vh-53px)] overflow-hidden">
@@ -5414,10 +5416,11 @@ export default function MarketingAutoPage() {
 
         {/* Units */}
         <nav className="flex-1 overflow-y-auto py-2">
-          {UNITS.map(unit => {
+          {UNITS.map((unit, index) => {
             const Icon = unit.icon
             const isActive = unit.id === activeUnit
             const status = unitStatuses[unit.id] ?? 'idle'
+            const stepNumber = index + 1
             return (
               <button key={unit.id} onClick={() => setActiveUnit(unit.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors border-r-2 ${
@@ -5432,7 +5435,7 @@ export default function MarketingAutoPage() {
                     style={isActive ? { color: 'var(--primary)' } : { color: '#9ca3af' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate">{t(`unit.${unit.id}.name`)}</div>
+                  <div className="text-xs font-medium truncate">{stepNumber}. {t(`unit.${unit.id}.name`)}</div>
                   {!unit.implemented && <div className="text-[10px] text-gray-400">{t('mp.underConstruction')}</div>}
                 </div>
                 {status === 'done'    && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />}
@@ -5446,8 +5449,8 @@ export default function MarketingAutoPage() {
         <div className="p-3 border-t space-y-1">
           <div className="text-[10px] font-semibold text-gray-400 px-2 py-1 uppercase tracking-wide">{t('mp.otherTools')}</div>
           <a href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
-            className="flex items-center gap-2 text-xs font-medium px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
-            <Zap className="h-3.5 w-3.5" /> {t('mp.automation')}
+            className="flex items-center gap-2 text-xs font-semibold px-2 py-1.5 rounded-lg transition-colors text-amber-600 hover:bg-amber-50">
+            <Zap className="h-3.5 w-3.5" /> ⚡ {t('mp.automation')}
             {campaignId && <span className="ml-auto text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">{t('mp.linked')}</span>}
           </a>
           {SIDE_TOOLS.map(tool => {
@@ -5489,10 +5492,18 @@ export default function MarketingAutoPage() {
             <currentUnit.icon className="h-5 w-5" style={{ color: 'var(--primary)' }} />
           </div>
           <div>
-            <h1 className="font-bold text-base text-gray-900">{UNITS.find(u => u.id === activeUnit) ? `${currentUnit.id}. ` : ''}{t(`unit.${currentUnit.id}.name`)}</h1>
+            <h1 className="font-bold text-base text-gray-900">{activeStepNum}{t(`unit.${currentUnit.id}.name`)}</h1>
             <p className="text-xs text-gray-400">{t(`unit.${currentUnit.id}.desc`)}</p>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2.5">
+            <a
+              href={campaignId ? `/marketing-pipeline?campaign=${campaignId}` : '/marketing-pipeline'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-sm transition-all active:scale-95"
+              title="開啟行銷流水線全自動執行"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              <span>{t('mp.automation')}</span>
+            </a>
             <StatusBadge status={unitStatuses[activeUnit] ?? 'idle'} />
           </div>
         </div>

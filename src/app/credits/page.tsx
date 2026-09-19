@@ -34,7 +34,7 @@ export default async function CreditsPage({
       <header className="border-b bg-card px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-primary" />
-          <span className="font-bold">AI GATE</span>
+          <span className="font-bold">IMT</span>
         </div>
         <CreditsBack from={sp.from} />
       </header>

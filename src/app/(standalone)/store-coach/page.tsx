@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Compass,
   Layers,
@@ -51,6 +52,8 @@ import type { DiagnosisOutput, VisionAnalysisResult, StoreLearningMaterial, Comp
 type TabType = 'diagnose' | 'workstations' | 'hygiene' | 'coaching' | 'vision' | 'marketing' | 'principles' | 'learning'
 
 export default function StoreCoachPage() {
+  const t = useTranslations('StoreCoachPage')
+  const locale = useLocale()
   const [activeTab, setActiveTab] = useState<TabType>('diagnose')
   const [data, setData] = useState(STORE_COACH_KNOWLEDGE)
   const [loading, setLoading] = useState(false)
@@ -146,7 +149,7 @@ export default function StoreCoachPage() {
   const handleTransmitRegulation = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!regTitle.trim() || !regClause.trim()) {
-      alert('請填寫規範標題與具體條款內容')
+      alert(t('fillRegTitleAndClause'))
       return
     }
     setIsSubmittingReg(true)
@@ -166,7 +169,7 @@ export default function StoreCoachPage() {
         }),
       })
       if (res.ok) {
-        setRegNotice('✅ 公司規範已成功傳遞給 AI 教練大腦，並同步融入營運守則！')
+        setRegNotice(t('regTransmitSuccess'))
         setRegTitle('')
         setRegCode('')
         setRegClause('')
@@ -174,11 +177,11 @@ export default function StoreCoachPage() {
         setRegEnforcement('')
         fetchRegulations()
       } else {
-        alert('規範傳遞失敗')
+        alert(t('regTransmitFailed'))
       }
     } catch (err) {
       console.error('Transmit regulation error:', err)
-      alert('規範傳遞發生錯誤')
+      alert(t('regTransmitError'))
     } finally {
       setIsSubmittingReg(false)
     }
@@ -201,11 +204,11 @@ export default function StoreCoachPage() {
         const json = await res.json()
         setRegAnswer(json.answer)
       } else {
-        alert('規章諮詢請求失敗')
+        alert(t('regAskFailed'))
       }
     } catch (err) {
       console.error('Compliance AI error:', err)
-      alert('規章諮詢發生錯誤')
+      alert(t('regAskError'))
     } finally {
       setIsAskingReg(false)
     }
@@ -240,7 +243,7 @@ export default function StoreCoachPage() {
   const handleIngestMaterial = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!learnTitle.trim() && !learnContent.trim()) {
-      alert('請輸入標題或內容')
+      alert(t('enterTitleOrContent'))
       return
     }
     setIsLearning(true)
@@ -261,17 +264,17 @@ export default function StoreCoachPage() {
       if (res.ok) {
         const json = await res.json()
         setLastLearnedMaterial(json.material)
-        setLearnNotice('✅ 資料已成功萃取並融入門市營運教練 AI 大腦！')
+        setLearnNotice(t('ingestSuccess'))
         setLearnTitle('')
         setLearnUrl('')
         setLearnContent('')
         fetchLearningMaterials()
       } else {
-        alert('資料餵入失敗，請稍後再試')
+        alert(t('ingestFailed'))
       }
     } catch (err) {
       console.error('Learn ingestion error:', err)
-      alert('資料餵入發生錯誤')
+      alert(t('ingestError'))
     } finally {
       setIsLearning(false)
     }
@@ -294,11 +297,11 @@ export default function StoreCoachPage() {
         const json = await res.json()
         setCoachAnswer(json.answer)
       } else {
-        alert('教練問答請求失敗')
+        alert(t('coachAskFailed'))
       }
     } catch (err) {
       console.error('Ask coach error:', err)
-      alert('教練問答發生錯誤')
+      alert(t('coachAskError'))
     } finally {
       setIsAskingCoach(false)
     }
@@ -328,11 +331,11 @@ export default function StoreCoachPage() {
           setExpandedLayer(rootCauseLayer.layer)
         }
       } else {
-        alert('診斷請求失敗，請稍後再試')
+        alert(t('diagnosisFailed'))
       }
     } catch (err) {
       console.error('Diagnosis error:', err)
-      alert('診斷執行發生錯誤')
+      alert(t('diagnosisError'))
     } finally {
       setDiagnosing(false)
     }
@@ -355,11 +358,11 @@ export default function StoreCoachPage() {
         const json = await res.json()
         setVisionResult(json.data)
       } else {
-        alert('視覺分析請求失敗')
+        alert(t('visionFailed'))
       }
     } catch (err) {
       console.error('Vision error:', err)
-      alert('視覺分析發生錯誤')
+      alert(t('visionError'))
     } finally {
       setVisionLoading(false)
     }
@@ -402,17 +405,17 @@ export default function StoreCoachPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Feeling Tea 門市營運教練 AI
+                  Feeling Tea {t('headerTitle')}
                 </h1>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300/60">
-                  現場問題共解大腦
+                  {t('headerBadge1')}
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-medium border border-amber-300/60">
-                  七大維度 × 十層診斷
+                  {t('headerBadge2')}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                店長・區督導・指導員・經理人專用：標準是底線，溫暖是靈魂，動線是效率，數據是真相。
+                {t('headerSubtitle')}
               </p>
             </div>
           </div>
@@ -422,19 +425,19 @@ export default function StoreCoachPage() {
             <Link href="/store">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs">
                 <Store className="h-3.5 w-3.5" />
-                門市首頁
+                {t('storeHomeLink')}
               </Button>
             </Link>
             <Link href="/rd-lab">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/50">
                 <FlaskConical className="h-3.5 w-3.5" />
-                研發大腦 RD-LAB
+                {t('rdLabLink')}
               </Button>
             </Link>
             <Link href="/store/bills">
               <Button variant="outline" size="sm" className="gap-1.5 text-xs">
                 <Zap className="h-3.5 w-3.5" />
-                水電瓦斯冰塊
+                {t('billsLink')}
               </Button>
             </Link>
           </div>
@@ -450,10 +453,10 @@ export default function StoreCoachPage() {
             </div>
             <div>
               <div className="text-sm font-bold text-emerald-200 flex items-center gap-2">
-                <span>一杯好茶，五步傳遞 — Feeling Tea 門市營運宣言</span>
+                <span>{t('manifestoTitle')}</span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                我們不用冰冷的話術對待顧客，也不用刻板的清單苛責夥伴。透過科學動線減少 60% 疲憊，透過溫暖引導喚醒 100% 匠心。
+                {t('manifestoDesc')}
               </p>
             </div>
           </div>
@@ -461,7 +464,7 @@ export default function StoreCoachPage() {
             onClick={() => setActiveTab('principles')}
             className="text-xs px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-emerald-100 font-semibold border border-white/20 transition-colors shrink-0 flex items-center gap-1 self-start md:self-auto cursor-pointer"
           >
-            檢視五大心法
+            {t('viewPrinciples')}
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -480,7 +483,7 @@ export default function StoreCoachPage() {
             }`}
           >
             <Search className="h-4 w-4 shrink-0" />
-            <span>🔍 十層全景診斷</span>
+            <span>{t('tabDiagnose')}</span>
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
               activeTab === 'diagnose' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
             }`}>
@@ -498,11 +501,11 @@ export default function StoreCoachPage() {
             }`}
           >
             <LayoutGrid className="h-4 w-4 shrink-0" />
-            <span>🛠️ 工作站・動線與空間配置</span>
+            <span>{t('tabWorkstations')}</span>
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
               activeTab === 'workstations' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
             }`}>
-              {data.workstations.length} 站
+              {t('stationsCount', { n: data.workstations.length })}
             </span>
           </button>
 
@@ -516,11 +519,11 @@ export default function StoreCoachPage() {
             }`}
           >
             <ShieldCheck className="h-4 w-4 shrink-0" />
-            <span>🧼 衛生標準與 90秒清潔</span>
+            <span>{t('tabHygiene')}</span>
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
               activeTab === 'hygiene' ? 'bg-white/25 text-white' : 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
             }`}>
-              4 大序列
+              {t('fourSequences')}
             </span>
           </button>
 
@@ -534,11 +537,11 @@ export default function StoreCoachPage() {
             }`}
           >
             <HeartHandshake className="h-4 w-4 shrink-0" />
-            <span>🤝 服務行為與教練引導</span>
+            <span>{t('tabCoaching')}</span>
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
               activeTab === 'coaching' ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
             }`}>
-              5 步心法
+              {t('fiveSteps')}
             </span>
           </button>
 
@@ -552,11 +555,11 @@ export default function StoreCoachPage() {
             }`}
           >
             <Camera className="h-4 w-4 shrink-0" />
-            <span>📷 現場視覺 AI 診斷 (看現場)</span>
+            <span>{t('tabVision')}</span>
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
               activeTab === 'vision' ? 'bg-white/25 text-white' : 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
             }`}>
-              5S + 工效
+              {t('fiveSEfficiency')}
             </span>
           </button>
 
@@ -570,7 +573,7 @@ export default function StoreCoachPage() {
             }`}
           >
             <MessageSquare className="h-4 w-4 shrink-0" />
-            <span>📢 門市專屬行銷 & Zalo</span>
+            <span>{t('tabMarketing')}</span>
           </button>
 
           <button
@@ -583,7 +586,7 @@ export default function StoreCoachPage() {
             }`}
           >
             <Award className="h-4 w-4 shrink-0" />
-            <span>🏛️ 企業哲學與雙AI架構</span>
+            <span>{t('tabPrinciples')}</span>
           </button>
 
           <button
@@ -596,11 +599,11 @@ export default function StoreCoachPage() {
             }`}
           >
             <GraduationCap className="h-4 w-4 shrink-0" />
-            <span>📚 資料餵入與主動學習</span>
+            <span>{t('tabLearning')}</span>
             <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${
               activeTab === 'learning' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
             }`}>
-              {learningMaterials.length} 篇
+              {t('articlesCount', { n: learningMaterials.length })}
             </span>
           </button>
         </div>
@@ -614,15 +617,15 @@ export default function StoreCoachPage() {
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Sliders className="h-5 w-5 text-emerald-600" />
-                    門市異常通報與 10 層根因穿透診斷
+                    {t('diagnoseTitle')}
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    不是單純檢查勾選，而是從「配方、流程、人員、設備、動線、顧客、行銷、排班、供應鏈、法規」穿透真實病灶。
+                    {t('diagnoseDesc')}
                   </p>
                 </div>
                 {/* 快速填入經典情境 */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs text-slate-400 font-medium">常見情境範例：</span>
+                  <span className="text-xs text-slate-400 font-medium">{t('commonScenariosLabel')}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -633,7 +636,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200 cursor-pointer"
                   >
-                    🍯 飲品太甜/糖量偏差
+                    {t('scenarioSweet')}
                   </button>
                   <button
                     type="button"
@@ -645,7 +648,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 border border-amber-200 cursor-pointer"
                   >
-                    ⏳ 高峰出單塞車瓶頸
+                    {t('scenarioBottleneck')}
                   </button>
                   <button
                     type="button"
@@ -657,7 +660,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 hover:bg-purple-100 border border-purple-200 cursor-pointer"
                   >
-                    🤝 新人服務冷淡/心態緊繃
+                    {t('scenarioColdService')}
                   </button>
                 </div>
               </div>
@@ -665,7 +668,7 @@ export default function StoreCoachPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    發生門市
+                    {t('occurredStoreLabel')}
                   </label>
                   <select
                     value={selectedStore}
@@ -681,36 +684,36 @@ export default function StoreCoachPage() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    涉及產品 / 項目
+                    {t('involvedProductLabel')}
                   </label>
                   <input
                     type="text"
                     value={selectedProduct}
                     onChange={e => setSelectedProduct(e.target.value)}
-                    placeholder="例如：翡翠檸檬綠、經典大吉嶺"
+                    placeholder={t('involvedProductPlaceholder')}
                     className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    問題範疇
+                    {t('problemScopeLabel')}
                   </label>
                   <select
                     value={selectedCategory}
                     onChange={e => setSelectedCategory(e.target.value)}
                     className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                   >
-                    <option value="quality">產品品質與口感 (Quality)</option>
-                    <option value="efficiency">效率動線與塞車 (Efficiency)</option>
-                    <option value="service">服務溫度與應對 (Service)</option>
-                    <option value="hygiene">清潔衛生與食安 (Hygiene)</option>
+                    <option value="quality">{t('categoryQuality')}</option>
+                    <option value="efficiency">{t('categoryEfficiency')}</option>
+                    <option value="service">{t('categoryService')}</option>
+                    <option value="hygiene">{t('categoryHygiene')}</option>
                   </select>
                 </div>
 
                 <div className="md:col-span-3">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    異常事件標題
+                    {t('eventTitleLabel')}
                   </label>
                   <input
                     type="text"
@@ -722,7 +725,7 @@ export default function StoreCoachPage() {
 
                 <div className="md:col-span-3">
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    現場狀況詳細描述 (包含時段、顧客反應、夥伴現場動作)
+                    {t('detailedDescLabel')}
                   </label>
                   <textarea
                     rows={2}
@@ -736,7 +739,7 @@ export default function StoreCoachPage() {
               <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
                 <div className="text-xs text-slate-500 flex items-center gap-1.5">
                   <Sparkles className="h-4 w-4 text-emerald-600" />
-                  <span>自動連結研發大腦配方 Brix 度數與歷次跨店問題記憶</span>
+                  <span>{t('autoLinkHint')}</span>
                 </div>
                 <Button
                   onClick={handleRunDiagnosis}
@@ -746,12 +749,12 @@ export default function StoreCoachPage() {
                   {diagnosing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      正在穿透 10 層全景因果鏈...
+                      {t('diagnosingInProgress')}
                     </>
                   ) : (
                     <>
                       <Zap className="h-4 w-4" />
-                      啟動 10 層全景診斷與根因溯源
+                      {t('runDiagnosisButton')}
                     </>
                   )}
                 </Button>
@@ -768,7 +771,7 @@ export default function StoreCoachPage() {
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 text-xs rounded-full font-bold bg-rose-600 text-white flex items-center gap-1 shadow-xs">
                           <Flame className="h-3 w-3" />
-                          核心根因 (Root Cause)
+                          {t('rootCauseLabel')}
                         </span>
                         <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                           {diagnosisResult.related_rd_recipe?.name}
@@ -788,20 +791,20 @@ export default function StoreCoachPage() {
                         <div className="flex items-center justify-between text-xs font-bold text-purple-700 dark:text-purple-300 mb-1.5">
                           <span className="flex items-center gap-1">
                             <FlaskConical className="h-3.5 w-3.5" />
-                            研發標準配方聯動
+                            {t('rdRecipeLinkLabel')}
                           </span>
                           <Link
                             href={diagnosisResult.related_rd_recipe.link || '/rd-lab'}
                             className="text-[11px] underline flex items-center gap-0.5 text-purple-600 hover:text-purple-800"
                           >
-                            前往配方
+                            {t('goToRecipe')}
                             <ExternalLink className="h-2.5 w-2.5" />
                           </Link>
                         </div>
                         <div className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-                          <div>標準糖度：<strong className="text-purple-600 dark:text-purple-400">{diagnosisResult.related_rd_recipe.target_brix}</strong></div>
-                          <div>標準糖量：<strong className="text-slate-800 dark:text-slate-200">{diagnosisResult.related_rd_recipe.standard_syrup}</strong></div>
-                          <div>萃取水溫：<strong className="text-slate-800 dark:text-slate-200">{diagnosisResult.related_rd_recipe.brewing_temp}</strong></div>
+                          <div>{t('standardBrixLabel')}<strong className="text-purple-600 dark:text-purple-400">{diagnosisResult.related_rd_recipe.target_brix}</strong></div>
+                          <div>{t('standardSyrupLabel')}<strong className="text-slate-800 dark:text-slate-200">{diagnosisResult.related_rd_recipe.standard_syrup}</strong></div>
+                          <div>{t('brewingTempLabel')}<strong className="text-slate-800 dark:text-slate-200">{diagnosisResult.related_rd_recipe.brewing_temp}</strong></div>
                         </div>
                       </div>
                     )}
@@ -812,7 +815,7 @@ export default function StoreCoachPage() {
                     <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl p-3.5 border border-amber-200 dark:border-amber-900/60">
                       <h4 className="text-xs font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5 mb-2">
                         <Clock className="h-4 w-4" />
-                        【現場即刻 15 分鐘改善行動】
+                        {t('immediateActionsTitle')}
                       </h4>
                       <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
                         {diagnosisResult.immediate_actions.map((act, i) => (
@@ -827,7 +830,7 @@ export default function StoreCoachPage() {
                     <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl p-3.5 border border-emerald-200 dark:border-emerald-900/60">
                       <h4 className="text-xs font-black text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 mb-2">
                         <ShieldCheck className="h-4 w-4" />
-                        【中長期系統性防呆與排班預防】
+                        {t('preventiveActionsTitle')}
                       </h4>
                       <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
                         {diagnosisResult.preventive_actions.map((act, i) => (
@@ -846,9 +849,9 @@ export default function StoreCoachPage() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                       <Layers className="h-4 w-4 text-emerald-600" />
-                      10 層因果穿透全景分析檢視
+                      {t('layersAnalysisTitle')}
                     </h3>
-                    <span className="text-xs text-slate-400">點擊任意層可展開/收合詳細發現與處方</span>
+                    <span className="text-xs text-slate-400">{t('layersAnalysisHint')}</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -885,17 +888,17 @@ export default function StoreCoachPage() {
                             <div className="flex items-center gap-1.5">
                               {isRoot && (
                                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200">
-                                  ● 核心病灶
+                                  {t('coreLesionBadge')}
                                 </span>
                               )}
                               {isSuspect && (
                                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200">
-                                  ▲ 疑似關聯
+                                  {t('suspectedLinkBadge')}
                                 </span>
                               )}
                               {isNormal && (
                                 <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
-                                  ✓ 標準正常
+                                  {t('normalBadge')}
                                 </span>
                               )}
                               {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-slate-400" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
@@ -906,15 +909,15 @@ export default function StoreCoachPage() {
                           {isExpanded && (
                             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs space-y-1.5 animate-fadeIn">
                               <div>
-                                <span className="font-semibold text-slate-500 dark:text-slate-400">現場發現：</span>
+                                <span className="font-semibold text-slate-500 dark:text-slate-400">{t('findingLabel')}</span>
                                 <span className="text-slate-900 dark:text-slate-100 font-medium ml-1">{layer.finding}</span>
                               </div>
                               <div>
-                                <span className="font-semibold text-slate-500 dark:text-slate-400">佐證指標：</span>
+                                <span className="font-semibold text-slate-500 dark:text-slate-400">{t('evidenceLabel')}</span>
                                 <span className="text-slate-700 dark:text-slate-300 ml-1">{layer.evidence}</span>
                               </div>
                               <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 mt-1">
-                                <span className="font-bold text-emerald-700 dark:text-emerald-400">改善處方：</span>
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400">{t('remedyLabel')}</span>
                                 <span className="text-slate-800 dark:text-slate-200 ml-1">{layer.remedy}</span>
                               </div>
                             </div>
@@ -931,14 +934,14 @@ export default function StoreCoachPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 font-black">
-                          教練對話 Playbook
+                          {t('coachingPlaybookBadge')}
                         </span>
                         <h3 className="text-sm sm:text-base font-bold text-white">
-                          店長與夥伴現場 5 步驟啟發引導話術（非責備式）
+                          {t('coachingPlaybookTitle')}
                         </h3>
                       </div>
                       <p className="text-xs text-emerald-200 mt-0.5">
-                        引導夥伴主動發現偏差、理解原因、達成行動共識，維護團隊心理安全感。
+                        {t('coachingPlaybookDesc')}
                       </p>
                     </div>
 
@@ -946,35 +949,35 @@ export default function StoreCoachPage() {
                       size="sm"
                       onClick={() => {
                         const d = diagnosisResult.coaching_dialogue
-                        const fullText = `【店長教練對話引導腳本】\n1. 同理辛勞：${d.step_1_empathy}\n2. 客觀陳述：${d.step_2_factual_observation}\n3. 啟發提問：${d.step_3_guiding_question}\n4. 共同約定：${d.step_4_action_agreement}\n5. 賦能激勵：${d.step_5_empowerment}`
+                        const fullText = t('coachingScriptTemplate', { empathy: d.step_1_empathy, factual: d.step_2_factual_observation, question: d.step_3_guiding_question, agreement: d.step_4_action_agreement, empowerment: d.step_5_empowerment })
                         handleCopy(fullText, 'dialogue')
                       }}
                       className="bg-white/20 hover:bg-white/30 text-white text-xs gap-1.5 self-start sm:self-auto shrink-0 cursor-pointer"
                     >
                       {copiedKey === 'dialogue' ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedKey === 'dialogue' ? '已複製教練腳本' : '複製完整話術'}
+                      {copiedKey === 'dialogue' ? t('copiedScript') : t('copyFullScript')}
                     </Button>
                   </div>
 
                   <div className="space-y-2.5">
                     <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-emerald-300 block mb-0.5">① 同理辛勞 (Empathy & Appreciation)：</span>
+                      <span className="font-bold text-emerald-300 block mb-0.5">{t('step1Label')}</span>
                       <p className="text-slate-200 pl-3 border-l-2 border-emerald-400">{diagnosisResult.coaching_dialogue.step_1_empathy}</p>
                     </div>
                     <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-teal-300 block mb-0.5">② 客觀陳述事實 (Factual Observation)：</span>
+                      <span className="font-bold text-teal-300 block mb-0.5">{t('step2Label')}</span>
                       <p className="text-slate-200 pl-3 border-l-2 border-teal-400">{diagnosisResult.coaching_dialogue.step_2_factual_observation}</p>
                     </div>
                     <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-amber-300 block mb-0.5">③ 啟發式提問 (Guiding Question)：</span>
+                      <span className="font-bold text-amber-300 block mb-0.5">{t('step3Label')}</span>
                       <p className="text-slate-200 pl-3 border-l-2 border-amber-400">{diagnosisResult.coaching_dialogue.step_3_guiding_question}</p>
                     </div>
                     <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-sky-300 block mb-0.5">④ 改善行動共識 (Action Agreement & Demo)：</span>
+                      <span className="font-bold text-sky-300 block mb-0.5">{t('step4Label')}</span>
                       <p className="text-slate-200 pl-3 border-l-2 border-sky-400">{diagnosisResult.coaching_dialogue.step_4_action_agreement}</p>
                     </div>
                     <div className="bg-black/25 rounded-xl p-3 border border-white/10 text-xs">
-                      <span className="font-bold text-purple-300 block mb-0.5">⑤ 賦能與激勵 (Empowerment & Trust)：</span>
+                      <span className="font-bold text-purple-300 block mb-0.5">{t('step5Label')}</span>
                       <p className="text-slate-200 pl-3 border-l-2 border-purple-400">{diagnosisResult.coaching_dialogue.step_5_empowerment}</p>
                     </div>
                   </div>
@@ -985,14 +988,14 @@ export default function StoreCoachPage() {
                   <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 text-xs">
                     <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-1.5">
                       <Sparkles className="h-4 w-4 text-emerald-600" />
-                      跨店知識記憶：歷史類似案例與驗證解決方案
+                      {t('crossStoreMemoryTitle')}
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {diagnosisResult.similar_past_cases.map((cs, idx) => (
                         <div key={idx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                           <div className="font-bold text-slate-900 dark:text-slate-100">{cs.problem_title}</div>
-                          <div className="text-slate-500 mt-0.5">根因：{cs.root_cause}</div>
-                          <div className="text-emerald-700 dark:text-emerald-400 font-semibold mt-1">成效：{cs.effectiveness_result}</div>
+                          <div className="text-slate-500 mt-0.5">{t('rootCauseColon')}{cs.root_cause}</div>
+                          <div className="text-emerald-700 dark:text-emerald-400 font-semibold mt-1">{t('effectivenessColon')}{cs.effectiveness_result}</div>
                         </div>
                       ))}
                     </div>
@@ -1011,10 +1014,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <LayoutGrid className="h-5 w-5 text-emerald-600" />
-                  三大標準店型配置 (Layouts) 與黃金動線
+                  {t('layoutsTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  流程決定動線，動線決定配置。消除 100% 交叉碰撞與逆向折返，創造最高出杯人效。
+                  {t('layoutsDesc')}
                 </p>
               </div>
 
@@ -1046,8 +1049,8 @@ export default function StoreCoachPage() {
                         {layout.description}
                       </p>
                       <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <span>尖峰時速：</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400">{layout.peak_capacity_cups_hr} 杯/小時</strong>
+                        <span>{t('peakHourlyRateLabel')}</span>
+                        <strong className="text-emerald-600 dark:text-emerald-400">{t('cupsPerHour', { n: layout.peak_capacity_cups_hr })}</strong>
                       </div>
                     </div>
                   )
@@ -1059,9 +1062,9 @@ export default function StoreCoachPage() {
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                     <Zap className="h-4 w-4 text-emerald-600" />
-                    【{selectedLayout.name}】工作站排列順序與動線管制
+                    {t('stationOrderTitle', { name: selectedLayout.name })}
                   </h4>
-                  <span className="text-slate-500 font-medium">建議配置人數：{selectedLayout.staff_count_min}-{selectedLayout.staff_count_max} 人</span>
+                  <span className="text-slate-500 font-medium">{t('recommendedStaffCount', { min: selectedLayout.staff_count_min, max: selectedLayout.staff_count_max })}</span>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -1078,7 +1081,7 @@ export default function StoreCoachPage() {
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-400">動線設計特點：</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-400">{t('flowDesignFeaturesLabel')}</span>
                   <p className="text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">{selectedLayout.movement_characteristics}</p>
                 </div>
               </div>
@@ -1089,10 +1092,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Coffee className="h-5 w-5 text-emerald-600" />
-                  五大核心工作站 (Workstations) 與 45cm 圓弧人體工學
+                  {t('workstationsTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  所有高頻使用的茶湯、糖漿、冰塊必須落在「手肘不離身體 45cm 直覺伸手範圍」內，避免無效彎腰與踏步。
+                  {t('workstationsDesc')}
                 </p>
               </div>
 
@@ -1117,14 +1120,14 @@ export default function StoreCoachPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-3">
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                    <span className="font-bold text-slate-500 dark:text-slate-400 block mb-1">【工作站定位與職責】</span>
+                    <span className="font-bold text-slate-500 dark:text-slate-400 block mb-1">{t('stationPurposeLabel')}</span>
                     <p className="text-sm font-medium text-slate-900 dark:text-white leading-relaxed">
                       {selectedStation.purpose}
                     </p>
                   </div>
 
                   <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                    <span className="font-bold text-emerald-800 dark:text-emerald-300 block mb-1">【黃金人體工學標準 (Ergonomics)】</span>
+                    <span className="font-bold text-emerald-800 dark:text-emerald-300 block mb-1">{t('ergonomicsLabel')}</span>
                     <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
                       {selectedStation.ergonomics_rule}
                     </p>
@@ -1133,7 +1136,7 @@ export default function StoreCoachPage() {
 
                 <div className="space-y-3">
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                    <span className="font-bold text-slate-500 dark:text-slate-400 block mb-1">【站內核心設備與器具】</span>
+                    <span className="font-bold text-slate-500 dark:text-slate-400 block mb-1">{t('equipmentListLabel')}</span>
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {selectedStation.equipment_list.map((eq, i) => (
                         <span key={i} className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
@@ -1144,7 +1147,7 @@ export default function StoreCoachPage() {
                   </div>
 
                   <div className="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800">
-                    <span className="font-bold text-rose-800 dark:text-rose-300 block mb-1">【常見致命動線失誤 (Pitfalls)】</span>
+                    <span className="font-bold text-rose-800 dark:text-rose-300 block mb-1">{t('pitfallsLabel')}</span>
                     <p className="text-rose-900 dark:text-rose-200 leading-relaxed">
                       {selectedStation.common_mistakes}
                     </p>
@@ -1163,10 +1166,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  Feeling Tea 三色抹布分色法則（絕對零容忍混用）
+                  {t('threeColorClothTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  抹布混用是手搖飲門市交叉污染的最大來源。嚴格遵循三色專用與每日漂白浸泡。
+                  {t('threeColorClothDesc')}
                 </p>
               </div>
 
@@ -1174,39 +1177,39 @@ export default function StoreCoachPage() {
                 <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border-2 border-blue-400 dark:border-blue-800">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="h-4 w-4 rounded-full bg-blue-600 shrink-0" />
-                    <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200">藍色專用抹布 (出杯吧檯)</h4>
+                    <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200">{t('blueClothTitle')}</h4>
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                    專門擦拭「調茶吧檯檯面、出杯操作區、雪克杯外壁」。保持潔淨無油污。
+                    {t('blueClothDesc')}
                   </p>
                   <div className="mt-2 text-[11px] text-blue-800 dark:text-blue-400 font-semibold">
-                    ✕ 嚴禁碰觸地面或水槽底
+                    {t('blueClothWarning')}
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border-2 border-amber-400 dark:border-amber-800">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="h-4 w-4 rounded-full bg-amber-500 shrink-0" />
-                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">黃色專用抹布 (出茶嘴/蒸奶棒)</h4>
+                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">{t('yellowClothTitle')}</h4>
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                    專門擦拭「保溫茶桶出水龍頭、蒸奶管、果糖噴嘴」。必須在每次出茶後立即順手擦拭。
+                    {t('yellowClothDesc')}
                   </p>
                   <div className="mt-2 text-[11px] text-amber-800 dark:text-amber-400 font-semibold">
-                    ✕ 嚴禁擦拭垃圾桶周遭或桌面
+                    {t('yellowClothWarning')}
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border-2 border-rose-400 dark:border-rose-800">
                   <div className="flex items-center gap-2 mb-1.5">
                     <div className="h-4 w-4 rounded-full bg-rose-600 shrink-0" />
-                    <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">紅色專用抹布 (水槽/地面)</h4>
+                    <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">{t('redClothTitle')}</h4>
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                    專門擦拭「中島水槽排水槽壁、吧檯腳踏區水漬、垃圾桶外圍」。
+                    {t('redClothDesc')}
                   </p>
                   <div className="mt-2 text-[11px] text-rose-800 dark:text-rose-400 font-semibold">
-                    ✕ 嚴禁上吧檯接觸任何調茶器具
+                    {t('redClothWarning')}
                   </div>
                 </div>
               </div>
@@ -1217,10 +1220,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Zap className="h-5 w-5 text-emerald-600" />
-                  四大 90 秒快閃清潔標準 (90-Second Flash Cleaning Sequences)
+                  {t('flashCleaningTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  清潔不是等到打烊花兩小時痛苦清掃，而是在每次換茶、交接的「90 秒微節奏」中隨時歸零。
+                  {t('flashCleaningDesc')}
                 </p>
               </div>
 
@@ -1249,7 +1252,7 @@ export default function StoreCoachPage() {
                       {selectedCleaningSeq.title}
                     </h4>
                     <span className="text-xs text-emerald-600 font-semibold">
-                      目標時長：{selectedCleaningSeq.target_duration_seconds} 秒 | 執行時機：{selectedCleaningSeq.trigger_timing}
+                      {t('targetDurationLabel', { n: selectedCleaningSeq.target_duration_seconds })} | {t('triggerTimingLabel')}{selectedCleaningSeq.trigger_timing}
                     </span>
                   </div>
                   <span className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black text-xs">
@@ -1267,17 +1270,17 @@ export default function StoreCoachPage() {
                       <div className="grow">
                         <div className="flex items-center justify-between font-bold text-slate-900 dark:text-slate-100">
                           <span>{st.action}</span>
-                          <span className="text-emerald-600 font-mono">{st.duration_seconds} 秒</span>
+                          <span className="text-emerald-600 font-mono">{t('secondsLabel', { n: st.duration_seconds })}</span>
                         </div>
                         <p className="text-slate-500 mt-0.5">{st.tool_needed}</p>
-                        <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">關鍵要點：{st.quality_checkpoint}</p>
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">{t('keyPointLabel')}{st.quality_checkpoint}</p>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="p-3 rounded-lg bg-emerald-100/60 dark:bg-emerald-950/40 text-xs text-emerald-900 dark:text-emerald-200 font-medium">
-                  <strong>檢驗標準：</strong> {selectedCleaningSeq.success_criteria}
+                  <strong>{t('successCriteriaLabel')}</strong> {selectedCleaningSeq.success_criteria}
                 </div>
               </div>
             </div>
@@ -1292,10 +1295,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <HeartHandshake className="h-5 w-5 text-emerald-600" />
-                  Feeling Tea 顧客服務行為準則 (Service Behaviors)
+                  {t('serviceBehaviorsTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  服務的溫度來自於被看見與被在乎。落實「進店3秒眼神問候」與「30秒無條件重調政策」。
+                  {t('serviceBehaviorsDesc')}
                 </p>
               </div>
 
@@ -1312,12 +1315,12 @@ export default function StoreCoachPage() {
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-medium text-emerald-700 dark:text-emerald-400 mb-2">
-                      標準語術：「{sb.standard_dialogue}」
+                      {t('standardScriptLabel', { text: sb.standard_dialogue })}
                     </div>
 
                     <div className="space-y-1 text-slate-600 dark:text-slate-300">
-                      <div><strong>肢體神態：</strong>{sb.body_language}</div>
-                      <div><strong>心理效應：</strong>{sb.psychological_impact}</div>
+                      <div><strong>{t('bodyLanguageLabel')}</strong>{sb.body_language}</div>
+                      <div><strong>{t('psychologicalImpactLabel')}</strong>{sb.psychological_impact}</div>
                     </div>
                   </div>
                 ))}
@@ -1329,10 +1332,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Award className="h-5 w-5 text-emerald-600" />
-                  門市指導員「五步引導式教練法」與夥伴職能矩陣
+                  {t('fiveStepCoachingTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  教練的最高境界是「讓夥伴自己講出答案」。從同理心出發，共創行動共識。
+                  {t('fiveStepCoachingDesc')}
                 </p>
               </div>
 
@@ -1349,7 +1352,7 @@ export default function StoreCoachPage() {
                       <p className="text-slate-600 dark:text-slate-300 pl-7">{cm.instruction}</p>
                     </div>
                     <div className="bg-white dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 font-medium text-emerald-700 dark:text-emerald-400 pl-7 sm:pl-3 max-w-sm shrink-0">
-                      範例：{cm.example_script}
+                      {t('exampleLabel')}{cm.example_script}
                     </div>
                   </div>
                 ))}
@@ -1360,7 +1363,7 @@ export default function StoreCoachPage() {
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
                     <Users className="h-4 w-4 text-emerald-600" />
-                    調茶師夥伴 6 大核心職能
+                    {t('baristaCompetenciesTitle')}
                   </h4>
                   <div className="space-y-2">
                     {data.employeeCompetencies.map((comp, idx) => (
@@ -1375,7 +1378,7 @@ export default function StoreCoachPage() {
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
                     <Award className="h-4 w-4 text-purple-600" />
-                    門市店長 6 大領導職能
+                    {t('managerCompetenciesTitle')}
                   </h4>
                   <div className="space-y-2">
                     {data.managerCompetencies.map((comp, idx) => (
@@ -1398,10 +1401,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Camera className="h-5 w-5 text-emerald-600" />
-                  現場視覺 AI 診斷（看現場 Vision AI）
+                  {t('visionAiTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  上傳門市吧檯、冷藏庫、排水槽或出杯檯現場照片，AI 自動辨識 5S 整理整頓、抹布分色合規性、出糖嘴乾涸滴漏與工效安全。
+                  {t('visionAiDesc')}
                 </p>
               </div>
 
@@ -1409,21 +1412,21 @@ export default function StoreCoachPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    拍攝場景類別
+                    {t('sceneTypeLabel')}
                   </label>
                   <select
                     value={visionScene}
                     onChange={e => setVisionScene(e.target.value as any)}
                     className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200 mb-3"
                   >
-                    <option value="bar_station">吧檯調茶工作站 (Bar Station)</option>
-                    <option value="refrigerator">原料冷藏冰箱/冷凍庫 (Refrigerator)</option>
-                    <option value="sink_drain">中島洗滌槽與排水濾網 (Sink & Drain)</option>
-                    <option value="cashier_pickup">點餐收銀與取餐台 (Cashier & Pickup)</option>
+                    <option value="bar_station">{t('sceneBarStation')}</option>
+                    <option value="refrigerator">{t('sceneRefrigerator')}</option>
+                    <option value="sink_drain">{t('sceneSinkDrain')}</option>
+                    <option value="cashier_pickup">{t('sceneCashierPickup')}</option>
                   </select>
 
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    上傳現場照片 (支援手機相機即拍)
+                    {t('uploadSceneLabel')}
                   </label>
                   <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-4 text-center hover:border-emerald-500 transition-colors">
                     <input
@@ -1436,9 +1439,9 @@ export default function StoreCoachPage() {
                     <label htmlFor="vision-file-input" className="cursor-pointer flex flex-col items-center gap-1.5">
                       <Upload className="h-6 w-6 text-slate-400" />
                       <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        {customImageBase64 ? '已成功載入現場照片 (點此可重新選擇)' : '點擊選擇檔案或拍照上傳'}
+                        {customImageBase64 ? t('imageLoadedHint') : t('clickToUploadHint')}
                       </span>
-                      <span className="text-[11px] text-slate-400">支援 JPG, PNG, WEBP (亦可直接點擊下方執行標準範例稽核)</span>
+                      <span className="text-[11px] text-slate-400">{t('supportedFormatsHint')}</span>
                     </label>
                   </div>
                 </div>
@@ -1447,13 +1450,13 @@ export default function StoreCoachPage() {
                   <div>
                     <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-1.5">
                       <Eye className="h-4 w-4 text-emerald-600" />
-                      Vision AI 檢測焦點
+                      {t('visionFocusTitle')}
                     </h4>
                     <ul className="space-y-1.5 text-slate-600 dark:text-slate-300">
-                      <li>• <strong>5S 整理整頓：</strong>非必要雜物是否上吧？物料是否在 45cm 圓弧內？</li>
-                      <li>• <strong>抹布分色檢查：</strong>有無藍、黃、紅抹布混用違規情事？</li>
-                      <li>• <strong>出糖嘴與茶桶：</strong>是否有乾涸結晶糖漬、出茶嘴積垢？</li>
-                      <li>• <strong>冷藏效期管理：</strong>備料盒是否貼齊三聯標籤（品名/效期/人員）？</li>
+                      <li>• <strong>{t('focus5sLabel')}</strong>{t('focus5sDesc')}</li>
+                      <li>• <strong>{t('focusClothLabel')}</strong>{t('focusClothDesc')}</li>
+                      <li>• <strong>{t('focusNozzleLabel')}</strong>{t('focusNozzleDesc')}</li>
+                      <li>• <strong>{t('focusExpiryLabel')}</strong>{t('focusExpiryDesc')}</li>
                     </ul>
                   </div>
 
@@ -1465,12 +1468,12 @@ export default function StoreCoachPage() {
                     {visionLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        AI 正在掃描影像與 5S 工效...
+                        {t('visionScanning')}
                       </>
                     ) : (
                       <>
                         <Camera className="h-4 w-4" />
-                        執行現場視覺 AI 稽核
+                        {t('runVisionAudit')}
                       </>
                     )}
                   </Button>
@@ -1482,32 +1485,32 @@ export default function StoreCoachPage() {
                 <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800 animate-fadeIn">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">5S 總合得分</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('score5sLabel')}</span>
                       <strong className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                         {visionResult.score_5s.total} / 100
                       </strong>
                     </div>
 
                     <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">食安衛生合規率</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('hygieneComplianceLabel')}</span>
                       <strong className="text-2xl font-black text-blue-600 dark:text-blue-400">
                         {visionResult.hygiene_compliance.score}%
                       </strong>
                     </div>
 
                     <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">工效受傷/疲勞風險</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('ergonomicRiskLabel')}</span>
                       <strong className={`text-lg font-black ${
                         visionResult.ergonomic_risk === 'high' ? 'text-rose-600' : visionResult.ergonomic_risk === 'medium' ? 'text-amber-600' : 'text-emerald-600'
                       }`}>
-                        {visionResult.ergonomic_risk === 'high' ? '高風險' : visionResult.ergonomic_risk === 'medium' ? '中度警示' : '良好低風險'}
+                        {visionResult.ergonomic_risk === 'high' ? t('riskHigh') : visionResult.ergonomic_risk === 'medium' ? t('riskMedium') : t('riskLow')}
                       </strong>
                     </div>
 
                     <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">檢測異常缺失點</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">{t('defectsFoundLabel')}</span>
                       <strong className="text-2xl font-black text-purple-600 dark:text-purple-400">
-                        {visionResult.defects.length} 項
+                        {t('itemsCount', { n: visionResult.defects.length })}
                       </strong>
                     </div>
                   </div>
@@ -1515,7 +1518,7 @@ export default function StoreCoachPage() {
                   {/* 缺失項卡片 */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      現場影像缺失精準定位與改善處方
+                      {t('defectLocationTitle')}
                     </h4>
                     {visionResult.defects.map((df, i) => (
                       <div key={i} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1530,7 +1533,7 @@ export default function StoreCoachPage() {
                           </div>
                         </div>
                         <div className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-emerald-700 dark:text-emerald-400 font-medium shrink-0">
-                          改善建議：{df.corrective_action}
+                          {t('improvementSuggestionLabel')}{df.corrective_action}
                         </div>
                       </div>
                     ))}
@@ -1538,7 +1541,7 @@ export default function StoreCoachPage() {
 
                   {/* 即刻教練引導 Tip */}
                   <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-900 to-teal-900 text-white text-xs">
-                    <span className="font-bold text-emerald-300 block mb-1">【督導現場教練對話指引】</span>
+                    <span className="font-bold text-emerald-300 block mb-1">{t('supervisorCoachingTipLabel')}</span>
                     <p className="text-slate-200 leading-relaxed">{visionResult.immediate_coaching_tip}</p>
                   </div>
                 </div>
@@ -1554,10 +1557,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-emerald-600" />
-                  門市專屬行銷與 Zalo 官方帳號本地運營
+                  {t('marketingTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  每家門市都有自己的專屬 Zalo 官方帳號 (OA)，支援門市天氣即時推播、午後下午茶推播、熟客印花集點。
+                  {t('marketingDesc')}
                 </p>
               </div>
 
@@ -1566,7 +1569,7 @@ export default function StoreCoachPage() {
                   <div key={i} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        {acc.store_code} 專屬帳號
+                        {t('dedicatedAccountLabel', { code: acc.store_code })}
                       </h4>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold">
                         {acc.status}
@@ -1574,15 +1577,15 @@ export default function StoreCoachPage() {
                     </div>
 
                     <div className="text-slate-700 dark:text-slate-300">
-                      <div><strong>OA 名稱：</strong>{acc.oa_name}</div>
-                      <div><strong>關注粉絲數：</strong>{acc.follower_count.toLocaleString()} 位本地熟客</div>
-                      <div><strong>自動化推播：</strong>{acc.auto_broadcast_rules}</div>
+                      <div><strong>{t('oaNameLabel')}</strong>{acc.oa_name}</div>
+                      <div><strong>{t('followerCountLabel')}</strong>{t('localFollowersCount', { n: acc.follower_count.toLocaleString() })}</div>
+                      <div><strong>{t('autoBroadcastLabel')}</strong>{acc.auto_broadcast_rules}</div>
                     </div>
 
                     <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px]">
-                      <span className="text-slate-500">掃描 QR Code 即可一鍵加入該店熟客群</span>
+                      <span className="text-slate-500">{t('qrJoinHint')}</span>
                       <Button size="sm" variant="outline" className="text-xs h-7 cursor-pointer">
-                        發送推播測試
+                        {t('sendTestBroadcast')}
                       </Button>
                     </div>
                   </div>
@@ -1599,10 +1602,10 @@ export default function StoreCoachPage() {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Award className="h-5 w-5 text-emerald-600" />
-                  Feeling Tea 五大經營哲學與企業底層信仰
+                  {t('principlesTitle')}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  所有標準、動線、配方、考核的源頭。當現場遇到未知情境時，以企業哲學為決策指南針。
+                  {t('principlesDesc')}
                 </p>
               </div>
 
@@ -1621,7 +1624,7 @@ export default function StoreCoachPage() {
                       {cp.philosophy_statement}
                     </p>
                     <div className="mt-2 pl-8 text-[11px] text-emerald-700 dark:text-emerald-400">
-                      <strong>門市落地行為：</strong>{cp.operational_standard}
+                      <strong>{t('operationalStandardLabel')}</strong>{cp.operational_standard}
                     </div>
                   </div>
                 ))}
@@ -1631,18 +1634,17 @@ export default function StoreCoachPage() {
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                   <h4 className="font-bold text-purple-200 text-sm flex items-center gap-1.5">
                     <FlaskConical className="h-4 w-4" />
-                    門市營運教練 AI × 研發數位大腦 RD-LAB 協同架構
+                    {t('rdCollaborationTitle')}
                   </h4>
                   <Link href="/rd-lab">
                     <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white text-xs h-7 gap-1 cursor-pointer">
-                      打開 RD-LAB
+                      {t('openRdLab')}
                       <ArrowRight className="h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
                 <p className="text-slate-300 leading-relaxed">
-                  研發 AI 與門市教練 AI 共享同一套 Feeling Tea 原料庫、配方 Brix 度數與食安標準。
-                  當門市現場發生甜度偏高時，門市教練會自動向研發大腦索取標準糖度；當研發推出新飲品時，門市教練自動在工作站配置中預測瓶頸並更新 90 秒快閃清潔標準。
+                  {t('rdCollaborationDesc')}
                 </p>
               </div>
             </div>
@@ -1654,14 +1656,14 @@ export default function StoreCoachPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <ShieldCheck className="h-5 w-5 text-rose-600" />
-                      Feeling Tea 公司正式規章與門市管理規範 ({regulations.length} 條)
+                      {t('regulationsTitle', { n: regulations.length })}
                     </h3>
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-bold border border-rose-200">
-                      嚴格紅線管制
+                      {t('strictRedLineBadge')}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    已全數傳遞並融入門市營運教練 AI 大腦。教練在執行 10 層診斷與巡站話術時，會主動援引並捍衛公司規範。
+                    {t('regulationsDesc')}
                   </p>
                 </div>
               </div>
@@ -1669,27 +1671,27 @@ export default function StoreCoachPage() {
               {/* 傳遞新規章表單 */}
               <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mb-5">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-2">
-                  📝 傳遞公司新規範 / 修改規章條款至 AI 教練大腦：
+                  {t('transmitRegFormTitle')}
                 </span>
                 <form onSubmit={handleTransmitRegulation} className="space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        規範名稱 *
+                        {t('regNameLabel')}
                       </label>
                       <input
                         type="text"
                         required
                         value={regTitle}
                         onChange={e => setRegTitle(e.target.value)}
-                        placeholder="例如：門市手機使用與社群發言規範"
+                        placeholder={t('regNamePlaceholder')}
                         className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                       />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        條款編號 (選填)
+                        {t('regCodeLabel')}
                       </label>
                       <input
                         type="text"
@@ -1702,73 +1704,73 @@ export default function StoreCoachPage() {
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        規範類別
+                        {t('regCategoryLabel')}
                       </label>
                       <select
                         value={regCategory}
                         onChange={e => setRegCategory(e.target.value)}
                         className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                       >
-                        <option value="food_safety">食安衛生法規 (Food Safety)</option>
-                        <option value="employee_conduct">員工紀律與誠信 (Conduct & Integrity)</option>
-                        <option value="store_safety">門市工安防護 (Safety & First Aid)</option>
-                        <option value="customer_crisis">客訴與公關危機 (Crisis Management)</option>
-                        <option value="confidentiality">營業秘密與配方保護 (Confidentiality)</option>
-                        <option value="labor_shift">勞動考勤與工時 (Labor & Shift)</option>
+                        <option value="food_safety">{t('regCatFoodSafety')}</option>
+                        <option value="employee_conduct">{t('regCatConduct')}</option>
+                        <option value="store_safety">{t('regCatStoreSafety')}</option>
+                        <option value="customer_crisis">{t('regCatCrisis')}</option>
+                        <option value="confidentiality">{t('regCatConfidentiality')}</option>
+                        <option value="labor_shift">{t('regCatLaborShift')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        紅線等級
+                        {t('redLineLevelLabel')}
                       </label>
                       <select
                         value={regLevel}
                         onChange={e => setRegLevel(e.target.value)}
                         className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                       >
-                        <option value="strict">🔴 嚴格紅線 (零容忍/解僱)</option>
-                        <option value="standard">🟡 常規規範 (記點/扣減獎金)</option>
-                        <option value="guideline">🔵 指導原則 (口頭糾正/宣導)</option>
+                        <option value="strict">{t('levelStrict')}</option>
+                        <option value="standard">{t('levelStandard')}</option>
+                        <option value="guideline">{t('levelGuideline')}</option>
                       </select>
                     </div>
 
                     <div className="md:col-span-4">
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        具體條款內容 *
+                        {t('regClauseRequiredLabel')}
                       </label>
                       <textarea
                         rows={2}
                         required
                         value={regClause}
                         onChange={e => setRegClause(e.target.value)}
-                        placeholder="詳細條文規定..."
+                        placeholder={t('regClausePlaceholder')}
                         className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        違規罰則與處分程序
+                        {t('regPenaltyLabel')}
                       </label>
                       <input
                         type="text"
                         value={regPenalty}
                         onChange={e => setRegPenalty(e.target.value)}
-                        placeholder="例如：首次記大過停職、賠償損失..."
+                        placeholder={t('regPenaltyPlaceholder')}
                         className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                        店長查核指引
+                        {t('regEnforcementLabel')}
                       </label>
                       <input
                         type="text"
                         value={regEnforcement}
                         onChange={e => setRegEnforcement(e.target.value)}
-                        placeholder="例如：每日班前早會抽檢、每週核對計數器..."
+                        placeholder={t('regEnforcementPlaceholder')}
                         className="w-full text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-slate-800 dark:text-slate-200"
                       />
                     </div>
@@ -1776,7 +1778,7 @@ export default function StoreCoachPage() {
 
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-[11px] text-slate-500">
-                      送出後 AI 教練大腦將即刻更新守則記憶
+                      {t('regSubmitHint')}
                     </span>
                     <Button
                       type="submit"
@@ -1784,7 +1786,7 @@ export default function StoreCoachPage() {
                       className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg gap-1.5 cursor-pointer"
                     >
                       {isSubmittingReg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                      傳遞規範至 AI 教練
+                      {t('transmitRegButton')}
                     </Button>
                   </div>
                 </form>
@@ -1801,10 +1803,10 @@ export default function StoreCoachPage() {
               <div className="p-4 rounded-xl bg-slate-900 text-white border border-slate-800 text-xs mb-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500 text-white font-bold">
-                    合規助手 Compliance AI
+                    {t('complianceAiBadge')}
                   </span>
                   <h4 className="font-bold text-white text-xs sm:text-sm">
-                    門市規章與員工紀律即時諮詢
+                    {t('complianceAiTitle')}
                   </h4>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 mb-2">
@@ -1815,7 +1817,7 @@ export default function StoreCoachPage() {
                     onKeyDown={e => {
                       if (e.key === 'Enter') handleAskCompliance()
                     }}
-                    placeholder="例如：員工在吧檯內滑手機，店長依照規章該如何處理？"
+                    placeholder={t('complianceQueryPlaceholder')}
                     className="grow text-xs rounded-lg border border-slate-700 bg-slate-800 text-white px-3 py-2 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-400"
                   />
                   <Button
@@ -1824,39 +1826,39 @@ export default function StoreCoachPage() {
                     className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-4 py-2 rounded-lg shrink-0 cursor-pointer"
                   >
                     {isAskingReg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                    諮詢規章
+                    {t('consultRegulations')}
                   </Button>
                 </div>
 
                 {/* 快速提問標籤 */}
                 <div className="flex items-center gap-1.5 flex-wrap text-[11px] text-slate-400">
-                  <span>常見規章諮詢：</span>
+                  <span>{t('commonRegQueriesLabel')}</span>
                   <button
                     type="button"
                     onClick={() => setRegQuery('收銀員私自收取現金未打 POS 單，公司處分規定是什麼？')}
                     className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
                   >
-                    「收銀誠信與舞弊處分」
+                    {t('sampleQueryCashHandling')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setRegQuery('原料賞味期過了或是標籤塗改，依照公司紅線如何懲處？')}
                     className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
                   >
-                    「過期原料與標籤偽造」
+                    {t('sampleQueryExpiredMaterial')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setRegQuery('員工把公司配方表拍照傳到社群網路，公司法律責任為何？')}
                     className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-slate-200 cursor-pointer"
                   >
-                    「配方機密外洩罰則」
+                    {t('sampleQueryRecipeLeak')}
                   </button>
                 </div>
 
                 {regAnswer && (
                   <div className="mt-3 p-3 rounded-lg bg-black/40 border border-rose-500/40 text-slate-200 space-y-1.5 leading-relaxed whitespace-pre-line">
-                    <strong className="text-rose-400 block font-bold">AI 援引規章條款回覆：</strong>
+                    <strong className="text-rose-400 block font-bold">{t('aiRegulationReplyLabel')}</strong>
                     <div>{regAnswer}</div>
                   </div>
                 )}
@@ -1866,7 +1868,7 @@ export default function StoreCoachPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                   <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    現行公司規章與紅線守則明細
+                    {t('currentRegListTitle')}
                   </h4>
                   <div className="flex items-center gap-1 flex-wrap text-xs">
                     {['all', 'food_safety', 'employee_conduct', 'confidentiality', 'store_safety', 'customer_crisis'].map(cat => (
@@ -1879,7 +1881,7 @@ export default function StoreCoachPage() {
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                         }`}
                       >
-                        {cat === 'all' ? '全部' : cat === 'food_safety' ? '食安衛生' : cat === 'employee_conduct' ? '員工紀律' : cat === 'confidentiality' ? '配方機密' : cat === 'store_safety' ? '工安防護' : '客訴公關'}
+                        {cat === 'all' ? t('regFilterAll') : cat === 'food_safety' ? t('regFilterFoodSafety') : cat === 'employee_conduct' ? t('regFilterConduct') : cat === 'confidentiality' ? t('regFilterConfidentiality') : cat === 'store_safety' ? t('regFilterStoreSafety') : t('regFilterCrisis')}
                       </button>
                     ))}
                   </div>
@@ -1902,7 +1904,7 @@ export default function StoreCoachPage() {
                               ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200'
                               : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                           }`}>
-                            {reg.mandatory_level === 'strict' ? '🔴 嚴格紅線' : '🟡 常規守則'}
+                            {reg.mandatory_level === 'strict' ? t('strictRedLineTag') : t('standardRuleTag')}
                           </span>
                         </div>
 
@@ -1915,12 +1917,12 @@ export default function StoreCoachPage() {
                         </p>
 
                         <div className="p-2.5 rounded-lg bg-rose-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 text-[11px] text-rose-900 dark:text-rose-200">
-                          <strong>違規罰則：</strong> {reg.violation_penalty}
+                          <strong>{t('violationPenaltyLabel')}</strong> {reg.violation_penalty}
                         </div>
 
                         {reg.manager_enforcement && (
                           <div className="p-2.5 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 text-[11px] text-emerald-900 dark:text-emerald-200">
-                            <strong>店長查核指引：</strong> {reg.manager_enforcement}
+                            <strong>{t('managerCheckGuideLabel')}</strong> {reg.manager_enforcement}
                           </div>
                         )}
                       </div>
@@ -1940,10 +1942,10 @@ export default function StoreCoachPage() {
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <GraduationCap className="h-5 w-5 text-emerald-600" />
-                    門市營運知識餵入與自主學習中心 (Continuous Learning Engine)
+                    {t('learningCenterTitle')}
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    店長、督導、管理層可隨時餵入總部 SOP、巡檢改善單、客訴實務、同業標竿影片或主管指導筆記。教練 AI 自動萃取結構化規則，即刻融入 10 層診斷與現場話術。
+                    {t('learningCenterDesc')}
                   </p>
                 </div>
               </div>
@@ -1951,7 +1953,7 @@ export default function StoreCoachPage() {
               {/* 4 大快速範本一鍵帶入 */}
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mb-4">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
-                  ⚡ 快速載入實務範本（點擊即帶入內容）：
+                  {t('quickTemplatesLabel')}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
@@ -1965,7 +1967,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
-                    🧼 範本1：茶桶深度除垢 SOP
+                    {t('template1Label')}
                   </button>
 
                   <button
@@ -1979,7 +1981,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-amber-50 hover:text-amber-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
-                    ⏳ 範本2：外送尖峰雙軌防催單
+                    {t('template2Label')}
                   </button>
 
                   <button
@@ -1993,7 +1995,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-blue-50 hover:text-blue-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
-                    🤝 範本3：冰融茶淡換新挽回法
+                    {t('template3Label')}
                   </button>
 
                   <button
@@ -2007,7 +2009,7 @@ export default function StoreCoachPage() {
                     }}
                     className="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-purple-50 hover:text-purple-700 border border-slate-300 dark:border-slate-600 transition-colors cursor-pointer"
                   >
-                    🌡️ 範本4：蒸奶棒與溫度槍校準
+                    {t('template4Label')}
                   </button>
                 </div>
               </div>
@@ -2017,59 +2019,59 @@ export default function StoreCoachPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      資料標題 *
+                      {t('dataTitleRequiredLabel')}
                     </label>
                     <input
                       type="text"
                       required
                       value={learnTitle}
                       onChange={e => setLearnTitle(e.target.value)}
-                      placeholder="例如：【打烊SOP】茶桶深度除垢標準"
+                      placeholder={t('dataTitlePlaceholder')}
                       className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      資料來源類型
+                      {t('dataSourceTypeLabel')}
                     </label>
                     <select
                       value={learnType}
                       onChange={e => setLearnType(e.target.value)}
                       className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                     >
-                      <option value="sop_manual">總部標準作業手冊 (SOP Manual)</option>
-                      <option value="audit_report">區督導巡檢改善報告 (Audit Report)</option>
-                      <option value="complaint_case">真實客訴處理案例 (Complaint Case)</option>
-                      <option value="supervisor_guide">門市指導員帶教手冊 (Supervisor Guide)</option>
-                      <option value="external_benchmark">同業標竿研究/文章 (Benchmark Article)</option>
-                      <option value="video_url">YouTube/教學影片 (Video Ingest)</option>
-                      <option value="owner_memo">經營者/總經理叮嚀 (Owner Memo)</option>
+                      <option value="sop_manual">{t('sourceTypeSop')}</option>
+                      <option value="audit_report">{t('sourceTypeAudit')}</option>
+                      <option value="complaint_case">{t('sourceTypeComplaint')}</option>
+                      <option value="supervisor_guide">{t('sourceTypeSupervisor')}</option>
+                      <option value="external_benchmark">{t('sourceTypeBenchmark')}</option>
+                      <option value="video_url">{t('sourceTypeVideo')}</option>
+                      <option value="owner_memo">{t('sourceTypeOwnerMemo')}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      主要營運維度
+                      {t('mainDimensionLabel')}
                     </label>
                     <select
                       value={learnDimension}
                       onChange={e => setLearnDimension(e.target.value)}
                       className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                     >
-                      <option value="sop">SOP 規則手冊 (SOP Rules)</option>
-                      <option value="workflow">流程節奏與交接 (Workflow)</option>
-                      <option value="workstation">工作站與設備維護 (Workstation)</option>
-                      <option value="movement">動線規劃與人體工學 (Movement)</option>
-                      <option value="hygiene">清潔衛生與食安 (Hygiene)</option>
-                      <option value="coaching">服務行為與教練話術 (Coaching)</option>
-                      <option value="problem_memory">智慧記憶與客訴對策 (Problem Memory)</option>
+                      <option value="sop">{t('dimSop')}</option>
+                      <option value="workflow">{t('dimWorkflow')}</option>
+                      <option value="workstation">{t('dimWorkstation')}</option>
+                      <option value="movement">{t('dimMovement')}</option>
+                      <option value="hygiene">{t('dimHygiene')}</option>
+                      <option value="coaching">{t('dimCoaching')}</option>
+                      <option value="problem_memory">{t('dimProblemMemory')}</option>
                     </select>
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      參考網址 / 雲端檔案連結 (選填)
+                      {t('refUrlLabel')}
                     </label>
                     <input
                       type="url"
@@ -2082,30 +2084,30 @@ export default function StoreCoachPage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      適用門市
+                      {t('applicableStoreLabel')}
                     </label>
                     <select
                       value={learnStoreCode}
                       onChange={e => setLearnStoreCode(e.target.value)}
                       className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-slate-800 dark:text-slate-200"
                     >
-                      <option value="ALL">全部門市通用 (Global)</option>
-                      <option value="TNN-01">TNN-01 (台南旗艦店專用)</option>
-                      <option value="TPE-02">TPE-02 (台北信義門市專用)</option>
-                      <option value="KHH-03">KHH-03 (高雄巨蛋門市專用)</option>
+                      <option value="ALL">{t('storeAllGlobal')}</option>
+                      <option value="TNN-01">{t('storeTnn01')}</option>
+                      <option value="TPE-02">{t('storeTpe02')}</option>
+                      <option value="KHH-03">{t('storeKhh03')}</option>
                     </select>
                   </div>
 
                   <div className="md:col-span-3">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      原始教材 / 條款規範 / 案例文字內容 *
+                      {t('rawContentLabel')}
                     </label>
                     <textarea
                       rows={5}
                       required
                       value={learnContent}
                       onChange={e => setLearnContent(e.target.value)}
-                      placeholder="在此貼上 SOP 文字、督導巡檢記錄、客訴對話、或是培訓教材內容..."
+                      placeholder={t('rawContentPlaceholder')}
                       className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3.5 py-2.5 text-slate-800 dark:text-slate-200"
                     />
                   </div>
@@ -2114,7 +2116,7 @@ export default function StoreCoachPage() {
                 <div className="flex items-center justify-between flex-wrap gap-3 pt-2">
                   <div className="text-xs text-slate-500 flex items-center gap-1.5">
                     <Sparkles className="h-4 w-4 text-emerald-600" />
-                    <span>AI 會自動辨識實證等級 (A/B/C/D) 並萃取出「核心要點」與「現場可執行規則」</span>
+                    <span>{t('aiExtractHint')}</span>
                   </div>
 
                   <Button
@@ -2125,12 +2127,12 @@ export default function StoreCoachPage() {
                     {isLearning ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        AI 正在研讀並結構化營運規則...
+                        {t('aiStructuringInProgress')}
                       </>
                     ) : (
                       <>
                         <Zap className="h-4 w-4" />
-                        🚀 餵入教練大腦，立即萃取學習
+                        {t('ingestAndLearnButton')}
                       </>
                     )}
                   </Button>
@@ -2153,14 +2155,14 @@ export default function StoreCoachPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-600 text-white flex items-center gap-1 shadow-xs">
                       <Sparkles className="h-3 w-3" />
-                      教練大腦最新吸收知識
+                      {t('latestKnowledgeBadge')}
                     </span>
                     <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                      實證等級：{lastLearnedMaterial.evidence_level} 級 (
-                      {lastLearnedMaterial.evidence_level === 'A' ? '總部正規SOP' : lastLearnedMaterial.evidence_level === 'B' ? '督導實證標準' : lastLearnedMaterial.evidence_level === 'C' ? '店長實戰經驗' : '同業標竿'})
+                      {t('evidenceLevelLabel', { level: lastLearnedMaterial.evidence_level ?? '' })}
+                      {lastLearnedMaterial.evidence_level === 'A' ? t('evidenceLevelA') : lastLearnedMaterial.evidence_level === 'B' ? t('evidenceLevelB') : lastLearnedMaterial.evidence_level === 'C' ? t('evidenceLevelC') : t('evidenceLevelD')})
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500">維度：{lastLearnedMaterial.dimension}</span>
+                  <span className="text-[11px] text-slate-500">{t('dimensionLabel')}{lastLearnedMaterial.dimension}</span>
                 </div>
 
                 <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
@@ -2172,16 +2174,16 @@ export default function StoreCoachPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-emerald-200 dark:border-emerald-900/40 text-xs">
                   <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                    <strong className="text-emerald-800 dark:text-emerald-300 block mb-1">【AI 萃取核心要點】</strong>
+                    <strong className="text-emerald-800 dark:text-emerald-300 block mb-1">{t('keyTakeawaysLabel')}</strong>
                     <ul className="space-y-1 text-slate-700 dark:text-slate-300">
-                      {lastLearnedMaterial.key_takeaways?.map((t, idx) => (
-                        <li key={idx}>• {t}</li>
+                      {lastLearnedMaterial.key_takeaways?.map((kt, idx) => (
+                        <li key={idx}>• {kt}</li>
                       ))}
                     </ul>
                   </div>
 
                   <div className="bg-white/90 dark:bg-slate-800/90 p-3 rounded-xl border border-teal-200 dark:border-teal-800">
-                    <strong className="text-teal-800 dark:text-teal-300 block mb-1">【現場落地行為規則】</strong>
+                    <strong className="text-teal-800 dark:text-teal-300 block mb-1">{t('actionableRulesLabel')}</strong>
                     <ul className="space-y-1 text-slate-700 dark:text-slate-300">
                       {lastLearnedMaterial.actionable_rules?.map((r, idx) => (
                         <li key={idx}>✓ {r}</li>
@@ -2197,14 +2199,14 @@ export default function StoreCoachPage() {
               <div className="mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-400 text-emerald-950 font-black">
-                    學習驗證 Live Q&A
+                    {t('learningVerifyBadge')}
                   </span>
                   <h3 className="text-sm sm:text-base font-bold text-white">
-                    向已研讀學習的門市教練現場發問
+                    {t('learningVerifyTitle')}
                   </h3>
                 </div>
                 <p className="text-xs text-emerald-200 mt-0.5">
-                  測試教練 AI 是否已經深刻理解剛剛餵入的教材，並隨機提問現場情境對策。
+                  {t('learningVerifyDesc')}
                 </p>
               </div>
 
@@ -2216,7 +2218,7 @@ export default function StoreCoachPage() {
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleAskCoach()
                   }}
-                  placeholder="例如：如果客人外帶後過了半小時說茶變淡了，標準應對話術與動作是什麼？"
+                  placeholder={t('coachQueryPlaceholder')}
                   className="grow text-xs rounded-xl border border-emerald-700/80 bg-slate-900/90 text-white px-3.5 py-2.5 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 />
                 <Button
@@ -2227,12 +2229,12 @@ export default function StoreCoachPage() {
                   {isAskingCoach ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      教練正在檢索已學習教材...
+                      {t('coachRetrievingMaterial')}
                     </>
                   ) : (
                     <>
                       <Send className="h-3.5 w-3.5" />
-                      提問測試
+                      {t('testQuestionButton')}
                     </>
                   )}
                 </Button>
@@ -2240,27 +2242,27 @@ export default function StoreCoachPage() {
 
               {/* 快速提問標籤 */}
               <div className="flex items-center gap-1.5 flex-wrap text-xs text-slate-300">
-                <span className="text-[11px] text-emerald-300 font-semibold">推薦提問：</span>
+                <span className="text-[11px] text-emerald-300 font-semibold">{t('recommendedQueriesLabel')}</span>
                 <button
                   type="button"
                   onClick={() => setCoachQuery('打烊保溫茶桶如何深度除垢？矽膠密封環可以用菜瓜布刷嗎？')}
                   className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
                 >
-                  「茶桶除垢與矽膠環消毒」
+                  {t('sampleCoachQueryTeaUrn')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setCoachQuery('尖峰時段外送員一直在吧檯前催單，我們該如何劃分動線和貼單防漏？')}
                   className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
                 >
-                  「外送雙軌與防催單」
+                  {t('sampleCoachQueryDelivery')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setCoachQuery('客人說冰塊融化茶變淡了，店長要怎麼教新夥伴親切應對並重做？')}
                   className="text-[11px] px-2 py-0.5 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 border border-white/15 cursor-pointer"
                 >
-                  「冰融茶淡的教練對話」
+                  {t('sampleCoachQueryDilutedTea')}
                 </button>
               </div>
 
@@ -2270,7 +2272,7 @@ export default function StoreCoachPage() {
                   <div className="flex items-center justify-between text-emerald-300 font-bold mb-1">
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="h-4 w-4" />
-                      門市營運教練 AI 依據已研讀教材之解答：
+                      {t('coachAnswerBasedOnLabel')}
                     </span>
                     <button
                       type="button"
@@ -2278,7 +2280,7 @@ export default function StoreCoachPage() {
                       className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
                     >
                       {copiedKey === 'coach_ans' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                      {copiedKey === 'coach_ans' ? '已複製' : '複製解答'}
+                      {copiedKey === 'coach_ans' ? t('copiedLabel') : t('copyAnswerLabel')}
                     </button>
                   </div>
                   <div>{coachAnswer}</div>
@@ -2292,10 +2294,10 @@ export default function StoreCoachPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <BookOpen className="h-5 w-5 text-emerald-600" />
-                    已研讀之門市營運知識庫 ({learningMaterials.length} 篇)
+                    {t('knowledgeBaseTitle', { n: learningMaterials.length })}
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    以下為所有已注入大腦的教材，教練在執行 10 層全景診斷與巡檢時將全自動調閱引用。
+                    {t('knowledgeBaseDesc')}
                   </p>
                 </div>
 
@@ -2306,19 +2308,19 @@ export default function StoreCoachPage() {
                     onChange={e => setLearnDimFilter(e.target.value)}
                     className="text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-slate-800 dark:text-slate-200"
                   >
-                    <option value="all">全維度知識</option>
-                    <option value="sop">SOP 規範</option>
-                    <option value="workflow">流程動線</option>
-                    <option value="hygiene">清潔衛生</option>
-                    <option value="coaching">教練話術</option>
-                    <option value="workstation">工作站設備</option>
+                    <option value="all">{t('filterAllDims')}</option>
+                    <option value="sop">{t('filterDimSop')}</option>
+                    <option value="workflow">{t('filterDimWorkflow')}</option>
+                    <option value="hygiene">{t('filterDimHygiene')}</option>
+                    <option value="coaching">{t('filterDimCoaching')}</option>
+                    <option value="workstation">{t('filterDimWorkstation')}</option>
                   </select>
 
                   <input
                     type="text"
                     value={learnSearch}
                     onChange={e => setLearnSearch(e.target.value)}
-                    placeholder="搜尋已學知識關鍵字..."
+                    placeholder={t('searchLearnedKeywordPlaceholder')}
                     className="text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-slate-800 dark:text-slate-200 w-40 sm:w-48"
                   />
                 </div>
@@ -2347,7 +2349,7 @@ export default function StoreCoachPage() {
                             {mat.dimension.toUpperCase()}
                           </span>
                           <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
-                            實證 {mat.evidence_level || 'B'} 級
+                            {t('evidenceLevelShort', { level: mat.evidence_level || 'B' })}
                           </span>
                         </div>
 
@@ -2362,7 +2364,7 @@ export default function StoreCoachPage() {
                         {mat.key_takeaways && mat.key_takeaways.length > 0 && (
                           <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/80 space-y-1">
                             <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 block">
-                              核心要點：
+                              {t('keyPointsColonLabel')}
                             </span>
                             {mat.key_takeaways.slice(0, 2).map((k, idx) => (
                               <div key={idx} className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-1">
@@ -2374,8 +2376,8 @@ export default function StoreCoachPage() {
                       </div>
 
                       <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-400">
-                        <span>{mat.author_role || '營運指導員'}</span>
-                        <span>{new Date(mat.created_at || '').toLocaleDateString('zh-TW')}</span>
+                        <span>{mat.author_role || t('operationsAdvisorFallback')}</span>
+                        <span>{new Date(mat.created_at || '').toLocaleDateString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')}</span>
                       </div>
                     </div>
                   ))}

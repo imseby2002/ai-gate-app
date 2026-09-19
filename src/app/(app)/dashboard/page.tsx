@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { LayoutGrid, Shield, Sparkles, ArrowRight } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Owner 專用控制台：僅限管理者，其他用戶一律導向 /apps（功能選單）
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase

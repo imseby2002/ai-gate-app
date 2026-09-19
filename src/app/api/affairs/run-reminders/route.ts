@@ -5,7 +5,7 @@ import { runAffairReminders } from '@/lib/affairs/reminders'
 // 後台「立即檢查提醒」：僅處理該公司 owner 的文件（沿用去重，不會重複發送）。
 export async function POST() {
   const ctx = await getUnitContext('affairs')
-  if (!ctx.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const result = await runAffairReminders(ctx.admin, ctx.ownerId)
   return NextResponse.json({ ok: true, ...result })

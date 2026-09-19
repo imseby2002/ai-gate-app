@@ -7,10 +7,12 @@ import {
   Image as ImageIcon, Upload, Copy, ArrowRight, ShieldCheck, Tag,
   ExternalLink, User, Store, Building2, RefreshCw, Layers
 } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { getLocalizedDepartments, getLocalizedUnitLabel } from '@/lib/org-units'
 
 interface Proposal {
   id: string
@@ -36,20 +38,12 @@ interface Proposal {
   approved_by_name?: string
 }
 
-const DEPARTMENTS: { key: string; label: string; icon: string }[] = [
-  { key: 'store',     label: '門市營運', icon: '🏪' },
-  { key: 'finance',   label: '出納總務', icon: '💰' },
-  { key: 'rd',        label: '研發配方', icon: '🧪' },
-  { key: 'hr',        label: '人事管理', icon: '👥' },
-  { key: 'audit',     label: '稽核巡檢', icon: '🛡️' },
-  { key: 'repair',    label: '設備維修', icon: '🔧' },
-  { key: 'affairs',   label: '外務證照', icon: '📑' },
-  { key: 'marketing', label: '品牌行銷', icon: '📣' },
-  { key: 'gm',        label: '總經理室', icon: '👑' },
-  { key: 'system',    label: '全系統共用', icon: '🌐' },
-]
-
 export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolean }) {
+  const t = useTranslations('Office.proposals')
+  const locale = useLocale()
+  const departments = getLocalizedDepartments(locale)
+  const unitLabels = getLocalizedUnitLabel(locale)
+
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState('')
@@ -123,10 +117,10 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
       if (res.ok && data.url) {
         setFormAttachments(prev => [...prev, data.url])
       } else {
-        alert(data.error || '圖片上傳失敗')
+        alert(data.error || t('alertUploadFail'))
       }
     } catch {
-      alert('上傳失敗，請確認網路連線')
+      alert(t('alertNetworkFail'))
     } finally {
       setUploadingImg(false)
     }
@@ -136,13 +130,13 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formTitle.trim() || !formDesc.trim()) {
-      alert('請填寫提案標題與問題/想法描述')
+      alert(t('alertFillRequired'))
       return
     }
 
     setSubmitting(true)
     try {
-      const deptObj = DEPARTMENTS.find(d => d.key === formDept)
+      const deptObj = departments.find(d => d.key === formDept)
       const res = await fetch('/api/office/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -164,14 +158,14 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
         setFormDesc('')
         setFormSolution('')
         setFormAttachments([])
-        setMsg({ type: 'success', text: '✅ 您的提案已成功送出！老闆審批後將即刻啟動程式改寫。' })
+        setMsg({ type: 'success', text: t('msgSuccessSubmit') })
         setTimeout(() => setMsg(null), 5000)
         loadData()
       } else {
-        alert(data.error || '送出失敗')
+        alert(data.error || t('alertSubmitFail'))
       }
     } catch {
-      alert('送出失敗，請重試')
+      alert(t('alertSubmitFail'))
     } finally {
       setSubmitting(false)
     }
@@ -196,18 +190,18 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
         setMsg({
           type: 'success',
           text: newStatus === 'approved'
-            ? '🚀 已批准該提案！AI 程式重寫任務規格書已自動生成，可即刻啟動程式改寫。'
+            ? t('msgApprovedAuto')
             : newStatus === 'completed'
-            ? '🎉 已標記該功能程式改寫完成並上線！'
-            : '已更新提案審核狀態。'
+            ? t('msgCompletedAuto')
+            : t('msgStatusUpdated')
         })
         setTimeout(() => setMsg(null), 5000)
         loadData()
       } else {
-        alert(data.error || '操作失敗')
+        alert(data.error || t('alertOpFail'))
       }
     } catch {
-      alert('更新失敗，請檢查網路')
+      alert(t('alertUpdateFail'))
     } finally {
       setUpdatingId(null)
     }
@@ -246,6 +240,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
     return true
   })
 
+  const dateLocale = locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW'
+
   return (
     <div className="space-y-5">
       {/* 訊息提示 */}
@@ -272,14 +268,11 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                 <Lightbulb className="h-4 w-4" />
               </div>
               <h2 className="text-lg font-bold tracking-tight text-foreground">
-                全體問題與想法提案中樞
+                {t('title')}
               </h2>
-              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 border-amber-300 font-normal">
-                老闆審批後自動啟動寫程式
-              </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              任何部門同仁皆可在此提出系統問題、操作痛點或創新想法；負責人審批批准後，將即刻依指示改寫程式並更新上線。
+              {t('subtitle')}
             </p>
           </div>
 
@@ -288,7 +281,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold gap-1.5 shadow-sm px-4"
           >
             <Plus className="h-4 w-4" />
-            提出問題或想法
+            {t('btnNew')}
           </Button>
         </div>
 
@@ -298,7 +291,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             onClick={() => setStatusFilter('all')}
             className={`p-2.5 rounded-xl border text-left transition-all ${statusFilter === 'all' ? 'bg-muted border-primary/50 ring-1 ring-primary/40' : 'bg-card hover:bg-muted/40'}`}
           >
-            <span className="text-[11px] text-muted-foreground font-medium block">全部提案</span>
+            <span className="text-[11px] text-muted-foreground font-medium block">{t('tabAll')}</span>
             <span className="text-lg font-bold text-foreground">{totalCount}</span>
           </button>
 
@@ -307,7 +300,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             className={`p-2.5 rounded-xl border text-left transition-all ${statusFilter === 'pending' ? 'bg-amber-50/70 dark:bg-amber-950/40 border-amber-300 ring-1 ring-amber-400' : 'bg-card hover:bg-amber-50/30'}`}
           >
             <span className="text-[11px] text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
-              <Clock className="h-3 w-3" />待審批
+              <Clock className="h-3 w-3" />{t('tabPending')}
             </span>
             <span className="text-lg font-bold text-amber-700 dark:text-amber-300">{pendingCount}</span>
           </button>
@@ -317,7 +310,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             className={`p-2.5 rounded-xl border text-left transition-all ${statusFilter === 'approved' ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-300 ring-1 ring-blue-400' : 'bg-card hover:bg-blue-50/30'}`}
           >
             <span className="text-[11px] text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1">
-              <Sparkles className="h-3 w-3" />已批准改寫
+              <Sparkles className="h-3 w-3" />{t('tabApproved')}
             </span>
             <span className="text-lg font-bold text-blue-700 dark:text-blue-300">{approvedCount}</span>
           </button>
@@ -327,7 +320,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             className={`p-2.5 rounded-xl border text-left transition-all ${statusFilter === 'in_progress' ? 'bg-purple-50/70 dark:bg-purple-950/40 border-purple-300 ring-1 ring-purple-400' : 'bg-card hover:bg-purple-50/30'}`}
           >
             <span className="text-[11px] text-purple-700 dark:text-purple-400 font-medium flex items-center gap-1">
-              <Loader2 className="h-3 w-3" />程式改寫中
+              <Loader2 className="h-3 w-3" />{t('tabInProgress')}
             </span>
             <span className="text-lg font-bold text-purple-700 dark:text-purple-300">{inProgressCount}</span>
           </button>
@@ -337,7 +330,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             className={`p-2.5 rounded-xl border text-left transition-all ${statusFilter === 'completed' ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300 ring-1 ring-emerald-400' : 'bg-card hover:bg-emerald-50/30'}`}
           >
             <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" />已完成上線
+              <CheckCircle2 className="h-3 w-3" />{t('tabCompleted')}
             </span>
             <span className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{completedCount}</span>
           </button>
@@ -353,8 +346,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             onChange={e => setDeptFilter(e.target.value)}
             className="h-8 rounded-lg border bg-background px-2.5 text-xs font-medium text-foreground focus:ring-1 focus:ring-primary"
           >
-            <option value="all">全部部門模組</option>
-            {DEPARTMENTS.map(d => (
+            <option value="all">{t('allDepartments')}</option>
+            {departments.map(d => (
               <option key={d.key} value={d.key}>{d.icon} {d.label}</option>
             ))}
           </select>
@@ -365,9 +358,9 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             onChange={e => setTypeFilter(e.target.value as any)}
             className="h-8 rounded-lg border bg-background px-2.5 text-xs font-medium text-foreground focus:ring-1 focus:ring-primary"
           >
-            <option value="all">全部提案類型</option>
-            <option value="problem">🚨 問題回報 (Problem)</option>
-            <option value="idea">💡 想法建議 (Idea)</option>
+            <option value="all">{t('allTypes')}</option>
+            <option value="problem">{t('typeProblemSelect')}</option>
+            <option value="idea">{t('typeIdeaSelect')}</option>
           </select>
 
           <button
@@ -376,14 +369,14 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
               statusFilter === 'mine' ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground hover:bg-muted'
             }`}
           >
-            <User className="h-3 w-3" />我提出的
+            <User className="h-3 w-3" />{t('tabMine')}
           </button>
         </div>
 
         {/* 搜尋與重新載入 */}
         <div className="flex items-center gap-2">
           <Input
-            placeholder="搜尋提案標題、同仁或內容…"
+            placeholder={t('searchPh')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="h-8 w-44 sm:w-56 text-xs"
@@ -398,21 +391,21 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
       {loading ? (
         <div className="py-12 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          正在載入全體問題與想法提案…
+          {t('loadingText')}
         </div>
       ) : filtered.length === 0 ? (
         <Card className="p-8 text-center text-xs text-muted-foreground space-y-2">
-          <p>尚無符合篩選條件的提案記錄。</p>
+          <p>{t('emptyFilter')}</p>
           <Button variant="outline" size="sm" onClick={() => setShowModal(true)} className="text-xs">
-            + 立即提出第一個問題或想法
+            {t('emptyCreateBtn')}
           </Button>
         </Card>
       ) : (
         <div className="space-y-3">
           {filtered.map(p => {
             const isMine = p.user_id === currentUserId
-            const isExpanded = expandedIds.has(p.id)
-            const deptObj = DEPARTMENTS.find(d => d.key === p.department)
+            const deptObj = departments.find(d => d.key === p.department)
+            const deptLabel = deptObj?.label || unitLabels[p.department] || p.department_label || p.department
 
             return (
               <Card
@@ -438,12 +431,12 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                           : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300'
                       }`}
                     >
-                      {p.type === 'problem' ? '🚨 問題回報' : '💡 想法建議'}
+                      {p.type === 'problem' ? t('typeProblemBadge') : t('typeIdeaBadge')}
                     </Badge>
 
                     {/* 部門標籤 */}
                     <Badge variant="outline" className="text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-muted/50">
-                      {deptObj?.icon} {p.department_label || deptObj?.label || p.department}
+                      {deptObj?.icon || '🏢'} {deptLabel}
                     </Badge>
 
                     {/* 門市代碼 */}
@@ -467,22 +460,22 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                           : 'bg-slate-100 text-slate-700 border-slate-300'
                       }`}
                     >
-                      {p.status === 'pending' && '⏳ 待老闆審核'}
-                      {p.status === 'approved' && '🚀 老闆已批准・可開始寫程式'}
-                      {p.status === 'in_progress' && '⚙️ 程式改寫中'}
-                      {p.status === 'completed' && '✅ 程式已改寫完成並上線'}
-                      {p.status === 'rejected' && '✕ 暫不採納'}
+                      {p.status === 'pending' && t('statusPendingBadge')}
+                      {p.status === 'approved' && t('statusApprovedBadge')}
+                      {p.status === 'in_progress' && t('statusInProgressBadge')}
+                      {p.status === 'completed' && t('statusCompletedBadge')}
+                      {p.status === 'rejected' && t('statusRejectedBadge')}
                     </Badge>
                   </div>
 
                   {/* 提案人與時間 */}
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                     <span>
-                      由 <strong>{p.author_name}</strong> {isMine && '(您)'} 提出
+                      {isMine ? t('submittedByYou', { name: p.author_name }) : t('submittedBy', { name: p.author_name })}
                     </span>
                     <span>•</span>
                     <span>
-                      {new Date(p.created_at).toLocaleString('zh-TW', {
+                      {new Date(p.created_at).toLocaleString(dateLocale, {
                         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
@@ -502,7 +495,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                 {/* 期望做法 */}
                 {p.expected_solution && (
                   <div className="text-xs space-y-1 bg-primary/5 border border-primary/20 p-2.5 rounded-lg">
-                    <span className="font-semibold text-primary block">✨ 期望做法與建議：</span>
+                    <span className="font-semibold text-primary block">{t('expectedSolutionTitle')}</span>
                     <p className="text-foreground whitespace-pre-wrap">{p.expected_solution}</p>
                   </div>
                 )}
@@ -511,7 +504,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                 {p.attachments && p.attachments.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap pt-1">
                     <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-                      <ImageIcon className="h-3.5 w-3.5" />截圖附件：
+                      <ImageIcon className="h-3.5 w-3.5" />{t('attachmentsTitle')}
                     </span>
                     {p.attachments.map((url, i) => (
                       <a
@@ -521,7 +514,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-xs text-primary hover:underline bg-muted px-2 py-1 rounded border"
                       >
-                        <ImageIcon className="h-3 w-3" />截圖 {i + 1} <ExternalLink className="h-2.5 w-2.5" />
+                        <ImageIcon className="h-3 w-3" />{t('screenshotIndex', { index: i + 1 })} <ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     ))}
                   </div>
@@ -532,7 +525,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                   <div className="text-xs bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-amber-900 dark:text-amber-200">
                     <span className="font-semibold flex items-center gap-1 mb-0.5">
                       <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
-                      負責人批示備註：
+                      {t('adminNotesTitle')}
                     </span>
                     <p>{p.admin_notes}</p>
                   </div>
@@ -544,7 +537,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[11px] text-emerald-400 font-semibold flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5" />
-                        AI 程式改寫指令規格書 (可一鍵複製給 AI 開始寫程式)
+                        {t('aiPlanSpecTitle')}
                       </span>
                       <Button
                         size="sm"
@@ -553,7 +546,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                         className="h-6 text-[10px] px-2 gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200"
                       >
                         {copiedId === p.id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                        {copiedId === p.id ? '已複製！' : '複製提示詞'}
+                        {copiedId === p.id ? t('copiedBtn') : t('copyPromptBtn')}
                       </Button>
                     </div>
                     <pre className="text-[11px] font-mono whitespace-pre-wrap text-slate-300 leading-relaxed max-h-40 overflow-y-auto bg-black/40 p-2 rounded">
@@ -567,7 +560,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                   <div className="pt-2 border-t mt-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex-1 min-w-[200px] flex items-center gap-2">
                       <Input
-                        placeholder="批示指引 (例: 同意，請新增至門市報表並更新計算邏輯)"
+                        placeholder={t('notesGuidancePh')}
                         value={actionNotes[p.id] || ''}
                         onChange={e => setActionNotes(prev => ({ ...prev, [p.id]: e.target.value }))}
                         className="h-8 text-xs"
@@ -584,7 +577,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1"
                           >
                             {updatingId === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                            ✅ 批准並開始寫程式
+                            {t('approveAndStartCode')}
                           </Button>
                           <Button
                             size="sm"
@@ -593,7 +586,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                             onClick={() => handleReview(p.id, 'rejected')}
                             className="h-8 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
                           >
-                            ✕ 暫不採納
+                            {t('rejectBtn')}
                           </Button>
                         </>
                       )}
@@ -606,7 +599,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                             onClick={() => handleReview(p.id, 'in_progress')}
                             className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white font-semibold gap-1"
                           >
-                            ⚙️ 標記改寫中
+                            {t('markInProgress')}
                           </Button>
                           <Button
                             size="sm"
@@ -614,7 +607,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                             onClick={() => handleReview(p.id, 'completed')}
                             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1"
                           >
-                            🎉 標記已完成上線
+                            {t('markCompleted')}
                           </Button>
                         </>
                       )}
@@ -626,13 +619,13 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                           onClick={() => handleReview(p.id, 'completed')}
                           className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1"
                         >
-                          🎉 標記已完成上線
+                          {t('markCompleted')}
                         </Button>
                       )}
 
                       {p.status === 'completed' && (
                         <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" />已完成部署
+                          <CheckCircle2 className="h-3.5 w-3.5" />{t('deployedBadge')}
                         </span>
                       )}
                     </div>
@@ -654,8 +647,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                   <Lightbulb className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-foreground">提出問題或改進想法</h3>
-                  <p className="text-[11px] text-muted-foreground">提交後由負責人審閱，批准後將即刻啟動程式改寫</p>
+                  <h3 className="font-bold text-base text-foreground">{t('modalHeading')}</h3>
+                  <p className="text-[11px] text-muted-foreground">{t('modalSubheading')}</p>
                 </div>
               </div>
               <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground text-sm">
@@ -666,7 +659,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
               {/* 類型選擇 */}
               <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">提案類型 *</label>
+                <label className="font-semibold text-foreground">{t('modalType')}</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -679,8 +672,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                   >
                     <Lightbulb className="h-4 w-4 text-amber-600 shrink-0" />
                     <div>
-                      <div className="font-bold">💡 想法建議</div>
-                      <div className="text-[10px] opacity-75">新功能、流程優化、更方便的做法</div>
+                      <div className="font-bold">{t('modalTypeIdea')}</div>
+                      <div className="text-[10px] opacity-75">{t('modalTypeIdeaDesc')}</div>
                     </div>
                   </button>
 
@@ -695,8 +688,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                   >
                     <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
                     <div>
-                      <div className="font-bold">🚨 問題回報</div>
-                      <div className="text-[10px] opacity-75">系統錯誤、計算異常、操作卡住</div>
+                      <div className="font-bold">{t('modalTypeProblem')}</div>
+                      <div className="text-[10px] opacity-75">{t('modalTypeProblemDesc')}</div>
                     </div>
                   </button>
                 </div>
@@ -704,13 +697,13 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
 
               {/* 相關部門 */}
               <div className="space-y-1">
-                <label className="font-semibold text-foreground">相關部門 / 模組 *</label>
+                <label className="font-semibold text-foreground">{t('modalDept')}</label>
                 <select
                   value={formDept}
                   onChange={e => setFormDept(e.target.value)}
                   className="w-full h-9 rounded-lg border bg-background px-3 text-xs font-medium"
                 >
-                  {DEPARTMENTS.map(d => (
+                  {departments.map(d => (
                     <option key={d.key} value={d.key}>{d.icon} {d.label}</option>
                   ))}
                 </select>
@@ -719,11 +712,11 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
               {/* 提案標題 */}
               <div className="space-y-1">
                 <label className="font-semibold text-foreground">
-                  {formType === 'problem' ? '問題摘要標題 *' : '想法建議標題 *'}
+                  {formType === 'problem' ? t('modalTitleProblem') : t('modalTitleIdea')}
                 </label>
                 <Input
                   required
-                  placeholder={formType === 'problem' ? '例：門市水電費上傳照片無法預覽' : '例：希望在出納總務增加 Excel 批次匯出'}
+                  placeholder={formType === 'problem' ? t('modalTitleProblemPh') : t('modalTitleIdeaPh')}
                   value={formTitle}
                   onChange={e => setFormTitle(e.target.value)}
                   className="h-9 text-xs"
@@ -733,12 +726,12 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
               {/* 詳細內容 */}
               <div className="space-y-1">
                 <label className="font-semibold text-foreground">
-                  {formType === 'problem' ? '問題詳細描述與發生時機 *' : '想法詳細說明與好處 *'}
+                  {formType === 'problem' ? t('modalDescProblem') : t('modalDescIdea')}
                 </label>
                 <textarea
                   required
                   rows={4}
-                  placeholder={formType === 'problem' ? '請描述遇到什麼狀況、操作步驟、哪家門市或哪個科目出錯…' : '請描述希望增加什麼功能，對門市或部門有什麼幫助…'}
+                  placeholder={formType === 'problem' ? t('modalDescProblemPh') : t('modalDescIdeaPh')}
                   value={formDesc}
                   onChange={e => setFormDesc(e.target.value)}
                   className="w-full rounded-lg border bg-background p-2.5 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
@@ -747,10 +740,10 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
 
               {/* 期望做法 */}
               <div className="space-y-1">
-                <label className="font-semibold text-foreground">期望改寫做法或功能設計 (可選)</label>
+                <label className="font-semibold text-foreground">{t('modalSolution')}</label>
                 <textarea
                   rows={2}
-                  placeholder="希望系統怎麼做？或是您覺得最方便的操作方式是什麼？"
+                  placeholder={t('modalSolutionPh')}
                   value={formSolution}
                   onChange={e => setFormSolution(e.target.value)}
                   className="w-full rounded-lg border bg-background p-2.5 text-xs text-foreground focus:ring-1 focus:ring-primary outline-none"
@@ -760,8 +753,8 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
               {/* 截圖附件上傳 */}
               <div className="space-y-1.5">
                 <label className="font-semibold text-foreground flex items-center justify-between">
-                  <span>截圖或照片憑證 (可選)</span>
-                  {uploadingImg && <span className="text-[11px] text-amber-600 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />上傳中...</span>}
+                  <span>{t('modalEvidence')}</span>
+                  {uploadingImg && <span className="text-[11px] text-amber-600 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />{t('modalUploading')}</span>}
                 </label>
                 <input
                   ref={fileInputRef}
@@ -796,7 +789,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                     className="h-14 px-3 border-dashed gap-1 text-xs"
                   >
                     <Upload className="h-3.5 w-3.5" />
-                    選擇截圖
+                    {t('modalChooseImage')}
                   </Button>
                 </div>
               </div>
@@ -804,7 +797,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
               {/* 底部動作列 */}
               <div className="flex items-center justify-end gap-2 pt-2 border-t">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowModal(false)} disabled={submitting}>
-                  取消
+                  {t('btnCancel')}
                 </Button>
                 <Button
                   type="submit"
@@ -812,7 +805,7 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
                   className="bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5 px-5"
                 >
                   {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                  確認送出提案
+                  {t('modalConfirmSubmit')}
                 </Button>
               </div>
             </form>

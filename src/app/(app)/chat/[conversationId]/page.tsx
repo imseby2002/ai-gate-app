@@ -1,5 +1,5 @@
 ﻿import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { ChatInterface } from '@/components/chat/ChatInterface'
 
 export default async function ConversationPage({
@@ -9,7 +9,7 @@ export default async function ConversationPage({
 }) {
   const { conversationId } = await params
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
   const { data: conversation } = await supabase

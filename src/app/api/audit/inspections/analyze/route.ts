@@ -7,7 +7,7 @@ export const maxDuration = 60
 
 async function ctx() {
   const c = await getUnitContextAny(['audit', 'store', 'rd'])
-  return c.ok ? c : null
+  return c
 }
 
 const CATEGORY_PROMPTS: Record<string, string> = {
@@ -53,7 +53,7 @@ const CATEGORY_PROMPTS: Record<string, string> = {
 // 多模態巡檢分析：照片＋手寫筆記 OCR ＋ 專家建議
 export async function POST(req: NextRequest) {
   const c = await ctx()
-  if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY 未設定' }, { status: 400 })
 
   const b = await req.json().catch(() => ({}))

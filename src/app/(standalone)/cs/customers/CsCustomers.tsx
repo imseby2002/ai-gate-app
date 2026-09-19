@@ -21,7 +21,7 @@ interface Customer {
   first_seen_at: string
 }
 
-const FACT_LABELS: Record<string, string> = { confirmedName: '訂房大名', orderNumber: '訂單號碼', phone: '手機號碼' }
+const FACT_LABEL_KEYS: Record<string, string> = { confirmedName: 'factConfirmedName', orderNumber: 'factOrderNumber', phone: 'factPhone' }
 
 const STAGE_CLS: Record<string, string> = {
   new: 'bg-gray-100 text-gray-600',
@@ -128,7 +128,7 @@ export function CsCustomers({ initialIndustry }: { initialIndustry?: string }) {
                           <div className="text-[11px] text-muted-foreground">{r.platform}{r.summary ? ` · ${r.summary}` : ''}</div>
                           {r.facts && Object.entries(r.facts).some(([, v]) => v) && (
                             <div className="text-[11px] text-muted-foreground mt-0.5">
-                              {Object.entries(r.facts).filter(([, v]) => v).map(([k, v]) => `${FACT_LABELS[k] ?? k}：${v}`).join('　')}
+                              {Object.entries(r.facts).filter(([, v]) => v).map(([k, v]) => `${FACT_LABEL_KEYS[k] ? t(FACT_LABEL_KEYS[k]) : k}：${v}`).join('　')}
                             </div>
                           )}
                         </td>

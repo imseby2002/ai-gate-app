@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const form = await req.formData()
   const file = form.get('file') as File | null

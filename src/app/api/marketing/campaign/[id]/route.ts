@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GET    /api/marketing/campaign/[id]  — load full campaign
  * PATCH  /api/marketing/campaign/[id]  — update campaign state
  * DELETE /api/marketing/campaign/[id]  — archive campaign
@@ -53,7 +53,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if ('selectedPlatforms' in body) patch.selected_platforms = body.selectedPlatforms
   if ('feedbacks'         in body) patch.feedbacks          = body.feedbacks
   if ('status'            in body) patch.status             = body.status
-  if ('unit_data'         in body) patch.unit_data          = body.unit_data
+  if ('unit_data'         in body) {
+    const { data: existing } = await supabase
+      .from('marketing_campaigns')
+      .select('unit_data')
+      .eq('id', id)
+      .single()
+    patch.unit_data = { ...(existing?.unit_data ?? {}), ...(body.unit_data as object) }
+  }
   if ('unit_statuses'     in body) patch.unit_statuses      = body.unit_statuses
 
   const { error } = await supabase

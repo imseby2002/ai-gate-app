@@ -36,6 +36,7 @@ interface RuleRow {
   conditions: Record<string, unknown>
   priority: number
   property_id: string | null
+  can_stack?: boolean
 }
 
 /**
@@ -108,7 +109,7 @@ export async function computeStayPrice(
 
   // 規則（此房型或全房型）
   const { data: rules } = await supabase
-    .from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions, priority, property_id')
+    .from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions, priority, property_id, can_stack')
     .eq('user_id', userId).eq('enabled', true)
     .or(`property_id.eq.${propertyId},property_id.is.null`)
   const sortedRules = ((rules ?? []) as (RuleRow & { name?: string })[]).sort((a, b) => b.priority - a.priority)
@@ -185,38 +186,60 @@ export async function computeStayPrice(
 
       // 2. 促銷型動態折扣（早鳥／晚鳥出清）
       if (!options?.skipPromotionalDiscounts) {
-        let bestAdvanceBooking: (RuleRow & { name?: string }) | null = null
-        let bestEarlyBird: (RuleRow & { name?: string }) | null = null
+        const applicablePromos: (RuleRow & { name?: string })[] = []
         for (const rule of sortedRules) {
           const c = rule.conditions ?? {}
           if (rule.rule_type === 'advance_booking') {
             const threshold = (c.days_before as number) ?? 0
-            if (daysUntil <= threshold) {
-              const bestThreshold = (bestAdvanceBooking?.conditions?.days_before as number) ?? Infinity
-              if (threshold < bestThreshold) bestAdvanceBooking = rule
-            }
+            if (daysUntil <= threshold) applicablePromos.push(rule)
           } else if (rule.rule_type === 'early_bird') {
             const threshold = (c.days_before as number) ?? 90
-            if (daysUntil >= threshold) {
-              const bestThreshold = (bestEarlyBird?.conditions?.days_before as number) ?? -Infinity
-              if (threshold > bestThreshold) bestEarlyBird = rule
-            }
+            if (daysUntil >= threshold) applicablePromos.push(rule)
           }
         }
 
-        const promoRule = bestAdvanceBooking ?? bestEarlyBird
-        if (promoRule) {
-          if (promoRule.adjustment_type === 'percent') {
-            const discountPct = Math.abs(Number(promoRule.adjustment_value))
-            promoDailyPrice = Math.max(0, Math.round(baseDailyPrice * (1 - discountPct / 100)))
-            const label = promoRule.name || (promoRule.rule_type === 'early_bird' ? `早鳥優惠 (${(10 - discountPct / 10).toFixed(discountPct % 10 === 0 ? 0 : 1)}折)` : `晚鳥特惠 (${(10 - discountPct / 10).toFixed(discountPct % 10 === 0 ? 0 : 1)}折)`)
-            appliedPromotionsSet.add(label)
-          } else {
-            const discountAmt = Math.abs(Number(promoRule.adjustment_value))
-            promoDailyPrice = Math.max(0, Math.round(baseDailyPrice - discountAmt))
-            const label = promoRule.name || `特惠折抵 $${discountAmt}`
-            appliedPromotionsSet.add(label)
+        if (applicablePromos.length > 0) {
+          // 若有開啟疊加的規則，將可疊加者全數套用；若全不可疊加或混合，則在不可疊加者中選最優者
+          const stackable = applicablePromos.filter(r => r.can_stack)
+          const nonStackable = applicablePromos.filter(r => !r.can_stack)
+
+          // 決定要套用的促銷集合
+          // 正數＝加價，負數＝折扣（跟調整值輸入框的說明一致）；「最優」指最後
+          // 售價最低（對旅客最有利），不再假設一定是折扣。
+          const delta = (r: RuleRow) => r.adjustment_type === 'percent'
+            ? baseDailyPrice * (Number(r.adjustment_value) / 100)
+            : Number(r.adjustment_value)
+
+          let rulesToApply: (RuleRow & { name?: string })[] = []
+          if (stackable.length > 0) {
+            // 可疊加者全數套用，另外如果還有不可疊加的最優者也可併入或單獨套用
+            const bestNonStack = nonStackable.length ? nonStackable.reduce((best, cur) =>
+              delta(cur) < delta(best) ? cur : best
+            ) : null
+            rulesToApply = bestNonStack ? [bestNonStack, ...stackable] : stackable
+          } else if (nonStackable.length > 0) {
+            // 全不可疊加，採二擇一最優原則
+            const bestNonStack = nonStackable.reduce((best, cur) =>
+              delta(cur) < delta(best) ? cur : best
+            )
+            rulesToApply = [bestNonStack]
           }
+
+          let currentPrice = baseDailyPrice
+          for (const promoRule of rulesToApply) {
+            const value = Number(promoRule.adjustment_value)
+            if (promoRule.adjustment_type === 'percent') {
+              currentPrice = Math.max(0, Math.round(currentPrice * (1 + value / 100)))
+              const kind = value >= 0 ? '加價' : '折扣'
+              const label = promoRule.name || (promoRule.rule_type === 'early_bird' ? `早鳥${kind} (${Math.abs(value)}%)` : `晚鳥${kind} (${Math.abs(value)}%)`)
+              appliedPromotionsSet.add(label)
+            } else {
+              currentPrice = Math.max(0, Math.round(currentPrice + value))
+              const label = promoRule.name || (value >= 0 ? `特惠加價 $${value}` : `特惠折抵 $${Math.abs(value)}`)
+              appliedPromotionsSet.add(label)
+            }
+          }
+          promoDailyPrice = currentPrice
         }
       }
     } else {

@@ -51,7 +51,6 @@ interface PipelineConfig {
 
 const STEP_DEFS: PipelineStepDef[] = [
   { unitId: 1,  nameKey: 'steps.1.name',  icon: Search,     descKey: 'steps.1.desc',  canAuto: true  },
-  { unitId: 2,  nameKey: 'steps.2.name',  icon: Building2,  descKey: 'steps.2.desc',  canAuto: false },
   { unitId: 3,  nameKey: 'steps.3.name',  icon: BarChart3,  descKey: 'steps.3.desc',  canAuto: true  },
   { unitId: 4,  nameKey: 'steps.4.name',  icon: PenLine,    descKey: 'steps.4.desc',  canAuto: true  },
   { unitId: 5,  nameKey: 'steps.5.name',  icon: ImageIcon,  descKey: 'steps.5.desc',  canAuto: true  },
@@ -73,7 +72,7 @@ const DEFAULT_SCHEDULE: PipelineSchedule = {
 }
 
 const DEFAULT_CONFIG: PipelineConfig = {
-  activityName: '自動化流程',
+  activityName: '行銷流水線',
   steps: STEP_DEFS.map(s => ({ unitId: s.unitId, enabled: s.canAuto, notify: [4, 6, 8, 9, 10, 11].includes(s.unitId) })),
   schedule: DEFAULT_SCHEDULE,
 }
@@ -88,7 +87,19 @@ function loadConfigFromLS(): PipelineConfig {
     const raw = localStorage.getItem(LS_CONFIG_KEY)
     if (!raw) return DEFAULT_CONFIG
     const parsed = JSON.parse(raw) as Partial<PipelineConfig>
-    return { ...DEFAULT_CONFIG, ...parsed }
+    const validIds = new Set(STEP_DEFS.map(s => s.unitId))
+    const filteredSteps = (parsed.steps || []).filter(s => validIds.has(s.unitId))
+    const existingIds = new Set(filteredSteps.map(s => s.unitId))
+    const missingSteps = STEP_DEFS.filter(s => !existingIds.has(s.unitId)).map(s => ({
+      unitId: s.unitId,
+      enabled: s.canAuto,
+      notify: [4, 6, 8, 9, 10, 11].includes(s.unitId),
+    }))
+    return {
+      ...DEFAULT_CONFIG,
+      ...parsed,
+      steps: [...filteredSteps, ...missingSteps],
+    }
   } catch { return DEFAULT_CONFIG }
 }
 
@@ -150,29 +161,40 @@ function MarketingPipelineContent() {
     try { localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config)) } catch { /* ignore */ }
   }, [config])
 
-  // Load from campaign when ?campaign=xxx is present
+  // Load from campaign when ?campaign=xxx is present, and load company data
   useEffect(() => {
     const campaignId = searchParams.get('campaign')
-    if (!campaignId) return
 
     const load = async () => {
       setLoadingCampaign(true)
       try {
-        const [campaignRes, companyRes] = await Promise.all([
-          fetch(`/api/marketing/campaign/${campaignId}`),
-          fetch('/api/marketing/company-data'),
-        ])
-        if (!campaignRes.ok) return
+        const promises: Promise<Response>[] = [fetch('/api/marketing/company-data')]
+        if (campaignId) promises.push(fetch(`/api/marketing/campaign/${campaignId}`))
 
-        const { campaign } = await campaignRes.json()
+        const results = await Promise.all(promises)
+        const companyRes = results[0]
+        const campaignRes = campaignId ? results[1] : null
+
         const companyJson = companyRes.ok ? await companyRes.json() : {}
-
-        const unitData: Record<string, unknown> = { ...(campaign.unit_data ?? {}) }
+        const unitData: Record<string, unknown> = {}
         if (companyJson.data) unitData['2'] = companyJson.data
 
-        const loadedUnits = Object.keys(unitData)
-          .map(Number)
-          .filter(n => !isNaN(n) && unitData[String(n)])
+        if (campaignRes && campaignRes.ok) {
+          const { campaign } = await campaignRes.json()
+          Object.assign(unitData, campaign.unit_data ?? {})
+          if (companyJson.data) unitData['2'] = companyJson.data
+
+          const loadedUnits = Object.keys(unitData)
+            .map(Number)
+            .filter(n => !isNaN(n) && unitData[String(n)])
+
+          setConfig(prev => ({
+            ...prev,
+            activityName: campaign.title ?? prev.activityName,
+          }))
+
+          setSourceCampaign({ id: campaignId!, title: campaign.title ?? t('untitledCampaign'), loadedUnits })
+        }
 
         setCampaignData(prev => {
           const merged = { ...prev }
@@ -182,13 +204,6 @@ function MarketingPipelineContent() {
           try { localStorage.setItem(LS_RESULTS_KEY, JSON.stringify(merged)) } catch { /* ignore */ }
           return merged
         })
-
-        setConfig(prev => ({
-          ...prev,
-          activityName: campaign.title ?? prev.activityName,
-        }))
-
-        setSourceCampaign({ id: campaignId, title: campaign.title ?? t('untitledCampaign'), loadedUnits })
       } catch { /* ignore */ } finally {
         setLoadingCampaign(false)
       }
@@ -717,13 +732,50 @@ function MarketingPipelineContent() {
           />
         </div>
 
+        {/* Company Data Prerequisite Card */}
+        {(() => {
+          const compData = campaignData[2] as { companyName?: string } | undefined
+          const hasComp = !!compData?.companyName
+          return (
+            <div className="px-3 pt-2.5 pb-1">
+              <div className={`flex items-center gap-2 p-2 rounded-xl border text-xs ${
+                hasComp ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-gray-50 border-gray-200 text-gray-500'
+              }`}>
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                  hasComp ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-400'
+                }`}>
+                  <Building2 className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 font-semibold text-gray-800 text-xs">
+                    <span>{t('steps.2.name')}</span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">必讀</span>
+                  </div>
+                  <div className="text-[10px] truncate text-gray-500">
+                    {hasComp ? `✓ 已載入 (${compData.companyName})` : t('steps.2.desc')}
+                  </div>
+                </div>
+                <a
+                  href="/settings#company"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] text-blue-600 hover:underline shrink-0"
+                >
+                  {hasComp ? '查看' : '設定'}
+                </a>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Step list */}
         <div className="flex-1 overflow-y-auto py-1">
-          {STEP_DEFS.map(def => {
+          {STEP_DEFS.map((def, idx) => {
             const stepCfg = config.steps.find(s => s.unitId === def.unitId)!
             const Icon = def.icon
             const run = stepRuns.find(r => r.unitId === def.unitId)
             const hasData = campaignData[def.unitId] != null
+            const stepNum = idx + 1
             return (
               <div key={def.unitId}
                 className={`flex items-center gap-2 px-3 py-2 ${!def.canAuto ? 'opacity-40' : ''}`}>
@@ -747,7 +799,7 @@ function MarketingPipelineContent() {
                    <Icon className="h-3.5 w-3.5 text-gray-400" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-gray-700 truncate">{def.unitId}. {t(def.nameKey)}</div>
+                  <div className="text-xs font-medium text-gray-700 truncate">{stepNum}. {t(def.nameKey)}</div>
                   <div className="text-[10px] truncate">
                     {hasData
                       ? <span className="text-green-500">{t('dataReady')}</span>
@@ -926,7 +978,7 @@ function MarketingPipelineContent() {
                         )}
                       </div>
                       <div className="min-w-0 pb-2">
-                        <div className={`text-xs font-medium ${isCurrent ? 'text-blue-600' : 'text-gray-700'}`}>{t(def.nameKey)}</div>
+                        <div className={`text-xs font-medium ${isCurrent ? 'text-blue-600' : 'text-gray-700'}`}>{i + 1}. {t(def.nameKey)}</div>
                         {run?.output && <div className="text-[10px] text-gray-400 truncate mt-0.5">{run.output}</div>}
                         {stepCfg.notify && <div className="flex items-center gap-1 mt-0.5"><Bell className="h-2.5 w-2.5 text-amber-400" /><span className="text-[10px] text-amber-500">{t('notify')}</span></div>}
                       </div>

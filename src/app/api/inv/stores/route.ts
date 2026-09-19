@@ -3,14 +3,14 @@ import { NextResponse } from 'next/server'
 
 async function getAdminUser() {
   const ctx = await getUnitContextAny(['store', 'audit'])
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null as string | null }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode ?? null }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, storeCode: null as string | null , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, storeCode: ctx.storeCode ?? null , status: ctx.status }
 }
 
 // 已匯入資料中出現過的門市清單
 export async function GET() {
-  const { user, supabase, storeCode } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, storeCode , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   if (storeCode) {
     return NextResponse.json({ stores: [storeCode], locked_store: storeCode })

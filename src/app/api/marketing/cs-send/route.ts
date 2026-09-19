@@ -40,8 +40,36 @@ export async function POST(req: NextRequest) {
     } catch { /* 表未建立 → 略過，直接 Push */ }
   }
 
+  // 真人客服頭像與暱稱（從 unit_data[12] 取得）
+  let senderProfile: { name?: string; iconUrl?: string } | undefined
+  if (isLine) {
+    try {
+      const { data: campaign } = await admin
+        .from('marketing_campaigns')
+        .select('unit_data')
+        .eq('user_id', ctx.ownerId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const u12 = (campaign?.unit_data as Record<string, any> | undefined)?.['12']
+      if (u12) {
+        const name = String(u12.humanSenderName ?? '').trim()
+        const iconUrl = String(u12.humanSenderIconUrl ?? '').trim()
+        if (name || iconUrl) {
+          senderProfile = {
+            ...(name ? { name } : {}),
+            ...(iconUrl ? { iconUrl } : {}),
+          }
+        }
+      }
+    } catch { /* 容錯 */ }
+  }
+
   // 1. 推回原平台（LINE 有 token 則優先 Reply API，失敗自動 fallback Push）
-  const result = await sendToCustomer(ctx.ownerId, platform, to, message, { lineReplyToken })
+  const result = await sendToCustomer(ctx.ownerId, platform, to, message, {
+    lineReplyToken,
+    sender: senderProfile,
+  })
   if (!result.ok) return NextResponse.json({ error: result.error ?? '送訊失敗' }, { status: 502 })
 
   // reply token 一次性，無論結果如何用完即刪

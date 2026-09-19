@@ -12,14 +12,47 @@ export interface SystemDef {
 }
 
 export const SYSTEMS: Record<SystemKey, SystemDef> = {
-  chat:      { key: 'chat',      label: 'AI 對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
-  booking:   { key: 'booking',   label: '訂房系統',   desc: '房源、訂單、定價、線上訂房與通路同步', home: '/booking',        prefixes: ['/booking'] },
-  cs:        { key: 'cs',        label: '客服系統',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
-  marketing: { key: 'marketing', label: '行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
-  leads:     { key: 'leads',     label: '開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
-  office:    { key: 'office',    label: '公司入口',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store', '/store-reports', '/store-inventory', '/store-bills', '/store-coach', '/repair', '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai', '/audit-logs', '/audit-platform', '/gm', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
-  resume:    { key: 'resume',    label: '職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume'] },
-  agent:     { key: 'agent',     label: 'AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
+  chat:      { key: 'chat',      label: 'IMT 智能對話',    desc: '多模型智慧對話、助理與圖片／影片生成', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  booking:   { key: 'booking',   label: 'IMT 智能訂房系統',   desc: '房源、訂單、定價、線上訂房與通路同步', home: '/booking',        prefixes: ['/booking'] },
+  cs:        { key: 'cs',        label: 'IMT 智能客服',   desc: '多平台 AI 客服與知識庫', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
+  marketing: { key: 'marketing', label: 'IMT 行銷中心', desc: '行銷內容生成與自動化流水線', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
+  leads:     { key: 'leads',     label: 'IMT 開發信',     desc: '潛在客戶開發與外呼', home: '/prospect-call',  prefixes: ['/prospect-call'] },
+  office:    { key: 'office',    label: 'IMT ERP',   desc: '人事、出納總務、研發、門市、外務、稽核、任務等辦公系統', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store', '/store-reports', '/store-inventory', '/store-bills', '/store-coach', '/repair', '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai', '/audit-logs', '/audit-platform', '/gm', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
+  resume:    { key: 'resume',    label: 'IMT 職場助手',   desc: 'AI 全方位職場助理', home: '/resume',         prefixes: ['/resume'] },
+  agent:     { key: 'agent',     label: 'IMT AI Agent', desc: '全自動 AI 員工：自主研究、規劃、執行，重要動作交真人核准', home: '/agent', prefixes: ['/agent'] },
+}
+
+export const SYSTEMS_VI: Record<SystemKey, SystemDef> = {
+  chat:      { key: 'chat',      label: 'IMT Trò Chuyện Thông Minh', desc: 'Hội thoại đa mô hình, trợ lý AI & tạo ảnh / video', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  booking:   { key: 'booking',   label: 'IMT Đặt Phòng',   desc: 'Quản lý phòng, đơn đặt, định giá & đồng bộ kênh OTA', home: '/booking',        prefixes: ['/booking'] },
+  cs:        { key: 'cs',        label: 'IMT CSKH Thông Minh',        desc: 'Trợ lý CSKH AI đa kênh và cơ sở dữ liệu tri thức', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
+  marketing: { key: 'marketing', label: 'IMT Marketing',  desc: 'Tự động hóa tiếp thị, pipeline & sản xuất nội dung', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
+  leads:     { key: 'leads',     label: 'IMT Khai Thác KH', desc: 'Tìm kiếm khách hàng tiềm năng và tự động gọi điện', home: '/prospect-call',  prefixes: ['/prospect-call'] },
+  office:    { key: 'office',    label: 'IMT ERP',         desc: 'Hệ thống văn phòng: Nhân sự, Thủ quỹ, R&D, Chi nhánh, Đối ngoại, Kiểm toán, Nhiệm vụ', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store', '/store-reports', '/store-inventory', '/store-bills', '/store-coach', '/repair', '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai', '/audit-logs', '/audit-platform', '/gm', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
+  resume:    { key: 'resume',    label: 'IMT Trợ Lý Nghề Nghiệp',   desc: 'Trợ lý AI toàn diện cho công việc & nghề nghiệp', home: '/resume',         prefixes: ['/resume'] },
+  agent:     { key: 'agent',     label: 'IMT AI Agent',             desc: 'Nhân viên AI tự động: tự nghiên cứu, lập kế hoạch, thực thi công việc', home: '/agent', prefixes: ['/agent'] },
+}
+
+export const SYSTEMS_EN: Record<SystemKey, SystemDef> = {
+  chat:      { key: 'chat',      label: 'IMT Smart Chat',             desc: 'Multi-model AI conversations, assistants & media generation', home: '/apps',           prefixes: ['/apps', '/chat', '/assistants', '/image-gen', '/video-gen', '/usage', '/roundtable'] },
+  booking:   { key: 'booking',   label: 'IMT Booking',      desc: 'Properties, reservations, pricing, and OTA sync', home: '/booking',        prefixes: ['/booking'] },
+  cs:        { key: 'cs',        label: 'IMT Smart CS',    desc: 'Omnichannel AI customer support & knowledge base', home: '/cs',             prefixes: ['/cs', '/marketing-auto'] },
+  marketing: { key: 'marketing', label: 'IMT Marketing',   desc: 'Marketing content generation & automated pipelines', home: '/marketing', prefixes: ['/marketing', '/marketing-auto', '/marketing-pipeline', '/prospect-call', '/mkt'] },
+  leads:     { key: 'leads',     label: 'IMT Lead Gen',     desc: 'Prospect discovery and outreach calls', home: '/prospect-call',  prefixes: ['/prospect-call'] },
+  office:    { key: 'office',    label: 'IMT ERP',      desc: 'Office systems: HR, Finance, R&D, Store Operations, Legal, Audit, Tasks', home: '/office', prefixes: ['/office', '/hr', '/personnel', '/finance', '/store-expenses', '/vendors', '/units', '/rd', '/rd-recipes', '/rd-lab', '/rd-ai', '/rd-logs', '/store', '/store-reports', '/store-inventory', '/store-bills', '/store-coach', '/repair', '/shift', '/pos', '/affairs', '/audit', '/audit-inspection', '/audit-ai', '/audit-logs', '/audit-platform', '/gm', '/meeting', '/work', '/roundtable', '/mkt', '/legal'] },
+  resume:    { key: 'resume',    label: 'IMT Career Assistant',    desc: 'All-in-one AI career & workplace assistant', home: '/resume',         prefixes: ['/resume'] },
+  agent:     { key: 'agent',     label: 'IMT AI Agent',            desc: 'Autonomous AI worker: research, plan, and execute with human approval', home: '/agent', prefixes: ['/agent'] },
+}
+
+export function getLocalizedSystems(locale?: string): Record<SystemKey, SystemDef> {
+  if (locale === 'vi') return SYSTEMS_VI
+  if (locale === 'en') return SYSTEMS_EN
+  return SYSTEMS
+}
+
+export function getLocalizedSystemDef(system: SystemKey, locale?: string): SystemDef {
+  const sysMap = getLocalizedSystems(locale)
+  return sysMap[system] || SYSTEMS[system]
 }
 
 export const SYSTEM_LIST: SystemDef[] = Object.values(SYSTEMS)
@@ -52,7 +85,7 @@ export const SCOPE_SESSION_KEY = 'ai_gate_scope'
 
 // 不受 scope 限制、任何系統都可存取的共用路徑
 // /dashboard 不在此列：為 owner 專用總控台，非管理者會被導向 /apps
-const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/logout', '/privacy', '/work', '/office', '/roundtable', '/mkt', '/legal', '/esim', '/feedback', '/credits', '/company']
+const SHARED_PREFIXES = ['/settings', '/team', '/api', '/callback', '/login', '/register', '/reset-password', '/logout', '/privacy', '/work', '/office', '/roundtable', '/mkt', '/legal', '/esim', '/feedback', '/credits', '/company']
 
 export function isSystemKey(s: string | undefined | null): s is SystemKey {
   return !!s && Object.prototype.hasOwnProperty.call(SYSTEMS, s)

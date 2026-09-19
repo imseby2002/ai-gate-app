@@ -263,7 +263,7 @@ export function ChatInterface({
             </div>
             <div className="space-y-2">
               <h2 className="text-xl font-semibold">
-                {assistant ? assistant.name : 'AI GATE 助手'}
+                {assistant ? assistant.name : 'IMT 助手'}
               </h2>
               <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
                 {assistant?.description ?? '直接輸入問題開始對話，系統會自動選擇最適合的 AI 模型回答您。'}

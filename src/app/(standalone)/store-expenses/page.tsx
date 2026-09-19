@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import { Loader2, AlertCircle, Plus, Trash2, X, Store, Tags, Wallet, Table2, BarChart3, Upload, Truck, FileSpreadsheet, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,13 +10,10 @@ import { Input } from '@/components/ui/input'
 import { ExcelImportModal } from '@/components/common/ExcelImportModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 
-const fmt = (n: number) => Math.round(n).toLocaleString('zh-TW')
+const fmt = (n: number, locale: string) => Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 type Tab = 'stores' | 'categories' | 'bills' | 'vendors' | 'report'
 interface StoreRow { id: string; code: string; name: string; region: string; active: boolean }
 interface CatRow { id: string; code: string; name: string; entry_method: string; vendor_service: string; sort: number }
-
-const METHOD_LABEL: Record<string, string> = { import: '人工匯入', vendor: '廠商填', manual: '手動' }
-const SERVICE_LABEL: Record<string, string> = { gas: '瓦斯', electric: '電力', water: '水費', ice: '冰塊', '': '—' }
 
 const STORE_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'code', label: '門市編碼', required: true, example: 'YL', aliases: ['code', '編碼', '門市代碼'] },
@@ -40,6 +38,7 @@ const VENDOR_IMPORT_COLUMNS: ImportColumn[] = [
 ]
 
 export default function StoreExpensesPage() {
+  const t = useTranslations('StoreExpenses')
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [tab, setTab] = useState<Tab>('stores')
 
@@ -51,16 +50,16 @@ export default function StoreExpensesPage() {
 
   if (isAdmin === false) return (
     <div className="flex h-full items-center justify-center p-8">
-      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">僅出納總務單位可使用門市費用</p></div>
+      <div className="text-center space-y-2"><AlertCircle className="h-12 w-12 mx-auto text-amber-400" /><p className="font-semibold">{t('adminOnly')}</p></div>
     </div>
   )
 
   const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
-    { id: 'stores', label: '門市／區域', icon: <Store className="h-4 w-4" /> },
-    { id: 'categories', label: '費用科目', icon: <Tags className="h-4 w-4" /> },
-    { id: 'bills', label: '月度費用', icon: <Table2 className="h-4 w-4" /> },
-    { id: 'vendors', label: '廠商填報', icon: <Truck className="h-4 w-4" /> },
-    { id: 'report', label: '收支報表', icon: <BarChart3 className="h-4 w-4" /> },
+    { id: 'stores', label: t('tabStores'), icon: <Store className="h-4 w-4" /> },
+    { id: 'categories', label: t('tabCategories'), icon: <Tags className="h-4 w-4" /> },
+    { id: 'bills', label: t('tabBills'), icon: <Table2 className="h-4 w-4" /> },
+    { id: 'vendors', label: t('tabVendors'), icon: <Truck className="h-4 w-4" /> },
+    { id: 'report', label: t('tabReport'), icon: <BarChart3 className="h-4 w-4" /> },
   ]
 
   return (
@@ -68,10 +67,10 @@ export default function StoreExpensesPage() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"><Wallet className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">門市費用</h1>
-          <p className="text-sm text-gray-500">門市/區域、費用科目（水電瓦斯冰塊）</p>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="text-sm text-gray-500">{t('subtitle')}</p>
         </div>
-        <div className="ml-auto"><Link href="/finance"><Button variant="outline" size="sm" className="gap-1.5"><Wallet className="h-4 w-4" />出納總務</Button></Link></div>
+        <div className="ml-auto"><Link href="/finance"><Button variant="outline" size="sm" className="gap-1.5"><Wallet className="h-4 w-4" />{t('finance')}</Button></Link></div>
       </div>
 
       <div className="flex gap-1 p-1 bg-muted rounded-xl w-fit">
@@ -95,6 +94,8 @@ export default function StoreExpensesPage() {
 interface Vendor { id: string; name: string; service: string; regions: string[]; fill_token: string; active: boolean }
 
 function VendorsTab() {
+  const t = useTranslations('StoreExpenses')
+  const SERVICE_LABEL: Record<string, string> = { gas: t('serviceGas'), electric: t('serviceElectric'), water: t('serviceWater'), ice: t('serviceIce'), '': '—' }
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [regions, setRegions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -114,7 +115,7 @@ function VendorsTab() {
     })
     return () => { alive = false }
   }, [tick])
-  const reload = () => setTick(t => t + 1)
+  const reload = () => setTick(x => x + 1)
 
   const save = async () => {
     if (!editing?.name?.trim()) return
@@ -123,13 +124,13 @@ function VendorsTab() {
       method: editing.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
     })
     setBusy(false)
-    if (res.ok) { setEditing(null); reload() } else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+    if (res.ok) { setEditing(null); reload() } else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
   const remove = async (v: Vendor) => {
-    if (!confirm(`刪除廠商「${v.name}」？`)) return
+    if (!confirm(t('confirmDeleteVendor', { name: v.name }))) return
     await fetch('/api/fin/vendors', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: v.id }) }); reload()
   }
-  const copyLink = (v: Vendor) => { navigator.clipboard?.writeText(`${origin}/vendor/${v.fill_token}`); alert('已複製廠商填報連結') }
+  const copyLink = (v: Vendor) => { navigator.clipboard?.writeText(`${origin}/vendor/${v.fill_token}`); alert(t('linkCopied')) }
   const toggleRegion = (r: string) => setEditing(e => {
     if (!e) return e
     const cur = e.regions ?? []
@@ -140,13 +141,13 @@ function VendorsTab() {
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-gray-500">
-          電費/水費＝單一公用事業（全門市/工廠/辦公室）；瓦斯＝多家瓦斯公司（依負責區域配送）。每家一條專屬填報與單據上傳連結。
+          {t('vendorsDesc')}
         </p>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入廠商 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImportVendors')}
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'gas', regions: [], active: true })}><Plus className="h-4 w-4" />新增廠商</Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ name: '', service: 'gas', regions: [], active: true })}><Plus className="h-4 w-4" />{t('newVendor')}</Button>
         </div>
       </div>
 
@@ -170,44 +171,44 @@ function VendorsTab() {
         />
       )}
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : vendors.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無廠商</div>
+        : vendors.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">{t('noVendors')}</div>
         : <div className="grid gap-2">{vendors.map(v => (
           <Card key={v.id} className="p-3 flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-medium">{v.name} <span className="text-xs text-gray-400 ml-1">[{SERVICE_LABEL[v.service] ?? v.service}]</span>{!v.active && <span className="text-xs text-red-400 ml-1">停用</span>}</div>
+              <div className="font-medium">{v.name} <span className="text-xs text-gray-400 ml-1">[{SERVICE_LABEL[v.service] ?? v.service}]</span>{!v.active && <span className="text-xs text-red-400 ml-1">{t('inactive')}</span>}</div>
               <div className="text-xs text-gray-500">
                 {v.service === 'electric' || v.service === 'water'
-                  ? '全部門市、工廠、總部辦公室據點'
+                  ? t('allLocationsNote')
                   : v.regions && v.regions.length > 0
-                  ? `負責區域：${v.regions.join('、')}`
-                  : '全部門市據點'}
+                  ? t('responsibleRegions', { regions: v.regions.join('、') })
+                  : t('allStoreLocations')}
               </div>
             </div>
             <div className="flex gap-1 shrink-0 flex-wrap justify-end">
-              <button onClick={() => copyLink(v)} className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">複製填報連結</button>
-              <button onClick={() => setEditing({ ...v })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">編輯</button>
+              <button onClick={() => copyLink(v)} className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">{t('copyFillLink')}</button>
+              <button onClick={() => setEditing({ ...v })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('edit')}</button>
               <button onClick={() => remove(v)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
             </div>
           </Card>))}</div>}
 
       {editing && (
-        <Modal title={editing.id ? '編輯廠商' : '新增廠商'} onClose={() => setEditing(null)}>
-          <Field label="廠商名稱 *"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
-          <Field label="服務別">
+        <Modal title={editing.id ? t('editVendor') : t('newVendor')} onClose={() => setEditing(null)}>
+          <Field label={t('vendorNameRequired')}><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
+          <Field label={t('serviceType')}>
             <select value={editing.service ?? 'gas'} onChange={e => setEditing({ ...editing, service: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-              <option value="electric">電力公司 (單一公司提供・全門市/工廠/辦公室)</option>
-              <option value="water">水公司 (單一公司提供・全門市/工廠/辦公室)</option>
-              <option value="gas">瓦斯公司 (按區域劃分負責門市・支援簽收單上傳)</option>
-              <option value="ice">冰塊廠商 (按區域劃分)</option>
+              <option value="electric">{t('serviceElectricOption')}</option>
+              <option value="water">{t('serviceWaterOption')}</option>
+              <option value="gas">{t('serviceGasOption')}</option>
+              <option value="ice">{t('serviceIceOption')}</option>
             </select>
           </Field>
           {['gas', 'ice'].includes(editing.service ?? '') && (
             <div className="space-y-1">
               <span className="text-xs text-gray-500">
-                {editing.service === 'gas' ? '負責配送區域（瓦斯公司，不選＝全據點）' : '涵蓋區域（冰塊廠商，不選＝全據點）'}
+                {editing.service === 'gas' ? t('deliveryRegionGas') : t('deliveryRegionIce')}
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {regions.length === 0 && <span className="text-xs text-gray-400">尚無區域，請先於門市設定區域</span>}
+                {regions.length === 0 && <span className="text-xs text-gray-400">{t('noRegionsSetup')}</span>}
                 {regions.map(r => (
                   <button key={r} onClick={() => toggleRegion(r)} type="button"
                     className={`text-xs px-2 py-1 rounded border ${(editing.regions ?? []).includes(r) ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground'}`}>{r}</button>
@@ -217,10 +218,10 @@ function VendorsTab() {
           )}
           {['electric', 'water'].includes(editing.service ?? '') && (
             <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-              📌 單一公用事業提供，專屬填報連結自動涵蓋全部門市、工廠、總部辦公室據點。
+              📌 {t('utilityNotice')}
             </p>
           )}
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} />啟用</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} />{t('active')}</label>
           <ModalActions busy={busy} disabled={!editing.name?.trim()} onCancel={() => setEditing(null)} onSave={save} />
         </Modal>
       )}
@@ -236,6 +237,8 @@ interface Bill { store_code: string; category_code: string; amount: number; sour
 const billKey = (s: string, c: string) => `${s}|${c}`
 
 function BillsTab() {
+  const t = useTranslations('StoreExpenses')
+  const locale = useLocale()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -252,7 +255,7 @@ function BillsTab() {
   const [uploadingCellKey, setUploadingCellKey] = useState<string | null>(null)
   const [activeCellTarget, setActiveCellTarget] = useState<{ store_code: string; category_code: string } | null>(null)
   const cellFileRef = useRef<HTMLInputElement>(null)
-  const reload = () => setTick(t => t + 1)
+  const reload = () => setTick(x => x + 1)
 
   useEffect(() => {
     let alive = true
@@ -319,10 +322,10 @@ function BillsTab() {
         })
         reload()
       } else {
-        alert(data.error || '單據上傳失敗')
+        alert(data.error || t('receiptUploadFailed'))
       }
     } catch {
-      alert('上傳發生異常')
+      alert(t('uploadException'))
     } finally {
       setUploadingCellKey(null)
       setActiveCellTarget(null)
@@ -334,14 +337,14 @@ function BillsTab() {
       const [store_code, category_code, amount] = l.split(/[,\t]/).map(x => x.trim())
       return { store_code, category_code, amount }
     })
-    if (rows.length === 0) { setMsg('沒有資料'); return }
+    if (rows.length === 0) { setMsg(t('noData')); return }
     setImporting(true)
     const res = await fetch('/api/fin/bills/import', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ year, month, rows }),
     })
     setImporting(false)
     const d = await res.json().catch(() => ({}))
-    if (res.ok) { setMsg(`匯入 ${d.imported} 筆`); setShowImport(false); setImportText(''); reload() } else setMsg(d.error ?? '匯入失敗')
+    if (res.ok) { setMsg(t('importedCount', { n: d.imported })); setShowImport(false); setImportText(''); reload() } else setMsg(d.error ?? t('importFailed'))
   }
 
   const colTotal = (c: string) => stores.reduce((s, st) => s + (amounts[billKey(st.code, c)] ?? 0), 0)
@@ -361,32 +364,32 @@ function BillsTab() {
         }}
       />
       <div className="flex items-center gap-2 flex-wrap">
-        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}</select>
-        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}</select>
+        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{t('yearSuffix', { y })}</option>)}</select>
+        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('monthSuffix', { m })}</option>)}</select>
         <Link href="/store-bills">
           <Button size="sm" variant="outline" className="gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
-            <Store className="h-3.5 w-3.5" />門市水電與瓦斯填報端 ↗
+            <Store className="h-3.5 w-3.5" />{t('storeFillLink')}
           </Button>
         </Link>
-        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowImport(v => !v)}><Upload className="h-4 w-4" />水電匯入</Button>
+        <Button size="sm" variant="outline" className="gap-1.5 ml-auto" onClick={() => setShowImport(v => !v)}><Upload className="h-4 w-4" />{t('billsImport')}</Button>
         {msg && <span className="text-sm text-blue-600">{msg}</span>}
       </div>
 
       {showImport && (
         <Card className="p-3 space-y-2">
-          <p className="text-xs text-gray-500">每行一筆：<code>門市編碼,科目編碼,金額</code>（可貼 Excel 兩欄，用逗號或 Tab 分隔）。科目如 WATER/ELEC/GAS。</p>
+          <p className="text-xs text-gray-500">{t('importInstructions')}</p>
           <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={5} className="w-full rounded-md border px-2 py-1.5 text-sm font-mono" placeholder={'YL,WATER,1200000\nYL,ELEC,3400000\nYL,GAS,960000'} />
-          <div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setShowImport(false)}>取消</Button><Button size="sm" onClick={doImport} disabled={importing}>{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : '匯入'}</Button></div>
+          <div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => setShowImport(false)}>{t('cancel')}</Button><Button size="sm" onClick={doImport} disabled={importing}>{importing ? <Loader2 className="h-4 w-4 animate-spin" /> : t('import')}</Button></div>
         </Card>
       )}
 
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : stores.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無門市，請先到「門市／區域」新增。</div>
+        : stores.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">{t('noStoresYet')}</div>
         : <div className="overflow-x-auto"><table className="text-sm border-collapse">
           <thead><tr className="text-gray-500 border-b">
-            <th className="text-left py-2 pr-3 sticky left-0 bg-card">門市據點</th>
+            <th className="text-left py-2 pr-3 sticky left-0 bg-card">{t('storeLocation')}</th>
             {cats.map(c => <th key={c.code} className="px-2 text-right whitespace-nowrap">{c.name || c.code}</th>)}
-            <th className="px-2 text-right">合計</th>
+            <th className="px-2 text-right">{t('total')}</th>
           </tr></thead>
           <tbody>{stores.map(st => (
             <tr key={st.code} className="border-b last:border-0">
@@ -411,25 +414,25 @@ function BillsTab() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
                       ) : receiptUrl ? (
                         <div className="flex items-center gap-0.5 shrink-0">
-                          <a href={receiptUrl} target="_blank" rel="noreferrer" title="點擊檢視單據照片憑證" className="text-amber-600 hover:text-amber-800 p-0.5 rounded hover:bg-amber-50">
+                          <a href={receiptUrl} target="_blank" rel="noreferrer" title={t('viewReceiptTitle')} className="text-amber-600 hover:text-amber-800 p-0.5 rounded hover:bg-amber-50">
                             <ImageIcon className="h-4 w-4" />
                           </a>
                           <button
                             type="button"
-                            title="出納更換此單據憑證"
+                            title={t('replaceReceiptTitle')}
                             onClick={() => {
                               setActiveCellTarget({ store_code: st.code, category_code: c.code })
                               cellFileRef.current?.click()
                             }}
                             className="text-[10px] text-gray-400 hover:text-gray-700 p-0.5"
                           >
-                            換
+                            {t('replace')}
                           </button>
                         </div>
                       ) : (
                         <button
                           type="button"
-                          title="出納上傳此筆費用單據/發票照片"
+                          title={t('uploadReceiptTitle')}
                           onClick={() => {
                             setActiveCellTarget({ store_code: st.code, category_code: c.code })
                             cellFileRef.current?.click()
@@ -441,25 +444,25 @@ function BillsTab() {
                       )}
                     </div>
                     {bill?.source === 'store_upload' ? (
-                      <span className="block text-[10px] text-emerald-600 text-right pr-1">門市提報</span>
+                      <span className="block text-[10px] text-emerald-600 text-right pr-1">{t('sourceStore')}</span>
                     ) : bill?.source === 'vendor' ? (
-                      <span className="block text-[10px] text-indigo-600 text-right pr-1">廠商填報</span>
+                      <span className="block text-[10px] text-indigo-600 text-right pr-1">{t('sourceVendor')}</span>
                     ) : bill?.source === 'cashier_upload' ? (
-                      <span className="block text-[10px] text-amber-600 text-right pr-1">出納上傳</span>
+                      <span className="block text-[10px] text-amber-600 text-right pr-1">{t('sourceCashier')}</span>
                     ) : null}
                   </td>
                 )
               })}
-              <td className="px-2 text-right tabular-nums font-medium">{fmt(rowTotal(st.code))}</td>
+              <td className="px-2 text-right tabular-nums font-medium">{fmt(rowTotal(st.code), locale)}</td>
             </tr>))}
             <tr className="border-t font-medium">
-              <td className="py-2 pr-3 sticky left-0 bg-card">合計</td>
-              {cats.map(c => <td key={c.code} className="px-2 text-right tabular-nums">{fmt(colTotal(c.code))}</td>)}
-              <td className="px-2 text-right tabular-nums">{fmt(stores.reduce((s, st) => s + rowTotal(st.code), 0))}</td>
+              <td className="py-2 pr-3 sticky left-0 bg-card">{t('total')}</td>
+              {cats.map(c => <td key={c.code} className="px-2 text-right tabular-nums">{fmt(colTotal(c.code), locale)}</td>)}
+              <td className="px-2 text-right tabular-nums">{fmt(stores.reduce((s, st) => s + rowTotal(st.code), 0), locale)}</td>
             </tr>
           </tbody></table></div>}
       <p className="text-xs text-gray-400">
-        直接在格子輸入金額，離開欄位自動儲存。門市提報、公用事業與瓦斯廠商填報、出納自行上傳之單據憑證皆可即時檢視（<ImageIcon className="inline h-3.5 w-3.5 text-amber-600" />）或點擊 <Upload className="inline h-3 w-3" /> 上傳補充單據。
+        {t('billsFootnote')}（<ImageIcon className="inline h-3.5 w-3.5 text-amber-600" />）{t('billsFootnoteOr')} <Upload className="inline h-3 w-3" /> {t('billsFootnoteUpload')}
       </p>
     </div>
   )
@@ -469,6 +472,8 @@ function BillsTab() {
 interface Rep { income: number; expense: number; net: number; expense_cash: number; bills_total: number; expense_rows: { name: string; amount: number; kind: string }[] }
 
 function ReportTab() {
+  const t = useTranslations('StoreExpenses')
+  const locale = useLocale()
   const now = new Date()
   const [stores, setStores] = useState<GridStore[]>([])
   const [store, setStore] = useState('')
@@ -492,29 +497,29 @@ function ReportTab() {
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <select value={store} onChange={e => setStore(e.target.value)} className="h-9 rounded-md border px-2 text-sm">
-          <option value="">全部門市</option>
+          <option value="">{t('allStores')}</option>
           {stores.map(s => <option key={s.code} value={s.code}>{s.code}{s.name ? ` ${s.name}` : ''}</option>)}
         </select>
-        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{y} 年</option>)}</select>
-        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m} 月</option>)}</select>
+        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{[now.getFullYear(), now.getFullYear() - 1].map(y => <option key={y} value={y}>{t('yearSuffix', { y })}</option>)}</select>
+        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border px-2 text-sm">{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{t('monthSuffix', { m })}</option>)}</select>
       </div>
 
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : !rep ? <div className="text-center py-10 text-gray-400 text-sm">無資料</div>
+        : !rep ? <div className="text-center py-10 text-gray-400 text-sm">{t('noData')}</div>
         : <>
           <div className="grid grid-cols-3 gap-3">
-            <Card className="p-3"><div className="text-xs text-gray-500">收入</div><div className="text-xl font-bold text-green-600 tabular-nums">{fmt(rep.income)}</div></Card>
-            <Card className="p-3"><div className="text-xs text-gray-500">支出（含費用）</div><div className="text-xl font-bold text-red-500 tabular-nums">{fmt(rep.expense)}</div></Card>
-            <Card className="p-3"><div className="text-xs text-gray-500">淨額</div><div className={`text-xl font-bold tabular-nums ${rep.net < 0 ? 'text-red-600' : 'text-gray-800'}`}>{fmt(rep.net)}</div></Card>
+            <Card className="p-3"><div className="text-xs text-gray-500">{t('income')}</div><div className="text-xl font-bold text-green-600 tabular-nums">{fmt(rep.income, locale)}</div></Card>
+            <Card className="p-3"><div className="text-xs text-gray-500">{t('expenseWithBills')}</div><div className="text-xl font-bold text-red-500 tabular-nums">{fmt(rep.expense, locale)}</div></Card>
+            <Card className="p-3"><div className="text-xs text-gray-500">{t('netAmount')}</div><div className={`text-xl font-bold tabular-nums ${rep.net < 0 ? 'text-red-600' : 'text-gray-800'}`}>{fmt(rep.net, locale)}</div></Card>
           </div>
           <Card className="p-4">
-            <h3 className="font-semibold mb-2">支出明細</h3>
-            <p className="text-xs text-gray-400 mb-2">月度費用（水電瓦斯冰塊等）{fmt(rep.bills_total)}　+　日常支出 {fmt(rep.expense_cash)}</p>
-            {rep.expense_rows.length === 0 ? <p className="text-sm text-gray-400">無支出</p>
+            <h3 className="font-semibold mb-2">{t('expenseDetail')}</h3>
+            <p className="text-xs text-gray-400 mb-2">{t('billsAndCashExpense', { bills: fmt(rep.bills_total, locale), cash: fmt(rep.expense_cash, locale) })}</p>
+            {rep.expense_rows.length === 0 ? <p className="text-sm text-gray-400">{t('noExpense')}</p>
               : <table className="w-full text-sm"><tbody>{rep.expense_rows.map((r, i) => (
                 <tr key={i} className="border-b last:border-0">
-                  <td className="py-1.5">{r.name} {r.kind === 'bill' && <span className="text-[10px] text-gray-400">月度費用</span>}</td>
-                  <td className="text-right tabular-nums text-red-500">{fmt(r.amount)}</td>
+                  <td className="py-1.5">{r.name} {r.kind === 'bill' && <span className="text-[10px] text-gray-400">{t('monthlyBill')}</span>}</td>
+                  <td className="text-right tabular-nums text-red-500">{fmt(r.amount, locale)}</td>
                 </tr>))}</tbody></table>}
           </Card>
         </>}
@@ -523,6 +528,7 @@ function ReportTab() {
 }
 
 function StoresTab() {
+  const t = useTranslations('StoreExpenses')
   const [rows, setRows] = useState<StoreRow[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<StoreRow> | null>(null)
@@ -544,10 +550,10 @@ function StoresTab() {
       method: editing.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
     })
     setBusy(false)
-    if (res.ok) { setEditing(null); load() } else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+    if (res.ok) { setEditing(null); load() } else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
   const remove = async (r: StoreRow) => {
-    if (!confirm(`刪除門市「${r.code}」？`)) return
+    if (!confirm(t('confirmDeleteStore', { code: r.code }))) return
     await fetch('/api/fin/stores', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id }) }); load()
   }
 
@@ -555,12 +561,12 @@ function StoresTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-gray-500">每個門市有編碼與所屬區域（冰塊廠商依區域涵蓋）。</p>
+        <p className="text-sm text-gray-500">{t('storesDesc')}</p>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入門市 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImportStores')}
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', region: '', active: true })}><Plus className="h-4 w-4" />新增門市</Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', region: '', active: true })}><Plus className="h-4 w-4" />{t('newStore')}</Button>
         </div>
       </div>
 
@@ -584,29 +590,29 @@ function StoresTab() {
         />
       )}
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">尚無門市</div>
+        : rows.length === 0 ? <div className="text-center py-10 text-gray-400 text-sm">{t('noStores')}</div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">編碼</th><th className="pr-2">名稱</th><th className="pr-2">區域</th><th className="pr-2">狀態</th><th></th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">{t('code')}</th><th className="pr-2">{t('name')}</th><th className="pr-2">{t('region')}</th><th className="pr-2">{t('status')}</th><th></th></tr></thead>
           <tbody>{rows.map(r => (
             <tr key={r.id} className="border-b last:border-0">
               <td className="py-2 pr-2 font-medium">{r.code}</td>
               <td className="pr-2">{r.name}</td>
               <td className="pr-2 text-gray-500">{r.region || '—'}</td>
-              <td className="pr-2">{r.active ? <span className="text-emerald-600 text-xs">啟用</span> : <span className="text-gray-400 text-xs">停用</span>}</td>
+              <td className="pr-2">{r.active ? <span className="text-emerald-600 text-xs">{t('active')}</span> : <span className="text-gray-400 text-xs">{t('inactive')}</span>}</td>
               <td className="text-right whitespace-nowrap">
-                <button onClick={() => setEditing({ ...r })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">編輯</button>
+                <button onClick={() => setEditing({ ...r })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('edit')}</button>
                 <button onClick={() => remove(r)} className="ml-1 text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4 inline" /></button>
               </td>
             </tr>))}</tbody></table></div>}
 
       {editing && (
-        <Modal title={editing.id ? '編輯門市' : '新增門市'} onClose={() => setEditing(null)}>
-          <Field label="門市編碼 *"><Input value={editing.code ?? ''} onChange={e => setEditing({ ...editing, code: e.target.value })} /></Field>
-          <Field label="名稱"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
-          <Field label="區域"><Input list="region-list" value={editing.region ?? ''} onChange={e => setEditing({ ...editing, region: e.target.value })} />
+        <Modal title={editing.id ? t('editStore') : t('newStore')} onClose={() => setEditing(null)}>
+          <Field label={t('storeCodeRequired')}><Input value={editing.code ?? ''} onChange={e => setEditing({ ...editing, code: e.target.value })} /></Field>
+          <Field label={t('name')}><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
+          <Field label={t('region')}><Input list="region-list" value={editing.region ?? ''} onChange={e => setEditing({ ...editing, region: e.target.value })} />
             <datalist id="region-list">{regions.map(r => <option key={r} value={r} />)}</datalist>
           </Field>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} />啟用</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editing.active !== false} onChange={e => setEditing({ ...editing, active: e.target.checked })} />{t('active')}</label>
           <ModalActions busy={busy} disabled={!editing.code?.trim()} onCancel={() => setEditing(null)} onSave={save} />
         </Modal>
       )}
@@ -615,6 +621,9 @@ function StoresTab() {
 }
 
 function CategoriesTab() {
+  const t = useTranslations('StoreExpenses')
+  const METHOD_LABEL: Record<string, string> = { import: t('methodImport'), vendor: t('methodVendor'), manual: t('methodManual') }
+  const SERVICE_LABEL: Record<string, string> = { gas: t('serviceGas'), electric: t('serviceElectric'), water: t('serviceWater'), ice: t('serviceIce'), '': '—' }
   const [rows, setRows] = useState<CatRow[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Partial<CatRow> | null>(null)
@@ -636,22 +645,22 @@ function CategoriesTab() {
       method: editing.id ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editing),
     })
     setBusy(false)
-    if (res.ok) { setEditing(null); load() } else alert((await res.json().catch(() => ({}))).error ?? '儲存失敗')
+    if (res.ok) { setEditing(null); load() } else alert((await res.json().catch(() => ({}))).error ?? t('saveFailed'))
   }
   const remove = async (r: CatRow) => {
-    if (!confirm(`刪除科目「${r.name || r.code}」？`)) return
+    if (!confirm(t('confirmDeleteCategory', { name: r.name || r.code }))) return
     await fetch('/api/fin/categories', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: r.id }) }); load()
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm text-gray-500">水電＝人工匯入；瓦斯/冰塊＝廠商填。可自訂新增。</p>
+        <p className="text-sm text-gray-500">{t('categoriesDesc')}</p>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowImport(true)}>
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />批次匯入科目 (Excel/CSV)
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />{t('bulkImportCategories')}
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', entry_method: 'manual', vendor_service: '', sort: 0 })}><Plus className="h-4 w-4" />新增科目</Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setEditing({ code: '', name: '', entry_method: 'manual', vendor_service: '', sort: 0 })}><Plus className="h-4 w-4" />{t('newCategory')}</Button>
         </div>
       </div>
 
@@ -676,7 +685,7 @@ function CategoriesTab() {
       )}
       {loading ? <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
         : <div className="overflow-x-auto"><table className="w-full text-sm">
-          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">編碼</th><th className="pr-2">名稱</th><th className="pr-2">填寫方式</th><th className="pr-2">廠商別</th><th></th></tr></thead>
+          <thead><tr className="text-left text-gray-500 border-b"><th className="py-2 pr-2">{t('code')}</th><th className="pr-2">{t('name')}</th><th className="pr-2">{t('entryMethod')}</th><th className="pr-2">{t('vendorType')}</th><th></th></tr></thead>
           <tbody>{rows.map(r => (
             <tr key={r.id} className="border-b last:border-0">
               <td className="py-2 pr-2 font-medium">{r.code}</td>
@@ -684,25 +693,25 @@ function CategoriesTab() {
               <td className="pr-2 text-gray-500">{METHOD_LABEL[r.entry_method] ?? r.entry_method}</td>
               <td className="pr-2 text-gray-500">{r.entry_method === 'vendor' ? (SERVICE_LABEL[r.vendor_service] ?? r.vendor_service) : '—'}</td>
               <td className="text-right whitespace-nowrap">
-                <button onClick={() => setEditing({ ...r })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">編輯</button>
+                <button onClick={() => setEditing({ ...r })} className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">{t('edit')}</button>
                 <button onClick={() => remove(r)} className="ml-1 text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4 inline" /></button>
               </td>
             </tr>))}</tbody></table></div>}
 
       {editing && (
-        <Modal title={editing.id ? '編輯科目' : '新增科目'} onClose={() => setEditing(null)}>
+        <Modal title={editing.id ? t('editCategory') : t('newCategory')} onClose={() => setEditing(null)}>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="科目編碼 *"><Input value={editing.code ?? ''} onChange={e => setEditing({ ...editing, code: e.target.value })} /></Field>
-            <Field label="名稱"><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
-            <Field label="填寫方式">
+            <Field label={t('categoryCodeRequired')}><Input value={editing.code ?? ''} onChange={e => setEditing({ ...editing, code: e.target.value })} /></Field>
+            <Field label={t('name')}><Input value={editing.name ?? ''} onChange={e => setEditing({ ...editing, name: e.target.value })} /></Field>
+            <Field label={t('entryMethod')}>
               <select value={editing.entry_method ?? 'manual'} onChange={e => setEditing({ ...editing, entry_method: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-                <option value="import">人工匯入</option><option value="vendor">廠商填</option><option value="manual">手動</option>
+                <option value="import">{t('methodImport')}</option><option value="vendor">{t('methodVendor')}</option><option value="manual">{t('methodManual')}</option>
               </select>
             </Field>
             {editing.entry_method === 'vendor' && (
-              <Field label="廠商別">
+              <Field label={t('vendorType')}>
                 <select value={editing.vendor_service ?? ''} onChange={e => setEditing({ ...editing, vendor_service: e.target.value })} className="w-full h-9 rounded-md border px-2 text-sm">
-                  <option value="">選擇…</option><option value="gas">瓦斯（1 家）</option><option value="ice">冰塊（分區）</option>
+                  <option value="">{t('selectEllipsis')}</option><option value="gas">{t('gasOneVendor')}</option><option value="ice">{t('iceByRegion')}</option>
                 </select>
               </Field>
             )}
@@ -729,10 +738,11 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 function ModalActions({ busy, disabled, onCancel, onSave }: { busy: boolean; disabled: boolean; onCancel: () => void; onSave: () => void }) {
+  const t = useTranslations('StoreExpenses')
   return (
     <div className="flex justify-end gap-2 pt-1">
-      <Button variant="outline" size="sm" onClick={onCancel}>取消</Button>
-      <Button size="sm" onClick={onSave} disabled={busy || disabled}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : '儲存'}</Button>
+      <Button variant="outline" size="sm" onClick={onCancel}>{t('cancel')}</Button>
+      <Button size="sm" onClick={onSave} disabled={busy || disabled}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t('save')}</Button>
     </div>
   )
 }

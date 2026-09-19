@@ -865,6 +865,19 @@ interface CsChatForm {
   confirm_before_fields: boolean
 }
 
+export interface CsCampaignOffer {
+  id: string
+  name: string
+  enabled: boolean
+  offerType: 'nights_tiered' | 'percent' | 'fixed_amount' | 'custom'
+  qualification: string
+  tieredNightDiscounts?: number[]
+  discountPercent?: number
+  discountAmount?: number
+  canStack?: boolean
+  rulesNote: string
+}
+
 // ── Load CS knowledge base (unit_data[12]) + company data ────────────────────
 interface CsKnowledge {
   systemPrompt: string
@@ -883,6 +896,10 @@ interface CsKnowledge {
   notifyWebhooks: NotifyWebhook[]
   contactPhone1: string
   contactPhone2: string
+  aiSenderName?: string
+  aiSenderIconUrl?: string
+  campaignOffers?: CsCampaignOffer[]
+  campaignOfferSource?: 'cs' | 'booking' | 'both'
 }
 
 async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
@@ -908,6 +925,10 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let notifyWebhooks: NotifyWebhook[] = []
   let contactPhone1 = ''
   let contactPhone2 = ''
+  let aiSenderName = ''
+  let aiSenderIconUrl = ''
+  let campaignOffers: CsCampaignOffer[] = []
+  let campaignOfferSource: 'cs' | 'booking' | 'both' = 'both'
   const knowledgeParts: string[] = []
 
   // CS 設定（systemPrompt、付款資訊、訂房流程等）優先採用包含完整知識庫（knowledgeBase）
@@ -950,6 +971,10 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
         if (unit12.contactPhone1) contactPhone1 = String(unit12.contactPhone1)
         if (unit12.contactPhone2) contactPhone2 = String(unit12.contactPhone2)
+        if (unit12.aiSenderName) aiSenderName = String(unit12.aiSenderName).trim()
+        if (unit12.aiSenderIconUrl) aiSenderIconUrl = String(unit12.aiSenderIconUrl).trim()
+        if (Array.isArray(unit12.campaignOffers)) campaignOffers = unit12.campaignOffers as CsCampaignOffer[]
+        if (unit12.campaignOfferSource) campaignOfferSource = unit12.campaignOfferSource as 'cs' | 'booking' | 'both'
         settingsLoaded = true
       }
 
@@ -1076,6 +1101,10 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
     notifyWebhooks,
     contactPhone1,
     contactPhone2,
+    aiSenderName: aiSenderName || undefined,
+    aiSenderIconUrl: aiSenderIconUrl || undefined,
+    campaignOffers: campaignOffers.length ? campaignOffers : undefined,
+    campaignOfferSource,
   }
 }
 
@@ -1246,9 +1275,79 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
 
 // ── Sales context: availability + urgency, closing toolkit, social proof ──────
 // Mirrors the cs-chat sandbox so live customers get the same business-minded behavior.
-async function buildSalesContext(userId: string, discountMaxPct: number, discountGifts: string, discountAlreadyOffered: boolean): Promise<string> {
+async function buildSalesContext(
+  userId: string,
+  discountMaxPct: number,
+  discountGifts: string,
+  discountAlreadyOffered: boolean,
+  campaignOffers?: CsCampaignOffer[],
+  campaignOfferSource: 'cs' | 'booking' | 'both' = 'both',
+): Promise<string> {
   const supabase = getServiceClient()
   const sections: string[] = []
+
+  // Active campaign & subsidy offers (CS 自訂活動 vs Booking 訂房活動)
+  const offerLines: string[] = []
+
+  // 1. CS 客服自訂活動 (當模式為 'cs' 或 'both')
+  if (campaignOfferSource === 'cs' || campaignOfferSource === 'both') {
+    const activeOffers = (campaignOffers ?? []).filter(o => o.enabled)
+    if (activeOffers.length > 0) {
+      offerLines.push('【CS 客服促銷／補助活動（若客問優惠、補助或計算房價時主動說明與折抵）】')
+      for (const off of activeOffers) {
+        offerLines.push(`▸ 活動名稱：${off.name}（${off.canStack ? '可與其他優惠/早鳥疊加併用' : '不可疊加，採二擇一最優原則'}）`)
+        if (off.qualification) offerLines.push(`  適用資格與對象：${off.qualification}`)
+        if (off.offerType === 'nights_tiered' && off.tieredNightDiscounts?.length) {
+          const tieredDesc = off.tieredNightDiscounts.map((amt, idx) => `第 ${idx + 1} 晚折抵 $${amt.toLocaleString()} 元`).join('，')
+          offerLines.push(`  折扣計算方式：連住每晚階梯折抵（${tieredDesc}）`)
+        } else if (off.offerType === 'percent' && off.discountPercent) {
+          offerLines.push(`  折扣計算方式：享 ${10 - off.discountPercent / 10} 折優惠（折抵 ${off.discountPercent}%）`)
+        } else if (off.offerType === 'fixed_amount' && off.discountAmount) {
+          offerLines.push(`  折扣計算方式：單筆固定折抵 $${off.discountAmount.toLocaleString()} 元`)
+        } else {
+          offerLines.push(`  折扣計算方式：自訂方案`)
+        }
+        offerLines.push(`  優惠疊加原則：${off.canStack ? '本活動允許與其他促銷折扣、早鳥特惠或折扣碼同時累加折抵' : '本活動不可與其他早鳥或促銷折扣同時併用（客人可選最優惠的一種專案）'}`)
+        if (off.rulesNote) offerLines.push(`  活動規則與限制：${off.rulesNote}`)
+      }
+    }
+  }
+
+  // 2. Booking 訂房系統活動 (當模式為 'booking' 或 'both')
+  if (campaignOfferSource === 'booking' || campaignOfferSource === 'both') {
+    try {
+      const [rulesRes, promosRes] = await Promise.all([
+        supabase.from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions, can_stack').eq('user_id', userId).eq('enabled', true),
+        supabase.from('promo_codes').select('code, name, type, value, min_nights, can_stack').eq('user_id', userId).eq('enabled', true),
+      ])
+      const bRules = rulesRes.data ?? []
+      const bPromos = promosRes.data ?? []
+      if (bRules.length > 0 || bPromos.length > 0) {
+        offerLines.push('\n【Booking 訂房系統動態優惠（早鳥／晚鳥與促銷代碼）】')
+        for (const r of bRules) {
+          const adj = r.adjustment_type === 'percent' ? `享 ${10 - (r.adjustment_value / 10)} 折（折 ${r.adjustment_value}%）` : `折抵 $${r.adjustment_value} 元`
+          const cond = (r.conditions as Record<string, unknown>)?.days_before != null ? `（入住前 ${(r.conditions as Record<string, unknown>).days_before} 天以上預訂）` : ''
+          const stackNote = r.can_stack ? '【可與其他優惠/代碼疊加】' : '【單獨適用，不可疊加】'
+          offerLines.push(`▸ 訂房特惠：${r.name} - ${adj} ${cond} ${stackNote}`)
+        }
+        for (const p of bPromos) {
+          const discount = p.type === 'percent' ? `享 ${10 - (p.value / 10)} 折` : `折抵 $${p.value} 元`
+          const stackNote = p.can_stack ? '【可與其他優惠疊加】' : '【單獨適用，不可疊加】'
+          offerLines.push(`▸ 訂房優惠碼：【${p.code}】${p.name ? `（${p.name}）` : ''} - ${discount}${p.min_nights > 1 ? `，需滿 ${p.min_nights} 晚` : ''} ${stackNote}`)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (offerLines.length > 0) {
+    offerLines.push('\n計算與應對守則：')
+    offerLines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
+    offerLines.push('2. 計算總價時，以房價定價為基準，嚴格依照各活動設定之折抵金額與「是否可疊加」規則進行計算：若標註「可疊加」則可合併折抵；若標註「不可疊加」則採二擇一最優惠金額折抵，並清楚向客人列出原價、各項折抵與實付金額。')
+    offerLines.push('3. 喬民宿適用當期國旅補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
+    sections.push(offerLines.join('\n'))
+  }
 
   // Property availability + gentle urgency (homestay; empty for other industries)
   try {
@@ -2011,7 +2110,7 @@ async function getAIReply(
     }
 
     const salesContext = userId
-      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts, discountAlreadyOffered)
+      ? await buildSalesContext(userId, knowledge.discountMaxPct, knowledge.discountGifts, discountAlreadyOffered, knowledge.campaignOffers, knowledge.campaignOfferSource)
       : ''
 
     const systemPrompt = `${baseInstructions}
@@ -2019,6 +2118,13 @@ async function getAIReply(
 【重要格式規定】
 - 【死命令，最高優先，任何情況都不可違反】絕對禁止自己編造、想像、推測任何資訊——不管是房價、空房狀態、密碼、房號、訂單狀態、政策規則、日期時間、人名、操作步驟，或任何其他資訊，只要不是下方系統資料、知識庫、或這則系統提示裡明確提供的內容，一律不可以自己說出來當作事實講給客人聽；系統沒有查到、知識庫沒有寫、你自己不確定，就要誠實跟客人說「目前查不到／不確定，請稍候或提供其他資訊」，絕對不能為了讓對話聽起來順、為了不讓客人等待或失望，就自己編一個聽起來合理但沒有根據的答案——這條規則優先於你自己的推理、常識判斷，以及本提示裡除了「安全規定」之外的所有其他指示
 - 【最優先】${langInstruction}
+- 【AI 身分透明與自然呈現規則——務必讓客人清楚知道是由 AI 助理為其服務】
+  1. 【開場或首則互動必須表明身分】：
+     - 當對話開始、或為新的一輪對話（如客人打招呼「您好」「哈囉」或提出新問題），且前則對話未曾表明身分時，第一句必須自然且親切表明自己是 AI 客服助理（例如：「您好！我是喬民宿的 AI 智慧助理 小喬🌸，很高興為您服務！」）。
+  2. 【不必每則回覆都重複囉嗦署名】：
+     - 在同一輪接續對話中（例如客人接連詢問車牌、匯款帳號、房型），直接俐落回答問題即可，不需要在每句話最後硬塞「我是 AI」，避免造成客人閱讀負擔。
+  3. 【遇權限限制、轉真人或夜間服務時主動表明身分】：
+     - 當客人詢問退款、查無訂單、需要專員處理或深夜時段時，必須誠懇表明身分（例如：「我是 AI 助理小喬，此項需為您轉交真人管家人工核對確認...」），讓客人明確知曉當前是由 AI 處理還是已轉交真人！
 - 【出海行程與住宿預訂付款規則——最高原則，絕對嚴禁違背】
   1. 【搭船類／出海行程（龜山島、二合一、三合一、401高地、賞鯨、登島、牛奶湖等）】：
      - 付款方式：【一律 100% 全額預付，不收訂金】！（因船公司劃位班次與海難保險必須在出發前全額結清）
@@ -2040,8 +2146,11 @@ async function getAIReply(
      - 回答完客人的問題即立刻結束，【絕對禁止】在句尾習慣性加上「請問您想了解哪間呢？」、「請問這樣清楚嗎？」、「您想先確認哪一項呢？」、「請問還有其他想詢問的嗎？」等任何多餘追問或引導問句！
   2. 【陳述、確認或致謝，禁止反問】：
      - 當客人只是陳述事實、告知資訊（如「了解」、「好的」、「已匯款」、「我考慮一下」）或禮貌道謝（如「謝謝」、「晚安」），只需簡短禮貌回應（例如「好的，沒問題！」、「收到，祝您旅途愉快！」），【絕對嚴禁】強行拋出新問題反問客人！
-  3. 【嚴禁重複詢問已知資訊】：
+  3. 【嚴禁重複詢問已知資訊與嚴禁強推無關行程——特別是賞鯨／龜山島】：
      - 凡是在對話紀錄中、系統 Facts 中、或先前已出現過的資訊（包含：行程參加者名單、身分證字號、姓名、生日、電話、預訂日期、房型、人數、車牌、停車或早餐需求等），【絕對嚴禁再次向客人詢問或索取】！客人已明確表示不需要的事項，也絕對嚴禁二次提及！
+     - 【嚴禁每次回覆都強推賞鯨／出海行程】：
+       - 只有當客人「主動主動詢問」賞鯨、登島、龜山島等行程，或客人「正在預訂出海行程」時，才能討論行程！
+       - 若客人是在處理【訂房、國旅卡、付款連結、匯款、停車、入住時間、自付額、退款】等純住宿事務，【絕對嚴禁】在每次回答句尾硬塞或主動提及「是否需要賞鯨行程」、「烏石港搭船提醒」、「船班行程費用需全額預付」！客人沒有問行程就絕口不提行程，嚴禁像牛皮癬一樣每次回覆都反覆追問客人要不要賞鯨！
   4. 【唯一的追問例外】：
      - 只有在「客人明確處於預訂資料收集流程，且該必填欄位尚未提供」時，才能詢問下一個未填欄位；若預訂資料已收集齊全，立即提供匯款帳號要求付款，嚴禁再節外生枝詢問其他無關問題！
 - 禁止使用 Markdown 語法（禁用 **粗體**、*斜體*、# 標題、--- 分隔線）
@@ -2054,19 +2163,18 @@ async function getAIReply(
   1. 出海/搭船類行程（龜山島、401高地、賞鯨等）：一律全額預付，不收訂金。若客人問訂金多少，請明確告知出海行程需全額付款，並列出應付總金額與匯款帳號。
   2. 純訂房/住宿：系統目前沒有訂金與付款明細查詢功能，絕對不可以自己拿房價去減客人口頭說的訂金、算出一個餘款金額給客人，一律誠實告知「系統無法查詢訂金與餘額明細，會請管家人工核對」；如果客人的訂房大名、電話或訂單號碼在這通對話裡已經出現過，代表身份已經確認過了，絕對不要再重複詢問一次大名或電話，直接說已收到匯款資訊、會請管家核對即可。
   3. 客人回報已匯款或傳截圖：若資料已在對話或系統中記錄，【絕對禁止】再次索取參加者姓名、身分證字號、生日或電話，直接致謝並說明會由管家人工核對即可。
-- 【優惠與補助互斥規定——最高原則，嚴禁重複疊加折扣，嚴禁虛報2,600定價】
+- 【優惠與活動折抵原則——最高原則，嚴禁重複疊加折扣，嚴禁虛報2,600定價】
   1. 【真實一般售價與嚴禁虛構定價】：
      - 本民宿房間平日一般售價為：201 龜山加大床房 2,000 元、202 蘭博 1,800 元、302 山景 1,800 元、401 露臺 2,200 元、301 海景 2,500 元。
      - 【死命令】本民宿絕無 2,600 元等虛高門牌定價！絕對嚴禁向客人說出「龜山房定價/原價為 2,600」等捏造的價格！
-  2. 【國旅補助計價基準（宜蘭屬本島一般地區，嚴禁套用離島標準）】：
-     - 客人若要申請使用「國旅補助」：第 1 晚折抵 800 元，連住第 2 晚折抵 1,200 元（連住兩晚合計折抵 2,000 元）。
-     - 計價基準一律為【平日一般售價（如 302 山景房為 1,800 元，第 1 晚折抵 800 元後自付額為 1,000 元；龜山房為 2,000 元，折抵 800 元後自付額為 1,200 元）】，入住當天出示身分證正本現場由管家核銷折抵！
-     - 若客人另持有觀光署抽出之【生日券】：每房每晚可再折抵 1,200 元，得與平日補助併用（折抵上限至一般售價為止，自付額最低為 0 元）。
+  2. 【活動與補助折抵】：
+     - 嚴格依照下方「現正進行中的促銷／補助活動」規則進行折抵與說明。
+     - 計價基準一律為【平日一般售價（如 302 山景房為 1,800 元；龜山房為 2,000 元）】，入住當天出示符合資格之證件現場由管家核銷折抵！
   3. 【優惠與補助採二擇一，嚴禁重複折抵】：
-     - 所有優惠方案（早鳥優惠 8 折、晚鳥出清、促成工具箱折扣、特價專案等）與國旅補助【二擇一使用，恕不得重複疊加折扣】！
+     - 所有優惠方案（早鳥優惠 8 折、晚鳥出清、促成工具箱折扣、特價專案等）與活動補助【二擇一使用，恕不得重複疊加折扣】！
      - 【絕對嚴禁】在早鳥優惠價上面再扣除補助重複折抵！
   4. 【主動說明二擇一】：
-     - 當客人提到國旅補助或詢問優惠時，清楚說明二擇一供客人評估何者最划算！
+     - 當客人提到補助或詢問優惠時，清楚說明二擇一供客人評估何者最划算！
 - 【金流爭議與金額質疑強制煞車——最高死命令，嚴禁自行掛保證或承諾具體退款金額】
   - 當客人對折抵金額、退款數字、退款差額、價格計算提出質疑（如「到底退多少」「不是說退1000嗎」「算錯了」「之前說多少」等）：
   - 【絕對禁止】AI 自行選一個金額掛保證承諾、或隨意附和客人要求的金額！
@@ -2273,14 +2381,39 @@ function extractImageUrls(text: string): { cleanText: string; imageUrls: string[
   return { cleanText, imageUrls }
 }
 
-async function replyLine(replyToken: string, text: string, token: string) {
+async function replyLine(
+  replyToken: string,
+  text: string,
+  token: string,
+  sender?: { name?: string; iconUrl?: string }
+) {
   const { cleanText, imageUrls } = extractImageUrls(text)
+  const validIconUrl = sender?.iconUrl && /^https:\/\//i.test(sender.iconUrl.trim()) ? sender.iconUrl.trim().slice(0, 1000) : undefined
+  const validSenderName = sender?.name?.trim() ? sender.name.trim().slice(0, 20) : undefined
+  const senderObj = (validSenderName || validIconUrl)
+    ? {
+        ...(validSenderName ? { name: validSenderName } : {}),
+        ...(validIconUrl ? { iconUrl: validIconUrl } : {}),
+      }
+    : undefined
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const messages: any[] = []
-  if (cleanText) messages.push({ type: 'text', text: cleanText })
+  if (cleanText) {
+    messages.push({
+      type: 'text',
+      text: cleanText,
+      ...(senderObj ? { sender: senderObj } : {}),
+    })
+  }
   for (const url of imageUrls) {
     if (messages.length >= 5) break  // LINE 一次最多 5 則訊息
-    messages.push({ type: 'image', originalContentUrl: url, previewImageUrl: url })
+    messages.push({
+      type: 'image',
+      originalContentUrl: url,
+      previewImageUrl: url,
+      ...(senderObj ? { sender: senderObj } : {}),
+    })
   }
   if (!messages.length) return
   await fetch('https://api.line.me/v2/bot/message/reply', {
@@ -2441,7 +2574,12 @@ export async function POST(
 
       const fromName = token ? await resolveLineDisplayName(userId, customerId, token) : undefined
       const reply = await replyToCustomer(userId, platform, customerId, knowledge, history, text, gapNote, fromName, imgBuf, imgMime)
-      if (reply && token && replyToken) await replyLine(replyToken, reply, token)
+      if (reply && token && replyToken) {
+        await replyLine(replyToken, reply, token, {
+          name: knowledge.aiSenderName,
+          iconUrl: knowledge.aiSenderIconUrl,
+        })
+      }
       // reply token 省額度：AI 已回覆 → token 已用完，清除；AI 靜音（真人接管）→ 暫存供收件匣免費回覆
       void persistLineReplyToken(userId, platform, customerId, reply ? '' : replyToken)
       await saveHistory(userId, customerId, withTurn(history, text || '【圖片】', reply))

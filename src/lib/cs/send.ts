@@ -40,6 +40,11 @@ export interface SendResult {
 export interface SendOptions {
   /** LINE 專用：客戶傳訊後 ~1 分鐘內的 reply token；提供時優先用免費 Reply API，失敗才 fallback 到 Push。 */
   lineReplyToken?: string
+  /** LINE 專用：自訂寄件人身分（名稱與頭像，例如真人客服或特定助理） */
+  sender?: {
+    name?: string
+    iconUrl?: string
+  }
 }
 
 export async function sendToCustomer(
@@ -58,12 +63,20 @@ export async function sendToCustomer(
       const token = (await loadCredentials(userId, platform)).line_channel_access_token ?? ''
       if (!token) return { ok: false, error: '尚未設定 LINE Channel Access Token' }
 
+      const lineMsg: Record<string, unknown> = { type: 'text', text }
+      if (opts.sender?.name || opts.sender?.iconUrl) {
+        lineMsg.sender = {
+          ...(opts.sender.name ? { name: opts.sender.name.slice(0, 20) } : {}),
+          ...(opts.sender.iconUrl ? { iconUrl: opts.sender.iconUrl } : {}),
+        }
+      }
+
       // 先試免費 Reply API（reply token 一次性，可能已過期/被用過 → 失敗就轉 Push）
       if (opts.lineReplyToken) {
         const r = await fetch('https://api.line.me/v2/bot/message/reply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ replyToken: opts.lineReplyToken, messages: [{ type: 'text', text }] }),
+          body: JSON.stringify({ replyToken: opts.lineReplyToken, messages: [lineMsg] }),
         })
         if (r.ok) return { ok: true, channel: 'reply' }
         // 非 ok（token 失效）→ 落入下方 Push
@@ -72,7 +85,7 @@ export async function sendToCustomer(
       const res = await fetch('https://api.line.me/v2/bot/message/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ to, messages: [{ type: 'text', text }] }),
+        body: JSON.stringify({ to, messages: [lineMsg] }),
       })
       if (!res.ok) return { ok: false, error: `LINE 推播失敗（${res.status}）` }
       return { ok: true, channel: 'push' }

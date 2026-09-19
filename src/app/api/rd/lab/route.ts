@@ -8,14 +8,14 @@ export const maxDuration = 60
 
 async function getAdminUser() {
   const ctx = await getUnitContext('rd')
-  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, ownerId: '' }
-  return { user: { id: ctx.ownerId }, supabase: ctx.admin, ownerId: ctx.ownerId }
+  if (!ctx.ok) return { user: null as { id: string } | null, supabase: ctx.admin, ownerId: '' , status: ctx.status }
+  return { user: { id: ctx.ownerId }, supabase: ctx.admin, ownerId: ctx.ownerId , status: ctx.status }
 }
 
 // GET /api/rd/lab?section=all
 export async function GET(req: NextRequest) {
-  const { user, supabase, ownerId } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, ownerId , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const { searchParams } = new URL(req.url)
   const section = searchParams.get('section') || 'all'
@@ -90,8 +90,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/rd/lab (儲存或建立各類實體)
 export async function POST(req: NextRequest) {
-  const { user, supabase, ownerId } = await getAdminUser()
-  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { user, supabase, ownerId , status } = await getAdminUser()
+  if (!user) return NextResponse.json({ error: status === 401 ? 'Unauthorized' : 'Forbidden' }, { status })
 
   const body = await req.json().catch(() => ({}))
   const { target, data } = body as { target: string; data: any }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Scale, BookOpen, Clock, FileCheck, ArrowRight, ShieldCheck, AlertTriangle,
   ExternalLink, Search, Sparkles, Building2, CheckCircle2, ChevronRight,
@@ -15,6 +16,7 @@ import type { ProcedurePlanResult } from '@/lib/legal/procedure-agent'
 import { SEED_CROSS_BORDER_RULES } from '@/lib/legal/seeds'
 
 export default function LegalAssistantPage() {
+  const t = useTranslations('Legal')
   const [activeTab, setActiveTab] = useState<'qa' | 'procedure' | 'import' | 'amendment'>('qa')
 
   // QA Tab State
@@ -117,24 +119,23 @@ export default function LegalAssistantPage() {
                 <Scale className="h-7 w-7" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-                Vietnam Legal & Business AI Assistant
+                {t('title')}
               </h1>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 max-w-3xl">
-              專為跨國台商、外資企業、連鎖餐飲門市打造之越南法律公務文書與企業合規 AI。
-              嚴格依據國家法律資料庫 (vbpl.vn)、政府公報 (vanban.chinhphu.vn) 與國家公共服務平台 (dichvucong.gov.vn) 之法定條款點與時態生效判定。
+              {t('subtitle')}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-              🏛️ vbpl.vn 國家法律庫
+              {t('badgeVbpl')}
             </Badge>
             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-              📑 vanban.chinhphu.vn 政府法規庫
+              {t('badgeVanban')}
             </Badge>
             <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-              🏢 dichvucong.gov.vn 公共服務
+              {t('badgeDichvucong')}
             </Badge>
           </div>
         </div>
@@ -150,7 +151,7 @@ export default function LegalAssistantPage() {
             }`}
           >
             <Sparkles className="h-4 w-4" />
-            智能法律諮詢 (Q&A)
+            {t('tabQa')}
           </button>
           <button
             onClick={() => {
@@ -164,7 +165,7 @@ export default function LegalAssistantPage() {
             }`}
           >
             <Building2 className="h-4 w-4" />
-            開門市・公司審批引導 (DAG)
+            {t('tabProcedure')}
           </button>
           <button
             onClick={() => setActiveTab('import')}
@@ -175,7 +176,7 @@ export default function LegalAssistantPage() {
             }`}
           >
             <Plane className="h-4 w-4" />
-            各國進口原料與設備規定
+            {t('tabImport')}
           </button>
           <button
             onClick={() => {
@@ -189,7 +190,7 @@ export default function LegalAssistantPage() {
             }`}
           >
             <Clock className="h-4 w-4" />
-            條文修法歷程溯源
+            {t('tabAmendment')}
           </button>
         </div>
       </div>
@@ -202,7 +203,7 @@ export default function LegalAssistantPage() {
           <Card className="p-6 space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
               <Search className="h-5 w-5 text-amber-600" />
-              輸入法律、稅務或行政申請問題（支援中文、英文、越南文）
+              {t('qaHeading')}
             </h2>
 
             <div className="flex gap-2">
@@ -210,7 +211,7 @@ export default function LegalAssistantPage() {
                 value={queryInput}
                 onChange={e => setQueryInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="例如：外資在越南開一家手搖飲料店，需要辦什麼許可與文件？"
+                placeholder={t('qaPlaceholder')}
                 className="flex-1 text-sm py-5"
               />
               <Button
@@ -218,36 +219,36 @@ export default function LegalAssistantPage() {
                 disabled={loadingQuery}
                 className="bg-amber-600 hover:bg-amber-700 text-white px-6"
               >
-                {loadingQuery ? '法律檢索中...' : '進行法律檢索'}
+                {loadingQuery ? t('qaSearching') : t('qaSearchBtn')}
               </Button>
             </div>
 
             {/* Quick Prompts */}
             <div className="flex flex-wrap gap-2 pt-2 items-center text-xs text-gray-500">
-              <span>常見法規問題快速查詢：</span>
+              <span>{t('qaQuickLabel')}</span>
               <button
-                onClick={() => handleQuickPrompt('手搖飲料每杯含糖量超過多少需要課徵 10% 特別消費稅？何時生效？')}
+                onClick={() => handleQuickPrompt(t('qaQuick1Query'))}
                 className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-card hover:bg-amber-50 dark:hover:bg-accent border text-gray-700 dark:text-gray-300"
               >
-                🍬 含糖飲料特別消費稅門檻與生效日
+                {t('qaQuick1Label')}
               </button>
               <button
-                onClick={() => handleQuickPrompt('外資在越南開手搖飲料門市，需要辦理哪些法定手續與許可？')}
+                onClick={() => handleQuickPrompt(t('qaQuick2Query'))}
                 className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-card hover:bg-amber-50 dark:hover:bg-accent border text-gray-700 dark:text-gray-300"
               >
-                🏬 外商開飲料店 IRC + ERC 辦理程序
+                {t('qaQuick2Label')}
               </button>
               <button
-                onClick={() => handleQuickPrompt('在越南餐飲門市販售飲品，如何辦理食品安全自宣告 (Tự công bố) 與食安證書？')}
+                onClick={() => handleQuickPrompt(t('qaQuick3Query'))}
                 className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-card hover:bg-amber-50 dark:hover:bg-accent border text-gray-700 dark:text-gray-300"
               >
-                🥗 食品安全合格機構證書 (ATTP) 與自宣告
+                {t('qaQuick3Label')}
               </button>
               <button
-                onClick={() => handleQuickPrompt('進口台灣珍珠粉圓、茶葉與飲料封口機到越南，有哪些關稅與檢驗規定？')}
+                onClick={() => handleQuickPrompt(t('qaQuick4Query'))}
                 className="px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-card hover:bg-amber-50 dark:hover:bg-accent border text-gray-700 dark:text-gray-300"
               >
-                🚢 台灣珍珠茶葉原料與設備進口稅則
+                {t('qaQuick4Label')}
               </button>
             </div>
           </Card>
@@ -258,10 +259,10 @@ export default function LegalAssistantPage() {
               <div className="flex items-center justify-between border-b pb-4">
                 <div className="flex items-center gap-2">
                   <FileCheck className="h-5 w-5 text-emerald-600" />
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">法律合規分析結果</h3>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{t('resultTitle')}</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">法律信心等級：</span>
+                  <span className="text-xs text-gray-500">{t('confidenceLabel')}</span>
                   <Badge
                     className={
                       answer.confidence_level === 'HIGH'
@@ -278,7 +279,7 @@ export default function LegalAssistantPage() {
 
               {/* Conclusion */}
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">📋 核心法律結論</h4>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('conclusionHeading')}</h4>
                 <div className="p-4 rounded-xl bg-gray-50 dark:bg-card/80 border text-sm leading-relaxed whitespace-pre-line text-gray-800 dark:text-gray-200">
                   {answer.conclusion}
                 </div>
@@ -289,7 +290,7 @@ export default function LegalAssistantPage() {
                 <div className="p-4 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-sm text-blue-800 dark:text-blue-300 flex items-start gap-3">
                   <Clock className="h-5 w-5 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold">法律時效與生效判定（基準日：{answer.temporal_status.target_date}）：</span>
+                    <span className="font-semibold">{t('temporalLabel', { date: answer.temporal_status.target_date })}</span>
                     <p className="mt-1 text-xs sm:text-sm">{answer.temporal_status.notice}</p>
                   </div>
                 </div>
@@ -298,7 +299,7 @@ export default function LegalAssistantPage() {
               {/* Citations (條/款/點) */}
               {answer.legal_basis.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">⚖️ 具體法定依據（精確至條、款、點）</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('legalBasisHeading')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {answer.legal_basis.map((c, idx) => (
                       <div key={idx} className="p-4 rounded-xl border bg-white dark:bg-card space-y-2 hover:border-amber-400 transition-colors">
@@ -315,14 +316,14 @@ export default function LegalAssistantPage() {
                           {c.article} {c.clause ? `› ${c.clause}` : ''} {c.point ? `› ${c.point}` : ''}
                         </div>
                         <div className="pt-1 flex items-center justify-between text-xs text-gray-400">
-                          <span>生效日: {c.effective_date}</span>
+                          <span>{t('effectiveDate', { date: c.effective_date })}</span>
                           <a
                             href={c.official_url}
                             target="_blank"
                             rel="noreferrer"
                             className="text-primary font-medium hover:underline inline-flex items-center gap-1"
                           >
-                            檢視官方真確來源 <ExternalLink className="h-3 w-3" />
+                            {t('viewSource')} <ExternalLink className="h-3 w-3" />
                           </a>
                         </div>
                       </div>
@@ -334,7 +335,7 @@ export default function LegalAssistantPage() {
               {/* Exceptions */}
               {answer.exceptions && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">⚠️ 法定例外或豁免情形</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('exceptionsHeading')}</h4>
                   <p className="text-sm p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 text-amber-900 dark:text-amber-200">
                     {answer.exceptions}
                   </p>
@@ -344,7 +345,7 @@ export default function LegalAssistantPage() {
               {/* Practical Guidance */}
               {answer.practical_interpretation && (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">💡 實務審批與執行重點</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('practicalHeading')}</h4>
                   <p className="text-sm p-4 rounded-xl bg-gray-50 dark:bg-card border text-gray-700 dark:text-gray-300 leading-relaxed">
                     {answer.practical_interpretation}
                   </p>
@@ -354,16 +355,16 @@ export default function LegalAssistantPage() {
               {/* Procedures */}
               {answer.procedures && answer.procedures.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">🏢 對應之官方行政申請手續</h4>
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('proceduresHeading')}</h4>
                   <div className="space-y-2">
                     {answer.procedures.map((p, idx) => (
                       <div key={idx} className="p-4 rounded-xl border bg-white dark:bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{p.procedure_name}</p>
-                          <p className="text-xs text-gray-500">受理機關：{p.authority}</p>
+                          <p className="text-xs text-gray-500">{t('authority', { name: p.authority })}</p>
                           <div className="flex gap-4 text-xs text-gray-500 pt-1">
-                            <span>⏱️ 審理時程：約 {p.processing_time_days} 工作天</span>
-                            <span>💵 官方規費：{p.fee_vnd ? `${p.fee_vnd.toLocaleString()} VND` : '免規費'}</span>
+                            <span>{t('processingTime', { days: p.processing_time_days })}</span>
+                            <span>{t('officialFee', { fee: p.fee_vnd ? `${p.fee_vnd.toLocaleString()} VND` : t('noFee') })}</span>
                           </div>
                         </div>
                         {p.online_url && (
@@ -373,7 +374,7 @@ export default function LegalAssistantPage() {
                             rel="noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium shrink-0"
                           >
-                            線上申辦入口 <ExternalLink className="h-3 w-3" />
+                            {t('onlinePortal')} <ExternalLink className="h-3 w-3" />
                           </a>
                         )}
                       </div>
@@ -402,49 +403,49 @@ export default function LegalAssistantPage() {
           <Card className="p-6 space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
               <Building2 className="h-5 w-5 text-amber-600" />
-              設定門市與企業設立條件（自動生成循序審批 DAG 路徑）
+              {t('procHeading')}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="text-xs text-gray-500 block mb-1.5 font-medium">產業類別</label>
+                <label className="text-xs text-gray-500 block mb-1.5 font-medium">{t('procIndustryLabel')}</label>
                 <select
                   value={procIndustry}
                   onChange={e => setProcIndustry(e.target.value)}
                   className="w-full p-2.5 rounded-xl border bg-white dark:bg-card text-sm"
                 >
-                  <option value="beverage">手搖飲料 / 茶飲連鎖門市</option>
-                  <option value="restaurant">一般餐飲 / 餐廳經營</option>
-                  <option value="trading">進出口貿易 / 批發零售</option>
-                  <option value="manufacturing">食品製造 / 加工廠</option>
+                  <option value="beverage">{t('procIndustryBeverage')}</option>
+                  <option value="restaurant">{t('procIndustryRestaurant')}</option>
+                  <option value="trading">{t('procIndustryTrading')}</option>
+                  <option value="manufacturing">{t('procIndustryManufacturing')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 block mb-1.5 font-medium">投資主體型態</label>
+                <label className="text-xs text-gray-500 block mb-1.5 font-medium">{t('procEntityLabel')}</label>
                 <select
                   value={procEntity}
                   onChange={e => setProcEntity(e.target.value)}
                   className="w-full p-2.5 rounded-xl border bg-white dark:bg-card text-sm"
                 >
-                  <option value="100_FOE">100% 外資企業 (100% Foreign-Owned Enterprise)</option>
-                  <option value="JOINT_VENTURE">越外合資公司 (Joint Venture)</option>
-                  <option value="LOCAL_HOUSEHOLD">越南當地個人戶 (Hộ kinh doanh)</option>
+                  <option value="100_FOE">{t('procEntity100foe')}</option>
+                  <option value="JOINT_VENTURE">{t('procEntityJv')}</option>
+                  <option value="LOCAL_HOUSEHOLD">{t('procEntityHousehold')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 block mb-1.5 font-medium">預計落地省市</label>
+                <label className="text-xs text-gray-500 block mb-1.5 font-medium">{t('procProvinceLabel')}</label>
                 <select
                   value={procProvince}
                   onChange={e => setProcProvince(e.target.value)}
                   className="w-full p-2.5 rounded-xl border bg-white dark:bg-card text-sm"
                 >
-                  <option value="Hồ Chí Minh">胡志明市 (TP. Hồ Chí Minh)</option>
-                  <option value="Hà Nội">河內市 (TP. Hà Nội)</option>
-                  <option value="Đà Nẵng">峴港市 (TP. Đà Nẵng)</option>
-                  <option value="Bình Dương">平陽省 (Bình Dương)</option>
-                  <option value="Đồng Nai">同奈省 (Đồng Nai)</option>
+                  <option value="Hồ Chí Minh">{t('procProvinceHcm')}</option>
+                  <option value="Hà Nội">{t('procProvinceHanoi')}</option>
+                  <option value="Đà Nẵng">{t('procProvinceDanang')}</option>
+                  <option value="Bình Dương">{t('procProvinceBinhduong')}</option>
+                  <option value="Đồng Nai">{t('procProvinceDongnai')}</option>
                 </select>
               </div>
             </div>
@@ -455,7 +456,7 @@ export default function LegalAssistantPage() {
                 disabled={procLoading}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
-                {procLoading ? '計算審批路徑中...' : '重新生成審批循序 Checklist'}
+                {procLoading ? t('procGenerating') : t('procRegenerate')}
               </Button>
             </div>
           </Card>
@@ -466,25 +467,25 @@ export default function LegalAssistantPage() {
               {/* Summary Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="p-4 bg-amber-500/10 border-amber-200">
-                  <span className="text-xs text-gray-500">預估整體法定審查期</span>
+                  <span className="text-xs text-gray-500">{t('procStatDaysLabel')}</span>
                   <p className="text-2xl font-bold text-amber-700 mt-1">
-                    {procPlan.total_estimated_days} 工作日
+                    {t('procStatDaysUnit', { days: procPlan.total_estimated_days })}
                   </p>
-                  <span className="text-[11px] text-gray-400">建議預留 1.5 ~ 2 個月籌備期</span>
+                  <span className="text-[11px] text-gray-400">{t('procStatDaysHint')}</span>
                 </Card>
                 <Card className="p-4 bg-blue-500/10 border-blue-200">
-                  <span className="text-xs text-gray-500">預估官方規費合計</span>
+                  <span className="text-xs text-gray-500">{t('procStatFeeLabel')}</span>
                   <p className="text-lg font-bold text-blue-700 mt-1">
                     {procPlan.total_official_fee_estimate}
                   </p>
-                  <span className="text-[11px] text-gray-400">不含第三方體檢與公證認證費</span>
+                  <span className="text-[11px] text-gray-400">{t('procStatFeeHint')}</span>
                 </Card>
                 <Card className="p-4 bg-emerald-500/10 border-emerald-200">
-                  <span className="text-xs text-gray-500">循序審批總步驟數</span>
+                  <span className="text-xs text-gray-500">{t('procStatStepsLabel')}</span>
                   <p className="text-2xl font-bold text-emerald-700 mt-1">
-                    {procPlan.sequential_steps.length} 個步驟
+                    {t('procStatStepsUnit', { count: procPlan.sequential_steps.length })}
                   </p>
-                  <span className="text-[11px] text-gray-400">具備嚴格前後前置相依性</span>
+                  <span className="text-[11px] text-gray-400">{t('procStatStepsHint')}</span>
                 </Card>
               </div>
 
@@ -499,26 +500,26 @@ export default function LegalAssistantPage() {
                         </span>
                         <div>
                           <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{step.title}</h3>
-                          <span className="text-xs text-gray-500 font-mono">法定依據：{step.legal_basis}</span>
+                          <span className="text-xs text-gray-500 font-mono">{t('procStepLegalBasis', { basis: step.legal_basis })}</span>
                         </div>
                       </div>
                       <Badge variant="outline" className="bg-amber-50 text-amber-800 shrink-0">
-                        {step.processing_days} 個工作日
+                        {t('procStepDaysUnit', { days: step.processing_days })}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       <div className="space-y-2">
-                        <p><span className="font-semibold text-gray-700 dark:text-gray-300">受理審批機關：</span> {step.responsible_authority}</p>
-                        <p><span className="font-semibold text-gray-700 dark:text-gray-300">主管中央部會：</span> {step.governing_ministry}</p>
-                        <p><span className="font-semibold text-gray-700 dark:text-gray-300">官方規費標準：</span> {step.official_fee}</p>
+                        <p><span className="font-semibold text-gray-700 dark:text-gray-300">{t('procStepAuthority')}</span> {step.responsible_authority}</p>
+                        <p><span className="font-semibold text-gray-700 dark:text-gray-300">{t('procStepMinistry')}</span> {step.governing_ministry}</p>
+                        <p><span className="font-semibold text-gray-700 dark:text-gray-300">{t('procStepFee')}</span> {step.official_fee}</p>
                         <div className="p-2.5 rounded-lg bg-rose-50/70 border border-rose-200 text-rose-800">
-                          <span className="font-semibold">前置依賴要求：</span> {step.prerequisites}
+                          <span className="font-semibold">{t('procStepPrereq')}</span> {step.prerequisites}
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <span className="font-semibold text-gray-700 dark:text-gray-300 block">法定應備文件清單 (Dossier)：</span>
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 block">{t('procStepDossierLabel')}</span>
                         <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
                           {step.dossier_items.map((item, i) => (
                             <li key={i}>{item}</li>
@@ -528,12 +529,12 @@ export default function LegalAssistantPage() {
                     </div>
 
                     <div className="p-3 rounded-lg bg-gray-50 dark:bg-card border text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                      <span className="font-semibold text-gray-800 dark:text-gray-200">實務重點提醒：</span> {step.practical_notes}
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">{t('procStepNotesLabel')}</span> {step.practical_notes}
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                        <span>官方表格代碼：</span>
+                        <span>{t('procStepFormsLabel')}</span>
                         {step.official_forms.map((f, i) => (
                           <Badge key={i} variant="outline">{f}</Badge>
                         ))}
@@ -545,7 +546,7 @@ export default function LegalAssistantPage() {
                           rel="noreferrer"
                           className="text-xs text-amber-700 font-medium hover:underline inline-flex items-center gap-1"
                         >
-                          官方線上入口 <ExternalLink className="h-3 w-3" />
+                          {t('procStepOnlinePortal')} <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
                     </div>
@@ -566,12 +567,12 @@ export default function LegalAssistantPage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <Plane className="h-5 w-5 text-amber-600" />
-                各國食品原料與餐飲設備進口越南管制稅則
+                {t('importHeading')}
               </h2>
-              <Badge variant="outline">原產國：台灣 / 日本 → 目的國：越南</Badge>
+              <Badge variant="outline">{t('importOriginBadge')}</Badge>
             </div>
             <p className="text-xs text-gray-500">
-              進口食品原料及餐飲設備，需符合越南海關總署與衛生部之雙重檢驗要求。食品原料抵港前必須於越南完成自主公告 (Tự công bố)。
+              {t('importDesc')}
             </p>
           </Card>
 
@@ -581,7 +582,7 @@ export default function LegalAssistantPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Badge className={rule.category === 'FOOD' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}>
-                      {rule.category === 'FOOD' ? '食品原料' : '餐飲設備'}
+                      {rule.category === 'FOOD' ? t('importCategoryFood') : t('importCategoryEquipment')}
                     </Badge>
                     <span className="text-xs font-mono text-gray-500">HS: {rule.hs_code}</span>
                   </div>
@@ -589,27 +590,27 @@ export default function LegalAssistantPage() {
 
                   <div className="grid grid-cols-3 gap-2 py-2 text-center bg-gray-50 dark:bg-card rounded-lg border">
                     <div>
-                      <span className="text-[10px] text-gray-400 block">進口關稅</span>
+                      <span className="text-[10px] text-gray-400 block">{t('importTariffLabel')}</span>
                       <span className="text-xs font-bold text-amber-700">{rule.tariff_rate_percentage}%</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-gray-400 block">進口 VAT</span>
+                      <span className="text-[10px] text-gray-400 block">{t('importVatLabel')}</span>
                       <span className="text-xs font-bold text-blue-700">{rule.vat_rate_percentage}%</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-gray-400 block">特別消費稅</span>
+                      <span className="text-[10px] text-gray-400 block">{t('importSctLabel')}</span>
                       <span className="text-xs font-bold text-gray-700">{rule.special_consumption_tax}%</span>
                     </div>
                   </div>
 
                   <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                    <span className="font-semibold text-gray-800 dark:text-gray-200 block">法定監管規定：</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200 block">{t('importRegulatoryLabel')}</span>
                     <p className="leading-relaxed">{rule.regulatory_requirements}</p>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t space-y-2 text-xs">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300 block">必要單證文件 (Certificates)：</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300 block">{t('importCertLabel')}</span>
                   <div className="flex flex-wrap gap-1">
                     {rule.required_certificates.map((c, i) => (
                       <Badge key={i} variant="outline" className="text-[10px] bg-white dark:bg-card">
@@ -632,19 +633,19 @@ export default function LegalAssistantPage() {
           <Card className="p-6 space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
               <Clock className="h-5 w-5 text-amber-600" />
-              法律條文修訂歷程與時態追蹤器
+              {t('amendHeading')}
             </h2>
             <div className="flex flex-wrap gap-3">
               <Input
                 value={traceDocNum}
                 onChange={e => setTraceDocNum(e.target.value)}
-                placeholder="法規文號 (如 15/2018/NĐ-CP)"
+                placeholder={t('amendDocPlaceholder')}
                 className="w-48 text-sm"
               />
               <Input
                 value={traceArticle}
                 onChange={e => setTraceArticle(e.target.value)}
-                placeholder="條號 (如 Điều 4)"
+                placeholder={t('amendArticlePlaceholder')}
                 className="w-36 text-sm"
               />
               <Button
@@ -652,7 +653,7 @@ export default function LegalAssistantPage() {
                 disabled={traceLoading}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
-                {traceLoading ? '查詢歷程中...' : '查詢條文時間軸'}
+                {traceLoading ? t('amendSearching') : t('amendSearchBtn')}
               </Button>
             </div>
           </Card>
@@ -678,7 +679,7 @@ export default function LegalAssistantPage() {
               {/* Article Nodes Content */}
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  現行條文節點 ({traceResult.article})
+                  {t('amendNodesHeading', { article: traceResult.article })}
                 </h4>
                 <div className="space-y-2">
                   {traceResult.nodes.map((node: any, idx: number) => (
@@ -689,7 +690,7 @@ export default function LegalAssistantPage() {
                       </p>
                       {node.text_zh && (
                         <p className="text-xs text-gray-600 dark:text-gray-400 pt-1 border-t">
-                          【中文意譯】：{node.text_zh}
+                          {t('amendZhTranslation', { text: node.text_zh })}
                         </p>
                       )}
                     </div>
@@ -700,13 +701,13 @@ export default function LegalAssistantPage() {
               {/* Timeline */}
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  修法時間軸 (Amendment Timeline)
+                  {t('amendTimelineHeading')}
                 </h4>
                 <div className="p-4 rounded-xl border bg-gray-50 dark:bg-card space-y-2">
                   <div className="flex items-center gap-3 text-xs">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                     <span className="font-bold text-gray-800 dark:text-gray-200">{traceResult.document.effective_date}</span>
-                    <span className="text-gray-500">正式發布生效，建立全越產品自主公告 (Tự công bố) 體系</span>
+                    <span className="text-gray-500">{t('amendEffectiveNotice')}</span>
                   </div>
                 </div>
               </div>

@@ -4,13 +4,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const maxDuration = 120
 
-async function ctx() { const c = await getUnitContext('mkt'); return c.ok ? c : null }
+async function ctx() { const c = await getUnitContext('mkt'); return c }
 const s = (v: unknown) => String(v ?? '').trim()
 const STATUS = ['review', 'approved', 'scheduled', 'published', 'rejected']
 
 // 清單或單筆（?id=）
 export async function GET(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const id = s(new URL(req.url).searchParams.get('id'))
   if (id) {
     const { data, error } = await c.admin.from('mkt_content').select('*').eq('id', id).eq('owner_id', c.ownerId).maybeSingle()
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 // 一鍵產出：{ topic, brief?, channels[] } → AI 生成整套 → 存為待審核
 export async function POST(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   const topic = s(b.topic)
   if (!topic) return NextResponse.json({ error: '主題必填' }, { status: 400 })
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
 // 編輯產出／改狀態（核准/退回）／審核備註。body: { id, outputs?, status?, review_note? }
 export async function PATCH(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const b = await req.json().catch(() => ({}))
   const id = s(b.id)
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -59,7 +59,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const c = await ctx(); if (!c) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const c = await ctx(); if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
   const { id } = await req.json().catch(() => ({}))
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const { error } = await c.admin.from('mkt_content').delete().eq('id', s(id)).eq('owner_id', c.ownerId)

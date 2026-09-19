@@ -63,7 +63,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: tgChatId.trim(),
-          text: '✅ AI GATE 行銷自動化 Telegram 設定成功！\n\n您將在此收到行銷流程的審核通知。',
+          text: '✅ IMT 行銷流水線 Telegram 設定成功！\n\n您將在此收到行銷流程的審核通知。',
           parse_mode: 'HTML',
         }),
       })
@@ -270,7 +270,7 @@ export function SettingsForm({ profile, creditBalance }: SettingsFormProps) {
           <h2 className="font-semibold">社群平台連結</h2>
         </div>
         <p className="text-xs text-muted-foreground mb-5">
-          設定後，行銷自動化流程將自動上傳圖片與影片至對應平台。各平台 Token 請至官方開發者後台取得。
+          設定後，行銷流水線流程將自動上傳圖片與影片至對應平台。各平台 Token 請至官方開發者後台取得。
         </p>
         <SocialPlatformSettings />
       </div>

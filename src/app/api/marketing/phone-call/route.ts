@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
   if (!script.trim()) return NextResponse.json({ error: '腳本不可為空' }, { status: 400 })
 
-  // 電話撥打：行銷自動化（aiCallEmail）或潛在客戶行銷全開（prospectMarketing full）擇一即可
+  // 電話撥打：行銷流水線（aiCallEmail）或潛在客戶行銷全開（prospectMarketing full）擇一即可
   const { plan, features } = await getMarketingEntitlements(supabase, user.id)
   if (!features.aiCallEmail && features.prospectMarketing !== 'full') {
     return NextResponse.json({ error: '目前方案未開放電話撥打，請升級至 TEAM 以上', plan }, { status: 403 })

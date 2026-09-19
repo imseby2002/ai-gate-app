@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { SUBDOMAIN_SYSTEM } from '@/lib/systems'
 import {
   MessageSquare, Bot, BarChart3, TrendingUp, Lock,
@@ -24,7 +24,7 @@ const STAT_STYLES = [
 
 export default async function AppsPage({ searchParams }: { searchParams: Promise<{ blocked?: string }> }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
   const t = await getTranslations('Dashboard')
@@ -93,7 +93,7 @@ export default async function AppsPage({ searchParams }: { searchParams: Promise
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <Sparkles className="h-4 w-4 text-primary/70" />
-                <span className="text-xs font-medium text-primary/70 uppercase tracking-wide">AI GATE</span>
+                <span className="text-xs font-medium text-primary/70 uppercase tracking-wide">IMT</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
                 {t('welcome', { name: profile?.full_name ?? profile?.email })}

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 // 派工對象：外部廠商（fin_vendors）＋內部員工（hr_employees），限維修單位
 export async function GET() {
   const c = await getUnitContext('repair')
-  if (!c.ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!c.ok) return NextResponse.json({ error: c.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: c.status })
 
   const [v, e] = await Promise.all([
     c.admin.from('fin_vendors').select('id, name, service').eq('owner_id', c.ownerId).eq('active', true).order('name'),

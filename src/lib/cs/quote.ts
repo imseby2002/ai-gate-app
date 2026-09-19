@@ -45,6 +45,15 @@ export async function buildDeterministicQuote(
 
     if (config.productType === 'accommodation') {
       if (!object.roomName || !object.checkIn || !object.checkOut) return ''
+
+      // If notes contain complex calculation rules (tiered extra-person fees, consecutive stay discounts,
+      // festival multipliers), the deterministic flat formula cannot handle them accurately.
+      // We yield to the LLM (which receives formatPricingForAI with full step-by-step notes).
+      const hasComplexRulesInNotes = (config.notes ?? []).some(n =>
+        /加人|第二晚|第2晚|連續住宿|續住|加床|加成|x1\.|折抵|小孩|兒童|嬰兒/i.test(n)
+      )
+      if (hasComplexRulesInNotes) return ''
+
       const r = computeAccommodation(config, {
         roomName: object.roomName,
         checkIn: object.checkIn,

@@ -1,12 +1,12 @@
 ﻿import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { Bot, Plus } from 'lucide-react'
 import { AssistantCard } from '@/components/assistants/AssistantCard'
 
 export default async function AssistantsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await getCachedUser()
   if (!user) redirect('/login')
 
   const { data: assistants } = await supabase

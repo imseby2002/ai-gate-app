@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Check, X, Sparkles, Loader2, Lock, RefreshCw } from 'lucide-react'
 import { CS_FEATURE_REQUEST_PRICING, type CsPlanFeatures } from '@/lib/cs/entitlements'
 import { CsSideNav } from '../CsSideNav'
@@ -11,37 +12,40 @@ type Cycle = 'monthly' | 'yearly'
 
 const PLAN_NAME: Record<CsPlan, string> = { free: 'FREE', core: 'CORE', pro: 'PRO', max: 'MAX' }
 
-const PLAN_META = [
+const getPlanMeta = (t: (key: string) => string) => [
   { id: 'free' as CsPlan, monthlyUsd: 0, yearlyUsd: 0, highlight: false, monthlyId: undefined as string | undefined, yearlyId: undefined as string | undefined,
-    features: ['3 個平台串接', '不限訊息則數', '基本 AI 設定'] },
+    features: [t('featFree1'), t('featFree2'), t('featFree3')] },
   { id: 'core' as CsPlan, monthlyUsd: 19, yearlyUsd: 182, highlight: true, monthlyId: 'core_monthly', yearlyId: 'core_yearly',
-    features: ['Claude 風險升級', '複雜客服／圖片辨識', 'WhatsApp 個人版', '資料來源／工單／收件匣'] },
+    features: [t('featCore1'), t('featCore2'), t('featCore3'), t('featCore4')] },
   { id: 'pro' as CsPlan, monthlyUsd: 29, yearlyUsd: 278, highlight: false, monthlyId: 'pro_monthly', yearlyId: 'pro_yearly',
-    features: ['包含 CORE 全部功能', '即時網路搜尋', '最多 5 位協作人員', '每月 1 次免費協助設定'] },
+    features: [t('featPro1'), t('featPro2'), t('featPro3'), t('featPro4')] },
   { id: 'max' as CsPlan, monthlyUsd: 41, yearlyUsd: 399, highlight: false, monthlyId: 'max_monthly', yearlyId: 'max_yearly',
-    features: ['包含 PRO 全部功能', '不限平台數', '報價計算機', '每月 2 次免費協助設定'] },
+    features: [t('featMax1'), t('featMax2'), t('featMax3'), t('featMax4')] },
 ]
 
 // 功能比較表：四欄方案值（免費／PRO／TEAM／企業）＋ market（市場常見模式，用來對比痛點）
-const COMPARISON_ROWS: Array<{ label: string; values: [string, string, string, string]; market: string }> = [
-  { label: '客服訊息則數', values: ['不限', '不限', '不限', '不限'], market: '每月 50–100 則上限，超過加價' },
-  { label: '平台串接數', values: ['3 個', '3 個', '3 個', '不限'], market: '依方案 1–2 個' },
-  { label: 'WhatsApp 個人版', values: ['—', '✓', '✓', '✓'], market: '多數不支援' },
-  { label: '知識庫', values: ['✓', '✓', '✓', '✓'], market: '常需加購' },
-  { label: '協作人員', values: ['不可邀請', '1 位', '5 位', '無限'], market: '按席位另計' },
-  { label: 'AI 設定', values: ['基本', '完整', '完整', '完整'], market: '基礎版本' },
-  { label: 'Claude 風險升級', values: ['—', '✓', '✓', '✓'], market: '—' },
-  { label: '複雜客服／圖片辨識', values: ['—', '✓', '✓', '✓'], market: '多數不支援' },
-  { label: '資料來源管理', values: ['—', '✓', '✓', '✓'], market: '—' },
-  { label: '工單系統', values: ['—', '✓', '✓', '✓'], market: '常需加購' },
-  { label: '統一收件匣', values: ['—', '✓', '✓', '✓'], market: '常需加購' },
-  { label: '自動學習', values: ['—', '✓', '✓', '✓'], market: '—' },
-  { label: '即時網路搜尋', values: ['—', '—', '✓', '✓'], market: '多數不支援' },
-  { label: '報價計算機', values: ['—', '—', '—', '✓'], market: '—' },
-  { label: '協助設定（免費額度／月）', values: ['0（$25/次）', '0（$15/次）', '1 次', '2 次'], market: '通常另計顧問費' },
+const getComparisonRows = (t: (key: string) => string): Array<{ label: string; values: [string, string, string, string]; market: string }> => [
+  { label: t('rowMessages'), values: [t('unlimited'), t('unlimited'), t('unlimited'), t('unlimited')], market: t('marketMessages') },
+  { label: t('rowPlatformCount'), values: [t('threeItems'), t('threeItems'), t('threeItems'), t('unlimited')], market: t('marketPlatformCount') },
+  { label: t('rowWhatsapp'), values: ['—', '✓', '✓', '✓'], market: t('marketMostUnsupported') },
+  { label: t('rowKnowledgeBase'), values: ['✓', '✓', '✓', '✓'], market: t('marketOftenAddon') },
+  { label: t('rowCollaborators'), values: [t('cantInvite'), t('oneSeat'), t('fiveSeats'), t('unlimitedSeats')], market: t('marketPerSeat') },
+  { label: t('rowAiSettings'), values: [t('basic'), t('full'), t('full'), t('full')], market: t('marketBasicVersion') },
+  { label: t('rowClaudeEscalation'), values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: t('rowComplexCs'), values: ['—', '✓', '✓', '✓'], market: t('marketMostUnsupported') },
+  { label: t('rowDataSources'), values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: t('rowTickets'), values: ['—', '✓', '✓', '✓'], market: t('marketOftenAddon') },
+  { label: t('rowInbox'), values: ['—', '✓', '✓', '✓'], market: t('marketOftenAddon') },
+  { label: t('rowAutoLearning'), values: ['—', '✓', '✓', '✓'], market: '—' },
+  { label: t('rowWebSearch'), values: ['—', '—', '✓', '✓'], market: t('marketMostUnsupported') },
+  { label: t('rowPricingCalc'), values: ['—', '—', '—', '✓'], market: '—' },
+  { label: t('rowSetupHelp'), values: [t('setupHelpFree0'), t('setupHelpCore0'), t('setupHelp1x'), t('setupHelp2x')], market: t('marketConsultingFee') },
 ]
 
 export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
+  const t = useTranslations('CsPlanPage')
+  const PLAN_META = getPlanMeta(t)
+  const COMPARISON_ROWS = getComparisonRows(t)
   const [plan, setPlan] = useState<CsPlan | null>(null)
   const [features, setFeatures] = useState<CsPlanFeatures | null>(null)
   const [cycle, setCycle] = useState<Cycle>('yearly')
@@ -70,7 +74,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
   useEffect(() => { load(); loadRecurringOrders() }, [load, loadRecurringOrders])
 
   const handleCancelRecurring = async (orderId: string) => {
-    if (!confirm('確定要取消自動續訂嗎？取消後不會再自動扣款。')) return
+    if (!confirm(t('confirmCancelRecurring'))) return
     setCancellingId(orderId)
     try {
       const res = await fetch('/api/billing/cancel-recurring', {
@@ -82,7 +86,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       if (!res.ok) throw new Error(data.error)
       await loadRecurringOrders()
     } catch (err) {
-      alert(err instanceof Error ? err.message : '取消失敗，請稍後再試')
+      alert(err instanceof Error ? err.message : t('cancelFailed'))
     } finally {
       setCancellingId(null)
     }
@@ -97,7 +101,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
         body: JSON.stringify({ packageId, returnUrl: window.location.href, autoRenew: !!autoRenewPkg[packageId] }),
       })
       const data = await res.json()
-      if (!res.ok) { alert(data.error ?? '建立訂單失敗'); return }
+      if (!res.ok) { alert(data.error ?? t('createOrderFailed')); return }
 
       const form = document.createElement('form')
       form.method = 'POST'
@@ -115,13 +119,13 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
       document.body.removeChild(form)
       if (autoRenewPkg[packageId]) setTimeout(loadRecurringOrders, 3000)
     } catch {
-      alert('網路錯誤，請稍後再試')
+      alert(t('networkError'))
     } finally {
       setCheckingOut(null)
     }
   }
 
-  if (plan == null) return <div className="p-6 text-muted-foreground text-sm">載入中…</div>
+  if (plan == null) return <div className="p-6 text-muted-foreground text-sm">{t('loading')}</div>
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-slate-50 to-white dark:from-background dark:to-background">
@@ -131,29 +135,29 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
         <div className="rounded-2xl bg-gradient-to-r from-primary to-violet-600 px-5 py-4 text-white">
           <div className="flex items-center gap-2 text-lg sm:text-xl font-extrabold">
             <Sparkles className="h-5 w-5 shrink-0" />
-            不限則數，不怕用量爆表加價
+            {t('bannerTitle')}
           </div>
           <p className="text-white/85 text-xs sm:text-sm mt-1">
-            對話量再大，方案價格都固定——不像市場常見的「按則數計費」，用越多帳單越嚇人。
+            {t('bannerDesc')}
           </p>
         </div>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <h1 className="text-xl font-bold text-foreground">訂閱方案</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">依平台串接數與功能選擇適合的方案，隨時可升級</p>
+            <h1 className="text-xl font-bold text-foreground">{t('pageTitle')}</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">{t('pageDesc')}</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-              目前：{PLAN_NAME[plan]}
+              {t('currentPlanLabel')}{PLAN_NAME[plan]}
             </span>
             <div className="flex gap-1 text-xs">
               <button onClick={() => setCycle('yearly')}
                 className={`px-2.5 py-1 rounded-lg ${cycle === 'yearly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
-                年繳（約 8 折）
+                {t('yearlyBilling')}
               </button>
               <button onClick={() => setCycle('monthly')}
                 className={`px-2.5 py-1 rounded-lg ${cycle === 'monthly' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'}`}>
-                月繳
+                {t('monthlyBilling')}
               </button>
             </div>
           </div>
@@ -162,14 +166,14 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
         {!isOwner && (
           <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             <Lock className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>方案升級需由<strong>民宿擁有者本人</strong>操作。如需升級請改用擁有者帳號登入。</span>
+            <span>{t.rich('ownerOnlyNotice', { b: (chunks) => <strong>{chunks}</strong> })}</span>
           </div>
         )}
 
         <div className="flex items-center gap-2.5 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:border-amber-700 dark:from-amber-950/40 dark:to-orange-950/40 px-4 py-3">
           <span className="text-xl shrink-0">🎁</span>
           <p className="text-sm text-amber-900 dark:text-amber-200 font-medium">
-            升級 CORE，新會員享首次協助設定免費（每個帳號一次，不分月繳／年繳）
+            {t('coreUpgradeGiftHint')}
           </p>
         </div>
 
@@ -187,10 +191,10 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">{PLAN_NAME[c.id]}</span>
                   {isCurrent ? (
-                    <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium"><Check className="h-3 w-3" />使用中</span>
+                    <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium"><Check className="h-3 w-3" />{t('inUse')}</span>
                   ) : c.highlight && (
                     <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
-                      <Sparkles className="h-3 w-3" />推薦
+                      <Sparkles className="h-3 w-3" />{t('recommended')}
                     </span>
                   )}
                 </div>
@@ -199,17 +203,17 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                   <div className="text-2xl font-bold text-foreground">$0</div>
                 ) : cycle === 'monthly' ? (
                   <div className="text-2xl font-bold text-foreground">
-                    ${c.monthlyUsd} <span className="text-xs font-normal text-muted-foreground">美元/月</span>
+                    ${c.monthlyUsd} <span className="text-xs font-normal text-muted-foreground">{t('usdPerMonth')}</span>
                   </div>
                 ) : (
                   <div className="space-y-0.5">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-xs line-through text-muted-foreground">${c.monthlyUsd}</span>
                       <span className="text-2xl font-bold text-foreground">${yearlyMonthlyEquiv.toFixed(2)}</span>
-                      <span className="text-xs font-normal text-muted-foreground">美元/月</span>
-                      {savingsPct > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">省 {savingsPct}%</span>}
+                      <span className="text-xs font-normal text-muted-foreground">{t('usdPerMonth')}</span>
+                      {savingsPct > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">{t('savePct', { n: savingsPct })}</span>}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">年繳 ${c.yearlyUsd} 美元</div>
+                    <div className="text-[10px] text-muted-foreground">{t('yearlyUsdTotal', { n: c.yearlyUsd })}</div>
                   </div>
                 )}
 
@@ -231,7 +235,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                         onChange={e => setAutoRenewPkg(prev => ({ ...prev, [packageId ?? '']: e.target.checked }))}
                         className="rounded"
                       />
-                      每{cycle === 'yearly' ? '年' : '月'}自動於下一期扣款
+                      {cycle === 'yearly' ? t('autoRenewYearly') : t('autoRenewMonthly')}
                     </label>
                     <button
                       onClick={() => upgrade(packageId!)}
@@ -239,7 +243,7 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                       className="w-full mt-1 py-2 rounded-lg text-xs font-semibold text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                     >
                       {checkingOut === packageId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                      {isCurrent ? '目前方案' : '升級'}
+                      {isCurrent ? t('currentPlanButton') : t('upgradeButton')}
                     </button>
                   </>
                 )}
@@ -251,16 +255,16 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
         {recurringOrders.length > 0 && (
           <div className="rounded-xl border bg-card p-4 space-y-2">
             <div className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5" /> 自動續訂中
+              <RefreshCw className="h-3.5 w-3.5" /> {t('autoRenewingTitle')}
             </div>
             {recurringOrders.map(o => (
               <div key={o.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
                 <div>
                   <div className="font-medium text-foreground">
-                    {o.reference_id}<span className="ml-2 text-muted-foreground">${o.usd_value}/月</span>
+                    {o.reference_id}<span className="ml-2 text-muted-foreground">{t('usdPerMonthValue', { n: o.usd_value })}</span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    {o.status === 'pending' ? '等待首筆扣款確認中' : `已成功扣款 ${o.total_success_times} 次`}
+                    {o.status === 'pending' ? t('pendingFirstCharge') : t('chargedNTimes', { n: o.total_success_times })}
                   </div>
                 </div>
                 <button
@@ -268,24 +272,24 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
                   disabled={cancellingId === o.id}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium border hover:bg-accent disabled:opacity-50"
                 >
-                  {cancellingId === o.id ? '取消中…' : '取消自動續訂'}
+                  {cancellingId === o.id ? t('cancelling') : t('cancelAutoRenew')}
                 </button>
               </div>
             ))}
           </div>
         )}
 
-        <p className="text-[11px] text-muted-foreground">付款後方案立即生效；未勾選自動扣款時，到期前不會自動續訂，需自行再次購買延續。</p>
+        <p className="text-[11px] text-muted-foreground">{t('paymentEffectiveHint')}</p>
 
         <div className="overflow-x-auto rounded-xl border bg-card">
           <table className="w-full text-xs border-collapse min-w-[640px]">
             <thead>
               <tr className="bg-muted/60 border-b">
-                <th className="text-left font-medium py-2.5 px-3 text-muted-foreground">功能</th>
+                <th className="text-left font-medium py-2.5 px-3 text-muted-foreground">{t('featureColLabel')}</th>
                 {(['free', 'core', 'pro', 'max'] as CsPlan[]).map(id => (
                   <th key={id} className="text-center font-medium py-2.5 px-3 text-muted-foreground">{PLAN_NAME[id]}</th>
                 ))}
-                <th className="text-center font-semibold py-2.5 px-3 text-white bg-amber-800 whitespace-nowrap">市場常見模式</th>
+                <th className="text-center font-semibold py-2.5 px-3 text-white bg-amber-800 whitespace-nowrap">{t('marketPatternColLabel')}</th>
               </tr>
             </thead>
             <tbody>
@@ -308,15 +312,16 @@ export function CsPlanPage({ isOwner }: { isOwner: boolean }) {
 
         <div className="text-[11px] text-muted-foreground space-y-2">
           <p>
-            「協助設定」與「客製功能」不同：協助設定僅協助頻道串接與參數設定，依方案有免費額度；
-            客製功能是提供方案本身沒有的功能或需要改寫程式，能在 /cs/workspace 自行調整的設定（知識庫、定價表、觸發關鍵字等）不算客製——
-            基礎客製（調整既有邏輯，不動資料庫結構）：免費層 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan.free}/次，CORE 以上 ${CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan.core}/次（{CS_FEATURE_REQUEST_PRICING.basicNote}）；
-            複雜客製（{CS_FEATURE_REQUEST_PRICING.complexNote}）。
+            {t('customFeatureExplain', {
+              freePrice: CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan.free,
+              corePrice: CS_FEATURE_REQUEST_PRICING.basicPriceUsdByPlan.core,
+              basicNote: CS_FEATURE_REQUEST_PRICING.basicNote,
+              complexNote: CS_FEATURE_REQUEST_PRICING.complexNote,
+            })}
           </p>
           <p>{CS_FEATURE_REQUEST_PRICING.clawbackNote}。</p>
           <p>
-            協助設定範圍：站內所有設定（資料來源、報價計算機等）與各平台串接設定皆包含在內；
-            但不包含知識庫內容建立，以及各平台（LINE、WhatsApp 等）官方帳號本身的申請，這兩項需要另外報價。
+            {t('setupHelpScopeNote')}
           </p>
         </div>
         </div>

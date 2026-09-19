@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslations, useLocale } from 'next-intl'
 import { Loader2, Plus, RefreshCw, X, Columns3, LineChart, Settings2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { STORE_KIND_LABEL, type PnlLine } from './pnl-schema'
+import { getStoreKindLabel, type PnlLine } from './pnl-schema'
 import PnlSchemaEditor from './PnlSchemaEditor'
 import PnlImportSchema from './PnlImportSchema'
 
@@ -12,7 +13,7 @@ interface Store { id: string; code: string; name: string; name_vi: string; kind:
 interface Entry { store_id: string; line_code: string; amount: number }
 interface SeriesRow { period: string; line_code: string; amount: number }
 
-const fmt = (n: number) => n === 0 ? '–' : Math.round(n).toLocaleString('zh-TW')
+const fmt = (n: number, locale: string) => n === 0 ? '–' : Math.round(n).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 const pct = (v: number, base: number) => base ? (v / base * 100).toFixed(2) + '%' : '–'
 const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
 
@@ -47,6 +48,7 @@ const rowStyle = (kind: string) =>
       : ''
 
 export default function PnlReport() {
+  const t = useTranslations('FinancePage')
   const [mode, setMode] = useState<'compare' | 'trend'>('compare')
   const [stores, setStores] = useState<Store[]>([])
   const [lines, setLines] = useState<PnlLine[]>([])
@@ -101,22 +103,22 @@ export default function PnlReport() {
           <button onClick={() => setMode('compare')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
             style={mode === 'compare' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
-            <Columns3 className="h-4 w-4" />多店比較
+            <Columns3 className="h-4 w-4" />{t('multiStoreCompare')}
           </button>
           <button onClick={() => setMode('trend')}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
             style={mode === 'trend' ? { background: 'white', color: 'var(--primary)' } : { color: '#6b7280' }}>
-            <LineChart className="h-4 w-4" />單店趨勢
+            <LineChart className="h-4 w-4" />{t('singleStoreTrend')}
           </button>
         </div>
         <Button variant="outline" size="sm" onClick={() => setImporting(true)} className="gap-1.5 h-8 ml-auto">
-          <Upload className="h-4 w-4" />報表匯入
+          <Upload className="h-4 w-4" />{t('reportImport')}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="gap-1.5 h-8">
-          <Settings2 className="h-4 w-4" />科目設定
+          <Settings2 className="h-4 w-4" />{t('lineSettingsTitle')}
         </Button>
         <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="gap-1.5 h-8">
-          <Plus className="h-4 w-4" />新增門市
+          <Plus className="h-4 w-4" />{t('addStore')}
         </Button>
       </div>
 
@@ -126,7 +128,7 @@ export default function PnlReport() {
         <div className="flex items-center justify-center py-16 text-gray-400"><Loader2 className="h-6 w-6 animate-spin" /></div>
       ) : stores.length === 0 ? (
         <div className="py-16 text-center text-gray-400 text-sm">
-          尚無門市。先「新增門市」，再以「資料匯入」帶入各月損益數字。
+          {t('noStoresYetHint')}
         </div>
       ) : mode === 'compare' ? (
         <CompareView stores={stores} lines={lines} />
@@ -139,6 +141,9 @@ export default function PnlReport() {
 
 // ── 多店比較：月份固定，門市並排（科目為列） ──
 function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLine[] }) {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
+  const STORE_KIND_LABEL = getStoreKindLabel(t)
   const [entries, setEntries] = useState<Entry[]>([])
   const [periods, setPeriods] = useState<string[]>([])
   const [period, setPeriod] = useState(thisMonth())
@@ -174,17 +179,17 @@ function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlL
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-gray-500">月份</span>
+        <span className="text-sm text-gray-500">{t('monthLabel')}</span>
         <Input type="month" value={period} onChange={e => setPeriod(e.target.value)} className="h-8 w-40 text-sm" />
         {periods.length > 0 && (
           <select value={periods.includes(period) ? period : ''} onChange={e => e.target.value && setPeriod(e.target.value)}
             className="h-8 rounded-md border bg-background px-2 text-sm">
-            <option value="">— 已有資料月份 —</option>
+            <option value="">{t('periodsWithDataPlaceholder')}</option>
             {periods.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         )}
         <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}重新整理
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{t('refresh')}
         </Button>
       </div>
 
@@ -192,7 +197,7 @@ function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlL
         <table className="text-sm border-collapse w-full">
           <thead>
             <tr className="bg-gray-50">
-              <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">科目</th>
+              <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">{t('lineColHeader')}</th>
               {stores.map(s => (
                 <th key={s.id} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap">
                   <div className="font-semibold">{s.name}</div>
@@ -212,7 +217,7 @@ function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlL
                   const base = resolved[s.id]?.revenue ?? 0
                   return (
                     <td key={s.id} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
-                      <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v)}</span>
+                      <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v, locale)}</span>
                       {line.kind !== 'revenue' && <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>}
                     </td>
                   )
@@ -228,6 +233,8 @@ function CompareView({ stores, lines: allLines }: { stores: Store[]; lines: PnlL
 
 // ── 單店趨勢：選一門市，月份並排（科目為列），看逐月走勢 ──
 function TrendView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLine[] }) {
+  const t = useTranslations('FinancePage')
+  const locale = useLocale()
   const [storeId, setStoreId] = useState(stores[0]?.id ?? '')
   const [series, setSeries] = useState<SeriesRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -266,24 +273,24 @@ function TrendView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLin
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-gray-500">門市</span>
+        <span className="text-sm text-gray-500">{t('storeLabel')}</span>
         <select value={storeId} onChange={e => setStoreId(e.target.value)}
           className="h-8 rounded-md border bg-background px-2 text-sm min-w-[140px]">
           {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1.5 h-8">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}重新整理
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{t('refresh')}
         </Button>
       </div>
 
       {months.length === 0 ? (
-        <div className="py-12 text-center text-gray-400 text-sm">此門市尚無任何月份資料。</div>
+        <div className="py-12 text-center text-gray-400 text-sm">{t('noMonthDataForStore')}</div>
       ) : (
         <div className="overflow-x-auto border rounded-xl">
           <table className="text-sm border-collapse w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">科目</th>
+                <th className="sticky left-0 z-10 bg-gray-50 text-left px-3 py-2 border-b border-r min-w-[180px]">{t('lineColHeader')}</th>
                 {months.map(m => (
                   <th key={m} className="px-3 py-2 border-b border-r text-right min-w-[120px] whitespace-nowrap font-semibold">{m}</th>
                 ))}
@@ -300,7 +307,7 @@ function TrendView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLin
                     const base = byMonth[m]?.revenue ?? 0
                     return (
                       <td key={m} className="px-3 py-1.5 border-b border-r text-right tabular-nums whitespace-nowrap">
-                        <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v)}</span>
+                        <span className={v < 0 ? 'text-red-600' : ''}>{fmt(v, locale)}</span>
                         {line.kind !== 'revenue' && <span className="ml-1.5 text-[10px] text-gray-400">{pct(v, base)}</span>}
                       </td>
                     )
@@ -316,6 +323,8 @@ function TrendView({ stores, lines: allLines }: { stores: Store[]; lines: PnlLin
 }
 
 function AddStoreForm({ onClose, onSaved, nextSort }: { onClose: () => void; onSaved: () => void; nextSort: number }) {
+  const t = useTranslations('FinancePage')
+  const STORE_KIND_LABEL = getStoreKindLabel(t)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [nameVi, setNameVi] = useState('')
@@ -324,7 +333,7 @@ function AddStoreForm({ onClose, onSaved, nextSort }: { onClose: () => void; onS
   const [err, setErr] = useState('')
 
   const save = async () => {
-    if (!code.trim() || !name.trim()) { setErr('代碼與名稱為必填'); return }
+    if (!code.trim() || !name.trim()) { setErr(t('codeAndNameRequired')); return }
     setSaving(true); setErr('')
     try {
       const res = await fetch('/api/hr/pnl/stores', {
@@ -332,7 +341,7 @@ function AddStoreForm({ onClose, onSaved, nextSort }: { onClose: () => void; onS
         body: JSON.stringify({ code, name, name_vi: nameVi, kind, sort: nextSort }),
       })
       const j = await res.json()
-      if (!res.ok) { setErr(j.error ?? '儲存失敗'); return }
+      if (!res.ok) { setErr(j.error ?? t('saveFailed')); return }
       onSaved()
     } finally { setSaving(false) }
   }
@@ -340,24 +349,24 @@ function AddStoreForm({ onClose, onSaved, nextSort }: { onClose: () => void; onS
   return (
     <div className="rounded-xl border bg-gray-50 p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">新增門市</span>
+        <span className="text-sm font-medium">{t('addStore')}</span>
         <button onClick={onClose}><X className="h-4 w-4 text-gray-400" /></button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="space-y-1">
-          <label className="text-xs text-gray-500">代碼 *</label>
+          <label className="text-xs text-gray-500">{t('codeLabel')}</label>
           <Input value={code} onChange={e => setCode(e.target.value)} placeholder="BACH_MAI" className="h-8 text-sm" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-gray-500">顯示名 *</label>
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="白梅店" className="h-8 text-sm" />
+          <label className="text-xs text-gray-500">{t('displayNameLabel')}</label>
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder={t('storeNamePlaceholder')} className="h-8 text-sm" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-gray-500">越文名</label>
+          <label className="text-xs text-gray-500">{t('viNameLabel')}</label>
           <Input value={nameVi} onChange={e => setNameVi(e.target.value)} placeholder="BACH MAI" className="h-8 text-sm" />
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-gray-500">類型</label>
+          <label className="text-xs text-gray-500">{t('typeLabel')}</label>
           <select value={kind} onChange={e => setKind(e.target.value)}
             className="h-8 w-full rounded-md border bg-background px-2 text-sm">
             {Object.entries(STORE_KIND_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -367,9 +376,9 @@ function AddStoreForm({ onClose, onSaved, nextSort }: { onClose: () => void; onS
       {err && <p className="text-xs text-red-600">{err}</p>}
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={saving} className="gap-1.5 h-8">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}儲存
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}{t('save')}
         </Button>
-        <Button size="sm" variant="outline" onClick={onClose} className="h-8">取消</Button>
+        <Button size="sm" variant="outline" onClick={onClose} className="h-8">{t('cancel')}</Button>
       </div>
     </div>
   )

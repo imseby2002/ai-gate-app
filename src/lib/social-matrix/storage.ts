@@ -1,6 +1,106 @@
-import { SocialProxy, SocialAccount, SocialCampaign, SocialLog, TargetGroup, MatrixCopy } from './types'
+import {
+  SocialProxy,
+  SocialAccount,
+  SocialCampaign,
+  SocialLog,
+  TargetGroup,
+  MatrixCopy,
+  OfficialRentableProxy,
+  ProxyLease,
+} from './types'
+
+// Pre-seeded AI-GATE Official Rentable IP Inventory (管理者維護的官方可租用代理庫存)
+let globalOfficialProxies: OfficialRentableProxy[] = [
+  {
+    id: 'off-tw-yilan-01',
+    name: '🇹🇼 台灣宜蘭聯禾原生住宅 IP #1 (A+ 級防封首選)',
+    proxy_type: 'home_static',
+    protocol: 'http',
+    host: '211.75.142.88',
+    port: 28899,
+    username: 'gate_leased_01',
+    password: '••••••••',
+    country: 'TW',
+    city: '宜蘭 (Yilan)',
+    isp: '聯禾有線電視 (TBC 原生家用住宅寬頻)',
+    latency_ms: 18,
+    monthly_price_twd: 299,
+    max_tenants: 1,
+    current_tenants_count: 0,
+    status: 'available',
+    is_active: true,
+    notes: '純天然家用寬頻原生固定 IP，權重極高，專屬獨立不撞車，最抗 Meta / IG / Threads 風控演算法',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+  },
+  {
+    id: 'off-tw-cht-4g-01',
+    name: '🇹🇼 中華電信 4G/5G 行動基站代理 #1 (S 級獨立行動 IP)',
+    proxy_type: 'mobile_4g',
+    protocol: 'socks5',
+    host: 'cht-mobile-01.aigate.io',
+    port: 31280,
+    username: 'gate_cht_user',
+    password: '••••••••',
+    country: 'TW',
+    city: '台北 (Taipei)',
+    isp: '中華電信行動通信分公司 (Chunghwa 4G Mobile)',
+    latency_ms: 25,
+    monthly_price_twd: 399,
+    max_tenants: 1,
+    current_tenants_count: 0,
+    status: 'available',
+    is_active: true,
+    notes: '真實 SIM 卡 4G 行動網路，天然擁有最高信任度行動設備指紋，適合 TikTok / Dcard 矩陣號養號',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(),
+  },
+  {
+    id: 'off-tw-tfn-01',
+    name: '🇹🇼 台灣固網商業住宅代理 #1 (台北商務高帶寬)',
+    proxy_type: 'residential',
+    protocol: 'http',
+    host: 'tw-tfn-01.aigate.io',
+    port: 10800,
+    username: 'gate_tfn_user',
+    password: '••••••••',
+    country: 'TW',
+    city: '台北 (Taipei)',
+    isp: '台灣固網 (TFN Business Residential)',
+    latency_ms: 22,
+    monthly_price_twd: 249,
+    max_tenants: 1,
+    current_tenants_count: 0,
+    status: 'available',
+    is_active: true,
+    notes: '高速穩定骨幹商業住宅 IP，適合大批量貼文發布與社群多帳號高頻排程',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+  },
+  {
+    id: 'off-vn-viettel-01',
+    name: '🇻🇳 越南峴港 Viettel 原生住宅代理 #1 (東南亞在地行銷)',
+    proxy_type: 'residential',
+    protocol: 'http',
+    host: 'vn-danang-01.aigate.io',
+    port: 10808,
+    username: 'gate_viettel_danang',
+    password: '••••••••',
+    country: 'VN',
+    city: '峴港 (Da Nang)',
+    isp: 'Viettel Telecom (越南軍隊電信原生寬頻)',
+    latency_ms: 62,
+    monthly_price_twd: 199,
+    max_tenants: 1,
+    current_tenants_count: 0,
+    status: 'available',
+    is_active: true,
+    notes: '越南當地原生住宅 IP，專為峴港/中越旅遊、包車接待、跨境海外行銷打造之在地節點',
+    created_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+  }
+]
+
+let globalLeases: ProxyLease[] = []
 
 // In-memory persistent fallback store for current server lifecycle
+
 let globalProxies: SocialProxy[] = [
   {
     id: 'proxy-user-iproyal',
@@ -341,5 +441,173 @@ export const StorageService = {
     })
 
     return { log, newHealth, nextDay, newStatus }
+  },
+
+  // Official Rentable Proxies Management (AI-GATE 官方供租用 IP 資源庫)
+  getOfficialProxies: () => {
+    return [...globalOfficialProxies]
+  },
+
+  addOfficialProxy: (proxy: Omit<OfficialRentableProxy, 'id' | 'created_at' | 'updated_at' | 'current_tenants_count'>) => {
+    const newOfficial: OfficialRentableProxy = {
+      ...proxy,
+      id: `off-${Date.now()}`,
+      current_tenants_count: 0,
+      status: 'available',
+      is_active: proxy.is_active !== undefined ? proxy.is_active : true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    globalOfficialProxies = [newOfficial, ...globalOfficialProxies]
+    return newOfficial
+  },
+
+  updateOfficialProxy: (id: string, updates: Partial<OfficialRentableProxy>) => {
+    globalOfficialProxies = globalOfficialProxies.map(p => p.id === id ? {
+      ...p,
+      ...updates,
+      port: updates.port !== undefined ? Number(updates.port) : p.port,
+      monthly_price_twd: updates.monthly_price_twd !== undefined ? Number(updates.monthly_price_twd) : p.monthly_price_twd,
+      max_tenants: updates.max_tenants !== undefined ? Number(updates.max_tenants) : p.max_tenants,
+      updated_at: new Date().toISOString(),
+    } : p)
+    return globalOfficialProxies.find(p => p.id === id)
+  },
+
+  deleteOfficialProxy: (id: string) => {
+    globalOfficialProxies = globalOfficialProxies.filter(p => p.id !== id)
+    return true
+  },
+
+  // Leases Management (使用者租用官方 IP 紀錄)
+  getLeases: (userId?: string) => {
+    const list = userId ? globalLeases.filter(l => l.user_id === userId) : globalLeases
+    return list.map(l => ({
+      ...l,
+      official_proxy: globalOfficialProxies.find(p => p.id === l.official_proxy_id)
+    }))
+  },
+
+  leaseOfficialProxy: (userId: string, officialProxyId: string) => {
+    const offProxy = globalOfficialProxies.find(p => p.id === officialProxyId)
+    if (!offProxy) {
+      throw new Error('找不到指定的官方 IP')
+    }
+    if (offProxy.status === 'rented_out' || offProxy.current_tenants_count >= offProxy.max_tenants) {
+      throw new Error('該官方 IP 目前已被其他客戶專屬租用中，暫無空位')
+    }
+    if (offProxy.status === 'maintenance') {
+      throw new Error('該官方 IP 目前維護保養中，暫停租用')
+    }
+
+    const leaseId = `lease-${Date.now()}`
+    const rentedAt = new Date().toISOString()
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString() // 30 days lease
+
+    const newLease: ProxyLease = {
+      id: leaseId,
+      user_id: userId,
+      official_proxy_id: offProxy.id,
+      status: 'active',
+      rented_at: rentedAt,
+      expires_at: expiresAt,
+      created_at: rentedAt,
+      updated_at: rentedAt,
+    }
+    globalLeases.unshift(newLease)
+
+    // Update official proxy tenant count & status
+    const newTenantsCount = offProxy.current_tenants_count + 1
+    StorageService.updateOfficialProxy(offProxy.id, {
+      current_tenants_count: newTenantsCount,
+      status: newTenantsCount >= offProxy.max_tenants ? 'rented_out' : 'available'
+    })
+
+    // Automatically inject this rented proxy into the user's active proxy pool (globalProxies)
+    const leasedSocialProxy: SocialProxy = {
+      id: `leased-${leaseId}`,
+      user_id: userId,
+      name: `🏢 [官方租用] ${offProxy.name}`,
+      proxy_type: offProxy.proxy_type,
+      protocol: offProxy.protocol,
+      host: offProxy.host,
+      port: offProxy.port,
+      username: offProxy.username,
+      password: offProxy.password,
+      country: offProxy.country,
+      city: offProxy.city,
+      isp: offProxy.isp,
+      status: 'active',
+      latency_ms: offProxy.latency_ms,
+      notes: `AI-GATE 官方乾淨原生 IP，專屬租用中 (至 ${new Date(expiresAt).toLocaleDateString()})`,
+      source: 'official_leased',
+      lease_id: leaseId,
+      official_proxy_id: offProxy.id,
+      monthly_price_twd: offProxy.monthly_price_twd,
+      expires_at: expiresAt,
+      assigned_count: 0,
+      created_at: rentedAt,
+      updated_at: rentedAt,
+    }
+
+    globalProxies = [leasedSocialProxy, ...globalProxies]
+
+    return {
+      lease: newLease,
+      proxy: leasedSocialProxy,
+    }
+  },
+
+  releaseOfficialProxy: (userId: string, leaseId: string) => {
+    const leaseIndex = globalLeases.findIndex(l => l.id === leaseId && (!userId || l.user_id === userId))
+    if (leaseIndex === -1) {
+      // Also try matching directly by id if userId not matching strictly in mock
+      const directIndex = globalLeases.findIndex(l => l.id === leaseId)
+      if (directIndex === -1) {
+        // Fallback: look for proxy in globalProxies
+        const pIndex = globalProxies.findIndex(p => p.lease_id === leaseId || p.id === leaseId)
+        if (pIndex !== -1) {
+          const p = globalProxies[pIndex]
+          globalProxies.splice(pIndex, 1)
+          if (p.official_proxy_id) {
+            const off = globalOfficialProxies.find(o => o.id === p.official_proxy_id)
+            if (off) {
+              const newCount = Math.max(0, off.current_tenants_count - 1)
+              StorageService.updateOfficialProxy(off.id, {
+                current_tenants_count: newCount,
+                status: 'available',
+              })
+            }
+          }
+          return true
+        }
+        return false
+      }
+    }
+
+    const lease = globalLeases[leaseIndex !== -1 ? leaseIndex : 0]
+    lease.status = 'canceled'
+    lease.updated_at = new Date().toISOString()
+
+    // Decrement official proxy count
+    const off = globalOfficialProxies.find(o => o.id === lease.official_proxy_id)
+    if (off) {
+      const newCount = Math.max(0, off.current_tenants_count - 1)
+      StorageService.updateOfficialProxy(off.id, {
+        current_tenants_count: newCount,
+        status: 'available',
+      })
+    }
+
+    // Remove from globalProxies
+    globalProxies = globalProxies.filter(p => p.lease_id !== leaseId && p.id !== `leased-${leaseId}`)
+
+    // Unbind any account bound to this leased proxy
+    globalAccounts = globalAccounts.map(a =>
+      a.proxy_id === `leased-${leaseId}` ? { ...a, proxy_id: undefined } : a
+    )
+
+    return true
   }
 }
+

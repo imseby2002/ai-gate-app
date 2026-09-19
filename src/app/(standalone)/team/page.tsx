@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { UserPlus, Trash2, Building2, Check, Loader2, Users } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -7,14 +8,6 @@ import { Input } from '@/components/ui/input'
 
 type Scope = 'booking' | 'cs'
 type Role = 'admin' | 'manager' | 'viewer'
-
-const MODULE_LABEL: Record<Scope, string> = { booking: '訂房', cs: '客服' }
-const ROLE_LABEL: Record<Role, string> = {
-  admin: '管理員（含設定）',
-  manager: '一般管理（不可改設定）',
-  viewer: '唯讀',
-}
-const ROLE_SHORT: Record<Role, string> = { admin: '管理員', manager: '一般管理', viewer: '唯讀' }
 
 type ScopeInfo = { id: string; role: Role; status: string; canCorrectAi: boolean }
 type Member = {
@@ -35,6 +28,14 @@ function readActiveOwner(): string {
 }
 
 export default function TeamPage() {
+  const t = useTranslations('Team')
+  const MODULE_LABEL: Record<Scope, string> = { booking: t('moduleBooking'), cs: t('moduleCs') }
+  const ROLE_LABEL: Record<Role, string> = {
+    admin: t('roleAdminFull'),
+    manager: t('roleManagerFull'),
+    viewer: t('roleViewerFull'),
+  }
+  const ROLE_SHORT: Record<Role, string> = { admin: t('roleAdmin'), manager: t('roleManager'), viewer: t('roleViewer') }
   const [self, setSelf] = useState<{ id: string; email: string | null } | null>(null)
   const [ownerModules, setOwnerModules] = useState<Scope[]>([])
   const [managing, setManaging] = useState<Member[]>([])
@@ -67,7 +68,7 @@ export default function TeamPage() {
     try {
       const r = await fetch('/api/collab/members')
       const d = await r.json()
-      if (!r.ok) throw new Error(d.error || '載入失敗')
+      if (!r.ok) throw new Error(d.error || t('loadFailed'))
       setSelf(d.self)
       setOwnerModules(d.ownerModules ?? [])
       setManaging(d.managing ?? [])
@@ -84,13 +85,13 @@ export default function TeamPage() {
     try {
       const modules: Partial<Record<Scope, Role>> = {}
       for (const s of visibleModules) if (pick[s].on) modules[s] = pick[s].role
-      if (Object.keys(modules).length === 0) throw new Error('請至少勾選一個模組')
+      if (Object.keys(modules).length === 0) throw new Error(t('selectAtLeastOne'))
       const r = await fetch('/api/collab/members', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, modules }),
       })
       const d = await r.json()
-      if (!r.ok) throw new Error(d.error || '邀請失敗')
+      if (!r.ok) throw new Error(d.error || t('inviteFailed'))
       setEmail('')
       await load()
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)) }
@@ -122,7 +123,7 @@ export default function TeamPage() {
   }
 
   async function removePerson(personEmail: string) {
-    if (!confirm('移除此協作者的所有模組權限？')) return
+    if (!confirm(t('confirmRemovePerson'))) return
     await fetch('/api/collab/members', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: personEmail }),
@@ -145,13 +146,13 @@ export default function TeamPage() {
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-primary" /></div>
         <div>
-          <h1 className="text-2xl font-bold">{scopeParam ? `${MODULE_LABEL[scopeParam]}協作成員` : '協作成員'}</h1>
+          <h1 className="text-2xl font-bold">{scopeParam ? t('titleScoped', { module: MODULE_LABEL[scopeParam] }) : t('title')}</h1>
           <p className="text-sm text-muted-foreground">
             {scopeParam === 'cs'
-              ? '邀請夥伴一起回覆客服收件匣；可分權管理，也可切換到你協助的對象。'
+              ? t('subtitleCs')
               : scopeParam === 'booking'
-              ? '邀請夥伴一起管理訂房；可分權管理，也可切換到你協助的對象。'
-              : '邀請夥伴一起管理你的訂房與客服；可分別授權，也可切換到你協助的對象。'}
+              ? t('subtitleBooking')
+              : t('subtitleAll')}
           </p>
         </div>
       </div>
@@ -159,12 +160,12 @@ export default function TeamPage() {
       {/* 我參與協作的對象（切換器） */}
       {(memberships.length > 0 || !selfActive) && (
         <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-3">目前操作中的帳號</h2>
+          <h2 className="text-sm font-semibold mb-3">{t('activeAccount')}</h2>
           <div className="flex flex-col gap-2">
             <button onClick={() => switchOwner(self?.id ?? '')}
               className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
                 ${selfActive ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-              <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />我自己的帳號</span>
+              <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{t('myOwnAccount')}</span>
               {selfActive && <Check className="h-4 w-4" />}
             </button>
             {memberships.map(m => {
@@ -190,12 +191,12 @@ export default function TeamPage() {
 
       {/* 邀請表單 */}
       <Card className="p-4">
-        <h2 className="text-sm font-semibold mb-3">邀請協作者</h2>
+        <h2 className="text-sm font-semibold mb-3">{t('inviteCollaborator')}</h2>
         {visibleModules.length === 0 ? (
-          <p className="text-sm text-muted-foreground">你目前沒有可邀請協作的模組（需先開通{scopeParam ? MODULE_LABEL[scopeParam] : '訂房或客服'}）。</p>
+          <p className="text-sm text-muted-foreground">{t('noInvitableModules', { module: scopeParam ? MODULE_LABEL[scopeParam] : t('bookingOrCs') })}</p>
         ) : (
           <form onSubmit={invite} className="space-y-3">
-            <Input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="對方 Email" />
+            <Input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder={t('theirEmail')} />
             <div className="space-y-2">
               {visibleModules.map(s => (
                 <div key={s} className="flex items-center gap-3">
@@ -215,12 +216,12 @@ export default function TeamPage() {
               ))}
             </div>
             <Button type="submit" disabled={busy} size="sm" className="gap-1.5">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}送出邀請
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}{t('sendInvite')}
             </Button>
             {visibleModules.length === 1 && (
-              <p className="text-xs text-muted-foreground">此處只邀請「{MODULE_LABEL[visibleModules[0]]}」模組的協作。</p>
+              <p className="text-xs text-muted-foreground">{t('onlyThisModule', { module: MODULE_LABEL[visibleModules[0]] })}</p>
             )}
-            <p className="text-xs text-muted-foreground">對方用此 Email 登入後會自動加入。尚未註冊也可先邀請。</p>
+            <p className="text-xs text-muted-foreground">{t('inviteNote')}</p>
             {err && <p className="text-xs text-destructive">{err}</p>}
           </form>
         )}
@@ -228,11 +229,11 @@ export default function TeamPage() {
 
       {/* 協作者列表 */}
       <Card className="p-4">
-        <h2 className="text-sm font-semibold mb-3">協作者</h2>
+        <h2 className="text-sm font-semibold mb-3">{t('collaborators')}</h2>
         {loading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : visibleManaging.length === 0 ? (
-          <div className="text-sm text-muted-foreground py-6 text-center">尚無協作者，邀請第一位夥伴吧。</div>
+          <div className="text-sm text-muted-foreground py-6 text-center">{t('noCollaborators')}</div>
         ) : (
           <div className="divide-y">
             {visibleManaging.map(m => {
@@ -246,10 +247,10 @@ export default function TeamPage() {
                     </div>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0
                       ${anyActive ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                      {anyActive ? '已加入' : '待加入'}
+                      {anyActive ? t('joined') : t('pending')}
                     </span>
                     <button onClick={() => removePerson(m.email)}
-                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0" title="移除全部">
+                      className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0" title={t('removeAll')}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -267,14 +268,14 @@ export default function TeamPage() {
                             ))}
                           </select>
                           {s === 'cs' && info.role !== 'viewer' && (
-                            <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer" title="授權後，這位夥伴可以在客服工作台直接提交「AI 回答修正」，立即生效">
+                            <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer" title={t('canCorrectAiTitle')}>
                               <input type="checkbox" checked={info.canCorrectAi}
                                 onChange={e => changeCanCorrectAi(info.id, e.target.checked)} />
-                              可修正 AI
+                              {t('canCorrectAi')}
                             </label>
                           )}
                           <button onClick={() => removeScope(info.id)}
-                            className="text-muted-foreground hover:text-destructive" title={`移除${MODULE_LABEL[s]}權限`}>
+                            className="text-muted-foreground hover:text-destructive" title={t('removeModulePermission', { module: MODULE_LABEL[s] })}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   Zap, Droplets, Receipt, Upload, CheckCircle2, AlertCircle,
   Loader2, Image as ImageIcon, Store, Calendar, ArrowRight,
@@ -12,7 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
-const fmt = (n: number) => Math.round(Number(n) || 0).toLocaleString('zh-TW')
+const fmt = (n: number, locale: string) => Math.round(Number(n) || 0).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 
 interface StoreItem {
   code: string
@@ -33,6 +34,8 @@ interface BillRecord {
 }
 
 export default function StoreBillsPage() {
+  const t = useTranslations('StoreBills')
+  const locale = useLocale()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -199,13 +202,13 @@ export default function StoreBillsPage() {
         else if (type === 'gas') setGasReceiptUrl(data.url)
         else setIceReceiptUrl(data.url)
 
-        const typeLabel = type === 'elec' ? '電費' : type === 'water' ? '水費' : type === 'gas' ? '瓦斯' : '冰塊'
-        setMsg({ type: 'success', text: `${typeLabel}單據照片已成功上傳！` })
+        const typeLabel = type === 'elec' ? t('elec') : type === 'water' ? t('water') : type === 'gas' ? t('gas') : t('ice')
+        setMsg({ type: 'success', text: t('uploadSuccess', { type: typeLabel }) })
       } else {
-        setMsg({ type: 'error', text: data.error || '單據上傳失敗' })
+        setMsg({ type: 'error', text: data.error || t('uploadFailed') })
       }
     } catch {
-      setMsg({ type: 'error', text: '上傳失敗，請檢查網路連線' })
+      setMsg({ type: 'error', text: t('uploadNetworkError') })
     } finally {
       if (type === 'elec') setUploadingElec(false)
       else if (type === 'water') setUploadingWater(false)
@@ -217,7 +220,7 @@ export default function StoreBillsPage() {
   // 提交申報至出納
   const handleSubmit = async () => {
     if (!selectedStore) {
-      setMsg({ type: 'error', text: '請選擇門市' })
+      setMsg({ type: 'error', text: t('selectStoreFirst') })
       return
     }
 
@@ -330,13 +333,13 @@ export default function StoreBillsPage() {
       const hasError = results.some(r => !r.ok)
 
       if (hasError) {
-        setMsg({ type: 'error', text: '部分費用送出失敗，請重試' })
+        setMsg({ type: 'error', text: t('submitPartialFailed') })
       } else {
-        setMsg({ type: 'success', text: '✅ 費用與單據憑證已成功提交！數據已即時串接到出納總務之收支與損益報表。' })
+        setMsg({ type: 'success', text: t('submitSuccess') })
         loadData()
       }
     } catch {
-      setMsg({ type: 'error', text: '提報失敗，請確認網路連線' })
+      setMsg({ type: 'error', text: t('submitFailed') })
     } finally {
       setSubmitting(false)
     }
@@ -354,13 +357,13 @@ export default function StoreBillsPage() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">門市水電、瓦斯與冰塊費用填報</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t('pageTitle')}</h1>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-medium">
-                自動串接觸納總務
+                {t('autoLinkBadge')}
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              每月電費、水費、瓦斯費與冰塊費用填報，支援相機拍照／送貨簽收單上傳；數據即時同步至出納月度損益與收支報表
+              {t('pageSubtitle')}
             </p>
           </div>
         </div>
@@ -368,12 +371,12 @@ export default function StoreBillsPage() {
         <div className="flex items-center gap-2">
           <Link href="/store-inventory">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-              <Store className="h-3.5 w-3.5" />盤點・訂貨
+              <Store className="h-3.5 w-3.5" />{t('navInventory')}
             </Button>
           </Link>
           <Link href="/repair">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-              <Plus className="h-3.5 w-3.5" />門市報修
+              <Plus className="h-3.5 w-3.5" />{t('navRepair')}
             </Button>
           </Link>
         </div>
@@ -385,11 +388,11 @@ export default function StoreBillsPage() {
           <div className="space-y-1 flex-1 min-w-[200px]">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                申報據點 / 門市 (Unit)
+                {t('storeSelectLabel')}
               </label>
               {lockedStore && (
                 <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 font-normal">
-                  🔒 本店專屬・不可切換其他門市
+                  {t('lockedStoreBadge')}
                 </Badge>
               )}
             </div>
@@ -409,7 +412,7 @@ export default function StoreBillsPage() {
 
           <div className="space-y-1 w-32">
             <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              費用年份 (Year)
+              {t('yearLabel')}
             </label>
             <select
               value={year}
@@ -417,14 +420,14 @@ export default function StoreBillsPage() {
               className="w-full h-10 rounded-lg border bg-background px-3 text-sm font-medium"
             >
               {[now.getFullYear(), now.getFullYear() - 1].map(y => (
-                <option key={y} value={y}>{y} 年</option>
+                <option key={y} value={y}>{t('yearOption', { y })}</option>
               ))}
             </select>
           </div>
 
           <div className="space-y-1 w-28">
             <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              費用月份 (Month)
+              {t('monthLabel')}
             </label>
             <select
               value={month}
@@ -432,7 +435,7 @@ export default function StoreBillsPage() {
               className="w-full h-10 rounded-lg border bg-background px-3 text-sm font-medium"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m}>{m} 月</option>
+                <option key={m} value={m}>{t('monthOption', { m })}</option>
               ))}
             </select>
           </div>
@@ -446,9 +449,9 @@ export default function StoreBillsPage() {
 
         {currentStoreObj && (
           <div className="mt-3 pt-3 border-t flex flex-wrap gap-4 text-xs text-muted-foreground">
-            <span>⚡ 電號：<b className="text-foreground">{currentStoreObj.electricity_no || '未設定'}</b></span>
-            <span>💧 水號：<b className="text-foreground">{currentStoreObj.water_no || '未設定'}</b></span>
-            <span>📍 區域：<b className="text-foreground">{currentStoreObj.region || '—'}</b></span>
+            <span>{t('electricityNoLabel')}<b className="text-foreground">{currentStoreObj.electricity_no || t('notSet')}</b></span>
+            <span>{t('waterNoLabel')}<b className="text-foreground">{currentStoreObj.water_no || t('notSet')}</b></span>
+            <span>{t('regionLabel')}<b className="text-foreground">{currentStoreObj.region || '—'}</b></span>
           </div>
         )}
       </Card>
@@ -485,25 +488,25 @@ export default function StoreBillsPage() {
                   <Zap className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">本期電費</h3>
-                  <p className="text-[11px] text-muted-foreground">科目: ELEC</p>
+                  <h3 className="font-bold text-sm">{t('elecCardTitle')}</h3>
+                  <p className="text-[11px] text-muted-foreground">{t('elecSubject')}</p>
                 </div>
               </div>
               {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'ELEC') && (
                 <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
-                  <Check className="h-3 w-3" />已登入
+                  <Check className="h-3 w-3" />{t('registered')}
                 </Badge>
               )}
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                電費金額 (VND) *
+                {t('elecAmountLabel')}
               </label>
               <div className="relative">
                 <Input
                   type="number"
-                  placeholder="例: 3500000"
+                  placeholder="3500000"
                   value={elecAmount}
                   onChange={e => setElecAmount(e.target.value)}
                   className="font-mono text-sm font-bold pr-8"
@@ -512,7 +515,7 @@ export default function StoreBillsPage() {
               </div>
               {elecAmount && Number(elecAmount) > 0 && (
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
-                  約 {fmt(Number(elecAmount))} VND
+                  {t('approxVnd', { n: fmt(Number(elecAmount), locale) })}
                 </p>
               )}
             </div>
@@ -520,7 +523,7 @@ export default function StoreBillsPage() {
             {/* 單據憑證拍照/上傳 */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-                <span>電費帳單／收據照片</span>
+                <span>{t('elecReceiptLabel')}</span>
                 {elecReceiptUrl && (
                   <a
                     href={elecReceiptUrl}
@@ -528,7 +531,7 @@ export default function StoreBillsPage() {
                     rel="noreferrer"
                     className="text-xs text-primary underline inline-flex items-center gap-1"
                   >
-                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                    {t('viewReceipt')} <ExternalLink className="h-2.5 w-2.5" />
                   </a>
                 )}
               </label>
@@ -547,13 +550,13 @@ export default function StoreBillsPage() {
               {elecReceiptUrl ? (
                 <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
                   {elecReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                    <img src={elecReceiptUrl} alt="電費單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                    <img src={elecReceiptUrl} alt={t('elecReceiptAlt')} className="h-10 w-10 object-cover rounded border shrink-0" />
                   ) : (
                     <FileText className="h-8 w-8 text-amber-600 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                      <Check className="h-3 w-3" />單據已上傳
+                      <Check className="h-3 w-3" />{t('receiptUploaded')}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">{elecReceiptUrl}</p>
                   </div>
@@ -564,7 +567,7 @@ export default function StoreBillsPage() {
                     disabled={uploadingElec}
                     onClick={() => elecFileRef.current?.click()}
                   >
-                    更換
+                    {t('replace')}
                   </Button>
                 </div>
               ) : (
@@ -574,12 +577,12 @@ export default function StoreBillsPage() {
                 >
                   {uploadingElec ? (
                     <div className="flex items-center justify-center gap-1.5 text-xs text-amber-600">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />{t('uploading')}
                     </div>
                   ) : (
                     <div className="space-y-0.5 text-xs text-muted-foreground">
                       <Upload className="h-4 w-4 mx-auto text-amber-600" />
-                      <p className="font-medium text-foreground text-[11px]">上傳電費單據</p>
+                      <p className="font-medium text-foreground text-[11px]">{t('uploadElecReceipt')}</p>
                       <p className="text-[10px]">JPG, PNG, PDF</p>
                     </div>
                   )}
@@ -589,9 +592,9 @@ export default function StoreBillsPage() {
           </div>
 
           <div className="space-y-1 pt-2">
-            <label className="text-[11px] text-muted-foreground">用電度數 / 備註</label>
+            <label className="text-[11px] text-muted-foreground">{t('elecNoteLabel')}</label>
             <Input
-              placeholder="例：度數 1450 度"
+              placeholder={t('elecNotePlaceholder')}
               value={elecNote}
               onChange={e => setElecNote(e.target.value)}
               className="text-xs h-8"
@@ -608,25 +611,25 @@ export default function StoreBillsPage() {
                   <Droplets className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">本期水費</h3>
-                  <p className="text-[11px] text-muted-foreground">科目: WATER</p>
+                  <h3 className="font-bold text-sm">{t('waterCardTitle')}</h3>
+                  <p className="text-[11px] text-muted-foreground">{t('waterSubject')}</p>
                 </div>
               </div>
               {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'WATER') && (
                 <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
-                  <Check className="h-3 w-3" />已登入
+                  <Check className="h-3 w-3" />{t('registered')}
                 </Badge>
               )}
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                水費金額 (VND) *
+                {t('waterAmountLabel')}
               </label>
               <div className="relative">
                 <Input
                   type="number"
-                  placeholder="例: 850000"
+                  placeholder="850000"
                   value={waterAmount}
                   onChange={e => setWaterAmount(e.target.value)}
                   className="font-mono text-sm font-bold pr-8"
@@ -635,7 +638,7 @@ export default function StoreBillsPage() {
               </div>
               {waterAmount && Number(waterAmount) > 0 && (
                 <p className="text-[11px] text-blue-700 dark:text-blue-300 font-medium">
-                  約 {fmt(Number(waterAmount))} VND
+                  {t('approxVnd', { n: fmt(Number(waterAmount), locale) })}
                 </p>
               )}
             </div>
@@ -643,7 +646,7 @@ export default function StoreBillsPage() {
             {/* 單據憑證拍照/上傳 */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-                <span>水費帳單／收據照片</span>
+                <span>{t('waterReceiptLabel')}</span>
                 {waterReceiptUrl && (
                   <a
                     href={waterReceiptUrl}
@@ -651,7 +654,7 @@ export default function StoreBillsPage() {
                     rel="noreferrer"
                     className="text-xs text-primary underline inline-flex items-center gap-1"
                   >
-                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                    {t('viewReceipt')} <ExternalLink className="h-2.5 w-2.5" />
                   </a>
                 )}
               </label>
@@ -670,13 +673,13 @@ export default function StoreBillsPage() {
               {waterReceiptUrl ? (
                 <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
                   {waterReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                    <img src={waterReceiptUrl} alt="水費單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                    <img src={waterReceiptUrl} alt={t('waterReceiptAlt')} className="h-10 w-10 object-cover rounded border shrink-0" />
                   ) : (
                     <FileText className="h-8 w-8 text-blue-600 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                      <Check className="h-3 w-3" />單據已上傳
+                      <Check className="h-3 w-3" />{t('receiptUploaded')}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">{waterReceiptUrl}</p>
                   </div>
@@ -687,7 +690,7 @@ export default function StoreBillsPage() {
                     disabled={uploadingWater}
                     onClick={() => waterFileRef.current?.click()}
                   >
-                    更換
+                    {t('replace')}
                   </Button>
                 </div>
               ) : (
@@ -697,12 +700,12 @@ export default function StoreBillsPage() {
                 >
                   {uploadingWater ? (
                     <div className="flex items-center justify-center gap-1.5 text-xs text-blue-600">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />{t('uploading')}
                     </div>
                   ) : (
                     <div className="space-y-0.5 text-xs text-muted-foreground">
                       <Upload className="h-4 w-4 mx-auto text-blue-600" />
-                      <p className="font-medium text-foreground text-[11px]">上傳水費單據</p>
+                      <p className="font-medium text-foreground text-[11px]">{t('uploadWaterReceipt')}</p>
                       <p className="text-[10px]">JPG, PNG, PDF</p>
                     </div>
                   )}
@@ -712,9 +715,9 @@ export default function StoreBillsPage() {
           </div>
 
           <div className="space-y-1 pt-2">
-            <label className="text-[11px] text-muted-foreground">用水度數 / 備註</label>
+            <label className="text-[11px] text-muted-foreground">{t('waterNoteLabel')}</label>
             <Input
-              placeholder="例：抄表 85 度"
+              placeholder={t('waterNotePlaceholder')}
               value={waterNote}
               onChange={e => setWaterNote(e.target.value)}
               className="text-xs h-8"
@@ -731,25 +734,25 @@ export default function StoreBillsPage() {
                   <Flame className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">本期瓦斯費</h3>
-                  <p className="text-[11px] text-muted-foreground">科目: GAS (叫桶/管線)</p>
+                  <h3 className="font-bold text-sm">{t('gasCardTitle')}</h3>
+                  <p className="text-[11px] text-muted-foreground">{t('gasSubject')}</p>
                 </div>
               </div>
               {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'GAS') && (
                 <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
-                  <Check className="h-3 w-3" />已登入
+                  <Check className="h-3 w-3" />{t('registered')}
                 </Badge>
               )}
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                瓦斯金額 (VND) *
+                {t('gasAmountLabel')}
               </label>
               <div className="relative">
                 <Input
                   type="number"
-                  placeholder="例: 960000"
+                  placeholder="960000"
                   value={gasAmount}
                   onChange={e => setGasAmount(e.target.value)}
                   className="font-mono text-sm font-bold pr-8"
@@ -758,7 +761,7 @@ export default function StoreBillsPage() {
               </div>
               {gasAmount && Number(gasAmount) > 0 && (
                 <p className="text-[11px] text-orange-700 dark:text-orange-300 font-medium">
-                  約 {fmt(Number(gasAmount))} VND
+                  {t('approxVnd', { n: fmt(Number(gasAmount), locale) })}
                 </p>
               )}
             </div>
@@ -766,7 +769,7 @@ export default function StoreBillsPage() {
             {/* 瓦斯簽收單/發票憑證拍照上傳 */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-                <span>瓦斯簽收單／發票單據</span>
+                <span>{t('gasReceiptLabel')}</span>
                 {gasReceiptUrl && (
                   <a
                     href={gasReceiptUrl}
@@ -774,7 +777,7 @@ export default function StoreBillsPage() {
                     rel="noreferrer"
                     className="text-xs text-primary underline inline-flex items-center gap-1"
                   >
-                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                    {t('viewReceipt')} <ExternalLink className="h-2.5 w-2.5" />
                   </a>
                 )}
               </label>
@@ -793,13 +796,13 @@ export default function StoreBillsPage() {
               {gasReceiptUrl ? (
                 <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
                   {gasReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                    <img src={gasReceiptUrl} alt="瓦斯單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                    <img src={gasReceiptUrl} alt={t('gasReceiptAlt')} className="h-10 w-10 object-cover rounded border shrink-0" />
                   ) : (
                     <FileText className="h-8 w-8 text-orange-600 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                      <Check className="h-3 w-3" />單據已上傳
+                      <Check className="h-3 w-3" />{t('receiptUploaded')}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">{gasReceiptUrl}</p>
                   </div>
@@ -810,7 +813,7 @@ export default function StoreBillsPage() {
                     disabled={uploadingGas}
                     onClick={() => gasFileRef.current?.click()}
                   >
-                    更換
+                    {t('replace')}
                   </Button>
                 </div>
               ) : (
@@ -820,12 +823,12 @@ export default function StoreBillsPage() {
                 >
                   {uploadingGas ? (
                     <div className="flex items-center justify-center gap-1.5 text-xs text-orange-600">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />{t('uploading')}
                     </div>
                   ) : (
                     <div className="space-y-0.5 text-xs text-muted-foreground">
                       <Upload className="h-4 w-4 mx-auto text-orange-600" />
-                      <p className="font-medium text-foreground text-[11px]">上傳瓦斯單據／簽收單</p>
+                      <p className="font-medium text-foreground text-[11px]">{t('uploadGasReceipt')}</p>
                       <p className="text-[10px]">JPG, PNG, PDF</p>
                     </div>
                   )}
@@ -836,18 +839,18 @@ export default function StoreBillsPage() {
 
           <div className="grid grid-cols-2 gap-2 pt-2">
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">叫桶規格/數量</label>
+              <label className="text-[11px] text-muted-foreground">{t('gasCylindersLabel')}</label>
               <Input
-                placeholder="例: 50kg 2 桶"
+                placeholder={t('gasCylindersPlaceholder')}
                 value={gasCylinders}
                 onChange={e => setGasCylinders(e.target.value)}
                 className="text-xs h-8"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">廠商/經辦備註</label>
+              <label className="text-[11px] text-muted-foreground">{t('gasVendorNoteLabel')}</label>
               <Input
-                placeholder="例: 協發瓦斯行"
+                placeholder={t('gasVendorNotePlaceholder')}
                 value={gasNote}
                 onChange={e => setGasNote(e.target.value)}
                 className="text-xs h-8"
@@ -865,25 +868,25 @@ export default function StoreBillsPage() {
                   <Snowflake className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">本期冰塊費</h3>
-                  <p className="text-[11px] text-muted-foreground">科目: ICE (每日食用冰)</p>
+                  <h3 className="font-bold text-sm">{t('iceCardTitle')}</h3>
+                  <p className="text-[11px] text-muted-foreground">{t('iceSubject')}</p>
                 </div>
               </div>
               {currentBills.some(b => b.store_code === selectedStore && b.category_code === 'ICE') && (
                 <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 gap-0.5 text-[10px] px-1.5 py-0.5">
-                  <Check className="h-3 w-3" />已登入
+                  <Check className="h-3 w-3" />{t('registered')}
                 </Badge>
               )}
             </div>
 
             <div className="space-y-1">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                冰塊金額 (VND) *
+                {t('iceAmountLabel')}
               </label>
               <div className="relative">
                 <Input
                   type="number"
-                  placeholder="例: 1200000"
+                  placeholder="1200000"
                   value={iceAmount}
                   onChange={e => setIceAmount(e.target.value)}
                   className="font-mono text-sm font-bold pr-8"
@@ -892,7 +895,7 @@ export default function StoreBillsPage() {
               </div>
               {iceAmount && Number(iceAmount) > 0 && (
                 <p className="text-[11px] text-cyan-700 dark:text-cyan-300 font-medium">
-                  約 {fmt(Number(iceAmount))} VND
+                  {t('approxVnd', { n: fmt(Number(iceAmount), locale) })}
                 </p>
               )}
             </div>
@@ -900,7 +903,7 @@ export default function StoreBillsPage() {
             {/* 冰塊送貨單/簽收單拍照上傳 */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
-                <span>送冰簽收單／發票憑證</span>
+                <span>{t('iceReceiptLabel')}</span>
                 {iceReceiptUrl && (
                   <a
                     href={iceReceiptUrl}
@@ -908,7 +911,7 @@ export default function StoreBillsPage() {
                     rel="noreferrer"
                     className="text-xs text-primary underline inline-flex items-center gap-1"
                   >
-                    查看單據 <ExternalLink className="h-2.5 w-2.5" />
+                    {t('viewReceipt')} <ExternalLink className="h-2.5 w-2.5" />
                   </a>
                 )}
               </label>
@@ -927,13 +930,13 @@ export default function StoreBillsPage() {
               {iceReceiptUrl ? (
                 <div className="relative rounded-lg border p-2 bg-muted/40 flex items-center gap-2">
                   {iceReceiptUrl.match(/\.(jpg|jpeg|png|webp)/i) ? (
-                    <img src={iceReceiptUrl} alt="冰塊單據" className="h-10 w-10 object-cover rounded border shrink-0" />
+                    <img src={iceReceiptUrl} alt={t('iceReceiptAlt')} className="h-10 w-10 object-cover rounded border shrink-0" />
                   ) : (
                     <FileText className="h-8 w-8 text-cyan-600 shrink-0" />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                      <Check className="h-3 w-3" />單據已上傳
+                      <Check className="h-3 w-3" />{t('receiptUploaded')}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate">{iceReceiptUrl}</p>
                   </div>
@@ -944,7 +947,7 @@ export default function StoreBillsPage() {
                     disabled={uploadingIce}
                     onClick={() => iceFileRef.current?.click()}
                   >
-                    更換
+                    {t('replace')}
                   </Button>
                 </div>
               ) : (
@@ -954,12 +957,12 @@ export default function StoreBillsPage() {
                 >
                   {uploadingIce ? (
                     <div className="flex items-center justify-center gap-1.5 text-xs text-cyan-600">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />上傳中...
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />{t('uploading')}
                     </div>
                   ) : (
                     <div className="space-y-0.5 text-xs text-muted-foreground">
                       <Upload className="h-4 w-4 mx-auto text-cyan-600" />
-                      <p className="font-medium text-foreground text-[11px]">上傳送冰簽收單／發票</p>
+                      <p className="font-medium text-foreground text-[11px]">{t('uploadIceReceipt')}</p>
                       <p className="text-[10px]">JPG, PNG, PDF</p>
                     </div>
                   )}
@@ -970,18 +973,18 @@ export default function StoreBillsPage() {
 
           <div className="grid grid-cols-2 gap-2 pt-2">
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">包數/規格</label>
+              <label className="text-[11px] text-muted-foreground">{t('iceQuantityLabel')}</label>
               <Input
-                placeholder="例: 20kg 30 包"
+                placeholder={t('iceQuantityPlaceholder')}
                 value={iceQuantity}
                 onChange={e => setIceQuantity(e.target.value)}
                 className="text-xs h-8"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">冰塊行/經辦備註</label>
+              <label className="text-[11px] text-muted-foreground">{t('iceVendorNoteLabel')}</label>
               <Input
-                placeholder="例: 順發製冰廠"
+                placeholder={t('iceVendorNotePlaceholder')}
                 value={iceNote}
                 onChange={e => setIceNote(e.target.value)}
                 className="text-xs h-8"
@@ -994,7 +997,7 @@ export default function StoreBillsPage() {
       {/* 提交按鈕列 */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
         <p className="text-xs text-muted-foreground">
-          📌 提交後費用與單據照片將即時串接入帳至出納總務系統（<code>fin_bills</code>），店別損益報表同步生效。
+          {t.rich('submitHint', { code: (chunks) => <code>{chunks}</code> })}
         </p>
         <Button
           size="lg"
@@ -1003,7 +1006,7 @@ export default function StoreBillsPage() {
           className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-semibold px-6 shadow-md"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-          確認送出並串接至出納
+          {t('submitButton')}
         </Button>
       </div>
 
@@ -1012,28 +1015,28 @@ export default function StoreBillsPage() {
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm flex items-center gap-2">
             <Receipt className="h-4 w-4 text-primary" />
-            [{selectedStore}] {year} 年 {month} 月 已提報費用一覽
+            {t('billListTitle', { store: selectedStore, year, month })}
           </h3>
           <span className="text-xs text-muted-foreground">
-            出納總務端同步狀態
+            {t('syncStatus')}
           </span>
         </div>
 
         {currentBills.filter(b => b.store_code === selectedStore).length === 0 ? (
           <div className="text-center py-6 text-xs text-muted-foreground">
-            本門市於此月份尚未提報水電、瓦斯或冰塊費用。請於上方輸入金額或上傳單據後點擊送出。
+            {t('billListEmpty')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-muted-foreground">
-                  <th className="py-2 text-left">費用科目</th>
-                  <th className="py-2 text-right">申報金額</th>
-                  <th className="py-2 text-center">來源狀態</th>
-                  <th className="py-2 text-left">單據憑證</th>
-                  <th className="py-2 text-left">備註明細</th>
-                  <th className="py-2 text-right">更新時間</th>
+                  <th className="py-2 text-left">{t('colSubject')}</th>
+                  <th className="py-2 text-right">{t('colAmount')}</th>
+                  <th className="py-2 text-center">{t('colSource')}</th>
+                  <th className="py-2 text-left">{t('colReceipt')}</th>
+                  <th className="py-2 text-left">{t('colNoteDetail')}</th>
+                  <th className="py-2 text-right">{t('colUpdatedAt')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -1053,14 +1056,14 @@ export default function StoreBillsPage() {
                   return (
                     <tr key={i} className="hover:bg-muted/30">
                       <td className="py-2.5 font-semibold">
-                        {b.category_code === 'ELEC' && '⚡ 電費 (ELEC)'}
-                        {b.category_code === 'WATER' && '💧 水費 (WATER)'}
-                        {b.category_code === 'GAS' && '🔥 瓦斯費 (GAS)'}
-                        {b.category_code === 'ICE' && '🧊 冰塊費 (ICE)'}
+                        {b.category_code === 'ELEC' && t('categoryElec')}
+                        {b.category_code === 'WATER' && t('categoryWater')}
+                        {b.category_code === 'GAS' && t('categoryGas')}
+                        {b.category_code === 'ICE' && t('categoryIce')}
                         {!['ELEC', 'WATER', 'GAS', 'ICE'].includes(b.category_code) && b.category_code}
                       </td>
                       <td className="py-2.5 text-right font-mono font-bold text-sm text-foreground">
-                        {fmt(b.amount)} <span className="text-[11px] font-normal text-muted-foreground">VND</span>
+                        {fmt(b.amount, locale)} <span className="text-[11px] font-normal text-muted-foreground">VND</span>
                       </td>
                       <td className="py-2.5 text-center">
                         <Badge
@@ -1073,7 +1076,7 @@ export default function StoreBillsPage() {
                               : 'bg-slate-50 text-slate-700'
                           }`}
                         >
-                          {b.source === 'store_upload' ? '門市已提報' : b.source === 'vendor' ? '廠商已填報' : b.source}
+                          {b.source === 'store_upload' ? t('sourceStoreUpload') : b.source === 'vendor' ? t('sourceVendor') : b.source}
                         </Badge>
                       </td>
                       <td className="py-2.5">
@@ -1085,7 +1088,7 @@ export default function StoreBillsPage() {
                             className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
                           >
                             <ImageIcon className="h-3 w-3" />
-                            檢視單據照片 <ExternalLink className="h-2.5 w-2.5" />
+                            {t('viewReceiptPhoto')} <ExternalLink className="h-2.5 w-2.5" />
                           </a>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -1095,7 +1098,7 @@ export default function StoreBillsPage() {
                         {parsedCylinders ? `[${parsedCylinders}] ` : ''}{parsedNote || '—'}
                       </td>
                       <td className="py-2.5 text-right text-muted-foreground">
-                        {b.updated_at ? new Date(b.updated_at).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                        {b.updated_at ? new Date(b.updated_at).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
                       </td>
                     </tr>
                   )

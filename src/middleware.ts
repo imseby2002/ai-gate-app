@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { systemForPath, SUBDOMAIN_SYSTEM, SYSTEM_SUBDOMAIN, isPathAllowedForScope } from '@/lib/systems'
+import { detectLocaleFromAcceptLanguage } from '@/i18n/request'
 
 
 export async function middleware(request: NextRequest) {
@@ -26,6 +27,21 @@ export async function middleware(request: NextRequest) {
     // im-tourist 多子域：auth cookie 設 domain=.im-tourist.com 跨子域共享。localhost/preview 不設。
     const host = (request.headers.get('host') || '').split(':')[0].toLowerCase()
     const cookieDomain = host.endsWith('im-tourist.com') ? '.im-tourist.com' : undefined
+
+    // 若瀏覽器/客戶端尚未設定 locale cookie，自動依 Accept-Language 偵測其系統語言並持久化
+    const hasLocaleCookie = request.cookies.has('locale')
+    const detectedLocale = hasLocaleCookie ? null : detectLocaleFromAcceptLanguage(request.headers.get('accept-language'))
+    const attachLocaleCookie = (res: NextResponse) => {
+      if (detectedLocale) {
+        res.cookies.set('locale', detectedLocale, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: 'lax',
+          ...(cookieDomain ? { domain: cookieDomain } : {})
+        })
+      }
+      return res
+    }
 
     // ── 子域名映射 ────────────────────────────────────────────
     // cs.im-tourist.com / → /cs 首頁；功能內 /cs/* 路徑在該子域名下照常運作。
@@ -61,7 +77,7 @@ export async function middleware(request: NextRequest) {
         const url = request.nextUrl.clone()
         url.hostname = `${targetSub}.im-tourist.com`
         url.port = ''
-        return NextResponse.redirect(url)
+        return attachLocaleCookie(NextResponse.redirect(url))
       }
     }
 
@@ -82,6 +98,7 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/geo/') ||
       pathname.startsWith('/login') ||
       pathname.startsWith('/register') ||
+      pathname.startsWith('/reset-password') ||
       pathname.startsWith('/auth') ||
       pathname.startsWith('/callback') ||
       pathname.startsWith('/_next') ||
@@ -116,9 +133,9 @@ export async function middleware(request: NextRequest) {
       if (needSubRewrite) {
         const url = request.nextUrl.clone()
         url.pathname = subHome!
-        return NextResponse.rewrite(url, { request })
+        return attachLocaleCookie(NextResponse.rewrite(url, { request }))
       }
-      return NextResponse.next({ request })
+      return attachLocaleCookie(NextResponse.next({ request }))
     }
 
     let supabaseResponse = NextResponse.next({ request })
@@ -163,7 +180,7 @@ export async function middleware(request: NextRequest) {
       redirectUrl.pathname = sys ? `/login/${sys}` : '/login'
       redirectUrl.search = ''
       redirectUrl.searchParams.set('redirectedFrom', pathname)
-      return NextResponse.redirect(redirectUrl)
+      return attachLocaleCookie(NextResponse.redirect(redirectUrl))
     }
 
     // scope guard 已移至 client-side ScopeManager（sessionStorage per-tab）
@@ -187,11 +204,17 @@ export async function middleware(request: NextRequest) {
     )
 
     if (needsProfileCheck) {
-      const { data: profile } = await supabase
+      // 公司的 enabled_modules 分開查，不用 PostgREST 的 embed：companies 與 profiles
+      // 之間有三條外鍵，embed 無法判斷該走哪一條，會回 PGRST201 讓整個查詢失敗、
+      // profile 變成 null——底下的模組權限檢查會被整段跳過，非管理者因此拿到預設模組。
+      const { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('user_type, enabled_modules, units, company_id, companies(enabled_modules)')
+        .select('user_type, enabled_modules, units, company_id')
         .eq('id', user.id)
         .single()
+      // 查詢失敗時 profile 是 null，底下的模組權限檢查會被整段跳過（`if (profile && ...)`），
+      // 等於權限形同虛設而且完全無聲。行為維持不變，但要留下錯誤。
+      if (profileErr) console.error('[middleware] profiles 查詢失敗', { userId: user.id, pathname, error: profileErr })
 
       const isAdmin = profile?.user_type === 'admin' ||
         user.email?.toLowerCase() === 'imseby@gmail.com' ||
@@ -214,7 +237,18 @@ export async function middleware(request: NextRequest) {
       // Module guard — 檢查 enabled_modules 與單位權限 units，總管理員(admin)跳過
       // 員工或公司負責人，皆受限於其個人或所屬公司的 enabled_modules
       if (profile && !isAdmin) {
-        const effectiveModules: string[] = (profile.companies as any)?.enabled_modules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
+        let companyModules: string[] | undefined
+        if (profile.company_id) {
+          const { data: company, error: companyErr } = await supabase
+            .from('companies')
+            .select('enabled_modules')
+            .eq('id', profile.company_id)
+            .single()
+          // 失敗時會退回個人的 enabled_modules，權限範圍默默變成另一組。
+          if (companyErr) console.error('[middleware] companies 查詢失敗', { companyId: profile.company_id, error: companyErr })
+          companyModules = company?.enabled_modules ?? undefined
+        }
+        const effectiveModules: string[] = companyModules ?? profile.enabled_modules ?? ['chat', 'marketing', 'cs', 'leads', 'resume', 'booking']
         const units: string[] = profile.units ?? []
         const ROUTE_MODULES: Record<string, string[]> = {
           '/marketing':      ['marketing', 'mkt'],
@@ -237,7 +271,7 @@ export async function middleware(request: NextRequest) {
               const url = request.nextUrl.clone()
               url.pathname = '/apps'
               url.search = '?blocked=' + modules[0]
-              return NextResponse.redirect(url)
+              return attachLocaleCookie(NextResponse.redirect(url))
             }
           }
         }
@@ -250,10 +284,10 @@ export async function middleware(request: NextRequest) {
       url.pathname = subHome!
       const rewriteRes = NextResponse.rewrite(url, { request })
       supabaseResponse.cookies.getAll().forEach((c: { name: string; value: string }) => rewriteRes.cookies.set(c))
-      return rewriteRes
+      return attachLocaleCookie(rewriteRes)
     }
 
-    return supabaseResponse
+    return attachLocaleCookie(supabaseResponse)
   } catch (e) {
     // If proxy throws for any reason, pass through to Next.js
     console.error('[proxy] error:', e)

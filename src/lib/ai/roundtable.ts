@@ -1178,6 +1178,7 @@ export async function executeSynthesize(
   emit: (e: RoundtableEvent) => void,
   synthesisStyle: SynthesisStyle = 'default',
   verbosity: VerbosityMode = 'standard_300',
+  bossGuidance = '',
 ): Promise<string> {
   const styleConfig = SYNTHESIS_STYLES.find(s => s.id === synthesisStyle) ?? SYNTHESIS_STYLES[0]
   const verbosityOption = VERBOSITY_OPTIONS.find(v => v.id === verbosity) ?? VERBOSITY_OPTIONS[1]
@@ -1209,10 +1210,14 @@ export async function executeSynthesize(
     `語言風格：繁體中文、極高資訊密度、條理清晰、具備頂級商業顧問水平。`
 
   const fullDebate = formatStatements(allStatements)
+  const guidance = bossGuidance.trim()
   const userPrompt =
     `【老闆最初指令】：\n${bossInstruction}\n\n` +
     `【會前客觀事實簡報 (Fact Sheet)】：\n${factBriefing}\n\n` +
     `【會議全程研議紀錄】：\n${fullDebate}\n\n` +
+    (guidance
+      ? `【老闆本次結會補充意見 (最高優先，必須貫徹於整份報告)】：\n${guidance}\n\n`
+      : '') +
     `請以首席幕僚長之最高視野綜觀全場，出具交付老闆的最終結構化決策報告。`
 
   const maxSynthesizeTokens = verbosity === 'concise_150' ? 2048 : 8192

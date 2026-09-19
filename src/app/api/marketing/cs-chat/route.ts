@@ -15,6 +15,7 @@ import { queryBnbCheckin, checkBeforeCheckin } from '@/lib/cs/checkin-lookup'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { classifyIntentL1, generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { calculateModelCosts, estimateTextTokens } from '@/lib/ai/token-cost-tracker'
+import { type CsCampaignOffer } from '@/app/api/marketing/cs-webhook/[platform]/[userId]/route'
 
 const INTENT_CATEGORIES = [
   '產品諮詢', '價格/報價', '訂單查詢', '退換貨/退款',
@@ -98,6 +99,8 @@ async function handlePost(req: NextRequest) {
     notifyWebhooks = [] as Array<{ id: string; type: 'line_messaging' | 'webhook'; label: string; value: string; target?: string }>,
     discountMaxPct = 0,
     discountGifts = '',
+    campaignOffers = [] as CsCampaignOffer[],
+    campaignOfferSource = 'both' as 'cs' | 'booking' | 'both',
     imageBase64 = '',    // base64-encoded image from test panel
     imageMimeType = '',  // e.g. 'image/jpeg'
   } = await req.json()
@@ -485,6 +488,70 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
     closingToolkitSection = lines.join('\n')
   }
 
+  // ── Active campaign & subsidy offers (CS 自訂活動 vs Booking 訂房活動) ─────
+  let campaignOffersSection = ''
+  const offerLines: string[] = []
+
+  // 1. CS 客服自訂活動 (當模式為 'cs' 或 'both')
+  if (campaignOfferSource === 'cs' || campaignOfferSource === 'both') {
+    const activeOffers: CsCampaignOffer[] = ((campaignOffers ?? []) as CsCampaignOffer[]).filter((o: CsCampaignOffer) => o.enabled)
+    if (activeOffers.length > 0) {
+      offerLines.push('【CS 客服促銷／補助活動（若客問優惠、補助或計算房價時主動說明與折抵）】')
+      for (const off of activeOffers) {
+        offerLines.push(`▸ 活動名稱：${off.name}（${off.canStack ? '可與其他優惠/早鳥疊加併用' : '不可疊加，採二擇一最優原則'}）`)
+        if (off.qualification) offerLines.push(`  適用資格與對象：${off.qualification}`)
+        if (off.offerType === 'nights_tiered' && off.tieredNightDiscounts?.length) {
+          const tieredDesc = off.tieredNightDiscounts.map((amt: number, idx: number) => `第 ${idx + 1} 晚折抵 $${amt.toLocaleString()} 元`).join('，')
+          offerLines.push(`  折扣計算方式：連住每晚階梯折抵（${tieredDesc}）`)
+        } else if (off.offerType === 'percent' && off.discountPercent) {
+          offerLines.push(`  折扣計算方式：享 ${10 - off.discountPercent / 10} 折優惠（折抵 ${off.discountPercent}%）`)
+        } else if (off.offerType === 'fixed_amount' && off.discountAmount) {
+          offerLines.push(`  折扣計算方式：單筆固定折抵 $${off.discountAmount.toLocaleString()} 元`)
+        } else {
+          offerLines.push(`  折扣計算方式：自訂方案`)
+        }
+        offerLines.push(`  優惠疊加原則：${off.canStack ? '本活動允許與其他促銷折扣、早鳥特惠或折扣碼同時累加折抵' : '本活動不可與其他早鳥或促銷折扣同時併用（客人可選最優惠的一種專案）'}`)
+        if (off.rulesNote) offerLines.push(`  活動規則與限制：${off.rulesNote}`)
+      }
+    }
+  }
+
+  // 2. Booking 訂房系統活動 (當模式為 'booking' 或 'both')
+  if (campaignOfferSource === 'booking' || campaignOfferSource === 'both') {
+    try {
+      const [rulesRes, promosRes] = await Promise.all([
+        supabase.from('pricing_rules').select('name, rule_type, adjustment_type, adjustment_value, conditions, can_stack').eq('user_id', user.id).eq('enabled', true),
+        supabase.from('promo_codes').select('code, name, type, value, min_nights, can_stack').eq('user_id', user.id).eq('enabled', true),
+      ])
+      const bRules = rulesRes.data ?? []
+      const bPromos = promosRes.data ?? []
+      if (bRules.length > 0 || bPromos.length > 0) {
+        offerLines.push('\n【Booking 訂房系統動態優惠（早鳥／晚鳥與促銷代碼）】')
+        for (const r of bRules) {
+          const adj = r.adjustment_type === 'percent' ? `享 ${10 - (r.adjustment_value / 10)} 折（折 ${r.adjustment_value}%）` : `折抵 $${r.adjustment_value} 元`
+          const cond = (r.conditions as Record<string, unknown>)?.days_before != null ? `（入住前 ${(r.conditions as Record<string, unknown>).days_before} 天以上預訂）` : ''
+          const stackNote = r.can_stack ? '【可與其他優惠/代碼疊加】' : '【單獨適用，不可疊加】'
+          offerLines.push(`▸ 訂房特惠：${r.name} - ${adj} ${cond} ${stackNote}`)
+        }
+        for (const p of bPromos) {
+          const discount = p.type === 'percent' ? `享 ${10 - (p.value / 10)} 折` : `折抵 $${p.value} 元`
+          const stackNote = p.can_stack ? '【可與其他優惠疊加】' : '【單獨適用，不可疊加】'
+          offerLines.push(`▸ 訂房優惠碼：【${p.code}】${p.name ? `（${p.name}）` : ''} - ${discount}${p.min_nights > 1 ? `，需滿 ${p.min_nights} 晚` : ''} ${stackNote}`)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (offerLines.length > 0) {
+    offerLines.push('\n計算與應對守則：')
+    offerLines.push('1. 當客人詢問「國旅補助」、「有沒有優惠」、「連住有沒有打折」或詢問房價時，主動告知上述正在進行中的補助/優惠活動。')
+    offerLines.push('2. 計算總價時，以房價定價為基準，嚴格依照各活動設定之折抵金額與「是否可疊加」規則進行計算：若標註「可疊加」則可合併折抵；若標註「不可疊加」則採二擇一最優惠金額折抵，並清楚向客人列出原價、各項折抵與實付金額。')
+    offerLines.push('3. 喬民宿適用當期國旅補助（合法旅宿），依規定於入住時出示身分證件正本現場核銷。')
+    campaignOffersSection = '\n\n' + offerLines.join('\n')
+  }
+
   // ── Top reviews for social proof ─────────────────────────────────────────
   let reviewsSection = ''
   try {
@@ -651,8 +718,9 @@ const systemPrompt = `${baseInstructions}
 - 計算步驟用純文字逐行呈現，例如「成人 2 位 × $800 = $1,600」，不用符號列點
 - 報價禁止顯示加價乘數（× 1.15 等），直接查定價表取假日/週末價輸出；只有折扣（打折、優惠）才需標示
 - 資料使用分工：初次詢問房型 → 定價計算機簡介；客人追問細節（設施/空間/特色）→ 查知識庫給具體答案，禁止二次重複簡介
-- 【對話極度精簡、直球回答、禁止囉嗦廢話與嚴禁句尾慣性追問——最高禁令】回覆一律精簡扼要，直中要害，禁止堆砌客套話或自說自話！回答完客人的問題即立刻結束，【絕對禁止】在句尾習慣性加上「請問您想了解哪間呢？」、「請問這樣清楚嗎？」、「您想先確認哪一項呢？」等任何多餘追問！當客人只是陳述事實、告知資訊（如「了解」、「好的」、「已匯款」）或禮貌道謝（如「謝謝」），只需簡短禮貌回應，嚴禁強行反問！凡對話紀錄中已出現過之資訊，嚴禁再次詢問！
-- 【優惠與補助互斥規定——最高原則，嚴禁重複疊加折扣，嚴禁虛報2,600定價】本民宿房間平日一般售價為：201龜山加大床房2,000元、202蘭博1,800元、302山景1,800元、401露臺2,200元、301海景2,500元。本民宿絕無2,600元等虛高門牌定價，絕對禁止向客人報2,600元！若客人要使用國旅補助（折抵1,000元），一律以【平日一般售價（如龜山房2,000元）】為基準現場折抵，客人實付只要1,000元！所有優惠（早鳥8折1,600元）與國旅補助採獨立計算二擇一，絕對不可在早鳥價1,600元上再重複扣補助變成600元！
+- 【AI 身分透明與自然呈現規則】開場或新的一輪對話開頭主動親切表明自己是 AI 客服助理（例如：「您好！我是喬民宿的 AI 智慧助理 小喬🌸，很高興為您服務！」）；接續日常問答直球回答即可，無需每句重複囉嗦署名；遇退款、查無訂單或需要管家協助時，說明「我是 AI 助理小喬，會為您轉交真人管家核對確認」，讓客人明確了解是由 AI 為其服務。
+- 【對話極度精簡、直球回答、禁止囉嗦廢話與嚴禁句尾慣性追問——最高禁令】回覆一律精簡扼要，直中要害，禁止堆砌客套話或自說自話！回答完客人的問題即立刻結束，【絕對禁止】在句尾習慣性加上「請問您想了解哪間呢？」、「請問這樣清楚嗎？」、「您想先確認哪一項呢？」等任何多餘追問！當客人只是陳述事實、告知資訊（如「了解」、「好的」、「已匯款」）或禮貌道謝（如「謝謝」），只需簡短禮貌回應，嚴禁強行反問！凡對話紀錄中已出現過之資訊，嚴禁再次詢問！客人若未主動詢問行程，【嚴禁】在每次回答句尾強推賞鯨或烏石港搭船提醒！
+- 【優惠與活動折抵原則——最高原則，嚴禁重複疊加折扣，嚴禁虛報2,600定價】本民宿房間平日一般售價為：201龜山加大床房2,000元、202蘭博1,800元、302山景1,800元、401露臺2,200元、301海景2,500元。本民宿絕無2,600元等虛高門牌定價，絕對禁止向客人報2,600元！若客人要使用促銷或補助活動，一律以【平日一般售價（如龜山房2,000元）】為基準折抵，嚴格依照【現正進行中的促銷／補助活動】規則辦理。所有優惠（早鳥8折等）與活動補助採獨立計算二擇一，絕對不可在早鳥價上再重複扣補助！
 - ${langInstruction}
 - 若需要人工介入，請告知客戶將安排專員跟進
 - 不確定的資訊請誠實說明，勿猜測
@@ -660,7 +728,7 @@ const systemPrompt = `${baseInstructions}
 
 【資料安全鐵則——絕對不可違反】
 密碼、房號、訂單號等「訂單專屬查詢數值」，必須且只能來自下方【外部資料查詢結果】。若無該區塊或查詢失敗，請直接告知客戶「查無資料，請聯繫工作人員」，禁止使用任何自行推測或虛構的數字。
-注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
+注意：商家預設的【付款帳號】（寫在預訂流程的付款說明中）屬於固定公告資訊，不受此限制，必須在訂單完成時主動告知客人。${knowledgeBase ? `\n\n【知識庫參考資料——房型細節詢問時的唯一來源】\n以下是民宿完整介紹文件，包含每個房型的空間、設施、床型、衛浴、景觀、陽台、辦公設備等所有細節。\n\n資料使用時機（嚴格區分）：\n・客人「初次詢問」房型或方案 → 使用定價計算機的簡介列出方案與價格，不必展開細節\n・客人「進一步詢問」設施或特色（例：有浴缸嗎、陽台多大、有辦公桌嗎、哪間適合辦公、景觀如何、床型是什麼）→ 必須查閱本區塊給出具體描述，禁止再重複簡介\n・判斷原則：只要客人的問題是關於「有沒有」「多大」「哪間」「適不適合」等設施/空間/特色問題，就屬於細節詢問，應從本區塊回答\n・禁止對細節問題回答「請參考網站」或重複貼定價計算機的同一段簡介\n\n${knowledgeBase.slice(0, 20000)}` : ''}${customerSection}${campaignOffersSection}${propertyAvailSection}${closingToolkitSection}${reviewsSection}${faqSection}${externalDataSection}${deterministicQuoteSection}${breakfastSection}${langEnforcement}${bookingCompletionInstruction}`
 
   // Build user turn — multimodal when image is provided
   type MsgContent = string | Array<{ type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }>

@@ -4,7 +4,7 @@ import { getPosOwner } from '@/lib/pos/auth'
 /** 雲端編輯用：回傳全部菜單（含門市標記） */
 export async function GET(req: NextRequest) {
   const ctx = await getPosOwner()
-  if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!ctx.ok) return NextResponse.json({ error: ctx.status === 401 ? 'Unauthorized' : 'Forbidden' }, { status: ctx.status })
 
   const storeId = new URL(req.url).searchParams.get('store_id')
 
