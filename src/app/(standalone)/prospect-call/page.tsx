@@ -7,7 +7,7 @@ import {
   Search, Building2, MapPin, Phone, Play, Loader2,
   CheckCircle2, AlertCircle, XCircle, Plus, Trash2, ChevronDown, ChevronUp,
   Filter, Users, Map, Globe, Mic, Settings2, PhoneCall, GripVertical, Mail,
-  Clock, Save, CalendarClock,
+  Clock, Save, CalendarClock, MessageSquare,
 } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -117,6 +117,23 @@ interface EmailRule {
   maxEmployees: number
 }
 
+// 簡訊模板／規則（結構比照 Email，但簡訊只有內容、沒有主旨）
+interface SmsTemplate {
+  id: string
+  name: string
+  body: string
+}
+
+interface SmsRule {
+  id: string
+  name: string
+  desc: string
+  templateId: string
+  customTag: string
+  minEmployees: number
+  maxEmployees: number
+}
+
 interface Config {
   keywords: string
   location: string
@@ -132,6 +149,8 @@ interface Config {
   keyMappings: KeyMapping[]   // 撥號後按鍵加入社群
   emailTemplates: EmailTemplate[]
   emailRules: EmailRule[]
+  smsTemplates: SmsTemplate[]
+  smsRules: SmsRule[]
   fromName: string
   fromEmail: string
 }
@@ -193,6 +212,12 @@ function makeDefaultConfig(t: Translate): Config {
     ],
     emailRules: [
       { id: 'erule-1', name: t('def.generalCustomer'), desc: t('def.generalCustomerDesc'), templateId: 'email-1', customTag: '', minEmployees: 0, maxEmployees: 0 },
+    ],
+    smsTemplates: [
+      { id: 'sms-1', name: t('def.template'), body: '' },
+    ],
+    smsRules: [
+      { id: 'srule-1', name: t('def.generalCustomer'), desc: t('def.generalCustomerDesc'), templateId: 'sms-1', customTag: '', minEmployees: 0, maxEmployees: 0 },
     ],
     fromName: t('def.marketingTeam'),
     fromEmail: '',
@@ -452,10 +477,10 @@ function RoutingRuleEditor({
 export default function ProspectCallPage() {
   const t = useTranslations('Prospect')
   const locale = useLocale()
-  const [activeTab, setActiveTab] = useState<'phone' | 'email' | 'schedule'>('phone')
+  const [activeTab, setActiveTab] = useState<'phone' | 'email' | 'sms' | 'schedule'>('phone')
   const [config, setConfig] = useState<Config>(() => makeDefaultConfig(t))
   const [branches, setBranches] = useState<Branch[]>([])
-  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailRules: true, emailSettings: true, schedule: false })
+  const [openSections, setOpenSections] = useState({ collect: true, filter: true, distance: true, scripts: true, mapping: false, call: true, emailTemplates: true, emailRules: true, emailSettings: true, smsTemplates: true, smsRules: true, schedule: false })
   const [schedule, setSchedule] = useState<ProspectSchedule>(DEFAULT_SCHEDULE)
   const [scheduleSaving, setScheduleSaving] = useState(false)
   const [scheduleSaved, setScheduleSaved] = useState(false)
@@ -472,6 +497,9 @@ export default function ProspectCallPage() {
   const [orgEmails, setOrgEmails] = useState<Record<string, string>>({})  // orgId → email
   const [sendingEmail, setSendingEmail] = useState<string | null>(null)  // templateId being sent
   const [emailResults, setEmailResults] = useState<Record<string, { ok: number; fail: number }>>({})
+  // SMS-specific state
+  const [sendingSms, setSendingSms] = useState<string | null>(null)  // ruleId being sent
+  const [smsResults, setSmsResults] = useState<Record<string, { ok: number; fail: number }>>({})
 
   // 寄件設定測試：直接寄一封測試信到指定信箱，驗證 Resend 網域／金鑰是否正常（僅管理員可用）
   const [isAdmin, setIsAdmin] = useState(false)
@@ -790,6 +818,81 @@ export default function ProspectCallPage() {
     }
   }
 
+  // ── SMS templates CRUD ────────────────────────────────────────────────────
+
+  const addSmsTemplate = () => setC('smsTemplates', [...(config.smsTemplates ?? []), {
+    id: `sms-${Date.now()}`, name: t('def.templateN', { n: (config.smsTemplates ?? []).length + 1 }), body: '',
+  }])
+  const updateSmsTemplate = (id: string, patch: Partial<SmsTemplate>) =>
+    setC('smsTemplates', (config.smsTemplates ?? []).map(s => s.id === id ? { ...s, ...patch } : s))
+  const removeSmsTemplate = (id: string) =>
+    setC('smsTemplates', (config.smsTemplates ?? []).filter(s => s.id !== id))
+
+  // ── SMS rules CRUD ────────────────────────────────────────────────────────
+
+  const addSmsRule = () => setC('smsRules', [...(config.smsRules ?? []), {
+    id: `srule-${Date.now()}`,
+    name: t('def.categoryN', { n: (config.smsRules ?? []).length + 1 }),
+    desc: '',
+    templateId: config.smsTemplates?.[0]?.id ?? '',
+    customTag: '',
+    minEmployees: 0,
+    maxEmployees: 0,
+  }])
+  const updateSmsRule = (id: string, patch: Partial<SmsRule>) =>
+    setC('smsRules', (config.smsRules ?? []).map(r => r.id === id ? { ...r, ...patch } : r))
+  const removeSmsRule = (id: string) =>
+    setC('smsRules', (config.smsRules ?? []).filter(r => r.id !== id))
+
+  // ── Batch SMS send（比照 Email；收件對象取名單門號，backend 依國別自動分流） ──
+
+  /** Match org against an SmsRule（分類標籤／員工數；邏輯同 Email 規則） */
+  const matchSmsRule = (org: ProspectOrg, rule: SmsRule): boolean => {
+    if (rule.customTag.trim()) {
+      const tag = rule.customTag.trim().toLowerCase()
+      const hay = `${org.name} ${org.rawCategory ?? ''}`.toLowerCase()
+      if (!hay.includes(tag)) return false
+    }
+    if (rule.minEmployees > 0) {
+      const emp = parseMaxEmployees(org.employeeHint)
+      if (emp === null || emp < rule.minEmployees) return false
+    }
+    if (rule.maxEmployees > 0) {
+      const emp = parseMaxEmployees(org.employeeHint)
+      if (emp === null || emp > rule.maxEmployees) return false
+    }
+    return true
+  }
+
+  const batchSms = async (rule: SmsRule, template: SmsTemplate) => {
+    const targetOrgs = selectedOrgs.filter(o => o.phoneNormalized && matchSmsRule(o, rule))
+    if (targetOrgs.length === 0) { setError(t('sms.noPhoneTitle')); return }
+    setSendingSms(rule.id)
+    try {
+      const recipients = targetOrgs.map(o => ({
+        phone: o.phoneNormalized!,
+        group: rule.name,
+        name: o.name,
+      }))
+      const res = await fetch('/api/marketing/sms-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients,
+          groups: {},
+          defaultText: template.body,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSmsResults(prev => ({ ...prev, [rule.id]: { ok: data.success, fail: data.total - data.success } }))
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setSendingSms(null)
+    }
+  }
+
   // ── Org → rule assignment (first-match wins) ──────────────────────────────
 
   const assignRules = (orgList: ProspectOrg[]): Record<string, string> => {
@@ -1021,7 +1124,7 @@ export default function ProspectCallPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b">
-          {([['phone', `📞 ${t('tabPhone')}`], ['email', `📧 ${t('tabEmail')}`], ['schedule', `⏱ ${t('tabSchedule')}`]] as const).map(([tab, label]) => (
+          {([['phone', `📞 ${t('tabPhone')}`], ['email', `📧 ${t('tabEmail')}`], ['sms', `💬 ${t('tabSms')}`], ['schedule', `⏱ ${t('tabSchedule')}`]] as const).map(([tab, label]) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab
@@ -1616,6 +1719,101 @@ export default function ProspectCallPage() {
 
             </>}
 
+            {activeTab === 'sms' && <>
+
+            {/* Step 4: SMS templates */}
+            <Section title={t('sms.title')} icon={MessageSquare}
+              open={openSections.smsTemplates} onToggle={() => toggleSection('smsTemplates')}>
+              <p className="text-xs text-gray-500">{t('sms.hint')}</p>
+              <div className="space-y-3">
+                {(config.smsTemplates ?? []).map(tpl => (
+                  <div key={tpl.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <input value={tpl.name} onChange={e => updateSmsTemplate(tpl.id, { name: e.target.value })}
+                        className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
+                        placeholder={t('sms.templateName')} />
+                      {(config.smsTemplates ?? []).length > 1 && (
+                        <button type="button" onClick={() => removeSmsTemplate(tpl.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <textarea value={tpl.body} onChange={e => updateSmsTemplate(tpl.id, { body: e.target.value })}
+                      rows={3} placeholder={t('sms.body')}
+                      className="w-full px-2 py-1.5 rounded-lg border text-xs outline-none focus:ring-2 resize-none bg-white" />
+                    <div className="text-[10px] text-gray-400 text-right">{tpl.body.length} 字</div>
+                  </div>
+                ))}
+                <button type="button" onClick={addSmsTemplate}
+                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+                  <Plus className="h-3.5 w-3.5" />{t('sms.addTemplate')}
+                </button>
+              </div>
+            </Section>
+
+            {/* Step 5: SMS sending rules */}
+            <Section title={t('sms.rulesTitle')} icon={Settings2}
+              open={openSections.smsRules} onToggle={() => toggleSection('smsRules')}>
+              <p className="text-xs text-gray-500">{t('sms.rulesHint')}</p>
+              <div className="space-y-3">
+                {(config.smsRules ?? []).map((rule, idx) => (
+                  <div key={rule.id} className="p-3 rounded-xl border space-y-2 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-gray-400 w-5">{idx + 1}</span>
+                      <input value={rule.name} onChange={e => updateSmsRule(rule.id, { name: e.target.value })}
+                        className="flex-1 h-8 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white font-semibold"
+                        placeholder={t('s5e.categoryName')} />
+                      {(config.smsRules ?? []).length > 1 && (
+                        <button type="button" onClick={() => removeSmsRule(rule.id)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">{t('rule.customTag')}</label>
+                      <input value={rule.customTag} onChange={e => updateSmsRule(rule.id, { customTag: e.target.value })}
+                        className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white"
+                        placeholder={t('s5e.tagPlaceholder')} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">{t('rule.minEmp')}</label>
+                        <input type="number" min={0} value={rule.minEmployees}
+                          onChange={e => updateSmsRule(rule.id, { minEmployees: Number(e.target.value) })}
+                          className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-gray-500 block mb-0.5">{t('rule.maxEmp')}</label>
+                        <input type="number" min={0} value={rule.maxEmployees}
+                          onChange={e => updateSmsRule(rule.id, { maxEmployees: Number(e.target.value) })}
+                          className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 block mb-0.5">{t('s5e.applyTemplate')}</label>
+                      <select value={rule.templateId} onChange={e => updateSmsRule(rule.id, { templateId: e.target.value })}
+                        className="w-full h-7 px-2 rounded-lg border text-xs outline-none focus:ring-2 bg-white">
+                        {(config.smsTemplates ?? []).map((tpl, ti) => (
+                          <option key={tpl.id} value={tpl.id}>{tpl.name || t('def.templateN', { n: ti + 1 })}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={addSmsRule}
+                  className="flex items-center gap-1.5 w-full py-2 rounded-lg border-2 border-dashed text-xs text-gray-500 hover:bg-gray-50 justify-center">
+                  <Plus className="h-3.5 w-3.5" />{t('s5p.addRule')}
+                </button>
+                <div className="text-[11px] text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 leading-relaxed">
+                  {t('sms.countryNote')}
+                </div>
+              </div>
+            </Section>
+
+            </>}
+
           </div>
 
           {/* ── Right: Run + Results ── */}
@@ -1743,6 +1941,56 @@ export default function ProspectCallPage() {
                           {t('email.subjectPrefix')}{tpl.subject.slice(0, 60)}{tpl.subject.length > 60 ? '…' : ''}
                         </div>
                       )}
+                      {result && (
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-green-600">{t('res.success', { n: result.ok })}</span>
+                          {result.fail > 0 && <span className="text-red-500">{t('res.fail', { n: result.fail })}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ── SMS right panel ── */}
+            {activeTab === 'sms' && selectedOrgs.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">{t('sms.sendTitle')}</h3>
+
+                {selectedOrgs.filter(o => o.phoneNormalized).length === 0 && (
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-700 space-y-1">
+                    <p className="font-medium">{t('sms.noPhoneTitle')}</p>
+                    <p>{t('sms.noPhoneHint')}</p>
+                  </div>
+                )}
+
+                {/* Rule-based send panels */}
+                {(config.smsRules ?? []).map(rule => {
+                  const tpl = (config.smsTemplates ?? []).find(s => s.id === rule.templateId)
+                  const targets = selectedOrgs.filter(o => o.phoneNormalized && matchSmsRule(o, rule))
+                  const result = smsResults[rule.id]
+                  const isSending = sendingSms === rule.id
+                  return (
+                    <div key={rule.id} className="p-4 rounded-xl border space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-semibold">{rule.name}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            {t('sms.templateLabel', { name: tpl?.name ?? t('email.notSet') })}{' · '}{t('sms.hasPhone', { count: targets.length })}
+                          </div>
+                        </div>
+                        <button type="button"
+                          onClick={() => tpl && batchSms(rule, tpl)}
+                          disabled={isSending || targets.length === 0 || !tpl?.body?.trim()}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
+                          style={{ background: 'var(--primary)' }}>
+                          {isSending ? <><Loader2 className="h-3 w-3 animate-spin" />{t('sms.sending')}</> : <><MessageSquare className="h-3 w-3" />{t('sms.sendN', { count: targets.length })}</>}
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">
+                        {t('sms.bodyPrefix')}{tpl?.body ? `${tpl.body.slice(0, 60)}${tpl.body.length > 60 ? '…' : ''}` : t('sms.noBody')}
+                      </div>
                       {result && (
                         <div className="flex gap-3 text-xs">
                           <span className="text-green-600">{t('res.success', { n: result.ok })}</span>
