@@ -200,7 +200,8 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
             兩層 header 疊在一起在小螢幕上太佔空間 */}
         <div className={`${active ? 'hidden md:flex' : 'flex'} items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b bg-card/60`}>
           <div className="flex items-center gap-3">
-            <Link href="/cs" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
+            {/* /cs 現在對已設定用戶會直接導回這頁本身，返回鍵改指向總覽頁才有意義 */}
+            <Link href="/cs/dashboard" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
             <div className="flex items-center gap-2">
               <Inbox className="h-6 w-6 text-blue-500" />
               <h1 className="text-xl font-bold">{t('title')}</h1>

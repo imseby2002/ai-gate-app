@@ -2,7 +2,7 @@
 
 import {
   MessageSquare, Sparkles, BookOpen, Database, Calculator,
-  FlaskConical, ClipboardList, Ticket, Inbox, Zap, Lock, ArrowLeft,
+  FlaskConical, ClipboardList, Ticket, Inbox, Zap, Lock, ArrowLeft, LayoutDashboard, Info,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
@@ -49,6 +49,7 @@ export function CsSideNav({
         <ArrowLeft className="h-4 w-4 shrink-0" />
         <span className="flex-1 text-left">客服主頁</span>
       </a>
+      {row({ label: '總覽', icon: LayoutDashboard, href: '/cs/dashboard', isActive: active === 'dashboard' })}
       {ITEMS.map(it =>
         row({
           label: it.label,
@@ -59,6 +60,7 @@ export function CsSideNav({
         }),
       )}
       {row({ label: '升級方案', icon: Zap, href: '/cs/plan', isActive: active === 'plan' })}
+      {row({ label: '功能介紹', icon: Info, href: '/cs/about', isActive: active === 'about' })}
     </nav>
   )
 }
