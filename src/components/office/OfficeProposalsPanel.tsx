@@ -270,9 +270,6 @@ export function OfficeProposalsPanel({ canManage = false }: { canManage?: boolea
               <h2 className="text-lg font-bold tracking-tight text-foreground">
                 {t('title')}
               </h2>
-              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 border-amber-300 font-normal">
-                {t('badgeAutoCode')}
-              </Badge>
             </div>
             <p className="text-xs text-muted-foreground">
               {t('subtitle')}
