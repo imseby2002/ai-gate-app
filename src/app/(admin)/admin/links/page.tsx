@@ -1,10 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, Link2, ExternalLink, Wrench, MessageCircle, Server, Users } from 'lucide-react'
-import { SYSTEM_LIST, SYSTEM_SUBDOMAIN } from '@/lib/systems'
+import {
+  Copy, Check, Link2, ExternalLink, Wrench, MessageCircle, Server, Users,
+  MessageSquare, CalendarDays, Headphones, Megaphone, Building2, FileText, Bot,
+} from 'lucide-react'
+import { SYSTEM_LIST, SYSTEM_SUBDOMAIN, type SystemKey } from '@/lib/systems'
 
 const DOMAIN = 'im-tourist.com'
+
+// leads (IMT 開發信) 併入行銷模組的一部分，不在這裡單獨列出獨立登入連結
+const SYSTEM_ICONS: Partial<Record<SystemKey, React.ElementType>> = {
+  chat: MessageSquare,
+  booking: CalendarDays,
+  cs: Headphones,
+  marketing: Megaphone,
+  office: Building2,
+  resume: FileText,
+  agent: Bot,
+}
 
 interface QuickTool {
   key: string
@@ -114,25 +128,38 @@ export default function AdminLinksPage() {
       </div>
 
       <div className="space-y-3">
-        {SYSTEM_LIST.map(s => {
+        {SYSTEM_LIST.filter(s => s.key !== 'leads').map(s => {
           const subdomain = SYSTEM_SUBDOMAIN[s.key]
           const loginUrl = subdomain ? `https://${subdomain}.${DOMAIN}/login/${s.key}` : `https://www.${DOMAIN}/login/${s.key}`
+          const Icon = SYSTEM_ICONS[s.key] ?? Link2
           return (
-            <div key={s.key} className="bg-card rounded-2xl border p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <div>
-                  <div className="font-semibold">{s.label}</div>
-                  <div className="text-xs text-muted-foreground">{s.desc}</div>
+            <div key={s.key} className="bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-transparent bg-card rounded-2xl border border-violet-500/30 p-5 shadow-sm hover:border-violet-500/60 transition-all">
+              <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-violet-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm">{s.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{s.desc}</div>
+                  </div>
                 </div>
-                <a href={loginUrl} target="_blank" rel="noreferrer"
-                  className="shrink-0 text-muted-foreground hover:text-foreground" title="開啟登入頁">
-                  <ExternalLink className="h-4 w-4" />
+                <a
+                  href={loginUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  開啟登入頁
                 </a>
               </div>
-              <div className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2 border">
-                <code className="flex-1 text-xs text-foreground/80 truncate">{loginUrl}</code>
-                <button onClick={() => copy(loginUrl, s.key)}
-                  className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-violet-600 hover:text-violet-700">
+              <div className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2 border mt-2">
+                <code className="flex-1 text-xs text-foreground/80 truncate font-mono">{loginUrl}</code>
+                <button
+                  onClick={() => copy(loginUrl, s.key)}
+                  className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700 cursor-pointer"
+                >
                   {copied === s.key ? <><Check className="h-3.5 w-3.5 text-green-500" /> 已複製</> : <><Copy className="h-3.5 w-3.5" /> 複製</>}
                 </button>
               </div>
