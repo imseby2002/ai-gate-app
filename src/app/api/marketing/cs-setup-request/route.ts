@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBnbContext } from '@/lib/bnb/context'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
-import { Resend } from 'resend'
+import { notifyAdmin } from '@/lib/notify/adminAlert'
 
 // 純防灌爆用的安全上限，跟方案的免費額度是兩件事——免費額度用完仍可送出（改收費），
 // 但不能無限送出洗版客服信箱。
@@ -71,28 +71,17 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const notifyTo = process.env.SUPPORT_NOTIFY_EMAIL ?? 'imseby@gmail.com'
-      const fromEmail = process.env.RESEND_FROM_EMAIL ?? 'marketing@aigate.app'
-      await resend.emails.send({
-        from: `AI GATE 客服協助 <${fromEmail}>`,
-        to: [notifyTo],
-        subject: `[CS 設定協助] ${ctx.user.email ?? ctx.user.id} 提出請求${isFree ? '' : `（需收費 $${priceUsd}）`}`,
-        text: [
-          `帳號 email：${ctx.user.email ?? '（未知）'}`,
-          `owner_id：${ctx.ownerId}`,
-          `產業：${industry}`,
-          `聯絡方式：${contact || '（未留）'}`,
-          `留言：${note || '（無）'}`,
-          `計費：${isFree ? (welcomeFree ? 'CORE 新會員首次免費' : '免費額度內') : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
-        ].join('\n'),
-      })
-    } catch {
-      // 通知失敗不影響請求已存檔，忽略即可
-    }
-  }
+  await notifyAdmin(
+    `[CS 設定協助] ${ctx.user.email ?? ctx.user.id} 提出請求${isFree ? '' : `（需收費 $${priceUsd}）`}`,
+    [
+      `帳號 email：${ctx.user.email ?? '（未知）'}`,
+      `owner_id：${ctx.ownerId}`,
+      `產業：${industry}`,
+      `聯絡方式：${contact || '（未留）'}`,
+      `留言：${note || '（無）'}`,
+      `計費：${isFree ? (welcomeFree ? 'CORE 新會員首次免費' : '免費額度內') : `需收費 $${priceUsd} 美元（本月已送出 ${usedThisMonth + 1} 次）`}`,
+    ]
+  )
 
   return NextResponse.json({ ok: true, id: row.id, isFree, priceUsd: isFree ? 0 : priceUsd })
 }

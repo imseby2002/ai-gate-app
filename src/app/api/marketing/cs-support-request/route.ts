@@ -5,7 +5,7 @@ import { getBnbContext } from '@/lib/bnb/context'
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { resolveFeedbackBilling } from '@/lib/feedback/billing'
 import { runFeedbackAutoFix } from '@/lib/feedback/autofix'
-import { notifyFeedbackAdmin } from '@/lib/feedback/notify'
+import { notifyAdmin } from '@/lib/notify/adminAlert'
 
 export const maxDuration = 300
 
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await notifyFeedbackAdmin(
+  await notifyAdmin(
     `[CS ${typeLabel}] ${ctx.user.email ?? ctx.user.id}${isPaid ? '（待報價審核）' : ''}`,
     [
       `類型：${typeLabel}`,

@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
-import { notifyFeedbackAdmin } from '@/lib/feedback/notify'
+import { notifyAdmin } from '@/lib/notify/adminAlert'
 
 export const CODE_ENGINE_NAME = 'Claude 3.7 Sonnet'
 
@@ -269,7 +269,7 @@ export async function runFeedbackAutoFix(feedbackId: string) {
         status: 'suggestion', complexity: 'manual', ai_plan: plan.reason,
         updated_at: new Date().toISOString(),
       }).eq('id', feedbackId)
-      await notifyFeedbackAdmin(
+      await notifyAdmin(
         `[意見反映] 需要人工處理：${fb.title}`,
         [`AI 判斷無法自動修改：${plan.reason}`, `請至後台查看：https://www.im-tourist.com/admin/feedback`]
       )
@@ -317,7 +317,7 @@ export async function runFeedbackAutoFix(feedbackId: string) {
       updated_at: new Date().toISOString(),
     }).eq('id', feedbackId)
 
-    await notifyFeedbackAdmin(
+    await notifyAdmin(
       `[意見反映] ${CODE_ENGINE_NAME} 已修好，待確認合併：${fb.title}`,
       [`Preview 預覽：${previewUrl}`, `GitHub PR：${pr.url}`, `後台一鍵合併：https://www.im-tourist.com/admin/feedback`]
     )

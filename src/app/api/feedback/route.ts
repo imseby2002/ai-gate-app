@@ -3,7 +3,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveFeedbackBilling } from '@/lib/feedback/billing'
-import { notifyFeedbackAdmin } from '@/lib/feedback/notify'
+import { notifyAdmin } from '@/lib/notify/adminAlert'
 import { runFeedbackAutoFix } from '@/lib/feedback/autofix'
 
 export async function GET(req: NextRequest) {
@@ -57,16 +57,16 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (isPaid) {
-    await notifyFeedbackAdmin(
-      `[意見反映] 新的計費需求待審核：${data.title}`,
-      [
-        `類型：${type}`, `帳號：${user.email ?? user.id}`, `內容：${description}`,
-        ...(quota ? [`本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
-        `後台審核：https://www.im-tourist.com/admin/feedback`,
-      ]
-    )
-  } else if (initialStatus === 'pending') {
+  await notifyAdmin(
+    isPaid ? `[意見反映] 新的計費需求待審核：${data.title}` : `[意見反映] 新回報：${data.title}`,
+    [
+      `類型：${type}`, `帳號：${user.email ?? user.id}`, `內容：${description}`,
+      ...(isPaid && quota ? [`本月免費額度已用完：${quota.used}/${quota.limit}`] : []),
+      `後台查看：https://www.im-tourist.com/admin/feedback`,
+    ]
+  )
+
+  if (!isPaid && initialStatus === 'pending') {
     // 免費/錯誤回報（直接施作等我合併）：由 Claude 3.7 Sonnet 在背景自動分析修改並建 PR
     after(() => runFeedbackAutoFix(data.id).catch(() => {}))
   }
