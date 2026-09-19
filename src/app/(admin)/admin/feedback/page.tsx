@@ -7,8 +7,8 @@ import {
   FileCode, DollarSign, Building2
 } from 'lucide-react'
 
-type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other'
-type FbStatus = 'pending' | 'awaiting_approval' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged'
+type FbType = 'bug' | 'feature' | 'text_change' | 'ai_error' | 'other' | 'problem' | 'idea'
+type FbStatus = 'pending' | 'awaiting_approval' | 'processing' | 'pr_ready' | 'suggestion' | 'rejected' | 'merged' | 'approved' | 'in_progress' | 'completed'
 
 interface Feedback {
   id: string
@@ -40,6 +40,9 @@ const STATUS_CONFIG: Record<FbStatus, { label: string; badgeClass: string }> = {
   suggestion:        { label: '💡 需人工架構重構', badgeClass: 'bg-purple-50 text-purple-700 border-purple-200' },
   rejected:          { label: '已關閉 / 拒絕',    badgeClass: 'bg-slate-100 text-slate-400 border-slate-200' },
   merged:            { label: '✅ 已合併上線',    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
+  approved:          { label: '✅ 部門負責人已批准', badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold' },
+  in_progress:       { label: '🔄 程式改寫中',    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200 animate-pulse' },
+  completed:         { label: '✅ 已完成上線',    badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300' },
 }
 
 const TYPE_CONFIG: Record<FbType, { label: string; icon: string }> = {
@@ -48,6 +51,8 @@ const TYPE_CONFIG: Record<FbType, { label: string; icon: string }> = {
   text_change: { label: 'UI / 視覺調整',   icon: '🎨' },
   feature:     { label: '新功能開發需求',  icon: '✨' },
   other:       { label: '其他綜合回饋',    icon: '💬' },
+  problem:     { label: '部門問題回報（辦公室提案）', icon: '🚨' },
+  idea:        { label: '部門改進想法（辦公室提案）', icon: '💡' },
 }
 
 export default function AdminFeedbackPage() {
