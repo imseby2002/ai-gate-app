@@ -8170,6 +8170,8 @@
     "tabPricingBooking": "Booking & pricing",
     "upgradePlanCta": "Upgrade plan",
     "fullSetupGuideCta": "Full setup guide",
+    "dashboardCta": "Dashboard",
+    "aboutCta": "Features",
     "testSandboxShortcutLabel": "Chat test sandbox",
     "realtimeValidationBadge": "Live check",
     "testSandboxDesc": "Simulate a real customer typing questions and instantly see the AI's knowledge-base answers, pricing calculator results and campaign discounts.",

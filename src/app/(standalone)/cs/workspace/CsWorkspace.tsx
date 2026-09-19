@@ -7,7 +7,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -1864,6 +1864,28 @@ function Unit12CustomerService({
           >
             <BookOpen className="h-4 w-4 shrink-0 text-gray-400" />
             {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('fullSetupGuideCta')} ↗</span>}
+          </a>
+
+          <a
+            href="/cs/dashboard"
+            title={sidebarCollapsed ? t('dashboardCta') : undefined}
+            className={`px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors flex items-center gap-2 sm:w-full ${
+              sidebarCollapsed ? 'sm:justify-center' : 'sm:justify-start'
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4 shrink-0 text-gray-400" />
+            {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('dashboardCta')}</span>}
+          </a>
+
+          <a
+            href="/cs/about"
+            title={sidebarCollapsed ? t('aboutCta') : undefined}
+            className={`px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors flex items-center gap-2 sm:w-full ${
+              sidebarCollapsed ? 'sm:justify-center' : 'sm:justify-start'
+            }`}
+          >
+            <Info className="h-4 w-4 shrink-0 text-gray-400" />
+            {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('aboutCta')}</span>}
           </a>
         </nav>
         <div className="flex-1 min-w-0 space-y-5">

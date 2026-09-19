@@ -40,14 +40,12 @@ export function BackToMenu() {
     if (pathname.startsWith('/marketing')) {
       setHref(SYSTEMS.marketing.home); return
     }
-    // CS 系統特殊處理：
-    // 若在 /cs/workspace 工作台（已設定帳號），返回連結回收件匣；若在 /cs 統整頁則回 /apps
-    if (pathname.startsWith('/cs/workspace')) {
-      setHref('/cs/workspace?tab=inbox')
-      return
-    }
+    // CS 系統特殊處理：跟 OFFICE_PREFIXES 一樣的邏輯——任何 /cs 底下的頁面（工作台、
+    // 收件匣 PWA、總覽、功能介紹頁…）都應該回到 CS 的工作首頁，而不是跳出去 /apps
+    // 跨系統選單（之前只認 /cs/workspace，其餘 /cs/* 頁面點了會被送到 /apps，
+    // 在子網域架構下等於直接跳到另一個子網域，體驗很突兀）。
     if (pathname.startsWith('/cs')) {
-      setHref('/apps')
+      setHref('/cs/workspace?tab=inbox')
       return
     }
 
@@ -86,12 +84,11 @@ export function BackToMenu() {
   }, [pathname])
 
   const isCs = pathname.startsWith('/cs')
-  const isCsWorkspace = pathname.startsWith('/cs/workspace')
 
   const titleSys = isCs ? 'cs' : systemForPath(pathname)
   const titleText = titleSys ? getLocalizedSystemDef(titleSys, locale).label : 'IMT'
   const csInboxText = locale === 'vi' ? 'Quay lại Hộp thư' : locale === 'en' ? 'Back to Inbox' : '返回收件匣'
-  const subText = isCsWorkspace ? `← ${csInboxText}` : `← ${t('backToMenu')}`
+  const subText = isCs ? `← ${csInboxText}` : `← ${t('backToMenu')}`
 
   return (
     <a href={href} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
