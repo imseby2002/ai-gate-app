@@ -35,7 +35,10 @@ export default async function CsPage({
   // 完全沒有 CS 足跡的全新用戶 → 顯示行業選擇 landing
   if (!hasFootprint) return <CsLanding />
 
-  // 已設定 → 日常入口直接進收件匣。總覽卡片/快速入口搬到 /cs/dashboard，想看數字或找
-  // 其他功能的人自己點進去，不用每次進 CS 都被擋在總覽頁前面。
-  redirect('/cs/inbox')
+  // 已設定 → 日常入口直接進工作台的收件匣分頁（不是 /cs/inbox 那個給手機 PWA 安裝用的
+  // 精簡版，那個沒有側邊選單，會找不到其他功能）。/cs/workspace?tab=inbox 才是桌機平常
+  // 在用、左側有完整功能選單（平台/AI設定/知識庫/工單/…）的收件匣，也是 BackToMenu
+  // 「返回主選單」原本就認得、會導回來的目標。總覽卡片/快速入口搬到 /cs/dashboard，
+  // 想看數字或找其他功能的人自己點進去，不用每次進 CS 都被擋在總覽頁前面。
+  redirect('/cs/workspace?tab=inbox')
 }
