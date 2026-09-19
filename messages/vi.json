@@ -7480,7 +7480,9 @@
     "navLogs": "Nhật Ký",
     "navTickets": "Phiếu Hỗ Trợ",
     "navInbox": "Hộp Thư Đến",
-    "upgradePlan": "Nâng Cấp Gói"
+    "navDashboard": "Tổng Quan",
+    "upgradePlan": "Nâng Cấp Gói",
+    "navAbout": "Giới Thiệu Tính Năng"
   },
   "CsChannels": {
     "pageTitle": "Kết Nối Kênh CS",

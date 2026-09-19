@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import {
   MessageSquare, Sparkles, BookOpen, Database, Calculator,
-  FlaskConical, ClipboardList, Ticket, Inbox, Zap, Lock, ArrowLeft,
+  FlaskConical, ClipboardList, Ticket, Inbox, Zap, Lock, ArrowLeft, LayoutDashboard, Info,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { CsPlanFeatures } from '@/lib/cs/entitlements'
@@ -51,6 +51,7 @@ export function CsSideNav({
         <ArrowLeft className="h-4 w-4 shrink-0" />
         <span className="flex-1 text-left">{t('csHome')}</span>
       </a>
+      {row({ label: t('navDashboard'), icon: LayoutDashboard, href: '/cs/dashboard', isActive: active === 'dashboard' })}
       {ITEMS.map(it =>
         row({
           label: t(it.labelKey),
@@ -61,6 +62,7 @@ export function CsSideNav({
         }),
       )}
       {row({ label: t('upgradePlan'), icon: Zap, href: '/cs/plan', isActive: active === 'plan' })}
+      {row({ label: t('navAbout'), icon: Info, href: '/cs/about', isActive: active === 'about' })}
     </nav>
   )
 }

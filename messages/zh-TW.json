@@ -7573,7 +7573,9 @@
     "navLogs": "對話紀錄",
     "navTickets": "工單",
     "navInbox": "收件夾",
-    "upgradePlan": "升級方案"
+    "navDashboard": "總覽",
+    "upgradePlan": "升級方案",
+    "navAbout": "功能介紹"
   },
   "CsChannels": {
     "pageTitle": "客服頻道綁定",

@@ -7573,7 +7573,9 @@
     "navLogs": "Logs",
     "navTickets": "Tickets",
     "navInbox": "Inbox",
-    "upgradePlan": "Upgrade Plan"
+    "navDashboard": "Dashboard",
+    "upgradePlan": "Upgrade Plan",
+    "navAbout": "About"
   },
   "CsChannels": {
     "pageTitle": "CS Channel Setup",
