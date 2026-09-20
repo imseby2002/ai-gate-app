@@ -228,16 +228,17 @@ function RowsEditor({ rows, fields, onChange, addLabel }: {
   onChange: (rows: Array<Record<string, unknown>>) => void
   addLabel: string
 }) {
-  const update = (idx: number, key: string, val: unknown) => onChange(rows.map((r, i) => i === idx ? { ...r, [key]: val } : r))
-  const remove = (idx: number) => onChange(rows.filter((_, i) => i !== idx))
+  const safeRows = Array.isArray(rows) ? rows : []
+  const update = (idx: number, key: string, val: unknown) => onChange(safeRows.map((r, i) => i === idx ? { ...r, [key]: val } : r))
+  const remove = (idx: number) => onChange(safeRows.filter((_, i) => i !== idx))
   const add = () => {
     const blank: Record<string, unknown> = {}
     fields.forEach(f => { blank[f.key] = f.type === 'number' ? 0 : '' })
-    onChange([...rows, blank])
+    onChange([...safeRows, blank])
   }
   return (
     <div className="space-y-1.5">
-      {rows.map((row, idx) => (
+      {safeRows.map((row, idx) => (
         <div key={idx} className="flex items-center gap-1.5 flex-wrap bg-white border rounded-lg p-1.5">
           {fields.map(f => (
             <div key={f.key} className="flex flex-col gap-0.5">
@@ -632,7 +633,7 @@ function Unit12CustomerService({
   const [autoCloseMinutes, setAutoCloseMinutes] = useState(savedData?.autoCloseMinutes ?? 0)
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
-  const [discountGifts, setDiscountGifts] = useState<CsGiftItem[]>(savedData?.discountGifts ?? [])
+  const [discountGifts, setDiscountGifts] = useState<CsGiftItem[]>(Array.isArray(savedData?.discountGifts) ? savedData.discountGifts : [])
   const [campaignOffers, setCampaignOffers] = useState<CsCampaignOffer[]>(savedData?.campaignOffers ?? [])
   const [campaignOfferSource, setCampaignOfferSource] = useState<'cs' | 'booking' | 'both'>(savedData?.campaignOfferSource ?? 'both')
   const [editingOffer, setEditingOffer] = useState<CsCampaignOffer | null>(null)
