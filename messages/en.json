@@ -3146,6 +3146,10 @@
         "marketing": {
           "label": "Marketing Copy Analysis",
           "desc": "Copy style trends, appeal points, keywords"
+        },
+        "review_insights": {
+          "label": "Reputation Check",
+          "desc": "Analyze your own reviews for fixes and owner teams"
         }
       },
       "unit1": "Step 1 Collected Data",
