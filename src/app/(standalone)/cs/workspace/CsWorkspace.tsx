@@ -335,6 +335,15 @@ interface CsCampaignOffer {
   rulesNote: string
 }
 
+// 贈品/賠禮清單——同一份清單同時給兩種情境用：客人議價猶豫時（折扣或贈品擇一），
+// 或客人已消費/入住後客訴、不滿意時（只能給贈品當賠禮，不能再打折）。用 situation
+// 描述「什麼情況適合給這項」，AI 依當下情境自己挑最合適的一項，不用另外分兩份清單。
+interface CsGiftItem {
+  id: string
+  name: string
+  situation: string
+}
+
 interface Unit12Data {
   systemPrompt?: string
   knowledgeBase?: string
@@ -349,7 +358,7 @@ interface Unit12Data {
   autoCloseMinutes?: number
   notifyWebhooks?: NotifyWebhook[]
   discountMaxPct?: number
-  discountGifts?: string
+  discountGifts?: CsGiftItem[]
   campaignOffers?: CsCampaignOffer[]
   campaignOfferSource?: 'cs' | 'booking' | 'both'
   contactPhone1?: string
@@ -623,7 +632,7 @@ function Unit12CustomerService({
   const [autoCloseMinutes, setAutoCloseMinutes] = useState(savedData?.autoCloseMinutes ?? 0)
   const [notifyWebhooks, setNotifyWebhooks] = useState<NotifyWebhook[]>(savedData?.notifyWebhooks ?? [])
   const [discountMaxPct, setDiscountMaxPct] = useState(savedData?.discountMaxPct ?? 0)
-  const [discountGifts, setDiscountGifts] = useState(savedData?.discountGifts ?? '')
+  const [discountGifts, setDiscountGifts] = useState<CsGiftItem[]>(savedData?.discountGifts ?? [])
   const [campaignOffers, setCampaignOffers] = useState<CsCampaignOffer[]>(savedData?.campaignOffers ?? [])
   const [campaignOfferSource, setCampaignOfferSource] = useState<'cs' | 'booking' | 'both'>(savedData?.campaignOfferSource ?? 'both')
   const [editingOffer, setEditingOffer] = useState<CsCampaignOffer | null>(null)
@@ -680,7 +689,7 @@ function Unit12CustomerService({
     if (savedData.autoCloseMinutes !== undefined) setAutoCloseMinutes(savedData.autoCloseMinutes)
     if (savedData.notifyWebhooks !== undefined) setNotifyWebhooks(savedData.notifyWebhooks)
     if (savedData.discountMaxPct !== undefined) setDiscountMaxPct(savedData.discountMaxPct)
-    if (savedData.discountGifts !== undefined) setDiscountGifts(savedData.discountGifts)
+    if (Array.isArray(savedData.discountGifts)) setDiscountGifts(savedData.discountGifts)
     if (Array.isArray(savedData.campaignOffers)) setCampaignOffers(savedData.campaignOffers)
     if (savedData.campaignOfferSource) setCampaignOfferSource(savedData.campaignOfferSource)
     if (savedData.contactPhone1 !== undefined) setContactPhone1(savedData.contactPhone1)
@@ -3249,6 +3258,47 @@ function Unit12CustomerService({
               )}
             </div>
           )}
+
+          {/* 議價折扣上限 + 贈品/賠禮清單 */}
+          <div className="border border-rose-200/90 bg-rose-50/40 rounded-2xl p-4 space-y-3">
+            <div className="text-sm font-bold text-gray-800 flex items-center gap-2">
+              <span>🤝 {t('negotiationToolkitTitle')}</span>
+            </div>
+            <p className="text-xs text-gray-500">{t('negotiationToolkitDesc')}</p>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t('discountMaxPctLabel')}</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min={0} max={100}
+                  value={discountMaxPct}
+                  onChange={e => setDiscountMaxPct(Number(e.target.value))}
+                  className="w-24 text-sm border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-rose-300"
+                />
+                <span className="text-sm text-gray-500">%</span>
+                {discountMaxPct === 0 && <span className="text-xs text-gray-400">{t('discountMaxPctZeroHint')}</span>}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t('giftListLabel')}</label>
+              <RowsEditor
+                rows={discountGifts as unknown as Array<Record<string, unknown>>}
+                fields={[
+                  { key: 'name', label: t('giftNameLabel'), type: 'text', width: 'w-32' },
+                  { key: 'situation', label: t('giftSituationLabel'), type: 'text', width: 'w-56' },
+                ]}
+                onChange={rows => setDiscountGifts(rows.map((r, i) => ({
+                  id: (r.id as string) || `g${i}`,
+                  name: (r.name as string) ?? '',
+                  situation: (r.situation as string) ?? '',
+                })))}
+                addLabel={t('addGiftItem')}
+              />
+            </div>
+
+            <p className="text-[11px] text-gray-400 bg-white/70 border border-rose-100 rounded-lg p-2">{t('negotiationToolkitRule')}</p>
+          </div>
 
           {/* CS 自訂活動標題 */}
           <div className="flex items-center justify-between pt-2">

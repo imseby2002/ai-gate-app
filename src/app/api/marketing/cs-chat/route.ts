@@ -98,7 +98,7 @@ async function handlePost(req: NextRequest) {
     bookingFlows = [] as BookingFlowDef[],
     notifyWebhooks = [] as Array<{ id: string; type: 'line_messaging' | 'webhook'; label: string; value: string; target?: string }>,
     discountMaxPct = 0,
-    discountGifts = '',
+    discountGifts = [] as Array<{ id: string; name: string; situation: string }>,
     campaignOffers = [] as CsCampaignOffer[],
     campaignOfferSource = 'both' as 'cs' | 'booking' | 'both',
     imageBase64 = '',    // base64-encoded image from test panel
@@ -468,21 +468,18 @@ ${payment || '（付款方式請聯繫工作人員確認）'}
   // ── Discount authority closing toolkit ───────────────────────────────────
   let closingToolkitSection = ''
   const hasDiscount = discountMaxPct > 0
-  const giftList: string[] = String(discountGifts ?? '').split('\n').map((g: string) => g.trim()).filter(Boolean)
+  const giftList = (discountGifts ?? []) as Array<{ id: string; name: string; situation: string }>
   const hasGifts = giftList.length > 0
 
   if (hasDiscount || hasGifts) {
-    const lines = ['\n\n【促成工具箱——客人猶豫或嫌貴時才使用，每次只說一項，不一次全列】']
-    lines.push('使用時機：客人說「有點貴」「我再想想」「比較一下」「考慮看看」等猶豫訊號時主動提出')
-    lines.push('提出方式：自然融入對話，例如「我幫您申請一個小優惠，您看可以嗎？」')
-    if (hasDiscount) {
-      lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額後告知客人，若客人確認則生效）`)
-      lines.push(`折扣使用方式：「我幫您申請 ${discountMaxPct}% 的優惠，折後只需 $（重新計算），這樣可以嗎？」`)
-    }
+    const lines = ['\n\n【促成/賠禮工具箱——折扣跟贈品不會同時給，一次只選一種】']
+    lines.push('情境一・成交前客人對價格猶豫或嫌貴（例如「有點貴」「我再想想」「比較一下」「考慮看看」）：')
+    if (hasDiscount) lines.push(`可從以下擇一：折扣最多 ${discountMaxPct}% off（算出折後金額告知客人），或下面贈品挑一項情境相符的——兩者只能選一個。`)
+    else if (hasGifts) lines.push('可從下面贈品清單挑一項情境相符的送給客人。')
+    lines.push('情境二・客人已消費/入住後客訴或不開心（跟價格無關）：只能從贈品清單挑一項當賠禮，不可以打折。')
     if (hasGifts) {
-      lines.push('\n可贈送項目（從以下選一項，問客人偏好）：')
-      giftList.forEach(g => lines.push(`• ${g}`))
-      lines.push('贈品使用方式：「我幫您加送一個小禮，（項目名稱），您覺得好嗎？」')
+      lines.push('\n贈品清單（依情境挑選最合適的一項）：')
+      giftList.forEach(g => lines.push(`• ${g.name}${g.situation ? `（適用情境：${g.situation}）` : ''}`))
     }
     lines.push('\n重要：優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
     closingToolkitSection = lines.join('\n')

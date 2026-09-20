@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { Plus, Trash2, Copy, Check, Loader2, ChevronDown, ChevronUp, ExternalLink, RefreshCw } from 'lucide-react'
-import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
+import type { CsFormField, CsFormNotifyTarget, CsFormPricingRule } from '@/app/api/marketing/cs-forms/route'
 
 interface CsForm {
   id: string
@@ -16,6 +16,7 @@ interface CsForm {
   created_at: string
   available_weekdays: number[]
   confirm_before_fields: boolean
+  pricing_rules: CsFormPricingRule[]
 }
 
 // route.ts 那份是伺服器端模組（依賴 next/headers），client component 只能拿型別，
@@ -52,6 +53,17 @@ function emptyNotifyTarget(): CsFormNotifyTarget {
   return { platform: '', to: '', batchMode: 'daily', batchTime: '08:00' }
 }
 
+function emptyPricingRule(fields: CsFormField[]): CsFormPricingRule {
+  return {
+    id: Math.random().toString(36).slice(2, 9),
+    fieldId: fields.find(f => f.label.trim())?.id ?? '',
+    matchValue: '',
+    adjustmentType: 'surcharge',
+    amountType: 'fixed',
+    amount: 0,
+  }
+}
+
 const formatDateTime = (iso: string, locale: string) =>
   new Date(iso).toLocaleString(locale === 'vi' ? 'vi-VN' : locale === 'en' ? 'en-US' : 'zh-TW')
 
@@ -76,6 +88,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
   const [notifyTarget, setNotifyTarget] = useState<CsFormNotifyTarget>(emptyNotifyTarget())
   const [availableWeekdays, setAvailableWeekdays] = useState<number[]>(ALL_WEEKDAYS)
   const [confirmBeforeFields, setConfirmBeforeFields] = useState(true)
+  const [pricingRules, setPricingRules] = useState<CsFormPricingRule[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -94,7 +107,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
 
   const resetEditor = () => {
     setName(''); setFields([emptyField()]); setTriggerKeywords(''); setNotifyTarget(emptyNotifyTarget())
-    setAvailableWeekdays(ALL_WEEKDAYS); setConfirmBeforeFields(true)
+    setAvailableWeekdays(ALL_WEEKDAYS); setConfirmBeforeFields(true); setPricingRules([])
     setError(''); setEditingId(null); setCreating(false)
   }
 
@@ -106,6 +119,7 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     setNotifyTarget(f.notify_target?.platform !== undefined ? f.notify_target : emptyNotifyTarget())
     setAvailableWeekdays(f.available_weekdays?.length ? f.available_weekdays : ALL_WEEKDAYS)
     setConfirmBeforeFields(f.confirm_before_fields !== false)
+    setPricingRules(f.pricing_rules ?? [])
     setError(''); setEditingId(f.id); setCreating(false)
   }
 
@@ -120,7 +134,8 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
     if (!availableWeekdays.length) { setError(t('errAtLeastOneWeekday')); return }
     setSaving(true); setError('')
     try {
-      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays, confirmBeforeFields }
+      const cleanRules = pricingRules.filter(r => r.fieldId && r.matchValue.trim() && r.amount)
+      const body = { name: name.trim(), fields: cleanFields, triggerKeywords, notifyTarget, industry, availableWeekdays, confirmBeforeFields, pricingRules: cleanRules }
       const res = editingId
         ? await fetch(`/api/marketing/cs-forms/${editingId}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
@@ -259,6 +274,57 @@ export function CsFormsPanel({ industry, appUrl }: { industry: string; appUrl: s
             <button onClick={() => setFields(prev => [...prev, emptyField()])}
               className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
               <Plus className="h-3 w-3" />{t('addField')}
+            </button>
+          </div>
+
+          <div className="space-y-2 border rounded-lg p-2.5 bg-white">
+            <label className="block text-xs font-medium text-gray-500">{t('pricingRulesLabel')}</label>
+            <p className="text-[11px] text-gray-400">{t('pricingRulesDesc')}</p>
+            {pricingRules.map((r, idx) => (
+              <div key={r.id} className="border rounded-lg p-2 space-y-1.5 bg-gray-50/50">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <select value={r.fieldId}
+                    onChange={e => setPricingRules(prev => prev.map((x, i) => i === idx ? { ...x, fieldId: e.target.value } : x))}
+                    className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs">
+                    {fields.filter(f => f.label.trim()).map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                  </select>
+                  <span className="text-[11px] text-gray-400">{t('pricingRuleContains')}</span>
+                  <input value={r.matchValue}
+                    onChange={e => setPricingRules(prev => prev.map((x, i) => i === idx ? { ...x, matchValue: e.target.value } : x))}
+                    placeholder={t('pricingRuleMatchPlaceholder')}
+                    className="flex-1 min-w-[100px] rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
+                  <button onClick={() => setPricingRules(prev => prev.filter((_, i) => i !== idx))}
+                    className="text-gray-400 hover:text-red-500 shrink-0">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <select value={r.adjustmentType}
+                    onChange={e => setPricingRules(prev => prev.map((x, i) => i === idx ? { ...x, adjustmentType: e.target.value as CsFormPricingRule['adjustmentType'] } : x))}
+                    className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs">
+                    <option value="surcharge">{t('pricingRuleSurcharge')}</option>
+                    <option value="discount">{t('pricingRuleDiscount')}</option>
+                  </select>
+                  <input type="number" min={0} value={r.amount}
+                    onChange={e => setPricingRules(prev => prev.map((x, i) => i === idx ? { ...x, amount: Number(e.target.value) } : x))}
+                    className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-xs" />
+                  <select value={r.amountType}
+                    onChange={e => setPricingRules(prev => prev.map((x, i) => i === idx ? { ...x, amountType: e.target.value as CsFormPricingRule['amountType'] } : x))}
+                    className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs">
+                    <option value="fixed">{t('pricingRuleFixed')}</option>
+                    <option value="percent">{t('pricingRulePercent')}</option>
+                  </select>
+                  <input value={r.note ?? ''}
+                    onChange={e => setPricingRules(prev => prev.map((x, i) => i === idx ? { ...x, note: e.target.value } : x))}
+                    placeholder={t('pricingRuleNotePlaceholder')}
+                    className="flex-1 min-w-[100px] rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:outline-none focus:border-gray-500" />
+                </div>
+              </div>
+            ))}
+            <button onClick={() => setPricingRules(prev => [...prev, emptyPricingRule(fields)])}
+              disabled={!fields.some(f => f.label.trim())}
+              className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 disabled:opacity-40">
+              <Plus className="h-3 w-3" />{t('addPricingRule')}
             </button>
           </div>
 
