@@ -534,6 +534,43 @@ async function maybeCreateInvoiceTicket(
   } catch { /* 不中斷主流程 */ }
 }
 
+// 每累積幾則對話才重新生成一次客戶摘要，不必每則訊息都多花一次 AI 呼叫
+const CUSTOMER_SUMMARY_INTERVAL = 5
+
+// ── 客戶摘要自動更新 ─────────────────────────────────────────────────────
+// cs_customers.summary 欄位本來就會被 buildSellSection() 讀出來注入 AI prompt，
+// 變成「回頭客背景：『...』，勿重問已知資訊」，但過去完全沒有任何地方會寫入這個
+// 欄位——沒有自動摘要、也沒有客服手動編輯介面，等於這個個人化機制形同虛設。這裡
+// 每累積 CUSTOMER_SUMMARY_INTERVAL 則對話，用 AI 重新統整一次摘要並寫回：內容
+// 除了「已知資訊」（讓客服/AI 不用重問），也整理「這位客人可能感興趣的方向」，
+// 供之後主動推廣時參考——不限特定行業，內容完全依實際對話生成，看不出來就不寫。
+async function maybeUpdateCustomerSummary(
+  userId: string, platform: string, customerId: string, industry: string,
+  history: HistoryMsg[], previousSummary: string | null,
+): Promise<void> {
+  const geminiKey = process.env.GOOGLE_AI_API_KEY
+  if (!geminiKey) return
+  try {
+    const conversation = history.slice(-40)
+      .map(m => `${m.role === 'user' ? '客戶' : 'AI客服'}：${m.content}`)
+      .join('\n')
+    if (!conversation.trim()) return
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+    const { text: summaryText } = await generateText({
+      model: google('gemini-3.1-flash-lite'),
+      messages: [{
+        role: 'user',
+        content: `你是客服系統的客戶側寫助理。以下是與同一位客人累積至今的對話紀錄，請統整成一段簡短的客戶背景摘要（100字以內，繁體中文，不分點、不加標題），內容包含：已經確認過的個人偏好/需求/身份資訊（讓客服下次不用重問），以及這位客人可能感興趣、適合主動推廣的方向（如果從對話看得出來的話）。看不出偏好或推廣方向就不要瞎猜，只寫確定看得出來的部分。\n\n${previousSummary ? `先前的摘要：「${previousSummary}」\n\n` : ''}對話紀錄：\n${conversation}`,
+      }],
+    })
+    const summary = summaryText.trim().slice(0, 300)
+    if (!summary) return
+    await getServiceClient().from('cs_customers')
+      .update({ summary, updated_at: new Date().toISOString() })
+      .eq('user_id', userId).eq('platform', platform).eq('from_id', customerId).eq('industry', industry)
+  } catch { /* 摘要生成失敗不影響主流程，下次累積到門檻再試一次 */ }
+}
+
 // Build the next history array; only record the assistant turn when the bot actually replied
 function withTurn(history: HistoryMsg[], text: string, reply: string): HistoryMsg[] {
   const h: HistoryMsg[] = [...history, { role: 'user', content: text }]
@@ -864,18 +901,27 @@ async function replyToCustomer(
     if (convoPriceAsks >= 2) stage = 'negotiating'
     else if (isPriceAskNow) stage = 'quoted'
     else if (stage === 'new') stage = 'inquiring'
+    const newMessageCount = (cust?.message_count ?? 0) + 1
     await getServiceClient().from('cs_customers').upsert({
       user_id: userId, platform, from_id: customerId, industry: knowledge.industry,
       name: fromName || cust?.name || null,
       stage,
       price_ask_count: (cust?.price_ask_count ?? 0) + (isPriceAskNow ? 1 : 0),
-      message_count: (cust?.message_count ?? 0) + 1,
+      message_count: newMessageCount,
       summary: cust?.summary ?? null,
       discount_offered_at: cust?.discount_offered_at ?? (discountJustOffered ? new Date().toISOString() : null),
       facts: cust?.facts ?? {},
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,platform,from_id,industry' })
+
+    if (newMessageCount % CUSTOMER_SUMMARY_INTERVAL === 0) {
+      void maybeUpdateCustomerSummary(
+        userId, platform, customerId, knowledge.industry,
+        [...history, { role: 'user', content: text }, { role: 'assistant', content: reply }],
+        cust?.summary ?? null,
+      )
+    }
   } catch { /* 表可能尚未建立 */ }
 
   return reply
