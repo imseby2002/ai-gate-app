@@ -65,7 +65,13 @@ export async function GET(req: NextRequest) {
         })
       }
     }
-    return NextResponse.json({ bubbles, takeover: takeoverSet.has(to) })
+    const { data: custRow } = await supabase
+      .from('cs_customers')
+      .select('summary')
+      .eq('user_id', ctx.ownerId).eq('platform', platform).eq('from_id', to).eq('industry', industry)
+      .maybeSingle()
+
+    return NextResponse.json({ bubbles, takeover: takeoverSet.has(to), summary: custRow?.summary ?? null })
   }
 
   // ── 對話清單 ────────────────────────────────────────────────────────────────

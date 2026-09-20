@@ -62,6 +62,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [active, setActive] = useState<Conversation | null>(null)
   const [bubbles, setBubbles] = useState<Bubble[]>([])
   const [takeover, setTakeover] = useState(false)
+  const [customerSummary, setCustomerSummary] = useState<string | null>(null)
   const [loadingThread, setLoadingThread] = useState(false)
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
@@ -86,6 +87,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
       const data = await res.json()
       setBubbles(data.bubbles ?? [])
       setTakeover(!!data.takeover)
+      setCustomerSummary(data.summary ?? null)
     } catch { /* ignore */ }
     finally { if (!silent) setLoadingThread(false) }
   }, [industry])
@@ -114,6 +116,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     setActive(c)
     setBubbles([])
     setErr(null)
+    setCustomerSummary(null)
     loadThread(c)
   }
 
@@ -318,6 +321,14 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                     )}
                   </button>
                 </div>
+
+                {/* 客戶摘要（AI 依對話累積自動生成，非即時） */}
+                {customerSummary && (
+                  <div className="px-4 py-2 border-b bg-violet-50/60 dark:bg-violet-950/30 text-[11px] text-violet-800 dark:text-violet-300 flex items-start gap-1.5">
+                    <span className="shrink-0">📝</span>
+                    <span className="line-clamp-2">{customerSummary}</span>
+                  </div>
+                )}
 
                 {/* 訊息串 */}
                 <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
