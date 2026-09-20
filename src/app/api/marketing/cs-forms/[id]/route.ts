@@ -41,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if ('enabled' in body) patch.enabled = body.enabled
   if ('availableWeekdays' in body) patch.available_weekdays = body.availableWeekdays
   if ('confirmBeforeFields' in body) patch.confirm_before_fields = body.confirmBeforeFields
+  if ('pricingRules' in body) patch.pricing_rules = body.pricingRules
   patch.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase

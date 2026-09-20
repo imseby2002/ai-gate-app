@@ -21,7 +21,7 @@ import { queryBnbCheckin, checkBeforeCheckin, queryBookingByGuestName, queryBook
 import { getCsEntitlements } from '@/lib/cs/entitlements'
 import { generateCsReplyL2, generateCsReplyL3, generateCsReplySearch, IMAGE_DOWNGRADE_REPLY, notifyOwnerUpgradeNudge } from '@/lib/cs/csReply'
 import { findLatestPendingApproval, resumeRunAfterApproval } from '@/lib/agents/approvals'
-import type { CsFormField, CsFormNotifyTarget } from '@/app/api/marketing/cs-forms/route'
+import type { CsFormField, CsFormNotifyTarget, CsFormPricingRule } from '@/app/api/marketing/cs-forms/route'
 import { formatFormSubmission, notifyFormSubmission } from '@/lib/cs/formNotify'
 import { isFormAvailableToday } from '@/lib/cs/formSchedule'
 import { resolveTodaySubmission, verifyRoomCheckedInToday } from '@/lib/cs/formSubmitGuard'
@@ -863,6 +863,15 @@ interface CsChatForm {
   trigger_keywords: string
   notify_target: CsFormNotifyTarget
   confirm_before_fields: boolean
+  pricing_rules: CsFormPricingRule[]
+}
+
+// 贈品/賠禮清單——同一份清單同時給兩種情境用：客人議價猶豫時（折扣或贈品擇一），
+// 或客人已消費/入住後客訴、不滿意時（只能給贈品當賠禮，不能再打折）。
+export interface CsGiftItem {
+  id: string
+  name: string
+  situation: string
 }
 
 export interface CsCampaignOffer {
@@ -889,7 +898,7 @@ interface CsKnowledge {
   bookingFlows: BookingFlowDef[]
   industry: string
   discountMaxPct: number
-  discountGifts: string
+  discountGifts: CsGiftItem[]
   pricingConfigs: PricingConfig[]
   csForms: CsChatForm[]
   corrections: string
@@ -921,7 +930,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   let paymentInfo = ''
   let bookingFlows: BookingFlowDef[] = []
   let discountMaxPct = 0
-  let discountGifts = ''
+  let discountGifts: CsGiftItem[] = []
   let notifyWebhooks: NotifyWebhook[] = []
   let contactPhone1 = ''
   let contactPhone2 = ''
@@ -967,7 +976,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
         if (unit12.paymentInfo) paymentInfo = String(unit12.paymentInfo)
         if (Array.isArray(unit12.bookingFlows)) bookingFlows = unit12.bookingFlows as BookingFlowDef[]
         if (typeof unit12.discountMaxPct === 'number') discountMaxPct = unit12.discountMaxPct
-        if (unit12.discountGifts) discountGifts = String(unit12.discountGifts)
+        if (Array.isArray(unit12.discountGifts)) discountGifts = unit12.discountGifts as CsGiftItem[]
         if (Array.isArray(unit12.notifyWebhooks)) notifyWebhooks = unit12.notifyWebhooks as NotifyWebhook[]
         if (unit12.contactPhone1) contactPhone1 = String(unit12.contactPhone1)
         if (unit12.contactPhone2) contactPhone2 = String(unit12.contactPhone2)
@@ -1023,7 +1032,7 @@ async function loadCsKnowledge(userId: string): Promise<CsKnowledge> {
   // 別的表單/別的通知對象」，就建多個表單、各自設定開放星期即可）
   const { data: formRows } = await supabase
     .from('cs_forms')
-    .select('id, name, slug, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields')
+    .select('id, name, slug, fields, trigger_keywords, notify_target, available_weekdays, confirm_before_fields, pricing_rules')
     .eq('user_id', userId)
     .eq('enabled', true)
     .neq('trigger_keywords', '')
@@ -1278,7 +1287,7 @@ async function queryDataSources(userId: string, message: string, bookingFlowEnab
 async function buildSalesContext(
   userId: string,
   discountMaxPct: number,
-  discountGifts: string,
+  discountGifts: CsGiftItem[],
   discountAlreadyOffered: boolean,
   campaignOffers?: CsCampaignOffer[],
   campaignOfferSource: 'cs' | 'booking' | 'both' = 'both',
@@ -1394,17 +1403,21 @@ async function buildSalesContext(
   // AI 依規則兩次都各自送出一次優惠（折價券 + 再折現金），把整趟行程的利潤折光，
   // 因為規則本身沒有記錄「這次對話是否已經給過優惠」。現在用 cs_customers.discount_offered_at
   // 這個實際欄位擋住第二次，而不是只靠提示詞叫 AI 自己記得。
-  const giftList = (discountGifts ?? '').split('\n').map(g => g.trim()).filter(Boolean)
+  const giftList = discountGifts ?? []
   if (discountMaxPct > 0 || giftList.length) {
     if (discountAlreadyOffered) {
-      sections.push('【促成工具箱——這位客人這次對話已經拿過優惠了】絕對不可以再提供任何折扣或贈品，就算客人又表達不滿或抱怨也一樣；只能同理客戶的感受、用非金錢方式回應（例如強調品質、服務保證、解答疑慮），不要提到「已經用完優惠額度」這類會讓客人追問的說法，自然地把話題帶回行程本身。')
+      sections.push('【促成/賠禮工具箱——這位客人這次對話已經拿過優惠或贈品了】絕對不可以再提供任何折扣或贈品，就算客人又表達不滿或抱怨也一樣；只能同理客戶的感受、用非金錢方式回應（例如強調品質、服務保證、解答疑慮），不要提到「已經用完優惠額度」這類會讓客人追問的說法，自然地把話題帶回行程本身。')
     } else {
-      const lines = ['【促成工具箱——客人猶豫或嫌貴時才使用，整個對話最多主動提供一次，用過就不能再用】']
-      lines.push('使用時機：客人第一次表現出價格猶豫或不滿就要主動提出，不要等客人講第二次才給——包括但不限於「有點貴」「我再想想」「考慮看看」「太貴了」「能不能便宜一點」「以前/之前訂比較便宜」「怎麼差那麼多」「別家比較便宜」等任何對價格表達疑慮或比較的說法，只要客人在問完價格後表達了「不滿意/意外/猶豫」的情緒，就算沒有用到上面例句的字眼，也要主動提出優惠，不要只顧著解釋定價邏輯而不提供優惠')
-      if (discountMaxPct > 0) lines.push(`\n可提供折扣：最多 ${discountMaxPct}% off（算出折後金額告知客人，客人確認則生效）`)
-      if (giftList.length) { lines.push('\n可贈送項目（從以下選一項，問客人偏好）：'); giftList.forEach(g => lines.push(`• ${g}`)) }
+      const giftLines = giftList.length
+        ? giftList.map(g => `• ${g.name}${g.situation ? `（適用情境：${g.situation}）` : ''}`).join('\n')
+        : ''
+      const lines = ['【促成/賠禮工具箱——整個對話最多主動提供一次，用過就不能再用；折扣跟贈品絕對不會同時給，一次只能選一種】']
+      lines.push('\n情境一・成交前客人對價格猶豫或嫌貴：客人第一次表現出價格猶豫或不滿就要主動提出，不要等客人講第二次才給——包括但不限於「有點貴」「我再想想」「考慮看看」「太貴了」「能不能便宜一點」「以前/之前訂比較便宜」「怎麼差那麼多」「別家比較便宜」等任何對價格表達疑慮或比較的說法，只要客人在問完價格後表達了「不滿意/意外/猶豫」的情緒，就算沒有用到上面例句的字眼，也要主動提出優惠，不要只顧著解釋定價邏輯而不提供優惠。')
+      if (discountMaxPct > 0) lines.push(`可從以下擇一提供：折扣最多 ${discountMaxPct}% off（算出折後金額告知客人，客人確認則生效），或下面贈品清單中情境相符的一項——兩者只能選一個，不可以「折扣完再送贈品」或「送贈品又打折」。`)
+      else if (giftList.length) lines.push('可從下面贈品清單中挑一項情境相符的送給客人。')
+      if (giftList.length) { lines.push('\n情境二・客人已完成消費／入住後客訴或表達不開心（跟價格無關，是抱怨體驗、服務、房況等）：客人已經付款/入住，不適用折扣，只能從下面贈品清單挑一項情境最相符的當賠禮致歉，絕對不可以提供折扣。'); lines.push('\n贈品清單（依情境描述挑選最合適的一項，沒有完全符合的情境也可挑最接近的）：'); lines.push(giftLines) }
       lines.push('\n優惠確認後必須在最終訂單確認清單中標注（例：含免費早餐 / 享9折優惠）')
-      lines.push('\n【重要】這個優惠整個對話只能主動提供一次——一旦你在這則回覆裡真的提出折扣或贈品，就要在回覆最後另起一行，原樣輸出（客人看不到，系統會自動移除）：\n<<<DISCOUNT_OFFERED>>>\n如果只是在解釋定價、還沒有真正給出優惠，就不要輸出這行。')
+      lines.push('\n【重要】上面兩種情境合計整個對話只能觸發一次——一旦你在這則回覆裡真的提出折扣或贈品（不論是情境一或情境二），就要在回覆最後另起一行，原樣輸出（客人看不到，系統會自動移除）：\n<<<DISCOUNT_OFFERED>>>\n如果只是在解釋定價、同理客人感受，還沒有真正給出優惠或贈品，就不要輸出這行。')
       sections.push(lines.join('\n'))
     }
   }
@@ -1548,7 +1561,18 @@ function buildFormsSection(forms: CsChatForm[]): string {
       ? `開始問欄位之前：如果同一件事上方知識庫另外還列了其他替代方案或選項（例如同一個需求有兩種不同的滿足方式），要先把選項列給客人選、確認客人明確選的是這個表單對應的方案，才能開始依序問欄位；客人選的是其他替代方案，就依知識庫內容回答，不要問這裡的欄位。如果知識庫沒有列出替代方案，可以直接開始問欄位，不用多問一輪。`
       : `這個表單不用先確認替代方案，客人提到觸發字詞就可以直接依序開始問下面的欄位。`
     const linkNote = appUrl ? `這個表單的公開填寫連結是：${appUrl}/f/${f.slug}——客人如果想要自己點連結填寫（而不是在對話裡一題一題回答），或明確要求「給我連結/網址」，可以直接照抄提供這個連結，不用只靠對話問欄位這一種方式。` : ''
-    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}${linkNote ? `\n${linkNote}` : ''}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}`
+    const rules = f.pricing_rules ?? []
+    const pricingNote = rules.length
+      ? '\n這個表單的價格調整規則（欄位答案符合條件時，算總價要照著加價或折扣，多條都符合就依序全部套用）：\n' +
+        rules.map(r => {
+          const field = f.fields.find(fd => fd.id === r.fieldId)
+          const fieldLabel = field?.label ?? r.fieldId
+          const verb = r.adjustmentType === 'surcharge' ? '加價' : '折扣'
+          const amountStr = r.amountType === 'percent' ? `${r.amount}%` : `$${r.amount.toLocaleString()}`
+          return `  - 當「${fieldLabel}」的回答包含「${r.matchValue}」時，${verb} ${amountStr}${r.note ? `（${r.note}）` : ''}`
+        }).join('\n')
+      : ''
+    return `【表單：${f.name}】(formId="${f.id}")\n觸發：客人提到「${kws}」等字詞時可能想使用這個表單。${confirmNote}${linkNote ? `\n${linkNote}` : ''}\n一次只問一個欄位，已回答的不要重複問：\n${fieldLines}${pricingNote}`
   }).join('\n\n')
 
   // 真實案例：早餐表單「房號」欄位是下拉選單（列出 5 個房型），客人整棟包下、

@@ -14,6 +14,19 @@ export interface CsFormField {
   required: boolean
 }
 
+// 依表單欄位答案觸發的加價/折扣規則（例：早餐表單選「東側房型」多收 100 元、
+// 賞鯨表單選「平日」折抵 100 元）。matchValue 用「答案包含這段文字」比對，
+// 不要求完全相等，客人回答用詞不一定跟選項一模一樣。
+export interface CsFormPricingRule {
+  id: string
+  fieldId: string
+  matchValue: string
+  adjustmentType: 'discount' | 'surcharge'
+  amountType: 'percent' | 'fixed'
+  amount: number
+  note?: string
+}
+
 export interface CsFormNotifyTarget {
   platform: 'line' | 'email' | 'webhook' | 'telegram' | ''
   to: string            // LINE：使用者或群組 id；email：收件地址；webhook：目標網址（例如既有的 Google Apps Script）；telegram：Chat ID（個人或群組）
@@ -56,7 +69,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { name, fields, triggerKeywords = '', notifyTarget, industry = 'homestay', availableWeekdays, confirmBeforeFields } = body
+  const { name, fields, triggerKeywords = '', notifyTarget, industry = 'homestay', availableWeekdays, confirmBeforeFields, pricingRules } = body
 
   if (!name?.trim()) return NextResponse.json({ error: '表單名稱不可為空' }, { status: 400 })
   if (!Array.isArray(fields) || !fields.length) return NextResponse.json({ error: '至少需要一個欄位' }, { status: 400 })
@@ -82,6 +95,7 @@ export async function POST(req: NextRequest) {
       notify_target: notifyTarget ?? {},
       available_weekdays: weekdays,
       confirm_before_fields: confirmBeforeFields !== false,
+      pricing_rules: Array.isArray(pricingRules) ? pricingRules : [],
     })
     .select()
     .single()
