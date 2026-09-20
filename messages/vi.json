@@ -3053,6 +3053,10 @@
         "marketing": {
           "label": "Phân tích nội dung tiếp thị",
           "desc": "Xu hướng phong cách, điểm thu hút, từ khóa"
+        },
+        "review_insights": {
+          "label": "Khám sức khỏe thương hiệu",
+          "desc": "Phân tích đánh giá của chính bạn, đề xuất cải thiện & bộ phận phụ trách"
         }
       },
       "unit1": "Bước 1 Thu thập thông tin",

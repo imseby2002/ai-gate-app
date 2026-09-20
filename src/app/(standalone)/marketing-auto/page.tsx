@@ -829,7 +829,7 @@ function Unit2CompanyData({
 
 // ─── Unit 3: 分析資料 ─────────────────────────────────────────────────────────
 
-type AnalysisType = 'swot' | 'company' | 'competitor_activity' | 'competitor_performance' | 'content' | 'marketing'
+type AnalysisType = 'swot' | 'company' | 'competitor_activity' | 'competitor_performance' | 'content' | 'marketing' | 'review_insights'
 
 interface Unit3Data {
   types?: AnalysisType[]
@@ -841,6 +841,7 @@ interface Unit3Data {
 const ANALYSIS_TYPE_DEFS: { id: AnalysisType }[] = [
   { id: 'swot' }, { id: 'company' }, { id: 'competitor_activity' },
   { id: 'competitor_performance' }, { id: 'content' }, { id: 'marketing' },
+  { id: 'review_insights' },
 ]
 
 function Unit3Analyze({
