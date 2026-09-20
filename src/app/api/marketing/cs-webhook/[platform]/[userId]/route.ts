@@ -1738,6 +1738,14 @@ const SENSITIVE_REVEAL_RE = /(密碼|房號|門鎖代碼)[：:是為]?\s*([A-Za-
 // 錢），只能來自這次真的查到的訂單資料；目前系統本來就沒有訂金/餘額查詢功能，等於這類
 // 宣告一律會被攔截，逼 AI 老實說查無明細，而不是自己算一個數字出來。
 const BALANCE_REVEAL_RE = /(餘款|尾款|剩餘款項|餘額|差額)[：:是為約]{0,2}\s*(?:NT\$|NTD\$?|\$)?\s*([\d,]{2,10})\s*元?/g
+// 真實案例：客人傳 Trip 訂單截圖，訂單號因平台顯示給客人與給業者不同而查無資料，系統
+// 已經在查詢結果裡明講「查無資料、嚴禁提供或捏造」，AI 卻整句無視，自己說「已核對到您
+// 的訂房紀錄」，還編了一個「權限有限無法查密碼」的藉口，讓客人以為身份已經核對過、只是
+// 密碼要等真人才能給——但密碼其實早就在系統裡，客人也從沒被問過姓名是否正確。這種「宣稱
+// 已核對身份」的話術不會出現在系統真正查到資料的模板裡（成功一律是「找到訂單」「找到
+// 旅客」「找到 N 筆」這類字眼，見 checkin-lookup.ts），下方查詢結果沒有出現任何「找到」
+// 字樣時，AI 卻講出「已核對/已找到」這類確認話術，一律視為捏造身份核對結果。
+const FAKE_CONFIRMATION_RE = /已(?:核對|查(?:到|詢)到|找到)/
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
 const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂金與餘額明細，我已經幫您通知管家人工核對，確認後會盡快回覆您正確的金額，謝謝您的耐心等候。'
 
@@ -1773,6 +1781,9 @@ async function enforceNoFabricatedReveal(
   userId: string, platform: string, customerId: string, industry: string, lastMessage: string,
   notifyWebhooks: NotifyWebhook[] = [],
 ): Promise<string> {
+  if (FAKE_CONFIRMATION_RE.test(reply) && !externalDataSection.includes('找到')) {
+    return NO_FABRICATION_FALLBACK
+  }
   const idMatches = [...reply.matchAll(SENSITIVE_REVEAL_RE)]
   const balanceMatches = [...reply.matchAll(BALANCE_REVEAL_RE)]
   if (!idMatches.length && !balanceMatches.length) return reply
@@ -2069,14 +2080,30 @@ async function getAIReply(
           if (clue?.order_number) {
             currentLookupKind = 'order'
             const bnbResult = await queryBnbCheckin(getServiceClient(), userId, clue.order_number)
-            currentLookupFailed = !bnbResult
             // 圖片辨識出的訂單號終究是 AI 視覺模型的猜測，不是客人自己打的——即使剛好比對到
             // 系統裡一筆真實存在的訂單，也可能是別人的訂單截圖，查到資料一律先跟客人核對
             // 身份（見 wrapImageDerivedResultForConfirm），不能直接把密碼給出去。
-            const bnb = bnbResult
-              ? wrapImageDerivedResultForConfirm(bnbResult)
-              : `【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}`
-            externalDataSection = `\n\n${bnb}${externalDataSection}`
+            if (bnbResult) {
+              currentLookupFailed = false
+              externalDataSection = `\n\n${wrapImageDerivedResultForConfirm(bnbResult)}${externalDataSection}`
+            } else if (clue.guest_name) {
+              // 訂單號查無資料時不能就此放棄——真實案例：Trip 這類平台顯示給客人的訂單號
+              // 跟同步給業者的訂單號本來就不同，會系統性地查無資料，但圖片裡通常同時印著
+              // 旅客姓名，改用姓名再查一次才查得到，而不是讓 AI 在「查無資料」的提示下自己
+              // 編一個「已核對到您的訂房紀錄」的話術搪塞客人。
+              currentLookupKind = 'name'
+              const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'))
+              if (byName) {
+                currentLookupFailed = byName.includes('查無')
+                externalDataSection = `\n\n${wrapImageDerivedResultForConfirm(byName)}${externalDataSection}`
+              } else {
+                currentLookupFailed = true
+                externalDataSection = `\n\n【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}${externalDataSection}`
+              }
+            } else {
+              currentLookupFailed = true
+              externalDataSection = `\n\n【入住資訊查詢結果】\n查無訂單「${clue.order_number}」的資料。\n${noDataFoundSuffix('訂房姓名或手機號碼')}${externalDataSection}`
+            }
           } else if (clue?.guest_name) {
             currentLookupKind = 'name'
             const byName = await queryBookingByGuestName(getServiceClient(), userId, clue.guest_name, google('gemini-3.1-flash-lite'))
