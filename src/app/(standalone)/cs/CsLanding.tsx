@@ -42,40 +42,40 @@ export function CsLanding() {
       titleKey: 'fg_ai_title' as TKey,
       color: 'text-violet-700',
       features: [
-        { icon: Sparkles,     labelKey: 'fg_ai_intent_label' as TKey,          descKey: 'fg_ai_intent_desc' as TKey },
-        { icon: Languages,    labelKey: 'fg_ai_lang_label' as TKey,            descKey: 'fg_ai_lang_desc' as TKey },
-        { icon: FileText,     labelKey: 'fg_ai_draft_label' as TKey,           descKey: 'fg_ai_draft_desc' as TKey },
-        { icon: MessageSquare,labelKey: 'fg_ai_summary_label' as TKey,         descKey: 'fg_ai_summary_desc' as TKey },
+        { icon: Sparkles,     labelKey: 'fg_ai_intent_label' as TKey,          descKey: 'fg_ai_intent_desc' as TKey,   live: true },
+        { icon: Languages,    labelKey: 'fg_ai_lang_label' as TKey,            descKey: 'fg_ai_lang_desc' as TKey,     live: true },
+        { icon: FileText,     labelKey: 'fg_ai_draft_label' as TKey,           descKey: 'fg_ai_draft_desc' as TKey,    live: false },
+        { icon: MessageSquare,labelKey: 'fg_ai_summary_label' as TKey,         descKey: 'fg_ai_summary_desc' as TKey,  live: false },
       ],
     },
     {
       titleKey: 'fg_analytics_title' as TKey,
       color: 'text-blue-700',
       features: [
-        { icon: BarChart3,    labelKey: 'fg_analytics_report_label' as TKey,   descKey: 'fg_analytics_report_desc' as TKey },
-        { icon: TrendingUp,   labelKey: 'fg_analytics_trend_label' as TKey,    descKey: 'fg_analytics_trend_desc' as TKey },
-        { icon: Search,       labelKey: 'fg_analytics_hot_label' as TKey,      descKey: 'fg_analytics_hot_desc' as TKey },
-        { icon: Star,         labelKey: 'fg_analytics_survey_label' as TKey,   descKey: 'fg_analytics_survey_desc' as TKey },
+        { icon: BarChart3,    labelKey: 'fg_analytics_report_label' as TKey,   descKey: 'fg_analytics_report_desc' as TKey, live: false },
+        { icon: TrendingUp,   labelKey: 'fg_analytics_trend_label' as TKey,    descKey: 'fg_analytics_trend_desc' as TKey,  live: false },
+        { icon: Search,       labelKey: 'fg_analytics_hot_label' as TKey,      descKey: 'fg_analytics_hot_desc' as TKey,    live: false },
+        { icon: Star,         labelKey: 'fg_analytics_survey_label' as TKey,   descKey: 'fg_analytics_survey_desc' as TKey, live: false },
       ],
     },
     {
       titleKey: 'fg_crm_title' as TKey,
       color: 'text-emerald-700',
       features: [
-        { icon: Users,        labelKey: 'fg_crm_vip_label' as TKey,            descKey: 'fg_crm_vip_desc' as TKey },
-        { icon: AlertTriangle,labelKey: 'fg_crm_churn_label' as TKey,          descKey: 'fg_crm_churn_desc' as TKey },
-        { icon: ShoppingCart, labelKey: 'fg_crm_order_label' as TKey,          descKey: 'fg_crm_order_desc' as TKey },
-        { icon: Ticket,       labelKey: 'fg_crm_ticket_label' as TKey,         descKey: 'fg_crm_ticket_desc' as TKey },
+        { icon: Users,        labelKey: 'fg_crm_vip_label' as TKey,            descKey: 'fg_crm_vip_desc' as TKey,     live: false },
+        { icon: AlertTriangle,labelKey: 'fg_crm_churn_label' as TKey,          descKey: 'fg_crm_churn_desc' as TKey,   live: false },
+        { icon: ShoppingCart, labelKey: 'fg_crm_order_label' as TKey,          descKey: 'fg_crm_order_desc' as TKey,   live: true },
+        { icon: Ticket,       labelKey: 'fg_crm_ticket_label' as TKey,         descKey: 'fg_crm_ticket_desc' as TKey,  live: true },
       ],
     },
     {
       titleKey: 'fg_int_title' as TKey,
       color: 'text-orange-700',
       features: [
-        { icon: Inbox,        labelKey: 'fg_int_inbox_label' as TKey,          descKey: 'fg_int_inbox_desc' as TKey },
-        { icon: Database,     labelKey: 'fg_int_kb_label' as TKey,             descKey: 'fg_int_kb_desc' as TKey },
-        { icon: Calculator,   labelKey: 'fg_int_pricing_label' as TKey,        descKey: 'fg_int_pricing_desc' as TKey },
-        { icon: Clock,        labelKey: 'fg_int_close_label' as TKey,          descKey: 'fg_int_close_desc' as TKey },
+        { icon: Inbox,        labelKey: 'fg_int_inbox_label' as TKey,          descKey: 'fg_int_inbox_desc' as TKey,   live: true },
+        { icon: Database,     labelKey: 'fg_int_kb_label' as TKey,             descKey: 'fg_int_kb_desc' as TKey,      live: false },
+        { icon: Calculator,   labelKey: 'fg_int_pricing_label' as TKey,        descKey: 'fg_int_pricing_desc' as TKey, live: true },
+        { icon: Clock,        labelKey: 'fg_int_close_label' as TKey,          descKey: 'fg_int_close_desc' as TKey,   live: false },
       ],
     },
   ]
@@ -199,13 +199,13 @@ export function CsLanding() {
                   const Icon = f.icon
                   return (
                     <div key={f.labelKey} className="flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 bg-green-50">
-                        <Icon className="h-3.5 w-3.5 text-green-600" />
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${f.live ? 'bg-green-50' : 'bg-gray-100'}`}>
+                        <Icon className={`h-3.5 w-3.5 ${f.live ? 'text-green-600' : 'text-gray-400'}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-gray-800">{t(f.labelKey)}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">{t('live')}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${f.live ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{f.live ? t('live') : t('dev')}</span>
                         </div>
                         <p className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{t(f.descKey)}</p>
                       </div>
