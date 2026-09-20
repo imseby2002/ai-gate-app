@@ -489,11 +489,14 @@ export async function syncEmailForSetting(settingId: string): Promise<EmailSyncR
       const subj80 = subject.slice(0, 80)
       if (platform !== 'other') addLog(`[掃描] ${platform} | ${subj80}`)
 
-      // Stage 1：便宜分類先篩掉明顯非訂單信（標籤模式整個資料夾都抓，不靠關鍵字篩，
-      // 大部分信件其實是取消政策說明、客服往來、轉寄信等雜訊），避免每一封都花
-      // Stage 2 完整擷取（含房型清單／平台提示／少樣本範例）的成本。
+      // Stage 1：便宜分類先篩掉明顯非訂單信，避免每一封都花 Stage 2 完整擷取
+      // （含房型清單／平台提示／少樣本範例）的成本。只在「沒有標籤模式」時做——
+      // 標籤模式下，資料夾本身就是使用者自己在 Gmail 設篩選器歸類過的，這關便宜
+      // 分類（小模型、只看前 1500 字、精簡 prompt）反而容易把真訂單/取消信誤判掉
+      // （尤其信件開頭常是版型/行銷文字，關鍵資訊超過 1500 字就被截斷），標籤模式
+      // 信件量本來就不大，全部送 Stage 2 完整擷取的成本可以忽略。
       // 來自「取消」資料夾的信已經確定是訂單，跳過分類直接進 Stage 2。
-      if (!forceCancel) {
+      if (!forceCancel && !labelMode) {
         const looksLikeBooking = await classifyIsBooking(subject, body)
         if (!looksLikeBooking) {
           result.debug.skipped_by_prefilter++
