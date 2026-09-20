@@ -148,11 +148,38 @@ async function isDuplicateEvent(platform: string, eventId: string): Promise<bool
   return false
 }
 
+// ── 一般意圖分類（沒有命中任何已知情境時的兜底分類）───────────────────────
+// 手動模式切換、人工客服、退換貨、圖片降級等「已知情境」在各自的判斷分支已經確定
+// 屬於哪一類，直接把寫死的字串當 intent 存，不需要另外呼叫 AI；只有一般 AI 回覆
+// 這條預設路徑（沒有命中任何已知情境）才需要這支輕量分類器兜底判斷客人這則訊息
+// 屬於哪種大類，讓「熱點問題統計」之類的分析功能未來能用真實客人訊息統計，而不是
+// 每多一種情境就要多寫一條規則。
+const GENERAL_INTENT_CATEGORIES = ['諮詢/詢問', '客訴/抱怨', '購買/下單意願', '售後服務', '閒聊/其他'] as const
+
+async function classifyGeneralIntent(text: string): Promise<string> {
+  const geminiKey = process.env.GOOGLE_AI_API_KEY
+  if (!geminiKey || !text.trim()) return '其他'
+  try {
+    const google = createGoogleGenerativeAI({ apiKey: geminiKey })
+    const { text: reply } = await generateText({
+      model: google('gemini-3.1-flash-lite'),
+      messages: [{
+        role: 'user',
+        content: `客人傳送的客服訊息：「${text.slice(0, 500)}」\n\n請判斷這則訊息最符合下列哪一種分類：${GENERAL_INTENT_CATEGORIES.join('、')}。只回傳分類名稱，不要有其他文字。`,
+      }],
+    })
+    return GENERAL_INTENT_CATEGORIES.find(c => reply.includes(c)) ?? '其他'
+  } catch {
+    return '其他'
+  }
+}
+
 // ── Persist a customer turn to cs_messages (powers the dashboard metrics) ─────
-async function logCsMessage(userId: string, platform: string, customerId: string, industry: string, message: string, reply: string, fromName?: string) {
+async function logCsMessage(userId: string, platform: string, customerId: string, industry: string, message: string, reply: string, fromName?: string, intent?: string | null) {
   try {
     await getServiceClient().from('cs_messages').insert({
       user_id: userId, industry, platform, from_id: customerId, from_name: fromName ?? null, message, reply,
+      ...(intent ? { intent } : {}),
     })
     // 當有真實客戶訊息進入時，即時推播給該商家的手機 APP
     if (message && message.trim()) {
@@ -629,7 +656,7 @@ async function replyToCustomer(
           .eq('intent', '人工客服請求').in('status', ['open', 'in_progress'])
       } catch { /* ignore */ }
       const reply = '已切換為【AI 自動回覆模式】🤖✅，AI 客服已恢復服務！'
-      void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+      void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, '恢復AI自動回覆')
       return reply
     }
 
@@ -637,7 +664,7 @@ async function replyToCustomer(
     void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
     void maybeCreateInvoiceTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
 
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, '', fromName)
+    void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, '', fromName, intent))
     return ''
   }
 
@@ -653,7 +680,7 @@ async function replyToCustomer(
       dispatchTicketNotify(knowledge.notifyWebhooks, { platform, customerId, industry: knowledge.industry, fromName }, `🔔 已切換為手動客服模式（AI 暫停）：\n\n${text.slice(0, 300)}`)
     } catch { /* ignore */ }
     const reply = '已切換為【手動客服模式】🤖❌，AI 已暫停回覆。真人專員接手為您服務。\n（若要恢復 AI 自動回覆，隨時輸入「自動」或「恢復AI」即可切回）'
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, '人工客服請求')
     return reply
   }
 
@@ -673,7 +700,7 @@ async function replyToCustomer(
       } catch { /* ignore */ }
     })()
     const reply = '好的，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏\n（若要重新開啟 AI，請隨時輸入「自動」）'
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, '人工客服請求')
     return reply
   }
 
@@ -694,7 +721,7 @@ async function replyToCustomer(
       } catch { /* ignore */ }
     })()
     const reply = '好的，退換貨/退款需要專人為您處理，已為您安排專人服務，客服人員會盡快與您聯繫，請稍候 🙏'
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, '退換貨/退款')
     return reply
   }
 
@@ -703,7 +730,7 @@ async function replyToCustomer(
   if (imageBuffer && imageMimeType && !planFeatures.advancedSupport) {
     void notifyOwnerUpgradeNudge(userId, 'image', text || '（客人傳送圖片）')
     const reply = IMAGE_DOWNGRADE_REPLY
-    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+    void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, '圖片諮詢')
     return reply
   }
 
@@ -821,7 +848,7 @@ async function replyToCustomer(
   const { visibleReply: withoutForm, submit: formSubmit } = extractFormSubmit(rawReply)
   const { visibleReply: reply, offered: discountJustOffered } = extractDiscountOffered(withoutForm)
   if (formSubmit) void saveFormSubmissionFromChat(userId, platform, customerId, knowledge.industry, knowledge.csForms, formSubmit, fromName, knowledge.notifyWebhooks)
-  void logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName)
+  void classifyGeneralIntent(text).then(intent => logCsMessage(userId, platform, customerId, knowledge.industry, text, reply, fromName, intent))
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
   if (knowledge.bookingFlowEnabled) {
