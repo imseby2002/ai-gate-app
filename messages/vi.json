@@ -1676,7 +1676,7 @@
         ]
       },
       "auto": {
-        "title": "Quy trình Marketing",
+        "title": "Tự động hóa Marketing",
         "desc": "Marketing tự động đầu-cuối — từ thu thập dữ liệu, phân tích đối thủ, viết nội dung, sản xuất ảnh/video, đến tải lên nền tảng",
         "badge": "Đầy đủ tính năng",
         "tags": [
@@ -2344,7 +2344,7 @@
     }
   },
   "Pipeline": {
-    "backToAuto": "Về Quy trình Marketing",
+    "backToAuto": "Về Tự động hóa Marketing",
     "title": "Quy trình tự động",
     "subtitle": "Chọn các bước cần chạy, tự động hoàn toàn chỉ một nhấp",
     "loadingCampaign": "Đang tải dữ liệu chiến dịch…",

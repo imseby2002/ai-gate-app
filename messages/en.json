@@ -1769,7 +1769,7 @@
         ]
       },
       "auto": {
-        "title": "Marketing Pipeline",
+        "title": "Marketing Automation",
         "desc": "End-to-end automated marketing — from data gathering, competitor analysis, copywriting, image/video production, to platform uploads",
         "badge": "Full Feature",
         "tags": [
@@ -2437,7 +2437,7 @@
     }
   },
   "Pipeline": {
-    "backToAuto": "Back to Marketing Pipeline",
+    "backToAuto": "Back to Marketing Automation",
     "title": "Automation Flow",
     "subtitle": "Check the steps to run, fully automated in one click",
     "loadingCampaign": "Loading campaign data…",
