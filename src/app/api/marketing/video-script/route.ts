@@ -23,6 +23,7 @@ import { getCronOrUserAuth } from '@/lib/cron-auth'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { langInstruction } from '@/lib/marketing/lang'
+import { getSkillKnowledge } from '@/lib/skills/knowledge'
 
 export async function POST(req: NextRequest) {
   const authUser = await getCronOrUserAuth(req)
@@ -158,6 +159,38 @@ ${feedbackSection}
       ]
     : promptText
 
+  // 短影音爆款專家知識庫注入：把「AI 專家 → 短影音爆款腳本」的內建方法論（見 lib/skills/knowledge.ts）
+  // 直接串進影片腳本生成；非 cron 使用者再加上他們自己掛在該專家上的自訂知識（builtin_expert_knowledge）。
+  let viralKnowledge = getSkillKnowledge('viral-video-copywriting') || ''
+  if (!authUser.isCron) {
+    const { data: userK } = await supabase
+      .from('builtin_expert_knowledge')
+      .select('name, extracted_text')
+      .eq('user_id', authUser.id)
+      .eq('skill_id', 'viral-video-copywriting')
+      .order('created_at', { ascending: true })
+    if (userK?.length) {
+      const MAX_USER_KNOWLEDGE = 15000
+      let used = 0
+      const blocks: string[] = []
+      for (const row of userK) {
+        const txt = String(row.extracted_text ?? '').trim()
+        if (!txt) continue
+        const remaining = MAX_USER_KNOWLEDGE - used
+        if (remaining <= 0) break
+        const clip = txt.slice(0, remaining)
+        blocks.push(`【${row.name || '知識來源'}】\n${clip}`)
+        used += clip.length
+      }
+      if (blocks.length) {
+        viralKnowledge += `\n\n以下是使用者提供的專屬爆款參考資料，請優先參考其風格與案例：\n\n${blocks.join('\n\n---\n\n')}`
+      }
+    }
+  }
+  const knowledgeSection = viralKnowledge
+    ? `\n\n【短影音爆款方法論（來自「短影音爆款腳本」專家知識庫，撰寫腳本時務必套用）】\n${viralKnowledge}`
+    : ''
+
   const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const { text } = await generateText({
@@ -165,7 +198,7 @@ ${feedbackSection}
     system: `你是一位頂尖的影片行銷導演，擅長為各社群平台撰寫高轉換率的影片分鏡腳本。
 你熟知短影音的黃金法則：前3秒必須抓住觀眾、節奏明快、視覺衝擊強、CTA清晰。
 輸出格式：每個影片腳本用「===【影片 N】===」作為分隔標題，直接輸出腳本，不需其他說明。
-${langInstruction(language)}（分隔標題「===【影片 N】===」維持原樣，腳本內容用該語言）`,
+${langInstruction(language)}（分隔標題「===【影片 N】===」維持原樣，腳本內容用該語言）${knowledgeSection}`,
     messages: [{ role: 'user', content: userContent }],
     maxOutputTokens: 4000,
   })
