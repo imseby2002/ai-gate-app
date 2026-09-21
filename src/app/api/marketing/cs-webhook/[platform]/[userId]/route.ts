@@ -1818,7 +1818,10 @@ const BALANCE_REVEAL_RE = /(餘款|尾款|剩餘款項|餘額|差額)[：:是為
 // 已核對身份」的話術不會出現在系統真正查到資料的模板裡（成功一律是「找到訂單」「找到
 // 旅客」「找到 N 筆」這類字眼，見 checkin-lookup.ts），下方查詢結果沒有出現任何「找到」
 // 字樣時，AI 卻講出「已核對/已找到」這類確認話術，一律視為捏造身份核對結果。
-const FAKE_CONFIRMATION_RE = /已(?:核對|查(?:到|詢)到|找到)/
+// 真實案例二：AI 講的不是「已核對到」而是「已為您查到」（中間多插了「為您」），原本
+// 「已」後面緊接動詞的寫法抓不到這種插入敬語的變體，同一種捏造換個講法就漏放行——改成
+// 允許「已」跟動詞之間夾雜「經／為／替／幫／您／你」等常見敬語詞，涵蓋更多實際講法。
+const FAKE_CONFIRMATION_RE = /已(?:經)?(?:為|替|幫)?(?:您|你)?(?:核對|查(?:到|詢)|找到)/
 const NO_FABRICATION_FALLBACK = '不好意思，目前無法為您查詢到相關資訊，麻煩提供您的訂單編號、訂房大名或訂房手機號碼，我立即為您確認。'
 const BALANCE_ESCALATION_FALLBACK = '不好意思，系統目前無法查詢訂金與餘額明細，我已經幫您通知管家人工核對，確認後會盡快回覆您正確的金額，謝謝您的耐心等候。'
 
@@ -2093,19 +2096,30 @@ async function getAIReply(
         // 回「我在門口」——這不是姓名，也不是在回答姓名，卻被當成姓名去查訂單、比對到不相干
         // 的客人資料。用「上一輪 AI 是否真的問了姓名」這個更精準的條件避免這種誤觸發。
         const lastAssistantTurn = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
-        const askedForName = /大名|姓名/.test(lastAssistantTurn)
-        if (NAME_ONLY_RE.test(message.trim()) && !NON_NAME_ACK_RE.test(message.trim()) && askedForName && !passwordFromDatasource) {
+        // 真實案例：AI 問「請提供您的訂單編號或訂房時登記的行動電話號碼」（沒有出現「姓名」
+        // 兩個字），客人回「00009呂聰明」（訂房編號＋姓名連在一起打），原本只認「大名/姓名」
+        // 字樣導致這輪完全不觸發，也擋不到下面的數字前綴姓名判斷——擴大成只要上一輪是在要求
+        // 任何一種身份識別資訊就算。
+        const askedForName = /大名|姓名|訂單編號|訂單號碼|電話號碼|手機號碼/.test(lastAssistantTurn)
+        const trimmed = message.trim()
+        // 客人有時會把訂房編號跟姓名連在一起打（例如「00009呂聰明」），純數字開頭讓
+        // NAME_ONLY_RE 直接判定不是姓名，導致這則訊息完全沒有觸發任何查詢——AI 在沒有
+        // 比對到任何資料的情況下，還是自己說「已查到」您的訂房紀錄，這種假造比誠實回覆
+        // 查無資料更嚴重。這裡額外允許「開頭一段數字＋姓名」的格式，把姓名部分抽出來查。
+        const digitPrefixMatch = trimmed.match(/^\d{1,10}[\s,、-]*([A-Za-z一-鿿][A-Za-z一-鿿\s.'-]{1,39})$/)
+        const nameCandidate = NAME_ONLY_RE.test(trimmed) ? trimmed : (digitPrefixMatch?.[1] ?? null)
+        if (nameCandidate && !NON_NAME_ACK_RE.test(nameCandidate) && askedForName && !passwordFromDatasource) {
           // NAME_ONLY_RE 只能抓「形式像姓名（無數字無符號）」，抓不到語意——像「我在門口」
           // 這種完整句子一樣會通過形式檢查，所以再用 LLM 判斷這句話語意上是不是真的在報姓名，
           // 不是的話（例如在描述位置、回答是非題）就不觸發查詢，避免拿無關的話去比對訂單。
-          if (await looksLikeGuestName(message.trim(), google('gemini-3.1-flash-lite'))) {
+          if (await looksLikeGuestName(nameCandidate, google('gemini-3.1-flash-lite'))) {
             orderLookupDone = true
             currentLookupKind = 'name'
             try {
-              const byName = await queryBookingByGuestName(getServiceClient(), userId, message.trim(), google('gemini-3.1-flash-lite'))
+              const byName = await queryBookingByGuestName(getServiceClient(), userId, nameCandidate, google('gemini-3.1-flash-lite'))
               if (byName) {
                 currentLookupFailed = byName.includes('查無')
-                if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: message.trim() })
+                if (!currentLookupFailed) void saveConfirmedFacts(userId, platform, customerId, knowledge.industry, { confirmedName: nameCandidate })
                 externalDataSection = `\n\n${byName}${externalDataSection}`
               }
             } catch { /* 不中斷主流程 */ }
