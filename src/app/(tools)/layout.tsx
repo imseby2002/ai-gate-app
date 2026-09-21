@@ -4,6 +4,7 @@ import { getLocale } from 'next-intl/server'
 import { ToolsBrand } from '@/components/layout/ToolsBrand'
 import { ToolsUserMenu } from '@/components/layout/ToolsUserMenu'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
+import { CollapsibleAppHeader } from '@/components/layout/CollapsibleAppHeader'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,12 +23,14 @@ export default async function ToolsLayout({ children }: { children: React.ReactN
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
       {/* Minimal top bar */}
-      <header className="h-11 shrink-0 bg-white border-b flex items-center px-4 gap-3">
-        <ToolsBrand />
-        <div className="flex-1" />
-        <LanguageSwitcher currentLocale={locale} />
-        <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
-      </header>
+      <CollapsibleAppHeader>
+        <header className="h-11 shrink-0 bg-white border-b flex items-center px-4 gap-3">
+          <ToolsBrand />
+          <div className="flex-1" />
+          <LanguageSwitcher currentLocale={locale} />
+          <ToolsUserMenu displayName={profile?.display_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
+        </header>
+      </CollapsibleAppHeader>
 
       {/* Tool content (each tool has its own sub-layout) */}
       <div className="flex-1 overflow-hidden">

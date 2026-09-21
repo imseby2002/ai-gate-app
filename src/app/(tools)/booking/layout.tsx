@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { isMinimalChromeStandalone, useStandaloneDisplay } from '@/components/layout/CollapsibleAppHeader'
 import BnbSwitcher from './BnbSwitcher'
 import {
   CalendarDays, Home, List, RefreshCw, Mail, Building2,
@@ -65,6 +66,11 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
   const t = useTranslations('Booking')
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // 每日入住記錄以獨立 App 模式開啟時，這條手機版標題列只留漢堡選單按鈕（進其他
+  // 訂房頁面還是要用），拿掉文字標題——外層 App 選單列已經被 CollapsibleAppHeader
+  // 隱藏，這裡不需要再重複顯示「訂房管理」四個字佔位。
+  const standalone = useStandaloneDisplay()
+  const minimalMobileBar = standalone && isMinimalChromeStandalone(pathname)
 
   function isActive(href: string) {
     return pathname === href || (href !== '/booking' && pathname.startsWith(href))
@@ -123,8 +129,8 @@ export default function BookingLayout({ children }: { children: React.ReactNode 
       {/* Content area */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobile top bar */}
-        <div className="sm:hidden flex items-center justify-between px-4 h-14 border-b bg-white shrink-0">
-          <span className="font-semibold text-sm text-gray-900">{t('title')}</span>
+        <div className={`sm:hidden flex items-center ${minimalMobileBar ? 'justify-end' : 'justify-between'} px-4 h-14 border-b bg-white shrink-0`}>
+          {!minimalMobileBar && <span className="font-semibold text-sm text-gray-900">{t('title')}</span>}
           <button onClick={() => setDrawerOpen(true)}
             className="p-2 -mr-1 rounded-lg hover:bg-gray-100 text-gray-600">
             <Menu className="h-5 w-5" />
