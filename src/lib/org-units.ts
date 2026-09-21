@@ -82,7 +82,7 @@ export const UNIT_AREAS: UnitArea[] = [
   {
     key: 'audit',
     label: '稽核',
-    homeHref: '/audit-platform',
+    homeHref: '/audit',
     description: '企業稽核智慧平台・原物料推算引擎・Rule Engine 與 Copilot',
     pages: [
       { href: '/audit-platform', label: '企業稽核智慧平台', description: '四來源推算引擎、加料排擠修正、Rule Engine 四級規則與 Audit Copilot' },
@@ -189,7 +189,7 @@ export const UNIT_AREAS_VI: UnitArea[] = [
   {
     key: 'audit',
     label: 'Kiểm toán & Thanh tra',
-    homeHref: '/audit-platform',
+    homeHref: '/audit',
     description: 'Nền tảng kiểm toán thông minh, ước tính nguyên liệu, Rule Engine & Copilot',
     pages: [
       { href: '/audit-platform', label: 'Nền tảng kiểm toán AI', description: 'Động cơ tính toán 4 nguồn, điều chỉnh topping, 4 cấp quy tắc & Audit Copilot' },
@@ -296,7 +296,7 @@ export const UNIT_AREAS_EN: UnitArea[] = [
   {
     key: 'audit',
     label: 'Audit',
-    homeHref: '/audit-platform',
+    homeHref: '/audit',
     description: 'Audit intelligence platform, consumption estimation engine, Rule Engine & Copilot',
     pages: [
       { href: '/audit-platform', label: 'Audit Intelligence Platform', description: '4-source consumption engine, topping displacement, 4-tier rule engine & Copilot' },
