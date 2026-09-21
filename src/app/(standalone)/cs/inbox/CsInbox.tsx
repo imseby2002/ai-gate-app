@@ -68,6 +68,11 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
   const [sending, setSending] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // 客服是否目前捲動在接近底部——只有在這裡才自動捲到底。沒有這個判斷，手機版每 4 秒
+  // 的靜默輪詢（loadThread silent）都會產生一組新的 bubbles 陣列（即使內容沒變），
+  // 觸發下面的自動捲動 effect，把正在往上滑看歷史訊息的客服硬拉回最底部，完全沒辦法
+  // 慢慢看內容（真實案例：客服反映「往上滑一看就馬上被拉下來」）。
+  const nearBottomRef = useRef(true)
 
   // ── 對話清單 ─────────────────────────────────────────────────────────────
   const loadList = useCallback(async () => {
@@ -107,16 +112,26 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
     return () => clearInterval(t)
   }, [active, loadThread])
 
-  // 新訊息自動捲到底
+  // 新訊息自動捲到底——只有客服本來就在底部附近（正在看最新訊息）才自動跟著捲，
+  // 已經往上滑去看歷史訊息時，不能被輪詢硬拉回底部。
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    if (nearBottomRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    }
   }, [bubbles])
+
+  const handleThreadScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
 
   const openConvo = (c: Conversation) => {
     setActive(c)
     setBubbles([])
     setErr(null)
     setCustomerSummary(null)
+    nearBottomRef.current = true
     loadThread(c)
   }
 
@@ -331,7 +346,7 @@ export function CsInbox({ initialIndustry, initialTarget }: { initialIndustry: s
                 )}
 
                 {/* 訊息串 */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                <div ref={scrollRef} onScroll={handleThreadScroll} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                   {loadingThread ? (
                     <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                   ) : bubbles.length === 0 ? (
