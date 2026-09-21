@@ -64,16 +64,20 @@ interface ChatMessage {
 export default function AuditPlatformPage() {
   const t = useTranslations('AuditPlatform')
   const locale = useLocale()
+  const now = new Date()
   const [activeTab, setActiveTab] = useState<PlatformTab>('material')
   const [loading, setLoading] = useState(false)
-  const [targetStore, setTargetStore] = useState('胡志明一號旗艦店 (HCM-01)')
-  const [targetDate, setTargetDate] = useState('2026-09-08')
+  const [stores, setStores] = useState<string[]>([])
+  const [targetStore, setTargetStore] = useState('')
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
 
   // 推算引擎資料
   const [materialRows, setMaterialRows] = useState<MaterialConsumptionRow[]>([])
   const [totalRawLoss, setTotalRawLoss] = useState(0)
   const [totalAdjustedLoss, setTotalAdjustedLoss] = useState(0)
   const [appliedRulesSummary, setAppliedRulesSummary] = useState<any[]>([])
+  const [isSampleData, setIsSampleData] = useState(false)
 
   // 規則庫資料
   const [rules, setRules] = useState<AuditRule[]>([])
@@ -88,64 +92,15 @@ export default function AuditPlatformPage() {
       id: 'init-1',
       role: 'assistant',
       content: `您好！我是企業稽核智慧平台的「稽核副駕駛 (Audit Copilot)」。
-我已為您加載【胡志明一號旗艦店】2026-09-08 的 IPOS 銷量與 IVT 實耗。
 
-當前發現：經典阿薩姆紅茶茶湯實耗高出原始理論值 8.7% (+3.6L)，估計表觀金額差異 86,400 VND。
-我已準備好與您一起探討：
-1. 雙料加料（珍珠+椰果）造成的杯內物理排擠與滿杯補茶習慣
-2. 5月份生效之 V2 新配方（220ml）切換影響
-3. 現場出杯與濾茶桶殘留損耗
-
-您可以切換上方「討論 / 導引 / 建議 / 答案」模式，隨時開始對話！`,
+請先在上方選擇要分析的門市與年月，點擊「重新計算推算引擎」載入該門市當月的 IPOS 銷量與 IVT 實耗，我再跟您一起討論原料耗用異常的可能成因。`,
       mode: 'discuss',
-      timestamp: '2026-09-09 23:00',
-      suggestion: {
-        issue_title: '阿薩姆紅茶茶湯耗用偏差 (+8.7%) 根因剖析',
-        possible_causes: [
-          {
-            title: '雙料加料體積排擠與滿杯補茶習慣',
-            probability: 68,
-            description: '珍珠奶茶 + 2 toppings 時，杯內物理排擠造成員工習慣多補 18ml 茶湯以達滿杯。',
-          },
-          {
-            title: '配方版本切換 (V1 ➔ V2)',
-            probability: 20,
-            description: '2026/05 起配方升級，基底茶標準用量由 200ml 調高至 220ml。',
-          },
-          {
-            title: '茶桶底部餘茶殘留損耗',
-            probability: 12,
-            description: '每日更換 4-6 桶茶湯，桶底殘留及濾茶布吸附損耗約 0.4L。',
-          },
-        ],
-        ai_confidence: 86,
-        evidence: [
-          { source: 'IPOS', detail: '珍珠奶茶售出 100 杯，加料多達 110 份（雙料佔比 20%）' },
-          { source: 'IVT', detail: '實耗 44.8L vs 原始規定 41.2L，表觀差異 +3.6L' },
-          { source: 'Recipe', detail: '採用 2026/05 生效之 V2 標準配方 (220ml/杯)' },
-          { source: 'Past 6 Months', detail: '同商圈 5 家門市中，加料率高者均呈現 6-9% 茶湯同向正偏差' },
-        ],
-        actionable_proposals: [
-          '套用 RULE-00038 (+18ml) 修正後，誤差率降至 0.7%，轉為正常綠燈',
-          '向門市宣導雪克杯 450ml 防溢刻度標準操作流程',
-          '由稽核主管將該修正係數升級為正式 Hard Rule 全門市強制套用',
-        ],
-        candidate_rule: {
-          code: 'RULE-00038',
-          target_product: '珍珠奶茶 500ml',
-          condition: '2 toppings (加2種加料)',
-          adjustment_type: 'tea_adjustment',
-          adjustment_value: '+18ml 紅茶基底',
-          numerical_delta: 18,
-          unit: 'ml',
-          proposed_status: 'approved',
-        },
-      },
+      timestamp: '',
     },
   ])
   const [inputMsg, setInputMsg] = useState('')
   const [sendingMsg, setSendingMsg] = useState(false)
-  const [currentSuggestion, setCurrentSuggestion] = useState<AuditSuggestionCard | null>(chatMessages[0].suggestion || null)
+  const [currentSuggestion, setCurrentSuggestion] = useState<AuditSuggestionCard | null>(null)
 
   // 稽核日誌與模組概況
   const [logs, setLogs] = useState<AuditKnowledgeLog[]>([])
@@ -160,22 +115,42 @@ export default function AuditPlatformPage() {
     fetchRules()
     fetchLogs()
     fetchOverview()
+    loadStores()
   }, [])
+
+  // 門市／年月變更後重新計算（真實門市清單載入完成、setTargetStore 生效時會再觸發一次）
+  useEffect(() => {
+    if (targetStore) fetchCalculation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetStore, year, month])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
+  const loadStores = async () => {
+    try {
+      const res = await fetch('/api/inv/stores')
+      const data = await res.json()
+      const list: string[] = data.stores ?? []
+      setStores(list)
+      setTargetStore(s => s || list[0] || '')
+    } catch (e) {
+      console.error('Failed to load stores:', e)
+    }
+  }
+
   const fetchCalculation = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/audit/platform/calculate?store=${encodeURIComponent(targetStore)}&date=${targetDate}`)
+      const res = await fetch(`/api/audit/platform/calculate?store=${encodeURIComponent(targetStore)}&year=${year}&month=${month}`)
       const data = await res.json()
       if (data.success) {
         setMaterialRows(data.rows || [])
         setTotalRawLoss(data.totalRawLoss || 0)
         setTotalAdjustedLoss(data.totalAdjustedLoss || 0)
         setAppliedRulesSummary(data.appliedRulesSummary || [])
+        setIsSampleData(!!data.isSampleData)
       }
     } catch (e) {
       console.error('Failed to load calculation:', e)
@@ -272,7 +247,9 @@ export default function AuditPlatformPage() {
           history: chatMessages.map(m => ({ role: m.role, content: m.content })),
           contextData: {
             targetStore,
-            targetDate,
+            year,
+            month,
+            isSampleData,
             materialRows: materialRows.slice(0, 5),
             totalRawLoss,
             totalAdjustedLoss,
@@ -386,27 +363,38 @@ export default function AuditPlatformPage() {
           </div>
         </div>
 
-        {/* 門市與日期維度選擇區 */}
+        {/* 門市與年月維度選擇區 */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800">
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">{t('auditStoreLabel')}</span>
-              <span className="font-semibold text-indigo-300 bg-indigo-950/60 px-3 py-1 rounded-md border border-indigo-500/30">
-                {targetStore}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">{t('analysisDateLabel')}</span>
-              <span className="font-mono text-slate-200 bg-slate-800 px-3 py-1 rounded-md border border-slate-700">
-                {targetDate}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">{t('activeRecipeVersionLabel')}</span>
-              <span className="font-mono text-emerald-400 bg-emerald-950/40 px-2.5 py-0.5 rounded border border-emerald-500/30 text-xs">
-                {t('recipeVersionValue')}
-              </span>
-            </div>
+          <div className="flex flex-wrap items-end gap-4 text-sm">
+            <label className="space-y-1">
+              <span className="block text-xs text-slate-400">{t('auditStoreLabel')}</span>
+              <Input
+                list="audit-platform-stores"
+                value={targetStore}
+                onChange={e => setTargetStore(e.target.value)}
+                className="w-40 h-9 bg-slate-900 border-slate-700 text-indigo-200 font-semibold"
+                placeholder={t('auditStoreLabel')}
+              />
+              <datalist id="audit-platform-stores">{stores.map(s => <option key={s} value={s} />)}</datalist>
+            </label>
+            <label className="space-y-1">
+              <span className="block text-xs text-slate-400">{t('yearLabel')}</span>
+              <Input
+                type="number"
+                value={String(year)}
+                onChange={e => setYear(Number(e.target.value) || year)}
+                className="w-24 h-9 bg-slate-800 border-slate-700 text-slate-200 font-mono"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-xs text-slate-400">{t('monthLabel')}</span>
+              <Input
+                type="number"
+                value={String(month)}
+                onChange={e => setMonth(Number(e.target.value) || month)}
+                className="w-20 h-9 bg-slate-800 border-slate-700 text-slate-200 font-mono"
+              />
+            </label>
           </div>
 
           <div className="flex items-center gap-3 text-xs">
@@ -425,6 +413,13 @@ export default function AuditPlatformPage() {
             </div>
           </div>
         </div>
+
+        {isSampleData && (
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs sm:text-sm">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>{t('sampleDataWarning')}</span>
+          </div>
+        )}
 
         {/* 自適應分頁標籤導覽 (無向右拖拉，flex-wrap gap-2) */}
         <div className="flex flex-wrap items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
