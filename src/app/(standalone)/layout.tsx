@@ -5,6 +5,7 @@ import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { BackToMenu } from '@/components/layout/BackToMenu'
 import { ToolsUserMenu } from '@/components/layout/ToolsUserMenu'
 import { UpgradePlanBadge } from '@/components/cs/UpgradePlanBadge'
+import { CollapsibleAppHeader } from '@/components/layout/CollapsibleAppHeader'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,14 +24,16 @@ export default async function StandaloneLayout({ children }: { children: React.R
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top bar */}
-      <header className="border-b bg-card px-6 py-3 flex items-center justify-between shrink-0">
-        <BackToMenu />
-        <div className="flex items-center gap-3">
-          <UpgradePlanBadge />
-          <LanguageSwitcher currentLocale={locale} />
-          <ToolsUserMenu displayName={profile?.full_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
-        </div>
-      </header>
+      <CollapsibleAppHeader>
+        <header className="border-b bg-card px-6 py-3 flex items-center justify-between shrink-0">
+          <BackToMenu />
+          <div className="flex items-center gap-3">
+            <UpgradePlanBadge />
+            <LanguageSwitcher currentLocale={locale} />
+            <ToolsUserMenu displayName={profile?.full_name ?? user.email ?? ''} hasCompany={!!profile?.company_id} />
+          </div>
+        </header>
+      </CollapsibleAppHeader>
 
       {/* Page content */}
       <main className="flex-1 overflow-y-auto">
