@@ -6049,7 +6049,7 @@
     "jetsonLinked": "Liên kết Jetson",
     "tabLogs": "📜 Nhật ký kiểm toán & Đồ thị tri thức",
     "materialCoreConceptTitle": "[Tư duy cốt lõi của công cụ suy luận tiêu hao nguyên liệu]",
-    "materialCoreConceptDesc": "Không thể tính trực tiếp \"100 ly × công thức = lượng trà sữa lý thuyết\". Trong dữ liệu bán hàng IPOS hôm nay, tổng cộng 100 ly Trà sữa trân châu (trân châu 80 phần, cốt dừa 30 phần). Lượng tiêu hao lý thuyết thực tế của trà nền và kem sữa hoàn toàn khác nhau giữa \"không topping\" và \"thêm 2 loại topping\"! Hệ thống đã kích hoạt Product Composition Model cùng với <rule>RULE-00038 (+18ml)</rule> đã được phê duyệt, thu hẹp mức chênh lệch tưởng như bất thường +8,7% xuống còn <tolerance>+0,7% sai số kỹ thuật cho phép</tolerance>!",
+    "materialCoreConceptDesc": "Không thể tính đơn giản \"số ly × công thức = lượng tiêu hao lý thuyết\". Cùng một loại đồ uống nhưng thêm số lượng topping khác nhau (trân châu, cốt dừa...) thì lượng trà nền và kem sữa tiêu hao thực tế cũng khác nhau — một phần chênh lệch có thể chỉ do topping chiếm chỗ, không phải thất thoát thật. <rule>Mô hình điều chỉnh do topping chiếm chỗ</rule> hiện chưa kết nối với dữ liệu topping theo từng đơn hàng thực tế, nên bảng dưới đây đang so sánh lượng thực tế với <tolerance>giá trị lý thuyết theo công thức gốc, chưa điều chỉnh</tolerance>; khi có dữ liệu đơn hàng thực tế, hệ thống sẽ tự động áp dụng điều chỉnh.",
     "varianceTableTitle": "Bảng đối chiếu suy luận hợp lý nguyên liệu (Consumption Variance)",
     "legendNormal": "Bình thường (±4%)",
     "legendMinor": "Sai lệch nhẹ (4-8%)",

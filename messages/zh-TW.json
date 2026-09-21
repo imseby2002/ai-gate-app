@@ -6142,7 +6142,7 @@
     "jetsonLinked": "Jetson 連動",
     "tabLogs": "📜 稽核日誌與知識圖譜",
     "materialCoreConceptTitle": "【原料消耗推算引擎核心思維】",
-    "materialCoreConceptDesc": "不能直接以「100杯 × 配方 = 理論奶茶量」。今日 IPOS 銷售紀錄中，珍珠奶茶共 100 杯（珍珠 80 份、椰果 30 份）。其中「無加料」與「加 2 種加料 (2 toppings)」出杯時的基底茶與奶精實際理論耗用完全不同！系統已啟用 Product Composition Model 與已核准之 <rule>RULE-00038 (+18ml)</rule>，將原本看似異常的 +8.7% 偏差收斂至 <tolerance>+0.7% 工藝公差</tolerance>！",
+    "materialCoreConceptDesc": "不能直接以「杯數 × 配方 = 理論用量」。同一款飲料加了不同數量的加料（如珍珠、椰果）時，基底茶與奶精的實際耗用並不相同，用量差異有一部分可能只是加料排擠造成，不代表真的異常。<rule>加料排擠修正模型</rule>目前尚未接上每筆訂單的加料明細，下表暫以<tolerance>未經修正的純配方理論值</tolerance>對比實耗；之後接上真實訂單級資料，才會自動套用修正。",
     "varianceTableTitle": "原物料合理性推算比對表 (Consumption Variance)",
     "legendNormal": "正常 (±4%)",
     "legendMinor": "輕微偏差 (4-8%)",

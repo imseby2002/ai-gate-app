@@ -6142,7 +6142,7 @@
     "jetsonLinked": "Jetson Linked",
     "tabLogs": "📜 Audit Logs & Knowledge Graph",
     "materialCoreConceptTitle": "[Material Consumption Engine Core Concept]",
-    "materialCoreConceptDesc": "You cannot directly use \"100 cups × recipe = theoretical milk tea amount.\" In today's IPOS sales record, 100 Pearl Milk Tea cups were sold (80 pearl orders, 30 coconut jelly orders). The actual theoretical usage of tea base and creamer differs completely between \"no toppings\" and \"2 toppings\"! The system has enabled the Product Composition Model with approved <rule>RULE-00038 (+18ml)</rule>, converging the seemingly abnormal +8.7% deviation down to <tolerance>+0.7% craft tolerance</tolerance>!",
+    "materialCoreConceptDesc": "You can't just multiply cups × recipe to get the theoretical usage. The same drink with a different number of toppings (e.g. pearls, coconut jelly) uses a different amount of base tea and creamer — part of the apparent variance may just be topping displacement, not real loss. The <rule>topping displacement model</rule> isn't wired to per-order topping data yet, so the table below currently compares actual usage against the <tolerance>unadjusted pure-recipe theoretical value</tolerance>; once real order-level data is connected, the correction will apply automatically.",
     "varianceTableTitle": "Material Reasonableness Comparison Table (Consumption Variance)",
     "legendNormal": "Normal (±4%)",
     "legendMinor": "Minor Deviation (4-8%)",
