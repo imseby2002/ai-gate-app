@@ -482,7 +482,16 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const matched = (candidates ?? []).filter((c: any) => (c.guest_phone ?? '').replace(/\D/g, '').endsWith(suffix))
-  if (!matched.length) return notFoundMsg
+  if (!matched.length) {
+    // 真實案例：客人單獨傳電話號碼查密碼，guest_phone 欄位查無資料，但這組號碼其實是
+    // 商家手動建檔時直接拿客人電話當「訂單號碼」登記進去的（bnb_daily_records.
+    // order_number / bookings.platform_booking_id 剛好等於這組電話數字，guest_phone
+    // 欄位本身反而是空的）——訂單系統路徑（queryBnbCheckin）本來就會查這兩個欄位，
+    // 用同一組數字當訂單號碼再試一次，找到就直接回傳，找不到才是真的查無資料。
+    const byOrderNum = await queryBnbCheckin(supabase, userId, digits)
+    if (byOrderNum) return byOrderNum
+    return notFoundMsg
+  }
 
   const { checkinTime, nowHHMM } = await checkBeforeCheckin(supabase, userId)
 
