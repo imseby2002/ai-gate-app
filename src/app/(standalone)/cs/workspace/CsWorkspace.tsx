@@ -7,7 +7,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -594,6 +594,11 @@ function Unit12CustomerService({
   }
   const [tab, setTab] = useState<Cs12Tab>(initialTab ?? 'platforms')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialTab === 'inbox')
+  // 手機版選單抽屜——原本手機版沒有收合機制，11 個分頁 + 4 個常用連結全部用
+  // flex-wrap 攤平顯示，佔掉手機畫面一大截才看得到實際內容（真實案例：商家反映
+  // 「為何沒有像 booking 那樣點三條線才展開」）。比照 booking 既有的手機版做法，
+  // 預設收起，只留一個漢堡選單按鈕，點了才用抽屜展開完整選單。
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // CS 方案權限（決定哪些分頁要鎖定顯示升級提示）
   const [csFeatures, setCsFeatures] = useState<CsPlanFeatures | null>(null)
@@ -1765,14 +1770,37 @@ function Unit12CustomerService({
   const platformEmoji = (p: string) =>
     p === 'line' ? '💬' : p === 'whatsapp' ? '📱' : p === 'telegram' ? '✈️' : p === 'test' ? '🧪' : '💌'
 
+  const CS_TAB_LABEL_KEYS: Record<Cs12Tab, string> = {
+    platforms: 'tabPlatforms', 'campaign-offers': 'tabCampaignOffers', pricing: 'tabPricingBooking',
+    'dialogue-files': 'tabKnowledge', 'ai-settings': 'tabAiSettings', 'data-sources': 'tabDataSources',
+    forms: 'tabForms', logs: 'tabLogs', tickets: 'tabTickets', inbox: 'tabInbox',
+    corrections: 'tabCorrections', test: 'tabTest',
+  }
+
   return (
     <>
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row gap-5 items-start">
-        <nav className={`flex flex-wrap gap-1.5 sm:flex-col sm:flex-nowrap ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}>
+        {/* 手機版精簡列：只顯示目前分頁名稱 + 漢堡選單開關，點了才展開完整選單抽屜
+            （比照 booking 的手機版做法）——原本手機版沒有收合機制，11 個分頁 +
+            4 個常用連結全部攤平顯示，佔掉一大截版面才看得到實際內容。 */}
+        <div className="sm:hidden flex items-center justify-between w-full">
+          <span className="text-sm font-semibold text-gray-800">{t(CS_TAB_LABEL_KEYS[tab])}</span>
+          <button type="button" onClick={() => setMobileNavOpen(true)}
+            className="p-2 -mr-1 rounded-lg text-gray-500 hover:bg-gray-100">
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
+        {mobileNavOpen && (
+          <div className="sm:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setMobileNavOpen(false)} />
+        )}
+        <nav
+          onClickCapture={() => setMobileNavOpen(false)}
+          className={`${mobileNavOpen ? 'flex fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl p-3 overflow-y-auto flex-col gap-1.5' : 'hidden'} sm:flex sm:static sm:z-auto sm:shadow-none sm:p-0 sm:bg-transparent sm:overflow-visible sm:flex-col sm:flex-nowrap sm:gap-1.5 ${sidebarCollapsed ? 'sm:w-14' : 'sm:w-48'} sm:shrink-0 transition-all duration-200`}
+        >
           {/* 折疊/展開按鈕 */}
           <div className="hidden sm:flex items-center justify-between pb-1 border-b border-gray-100 mb-1 w-full">
-            {!sidebarCollapsed && <span className="text-[11px] font-semibold text-gray-400 px-1">{t('menuItemsLabel')}</span>}
+            {(!sidebarCollapsed || mobileNavOpen) && <span className="text-[11px] font-semibold text-gray-400 px-1">{t('menuItemsLabel')}</span>}
             <button
               type="button"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -1840,8 +1868,8 @@ function Unit12CustomerService({
                   active ? 'bg-primary/10 text-primary font-semibold' : 'text-gray-600 hover:bg-gray-100'
                 }`}>
                 <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-primary' : 'text-gray-400'}`} />
-                {!sidebarCollapsed && <span className="flex-1 text-left truncate">{labels[tb]}</span>}
-                {!sidebarCollapsed && isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
+                {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{labels[tb]}</span>}
+                {(!sidebarCollapsed || mobileNavOpen) && isLocked && <Lock className="h-3.5 w-3.5 shrink-0 text-gray-400" />}
                 {isNew && tb === 'inbox' && inboxConvos.length === 0 && (
                   <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                 )}
@@ -1860,7 +1888,7 @@ function Unit12CustomerService({
             } bg-primary/10 text-primary hover:bg-primary/20`}
           >
             <Zap className="h-4 w-4 shrink-0 fill-current" />
-            {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('upgradePlanCta')}</span>}
+            {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{t('upgradePlanCta')}</span>}
           </a>
 
           <a
@@ -1873,7 +1901,7 @@ function Unit12CustomerService({
             }`}
           >
             <BookOpen className="h-4 w-4 shrink-0 text-gray-400" />
-            {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('fullSetupGuideCta')} ↗</span>}
+            {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{t('fullSetupGuideCta')} ↗</span>}
           </a>
 
           <a
@@ -1884,7 +1912,7 @@ function Unit12CustomerService({
             }`}
           >
             <LayoutDashboard className="h-4 w-4 shrink-0 text-gray-400" />
-            {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('dashboardCta')}</span>}
+            {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{t('dashboardCta')}</span>}
           </a>
 
           <a
@@ -1895,7 +1923,7 @@ function Unit12CustomerService({
             }`}
           >
             <Info className="h-4 w-4 shrink-0 text-gray-400" />
-            {!sidebarCollapsed && <span className="flex-1 text-left truncate">{t('aboutCta')}</span>}
+            {(!sidebarCollapsed || mobileNavOpen) && <span className="flex-1 text-left truncate">{t('aboutCta')}</span>}
           </a>
         </nav>
         <div className="flex-1 min-w-0 space-y-5">
