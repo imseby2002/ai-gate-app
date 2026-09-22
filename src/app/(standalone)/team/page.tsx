@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { UserPlus, Trash2, Building2, Check, Loader2, Users } from 'lucide-react'
+import { UserPlus, Trash2, Building2, Check, Loader2, Users, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,6 +50,9 @@ export default function TeamPage() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [active, setActive] = useState('')
+  const [addingBusiness, setAddingBusiness] = useState(false)
+  const [newBusinessName, setNewBusinessName] = useState('')
+  const [creatingBusiness, setCreatingBusiness] = useState(false)
   // ?scope=cs / ?scope=booking → 只處理單一模組（客服或訂房單獨邀請）
   const [scopeParam, setScopeParam] = useState<Scope | ''>('')
 
@@ -139,6 +142,23 @@ export default function TeamPage() {
     window.location.reload()
   }
 
+  async function createBusiness(e: React.FormEvent) {
+    e.preventDefault()
+    setErr(''); setCreatingBusiness(true)
+    try {
+      const r = await fetch('/api/collab/businesses', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newBusinessName }),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || t('addBusinessFailed'))
+      await switchOwner(d.ownerId)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setCreatingBusiness(false)
+    }
+  }
+
   const selfActive = !active || active === self?.id
 
   return (
@@ -158,36 +178,55 @@ export default function TeamPage() {
       </div>
 
       {/* 我參與協作的對象（切換器） */}
-      {(memberships.length > 0 || !selfActive) && (
-        <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-3">{t('activeAccount')}</h2>
-          <div className="flex flex-col gap-2">
-            <button onClick={() => switchOwner(self?.id ?? '')}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
-                ${selfActive ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-              <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{t('myOwnAccount')}</span>
-              {selfActive && <Check className="h-4 w-4" />}
+      <Card className="p-4">
+        <h2 className="text-sm font-semibold mb-3">{t('activeAccount')}</h2>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => switchOwner(self?.id ?? '')}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
+              ${selfActive ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+            <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{t('myOwnAccount')}</span>
+            {selfActive && <Check className="h-4 w-4" />}
+          </button>
+          {memberships.map(m => {
+            const on = active === m.owner_id
+            const scopeText = (Object.entries(m.scopes) as [Scope, Role][])
+              .map(([s, r]) => `${MODULE_LABEL[s]}·${ROLE_SHORT[r]}`).join('，')
+            return (
+              <button key={m.owner_id} onClick={() => switchOwner(m.owner_id)}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
+                  ${on ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+                <span className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  {m.owner?.full_name || m.owner?.email || m.owner_id.slice(0, 8)}
+                  <span className="text-xs text-muted-foreground">（{scopeText}）</span>
+                </span>
+                {on && <Check className="h-4 w-4" />}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-3 pt-3 border-t">
+          {!addingBusiness ? (
+            <button onClick={() => setAddingBusiness(true)}
+              className="flex items-center gap-1.5 text-sm text-primary hover:underline">
+              <Plus className="h-4 w-4" />{t('addBusiness')}
             </button>
-            {memberships.map(m => {
-              const on = active === m.owner_id
-              const scopeText = (Object.entries(m.scopes) as [Scope, Role][])
-                .map(([s, r]) => `${MODULE_LABEL[s]}·${ROLE_SHORT[r]}`).join('，')
-              return (
-                <button key={m.owner_id} onClick={() => switchOwner(m.owner_id)}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
-                    ${on ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-                  <span className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    {m.owner?.full_name || m.owner?.email || m.owner_id.slice(0, 8)}
-                    <span className="text-xs text-muted-foreground">（{scopeText}）</span>
-                  </span>
-                  {on && <Check className="h-4 w-4" />}
-                </button>
-              )
-            })}
-          </div>
-        </Card>
-      )}
+          ) : (
+            <form onSubmit={createBusiness} className="space-y-2">
+              <p className="text-xs text-muted-foreground">{t('addBusinessSubtitle')}</p>
+              <div className="flex gap-2">
+                <Input value={newBusinessName} onChange={e => setNewBusinessName(e.target.value)}
+                  placeholder={t('addBusinessPlaceholder')} required disabled={creatingBusiness} />
+                <Button type="submit" size="sm" disabled={creatingBusiness} className="shrink-0 gap-1.5">
+                  {creatingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {t('addBusinessSubmit')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </Card>
 
       {/* 邀請表單 */}
       <Card className="p-4">
