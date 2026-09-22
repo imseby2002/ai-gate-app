@@ -4813,7 +4813,8 @@
     "companySubtitle": "One account can be staff at multiple companies at once. Switching changes which company's CS/Booking/ERP/Marketing data you're editing (not personal data).",
     "personalAccountOption": "Personal (not part of any company)",
     "noCompanies": "You don't belong to any company yet",
-    "switchCompanyFailed": "Failed to switch company"
+    "switchCompanyFailed": "Failed to switch company",
+    "noManagePermission": "Your role (manager/viewer) can't view or manage this business's team. Only the owner or an admin can."
   },
   "Vendors": {
     "adminOnly": "Only Finance/General Affairs can use vendor data",

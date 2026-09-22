@@ -4720,7 +4720,8 @@
     "companySubtitle": "Một tài khoản có thể là nhân viên của nhiều công ty cùng lúc. Chuyển đổi sẽ thay đổi dữ liệu CSKH/Đặt phòng/ERP/Marketing bạn đang chỉnh sửa thuộc về công ty nào (không phải dữ liệu cá nhân).",
     "personalAccountOption": "Cá nhân (không thuộc công ty nào)",
     "noCompanies": "Bạn hiện chưa thuộc công ty nào",
-    "switchCompanyFailed": "Chuyển công ty thất bại"
+    "switchCompanyFailed": "Chuyển công ty thất bại",
+    "noManagePermission": "Vai trò hiện tại của bạn (quản lý/chỉ xem) không thể xem hoặc quản lý danh sách nhóm của doanh nghiệp này. Chỉ chủ sở hữu hoặc quản trị viên mới được phép."
   },
   "Vendors": {
     "adminOnly": "Chỉ bộ phận Thu ngân／Tổng vụ được sử dụng dữ liệu nhà cung cấp",

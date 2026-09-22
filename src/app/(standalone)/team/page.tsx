@@ -46,6 +46,7 @@ export default function TeamPage() {
   const COMPANY_ROLE_SHORT: Record<string, string> = { owner: t('companyRoleOwner'), admin: t('roleAdmin'), manager: t('roleManager'), viewer: t('roleViewer') }
   const [self, setSelf] = useState<{ id: string; email: string | null } | null>(null)
   const [ownerModules, setOwnerModules] = useState<Scope[]>([])
+  const [canManage, setCanManage] = useState(true)
   const [managing, setManaging] = useState<Member[]>([])
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,6 +112,7 @@ export default function TeamPage() {
       if (!r.ok) throw new Error(d.error || t('loadFailed'))
       setSelf(d.self)
       setOwnerModules(d.ownerModules ?? [])
+      setCanManage(d.canManage ?? true)
       setManaging(d.managing ?? [])
       setMemberships(d.memberships ?? [])
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)) }
@@ -299,7 +301,9 @@ export default function TeamPage() {
       {/* 邀請表單 */}
       <Card className="p-4">
         <h2 className="text-sm font-semibold mb-3">{t('inviteCollaborator')}</h2>
-        {visibleModules.length === 0 ? (
+        {!canManage ? (
+          <p className="text-sm text-muted-foreground">{t('noManagePermission')}</p>
+        ) : visibleModules.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('noInvitableModules', { module: scopeParam ? MODULE_LABEL[scopeParam] : t('bookingOrCs') })}</p>
         ) : (
           <form onSubmit={invite} className="space-y-3">
@@ -339,6 +343,8 @@ export default function TeamPage() {
         <h2 className="text-sm font-semibold mb-3">{t('collaborators')}</h2>
         {loading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : !canManage ? (
+          <div className="text-sm text-muted-foreground py-6 text-center">{t('noManagePermission')}</div>
         ) : visibleManaging.length === 0 ? (
           <div className="text-sm text-muted-foreground py-6 text-center">{t('noCollaborators')}</div>
         ) : (

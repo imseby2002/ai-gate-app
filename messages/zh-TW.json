@@ -4813,7 +4813,8 @@
     "companySubtitle": "一個帳號可以同時是多家公司的員工，切換後 CS／訂房／ERP／行銷資料都會變成該公司的（非個人資料）。",
     "personalAccountOption": "個人身分（不屬於任何公司）",
     "noCompanies": "你目前不屬於任何公司",
-    "switchCompanyFailed": "切換公司失敗"
+    "switchCompanyFailed": "切換公司失敗",
+    "noManagePermission": "你目前的角色（一般管理／唯讀）無法查看或管理此業務的團隊名單，僅擁有者或管理員角色可以。"
   },
   "Vendors": {
     "adminOnly": "僅出納總務單位可使用廠商資料",
