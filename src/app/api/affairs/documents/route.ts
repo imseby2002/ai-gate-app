@@ -26,6 +26,7 @@ const s = (v: unknown) => String(v ?? '').trim()
 const dateOrNull = (v: unknown) => { const t = s(v); return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : null }
 const dayOrNull = (v: unknown) => { const n = parseInt(s(v)); return n >= 1 && n <= 31 ? n : null }
 const numOrNull = (v: unknown) => { const n = Number(s(v)); return !isNaN(n) && s(v) !== '' ? n : null }
+const cycleMonthsOrDefault = (v: unknown) => { const n = parseInt(s(v)); return n >= 1 && n <= 60 ? n : 1 }
 
 // 清單（可依類別／狀態／門市過濾），附簽章 URL
 export async function GET(req: NextRequest) {
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
       remind_days_urgent: d.remind_days_urgent ?? extra.remind_days_urgent ?? 7,
       pay_remind_days_before: Number(d.pay_remind_days_before) || 3,
       pay_remind_days_2: d.pay_remind_days_2 ?? extra.pay_remind_days_2 ?? 1,
+      payment_cycle_months: Number(d.payment_cycle_months ?? extra.payment_cycle_months) || 1,
       url,
     }
   }))
@@ -98,6 +100,8 @@ export async function POST(req: NextRequest) {
   const pay_remind_days_before = Math.max(0, parseInt(s(form.get('pay_remind_days_before'))) || 3)
   const pay_remind_days_2 = Math.max(0, parseInt(s(form.get('pay_remind_days_2'))) || 1)
 
+  const payment_cycle_months = cycleMonthsOrDefault(form.get('payment_cycle_months'))
+
   const ai_extracted = {
     deposit,
     monthly_rent,
@@ -106,6 +110,7 @@ export async function POST(req: NextRequest) {
     remind_days_stage2,
     remind_days_urgent,
     pay_remind_days_2,
+    payment_cycle_months,
   }
 
   const insertPayload: Record<string, unknown> = {
@@ -170,6 +175,7 @@ export async function PATCH(req: NextRequest) {
   if (b.remind_days_stage2 !== undefined) currentExt.remind_days_stage2 = Math.max(0, Number(b.remind_days_stage2) || 0)
   if (b.remind_days_urgent !== undefined) currentExt.remind_days_urgent = Math.max(0, Number(b.remind_days_urgent) || 0)
   if (b.pay_remind_days_2 !== undefined) currentExt.pay_remind_days_2 = Math.max(0, Number(b.pay_remind_days_2) || 0)
+  if (b.payment_cycle_months !== undefined) currentExt.payment_cycle_months = cycleMonthsOrDefault(b.payment_cycle_months)
 
   upd.ai_extracted = currentExt
 

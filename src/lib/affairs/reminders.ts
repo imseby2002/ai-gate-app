@@ -25,6 +25,38 @@ function thisMonthPaymentDate(today: string, day: number): string {
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
+// 依「年-以 0 起算的月」＋繳費日算出該月的實際繳款日（月底自動夾住），回傳 Date 與字串。
+function cycleMonthDate(year: number, month0: number, day: number): { date: Date; str: string } {
+  const first = new Date(year, month0, 1)
+  const y = first.getFullYear(), m = first.getMonth()
+  const last = new Date(y, m + 1, 0).getDate()
+  const d = Math.min(Math.max(1, day), last)
+  return { date: new Date(y, m, d), str: `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
+}
+
+// 支援非月繳（季繳/半年繳/年繳）：以租約生效日為錨點，每 cycleMonths 個月一次，找出下一個 >= 今天的繳款日。
+function nextPaymentDate(today: string, effectiveDate: string | null, day: number, cycleMonths: number): string {
+  const cm = Math.max(1, cycleMonths || 1)
+  if (cm === 1) return thisMonthPaymentDate(today, day)
+
+  const [ty, tm] = today.split('-').map(Number)
+  let anchorY = ty, anchorM0 = tm - 1
+  if (effectiveDate) {
+    const [ey, em] = effectiveDate.split('-').map(Number)
+    anchorY = ey; anchorM0 = em - 1
+  }
+
+  let { date, str } = cycleMonthDate(anchorY, anchorM0, day)
+  const todayDate = new Date(today + 'T00:00:00')
+  let guard = 0
+  while (date < todayDate && guard < 600) {
+    anchorM0 += cm
+    ;({ date, str } = cycleMonthDate(anchorY, anchorM0, day))
+    guard++
+  }
+  return str
+}
+
 export interface RoleChannel {
   telegram?: string
   email?: string
@@ -117,7 +149,7 @@ export async function getAffairSettings(admin: Admin, ownerId: string): Promise<
 export async function runAffairReminders(admin: Admin, ownerId?: string): Promise<{ expiry: number; payment: number }> {
   const today = taipeiDate(0)
   let q = admin.from('affair_documents')
-    .select('id, owner_id, doc_type, title, store_code, counterparty, expiry_date, payment_day, remind_days_before, pay_remind_days_before, ai_extracted')
+    .select('id, owner_id, doc_type, title, store_code, counterparty, effective_date, expiry_date, payment_day, remind_days_before, pay_remind_days_before, ai_extracted')
     .eq('status', 'active')
   if (ownerId) q = q.eq('owner_id', ownerId)
   const { data: docs } = await q
@@ -212,7 +244,8 @@ export async function runAffairReminders(admin: Admin, ownerId?: string): Promis
     if (d.doc_type === 'lease' && d.payment_day) {
       const payStage1 = Number(d.pay_remind_days_before) || st.default_pay_stage1_days || 3
       const payStage2 = Number(extra.pay_remind_days_2) || st.default_pay_stage2_days || 1
-      const due = thisMonthPaymentDate(today, d.payment_day)
+      const cycleMonths = Number(extra.payment_cycle_months) || 1
+      const due = nextPaymentDate(today, d.effective_date, d.payment_day, cycleMonths)
       const du = daysBetween(today, due)
 
       // 繳款階段 2：前 1 天通知 (<= payStage2 天且 >= 0 天)

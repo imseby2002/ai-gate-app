@@ -39,6 +39,7 @@ interface Doc {
   effective_date: string | null
   expiry_date: string | null
   payment_day: number | null
+  payment_cycle_months: number
   deposit: number | null
   monthly_rent: number | null
   contract_text: string
@@ -93,6 +94,15 @@ function daysUntil(d: string | null): number | null {
   if (!d) return null
   const ms = new Date(d + 'T00:00:00').getTime() - new Date(todayStr() + 'T00:00:00').getTime()
   return Math.round(ms / 86400000)
+}
+
+const PAYMENT_CYCLE_OPTIONS = [1, 3, 6, 12] as const
+
+function paymentCycleLabel(t: ReturnType<typeof useTranslations>, months?: number | null): string {
+  const n = months || 1
+  return (PAYMENT_CYCLE_OPTIONS as readonly number[]).includes(n)
+    ? t(`paymentCycleLabel${n}`)
+    : t('paymentCycleLabelCustom', { n })
 }
 
 export default function AffairsPage() {
@@ -301,7 +311,7 @@ function DocsTab() {
                         <>
                           {d.monthly_rent && <span><b>{t('monthlyRentLabel')}</b>NT$ {Number(d.monthly_rent).toLocaleString()}</span>}
                           {d.deposit && <span><b>{t('depositLabel')}</b>NT$ {Number(d.deposit).toLocaleString()}</span>}
-                          {d.payment_day && <span><b>{t('paymentDayLabel')}</b>{t('paymentDayValue', { day: d.payment_day })}</span>}
+                          {d.payment_day && <span><b>{t('paymentDayLabel')}</b>{t('paymentDayValue', { day: d.payment_day, cycle: paymentCycleLabel(t, d.payment_cycle_months) })}</span>}
                         </>
                       )}
                     </div>
@@ -403,6 +413,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
         if (f.effective_date) fd.append('effective_date', f.effective_date)
         if (f.expiry_date) fd.append('expiry_date', f.expiry_date)
         if (f.payment_day) fd.append('payment_day', String(f.payment_day))
+        fd.append('payment_cycle_months', String(f.payment_cycle_months || 1))
         if (f.deposit) fd.append('deposit', String(f.deposit))
         if (f.monthly_rent) fd.append('monthly_rent', String(f.monthly_rent))
         fd.append('is_renewed', f.is_renewed ? 'true' : 'false')
@@ -429,6 +440,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
             effective_date: f.effective_date || null,
             expiry_date: f.expiry_date || null,
             payment_day: f.payment_day || null,
+            payment_cycle_months: f.payment_cycle_months || 1,
             deposit: f.deposit || null,
             monthly_rent: f.monthly_rent || null,
             contract_text: f.contract_text || '',
@@ -525,7 +537,7 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
 
           {/* 租約專屬：租金、押金與付款日 */}
           {isLease && (
-            <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-gray-700">{t('monthlyRentField')}</span>
                 <Input type="number" value={f.monthly_rent ? String(f.monthly_rent) : ''} onChange={e => set({ monthly_rent: Number(e.target.value) || undefined })} placeholder="50000" />
@@ -537,6 +549,16 @@ function DocModal({ doc, stores, onClose, onSaved }: { doc: Partial<Doc>; stores
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-gray-700">{t('paymentDayField')}</span>
                 <Input type="number" value={f.payment_day ? String(f.payment_day) : ''} onChange={e => set({ payment_day: Number(e.target.value) || undefined })} placeholder="5" />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-semibold text-gray-700">{t('paymentCycleField')}</span>
+                <select
+                  value={String(f.payment_cycle_months || 1)}
+                  onChange={e => set({ payment_cycle_months: Number(e.target.value) })}
+                  className="w-full h-9 rounded-lg border px-2 text-sm bg-background"
+                >
+                  {PAYMENT_CYCLE_OPTIONS.map(m => <option key={m} value={m}>{t(`paymentCycleOption${m}`)}</option>)}
+                </select>
               </label>
             </div>
           )}
@@ -697,6 +719,12 @@ function SettingsTab() {
         </p>
         <p>• <b>{t('zaloPersonalLabel')}</b>：{t('zaloPersonalDesc')}</p>
         <p>• <b>{t('customDefaultDaysLabel')}</b>：{t('customDefaultDaysDesc')}</p>
+        <p className="pt-1">
+          <Link href="/cs/settings" className="inline-flex items-center gap-1 text-indigo-700 underline hover:text-indigo-900">
+            {t('zaloOaTokenLinkLabel')}
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        </p>
       </div>
 
       {/* 角色管道設定 */}
