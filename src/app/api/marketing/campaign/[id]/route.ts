@@ -5,20 +5,28 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getBnbContext } from '@/lib/bnb/context'
 
 type Params = { params: Promise<{ id: string }> }
+
+// 比照 /api/marketing/campaign 的 resolveOwnerId：跟著目前操作中的業務走
+async function resolveOwnerId(supabase: Awaited<ReturnType<typeof createClient>>, fallbackUserId: string): Promise<string> {
+  const ctx = await getBnbContext(supabase, 'cs')
+  return ctx?.ownerId ?? fallbackUserId
+}
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ownerId = await resolveOwnerId(supabase, user.id)
 
   const { data, error } = await supabase
     .from('marketing_campaigns')
     .select('*')
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', ownerId)
     .single()
 
   if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -30,6 +38,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ownerId = await resolveOwnerId(supabase, user.id)
 
   const body = await req.json()
 
@@ -67,7 +76,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     .from('marketing_campaigns')
     .update(patch)
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', ownerId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
@@ -78,12 +87,13 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const ownerId = await resolveOwnerId(supabase, user.id)
 
   const { error } = await supabase
     .from('marketing_campaigns')
     .update({ status: 'archived' })
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', ownerId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
