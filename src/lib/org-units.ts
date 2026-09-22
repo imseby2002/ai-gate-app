@@ -71,9 +71,9 @@ export const UNIT_AREAS: UnitArea[] = [
   },
   {
     key: 'affairs',
-    label: '外務・法規',
+    label: '外務・證照',
     homeHref: '/affairs',
-    description: '越南法律合規・各國進口規定・門市租約・營業執照',
+    description: '門市租約・營業執照・到期提醒，另有法律合規 AI 子功能',
     pages: [
       { href: '/legal', label: '法律合規 AI (越南法律/進口/門市)', description: '越南法律公務文書、各國食品設備進口規定與開門市手續引導' },
       { href: '/affairs', label: '外務・證照', description: '門市房屋租約、各類營業證照、到期提醒與自動預警' },
@@ -178,9 +178,9 @@ export const UNIT_AREAS_VI: UnitArea[] = [
   },
   {
     key: 'affairs',
-    label: 'Hành chính & Pháp lý',
+    label: 'Hành chính & Giấy phép',
     homeHref: '/affairs',
-    description: 'Tuân thủ pháp luật VN, quy định xuất nhập khẩu, hợp đồng thuê & giấy phép',
+    description: 'Hợp đồng thuê, giấy phép kinh doanh, nhắc hết hạn; có thêm AI Pháp lý & Tuân thủ',
     pages: [
       { href: '/legal', label: 'AI Pháp lý & Tuân thủ', description: 'Soạn thảo công văn, quy định nhập khẩu máy móc thực phẩm & thủ tục mở quán' },
       { href: '/affairs', label: 'Hồ sơ & Giấy phép', description: 'Hợp đồng thuê mặt bằng, các loại giấy phép kinh doanh, nhắc nhở hết hạn' },
@@ -285,9 +285,9 @@ export const UNIT_AREAS_EN: UnitArea[] = [
   },
   {
     key: 'affairs',
-    label: 'Legal & Affairs',
+    label: 'Affairs & Licenses',
     homeHref: '/affairs',
-    description: 'Vietnam legal compliance, import rules, store leases, and licenses',
+    description: 'Store leases, licenses, and expiration reminders; includes Legal Compliance AI',
     pages: [
       { href: '/legal', label: 'Legal Compliance AI', description: 'Vietnam legal documents, import regulations, and store licensing guide' },
       { href: '/affairs', label: 'Affairs & Licenses', description: 'Property leases, business licenses, expiration reminders, and alerts' },
