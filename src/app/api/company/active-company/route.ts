@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
 import { ACTIVE_COMPANY_COOKIE } from '@/lib/company/activeCompany'
+import { ACTIVE_BNB_COOKIE } from '@/lib/bnb/context'
 
 async function cookieDomain(): Promise<string | undefined> {
   try {
@@ -14,7 +15,9 @@ async function cookieDomain(): Promise<string | undefined> {
   }
 }
 
-// 切換目前要操作哪一家公司（ERP 側：CS/Booking/HR/Finance/行銷）
+// 切換目前要操作哪一家公司（ERP 側：CS/Booking/HR/Finance/行銷）。
+// 公司若有綁定訂房/客服帳號（companies.bnb_owner_id），連動切換 active_bnb_owner，
+// 避免「上面訂房切 A、下面公司切 B」兩邊不一致的情況——一次只操作一個業務。
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,10 +27,14 @@ export async function POST(req: NextRequest) {
   const cookieStore = await cookies()
   const domain = await cookieDomain()
   const opts = { path: '/', maxAge: 60 * 60 * 24 * 365, ...(domain ? { domain } : {}) }
+  const clearOpts = { ...opts, maxAge: 0 }
 
-  // 切回個人身分
+  // 切回個人身分：公司 cookie 清掉；訂房/客服 cookie 明確指回自己（不能只清掉——
+  // 清掉會落到 getBnbContext 的「純協作者自動判定」，若你剛好是別人的協作者又沒有
+  // 自己的房源，會被悄悄帶回那個業務，跟你剛選的「個人身分」不一致）。
   if (!companyId) {
-    cookieStore.set(ACTIVE_COMPANY_COOKIE, '', { ...opts, maxAge: 0 })
+    cookieStore.set(ACTIVE_COMPANY_COOKIE, '', clearOpts)
+    cookieStore.set(ACTIVE_BNB_COOKIE, user.id, opts)
     return NextResponse.json({ companyId: null })
   }
 
@@ -35,16 +42,19 @@ export async function POST(req: NextRequest) {
   const { data: profile } = await admin.from('profiles').select('user_type, email').eq('id', user.id).maybeSingle()
   const isSuperAdmin = isSuperAdminUser(user, profile)
 
-  // 總管理員代操：可切換到任何公司（不需 membership）
-  if (isSuperAdmin) {
-    cookieStore.set(ACTIVE_COMPANY_COOKIE, companyId, opts)
-    return NextResponse.json({ companyId, role: 'admin' })
+  let role = 'admin'
+  if (!isSuperAdmin) {
+    const { data: member } = await admin.from('company_members')
+      .select('role').eq('company_id', companyId).eq('member_id', user.id).eq('status', 'active').maybeSingle()
+    if (!member) return NextResponse.json({ error: '無權操作此公司' }, { status: 403 })
+    role = member.role
   }
 
-  const { data: member } = await admin.from('company_members')
-    .select('role').eq('company_id', companyId).eq('member_id', user.id).eq('status', 'active').maybeSingle()
-  if (!member) return NextResponse.json({ error: '無權操作此公司' }, { status: 403 })
+  const { data: company } = await admin.from('companies').select('bnb_owner_id').eq('id', companyId).maybeSingle()
 
   cookieStore.set(ACTIVE_COMPANY_COOKIE, companyId, opts)
-  return NextResponse.json({ companyId, role: member.role })
+  // 這家公司有掛訂房/客服帳號 → 連動切過去；沒有的話明確指回自己（理由同上，不能只清掉）
+  cookieStore.set(ACTIVE_BNB_COOKIE, company?.bnb_owner_id || user.id, opts)
+
+  return NextResponse.json({ companyId, role })
 }

@@ -14,7 +14,7 @@ export async function GET() {
 
   const admin = createAdminClient()
   const { data: memberships, error } = await admin.from('company_members')
-    .select('company_id, role, companies(id, name)')
+    .select('company_id, role, companies(id, name, bnb_owner_id)')
     .eq('member_id', user.id)
     .eq('status', 'active')
     .order('created_at', { ascending: true })
@@ -24,7 +24,7 @@ export async function GET() {
     self: { id: user.id, email: user.email },
     memberships: (memberships ?? []).map((m) => {
       const company = Array.isArray(m.companies) ? m.companies[0] : m.companies
-      return { company_id: m.company_id, role: m.role, company_name: company?.name ?? null }
+      return { company_id: m.company_id, role: m.role, company_name: company?.name ?? null, bnb_owner_id: company?.bnb_owner_id ?? null }
     }),
   })
 }

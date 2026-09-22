@@ -20,7 +20,7 @@ type Membership = {
   owner: { email: string | null; full_name: string | null } | null
   scopes: Partial<Record<Scope, Role>>
 }
-type CompanyMembership = { company_id: string; role: string; company_name: string | null }
+type CompanyMembership = { company_id: string; role: string; company_name: string | null; bnb_owner_id: string | null }
 
 function readActiveOwner(): string {
   if (typeof document === 'undefined') return ''
@@ -48,6 +48,7 @@ export default function TeamPage() {
   const [ownerModules, setOwnerModules] = useState<Scope[]>([])
   const [canManage, setCanManage] = useState(true)
   const [managing, setManaging] = useState<Member[]>([])
+  const [companyTeam, setCompanyTeam] = useState<{ companyName: string; members: { email: string; full_name: string | null; role: string }[] } | null>(null)
   const [memberships, setMemberships] = useState<Membership[]>([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -103,6 +104,9 @@ export default function TeamPage() {
   const visibleModules = scopeParam ? ownerModules.filter(m => m === scopeParam) : ownerModules
   const onlyScope: Scope[] = scopeParam ? [scopeParam] : (['booking', 'cs'] as Scope[])
   const visibleManaging = scopeParam ? managing.filter(m => m.scopes[scopeParam]) : managing
+  // 公司若有掛訂房/客服帳號，切公司會自動連動訂房/客服，不用在上面「目前操作中的帳號」重複列一次
+  const companyBnbOwnerIds = new Set(companyMemberships.map(m => m.bnb_owner_id).filter(Boolean))
+  const visibleBnbMemberships = memberships.filter(m => !companyBnbOwnerIds.has(m.owner_id))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -114,6 +118,7 @@ export default function TeamPage() {
       setOwnerModules(d.ownerModules ?? [])
       setCanManage(d.canManage ?? true)
       setManaging(d.managing ?? [])
+      setCompanyTeam(d.companyTeam ?? null)
       setMemberships(d.memberships ?? [])
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)) }
     finally { setLoading(false) }
@@ -216,9 +221,12 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* 我參與協作的對象（切換器） */}
+      {/* 我參與協作的對象（切換器）。已掛公司的業務不在這裡重複列出，切換公司會自動連動。 */}
       <Card className="p-4">
         <h2 className="text-sm font-semibold mb-3">{t('activeAccount')}</h2>
+        {active && companyBnbOwnerIds.has(active) && (
+          <p className="text-xs text-muted-foreground mb-2">{t('activeAccountFollowsCompany')}</p>
+        )}
         <div className="flex flex-col gap-2">
           <button onClick={() => switchOwner(self?.id ?? '')}
             className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
@@ -226,7 +234,7 @@ export default function TeamPage() {
             <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{t('myOwnAccount')}</span>
             {selfActive && <Check className="h-4 w-4" />}
           </button>
-          {memberships.map(m => {
+          {visibleBnbMemberships.map(m => {
             const on = active === m.owner_id
             const scopeText = (Object.entries(m.scopes) as [Scope, Role][])
               .map(([s, r]) => `${MODULE_LABEL[s]}·${ROLE_SHORT[r]}`).join('，')
@@ -401,6 +409,28 @@ export default function TeamPage() {
           </div>
         )}
       </Card>
+
+      {/* 該業務所屬公司的 ERP 團隊（唯讀，避免跟上面的訂房/客服協作者重複邀請） */}
+      {canManage && companyTeam && (
+        <Card className="p-4">
+          <h2 className="text-sm font-semibold mb-3">{t('companyTeam', { company: companyTeam.companyName })}</h2>
+          {companyTeam.members.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 text-center">{t('companyTeamEmpty')}</div>
+          ) : (
+            <div className="divide-y">
+              {companyTeam.members.map(m => (
+                <div key={m.email} className="py-2.5 flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate">{m.full_name || m.email}</div>
+                    <div className="text-xs text-muted-foreground truncate">{m.email}</div>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">{COMPANY_ROLE_SHORT[m.role] ?? m.role}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   )
 }

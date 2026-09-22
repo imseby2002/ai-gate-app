@@ -4721,7 +4721,10 @@
     "personalAccountOption": "Cá nhân (không thuộc công ty nào)",
     "noCompanies": "Bạn hiện chưa thuộc công ty nào",
     "switchCompanyFailed": "Chuyển công ty thất bại",
-    "noManagePermission": "Vai trò hiện tại của bạn (quản lý/chỉ xem) không thể xem hoặc quản lý danh sách nhóm của doanh nghiệp này. Chỉ chủ sở hữu hoặc quản trị viên mới được phép."
+    "noManagePermission": "Vai trò hiện tại của bạn (quản lý/chỉ xem) không thể xem hoặc quản lý danh sách nhóm của doanh nghiệp này. Chỉ chủ sở hữu hoặc quản trị viên mới được phép.",
+    "activeAccountFollowsCompany": "Đặt phòng/CSKH hiện do công ty được chọn bên dưới đại diện — chuyển công ty sẽ tự động theo, không cần chọn thêm ở đây.",
+    "companyTeam": "Đội ngũ ERP của {company} (chỉ xem, tránh mời trùng)",
+    "companyTeamEmpty": "Công ty này hiện chưa có thành viên ERP nào khác"
   },
   "Vendors": {
     "adminOnly": "Chỉ bộ phận Thu ngân／Tổng vụ được sử dụng dữ liệu nhà cung cấp",

@@ -4814,7 +4814,10 @@
     "personalAccountOption": "Personal (not part of any company)",
     "noCompanies": "You don't belong to any company yet",
     "switchCompanyFailed": "Failed to switch company",
-    "noManagePermission": "Your role (manager/viewer) can't view or manage this business's team. Only the owner or an admin can."
+    "noManagePermission": "Your role (manager/viewer) can't view or manage this business's team. Only the owner or an admin can.",
+    "activeAccountFollowsCompany": "Booking/CS is currently represented by the company selected below — switching companies follows automatically, no need to pick here too.",
+    "companyTeam": "{company}'s ERP team (read-only, avoids double-inviting)",
+    "companyTeamEmpty": "This company has no other ERP team members yet"
   },
   "Vendors": {
     "adminOnly": "Only Finance/General Affairs can use vendor data",

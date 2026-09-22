@@ -32,6 +32,23 @@ async function resolveOwnerAndPermission(supabase: SB, userId: string): Promise<
   return { ownerId: ctx.ownerId, canManage: ctx.canSettings }
 }
 
+// 這個業務帳號若剛好是某家公司掛的訂房/客服帳號，一併列出該公司的 ERP 團隊
+// （company_members），純唯讀顯示，方便核對避免跟 bnb_members 重複邀請同一個人。
+async function companyTeam(admin: Admin, ownerId: string) {
+  const { data: company } = await admin.from('companies').select('id, name').eq('bnb_owner_id', ownerId).maybeSingle()
+  if (!company) return null
+  const { data: rows } = await admin.from('company_members')
+    .select('member_id, invited_email, role, profiles(email, full_name)')
+    .eq('company_id', company.id).eq('status', 'active').order('created_at', { ascending: true })
+  return {
+    companyName: company.name,
+    members: (rows ?? []).map((r) => {
+      const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles
+      return { email: profile?.email ?? r.invited_email, full_name: profile?.full_name ?? null, role: r.role }
+    }),
+  }
+}
+
 async function profileMap(ids: string[]) {
   const uniq = [...new Set(ids.filter(Boolean))]
   if (uniq.length === 0) return {} as Record<string, { email: string | null; full_name: string | null }>
@@ -53,13 +70,15 @@ export async function GET() {
   const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id)
   const admin = await createAdminClient()
 
-  const [{ data: managingRaw }, { data: memberships }, modsRaw] = await Promise.all([
+  const [{ data: managingRaw }, { data: memberships }, modsRaw, companyTeamRaw] = await Promise.all([
     admin.from('bnb_members').select('*').eq('owner_id', ownerId).order('created_at', { ascending: true }),
     supabase.from('bnb_members').select('*').eq('member_id', user.id).eq('status', 'active'),
     ownerModules(admin, ownerId),
+    companyTeam(admin, ownerId),
   ])
   const managing = canManage ? managingRaw : []
   const mods = canManage ? modsRaw : []
+  const companyTeamResult = canManage ? companyTeamRaw : null
 
   const ids = [
     ...(managing ?? []).map((m) => m.member_id).filter(Boolean),
@@ -93,6 +112,7 @@ export async function GET() {
     canManage,
     managing: Object.values(byEmail),
     memberships: Object.values(byOwner),
+    companyTeam: companyTeamResult,
   })
 }
 
