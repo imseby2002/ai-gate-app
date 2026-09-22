@@ -7,7 +7,7 @@ import {
   FileText, X, Sparkles, Wand2, Zap, TrendingUp, Check, AlertTriangle,
   ClipboardList, PieChart, Clock as ClockIcon, ThumbsUp, Lock,
   MessageSquare, BookOpen, Database, Calculator, FlaskConical, Ticket, Inbox, Send, ShieldCheck, Phone,
-  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu,
+  PanelLeftClose, PanelLeftOpen, UserRound, Image as ImageIcon, Tag, Gift, LayoutDashboard, Info, Menu, ChevronLeft,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { HelpTip } from '@/components/cs/HelpTip'
@@ -4867,9 +4867,13 @@ function Unit12CustomerService({
                 <div className="text-[11px]">{t('noInboxHint')}</div>
               </div>
             ) : (
-              <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden bg-white shadow-sm" style={{ height: 'calc(100vh - 210px)', minHeight: '600px' }}>
-                {/* 左側：客戶列表（支援搜尋、垂直滾動、全部客戶） */}
-                <div className="md:w-80 shrink-0 border-b md:border-b-0 md:border-r flex flex-col bg-gray-50/50">
+              <div className="flex flex-col md:flex-row border rounded-xl overflow-hidden bg-white shadow-sm h-[calc(100dvh-260px)] min-h-[380px] md:h-[calc(100vh-210px)] md:min-h-[600px]">
+                {/* 左側：客戶列表（支援搜尋、垂直滾動、全部客戶）——手機版一次只顯示
+                    列表或對話串其中一個（比照 CsInbox.tsx 的做法），不然兩個都塞進
+                    同一個固定高度的盒子裡，手機螢幕根本不夠放，客戶名單完全滑不下去
+                    （真實案例：商家反映「無法往下拉名單」）。桌面版（md 以上）維持
+                    原本並排雙欄不變。 */}
+                <div className={`${activeConvo ? 'hidden md:flex' : 'flex'} md:w-80 shrink-0 border-b md:border-b-0 md:border-r flex-col bg-gray-50/50`}>
                   {/* 搜尋列與計數 */}
                   <div className="p-2.5 border-b bg-white space-y-2 shrink-0">
                     <div className="relative">
@@ -4954,7 +4958,7 @@ function Unit12CustomerService({
                 </div>
 
                 {/* 右側：對話串 + 回覆框 */}
-                <div className="flex-1 flex flex-col min-w-0 bg-white">
+                <div className={`${activeConvo ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 bg-white`}>
                   {!activeConvo ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2 p-6">
                       <Inbox className="h-10 w-10 text-gray-300" />
@@ -4965,6 +4969,9 @@ function Unit12CustomerService({
                       {/* 對話頭部 */}
                       <div className="px-4 py-3 border-b bg-gray-50/70 shrink-0 flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-2.5 min-w-0">
+                          <button type="button" onClick={() => setActiveConvo(null)} className="md:hidden text-gray-500 shrink-0 -ml-1 p-1">
+                            <ChevronLeft className="h-5 w-5" />
+                          </button>
                           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                             {formatCustomerName(activeConvo.name, activeConvo.from_id, t).charAt(0)}
                           </div>
