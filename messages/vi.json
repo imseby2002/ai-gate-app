@@ -4714,7 +4714,13 @@
     "removeAll": "Xóa tất cả",
     "canCorrectAiTitle": "Sau khi cấp quyền, đồng đội này có thể gửi trực tiếp \"sửa câu trả lời AI\" trong không gian làm việc CSKH, có hiệu lực ngay lập tức",
     "canCorrectAi": "Có thể sửa AI",
-    "removeModulePermission": "Xóa quyền {module}"
+    "removeModulePermission": "Xóa quyền {module}",
+    "companyRoleOwner": "Chủ sở hữu",
+    "companyAccount": "Công ty đang hoạt động",
+    "companySubtitle": "Một tài khoản có thể là nhân viên của nhiều công ty cùng lúc. Chuyển đổi sẽ thay đổi dữ liệu CSKH/Đặt phòng/ERP/Marketing bạn đang chỉnh sửa thuộc về công ty nào (không phải dữ liệu cá nhân).",
+    "personalAccountOption": "Cá nhân (không thuộc công ty nào)",
+    "noCompanies": "Bạn hiện chưa thuộc công ty nào",
+    "switchCompanyFailed": "Chuyển công ty thất bại"
   },
   "Vendors": {
     "adminOnly": "Chỉ bộ phận Thu ngân／Tổng vụ được sử dụng dữ liệu nhà cung cấp",

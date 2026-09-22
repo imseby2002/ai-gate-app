@@ -20,10 +20,17 @@ type Membership = {
   owner: { email: string | null; full_name: string | null } | null
   scopes: Partial<Record<Scope, Role>>
 }
+type CompanyMembership = { company_id: string; role: string; company_name: string | null }
 
 function readActiveOwner(): string {
   if (typeof document === 'undefined') return ''
   const m = document.cookie.match(/(?:^|;\s*)active_bnb_owner=([^;]+)/)
+  return m ? decodeURIComponent(m[1]) : ''
+}
+
+function readActiveCompany(): string {
+  if (typeof document === 'undefined') return ''
+  const m = document.cookie.match(/(?:^|;\s*)active_company_id=([^;]+)/)
   return m ? decodeURIComponent(m[1]) : ''
 }
 
@@ -36,6 +43,7 @@ export default function TeamPage() {
     viewer: t('roleViewerFull'),
   }
   const ROLE_SHORT: Record<Role, string> = { admin: t('roleAdmin'), manager: t('roleManager'), viewer: t('roleViewer') }
+  const COMPANY_ROLE_SHORT: Record<string, string> = { owner: t('companyRoleOwner'), admin: t('roleAdmin'), manager: t('roleManager'), viewer: t('roleViewer') }
   const [self, setSelf] = useState<{ id: string; email: string | null } | null>(null)
   const [ownerModules, setOwnerModules] = useState<Scope[]>([])
   const [managing, setManaging] = useState<Member[]>([])
@@ -50,6 +58,9 @@ export default function TeamPage() {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [active, setActive] = useState('')
+  const [companyMemberships, setCompanyMemberships] = useState<CompanyMembership[]>([])
+  const [activeCompany, setActiveCompany] = useState('')
+  const [switchingCompany, setSwitchingCompany] = useState(false)
   const [addingBusiness, setAddingBusiness] = useState(false)
   const [newBusinessName, setNewBusinessName] = useState('')
   const [creatingBusiness, setCreatingBusiness] = useState(false)
@@ -58,9 +69,35 @@ export default function TeamPage() {
 
   useEffect(() => {
     setActive(readActiveOwner())
+    setActiveCompany(readActiveCompany())
     const sp = new URLSearchParams(window.location.search).get('scope')
     if (sp === 'cs' || sp === 'booking') setScopeParam(sp)
   }, [])
+
+  const loadCompanies = useCallback(async () => {
+    try {
+      const r = await fetch('/api/company/memberships')
+      const d = await r.json()
+      if (r.ok) setCompanyMemberships(d.memberships ?? [])
+    } catch { /* 靜默失敗：不影響訂房/客服切換器 */ }
+  }, [])
+
+  useEffect(() => { loadCompanies() }, [loadCompanies])
+
+  async function switchCompany(companyId: string) {
+    setSwitchingCompany(true)
+    try {
+      const r = await fetch('/api/company/active-company', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: companyId || null }),
+      })
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || t('switchCompanyFailed')) }
+      window.location.reload()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setSwitchingCompany(false)
+    }
+  }
 
   const visibleModules = scopeParam ? ownerModules.filter(m => m === scopeParam) : ownerModules
   const onlyScope: Scope[] = scopeParam ? [scopeParam] : (['booking', 'cs'] as Scope[])
@@ -227,6 +264,37 @@ export default function TeamPage() {
           )}
         </div>
       </Card>
+
+      {/* 目前操作中的公司（ERP／CS／訂房／行銷資料所屬） */}
+      {companyMemberships.length > 0 && (
+        <Card className="p-4">
+          <h2 className="text-sm font-semibold mb-1">{t('companyAccount')}</h2>
+          <p className="text-xs text-muted-foreground mb-3">{t('companySubtitle')}</p>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => switchCompany('')} disabled={switchingCompany}
+              className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
+                ${!activeCompany ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+              <span className="flex items-center gap-2"><Users className="h-4 w-4" />{t('personalAccountOption')}</span>
+              {!activeCompany && <Check className="h-4 w-4" />}
+            </button>
+            {companyMemberships.map(m => {
+              const on = activeCompany === m.company_id
+              return (
+                <button key={m.company_id} onClick={() => switchCompany(m.company_id)} disabled={switchingCompany}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
+                    ${on ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+                  <span className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {m.company_name || m.company_id.slice(0, 8)}
+                    <span className="text-xs text-muted-foreground">（{COMPANY_ROLE_SHORT[m.role] ?? m.role}）</span>
+                  </span>
+                  {on && <Check className="h-4 w-4" />}
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* 邀請表單 */}
       <Card className="p-4">

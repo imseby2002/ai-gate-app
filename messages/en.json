@@ -4807,7 +4807,13 @@
     "removeAll": "Remove all",
     "canCorrectAiTitle": "Once granted, this teammate can submit \"AI answer corrections\" directly in the CS workspace, effective immediately",
     "canCorrectAi": "Can correct AI",
-    "removeModulePermission": "Remove {module} permission"
+    "removeModulePermission": "Remove {module} permission",
+    "companyRoleOwner": "Owner",
+    "companyAccount": "Currently Active Company",
+    "companySubtitle": "One account can be staff at multiple companies at once. Switching changes which company's CS/Booking/ERP/Marketing data you're editing (not personal data).",
+    "personalAccountOption": "Personal (not part of any company)",
+    "noCompanies": "You don't belong to any company yet",
+    "switchCompanyFailed": "Failed to switch company"
   },
   "Vendors": {
     "adminOnly": "Only Finance/General Affairs can use vendor data",

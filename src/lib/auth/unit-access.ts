@@ -4,6 +4,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
+import { resolveCompanyOwner, resolveActiveCompanyId } from '@/lib/company/activeCompany'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -20,17 +21,6 @@ export interface UnitContext {
 const DENY_401: UnitContext = { ok: false, status: 401, userId: '', ownerId: '', isAdmin: false, admin: null as unknown as Admin, storeCode: null }
 const DENY_403: UnitContext = { ok: false, status: 403, userId: '', ownerId: '', isAdmin: false, admin: null as unknown as Admin, storeCode: null }
 
-// 解析公司 owner 的帳號 id
-async function resolveCompanyOwner(admin: Admin, companyId: string | null): Promise<string | null> {
-  if (!companyId) return null
-  const { data, error } = await admin.from('company_members')
-    .select('member_id').eq('company_id', companyId).eq('role', 'owner').eq('status', 'active').maybeSingle()
-  // 查詢失敗時會退回使用者自己當 ownerId，整個資料範圍跑掉（使用者會看到空資料），
-  // 而且過程完全無聲。行為維持不變，但一定要留下錯誤才追得到。
-  if (error) console.error('[unit-access] company_members(owner) 查詢失敗', { companyId, error })
-  return data?.member_id ?? null
-}
-
 // 驗證單位存取（符合任一單位即通過；總管理者或公司負責人/IT 全開）。unitKeys 例：['store', 'audit', 'hr']
 export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext> {
   const supabase = await createClient()
@@ -43,17 +33,18 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   // 卻沒有任何線索可查。權限判斷維持 fail-closed（該擋還是擋），但錯誤要留下來。
   if (profileErr) console.error('[unit-access] profiles 查詢失敗', { userId: user.id, error: profileErr })
   const isSuperAdmin = isSuperAdminUser(user, profile)
+  const activeCompanyId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
 
   // 檢查是否為公司負責人 (owner) 或公司 IT (admin)
   let isCompanyAdmin = false
-  if (profile?.company_id) {
+  if (activeCompanyId) {
     const { data: m, error: memberErr } = await admin.from('company_members')
       .select('role')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', activeCompanyId)
       .eq('member_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
-    if (memberErr) console.error('[unit-access] company_members(role) 查詢失敗', { userId: user.id, companyId: profile.company_id, error: memberErr })
+    if (memberErr) console.error('[unit-access] company_members(role) 查詢失敗', { userId: user.id, companyId: activeCompanyId, error: memberErr })
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }
@@ -66,7 +57,7 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   // 管理者／owner：資料在自己名下；IT 或一般成員：解析公司 owner
   let ownerId = user.id
   if (!isSuperAdmin) {
-    const owner = await resolveCompanyOwner(admin, profile?.company_id ?? null)
+    const owner = await resolveCompanyOwner(admin, activeCompanyId)
     if (owner) {
       ownerId = owner
     }
@@ -98,16 +89,17 @@ export async function getCompanyContext(): Promise<UnitContext> {
   // 卻沒有任何線索可查。權限判斷維持 fail-closed（該擋還是擋），但錯誤要留下來。
   if (profileErr) console.error('[unit-access] profiles 查詢失敗', { userId: user.id, error: profileErr })
   const isSuperAdmin = isSuperAdminUser(user, profile)
+  const activeCompanyId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
 
   let isCompanyAdmin = false
-  if (profile?.company_id) {
+  if (activeCompanyId) {
     const { data: m, error: memberErr } = await admin.from('company_members')
       .select('role')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', activeCompanyId)
       .eq('member_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
-    if (memberErr) console.error('[unit-access] company_members(role) 查詢失敗', { userId: user.id, companyId: profile.company_id, error: memberErr })
+    if (memberErr) console.error('[unit-access] company_members(role) 查詢失敗', { userId: user.id, companyId: activeCompanyId, error: memberErr })
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }
@@ -115,7 +107,7 @@ export async function getCompanyContext(): Promise<UnitContext> {
 
   let ownerId = user.id
   if (!isSuperAdmin) {
-    const owner = await resolveCompanyOwner(admin, profile?.company_id ?? null)
+    const owner = await resolveCompanyOwner(admin, activeCompanyId)
     if (owner) {
       ownerId = owner
     }

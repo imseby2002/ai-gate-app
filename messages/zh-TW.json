@@ -4807,7 +4807,13 @@
     "removeAll": "移除全部",
     "canCorrectAiTitle": "授權後，這位夥伴可以在客服工作台直接提交「AI 回答修正」，立即生效",
     "canCorrectAi": "可修正 AI",
-    "removeModulePermission": "移除{module}權限"
+    "removeModulePermission": "移除{module}權限",
+    "companyRoleOwner": "負責人",
+    "companyAccount": "目前操作中的公司",
+    "companySubtitle": "一個帳號可以同時是多家公司的員工，切換後 CS／訂房／ERP／行銷資料都會變成該公司的（非個人資料）。",
+    "personalAccountOption": "個人身分（不屬於任何公司）",
+    "noCompanies": "你目前不屬於任何公司",
+    "switchCompanyFailed": "切換公司失敗"
   },
   "Vendors": {
     "adminOnly": "僅出納總務單位可使用廠商資料",

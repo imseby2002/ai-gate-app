@@ -2,6 +2,7 @@
 //   ownerId（資料歸屬＝公司 owner）與 memberIds（公司全體成員 id，供公司級日誌彙整）。
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
 
 type Admin = ReturnType<typeof createAdminClient>
 export interface MktCompany { admin: Admin; userId: string; ownerId: string; memberIds: string[] }
@@ -17,15 +18,17 @@ export async function marketingCompany(): Promise<MktCompany | null> {
   if (profileErr) console.error('[marketing-company] profiles 查詢失敗', { userId: user.id, error: profileErr })
   if (!profile || profile.is_active === false) return null
   const isSuperAdmin = profile.user_type === 'admin'
+  const activeCompanyId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile.company_id ?? null)
+
   let isCompanyAdmin = false
-  if (profile.company_id) {
+  if (activeCompanyId) {
     const { data: m, error: memberErr } = await admin.from('company_members')
       .select('role')
-      .eq('company_id', profile.company_id)
+      .eq('company_id', activeCompanyId)
       .eq('member_id', user.id)
       .eq('status', 'active')
       .maybeSingle()
-    if (memberErr) console.error('[marketing-company] company_members(role) 查詢失敗', { userId: user.id, companyId: profile.company_id, error: memberErr })
+    if (memberErr) console.error('[marketing-company] company_members(role) 查詢失敗', { userId: user.id, companyId: activeCompanyId, error: memberErr })
     if (m?.role === 'owner' || m?.role === 'admin') {
       isCompanyAdmin = true
     }
@@ -40,11 +43,11 @@ export async function marketingCompany(): Promise<MktCompany | null> {
 
   let ownerId = user.id
   let memberIds: string[] = [user.id]
-  if (profile.company_id) {
+  if (activeCompanyId) {
     const { data: members, error: membersErr } = await admin.from('company_members')
-      .select('member_id, role').eq('company_id', profile.company_id).eq('status', 'active')
+      .select('member_id, role').eq('company_id', activeCompanyId).eq('status', 'active')
     // 查詢失敗會讓 ownerId 退回使用者自己，資料範圍整個跑掉（會看到空資料）而且無聲。
-    if (membersErr) console.error('[marketing-company] company_members 查詢失敗', { companyId: profile.company_id, error: membersErr })
+    if (membersErr) console.error('[marketing-company] company_members 查詢失敗', { companyId: activeCompanyId, error: membersErr })
     const rows = members ?? []
     const owner = rows.find(m => m.role === 'owner')?.member_id
     if (owner) ownerId = owner
