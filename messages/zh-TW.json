@@ -5726,6 +5726,7 @@
     "zaloPersonalDesc": "輸入對應人員的 Zalo User ID，系統將在觸發提醒時透過 Zalo OA 官方帳號主動推播訊息至該人員手機。",
     "customDefaultDaysLabel": "自訂預設天數",
     "customDefaultDaysDesc": "可在下方隨意更改預設天數；所有合約與證書亦可在建立時獨立自訂。",
+    "zaloOaTokenLinkLabel": "前往設定 Zalo OA Access Token（客服系統 → 頻道設定）",
     "zaloPersonalField": "ZALO 個人 (User ID)",
     "zaloUserIdPlaceholder": "Zalo OA 用戶 ID",
     "globalDefaultDaysTitle": "全域預設提醒天數調整",

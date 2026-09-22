@@ -697,6 +697,12 @@ function SettingsTab() {
         </p>
         <p>• <b>{t('zaloPersonalLabel')}</b>：{t('zaloPersonalDesc')}</p>
         <p>• <b>{t('customDefaultDaysLabel')}</b>：{t('customDefaultDaysDesc')}</p>
+        <p className="pt-1">
+          <Link href="/cs/settings" className="inline-flex items-center gap-1 text-indigo-700 underline hover:text-indigo-900">
+            {t('zaloOaTokenLinkLabel')}
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        </p>
       </div>
 
       {/* 角色管道設定 */}

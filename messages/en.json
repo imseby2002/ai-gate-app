@@ -5726,6 +5726,7 @@
     "zaloPersonalDesc": "Enter the Zalo User ID of the relevant person; the system will proactively push a message to their phone via the Zalo OA official account when a reminder triggers.",
     "customDefaultDaysLabel": "Custom Default Days",
     "customDefaultDaysDesc": "You can freely change the default days below; each contract/certificate can also be customized individually when created.",
+    "zaloOaTokenLinkLabel": "Set up the Zalo OA Access Token (CS system → Channel Settings)",
     "zaloPersonalField": "ZALO Personal (User ID)",
     "zaloUserIdPlaceholder": "Zalo OA User ID",
     "globalDefaultDaysTitle": "Global Default Reminder Days",

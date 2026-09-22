@@ -5633,6 +5633,7 @@
     "zaloPersonalDesc": "Nhập Zalo User ID của người liên quan, hệ thống sẽ chủ động đẩy tin nhắn đến điện thoại người đó qua tài khoản Zalo OA chính thức khi kích hoạt nhắc nhở.",
     "customDefaultDaysLabel": "Tùy chỉnh số ngày mặc định",
     "customDefaultDaysDesc": "Có thể thay đổi số ngày mặc định tự do bên dưới; mỗi hợp đồng và chứng chỉ cũng có thể tùy chỉnh riêng khi tạo.",
+    "zaloOaTokenLinkLabel": "Đi thiết lập Zalo OA Access Token (Hệ thống CSKH → Cài đặt kênh)",
     "zaloPersonalField": "ZALO cá nhân (User ID)",
     "zaloUserIdPlaceholder": "Zalo OA User ID",
     "globalDefaultDaysTitle": "Điều chỉnh số ngày nhắc nhở mặc định toàn cục",
