@@ -72,7 +72,7 @@ export const UNIT_AREAS: UnitArea[] = [
   {
     key: 'affairs',
     label: '外務・法規',
-    homeHref: '/legal',
+    homeHref: '/affairs',
     description: '越南法律合規・各國進口規定・門市租約・營業執照',
     pages: [
       { href: '/legal', label: '法律合規 AI (越南法律/進口/門市)', description: '越南法律公務文書、各國食品設備進口規定與開門市手續引導' },
@@ -179,7 +179,7 @@ export const UNIT_AREAS_VI: UnitArea[] = [
   {
     key: 'affairs',
     label: 'Hành chính & Pháp lý',
-    homeHref: '/legal',
+    homeHref: '/affairs',
     description: 'Tuân thủ pháp luật VN, quy định xuất nhập khẩu, hợp đồng thuê & giấy phép',
     pages: [
       { href: '/legal', label: 'AI Pháp lý & Tuân thủ', description: 'Soạn thảo công văn, quy định nhập khẩu máy móc thực phẩm & thủ tục mở quán' },
@@ -286,7 +286,7 @@ export const UNIT_AREAS_EN: UnitArea[] = [
   {
     key: 'affairs',
     label: 'Legal & Affairs',
-    homeHref: '/legal',
+    homeHref: '/affairs',
     description: 'Vietnam legal compliance, import rules, store leases, and licenses',
     pages: [
       { href: '/legal', label: 'Legal Compliance AI', description: 'Vietnam legal documents, import regulations, and store licensing guide' },
