@@ -119,6 +119,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   // Form states for Create / Edit Company
   const [formName, setFormName] = useState('')
   const [formOwnerId, setFormOwnerId] = useState('')
+  const [formBnbOwnerId, setFormBnbOwnerId] = useState('')
   const [formItId, setFormItId] = useState('')
   const [formModules, setFormModules] = useState<string[]>([])
   const [formFeedbackFree, setFormFeedbackFree] = useState(false)
@@ -193,6 +194,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const handleOpenCreate = () => {
     setFormName('')
     setFormOwnerId('')
+    setFormBnbOwnerId('')
     setFormItId('')
     setFormModules(ALL_MODULES.map(m => m.id))
     setShowCreateModal(true)
@@ -211,6 +213,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
         body: JSON.stringify({
           name: formName.trim(),
           ownerId: formOwnerId || undefined,
+          bnbOwnerId: formBnbOwnerId || formOwnerId || undefined,
           itId: formItId || undefined,
           enabledModules: formModules,
         }),
@@ -231,6 +234,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setEditingCompany(company)
     setFormName(company.name)
     setFormOwnerId(company.owner?.id ?? '')
+    setFormBnbOwnerId(company.bnb_owner_id ?? company.owner?.id ?? '')
     setFormItId(company.it?.id ?? '')
     setFormModules(company.enabled_modules ?? ALL_MODULES.map(m => m.id))
     setFormFeedbackFree(company.feedback_free_features ?? false)
@@ -249,6 +253,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           id: editingCompany.id,
           name: formName.trim(),
           ownerId: formOwnerId || undefined,
+          bnbOwnerId: formBnbOwnerId || formOwnerId || null,
           itId: formItId || '',
           enabledModules: formModules,
           feedbackFree: formFeedbackFree,
@@ -761,7 +766,10 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                 <label className="font-bold text-slate-800 block mb-1.5">指派公司負責人 (Owner)</label>
                 <select
                   value={formOwnerId}
-                  onChange={e => setFormOwnerId(e.target.value)}
+                  onChange={e => {
+                    setFormOwnerId(e.target.value)
+                    if (!formBnbOwnerId) setFormBnbOwnerId(e.target.value)
+                  }}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">-- 先不指定負責人（後續再指派） --</option>
@@ -773,6 +781,24 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                   ))}
                 </select>
                 <p className="text-[11px] text-slate-500 mt-1">負責人具備該公司的最高管理與成員邀請權限。</p>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1.5">客服與訂房業務主帳號 (CS / Booking)</label>
+                <select
+                  value={formBnbOwnerId}
+                  onChange={e => setFormBnbOwnerId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- 同公司負責人 (預設) --</option>
+                  {allUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name ? `${u.full_name} (${u.email})` : u.email}
+                      {u.company_id ? ' [已有公司]' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">決定公司旗下客服 Webhook、LINE 憑證、房源與訂單歸屬於哪個帳號（預設跟隨負責人）。</p>
               </div>
 
               <div>
@@ -890,7 +916,10 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                 <label className="font-bold text-slate-800 block mb-1.5">變更公司負責人 (Owner)</label>
                 <select
                   value={formOwnerId}
-                  onChange={e => setFormOwnerId(e.target.value)}
+                  onChange={e => {
+                    setFormOwnerId(e.target.value)
+                    if (!formBnbOwnerId) setFormBnbOwnerId(e.target.value)
+                  }}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">-- 先不指定負責人 --</option>
@@ -900,6 +929,23 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1.5">客服與訂房業務主帳號 (CS / Booking)</label>
+                <select
+                  value={formBnbOwnerId}
+                  onChange={e => setFormBnbOwnerId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- 同公司負責人 (預設) --</option>
+                  {allUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name ? `${u.full_name} (${u.email})` : u.email}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">決定公司旗下客服 Webhook、LINE 憑證、房源與訂單歸屬於哪個帳號（預設跟隨負責人）。</p>
               </div>
 
               <div>

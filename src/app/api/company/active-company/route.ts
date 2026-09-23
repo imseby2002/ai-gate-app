@@ -53,13 +53,46 @@ export async function POST(req: NextRequest) {
   }
 
   const [{ data: company }, { data: companyOwnerMember }] = await Promise.all([
-    admin.from('companies').select('bnb_owner_id, created_by').eq('id', companyId).maybeSingle(),
+    admin.from('companies').select('id, bnb_owner_id, created_by').eq('id', companyId).maybeSingle(),
     admin.from('company_members').select('member_id').eq('company_id', companyId).eq('role', 'owner').eq('status', 'active').maybeSingle(),
   ])
 
+  let bnbDefault = company?.bnb_owner_id
+
+  if (!bnbDefault) {
+    // 自動修復：優先找負責人（非當前登入者優先）
+    if (companyOwnerMember?.member_id && companyOwnerMember.member_id !== user.id) {
+      bnbDefault = companyOwnerMember.member_id
+    } else {
+      // 查詢公司成員中，是否有已設定客服憑證（如 LINE OA）的帳號（例：已轉移後的 admin@ciaohome.net）
+      const { data: members } = await admin.from('company_members')
+        .select('member_id').eq('company_id', companyId).eq('status', 'active')
+      const memberIds = (members ?? []).map(m => m.member_id).filter(Boolean) as string[]
+
+      if (memberIds.length > 0) {
+        const { data: credRow } = await admin.from('social_platform_credentials')
+          .select('user_id')
+          .in('user_id', memberIds)
+          .eq('platform', 'line')
+          .eq('is_connected', true)
+          .maybeSingle()
+        if (credRow?.user_id) {
+          bnbDefault = credRow.user_id
+        }
+      }
+    }
+
+    if (!bnbDefault) {
+      bnbDefault = companyOwnerMember?.member_id || company?.created_by || user.id
+    }
+
+    // 自動補齊回寫 companies.bnb_owner_id，一勞永逸，從此再也不用開 SQL Editor！
+    if (bnbDefault && company?.id) {
+      await admin.from('companies').update({ bnb_owner_id: bnbDefault }).eq('id', company.id)
+    }
+  }
+
   cookieStore.set(ACTIVE_COMPANY_COOKIE, companyId, opts)
-  // 這家公司有掛訂房/客服帳號 → 連動切過去；若無顯式 bnb_owner_id，則優先連動公司負責人 (owner/created_by)；全無才明確指回自己
-  const bnbDefault = company?.bnb_owner_id || companyOwnerMember?.member_id || company?.created_by || user.id
   cookieStore.set(activeBnbCookieName('booking'), bnbDefault, opts)
   cookieStore.set(activeBnbCookieName('cs'), bnbDefault, opts)
 

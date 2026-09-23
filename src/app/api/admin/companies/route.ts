@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
         name: trimmedName,
         created_by: auth.user!.id,
         enabled_modules: enabledModules ?? null,
-        bnb_owner_id: bnbOwnerId || null,
+        bnb_owner_id: bnbOwnerId || ownerId || null,
       })
       .select('*')
       .single()
@@ -198,7 +198,11 @@ export async function PATCH(req: NextRequest) {
     const patch: Record<string, unknown> = {}
     if (name !== undefined) patch.name = String(name).trim()
     if (enabledModules !== undefined) patch.enabled_modules = enabledModules
-    if (bnbOwnerId !== undefined) patch.bnb_owner_id = bnbOwnerId || null
+    if (bnbOwnerId !== undefined) {
+      patch.bnb_owner_id = bnbOwnerId || null
+    } else if (ownerId) {
+      patch.bnb_owner_id = ownerId
+    }
     if (feedbackFree !== undefined) patch.feedback_free_features = feedbackFree
     if (freeFeatureQuotaMonthly !== undefined) patch.free_feature_quota_monthly = freeFeatureQuotaMonthly
 

@@ -60,8 +60,48 @@ export async function getBnbContext(
     canCorrectAi: (role === 'admin' || role === 'manager') && canCorrectAi,
   })
 
-  // 使用者主動選了自己的民宿
-  if (requested === user.id) return selfCtx()
+  // 檢查是否有正在操作中的公司身分（active_company_id）
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('company_id, user_type').eq('id', user.id).maybeSingle()
+  const isSuperAdmin = profile?.user_type === 'admin'
+  const activeCompId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
+
+  // 使用者選了自己的民宿（或切換公司時殘留舊 cookie）：
+  // 若目前正處於某間公司身分，且該公司有其專屬業務主帳號（非自己），以公司業務為準
+  if (requested === user.id) {
+    if (activeCompId) {
+      let { data: comp } = await admin.from('companies').select('id, bnb_owner_id').eq('id', activeCompId).maybeSingle()
+      let companyOwnerId = comp?.bnb_owner_id
+      if (!companyOwnerId) {
+        const { data: members } = await admin.from('company_members')
+          .select('member_id, role').eq('company_id', activeCompId).eq('status', 'active')
+        const otherOwner = members?.find(m => m.role === 'owner' && m.member_id !== user.id)
+        if (otherOwner?.member_id) {
+          companyOwnerId = otherOwner.member_id
+        } else {
+          const memberIds = (members ?? []).map(m => m.member_id).filter(Boolean) as string[]
+          if (memberIds.length > 0) {
+            const { data: credRow } = await admin.from('social_platform_credentials')
+              .select('user_id').in('user_id', memberIds).eq('platform', 'line').eq('is_connected', true).maybeSingle()
+            if (credRow?.user_id) companyOwnerId = credRow.user_id
+          }
+        }
+        if (companyOwnerId && comp?.id) {
+          await admin.from('companies').update({ bnb_owner_id: companyOwnerId }).eq('id', comp.id)
+        }
+      }
+
+      if (companyOwnerId && companyOwnerId !== user.id) {
+        const { data: cm } = await admin.from('company_members')
+          .select('role').eq('company_id', activeCompId).eq('member_id', user.id).eq('status', 'active').maybeSingle()
+        if (cm) {
+          const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
+          return memberCtx(companyOwnerId, role, role === 'admin' || role === 'manager')
+        }
+      }
+    }
+    return selfCtx()
+  }
 
   // 尚未設定切換 cookie：若是「純協作者」（自己沒有任何民宿房型或 CS 客戶資料、但有受邀的
   // active membership）→ 自動進入受邀民宿／商戶，省去手動切換。一旦用切換器選過即寫入

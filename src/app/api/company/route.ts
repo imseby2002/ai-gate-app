@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: company, error: companyErr } = await admin
     .from('companies')
-    .insert({ name: trimmed, created_by: user.id })
+    .insert({ name: trimmed, created_by: user.id, bnb_owner_id: user.id })
     .select('id, name')
     .single()
   if (companyErr || !company) return NextResponse.json({ error: companyErr?.message ?? '建立失敗' }, { status: 500 })
