@@ -83,7 +83,10 @@ export async function getBnbContext(
       }
     }
 
-    // 若在 bnb_members 未找到，再檢查公司身分（company_members）
+    // 若在 bnb_members 未找到，再檢查公司身分（company_members）。
+    // 已加入公司的員工，預設一律是公司的業務——不是個人帳號，跟有沒有自己的房源/客戶
+    // 無關（不像上面純協作者才需要用「自己有沒有資料」去猜要不要自動代入）；
+    // 除非本人自己手動切換 cookie，才會改成別的。
     const admin = createAdminClient()
     const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
     if (profile?.company_id) {
@@ -108,13 +111,7 @@ export async function getBnbContext(
           accepted_at: new Date().toISOString(),
         }, { onConflict: 'owner_id,invited_email,scope' }).then(() => {}, () => {})
 
-        if (scope === 'booking') {
-          const { count } = await sb.from('properties').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
-          if (!count) return memberCtx(companyOwnerId, role, canCorrectAi)
-        } else {
-          const { count } = await sb.from('cs_customers').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
-          if (!count) return memberCtx(companyOwnerId, role, canCorrectAi)
-        }
+        return memberCtx(companyOwnerId, role, canCorrectAi)
       }
     }
 
