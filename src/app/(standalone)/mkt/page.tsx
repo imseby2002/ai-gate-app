@@ -78,13 +78,14 @@ export default function MktPage() {
           ['stores', t('tabStores'), <Building2 key="s" className="h-4 w-4" />],
           ['products', t('tabProducts'), <UtensilsCrossed key="p" className="h-4 w-4" />],
           ['generate', t('tabGenerate'), <Sparkles key="g" className="h-4 w-4" />],
-          ['campaigns', '活動中心 (實體/線上/成效)', <MapPin key="o" className="h-4 w-4" />],
+          ['campaigns', '活動企劃中心 (AI/成效)', <Sparkles key="cp" className="h-4 w-4 text-purple-500" />],
+          ['offline', t('tabOffline'), <MapPin key="o" className="h-4 w-4" />],
           ['crm', '會員 CRM & VIP', <Users key="crm" className="h-4 w-4" />],
           ['delivery', t('tabDelivery'), <Bike key="d" className="h-4 w-4" />],
           ['analytics', t('tabAnalytics'), <BarChart3 key="a" className="h-4 w-4" />],
           ['calendar', t('tabCalendar'), <CalendarDays key="c" className="h-4 w-4" />]
         ] as const).map(([id, label, icon]) => (
-          <button key={id} onClick={() => setTab(id as Tab)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id || (id === 'campaigns' && tab === 'offline') ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+          <button key={id} onClick={() => setTab(id as Tab)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
 
@@ -92,7 +93,8 @@ export default function MktPage() {
         : tab === 'stores' ? <StoresTab />
         : tab === 'products' ? <ProductsTab />
         : tab === 'generate' ? <GenerateTab />
-        : tab === 'campaigns' || tab === 'offline' ? <CampaignsTab />
+        : tab === 'campaigns' ? <CampaignsTab />
+        : tab === 'offline' ? <OfflineTab />
         : tab === 'crm' ? <CrmTab />
         : tab === 'delivery' ? <DeliveryTab />
         : tab === 'analytics' ? <AnalyticsTab />
