@@ -25,8 +25,8 @@ export async function GET() {
   await supabase.rpc('claim_bnb_invitations')
 
   const [{ data: managing }, { data: memberships }] = await Promise.all([
-    supabase.from('bnb_members').select('*').eq('owner_id', user.id).order('created_at', { ascending: true }),
-    supabase.from('bnb_members').select('*').eq('member_id', user.id).eq('status', 'active'),
+    supabase.from('bnb_members').select('*').eq('owner_id', user.id).eq('scope', 'booking').order('created_at', { ascending: true }),
+    supabase.from('bnb_members').select('*').eq('member_id', user.id).eq('status', 'active').eq('scope', 'booking'),
   ])
 
   const ids = [

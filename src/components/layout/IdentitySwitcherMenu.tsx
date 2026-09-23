@@ -15,40 +15,43 @@ function readCookie(name: string): string {
   return m ? decodeURIComponent(m[1]) : ''
 }
 
-// 右上角帳號選單裡的「身分/協作」快速切換區塊：把 /team 頁兩個切換器的精簡版
-// 搬到隨處可見的地方，不用先跑去團隊頁才能切換。完整的邀請/角色管理仍留在 /team。
+// 右上角帳號選單裡的「身分/協作」快速切換區塊：把 /team 頁的切換器精簡版搬到
+// 隨處可見的地方，不用先跑去團隊頁才能切換。完整的邀請/角色管理仍留在 /team。
+// 「操作身分」（個人／公司）跟「客服／訂房協作邀請」是兩個獨立軸：身分決定
+// ERP/行銷等預設歸屬；協作邀請是被個別邀請、跟身分互不牽動，可以同時存在。
 export function IdentitySwitcherMenu({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations('Team')
   const [loading, setLoading] = useState(true)
-  const [selfId, setSelfId] = useState('')
-  const [activeOwner, setActiveOwner] = useState('')
+  const [activeBooking, setActiveBooking] = useState('')
+  const [activeCs, setActiveCs] = useState('')
   const [activeCompany, setActiveCompany] = useState('')
   const [memberships, setMemberships] = useState<BnbMembership[]>([])
   const [companyMemberships, setCompanyMemberships] = useState<CompanyMembership[]>([])
   const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
-    setActiveOwner(readCookie('active_bnb_owner'))
+    setActiveBooking(readCookie('active_bnb_owner_booking'))
+    setActiveCs(readCookie('active_bnb_owner_cs'))
     setActiveCompany(readCookie('active_company_id'))
     Promise.all([
       fetch('/api/collab/members').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/company/memberships').then(r => r.ok ? r.json() : null).catch(() => null),
     ]).then(([collab, company]) => {
-      if (collab) { setSelfId(collab.self?.id ?? ''); setMemberships(collab.memberships ?? []) }
+      if (collab) setMemberships(collab.memberships ?? [])
       if (company) setCompanyMemberships(company.memberships ?? [])
       setLoading(false)
     })
   }, [])
 
   const companyBnbOwnerIds = new Set(companyMemberships.map(m => m.bnb_owner_id).filter(Boolean))
-  const visibleMemberships = memberships.filter(m => !companyBnbOwnerIds.has(m.owner_id))
-  const selfActive = !activeOwner || activeOwner === selfId
+  const csMemberships = memberships.filter(m => m.scopes.cs && !companyBnbOwnerIds.has(m.owner_id))
+  const bookingMemberships = memberships.filter(m => m.scopes.booking && !companyBnbOwnerIds.has(m.owner_id))
 
-  async function switchOwner(ownerId: string) {
+  async function switchOwner(ownerId: string, scope: Scope) {
     setSwitching(true)
     await fetch('/api/booking/active-bnb', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ownerId }),
+      body: JSON.stringify({ ownerId, scope }),
     })
     window.location.reload()
   }
@@ -68,18 +71,43 @@ export function IdentitySwitcherMenu({ onNavigate }: { onNavigate?: () => void }
 
   if (memberships.length === 0 && companyMemberships.length === 0) return null
 
+  const collabGroup = (scope: Scope, list: BnbMembership[], active: string) => {
+    if (list.length === 0) return null
+    return (
+      <div key={scope}>
+        <p className="px-3 pb-0.5 pt-1.5 text-[11px] font-semibold text-muted-foreground tracking-wide">
+          {scope === 'cs' ? t('csCollabHeader') : t('bookingCollabHeader')}
+        </p>
+        {list.map(m => {
+          const on = active === m.owner_id
+          return (
+            <button key={m.owner_id} onClick={() => switchOwner(m.owner_id, scope)} disabled={switching}
+              className={`flex items-center justify-between gap-2 w-full px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50
+                ${on ? 'text-primary bg-primary/10' : 'hover:bg-accent'}`}>
+              <span className="flex items-center gap-2 truncate">
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{m.owner?.full_name || m.owner?.email || m.owner_id.slice(0, 8)}</span>
+              </span>
+              {on && <Check className="h-3.5 w-3.5 shrink-0" />}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="py-1">
-      <p className="px-3 pb-1 text-[11px] font-semibold text-muted-foreground tracking-wide">{t('identityCollabHeader')}</p>
+      <p className="px-3 pb-1 text-[11px] font-semibold text-muted-foreground tracking-wide">{t('identityHeader')}</p>
       <div className="flex flex-col gap-0.5">
         <button
-          onClick={() => switchOwner(selfId)}
+          onClick={() => switchCompany('')}
           disabled={switching}
           className={`flex items-center justify-between gap-2 w-full px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50
-            ${selfActive ? 'text-primary bg-primary/10' : 'hover:bg-accent'}`}
+            ${!activeCompany ? 'text-primary bg-primary/10' : 'hover:bg-accent'}`}
         >
-          <span className="flex items-center gap-2 truncate"><Users className="h-3.5 w-3.5 shrink-0" />{t('myOwnAccount')}</span>
-          {selfActive && <Check className="h-3.5 w-3.5 shrink-0" />}
+          <span className="flex items-center gap-2 truncate"><Users className="h-3.5 w-3.5 shrink-0" />{t('personalAccountOption')}</span>
+          {!activeCompany && <Check className="h-3.5 w-3.5 shrink-0" />}
         </button>
 
         {companyMemberships.map(m => {
@@ -97,20 +125,8 @@ export function IdentitySwitcherMenu({ onNavigate }: { onNavigate?: () => void }
           )
         })}
 
-        {visibleMemberships.map(m => {
-          const on = activeOwner === m.owner_id
-          return (
-            <button key={m.owner_id} onClick={() => switchOwner(m.owner_id)} disabled={switching}
-              className={`flex items-center justify-between gap-2 w-full px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50
-                ${on ? 'text-primary bg-primary/10' : 'hover:bg-accent'}`}>
-              <span className="flex items-center gap-2 truncate">
-                <Building2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{m.owner?.full_name || m.owner?.email || m.owner_id.slice(0, 8)}</span>
-              </span>
-              {on && <Check className="h-3.5 w-3.5 shrink-0" />}
-            </button>
-          )
-        })}
+        {collabGroup('cs', csMemberships, activeCs)}
+        {collabGroup('booking', bookingMemberships, activeBooking)}
       </div>
       <a href="/team" onClick={onNavigate}
         className="block mt-1 px-3 py-1.5 text-xs text-primary hover:underline">

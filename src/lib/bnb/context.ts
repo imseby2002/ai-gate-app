@@ -3,7 +3,14 @@ import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export const ACTIVE_BNB_COOKIE = 'active_bnb_owner'
+export type BnbScope = 'booking' | 'cs'
+
+// 訂房與客服各自獨立的協作邀請，切換 cookie 也分開——可以同時「訂房用自己的、
+// 客服在幫別家公司代操」，不會互相牽動。舊版共用一顆 cookie，新舊版並存期間
+// 讀不到值屬正常（會退回自己／公司預設)，不需要遷移舊 cookie。
+export function activeBnbCookieName(scope: BnbScope): string {
+  return scope === 'booking' ? 'active_bnb_owner_booking' : 'active_bnb_owner_cs'
+}
 
 export type BnbRole = 'owner' | 'admin' | 'manager' | 'viewer'
 
@@ -31,7 +38,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
  */
 export async function getBnbContext(
   supabase?: SupabaseClient,
-  scope: 'booking' | 'cs' = 'booking'
+  scope: BnbScope = 'booking'
 ): Promise<BnbContext | null> {
   const sb = supabase ?? (await createClient())
   const {
@@ -40,7 +47,7 @@ export async function getBnbContext(
   if (!user) return null
 
   const cookieStore = await cookies()
-  const requested = cookieStore.get(ACTIVE_BNB_COOKIE)?.value
+  const requested = cookieStore.get(activeBnbCookieName(scope))?.value
 
   const selfCtx = (): BnbContext => ({
     user, ownerId: user.id, role: 'owner', isOwner: true, canWrite: true, canSettings: true, canCorrectAi: true,

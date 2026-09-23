@@ -53,7 +53,7 @@ export default function BnbSwitcher({ collapsed = false }: { collapsed?: boolean
         ]
         if (!alive) return
         setOptions(opts)
-        const cookieVal = readCookie('active_bnb_owner')
+        const cookieVal = readCookie('active_bnb_owner_booking')
         setActiveId(cookieVal && opts.some(o => o.ownerId === cookieVal) ? cookieVal : self.id)
       } catch { /* 靜默：取不到就不顯示切換器 */ }
     })()
@@ -81,7 +81,7 @@ export default function BnbSwitcher({ collapsed = false }: { collapsed?: boolean
       const res = await fetch('/api/booking/active-bnb', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerId }),
+        body: JSON.stringify({ ownerId, scope: 'booking' }),
       })
       if (res.ok) {
         window.location.reload()

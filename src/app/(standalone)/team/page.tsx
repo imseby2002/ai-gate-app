@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { UserPlus, Trash2, Building2, Check, Loader2, Users, Plus } from 'lucide-react'
+import { UserPlus, Trash2, Building2, Check, Loader2, Users } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,15 +22,9 @@ type Membership = {
 }
 type CompanyMembership = { company_id: string; role: string; company_name: string | null; bnb_owner_id: string | null }
 
-function readActiveOwner(): string {
+function readCookie(name: string): string {
   if (typeof document === 'undefined') return ''
-  const m = document.cookie.match(/(?:^|;\s*)active_bnb_owner=([^;]+)/)
-  return m ? decodeURIComponent(m[1]) : ''
-}
-
-function readActiveCompany(): string {
-  if (typeof document === 'undefined') return ''
-  const m = document.cookie.match(/(?:^|;\s*)active_company_id=([^;]+)/)
+  const m = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`))
   return m ? decodeURIComponent(m[1]) : ''
 }
 
@@ -44,7 +38,6 @@ export default function TeamPage() {
   }
   const ROLE_SHORT: Record<Role, string> = { admin: t('roleAdmin'), manager: t('roleManager'), viewer: t('roleViewer') }
   const COMPANY_ROLE_SHORT: Record<string, string> = { owner: t('companyRoleOwner'), admin: t('roleAdmin'), manager: t('roleManager'), viewer: t('roleViewer') }
-  const [self, setSelf] = useState<{ id: string; email: string | null } | null>(null)
   const [ownerModules, setOwnerModules] = useState<Scope[]>([])
   const [canManage, setCanManage] = useState(true)
   const [managing, setManaging] = useState<Member[]>([])
@@ -59,19 +52,19 @@ export default function TeamPage() {
   })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [active, setActive] = useState('')
+  const [activeBooking, setActiveBooking] = useState('')
+  const [activeCs, setActiveCs] = useState('')
   const [companyMemberships, setCompanyMemberships] = useState<CompanyMembership[]>([])
   const [activeCompany, setActiveCompany] = useState('')
   const [switchingCompany, setSwitchingCompany] = useState(false)
-  const [addingBusiness, setAddingBusiness] = useState(false)
-  const [newBusinessName, setNewBusinessName] = useState('')
-  const [creatingBusiness, setCreatingBusiness] = useState(false)
+  const [switchingOwner, setSwitchingOwner] = useState(false)
   // ?scope=cs / ?scope=booking → 只處理單一模組（客服或訂房單獨邀請）
   const [scopeParam, setScopeParam] = useState<Scope | ''>('')
 
   useEffect(() => {
-    setActive(readActiveOwner())
-    setActiveCompany(readActiveCompany())
+    setActiveBooking(readCookie('active_bnb_owner_booking'))
+    setActiveCs(readCookie('active_bnb_owner_cs'))
+    setActiveCompany(readCookie('active_company_id'))
     const sp = new URLSearchParams(window.location.search).get('scope')
     if (sp === 'cs' || sp === 'booking') setScopeParam(sp)
   }, [])
@@ -81,7 +74,7 @@ export default function TeamPage() {
       const r = await fetch('/api/company/memberships')
       const d = await r.json()
       if (r.ok) setCompanyMemberships(d.memberships ?? [])
-    } catch { /* 靜默失敗：不影響訂房/客服切換器 */ }
+    } catch { /* 靜默失敗：不影響身分卡片其餘部分 */ }
   }, [])
 
   useEffect(() => { loadCompanies() }, [loadCompanies])
@@ -101,12 +94,28 @@ export default function TeamPage() {
     }
   }
 
+  async function switchOwner(ownerId: string, scope: Scope) {
+    setSwitchingOwner(true)
+    try {
+      const r = await fetch('/api/booking/active-bnb', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerId, scope }),
+      })
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || t('switchCompanyFailed')) }
+      window.location.reload()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+      setSwitchingOwner(false)
+    }
+  }
+
   const visibleModules = scopeParam ? ownerModules.filter(m => m === scopeParam) : ownerModules
   const onlyScope: Scope[] = scopeParam ? [scopeParam] : (['booking', 'cs'] as Scope[])
   const visibleManaging = scopeParam ? managing.filter(m => m.scopes[scopeParam]) : managing
-  // 公司若有掛訂房/客服帳號，切公司會自動連動訂房/客服，不用在上面「目前操作中的帳號」重複列一次
+  // 公司若有掛訂房/客服帳號，切公司會自動連動訂房/客服，不用在下面協作邀請清單重複列一次
   const companyBnbOwnerIds = new Set(companyMemberships.map(m => m.bnb_owner_id).filter(Boolean))
-  const visibleBnbMemberships = memberships.filter(m => !companyBnbOwnerIds.has(m.owner_id))
+  const csMemberships = memberships.filter(m => m.scopes.cs && !companyBnbOwnerIds.has(m.owner_id))
+  const bookingMemberships = memberships.filter(m => m.scopes.booking && !companyBnbOwnerIds.has(m.owner_id))
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -114,7 +123,6 @@ export default function TeamPage() {
       const r = await fetch('/api/collab/members')
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || t('loadFailed'))
-      setSelf(d.self)
       setOwnerModules(d.ownerModules ?? [])
       setCanManage(d.canManage ?? true)
       setManaging(d.managing ?? [])
@@ -135,7 +143,7 @@ export default function TeamPage() {
       if (Object.keys(modules).length === 0) throw new Error(t('selectAtLeastOne'))
       const r = await fetch('/api/collab/members', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, modules }),
+        body: JSON.stringify({ email, modules, scope: scopeParam || 'booking' }),
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || t('inviteFailed'))
@@ -145,26 +153,26 @@ export default function TeamPage() {
     finally { setBusy(false) }
   }
 
-  async function changeRole(id: string, role: Role) {
+  async function changeRole(id: string, role: Role, scope: Scope) {
     await fetch('/api/collab/members', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, role }),
+      body: JSON.stringify({ id, role, scope }),
     })
     await load()
   }
 
-  async function changeCanCorrectAi(id: string, canCorrectAi: boolean) {
+  async function changeCanCorrectAi(id: string, canCorrectAi: boolean, scope: Scope) {
     await fetch('/api/collab/members', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, canCorrectAi }),
+      body: JSON.stringify({ id, canCorrectAi, scope }),
     })
     await load()
   }
 
-  async function removeScope(id: string) {
+  async function removeScope(id: string, scope: Scope) {
     await fetch('/api/collab/members', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, scope }),
     })
     await load()
   }
@@ -173,37 +181,42 @@ export default function TeamPage() {
     if (!confirm(t('confirmRemovePerson'))) return
     await fetch('/api/collab/members', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: personEmail }),
+      body: JSON.stringify({ email: personEmail, scope: scopeParam || 'booking' }),
     })
     await load()
   }
 
-  async function switchOwner(ownerId: string) {
-    await fetch('/api/booking/active-bnb', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ownerId }),
-    })
-    window.location.reload()
+  function collabCard(scope: Scope, list: Membership[]) {
+    const active = scope === 'booking' ? activeBooking : activeCs
+    return (
+      <Card key={scope} className="p-4">
+        <h2 className="text-sm font-semibold mb-1">{scope === 'cs' ? t('csCollabHeader') : t('bookingCollabHeader')}</h2>
+        <p className="text-xs text-muted-foreground mb-2">{t('collabSubtitle')}</p>
+        {list.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">{t('noCollabInvites')}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {list.map(m => {
+              const on = active === m.owner_id
+              const role = m.scopes[scope]
+              return (
+                <button key={m.owner_id} onClick={() => switchOwner(m.owner_id, scope)} disabled={switchingOwner}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
+                    ${on ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+                  <span className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {m.owner?.full_name || m.owner?.email || m.owner_id.slice(0, 8)}
+                    {role && <span className="text-xs text-muted-foreground">（{ROLE_SHORT[role]}）</span>}
+                  </span>
+                  {on && <Check className="h-4 w-4" />}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+    )
   }
-
-  async function createBusiness(e: React.FormEvent) {
-    e.preventDefault()
-    setErr(''); setCreatingBusiness(true)
-    try {
-      const r = await fetch('/api/collab/businesses', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newBusinessName }),
-      })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d.error || t('addBusinessFailed'))
-      await switchOwner(d.ownerId)
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e))
-      setCreatingBusiness(false)
-    }
-  }
-
-  const selfActive = !active || active === self?.id
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
@@ -221,91 +234,38 @@ export default function TeamPage() {
         </div>
       </div>
 
-      {/* 我參與協作的對象（切換器）。已掛公司的業務不在這裡重複列出，切換公司會自動連動。 */}
+      {/* 目前操作身分：以員工身分整個公司一起切（ERP/CS/訂房/行銷全包），或個人身分 */}
       <Card className="p-4">
-        <h2 className="text-sm font-semibold mb-1">{t('activeAccount')}</h2>
-        <p className="text-xs text-muted-foreground mb-2">{t('activeAccountSubtitle')}</p>
-        {active && companyBnbOwnerIds.has(active) && (
-          <p className="text-xs text-muted-foreground mb-2">{t('activeAccountFollowsCompany')}</p>
-        )}
+        <h2 className="text-sm font-semibold mb-1">{t('identityHeader')}</h2>
+        <p className="text-xs text-muted-foreground mb-3">{t('companySubtitle')}</p>
         <div className="flex flex-col gap-2">
-          <button onClick={() => switchOwner(self?.id ?? '')}
-            className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
-              ${selfActive ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-            <span className="flex items-center gap-2"><Building2 className="h-4 w-4" />{t('myOwnAccount')}</span>
-            {selfActive && <Check className="h-4 w-4" />}
+          <button onClick={() => switchCompany('')} disabled={switchingCompany}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
+              ${!activeCompany ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
+            <span className="flex items-center gap-2"><Users className="h-4 w-4" />{t('personalAccountOption')}</span>
+            {!activeCompany && <Check className="h-4 w-4" />}
           </button>
-          {visibleBnbMemberships.map(m => {
-            const on = active === m.owner_id
-            const scopeText = (Object.entries(m.scopes) as [Scope, Role][])
-              .map(([s, r]) => `${MODULE_LABEL[s]}·${ROLE_SHORT[r]}`).join('，')
+          {companyMemberships.map(m => {
+            const on = activeCompany === m.company_id
             return (
-              <button key={m.owner_id} onClick={() => switchOwner(m.owner_id)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors
+              <button key={m.company_id} onClick={() => switchCompany(m.company_id)} disabled={switchingCompany}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
                   ${on ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
                 <span className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  {m.owner?.full_name || m.owner?.email || m.owner_id.slice(0, 8)}
-                  <span className="text-xs text-muted-foreground">（{scopeText}）</span>
+                  {m.company_name || m.company_id.slice(0, 8)}
+                  <span className="text-xs text-muted-foreground">（{COMPANY_ROLE_SHORT[m.role] ?? m.role}）</span>
                 </span>
                 {on && <Check className="h-4 w-4" />}
               </button>
             )
           })}
         </div>
-
-        <div className="mt-3 pt-3 border-t">
-          {!addingBusiness ? (
-            <button onClick={() => setAddingBusiness(true)}
-              className="flex items-center gap-1.5 text-sm text-primary hover:underline">
-              <Plus className="h-4 w-4" />{t('addBusiness')}
-            </button>
-          ) : (
-            <form onSubmit={createBusiness} className="space-y-2">
-              <p className="text-xs text-muted-foreground">{t('addBusinessSubtitle')}</p>
-              <div className="flex gap-2">
-                <Input value={newBusinessName} onChange={e => setNewBusinessName(e.target.value)}
-                  placeholder={t('addBusinessPlaceholder')} required disabled={creatingBusiness} />
-                <Button type="submit" size="sm" disabled={creatingBusiness} className="shrink-0 gap-1.5">
-                  {creatingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  {t('addBusinessSubmit')}
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
       </Card>
 
-      {/* 目前操作中的公司（ERP／CS／訂房／行銷資料所屬） */}
-      {companyMemberships.length > 0 && (
-        <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-1">{t('companyAccount')}</h2>
-          <p className="text-xs text-muted-foreground mb-3">{t('companySubtitle')}</p>
-          <div className="flex flex-col gap-2">
-            <button onClick={() => switchCompany('')} disabled={switchingCompany}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
-                ${!activeCompany ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-              <span className="flex items-center gap-2"><Users className="h-4 w-4" />{t('personalAccountOption')}</span>
-              {!activeCompany && <Check className="h-4 w-4" />}
-            </button>
-            {companyMemberships.map(m => {
-              const on = activeCompany === m.company_id
-              return (
-                <button key={m.company_id} onClick={() => switchCompany(m.company_id)} disabled={switchingCompany}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors disabled:opacity-50
-                    ${on ? 'border-primary/30 bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-                  <span className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    {m.company_name || m.company_id.slice(0, 8)}
-                    <span className="text-xs text-muted-foreground">（{COMPANY_ROLE_SHORT[m.role] ?? m.role}）</span>
-                  </span>
-                  {on && <Check className="h-4 w-4" />}
-                </button>
-              )
-            })}
-          </div>
-        </Card>
-      )}
+      {/* 客服／訂房協作邀請：只顯示別人邀請你協作的項目，不能自己新增，跟上面的身分各自獨立 */}
+      {(!scopeParam || scopeParam === 'cs') && collabCard('cs', csMemberships)}
+      {(!scopeParam || scopeParam === 'booking') && collabCard('booking', bookingMemberships)}
 
       {/* 邀請表單 */}
       <Card className="p-4">
@@ -383,7 +343,7 @@ export default function TeamPage() {
                       return (
                         <div key={s} className="flex items-center gap-1.5 bg-muted border rounded-lg px-2 py-1">
                           <span className="text-xs text-muted-foreground">{MODULE_LABEL[s]}</span>
-                          <select value={info.role} onChange={e => changeRole(info.id, e.target.value as Role)}
+                          <select value={info.role} onChange={e => changeRole(info.id, e.target.value as Role, s)}
                             className="text-xs px-1.5 py-0.5 border rounded bg-card">
                             {(['admin', 'manager', 'viewer'] as Role[]).map(r => (
                               <option key={r} value={r}>{ROLE_SHORT[r]}</option>
@@ -392,11 +352,11 @@ export default function TeamPage() {
                           {s === 'cs' && info.role !== 'viewer' && (
                             <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer" title={t('canCorrectAiTitle')}>
                               <input type="checkbox" checked={info.canCorrectAi}
-                                onChange={e => changeCanCorrectAi(info.id, e.target.checked)} />
+                                onChange={e => changeCanCorrectAi(info.id, e.target.checked, s)} />
                               {t('canCorrectAi')}
                             </label>
                           )}
-                          <button onClick={() => removeScope(info.id)}
+                          <button onClick={() => removeScope(info.id, s)}
                             className="text-muted-foreground hover:text-destructive" title={t('removeModulePermission', { module: MODULE_LABEL[s] })}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

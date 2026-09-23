@@ -23,11 +23,12 @@ async function ownerModules(admin: Admin, ownerId: string): Promise<Scope[]> {
 }
 
 // 解析「目前實際在操作哪個業務」：比照 CS/訂房頁面本身用的 getBnbContext，
-// 團隊名單要跟著同一顆 active_bnb_owner cookie 走，不能只認登入者自己。
+// 團隊名單要跟著對應 scope 的切換 cookie 走，不能只認登入者自己。訂房跟客服
+// 現在各自獨立切換，沒指定 scope 時預設看訂房（沿用舊行為，多數呼叫端仍是合併管理）。
 // canManage：只有 owner 本人或 admin 角色協作者（比照 canSettings）能看/管團隊名單，
 // 一般 manager/viewer 協作者不行——避免「隨便一個協作者都能看到全公司團隊清單」。
-async function resolveOwnerAndPermission(supabase: SB, userId: string): Promise<{ ownerId: string; canManage: boolean }> {
-  const ctx = await getBnbContext(supabase, 'booking')
+async function resolveOwnerAndPermission(supabase: SB, userId: string, scope: Scope = 'booking'): Promise<{ ownerId: string; canManage: boolean }> {
+  const ctx = await getBnbContext(supabase, scope)
   if (!ctx || ctx.ownerId === userId) return { ownerId: userId, canManage: true }
   return { ownerId: ctx.ownerId, canManage: ctx.canSettings }
 }
@@ -60,14 +61,17 @@ async function profileMap(ids: string[]) {
 }
 
 // 列出目前操作中業務的團隊名單（依 email 聚合各模組，含待接受邀請）+ 我參與協作的對象
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const scopeParam = req.nextUrl.searchParams.get('scope')
+  const scope: Scope = scopeParam === 'cs' ? 'cs' : 'booking'
+
   await supabase.rpc('claim_bnb_invitations')
 
-  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id)
+  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id, scope)
   const admin = await createAdminClient()
 
   const [{ data: managingRaw }, { data: memberships }, modsRaw, companyTeamRaw] = await Promise.all([
@@ -123,11 +127,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id)
+  const body = await req.json() as { email?: string; modules?: Partial<Record<Scope, Role>>; scope?: Scope }
+  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id, body.scope === 'cs' ? 'cs' : 'booking')
   if (!canManage) return NextResponse.json({ error: '你沒有管理此業務團隊的權限' }, { status: 403 })
   const admin = await createAdminClient()
 
-  const { email, modules } = await req.json() as { email?: string; modules?: Partial<Record<Scope, Role>> }
+  const { email, modules } = body
   const normEmail = String(email ?? '').trim().toLowerCase()
   if (!EMAIL_RE.test(normEmail)) return NextResponse.json({ error: 'Email 格式錯誤' }, { status: 400 })
   if (normEmail === (user.email ?? '').toLowerCase())
@@ -205,11 +210,11 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id)
+  const { id, role, canCorrectAi, scope } = await req.json() as { id?: string; role?: string; canCorrectAi?: boolean; scope?: Scope }
+  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id, scope === 'cs' ? 'cs' : 'booking')
   if (!canManage) return NextResponse.json({ error: '你沒有管理此業務團隊的權限' }, { status: 403 })
   const admin = await createAdminClient()
 
-  const { id, role, canCorrectAi } = await req.json()
   if (!id) return NextResponse.json({ error: '參數錯誤' }, { status: 400 })
 
   const patch: Record<string, unknown> = {}
@@ -232,11 +237,11 @@ export async function DELETE(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id)
+  const { id, email, scope } = await req.json() as { id?: string; email?: string; scope?: Scope }
+  const { ownerId, canManage } = await resolveOwnerAndPermission(supabase, user.id, scope === 'cs' ? 'cs' : 'booking')
   if (!canManage) return NextResponse.json({ error: '你沒有管理此業務團隊的權限' }, { status: 403 })
   const admin = await createAdminClient()
 
-  const { id, email } = await req.json()
   let q = admin.from('bnb_members').delete().eq('owner_id', ownerId)
   if (id) q = q.eq('id', id)
   else if (email) q = q.eq('invited_email', String(email).trim().toLowerCase())

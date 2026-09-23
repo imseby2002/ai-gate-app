@@ -63,7 +63,7 @@ export function CsSetupRequestsTable() {
       const res = await fetch('/api/booking/active-bnb', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ownerId }),
+        body: JSON.stringify({ ownerId, scope: 'cs' }),
       })
       if (!res.ok) { const d = await res.json(); alert(d.error ?? '切換失敗'); return }
       // 標記已聯繫（開始處理）

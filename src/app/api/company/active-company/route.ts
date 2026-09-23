@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdminUser } from '@/lib/auth/admin-check'
 import { ACTIVE_COMPANY_COOKIE } from '@/lib/company/activeCompany'
-import { ACTIVE_BNB_COOKIE } from '@/lib/bnb/context'
+import { activeBnbCookieName } from '@/lib/bnb/context'
 
 async function cookieDomain(): Promise<string | undefined> {
   try {
@@ -15,9 +15,10 @@ async function cookieDomain(): Promise<string | undefined> {
   }
 }
 
-// 切換目前要操作哪一家公司（ERP 側：CS/Booking/HR/Finance/行銷）。
-// 公司若有綁定訂房/客服帳號（companies.bnb_owner_id），連動切換 active_bnb_owner，
-// 避免「上面訂房切 A、下面公司切 B」兩邊不一致的情況——一次只操作一個業務。
+// 切換目前操作身分（ERP 側：CS/Booking/HR/Finance/行銷全部一起切，代表整個公司的預設）。
+// 公司若有綁定訂房/客服帳號（companies.bnb_owner_id），連動把訂房與客服的預設都設過去；
+// 沒有掛的話明確指回自己。這只是設定「預設值」——訂房/客服各自的單獨受邀協作
+// （/team 頁「客服協作邀請」「訂房協作邀請」）仍然獨立，不會被這裡蓋掉。
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
   // 自己的房源，會被悄悄帶回那個業務，跟你剛選的「個人身分」不一致）。
   if (!companyId) {
     cookieStore.set(ACTIVE_COMPANY_COOKIE, '', clearOpts)
-    cookieStore.set(ACTIVE_BNB_COOKIE, user.id, opts)
+    cookieStore.set(activeBnbCookieName('booking'), user.id, opts)
+    cookieStore.set(activeBnbCookieName('cs'), user.id, opts)
     return NextResponse.json({ companyId: null })
   }
 
@@ -54,7 +56,9 @@ export async function POST(req: NextRequest) {
 
   cookieStore.set(ACTIVE_COMPANY_COOKIE, companyId, opts)
   // 這家公司有掛訂房/客服帳號 → 連動切過去；沒有的話明確指回自己（理由同上，不能只清掉）
-  cookieStore.set(ACTIVE_BNB_COOKIE, company?.bnb_owner_id || user.id, opts)
+  const bnbDefault = company?.bnb_owner_id || user.id
+  cookieStore.set(activeBnbCookieName('booking'), bnbDefault, opts)
+  cookieStore.set(activeBnbCookieName('cs'), bnbDefault, opts)
 
   return NextResponse.json({ companyId, role })
 }
