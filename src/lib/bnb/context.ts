@@ -189,10 +189,6 @@ export async function getBnbContext(
   if (member) return memberCtx(requested, member.role as BnbRole, member.can_correct_ai)
 
   // 亦支援以公司成員身分切換
-  const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('company_id, user_type').eq('id', user.id).maybeSingle()
-  const isSuperAdmin = profile?.user_type === 'admin'
-  const activeCompId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
   if (activeCompId) {
     const [{ data: company }, { data: cm }, { data: companyOwnerMember }] = await Promise.all([
       admin.from('companies').select('created_by, bnb_owner_id').eq('id', activeCompId).maybeSingle(),
