@@ -117,8 +117,36 @@ export async function POST(req: NextRequest) {
 
   if (mode === 'preview') return NextResponse.json({ preview: summary })
 
-  // commit：自動建置科目 → 補帳戶 → 依 external_ref 去重 → 分批寫入 → 記錄詳細日誌
+  // commit：自動建置科目 → 補帳戶 → 依 mode 處理覆蓋或去重 → 分批寫入 → 記錄詳細日誌
   try {
+    const overwriteMode = body.overwrite_mode === 'clean_overwrite' ? 'clean_overwrite' : 'append'
+    let clearedCount = 0
+
+    // 若使用者選擇「全新乾淨重匯（覆蓋舊 MDB 資料）」：
+    // 先安全清空先前所有 source='zero_import' 的流水帳（完全不影響手動記帳），避免幽靈帳目殘留
+    if (overwriteMode === 'clean_overwrite') {
+      const { data: delData, error: delErr } = await supabase
+        .from('hr_cashflow')
+        .delete()
+        .eq('owner_id', user.id)
+        .eq('source', 'zero_import')
+        .select('id')
+
+      if (delErr) {
+        console.warn('清空舊 MDB 資料失敗:', delErr.message)
+      } else {
+        clearedCount = delData?.length ?? 0
+      }
+
+      // 將該帳本先前的 active 匯入紀錄標記為 reverted
+      await supabase
+        .from('fin_import_logs')
+        .update({ status: 'reverted', reverted_at: new Date().toISOString() })
+        .eq('owner_id', user.id)
+        .eq('account_book', parsed.bookName || 'FT')
+        .eq('status', 'active')
+    }
+
     const subjectsCreated = await ensureSubjects(supabase, user.id, parsed.bookName, parsed.subjects)
     const openingBalanceByName = new Map<string, number>()
     for (const s of parsed.subjects) {
@@ -126,16 +154,23 @@ export async function POST(req: NextRequest) {
     }
     const { map: accountMap, created: accountsCreated } = await ensureAccounts(supabase, user.id, parsed.accountNames, openingBalanceByName)
 
-    // 分頁抓取全部既有 external_ref（PostgREST 預設每次查詢有筆數上限，資料量大時需分頁）
-    const existingSet = new Set<string>()
-    for (let from = 0; ; from += 1000) {
-      const { data: page } = await supabase.from('hr_cashflow')
-        .select('external_ref').eq('owner_id', user.id).neq('external_ref', '')
-        .range(from, from + 999)
-      for (const r of page ?? []) existingSet.add(r.external_ref)
-      if (!page || page.length < 1000) break
+    let newTransactions = parsed.transactions
+
+    if (overwriteMode !== 'clean_overwrite') {
+      // 增量模式：分頁抓取全部既有 external_ref 進行去重
+      const existingSet = new Set<string>()
+      for (let from = 0; ; from += 1000) {
+        const { data: page } = await supabase.from('hr_cashflow')
+          .select('external_ref').eq('owner_id', user.id).neq('external_ref', '')
+          .range(from, from + 999)
+        for (const r of page ?? []) existingSet.add(r.external_ref)
+        if (!page || page.length < 1000) break
+      }
+      newTransactions = parsed.transactions.filter(tx => !existingSet.has(tx.external_ref))
     }
-    const newTransactions = parsed.transactions.filter(tx => !existingSet.has(tx.external_ref))
+
+    const batchId = crypto.randomUUID()
+    const fileName = path.split('/').pop() || 'MymoneyData.mdb'
 
     let imported = 0
     for (let i = 0; i < newTransactions.length; i += CHUNK) {
@@ -156,15 +191,16 @@ export async function POST(req: NextRequest) {
         receipt_url: '',
         external_ref: tx.external_ref,
         source: 'zero_import',
+        import_batch_id: batchId,
       }))
       const { error, count } = await supabase.from('hr_cashflow').insert(rows)
       if (error) return NextResponse.json({ error: `匯入中斷（已匯入 ${imported} 筆）：${error.message}` }, { status: 500 })
       imported += count ?? rows.length
     }
 
-    // 儲存詳細匯入紀錄與錯誤日誌，供使用者後續檢視與校正
-    const fileName = path.split('/').pop() || 'MymoneyData.mdb'
+    // 儲存詳細匯入紀錄與錯誤日誌，包含批次 ID 與狀態
     await supabase.from('fin_import_logs').insert({
+      id: batchId,
       owner_id: user.id,
       account_book: parsed.bookName || 'FT',
       filename: fileName,
@@ -175,15 +211,19 @@ export async function POST(req: NextRequest) {
       subjects_created: subjectsCreated,
       date_range: parsed.dateRange ? `${parsed.dateRange[0]} ~ ${parsed.dateRange[1]}` : '',
       errors: parsed.errors,
+      status: 'active',
     })
 
     await supabase.storage.from(BUCKET).remove([path]).catch(() => {})
 
     return NextResponse.json({
       ok: true,
+      batch_id: batchId,
       imported,
+      clearedPrevious: clearedCount,
+      overwriteMode,
       skipped: parsed.skipped,
-      alreadyImported: existingSet.size > 0 ? parsed.transactions.length - newTransactions.length : 0,
+      alreadyImported: overwriteMode !== 'clean_overwrite' ? (parsed.transactions.length - newTransactions.length) : 0,
       accountsCreated,
       subjectsCreated,
       totalParsed: parsed.transactions.length,

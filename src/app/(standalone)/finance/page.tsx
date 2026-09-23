@@ -8,7 +8,7 @@ import {
   ArrowDownCircle, ArrowLeftRight, Landmark, Banknote, PiggyBank,
   BarChart3, Upload, Store, FileText, Truck, FileSpreadsheet,
   Package, Search, AlertTriangle, Layers, Calendar, Filter,
-  Settings, ChevronRight, Sparkles
+  Settings, ChevronRight, Sparkles, Database
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -19,6 +19,7 @@ import { ZeroImportModal } from '@/components/finance/ZeroImportModal'
 import { SubjectTree, type SubjectItem, type SubjectFilter } from '@/components/finance/SubjectTree'
 import { SubjectManagementModal } from '@/components/finance/SubjectManagementModal'
 import { MdbErrorDrawer } from '@/components/finance/MdbErrorDrawer'
+import { MdbBatchManagementModal } from '@/components/finance/MdbBatchManagementModal'
 import type { ImportColumn } from '@/lib/excel/universal-import'
 import type { MdbErrorInfo } from '@/lib/fin/zero-import'
 
@@ -373,6 +374,7 @@ export default function FinancePage() {
   const [importLogs, setImportLogs] = useState<any[]>([])
   const [showErrorDrawer, setShowErrorDrawer] = useState(false)
   const [showZeroImport, setShowZeroImport] = useState(false)
+  const [showMdbBatchModal, setShowMdbBatchModal] = useState(false)
   const [showExcelImport, setShowExcelImport] = useState(false)
   const [showSubjectSettings, setShowSubjectSettings] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
@@ -767,6 +769,17 @@ export default function FinancePage() {
                   匯入記帳檔 (.mdb)
                 </Button>
 
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1 border-blue-200 text-blue-700 bg-blue-50/60 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-300 font-medium"
+                  onClick={() => setShowMdbBatchModal(true)}
+                  title="檢視 MDB 匯入歷史批次、撤回單次或清空 MDB 資料"
+                >
+                  <Database className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                  MDB 批次管理 / 撤回
+                </Button>
+
                 {totalErrors > 0 && (
                   <Button
                     size="sm"
@@ -1063,6 +1076,18 @@ export default function FinancePage() {
         errors={allErrors}
         bookName="FT"
         filename={latestLog?.filename}
+      />
+
+      <MdbBatchManagementModal
+        open={showMdbBatchModal}
+        onClose={() => setShowMdbBatchModal(false)}
+        accountBook="FT"
+        onReverted={() => {
+          loadSubjects()
+          loadAccounts()
+          loadCashflow()
+          loadImportLogs()
+        }}
       />
 
       {showExcelImport && (

@@ -4,7 +4,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { X, Loader2, CheckCircle2, AlertTriangle, AlertCircle, Upload, FileText, Layers } from 'lucide-react'
+import { X, Loader2, CheckCircle2, AlertTriangle, AlertCircle, Upload, FileText, Layers, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { MdbErrorInfo } from '@/lib/fin/zero-import'
 import { MdbErrorDrawer } from './MdbErrorDrawer'
@@ -28,6 +28,8 @@ interface Preview {
 interface CommitResult {
   imported: number
   skipped: number
+  clearedPrevious?: number
+  overwriteMode?: string
   accountsCreated: number
   subjectsCreated: number
   totalParsed: number
@@ -48,6 +50,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
   const [result, setResult] = useState<CommitResult | null>(null)
   const [showErrorDrawer, setShowErrorDrawer] = useState(false)
   const [currentFilename, setCurrentFilename] = useState('')
+  const [overwriteMode, setOverwriteMode] = useState<'append' | 'clean_overwrite'>('append')
   const fileRef = useRef<HTMLInputElement | null>(null)
   const supabase = useRef(createClient()).current
 
@@ -85,7 +88,7 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
     try {
       const res = await fetch('/api/hr/cashflow/zero-import', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, mode: 'commit' }),
+        body: JSON.stringify({ path, mode: 'commit', overwrite_mode: overwriteMode }),
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error ?? '匯入失敗')
@@ -159,6 +162,51 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                 </div>
               </div>
 
+              {/* 匯入覆蓋/去重模式選擇 */}
+              <div className="rounded-xl border p-3 bg-muted/20 space-y-2">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  寫入模式選擇（防呆與覆蓋機制）
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                    overwriteMode === 'append' ? 'bg-primary/5 border-primary text-primary font-medium' : 'bg-card border-border hover:bg-muted/40'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="overwriteMode"
+                      checked={overwriteMode === 'append'}
+                      onChange={() => setOverwriteMode('append')}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-bold text-foreground">增量補充（預設推薦）</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        依流水單號自動去重，已存在的交易略過，僅補入新單據。
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                    overwriteMode === 'clean_overwrite' ? 'bg-amber-500/10 border-amber-500 text-amber-900 dark:text-amber-200 font-medium' : 'bg-card border-border hover:bg-muted/40'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="overwriteMode"
+                      checked={overwriteMode === 'clean_overwrite'}
+                      onChange={() => setOverwriteMode('clean_overwrite')}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <div className="font-bold text-foreground">清空並重新匯入（乾淨覆蓋）</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        先清除歷史 MDB 舊資料再完整寫入，避免舊刪除單據殘留。手動帳目完全不受影響。
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
               {/* 科目自動建置提示 */}
               <div className="p-3 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 text-xs space-y-1">
                 <div className="flex items-center gap-1.5 font-semibold text-blue-700 dark:text-blue-300">
@@ -203,9 +251,9 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                 <Button variant="outline" size="sm" onClick={() => { setPreview(null); setPath('') }}>
                   重新選擇
                 </Button>
-                <Button size="sm" onClick={confirmImport} disabled={busy} className="gap-1.5">
+                <Button size="sm" onClick={confirmImport} disabled={busy} className="gap-1.5 font-semibold">
                   {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {busy ? '正在寫入資料庫…' : '確認匯入並建置科目'}
+                  {busy ? '正在寫入資料庫…' : overwriteMode === 'clean_overwrite' ? '確認清空舊檔並全新重匯' : '確認匯入並建置科目'}
                 </Button>
               </div>
             </div>
@@ -219,7 +267,12 @@ export function ZeroImportModal({ onClose, onDone }: { onClose: () => void; onDo
                   匯入完成！
                 </div>
                 <p className="text-xs leading-relaxed text-foreground">
-                  已成功匯入 <b>{fmt(result.imported)}</b> 筆交易（自動去重防重複），自動建置/更新 <b>{result.subjectsCreated}</b> 個樹狀科目，新建 <b>{result.accountsCreated}</b> 個資金帳戶。
+                  已成功匯入 <b>{fmt(result.imported)}</b> 筆交易
+                  {result.clearedPrevious !== undefined && result.clearedPrevious > 0 && (
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">（已自動清空先前 {fmt(result.clearedPrevious)} 筆舊 MDB 資料，達成乾淨重匯）</span>
+                  )}
+                  {result.skipped > 0 && `，略過 ${fmt(result.skipped)} 筆`}
+                  ，自動建置/更新 <b>{result.subjectsCreated}</b> 個樹狀科目，新建 <b>{result.accountsCreated}</b> 個資金帳戶。
                 </p>
               </div>
 
