@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveActiveCompanyId } from '@/lib/company/activeCompany'
 
 export type BnbScope = 'booking' | 'cs'
 
@@ -95,13 +96,16 @@ export async function getBnbContext(
     // 無關（不像上面純協作者才需要用「自己有沒有資料」去猜要不要自動代入）；
     // 除非本人自己手動切換 cookie，才會改成別的。
     const admin = createAdminClient()
-    const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
-    if (profile?.company_id) {
-      const [{ data: company }, { data: cm }] = await Promise.all([
-        admin.from('companies').select('created_by, bnb_owner_id').eq('id', profile.company_id).maybeSingle(),
-        admin.from('company_members').select('role').eq('company_id', profile.company_id).eq('member_id', user.id).eq('status', 'active').maybeSingle(),
+    const { data: profile } = await admin.from('profiles').select('company_id, user_type').eq('id', user.id).maybeSingle()
+    const isSuperAdmin = profile?.user_type === 'admin'
+    const activeCompId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
+    if (activeCompId) {
+      const [{ data: company }, { data: cm }, { data: companyOwnerMember }] = await Promise.all([
+        admin.from('companies').select('created_by, bnb_owner_id').eq('id', activeCompId).maybeSingle(),
+        admin.from('company_members').select('role').eq('company_id', activeCompId).eq('member_id', user.id).eq('status', 'active').maybeSingle(),
+        admin.from('company_members').select('member_id').eq('company_id', activeCompId).eq('role', 'owner').eq('status', 'active').maybeSingle(),
       ])
-      const companyOwnerId = company?.bnb_owner_id || company?.created_by
+      const companyOwnerId = company?.bnb_owner_id || companyOwnerMember?.member_id || company?.created_by
       if (companyOwnerId && companyOwnerId !== user.id && cm) {
         const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
         const canCorrectAi = role === 'admin' || role === 'manager'
@@ -146,13 +150,16 @@ export async function getBnbContext(
 
   // 亦支援以公司成員身分切換
   const admin = createAdminClient()
-  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', user.id).maybeSingle()
-  if (profile?.company_id) {
-    const [{ data: company }, { data: cm }] = await Promise.all([
-      admin.from('companies').select('created_by, bnb_owner_id').eq('id', profile.company_id).maybeSingle(),
-      admin.from('company_members').select('role').eq('company_id', profile.company_id).eq('member_id', user.id).eq('status', 'active').maybeSingle(),
+  const { data: profile } = await admin.from('profiles').select('company_id, user_type').eq('id', user.id).maybeSingle()
+  const isSuperAdmin = profile?.user_type === 'admin'
+  const activeCompId = await resolveActiveCompanyId(admin, user.id, isSuperAdmin, profile?.company_id ?? null)
+  if (activeCompId) {
+    const [{ data: company }, { data: cm }, { data: companyOwnerMember }] = await Promise.all([
+      admin.from('companies').select('created_by, bnb_owner_id').eq('id', activeCompId).maybeSingle(),
+      admin.from('company_members').select('role').eq('company_id', activeCompId).eq('member_id', user.id).eq('status', 'active').maybeSingle(),
+      admin.from('company_members').select('member_id').eq('company_id', activeCompId).eq('role', 'owner').eq('status', 'active').maybeSingle(),
     ])
-    const companyOwnerId = company?.bnb_owner_id || company?.created_by
+    const companyOwnerId = company?.bnb_owner_id || companyOwnerMember?.member_id || company?.created_by
     if (companyOwnerId === requested && cm) {
       const role = (cm.role === 'owner' ? 'admin' : cm.role) as BnbRole
       const canCorrectAi = role === 'admin' || role === 'manager'

@@ -52,11 +52,14 @@ export async function POST(req: NextRequest) {
     role = member.role
   }
 
-  const { data: company } = await admin.from('companies').select('bnb_owner_id').eq('id', companyId).maybeSingle()
+  const [{ data: company }, { data: companyOwnerMember }] = await Promise.all([
+    admin.from('companies').select('bnb_owner_id, created_by').eq('id', companyId).maybeSingle(),
+    admin.from('company_members').select('member_id').eq('company_id', companyId).eq('role', 'owner').eq('status', 'active').maybeSingle(),
+  ])
 
   cookieStore.set(ACTIVE_COMPANY_COOKIE, companyId, opts)
-  // 這家公司有掛訂房/客服帳號 → 連動切過去；沒有的話明確指回自己（理由同上，不能只清掉）
-  const bnbDefault = company?.bnb_owner_id || user.id
+  // 這家公司有掛訂房/客服帳號 → 連動切過去；若無顯式 bnb_owner_id，則優先連動公司負責人 (owner/created_by)；全無才明確指回自己
+  const bnbDefault = company?.bnb_owner_id || companyOwnerMember?.member_id || company?.created_by || user.id
   cookieStore.set(activeBnbCookieName('booking'), bnbDefault, opts)
   cookieStore.set(activeBnbCookieName('cs'), bnbDefault, opts)
 
