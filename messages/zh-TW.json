@@ -4810,11 +4810,12 @@
     "removeModulePermission": "移除{module}權限",
     "companyRoleOwner": "負責人",
     "companyAccount": "目前操作中的公司",
-    "companySubtitle": "一個帳號可以同時是多家公司的員工，切換後 CS／訂房／ERP／行銷資料都會變成該公司的（非個人資料）。",
+    "companySubtitle": "一個帳號可以同時是多家公司的員工，切換後 CS／訂房／ERP／行銷資料都會變成該公司的（非個人資料）。這是以「員工」身分整個公司一起切換——如果只是被邀請幫忙某公司的訂房／客服、但不是該公司員工，請改用上面「目前操作中的帳號」切換。",
     "personalAccountOption": "個人身分（不屬於任何公司）",
     "noCompanies": "你目前不屬於任何公司",
     "switchCompanyFailed": "切換公司失敗",
     "noManagePermission": "你目前的角色（一般管理／唯讀）無法查看或管理此業務的團隊名單，僅擁有者或管理員角色可以。",
+    "activeAccountSubtitle": "這裡切換的是「訂房／客服」資料範圍。如果你是被個別邀請協作某個業務（例如接了別家公司的客服，但不是對方的員工），會列在這裡；如果對方的訂房／客服已經掛在下面的公司底下，會自動跟著下面的公司走，不會重複出現在這裡。",
     "activeAccountFollowsCompany": "目前訂房/客服由下方「目前操作中的公司」代表操作，切公司會自動連動，不需要在這裡另外選。",
     "companyTeam": "{company} 的 ERP 團隊成員（唯讀，避免重複邀請）",
     "companyTeamEmpty": "此公司目前沒有其他 ERP 團隊成員"

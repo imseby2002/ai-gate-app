@@ -223,7 +223,8 @@ export default function TeamPage() {
 
       {/* 我參與協作的對象（切換器）。已掛公司的業務不在這裡重複列出，切換公司會自動連動。 */}
       <Card className="p-4">
-        <h2 className="text-sm font-semibold mb-3">{t('activeAccount')}</h2>
+        <h2 className="text-sm font-semibold mb-1">{t('activeAccount')}</h2>
+        <p className="text-xs text-muted-foreground mb-2">{t('activeAccountSubtitle')}</p>
         {active && companyBnbOwnerIds.has(active) && (
           <p className="text-xs text-muted-foreground mb-2">{t('activeAccountFollowsCompany')}</p>
         )}

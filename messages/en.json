@@ -4810,11 +4810,12 @@
     "removeModulePermission": "Remove {module} permission",
     "companyRoleOwner": "Owner",
     "companyAccount": "Currently Active Company",
-    "companySubtitle": "One account can be staff at multiple companies at once. Switching changes which company's CS/Booking/ERP/Marketing data you're editing (not personal data).",
+    "companySubtitle": "One account can be staff at multiple companies at once. Switching changes which company's CS/Booking/ERP/Marketing data you're editing (not personal data). This switches everything as an \"employee\" of that company — if you're only invited to help with a company's Booking/CS without being their employee, use \"Currently Active Account\" above instead.",
     "personalAccountOption": "Personal (not part of any company)",
     "noCompanies": "You don't belong to any company yet",
     "switchCompanyFailed": "Failed to switch company",
     "noManagePermission": "Your role (manager/viewer) can't view or manage this business's team. Only the owner or an admin can.",
+    "activeAccountSubtitle": "This switches your Booking/CS data scope. If you were individually invited to help with a business (e.g. doing CS for another company without being their employee), it shows up here; if that business's Booking/CS is already tied to a company below, it follows that company automatically and won't be listed twice here.",
     "activeAccountFollowsCompany": "Booking/CS is currently represented by the company selected below — switching companies follows automatically, no need to pick here too.",
     "companyTeam": "{company}'s ERP team (read-only, avoids double-inviting)",
     "companyTeamEmpty": "This company has no other ERP team members yet"
