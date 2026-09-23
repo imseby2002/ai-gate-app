@@ -4815,6 +4815,8 @@
     "noCompanies": "You don't belong to any company yet",
     "switchCompanyFailed": "Failed to switch company",
     "noManagePermission": "Your role (manager/viewer) can't view or manage this business's team. Only the owner or an admin can.",
+    "identityCollabHeader": "Identity / Collab",
+    "manageCollabLink": "Manage collaborators",
     "activeAccountSubtitle": "This switches your Booking/CS data scope. If you were individually invited to help with a business (e.g. doing CS for another company without being their employee), it shows up here; if that business's Booking/CS is already tied to a company below, it follows that company automatically and won't be listed twice here.",
     "activeAccountFollowsCompany": "Booking/CS is currently represented by the company selected below — switching companies follows automatically, no need to pick here too.",
     "companyTeam": "{company}'s ERP team (read-only, avoids double-inviting)",

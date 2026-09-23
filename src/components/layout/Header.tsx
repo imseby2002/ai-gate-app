@@ -7,6 +7,7 @@ import { LogOut, Settings, CreditCard, ChevronDown, BarChart3, Shield, Menu, Bui
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { IdentitySwitcherMenu } from './IdentitySwitcherMenu'
 import type { Profile } from '@/types/database'
 
 interface HeaderProps {
@@ -123,6 +124,7 @@ export function Header({ profile, creditBalance, locale, onMenuClick }: HeaderPr
                   <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
                 </div>
                 <div className="p-1.5 space-y-0.5">
+                  <IdentitySwitcherMenu onNavigate={() => setMenuOpen(false)} />
                   <button
                     onClick={() => { router.push('/usage'); setMenuOpen(false) }}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-lg hover:bg-accent transition-colors"

@@ -4722,6 +4722,8 @@
     "noCompanies": "Bạn hiện chưa thuộc công ty nào",
     "switchCompanyFailed": "Chuyển công ty thất bại",
     "noManagePermission": "Vai trò hiện tại của bạn (quản lý/chỉ xem) không thể xem hoặc quản lý danh sách nhóm của doanh nghiệp này. Chỉ chủ sở hữu hoặc quản trị viên mới được phép.",
+    "identityCollabHeader": "Danh tính / Cộng tác",
+    "manageCollabLink": "Quản lý cộng tác viên",
     "activeAccountSubtitle": "Chỗ này chuyển phạm vi dữ liệu Đặt phòng/CSKH. Nếu bạn được mời riêng để hỗ trợ một doanh nghiệp (ví dụ phụ trách CSKH cho công ty khác mà không phải nhân viên của họ), nó sẽ hiện ở đây; nếu Đặt phòng/CSKH của doanh nghiệp đó đã gắn với công ty bên dưới, nó sẽ tự động theo công ty đó và không hiện trùng ở đây.",
     "activeAccountFollowsCompany": "Đặt phòng/CSKH hiện do công ty được chọn bên dưới đại diện — chuyển công ty sẽ tự động theo, không cần chọn thêm ở đây.",
     "companyTeam": "Đội ngũ ERP của {company} (chỉ xem, tránh mời trùng)",

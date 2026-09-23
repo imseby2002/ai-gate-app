@@ -6,6 +6,7 @@ import { LogOut, ChevronDown, Settings, Wallet, LayoutDashboard, Building2 } fro
 import { useTranslations, useLocale } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { systemForPath, SUBDOMAIN_SYSTEM } from '@/lib/systems'
+import { IdentitySwitcherMenu } from './IdentitySwitcherMenu'
 
 export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string; hasCompany?: boolean }) {
   const router = useRouter()
@@ -47,7 +48,8 @@ export function ToolsUserMenu({ displayName, hasCompany }: { displayName: string
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 w-44 rounded-lg border bg-white shadow-md z-50 overflow-hidden py-1">
+          <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border bg-white shadow-md z-50 overflow-hidden py-1">
+            <IdentitySwitcherMenu onNavigate={() => setOpen(false)} />
             {pathname.startsWith('/cs') && (
               <a
                 href="/cs"
