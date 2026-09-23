@@ -5355,7 +5355,9 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
           const r = await fetch(`/api/marketing/campaign/${savedId}`)
           if (r.ok) {
             const c = (await r.json()).campaign
-            if (c) {
+            // 快取的 id 若已被封存（例如清過重複的舊草稿），不要直接載入它——
+            // 往下走 fallback 找目前真正在用的那一筆，避免又載到舊資料。
+            if (c && c.status !== 'archived') {
               setCampaignId(c.id)
               setUnit12Data(c.unit_data?.[12] as Unit12Data | undefined)
               found = true
@@ -5364,18 +5366,21 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
         } catch { /* ignore, 往下走 fallback */ }
       }
 
-      // localStorage 遺失（換裝置/清快取）時，回頭找同產業最近一筆有內容的舊 campaign，
-      // 避免每次都建立空白新草稿、讓先前上傳的知識庫「消失」。
+      // localStorage 遺失（換裝置/清快取/剛封存掉快取指到的那筆）時，回頭找同產業
+      // 內容最豐富的 campaign，避免每次都建立空白新草稿、或撿到內容較少的舊草稿，
+      // 讓先前上傳的知識庫「消失」。
       if (!found) {
         try {
           const r = await fetch('/api/marketing/campaign')
           if (r.ok) {
             const list = ((await r.json()).campaigns ?? []) as Array<{ id: string; industry?: string; unit_data?: Record<string, unknown> }>
-            const match = list.find(c => {
+            const candidates = list.filter(c => {
               if (industry && c.industry !== industry) return false
               const u12 = c.unit_data?.[12] as Unit12Data | undefined
               return !!(u12?.systemPrompt || u12?.knowledgeBase || u12?.dialogueFiles?.length)
             })
+            const richness = (c: typeof candidates[number]) => (c.unit_data?.[12] as Unit12Data | undefined)?.dialogueFiles?.length ?? 0
+            const match = candidates.sort((a, b) => richness(b) - richness(a))[0]
             if (match) {
               setCampaignId(match.id)
               setUnit12Data(match.unit_data?.[12] as Unit12Data | undefined)
