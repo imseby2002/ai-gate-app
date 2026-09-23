@@ -27,6 +27,7 @@ export async function GET() {
     .eq('user_id', ownerId)
     .neq('status', 'archived')
     .order('updated_at', { ascending: false })
+    .order('created_at', { ascending: false }) // updated_at 相同時（例如批次搬移資料造成的並列）改用建立時間決勝負，永遠是「最新的那筆」
     .limit(20)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

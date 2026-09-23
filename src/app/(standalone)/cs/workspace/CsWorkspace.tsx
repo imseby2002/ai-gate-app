@@ -5367,20 +5367,18 @@ export function CsWorkspace({ industry, initialTab }: { industry?: string; initi
       }
 
       // localStorage 遺失（換裝置/清快取/剛封存掉快取指到的那筆）時，回頭找同產業
-      // 內容最豐富的 campaign，避免每次都建立空白新草稿、或撿到內容較少的舊草稿，
-      // 讓先前上傳的知識庫「消失」。
+      // 最新的一筆有內容的 campaign——API 已經照 updated_at desc, created_at desc
+      // 排好序，這裡直接取排序後第一筆符合的即可，不用自己再猜「哪筆內容比較多」。
       if (!found) {
         try {
           const r = await fetch('/api/marketing/campaign')
           if (r.ok) {
             const list = ((await r.json()).campaigns ?? []) as Array<{ id: string; industry?: string; unit_data?: Record<string, unknown> }>
-            const candidates = list.filter(c => {
+            const match = list.find(c => {
               if (industry && c.industry !== industry) return false
               const u12 = c.unit_data?.[12] as Unit12Data | undefined
               return !!(u12?.systemPrompt || u12?.knowledgeBase || u12?.dialogueFiles?.length)
             })
-            const richness = (c: typeof candidates[number]) => (c.unit_data?.[12] as Unit12Data | undefined)?.dialogueFiles?.length ?? 0
-            const match = candidates.sort((a, b) => richness(b) - richness(a))[0]
             if (match) {
               setCampaignId(match.id)
               setUnit12Data(match.unit_data?.[12] as Unit12Data | undefined)
