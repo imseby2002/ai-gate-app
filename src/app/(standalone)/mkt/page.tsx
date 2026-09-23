@@ -7,15 +7,18 @@ import {
   Loader2, AlertCircle, Megaphone, Palette, CalendarDays, Plus, Trash2, Pencil,
   X, Save, Sparkles, Check, RotateCcw, CalendarPlus, MapPin, Bike, Star, ExternalLink,
   BarChart3, Building2, UtensilsCrossed, Upload, Image as ImageIcon, Camera, Globe,
-  CheckCircle2, Search, Tag, Eye, BookOpen
+  CheckCircle2, Search, Tag, Eye, BookOpen, Users, Rocket
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { CampaignsTab } from '@/components/marketing/CampaignsTab'
+import { CrmTab } from '@/components/marketing/CrmTab'
+import { ProductLaunchesSection } from '@/components/marketing/ProductLaunchesSection'
 
 const selCls = 'h-9 rounded-md border border-input bg-transparent px-3 text-sm'
 const ta = 'w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-type Tab = 'brand' | 'stores' | 'products' | 'generate' | 'offline' | 'delivery' | 'analytics' | 'calendar'
+type Tab = 'brand' | 'stores' | 'products' | 'generate' | 'campaigns' | 'crm' | 'delivery' | 'analytics' | 'calendar' | 'offline'
 
 export default function MktPage() {
   const t = useTranslations('MktPage')
@@ -75,12 +78,13 @@ export default function MktPage() {
           ['stores', t('tabStores'), <Building2 key="s" className="h-4 w-4" />],
           ['products', t('tabProducts'), <UtensilsCrossed key="p" className="h-4 w-4" />],
           ['generate', t('tabGenerate'), <Sparkles key="g" className="h-4 w-4" />],
-          ['offline', t('tabOffline'), <MapPin key="o" className="h-4 w-4" />],
+          ['campaigns', '活動中心 (實體/線上/成效)', <MapPin key="o" className="h-4 w-4" />],
+          ['crm', '會員 CRM & VIP', <Users key="crm" className="h-4 w-4" />],
           ['delivery', t('tabDelivery'), <Bike key="d" className="h-4 w-4" />],
           ['analytics', t('tabAnalytics'), <BarChart3 key="a" className="h-4 w-4" />],
           ['calendar', t('tabCalendar'), <CalendarDays key="c" className="h-4 w-4" />]
         ] as const).map(([id, label, icon]) => (
-          <button key={id} onClick={() => setTab(id)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
+          <button key={id} onClick={() => setTab(id as Tab)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${tab === id || (id === 'campaigns' && tab === 'offline') ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>{icon}{label}</button>
         ))}
       </div>
 
@@ -88,7 +92,8 @@ export default function MktPage() {
         : tab === 'stores' ? <StoresTab />
         : tab === 'products' ? <ProductsTab />
         : tab === 'generate' ? <GenerateTab />
-        : tab === 'offline' ? <OfflineTab />
+        : tab === 'campaigns' || tab === 'offline' ? <CampaignsTab />
+        : tab === 'crm' ? <CrmTab />
         : tab === 'delivery' ? <DeliveryTab />
         : tab === 'analytics' ? <AnalyticsTab />
         : <CalendarTab />}
@@ -1104,6 +1109,8 @@ function ProductsTab() {
           </div>
         </div>
       )}
+      {/* 研發新品上架流水線與 VIP 搶先期排程 */}
+      <ProductLaunchesSection />
     </div>
   )
 }

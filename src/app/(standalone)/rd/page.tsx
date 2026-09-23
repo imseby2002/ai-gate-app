@@ -7,7 +7,7 @@ import {
   FlaskConical, Upload, Loader2, AlertCircle, Building2, Store,
   Plus, Trash2, Edit3, Search, FileSpreadsheet, X, CheckCircle2,
   Package, BookOpen, Link2, Scale, TrendingUp, DollarSign, ChevronDown, ChevronUp, Info,
-  Wrench, Coffee, ShoppingBag, Layers
+  Wrench, Coffee, ShoppingBag, Layers, Rocket
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -219,6 +219,32 @@ export default function RdPage() {
       loadData()
     } else {
       alert(t('deleteFailed'))
+    }
+  }
+
+  // 推送至行銷部新品上架流水線
+  const submitToMarketingLaunch = async (r: Recipe) => {
+    if (!confirm(`確定將研發配方【${r.name}】推送至行銷部門進行新品上架包裝？`)) return
+    try {
+      const res = await fetch('/api/mkt/launches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: r.name,
+          recipe_id: r.id,
+          price: Math.round((r.store_cost || 0) * 2.5),
+          status: 'mkt_prep',
+          vip_notes: `研發定稿配方：${r.name}，單杯門市成本約 $${Math.round(r.store_cost || 0)}`,
+        }),
+      })
+      const j = await res.json()
+      if (res.ok) {
+        alert(`✅ 已成功將【${r.name}】推送至行銷部門！\n行銷人員可在「行銷系統 → 產品圖文 → 新品上架流水線」接續籌備 VIP 優先專享期與上市排程。`)
+      } else {
+        alert(j.error || '推送失敗')
+      }
+    } catch (e: any) {
+      alert(e.message || '推送失敗')
     }
   }
 
@@ -537,6 +563,16 @@ export default function RdPage() {
                           {r.note && <p className="text-xs text-muted-foreground mt-0.5">{r.note}</p>}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 gap-1 text-xs text-primary border-primary/30 hover:bg-primary/10 font-semibold"
+                            onClick={() => submitToMarketingLaunch(r)}
+                            title="推送至行銷部門發起新品上市"
+                          >
+                            <Rocket className="h-3.5 w-3.5" />
+                            推送上架
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"

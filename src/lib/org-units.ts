@@ -99,6 +99,7 @@ export const UNIT_AREAS: UnitArea[] = [
     description: '品牌中樞・視覺庫・外送平台與行銷流水線',
     pages: [
       { href: '/marketing', label: '行銷中心 (marketing.im-tourist.com)', description: '行銷流水線、AI 視覺工坊與潛在客戶外呼開發' },
+      { href: '/mkt?tab=campaigns', label: '活動中心與成效分析', description: '實體與線上活動企劃、AI 助手、前期/同期業績比對與 CRM VIP 新品上架' },
       { href: '/marketing/logbook', label: '行銷日誌', description: '行銷活動計畫、社群發布紀錄與效益追蹤' },
       { href: '/mkt', label: '門市實體行銷與外送平台', description: '品牌視覺庫、各分店專屬行銷活動與外送平台整合' },
     ],
@@ -206,6 +207,7 @@ export const UNIT_AREAS_VI: UnitArea[] = [
     description: 'Trung tâm thương hiệu, thư viện hình ảnh, app giao hàng & tự động hóa',
     pages: [
       { href: '/marketing', label: 'Trung tâm Marketing', description: 'Tự động hóa tiếp thị, xưởng hình ảnh AI, pipeline & tiếp cận khách hàng' },
+      { href: '/mkt?tab=campaigns', label: 'Trung tâm chiến dịch & Phân tích ROI', description: 'Chiến dịch online/offline, trợ lý AI, đối chiếu doanh thu & CRM VIP ra mắt sản phẩm mới' },
       { href: '/marketing/logbook', label: 'Nhật ký Marketing', description: 'Kế hoạch chiến dịch tiếp thị, lịch đăng mạng xã hội & đo lường hiệu quả' },
       { href: '/mkt', label: 'Marketing cửa hàng & App giao hàng', description: 'Thư viện visual thương hiệu, chương trình từng chi nhánh & tích hợp app giao hàng' },
     ],
@@ -313,6 +315,7 @@ export const UNIT_AREAS_EN: UnitArea[] = [
     description: 'Brand hub, visual assets, delivery platforms, and marketing automation',
     pages: [
       { href: '/marketing', label: 'Marketing Hub', description: 'Marketing automation, AI visual workshop, sales pipeline, and outbound calls' },
+      { href: '/mkt?tab=campaigns', label: 'Campaigns & ROI Analytics', description: 'Online & physical campaigns, AI copilot, revenue comparison & CRM VIP product rollout' },
       { href: '/marketing/logbook', label: 'Marketing Logbook', description: 'Campaign plans, social media scheduling, and performance tracking' },
       { href: '/mkt', label: 'Store Marketing & Delivery', description: 'Brand visual library, store-specific campaigns, and delivery integration' },
     ],
