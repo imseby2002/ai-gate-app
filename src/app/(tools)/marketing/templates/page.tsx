@@ -6,13 +6,15 @@ import Link from 'next/link'
 import {
   Sparkles, Palette, Tag, Crown, Zap, Gift, MessageSquare, ShieldCheck,
   Megaphone, Search, Upload, X, Copy, Check, Download, Loader2, ArrowRight,
-  Sliders, RefreshCw, Eye, ExternalLink, HelpCircle, Layers, Image as ImageIcon
+  Sliders, RefreshCw, Eye, ExternalLink, HelpCircle, Layers, Image as ImageIcon,
+  Share2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
 import {
   VISUAL_TEMPLATES,
   CATEGORIES,
@@ -51,6 +53,7 @@ export default function VisualTemplatesPage() {
     negativePrompt: string
     aspectRatio: string
   } | null>(null)
+  const [showPublishModal, setShowPublishModal] = useState(false)
 
   // 篩選模板
   const filteredTemplates = useMemo(() => {
@@ -541,6 +544,15 @@ export default function VisualTemplatesPage() {
                     下載高畫質大圖
                   </Button>
                 </a>
+
+                <Button
+                  size="sm"
+                  onClick={() => setShowPublishModal(true)}
+                  className="h-8 text-xs gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-sm"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  🚀 一鍵串接上傳至社群平台
+                </Button>
               </div>
             </div>
 
@@ -579,6 +591,30 @@ export default function VisualTemplatesPage() {
                     <span>•</span>
                     <span>存儲狀態：<b className="text-emerald-600">已自動存入素材庫</b></span>
                   </div>
+
+                  {/* 社群發布中心推薦卡 */}
+                  <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-xs flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
+                        <Share2 className="h-3.5 w-3.5" />
+                        社群發布中心一鍵串接
+                      </div>
+                      <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-300">
+                        直發多平台
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      免手動下載轉存！立即將這張成果圖同步發布至 Facebook、Instagram、Threads 等社群平台。
+                    </p>
+                    <Button
+                      size="sm"
+                      className="w-full h-8 text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                      onClick={() => setShowPublishModal(true)}
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                      開啟上傳中心並選擇發布平台
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2 pt-3 border-t">
@@ -602,6 +638,22 @@ export default function VisualTemplatesPage() {
           </div>
         )}
       </div>
+
+      {/* 社群平台發布 Modal */}
+      {generatedResult && (
+        <SocialPublishModal
+          open={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          media={{
+            type: 'image',
+            url: generatedResult.url,
+            title: `${selectedTemplate.title}（${selectedTemplate.feeling}）`,
+            aspectRatio: generatedResult.aspectRatio,
+          }}
+          initialCopy={`✨【${selectedTemplate.title}】新視覺公開！\n\n以「${selectedTemplate.feeling}」專屬風格打造，呈現極致質感與細節魅力 🔥${userPrompt.trim() ? `\n\n重點特色：${userPrompt.trim()}` : ''}\n\n立即了解更多或私訊我們！\n\n#品牌視覺 #新品上市 #行銷設計 #社群亮點 #質感生活`}
+          sourceName={`視覺風格與廣告圖 (${selectedTemplate.title})`}
+        />
+      )}
     </div>
   )
 }

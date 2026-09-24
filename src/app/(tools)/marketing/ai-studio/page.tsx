@@ -7,12 +7,13 @@ import {
   ChevronLeft, Upload, Sparkles, Loader2, Image as ImageIcon,
   Wand2, Palette, ArrowUpToLine, Scissors, Video, Plus, X,
   ArrowRight, Play, Download, Copy, RefreshCw, MessageSquare,
-  Brush, Eraser, Trash2, Layers, PenTool,
+  Brush, Eraser, Trash2, Layers, PenTool, Share2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils/cn'
 import { PlanGate } from '@/components/marketing/PlanGate'
+import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,26 @@ function AiStudioContent() {
   ])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [runningAll, setRunningAll] = useState(false)
+  const [publishMedia, setPublishMedia] = useState<{
+    type: 'image' | 'video'
+    url: string
+    title?: string
+    initialCopy?: string
+  } | null>(null)
+
+  const handleOpenPublish = useCallback((node: PipelineNode) => {
+    if (!node.outputUrl) return
+    const isVideo = node.type === 'video'
+    const typeLabel = t(NODE_META[node.type]?.labelKey ?? node.type)
+    setPublishMedia({
+      type: isVideo ? 'video' : 'image',
+      url: node.outputUrl,
+      title: `AI 視覺工坊 - ${typeLabel}`,
+      initialCopy: node.prompt
+        ? `✨【AI 視覺工坊創作成果】\n\n以「${typeLabel}」專業流程打造：${node.prompt}\n\n立即體驗或私訊諮詢！\n\n#AI視覺 #品牌行銷 #創新內容 #質感美學`
+        : `✨【AI 視覺工坊創作成果】\n\n透過 AI 視覺工坊「${typeLabel}」精心生成，展現極致美感與細節魅力 🔥\n\n立即了解更多或私訊我們！\n\n#AI視覺 #品牌行銷 #創意無界 #質感設計`,
+    })
+  }, [t])
 
   const fileRef = useRef<HTMLInputElement>(null)
   const pipelineRef = useRef<HTMLDivElement>(null)
@@ -570,6 +591,7 @@ function AiStudioContent() {
                   onRun={() => runNode(node.id)}
                   onRemove={() => removeNode(node.id)}
                   onUpload={e => handleUpload(e, node.id)}
+                  onPublish={handleOpenPublish}
                   fileRef={node.type === 'input' ? fileRef : undefined}
                   t={t}
                 />
@@ -626,6 +648,17 @@ function AiStudioContent() {
           if (inputNode) handleUpload(e, inputNode.id)
         }}
       />
+
+      {/* 社群平台發布 Modal */}
+      {publishMedia && (
+        <SocialPublishModal
+          open={!!publishMedia}
+          onClose={() => setPublishMedia(null)}
+          media={publishMedia}
+          initialCopy={publishMedia.initialCopy}
+          sourceName={publishMedia.title}
+        />
+      )}
     </div>
   )
 }
@@ -642,11 +675,12 @@ interface NodeCardProps {
   onRun: () => void
   onRemove: () => void
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onPublish?: (node: PipelineNode) => void
   fileRef?: React.RefObject<HTMLInputElement | null>
   t: ReturnType<typeof useTranslations<'Marketing'>>
 }
 
-function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload, fileRef, t }: NodeCardProps) {
+function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload, onPublish, fileRef, t }: NodeCardProps) {
   const meta = NODE_META[node.type]
   const Icon = meta.icon
   const localFileRef = useRef<HTMLInputElement>(null)
@@ -770,7 +804,15 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
 
         {/* Done indicator */}
         {node.status === 'done' && node.outputUrl && (
-          <div className="absolute top-2 right-2 flex gap-1">
+          <div className="absolute top-2 right-2 flex gap-1 z-10">
+            <button
+              onClick={() => onPublish?.(node)}
+              className="h-6 px-2 rounded-md bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex items-center justify-center text-white text-[11px] font-semibold gap-1 transition-all shadow-md"
+              title="一鍵串接上傳至社群平台"
+            >
+              <Share2 className="h-3 w-3" />
+              <span>發布</span>
+            </button>
             <button
               onClick={() => downloadImage(node.outputUrl!, node.type)}
               className="h-6 w-6 rounded-md bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition-colors"
@@ -1037,6 +1079,18 @@ function NodeCard({ node, index, canRemove, onUpdate, onRun, onRemove, onUpload,
             ) : (
               <><Sparkles className="h-3 w-3" />{t('studio.run')}</>
             )}
+          </Button>
+        )}
+
+        {/* 成果產出後的一鍵社群發布按鈕 */}
+        {node.status === 'done' && node.outputUrl && (
+          <Button
+            size="sm"
+            className="w-full mt-1.5 h-7 text-[11px] gap-1.5 font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-xs"
+            onClick={() => onPublish?.(node)}
+          >
+            <Share2 className="h-3 w-3" />
+            一鍵串接上傳至社群平台
           </Button>
         )}
       </div>
