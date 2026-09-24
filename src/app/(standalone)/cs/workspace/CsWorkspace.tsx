@@ -1143,7 +1143,7 @@ function Unit12CustomerService({
   const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.id) setUserId(d.id) }).catch(() => {})
+    fetch('/api/marketing/cs-owner').then(r => r.json()).then(d => { if (d.id) setUserId(d.id) }).catch(() => {})
     fetch('/api/social/credentials').then(r => r.json()).then(d => {
       if (d.platforms) {
         const connected: Record<string, boolean> = {}
