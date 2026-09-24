@@ -21,56 +21,75 @@ export interface TicketNotifyPayload {
   webhookExtra?: Record<string, unknown>
 }
 
+// 真實案例：客人的賞鯨行程付款工單有正常建立，但商家設定的 Telegram 通知管道完全
+// 沒收到——因為底下每個管道的 fetch 失敗（token 錯誤、bot 不在群組、chat_id 打錯）
+// 一律被 Promise.allSettled 吞掉，連 Vercel log 都查不到任何錯誤，事後完全無從排查。
+// 這裡補上失敗時的 console.error（不印出 token/value 本身，只印遮罩後的管道識別資訊
+// 與 HTTP 回應），下次同樣情況至少能在 log 裡看到是哪個管道、什麼原因失敗。
+function maskWebhookIdent(wh: NotifyWebhook): string {
+  const target = wh.target?.trim() ? ` target=${wh.target.trim()}` : ''
+  return `type=${wh.type}${target}`
+}
+
 export async function sendTicketNotification(notifyWebhooks: NotifyWebhook[], payload: TicketNotifyPayload): Promise<void> {
   if (!notifyWebhooks?.length) return
   await Promise.allSettled(notifyWebhooks.filter(wh => wh.value?.trim()).map(async wh => {
-    if (wh.type === 'line_messaging') {
-      if (!wh.target?.trim()) return
-      await fetch('https://api.line.me/v2/bot/message/push', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: payload.text }] }),
-      })
-      return
-    }
+    try {
+      if (wh.type === 'line_messaging') {
+        if (!wh.target?.trim()) return
+        const res = await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${wh.value.trim()}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: wh.target.trim(), messages: [{ type: 'text', text: payload.text }] }),
+        })
+        if (!res.ok) console.error(`[ticket-notify] LINE push failed (${maskWebhookIdent(wh)}): ${res.status} ${await res.text().catch(() => '')}`)
+        return
+      }
 
-    if (wh.type === 'telegram') {
-      if (!wh.target?.trim()) return
-      const usingHtml = !!payload.telegramHtml
-      const res = await fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: wh.target.trim(),
-          text: payload.telegramHtml ?? payload.text,
-          ...(usingHtml ? { parse_mode: 'HTML' } : {}),
-          ...(payload.telegramReplyMarkup ? { reply_markup: payload.telegramReplyMarkup } : {}),
-          // 訊息含 <a href> 連結時，Telegram 預設會在下方另外貼一張抓取自該網址的
-          // 預覽卡片，卡片上照樣顯示完整長網址——關掉預覽卡片，只留文字裡的短連結
-          // 跟按鈕（沒有連結時這個選項無影響）。
-          link_preview_options: { is_disabled: true },
-        }),
-      })
-      if (!res.ok && usingHtml) {
-        // HTML 解析失敗時退回純文字，僅以按鈕（若有）提供連結，避免完全收不到通知
-        await fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+      if (wh.type === 'telegram') {
+        if (!wh.target?.trim()) return
+        const usingHtml = !!payload.telegramHtml
+        const res = await fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: wh.target.trim(),
-            text: payload.text,
+            text: payload.telegramHtml ?? payload.text,
+            ...(usingHtml ? { parse_mode: 'HTML' } : {}),
             ...(payload.telegramReplyMarkup ? { reply_markup: payload.telegramReplyMarkup } : {}),
+            // 訊息含 <a href> 連結時，Telegram 預設會在下方另外貼一張抓取自該網址的
+            // 預覽卡片，卡片上照樣顯示完整長網址——關掉預覽卡片，只留文字裡的短連結
+            // 跟按鈕（沒有連結時這個選項無影響）。
+            link_preview_options: { is_disabled: true },
           }),
         })
+        if (!res.ok && usingHtml) {
+          // HTML 解析失敗時退回純文字，僅以按鈕（若有）提供連結，避免完全收不到通知
+          const retryRes = await fetch(`https://api.telegram.org/bot${wh.value.trim()}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: wh.target.trim(),
+              text: payload.text,
+              ...(payload.telegramReplyMarkup ? { reply_markup: payload.telegramReplyMarkup } : {}),
+            }),
+          })
+          if (!retryRes.ok) console.error(`[ticket-notify] Telegram sendMessage failed (${maskWebhookIdent(wh)}): ${retryRes.status} ${await retryRes.text().catch(() => '')}`)
+        } else if (!res.ok) {
+          console.error(`[ticket-notify] Telegram sendMessage failed (${maskWebhookIdent(wh)}): ${res.status} ${await res.text().catch(() => '')}`)
+        }
+        return
       }
-      return
-    }
 
-    if (!isSafeWebhookUrl(wh.value.trim())) return  // block SSRF to internal hosts
-    await fetch(wh.value.trim(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: payload.text, ...(payload.webhookExtra ?? {}) }),
-    })
+      if (!isSafeWebhookUrl(wh.value.trim())) return  // block SSRF to internal hosts
+      const res = await fetch(wh.value.trim(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: payload.text, ...(payload.webhookExtra ?? {}) }),
+      })
+      if (!res.ok) console.error(`[ticket-notify] generic webhook failed (${maskWebhookIdent(wh)}): ${res.status} ${await res.text().catch(() => '')}`)
+    } catch (e) {
+      console.error(`[ticket-notify] send threw (${maskWebhookIdent(wh)}): ${e instanceof Error ? e.message : String(e)}`)
+    }
   }))
 }
