@@ -523,7 +523,11 @@ ${selectedVideoTemplate.rawScript}
                           {/* 遮罩漸層與頂部/底部標籤 */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-between p-2 pointer-events-none">
                             <div className="flex items-center justify-between">
-                              {tpl.badge ? (
+                              {tpl.id === 'beforeafter' ? (
+                                <Badge className="text-[10px] bg-indigo-600/90 text-white border-0 backdrop-blur-xs font-semibold shadow-xs">
+                                  ◀ BEFORE | AFTER ▶
+                                </Badge>
+                              ) : tpl.badge ? (
                                 <Badge variant="outline" className="text-[10px] bg-black/70 text-amber-300 border-amber-400/40 backdrop-blur-xs font-semibold">
                                   {tpl.badge}
                                 </Badge>
