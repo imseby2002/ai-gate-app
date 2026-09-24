@@ -541,6 +541,85 @@ export async function queryBookingByPhone(supabase: any, userId: string, rawPhon
 // 一律不能直接洩漏，只能先跟客人核對候選姓名；只有客人「自己打的字串」逐字/子字串比對到
 // 系統資料，或客人已經核對確認過的姓名，才視為身份已驗證可以直接給密碼。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// 真實案例：客人打中文姓名「江睿安」，系統訂單存的是這位客人證件上的羅馬拼音
+// 「Chiang Juian」（台灣證件羅馬拼音常是本人自訂拼法，不一定照漢語拼音/通用拼音/
+// 威妥瑪任一套規則）——原本完全交給 AI 從候選清單裡「自由心證」挑一筆或回 NONE，
+// AI 這次沒挑中，客人被要求重打訂單編號，查了資料庫才發現訂單其實存在。
+// 改成先讓 AI 只做「音譯成拼音候選」這個誤差較小的單一翻譯任務，比對決策本身則用
+// 下面固定的編輯距離相似度門檻，行為確定、可稽核，也不會因為候選清單排序或措辭
+// 不同而每次判斷不一致。找不到高相似度候選，或最高分兩筆分數太接近（可能撞名，
+// 不確定指哪一筆）就直接放棄，退回原本「AI 自由心證挑一筆或 NONE」的既有流程——
+// 兩層都失敗才是真的查無資料，不會比原本更容易誤判成同一人。
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp = new Array(n + 1)
+  for (let j = 0; j <= n; j++) dp[j] = j
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j]
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1])
+      prev = tmp
+    }
+  }
+  return dp[n]
+}
+
+function nameSimilarity(a: string, b: string): number {
+  const maxLen = Math.max(a.length, b.length)
+  if (maxLen === 0) return 1
+  return 1 - levenshtein(a, b) / maxLen
+}
+
+async function transliterateToLatin(chineseName: string, model: LanguageModel): Promise<string[]> {
+  try {
+    const { text } = await generateText({
+      model,
+      messages: [{
+        role: 'user',
+        content: `請把這個中文姓名音譯成常見的羅馬拼音寫法（漢語拼音、通用拼音、威妥瑪拼音等台灣證件常見拼法都列出來，最多 4 種）：「${chineseName}」\n只回傳一個 JSON 字串陣列，不要有其他文字，例如：["Jiang Rui An","Chiang Jui An","Chiang Ruei An"]`,
+      }],
+    })
+    const m = text.match(/\[[\s\S]*\]/)
+    if (!m) return []
+    const arr = JSON.parse(m[0])
+    return Array.isArray(arr) ? arr.filter((s): s is string => typeof s === 'string').slice(0, 6) : []
+  } catch { return [] }
+}
+
+// 門檻取 0.72：實測「Chiang Juian」對「江睿安」的音譯候選（如 Jiang Rui An／
+// Chiang Jui An）相似度都能過關，但跟明顯不同姓氏、不同發音的候選相似度會落在
+// 0.5 上下，抓得住差異，不會把完全不同的兩個人判成同一人。
+const TRANSLITERATION_MATCH_THRESHOLD = 0.72
+
+function matchByTransliteration<T extends { guest_name: string | null }>(
+  candidates: T[], transliterations: string[],
+): T | null {
+  if (!transliterations.length) return null
+  const norm = (s: string) => s.toLowerCase().replace(/[\s./-]/g, '')
+  let best: { candidate: T; score: number } | null = null
+  let secondBestScore = 0
+  for (const c of candidates) {
+    const g = norm(c.guest_name ?? '')
+    if (!g) continue
+    let candidateBest = 0
+    for (const t of transliterations) candidateBest = Math.max(candidateBest, nameSimilarity(g, norm(t)))
+    if (!best || candidateBest > best.score) {
+      secondBestScore = best?.score ?? 0
+      best = { candidate: c, score: candidateBest }
+    } else if (candidateBest > secondBestScore) {
+      secondBestScore = candidateBest
+    }
+  }
+  if (!best || best.score < TRANSLITERATION_MATCH_THRESHOLD) return null
+  // 最高分跟次高分太接近——可能是同名撞號，無法確定指哪一筆，不採用，交回原本流程
+  if (secondBestScore >= best.score - 0.05) return null
+  return best.candidate
+}
+
 export async function queryBookingByGuestName(supabase: any, userId: string, candidateName: string, model: LanguageModel, confirmedExactName?: string): Promise<string | null> {
   const { features } = await getBookingEntitlements(supabase, userId)
   if (!features.csIntegration) return null
@@ -560,7 +639,16 @@ export async function queryBookingByGuestName(supabase: any, userId: string, can
   const norm = (s: string) => s.toLowerCase().replace(/[\s./-]/g, '')
   const n = norm(lookupName)
 
+  const hasChinese = /[一-鿿]/.test(lookupName)
+
   const fuzzyMatchOne = async <T extends { guest_name: string | null }>(candidates: T[]): Promise<T | null> => {
+    // 第一層：中文姓名先試確定性的拼音相似度比對（AI 只負責音譯，比對決策本身
+    // 固定門檻、可稽核）；找不到高信心候選再退回下面既有的「AI 自由心證」流程。
+    if (hasChinese) {
+      const translits = await transliterateToLatin(lookupName, model)
+      const byTranslit = matchByTransliteration(candidates, translits)
+      if (byTranslit) return byTranslit
+    }
     try {
       const list = candidates.map((c, i) => `${i}: ${c.guest_name}`).join('\n')
       const { text } = await generateText({
