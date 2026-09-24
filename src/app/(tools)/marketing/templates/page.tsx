@@ -7,7 +7,8 @@ import {
   Sparkles, Palette, Tag, Crown, Zap, Gift, MessageSquare, ShieldCheck,
   Megaphone, Search, Upload, X, Copy, Check, Download, Loader2, ArrowRight,
   Sliders, RefreshCw, Eye, ExternalLink, HelpCircle, Layers, Image as ImageIcon,
-  Share2
+  Share2, Video, Film, Flame, Box, BookOpen, Clock, Smartphone, Monitor,
+  Play, FileText, CheckCircle2, AlertCircle, Send
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,10 +18,16 @@ import { Card } from '@/components/ui/card'
 import { SocialPublishModal } from '@/components/marketing/SocialPublishModal'
 import {
   VISUAL_TEMPLATES,
-  CATEGORIES,
+  CATEGORIES as IMAGE_CATEGORIES,
   type VisualTemplate,
-  type TemplateCategory
+  type TemplateCategory as ImageTemplateCategory
 } from '@/lib/marketing/visual-templates'
+import {
+  VIDEO_TEMPLATES,
+  VIDEO_CATEGORIES,
+  type VideoTemplate,
+  type VideoCategory
+} from '@/lib/marketing/video-templates'
 
 const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: string; desc: string }[] = [
   { value: '1:1',  label: '1:1 方形',     desc: 'IG 貼文 / 電商首圖' },
@@ -31,35 +38,55 @@ const ASPECT_RATIOS: { value: '1:1' | '4:5' | '3:4' | '16:9' | '9:16'; label: st
 ]
 
 export default function VisualTemplatesPage() {
-  const [selectedCat, setSelectedCat] = useState<TemplateCategory>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<VisualTemplate>(VISUAL_TEMPLATES[0])
-  const [aspectRatio, setAspectRatio] = useState<'1:1' | '4:5' | '3:4' | '16:9' | '9:16'>(VISUAL_TEMPLATES[0].defaultAspect)
+  // 主分頁切換：'image' (圖片風格模板) 或 'video' (影片廣告腳本)
+  const [mainTab, setMainTab] = useState<'image' | 'video'>('image')
 
-  // 輸入狀態
-  const [userPrompt, setUserPrompt] = useState('')
+  // ─── 圖片模式狀態 ───────────────────────────────────────────────
+  const [selectedImgCat, setSelectedImgCat] = useState<ImageTemplateCategory>('all')
+  const [imgSearchQuery, setImgSearchQuery] = useState('')
+  const [selectedImgTemplate, setSelectedImgTemplate] = useState<VisualTemplate>(VISUAL_TEMPLATES[0])
+  const [imgAspectRatio, setImgAspectRatio] = useState<'1:1' | '4:5' | '3:4' | '16:9' | '9:16'>(VISUAL_TEMPLATES[0].defaultAspect)
+
+  const [imgUserPrompt, setImgUserPrompt] = useState('')
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const imgFileInputRef = useRef<HTMLInputElement>(null)
 
-  // 生成狀態
-  const [generating, setGenerating] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const [copiedPrompt, setCopiedPrompt] = useState(false)
-  const [copiedLink, setCopiedLink] = useState(false)
-  const [generatedResult, setGeneratedResult] = useState<{
+  const [generatingImage, setGeneratingImage] = useState(false)
+  const [imgErrorMsg, setImgErrorMsg] = useState<string | null>(null)
+  const [copiedImgPrompt, setCopiedImgPrompt] = useState(false)
+  const [copiedImgLink, setCopiedImgLink] = useState(false)
+  const [generatedImgResult, setGeneratedImgResult] = useState<{
     url: string
     positivePrompt: string
     negativePrompt: string
     aspectRatio: string
   } | null>(null)
-  const [showPublishModal, setShowPublishModal] = useState(false)
+  const [showImgPublishModal, setShowImgPublishModal] = useState(false)
 
-  // 篩選模板
-  const filteredTemplates = useMemo(() => {
+  // ─── 影片模式狀態 ───────────────────────────────────────────────
+  const [selectedVideoCat, setSelectedVideoCat] = useState<VideoCategory>('all')
+  const [videoSearchQuery, setVideoSearchQuery] = useState('')
+  const [selectedVideoTemplate, setSelectedVideoTemplate] = useState<VideoTemplate>(VIDEO_TEMPLATES[0])
+  const [videoAspect, setVideoAspect] = useState<'9:16' | '16:9' | '1:1' | '4:5'>(VIDEO_TEMPLATES[0].defaultAspect)
+  const [videoProductName, setVideoProductName] = useState('')
+  const [videoKeyPoint, setVideoKeyPoint] = useState('')
+  
+  const [generatingVideo, setGeneratingVideo] = useState(false)
+  const [videoPollStatus, setVideoPollStatus] = useState<string | null>(null)
+  const [videoErrorMsg, setVideoErrorMsg] = useState<string | null>(null)
+  const [videoResultUrl, setVideoResultUrl] = useState<string | null>(null)
+  const [copiedVideoScript, setCopiedVideoScript] = useState(false)
+  const [copiedVideoPrompt, setCopiedVideoPrompt] = useState(false)
+  const [expandedAiScript, setExpandedAiScript] = useState<string | null>(null)
+  const [expandingAiScript, setExpandingAiScript] = useState(false)
+  const [showVideoPublishModal, setShowVideoPublishModal] = useState(false)
+
+  // ─── 圖片篩選 ───────────────────────────────────────────────────
+  const filteredImgTemplates = useMemo(() => {
     return VISUAL_TEMPLATES.filter(t => {
-      const matchCat = selectedCat === 'all' || t.category === selectedCat
-      const q = searchQuery.trim().toLowerCase()
+      const matchCat = selectedImgCat === 'all' || t.category === selectedImgCat
+      const q = imgSearchQuery.trim().toLowerCase()
       if (!q) return matchCat
 
       const matchQuery =
@@ -70,16 +97,43 @@ export default function VisualTemplatesPage() {
 
       return matchCat && matchQuery
     })
-  }, [selectedCat, searchQuery])
+  }, [selectedImgCat, imgSearchQuery])
 
-  // 當選擇新模板時，自動套用該模板的預設長寬比
-  const handleSelectTemplate = (tpl: VisualTemplate) => {
-    setSelectedTemplate(tpl)
-    setAspectRatio(tpl.defaultAspect)
+  // ─── 影片篩選 ───────────────────────────────────────────────────
+  const filteredVideoTemplates = useMemo(() => {
+    return VIDEO_TEMPLATES.filter(t => {
+      const matchCat = selectedVideoCat === 'all' || t.category === selectedVideoCat
+      const q = videoSearchQuery.trim().toLowerCase()
+      if (!q) return matchCat
+
+      const matchQuery =
+        t.command.toLowerCase().includes(q) ||
+        t.title.toLowerCase().includes(q) ||
+        t.applicability.toLowerCase().includes(q) ||
+        t.params.toLowerCase().includes(q) ||
+        t.tags.some(tag => tag.toLowerCase().includes(q))
+
+      return matchCat && matchQuery
+    })
+  }, [selectedVideoCat, videoSearchQuery])
+
+  // 選擇圖片模板
+  const handleSelectImgTemplate = (tpl: VisualTemplate) => {
+    setSelectedImgTemplate(tpl)
+    setImgAspectRatio(tpl.defaultAspect)
+  }
+
+  // 選擇影片模板
+  const handleSelectVideoTemplate = (tpl: VideoTemplate) => {
+    setSelectedVideoTemplate(tpl)
+    setVideoAspect(tpl.defaultAspect)
+    setVideoResultUrl(null)
+    setExpandedAiScript(null)
+    setVideoErrorMsg(null)
   }
 
   // 處理本機圖片上傳
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImgFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -88,44 +142,44 @@ export default function VisualTemplatesPage() {
       return
     }
 
-    setUploading(true)
+    setUploadingImage(true)
     const reader = new FileReader()
     reader.onload = ev => {
       setUploadedImage(ev.target?.result as string)
-      setUploading(false)
+      setUploadingImage(false)
     }
     reader.readAsDataURL(file)
     e.target.value = ''
   }
 
-  // 即時計算預覽組裝提示詞
-  const previewSynthesizedPrompt = useMemo(() => {
-    if (!userPrompt.trim()) return selectedTemplate.positivePrompt
-    return `${selectedTemplate.positivePrompt}, featuring ${userPrompt.trim()}, high quality, commercial photography, stunning details`
-  }, [selectedTemplate, userPrompt])
+  // 即時計算圖片提示詞
+  const previewSynthesizedImgPrompt = useMemo(() => {
+    if (!imgUserPrompt.trim()) return selectedImgTemplate.positivePrompt
+    return `${selectedImgTemplate.positivePrompt}, featuring ${imgUserPrompt.trim()}, high quality, commercial photography, stunning details`
+  }, [selectedImgTemplate, imgUserPrompt])
 
-  // 一鍵複製提示詞
-  const handleCopyPrompt = () => {
-    const fullText = `【風格特徵 / 正向提示詞】：\n${previewSynthesizedPrompt}\n\n【排除特徵 / 負面提示詞】：\n${selectedTemplate.negativePrompt}\n\n【建議尺寸比例】：\n${aspectRatio}`
+  // 複製圖片提示詞
+  const handleCopyImgPrompt = () => {
+    const fullText = `【風格特徵 / 正向提示詞】：\n${previewSynthesizedImgPrompt}\n\n【排除特徵 / 負面提示詞】：\n${selectedImgTemplate.negativePrompt}\n\n【建議尺寸比例】：\n${imgAspectRatio}`
     navigator.clipboard.writeText(fullText)
-    setCopiedPrompt(true)
-    setTimeout(() => setCopiedPrompt(false), 2000)
+    setCopiedImgPrompt(true)
+    setTimeout(() => setCopiedImgPrompt(false), 2000)
   }
 
-  // 呼叫 AI 生成圖片
-  const handleGenerate = async () => {
-    setGenerating(true)
-    setErrorMsg(null)
+  // 生成圖片
+  const handleGenerateImage = async () => {
+    setGeneratingImage(true)
+    setImgErrorMsg(null)
 
     try {
       const res = await fetch('/api/marketing/visual-generator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          templateId: selectedTemplate.id,
-          userPrompt: userPrompt.trim(),
+          templateId: selectedImgTemplate.id,
+          userPrompt: imgUserPrompt.trim(),
           imageUrl: uploadedImage || undefined,
-          aspectRatio,
+          aspectRatio: imgAspectRatio,
           model: 'flux',
           action: 'generate_image',
         }),
@@ -134,52 +188,213 @@ export default function VisualTemplatesPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '生成失敗，請稍後再試')
 
-      setGeneratedResult({
+      setGeneratedImgResult({
         url: data.url,
-        positivePrompt: data.positivePrompt || previewSynthesizedPrompt,
-        negativePrompt: data.negativePrompt || selectedTemplate.negativePrompt,
-        aspectRatio: data.aspectRatio || aspectRatio,
+        positivePrompt: data.positivePrompt || previewSynthesizedImgPrompt,
+        negativePrompt: data.negativePrompt || selectedImgTemplate.negativePrompt,
+        aspectRatio: data.aspectRatio || imgAspectRatio,
       })
 
-      // 滾動到結果展示
       setTimeout(() => {
-        const el = document.getElementById('generation-result-box')
+        const el = document.getElementById('image-generation-result-box')
         el?.scrollIntoView({ behavior: 'smooth' })
       }, 100)
     } catch (err: any) {
-      setErrorMsg(err.message || '生成失敗')
+      setImgErrorMsg(err.message || '生成失敗')
     } finally {
-      setGenerating(false)
+      setGeneratingImage(false)
     }
   }
 
   // 複製圖片連結
-  const handleCopyLink = () => {
-    if (!generatedResult?.url) return
-    navigator.clipboard.writeText(generatedResult.url)
-    setCopiedLink(true)
-    setTimeout(() => setCopiedLink(false), 2000)
+  const handleCopyImgLink = () => {
+    if (!generatedImgResult?.url) return
+    navigator.clipboard.writeText(generatedImgResult.url)
+    setCopiedImgLink(true)
+    setTimeout(() => setCopiedImgLink(false), 2000)
+  }
+
+  // ─── 影片分鏡腳本合成 ───────────────────────────────────────────
+  const synthesizedVideoScript = useMemo(() => {
+    const pName = videoProductName.trim() || '本商品'
+    const kPoint = videoKeyPoint.trim() ? `（重點：${videoKeyPoint.trim()}）` : ''
+
+    const lines = [
+      `【${selectedVideoTemplate.title} ${selectedVideoTemplate.command} 完整分鏡腳本】`,
+      `適用情境：${selectedVideoTemplate.applicability}`,
+      `推薦規格：比例 ${videoAspect}｜規格建議：${selectedVideoTemplate.params}`,
+      `推廣主題：${pName} ${kPoint}`,
+      '',
+      '─── 分鏡時間軸規劃 ───',
+    ]
+
+    selectedVideoTemplate.scriptTimeline.forEach(item => {
+      let content = item.content
+      if (videoProductName.trim()) {
+        content = content.replace(/產品|成品|招牌飲|商品|這杯/g, pName)
+      }
+      lines.push(`▶ [${item.time}] ${content}`)
+    })
+
+    return lines.join('\n')
+  }, [selectedVideoTemplate, videoAspect, videoProductName, videoKeyPoint])
+
+  // 即時計算影片英文 Prompt 骨架
+  const synthesizedVideoPrompt = useMemo(() => {
+    const pName = videoProductName.trim() ? `${videoProductName.trim()}, ` : ''
+    return `commercial advertising video of ${pName}${selectedVideoTemplate.title}, ${selectedVideoTemplate.positivePrompt}, high dynamic range, 4k ultra detailed cinematic lighting, aspect ratio ${videoAspect}`
+  }, [selectedVideoTemplate, videoAspect, videoProductName])
+
+  // 複製完整分鏡腳本
+  const handleCopyVideoScript = () => {
+    navigator.clipboard.writeText(synthesizedVideoScript)
+    setCopiedVideoScript(true)
+    setTimeout(() => setCopiedVideoScript(false), 2000)
+  }
+
+  // 複製影片英文 Prompt
+  const handleCopyVideoPrompt = () => {
+    navigator.clipboard.writeText(synthesizedVideoPrompt)
+    setCopiedVideoPrompt(true)
+    setTimeout(() => setCopiedVideoPrompt(false), 2000)
+  }
+
+  // AI 智慧擴寫完整口播對白
+  const handleExpandAiScript = async () => {
+    setExpandingAiScript(true)
+    setVideoErrorMsg(null)
+
+    try {
+      const prompt = `請為以下行銷影片腳本撰寫專業、具吸引力且自然流暢的口播台詞與分鏡字幕：
+模板：${selectedVideoTemplate.title} (${selectedVideoTemplate.command})
+適用情境：${selectedVideoTemplate.applicability}
+推廣商品/主題：${videoProductName || '精選商品'}
+核心特色/優惠：${videoKeyPoint || '極致品質、限時優惠'}
+分鏡時間軸結構：
+${selectedVideoTemplate.rawScript}
+
+請提供：
+1. 吸引人的開場口播（前3秒）
+2. 分鏡逐秒台詞與畫面拍攝指令
+3. 結尾行動呼籲（CTA）
+請用繁體中文回答，口吻具親和力與行銷轉換力。`
+
+      const res = await fetch('/api/marketing/copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          copyTypes: ['anchor_script'],
+          userInstructions: prompt,
+          topic: `${selectedVideoTemplate.title} - ${videoProductName || '商品行銷影片'}`,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const text = data?.copies?.anchor_script || data?.copy || data?.result
+        if (text) {
+          setExpandedAiScript(text)
+        } else {
+          setExpandedAiScript(`【${selectedVideoTemplate.title} 口播講稿】\n\n「嗨大家！${videoProductName || '這款人氣好物'}今天正式亮相！${videoKeyPoint ? `不僅${videoKeyPoint}，` : ''}更為您帶來極致超值體驗！現在就留言或點擊主頁連結搶先下單，名額有限送完為止！」`)
+        }
+      } else {
+        setExpandedAiScript(`【${selectedVideoTemplate.title} 口播講稿】\n\n「嗨大家！${videoProductName || '這款人氣好物'}今天正式亮相！${videoKeyPoint ? `不僅${videoKeyPoint}，` : ''}更為您帶來極致超值體驗！現在就留言或點擊主頁連結搶先下單，名額有限送完為止！」`)
+      }
+    } catch {
+      setExpandedAiScript(`【${selectedVideoTemplate.title} 口播講稿】\n\n「嗨大家！${videoProductName || '這款人氣好物'}今天正式亮相！立即點擊了解更多！」`)
+    } finally {
+      setExpandingAiScript(false)
+    }
+  }
+
+  // 呼叫 AI 生成影片
+  const handleGenerateVideo = async () => {
+    setGeneratingVideo(true)
+    setVideoErrorMsg(null)
+    setVideoResultUrl(null)
+    setVideoPollStatus('正在向 AI 影片引擎提交任務...')
+
+    try {
+      const res = await fetch('/api/marketing/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: synthesizedVideoPrompt,
+          model: 'kling-standard',
+          duration: String(Math.min(selectedVideoTemplate.recommendedSeconds, 10)),
+          aspectRatio: videoAspect,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 403) {
+          throw new Error(data.error || '目前方案未開放影片產出，請升級至 TEAM 以上方案')
+        }
+        throw new Error(data.error || '影片任務提交失敗')
+      }
+
+      const requestId = data.requestId
+      if (!requestId) {
+        throw new Error('未取得影片任務 ID')
+      }
+
+      setVideoPollStatus('任務已提交，AI 正在繪製各幀動態與光影渲染 (約 30~60 秒)...')
+
+      // Polling
+      for (let i = 0; i < 40; i++) {
+        await new Promise(r => setTimeout(r, 4000))
+        setVideoPollStatus(`AI 影片渲染中 (進度 ${Math.min(15 + i * 2, 95)}%)...`)
+
+        try {
+          const pollRes = await fetch(`/api/marketing/generate-video?requestId=${requestId}&model=kling-standard`)
+          const pollData = await pollRes.json()
+
+          if (pollData.status === 'completed' && pollData.url) {
+            setVideoResultUrl(pollData.url)
+            setVideoPollStatus(null)
+            setGeneratingVideo(false)
+            return
+          }
+
+          if (pollData.status === 'failed') {
+            throw new Error(pollData.error || '影片渲染失敗')
+          }
+        } catch (pollErr: any) {
+          if (pollErr.message && !pollErr.message.includes('fetch')) {
+            throw pollErr
+          }
+        }
+      }
+
+      throw new Error('影片生成超時，請稍後至 AI 視覺工坊查看')
+    } catch (err: any) {
+      setVideoErrorMsg(err.message || '生成失敗')
+      setVideoPollStatus(null)
+    } finally {
+      setGeneratingVideo(false)
+    }
   }
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/60 dark:bg-background">
-      {/* 頂部標題區 */}
+      {/* 頂部 Header */}
       <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-purple-600 text-white px-6 py-8 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-amber-200 text-xs font-semibold uppercase tracking-wider mb-2">
               <Sparkles className="h-4 w-4" />
-              <span>行銷視覺風格與廣告圖創作中心</span>
+              <span>行銷視覺風格與廣告創作中心</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              免記指令！只要選擇呈現感覺，立即產生專業行銷圖
+              視覺風格與廣告
             </h1>
             <p className="text-amber-100/90 text-sm mt-1 max-w-2xl leading-relaxed">
-              匯聚 85 種視覺風格、促銷大檔、會員 VIP、節慶檔期與社群互動版型。挑選喜愛的氛圍感，上傳商品照與說明，AI 即刻為您打造吸睛商用視覺！
+              免記指令！匯聚 85 種視覺風格呈現與 185 種行銷落地短影音分鏡模板。挑選氛圍感或腳本結構，AI 即刻打造吸睛商用圖文與短影音！
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
             <Link href="/marketing/ai-studio">
               <Button variant="secondary" size="sm" className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-xs font-semibold">
                 <Sliders className="h-4 w-4" />
@@ -191,469 +406,730 @@ export default function VisualTemplatesPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-        {/* 搜尋與分類選單 */}
-        <div className="bg-card border rounded-2xl p-4 shadow-xs space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜尋呈現感覺、關鍵字（如：黏土、黑五、免運、折扣、微縮、節慶...）"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 rounded-xl bg-muted/40 border-muted"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+        {/* 大分頁選擇切換：圖片風格模板 vs 影片廣告腳本 */}
+        <div className="bg-card border rounded-2xl p-2 shadow-xs flex items-center gap-2">
+          <button
+            onClick={() => setMainTab('image')}
+            className={`flex-1 flex items-center justify-center gap-2.5 py-3 rounded-xl font-bold text-sm transition-all ${
+              mainTab === 'image'
+                ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-md'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            }`}
+          >
+            <ImageIcon className="h-4 w-4" />
+            <span>圖片風格模板</span>
+            <Badge variant="secondary" className={`text-xs px-2 py-0.5 ${mainTab === 'image' ? 'bg-white/20 text-white border-0' : ''}`}>
+              85 款風格
+            </Badge>
+          </button>
 
-            <div className="text-xs text-muted-foreground self-center">
-              共顯示 <b className="text-foreground">{filteredTemplates.length}</b> 種視覺呈現風格
-            </div>
-          </div>
-
-          {/* 分類按鈕列 */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORIES.map(cat => {
-              const active = selectedCat === cat.key
-              return (
-                <button
-                  key={cat.key}
-                  onClick={() => setSelectedCat(cat.key)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                    active
-                      ? 'bg-primary text-primary-foreground shadow-xs font-bold'
-                      : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <span>{cat.label}</span>
-                </button>
-              )
-            })}
-          </div>
+          <button
+            onClick={() => setMainTab('video')}
+            className={`flex-1 flex items-center justify-center gap-2.5 py-3 rounded-xl font-bold text-sm transition-all ${
+              mainTab === 'video'
+                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white shadow-md'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+            }`}
+          >
+            <Video className="h-4 w-4" />
+            <span>短影音與廣告腳本</span>
+            <Badge variant="secondary" className={`text-xs px-2 py-0.5 ${mainTab === 'video' ? 'bg-white/20 text-white border-0' : ''}`}>
+              185 款分鏡
+            </Badge>
+          </button>
         </div>
 
-        {/* 主操作區：左側模板庫 (2/3) + 右側創作產生面板 (1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* 左側：呈現感覺卡片網格 (7 Cols) */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold flex items-center gap-2">
-                <Palette className="h-4 w-4 text-primary" />
-                挑選畫面呈現的感覺
-              </h2>
-              <span className="text-xs text-muted-foreground">點擊卡片即可切換套用</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[820px] overflow-y-auto pr-1">
-              {filteredTemplates.map(tpl => {
-                const isSelected = selectedTemplate.id === tpl.id
-                return (
-                  <div
-                    key={tpl.id}
-                    onClick={() => handleSelectTemplate(tpl)}
-                    className={`group relative p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-md -translate-y-0.5'
-                        : 'border-border bg-card hover:border-primary/40 hover:shadow-xs'
-                    }`}
-                  >
-                    <div>
-                      {/* 色彩亮點條與標籤 */}
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-3 h-3 rounded-full bg-gradient-to-r ${tpl.gradient} shrink-0 shadow-xs`} />
-                          <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                            {tpl.title}
-                          </h3>
-                        </div>
-                        {tpl.badge && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                            {tpl.badge}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 呈現的感覺（核心要求：大字醒目展示感官效果） */}
-                      <div className="p-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs font-semibold text-primary mb-2.5 leading-relaxed">
-                        ✨ {tpl.feeling}
-                      </div>
-
-                      {/* 適用場景 */}
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
-                        <span className="font-semibold text-foreground/80">適用：</span>
-                        {tpl.applicability}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span className="truncate pr-2">📐 建議：{tpl.defaultAspect}</span>
-                      <span className={`font-semibold shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                        {isSelected ? '✓ 目前選中' : '選擇此風格 →'}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-
-              {filteredTemplates.length === 0 && (
-                <div className="col-span-2 py-16 text-center text-muted-foreground bg-card border rounded-2xl border-dashed">
-                  <Search className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm font-medium">查無符合的風格呈現感覺</p>
-                  <Button variant="link" size="sm" onClick={() => { setSearchQuery(''); setSelectedCat('all') }}>
-                    重設搜尋條件
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 右側：創作工作室面板 (5 Cols，黏性固定) */}
-          <div className="lg:col-span-5">
-            <Card className="p-5 rounded-2xl border shadow-md space-y-5 sticky top-4 bg-card">
-              {/* 目前套用的呈現感覺 */}
-              <div className="pb-4 border-b space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    當前選中風格
-                  </span>
-                  <Badge variant="outline" className="text-[11px]">
-                    {selectedTemplate.category === 'style' ? '視覺風格' : '宣傳模板'}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${selectedTemplate.gradient} shrink-0 shadow-xs flex items-center justify-center text-white`}>
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-base text-foreground">{selectedTemplate.title}</h3>
-                    <p className="text-xs text-primary font-medium mt-0.5">
-                      {selectedTemplate.feeling}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-[11px] text-muted-foreground bg-muted/30 p-2 rounded-lg">
-                  💡 <b>特色：</b>{selectedTemplate.applicability}
-                </div>
-              </div>
-
-              {/* 上傳圖片（可選/圖生圖） */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                  <span>上傳商品 / 參考圖片（選填）</span>
-                  {uploadedImage && (
+        {/* ─── TAB 1: 圖片風格模板 ─────────────────────────────────── */}
+        {mainTab === 'image' && (
+          <div className="space-y-6 animate-in fade-in-50 duration-200">
+            {/* 搜尋與分類選單 */}
+            <div className="bg-card border rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="搜尋呈現感覺、關鍵字（如：黏土、黑五、免運、折扣、微縮、節慶...）"
+                    value={imgSearchQuery}
+                    onChange={e => setImgSearchQuery(e.target.value)}
+                    className="pl-9 h-10 rounded-xl bg-muted/40 border-muted"
+                  />
+                  {imgSearchQuery && (
                     <button
-                      onClick={() => setUploadedImage(null)}
-                      className="text-[11px] text-rose-500 hover:underline flex items-center gap-1"
+                      onClick={() => setImgSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      <X className="h-3 w-3" /> 清除圖片
+                      <X className="h-4 w-4" />
                     </button>
                   )}
-                </label>
+                </div>
 
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+                <div className="text-xs text-muted-foreground self-center">
+                  共顯示 <b className="text-foreground">{filteredImgTemplates.length}</b> 種視覺呈現風格
+                </div>
+              </div>
 
-                {uploadedImage ? (
-                  <div className="relative rounded-xl overflow-hidden border bg-black/5 dark:bg-black/30 group">
-                    <img
-                      src={uploadedImage}
-                      alt="Uploaded preview"
-                      className="w-full h-36 object-contain"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-8 text-xs gap-1"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        更換圖片
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 text-xs"
-                        onClick={() => setUploadedImage(null)}
-                      >
-                        刪除
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-border hover:border-primary/50 rounded-xl p-4 text-center cursor-pointer transition-colors bg-muted/10 hover:bg-muted/30 flex flex-col items-center justify-center gap-1.5"
+              {/* 分類按鈕列 */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none">
+                {IMAGE_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.key}
+                    onClick={() => setSelectedImgCat(cat.key)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      selectedImgCat === cat.key
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
                   >
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-foreground">點擊或拖曳上傳圖片</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      可上傳商品主照、門市照；AI 將依所選風格自動合成（未上傳則由文字生成）
-                    </span>
-                  </div>
-                )}
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
               </div>
+            </div>
 
-              {/* 內容與說明填寫 */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-foreground flex items-center justify-between">
-                  <span>商品名稱與內容說明</span>
-                  <span className="text-[11px] text-muted-foreground font-normal">可用中文填寫</span>
-                </label>
-                <Textarea
-                  placeholder="例如：特調黑糖珍珠鮮奶茶，滿滿冰塊與琥珀流動黑糖紋路，背景是溫潤木質吧檯，杯頂有鮮奶油與黑糖粉..."
-                  value={userPrompt}
-                  onChange={e => setUserPrompt(e.target.value)}
-                  className="h-24 text-xs resize-none rounded-xl"
-                />
-              </div>
-
-              {/* 長寬比選擇 */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-foreground block">
-                  生成尺寸比例
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-                  {ASPECT_RATIOS.map(ar => {
-                    const active = aspectRatio === ar.value
-                    const isDefault = selectedTemplate.defaultAspect === ar.value
+            {/* 圖片模板列表 + 工作室 */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* 左側：模板卡片清單 (7 cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[720px] overflow-y-auto pr-1">
+                  {filteredImgTemplates.map(tpl => {
+                    const isSelected = selectedImgTemplate.id === tpl.id
                     return (
-                      <button
-                        key={ar.value}
-                        onClick={() => setAspectRatio(ar.value)}
-                        className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center justify-center relative ${
-                          active
-                            ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
-                            : 'border-border bg-card hover:bg-muted/40 text-muted-foreground'
+                      <div
+                        key={tpl.id}
+                        onClick={() => handleSelectImgTemplate(tpl)}
+                        className={`group relative rounded-2xl border p-4 text-left transition-all cursor-pointer bg-card hover:shadow-md flex flex-col justify-between ${
+                          isSelected
+                            ? 'ring-2 ring-amber-500 border-amber-500 shadow-md bg-amber-50/20 dark:bg-amber-950/20'
+                            : 'hover:border-border/80'
                         }`}
                       >
-                        {isDefault && (
-                          <span className="absolute -top-1.5 -right-1 text-[9px] px-1 bg-amber-500 text-white rounded-full font-semibold">
-                            推薦
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                              {tpl.title}
+                            </span>
+                            {tpl.badge && (
+                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300">
+                                {tpl.badge}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                            {tpl.feeling}
+                          </div>
+
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                            適用：{tpl.applicability}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 mt-3 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span>預設比例 {tpl.defaultAspect}</span>
+                          <span className="text-amber-600 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                            選擇此風格 →
                           </span>
-                        )}
-                        <span className="text-xs font-mono">{ar.value}</span>
-                        <span className="text-[10px] scale-90 truncate max-w-full opacity-80">{ar.label.split(' ')[1]}</span>
-                      </button>
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
               </div>
 
-              {/* 即時組裝提示詞骨架 (點選可展開或複製) */}
-              <div className="p-3 bg-muted/30 border rounded-xl space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-foreground flex items-center gap-1">
-                    <Sliders className="h-3.5 w-3.5 text-primary" />
-                    已組裝提示詞骨架
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-[11px] gap-1 px-2 text-primary"
-                    onClick={handleCopyPrompt}
-                  >
-                    {copiedPrompt ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                    {copiedPrompt ? '已複製' : '複製 Prompt'}
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground font-mono line-clamp-3 bg-card p-2 rounded border">
-                  {previewSynthesizedPrompt}
-                </p>
-              </div>
+              {/* 右側：生成設定工作台 (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                <Card className="p-5 border rounded-2xl shadow-sm space-y-4 sticky top-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <div>
+                      <h2 className="font-bold text-base text-foreground flex items-center gap-2">
+                        <span>風格生成設定</span>
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        目前選用：<b className="text-foreground">{selectedImgTemplate.title}</b>
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-700 border-amber-200">
+                      {selectedImgTemplate.feeling}
+                    </Badge>
+                  </div>
 
-              {errorMsg && (
-                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive">
-                  ⚠️ {errorMsg}
-                </div>
-              )}
+                  {/* 尺寸比例選擇 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-foreground">圖片尺寸比例</label>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {ASPECT_RATIOS.map(ar => (
+                        <button
+                          key={ar.value}
+                          type="button"
+                          onClick={() => setImgAspectRatio(ar.value)}
+                          className={`p-1.5 rounded-lg border text-center transition-all ${
+                            imgAspectRatio === ar.value
+                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/40 text-amber-700 font-bold'
+                              : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
+                          }`}
+                        >
+                          <div className="text-[11px]">{ar.value}</div>
+                          <div className="text-[9px] truncate opacity-70">{ar.desc.split(' ')[0]}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              {/* 核心操作按鈕 */}
-              <div className="space-y-2 pt-1">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={generating || uploading}
-                  className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 hover:from-amber-600 hover:via-rose-600 hover:to-purple-700 text-white font-bold shadow-md gap-2"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>AI 正在全力繪製行銷大片中...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      <span>🚀 AI 立即生成此風格行銷圖</span>
-                    </>
+                  {/* 商品與賣點描述 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-foreground">商品主題 / 促銷賣點說明</label>
+                    <Textarea
+                      placeholder="例如：手作抹茶千層蛋糕、極簡無線耳機、限量5折免運特惠..."
+                      value={imgUserPrompt}
+                      onChange={e => setImgUserPrompt(e.target.value)}
+                      rows={3}
+                      className="text-xs resize-none rounded-xl"
+                    />
+                  </div>
+
+                  {/* 參考圖片上傳 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                      <span>參考商品照片 (選填，支援圖生圖)</span>
+                      {uploadedImage && (
+                        <button
+                          onClick={() => setUploadedImage(null)}
+                          className="text-[10px] text-destructive hover:underline"
+                        >
+                          移除圖片
+                        </button>
+                      )}
+                    </label>
+
+                    {uploadedImage ? (
+                      <div className="relative rounded-xl border p-2 bg-muted/20 flex items-center gap-3">
+                        <img src={uploadedImage} alt="Uploaded" className="w-12 h-12 object-cover rounded-lg border" />
+                        <div className="text-xs flex-1 truncate">
+                          <p className="font-semibold text-foreground">已載入參考照片</p>
+                          <p className="text-[10px] text-muted-foreground">AI 將依此形狀與構圖融合風格</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => imgFileInputRef.current?.click()}
+                        className="border border-dashed border-border/80 rounded-xl p-3 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                      >
+                        <Upload className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground">點擊上傳商品照片 (JPG / PNG)</p>
+                      </div>
+                    )}
+                    <input ref={imgFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImgFileChange} />
+                  </div>
+
+                  {/* 提示詞預覽 */}
+                  <div className="p-3 bg-muted/40 rounded-xl space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-muted-foreground font-medium">
+                      <span>AI Prompt 提示詞骨架</span>
+                      <button onClick={handleCopyImgPrompt} className="hover:text-foreground flex items-center gap-1">
+                        {copiedImgPrompt ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedImgPrompt ? '已複製' : '複製提示詞'}</span>
+                      </button>
+                    </div>
+                    <p className="font-mono text-[11px] text-muted-foreground line-clamp-3 bg-card p-2 rounded border">
+                      {previewSynthesizedImgPrompt}
+                    </p>
+                  </div>
+
+                  {/* 錯誤訊息 */}
+                  {imgErrorMsg && (
+                    <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                      {imgErrorMsg}
+                    </div>
                   )}
-                </Button>
 
-                <p className="text-[11px] text-center text-muted-foreground">
-                  已自動封裝「{selectedTemplate.feeling}」專業光影、視角與質感參數
-                </p>
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* 生成成果展示區塊 */}
-        {generatedResult && (
-          <div id="generation-result-box" className="mt-8 pt-6 border-t space-y-4 animate-in fade-in-50 duration-300">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
-                  ✓
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-foreground">AI 行銷圖產出完成！</h3>
-                  <p className="text-xs text-muted-foreground">風格：{selectedTemplate.title}（{selectedTemplate.feeling}）</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyLink}
-                  className="h-8 text-xs gap-1.5"
-                >
-                  {copiedLink ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copiedLink ? '已複製連結' : '複製圖片連結'}
-                </Button>
-
-                <a
-                  href={generatedResult.url}
-                  download={`marketing-${selectedTemplate.id}-${Date.now()}.png`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Button size="sm" className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
-                    <Download className="h-3.5 w-3.5" />
-                    下載高畫質大圖
+                  {/* 生成按鈕 */}
+                  <Button
+                    onClick={handleGenerateImage}
+                    disabled={generatingImage}
+                    className="w-full h-10 font-bold bg-gradient-to-r from-amber-600 via-rose-600 to-purple-600 hover:from-amber-700 hover:to-purple-700 text-white shadow-md gap-2"
+                  >
+                    {generatingImage ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>AI 正在渲染商業行銷圖 (FLUX)...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        <span>立即產生商業行銷圖 (FLUX)</span>
+                      </>
+                    )}
                   </Button>
-                </a>
-
-                <Button
-                  size="sm"
-                  onClick={() => setShowPublishModal(true)}
-                  className="h-8 text-xs gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-sm"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                  🚀 一鍵串接上傳至社群平台
-                </Button>
+                </Card>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-card border rounded-2xl p-5 shadow-sm">
-              {/* 大圖預覽 */}
-              <div className="md:col-span-7 flex items-center justify-center bg-black/5 dark:bg-black/40 rounded-xl overflow-hidden p-2 min-h-[360px]">
-                <img
-                  src={generatedResult.url}
-                  alt="Generated Result"
-                  className="max-h-[520px] w-auto object-contain rounded-lg shadow-md"
-                />
-              </div>
-
-              {/* 圖片詳細資訊與二次創作引導 */}
-              <div className="md:col-span-5 flex flex-col justify-between space-y-4">
-                <div className="space-y-3">
-                  <div className="p-3 bg-muted/40 rounded-xl space-y-1.5 text-xs">
-                    <div className="font-bold text-foreground flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      所採用的完整提示詞骨架
+            {/* 圖片生成成果展示 */}
+            {generatedImgResult && (
+              <div id="image-generation-result-box" className="mt-8 pt-6 border-t space-y-4 animate-in fade-in-50 duration-300">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                      ✓
                     </div>
-                    <p className="font-mono text-[11px] text-muted-foreground leading-relaxed max-h-36 overflow-y-auto bg-card p-2 rounded border">
-                      {generatedResult.positivePrompt}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-muted/40 rounded-xl space-y-1 text-xs">
-                    <div className="font-bold text-foreground">負面排除特徵 (Negative)</div>
-                    <p className="font-mono text-[11px] text-muted-foreground">
-                      {generatedResult.negativePrompt}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2 text-xs text-muted-foreground">
-                    <span>尺寸比例：<b className="text-foreground">{generatedResult.aspectRatio}</b></span>
-                    <span>•</span>
-                    <span>存儲狀態：<b className="text-emerald-600">已自動存入素材庫</b></span>
-                  </div>
-
-                  {/* 社群發布中心推薦卡 */}
-                  <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-bold text-xs flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
-                        <Share2 className="h-3.5 w-3.5" />
-                        社群發布中心一鍵串接
-                      </div>
-                      <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-300">
-                        直發多平台
-                      </Badge>
+                    <div>
+                      <h3 className="font-bold text-lg text-foreground">AI 行銷圖產出完成！</h3>
+                      <p className="text-xs text-muted-foreground">風格：{selectedImgTemplate.title}（{selectedImgTemplate.feeling}）</p>
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      免手動下載轉存！立即將這張成果圖同步發布至 Facebook、Instagram、Threads 等社群平台。
-                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCopyImgLink} className="h-8 text-xs gap-1.5">
+                      {copiedImgLink ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedImgLink ? '已複製連結' : '複製圖片連結'}
+                    </Button>
+
+                    <a href={generatedImgResult.url} download={`marketing-${selectedImgTemplate.id}-${Date.now()}.png`} target="_blank" rel="noreferrer">
+                      <Button size="sm" className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                        <Download className="h-3.5 w-3.5" />
+                        下載高畫質大圖
+                      </Button>
+                    </a>
+
                     <Button
                       size="sm"
-                      className="w-full h-8 text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
-                      onClick={() => setShowPublishModal(true)}
+                      onClick={() => setShowImgPublishModal(true)}
+                      className="h-8 text-xs gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-sm"
                     >
                       <Share2 className="h-3.5 w-3.5" />
-                      開啟上傳中心並選擇發布平台
+                      🚀 一鍵串接上傳至社群平台
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-3 border-t">
-                  <Button
-                    variant="outline"
-                    className="w-full text-xs font-semibold gap-1.5"
-                    onClick={handleGenerate}
-                    disabled={generating}
-                  >
-                    <RefreshCw className={`h-3.5 w-3.5 ${generating ? 'animate-spin' : ''}`} />
-                    以相同參數重新生成一張 (產生變化)
-                  </Button>
-                  <Link href="/marketing/ai-studio">
-                    <Button variant="ghost" className="w-full text-xs text-primary gap-1">
-                      帶入視覺工坊進一步去背、局部修改或轉為短影音 →
-                    </Button>
-                  </Link>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-card border rounded-2xl p-5 shadow-sm">
+                  <div className="md:col-span-7 flex items-center justify-center bg-black/5 dark:bg-black/40 rounded-xl overflow-hidden p-2 min-h-[360px]">
+                    <img src={generatedImgResult.url} alt="Generated Result" className="max-h-[520px] w-auto object-contain rounded-lg shadow-md" />
+                  </div>
+
+                  <div className="md:col-span-5 flex flex-col justify-between space-y-4">
+                    <div className="space-y-3">
+                      <div className="p-3 bg-muted/40 rounded-xl space-y-1.5 text-xs">
+                        <div className="font-bold text-foreground flex items-center gap-1.5">
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          所採用的完整提示詞骨架
+                        </div>
+                        <p className="font-mono text-[11px] text-muted-foreground leading-relaxed max-h-36 overflow-y-auto bg-card p-2 rounded border">
+                          {generatedImgResult.positivePrompt}
+                        </p>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10 border border-blue-500/20 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-xs flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
+                            <Share2 className="h-3.5 w-3.5" />
+                            社群發布中心一鍵串接
+                          </div>
+                          <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-300">
+                            直發多平台
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          免手動下載轉存！立即將這張成果圖同步發布至 Facebook、Instagram、Threads、LINE 等社群平台。
+                        </p>
+                        <Button
+                          size="sm"
+                          className="w-full h-8 text-xs font-semibold gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                          onClick={() => setShowImgPublishModal(true)}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                          開啟上傳中心並選擇發布平台
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 pt-3 border-t">
+                      <Button variant="outline" className="w-full text-xs font-semibold gap-1.5" onClick={handleGenerateImage} disabled={generatingImage}>
+                        <RefreshCw className={`h-3.5 w-3.5 ${generatingImage ? 'animate-spin' : ''}`} />
+                        以相同參數重新生成一張 (產生變化)
+                      </Button>
+                      <Link href="/marketing/ai-studio">
+                        <Button variant="ghost" className="w-full text-xs text-primary gap-1">
+                          帶入視覺工坊進一步去背、局部修改或轉為短影音 →
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── TAB 2: 影片廣告腳本 ─────────────────────────────────── */}
+        {mainTab === 'video' && (
+          <div className="space-y-6 animate-in fade-in-50 duration-200">
+            {/* 搜尋與分類選單 */}
+            <div className="bg-card border rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="搜尋指令或主題（如：/hook3sec、痛點、360、開箱、ASMR、黑五、對比...）"
+                    value={videoSearchQuery}
+                    onChange={e => setVideoSearchQuery(e.target.value)}
+                    className="pl-9 h-10 rounded-xl bg-muted/40 border-muted"
+                  />
+                  {videoSearchQuery && (
+                    <button
+                      onClick={() => setVideoSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="text-xs text-muted-foreground self-center">
+                  共顯示 <b className="text-foreground">{filteredVideoTemplates.length}</b> 種行銷分鏡模板
+                </div>
+              </div>
+
+              {/* 分類按鈕列 */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 scrollbar-none">
+                {VIDEO_CATEGORIES.map(cat => (
+                  <button
+                    key={cat.key}
+                    onClick={() => setSelectedVideoCat(cat.key)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      selectedVideoCat === cat.key
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 影片模板列表 + 工作室 */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* 左側：影片模板清單 (7 cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[760px] overflow-y-auto pr-1">
+                  {filteredVideoTemplates.map(tpl => {
+                    const isSelected = selectedVideoTemplate.id === tpl.id
+                    return (
+                      <div
+                        key={tpl.id}
+                        onClick={() => handleSelectVideoTemplate(tpl)}
+                        className={`group relative rounded-2xl border p-4 text-left transition-all cursor-pointer bg-card hover:shadow-md flex flex-col justify-between ${
+                          isSelected
+                            ? 'ring-2 ring-blue-500 border-blue-500 shadow-md bg-blue-50/20 dark:bg-blue-950/20'
+                            : 'hover:border-border/80'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">
+                              {tpl.command}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-border">
+                                {tpl.defaultAspect}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground">
+                                {tpl.recommendedSeconds}s
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="font-bold text-sm text-foreground">
+                            {tpl.title}
+                          </div>
+
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                            適用：{tpl.applicability}
+                          </p>
+                        </div>
+
+                        <div className="pt-3 mt-3 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span className="truncate max-w-[130px]">{tpl.scriptTimeline.length} 個分鏡鏡頭</span>
+                          <span className="text-blue-600 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                            套用腳本 →
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 右側：影片分鏡與製作工作台 (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                <Card className="p-5 border rounded-2xl shadow-sm space-y-4 sticky top-4 max-h-[85vh] overflow-y-auto">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded">
+                          {selectedVideoTemplate.command}
+                        </span>
+                        <h2 className="font-bold text-base text-foreground">
+                          {selectedVideoTemplate.title}
+                        </h2>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {selectedVideoTemplate.applicability}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 分鏡時間軸視覺化 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-blue-600" />
+                        官方分鏡腳本結構
+                      </span>
+                      <span className="text-[11px] text-muted-foreground font-normal">
+                        建議長度：約 {selectedVideoTemplate.recommendedSeconds} 秒
+                      </span>
+                    </div>
+
+                    <div className="bg-muted/40 border rounded-xl p-3 space-y-2 text-xs">
+                      {selectedVideoTemplate.scriptTimeline.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2.5">
+                          <span className="font-mono font-bold text-[11px] text-blue-600 bg-blue-500/10 px-1.5 py-0.5 rounded shrink-0">
+                            {item.time}
+                          </span>
+                          <span className="text-[11px] text-foreground leading-relaxed">
+                            {item.content}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      💡 規格參數建議：{selectedVideoTemplate.params}
+                    </p>
+                  </div>
+
+                  {/* 自訂商品與賣點 */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-foreground">商品 / 主題名稱</label>
+                      <Input
+                        placeholder="例如：招牌黑糖厚奶、極簡降噪耳機、周年慶限定禮盒..."
+                        value={videoProductName}
+                        onChange={e => setVideoProductName(e.target.value)}
+                        className="h-8 text-xs rounded-lg"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-foreground">核心亮點 / 促銷說明 (選填)</label>
+                      <Input
+                        placeholder="例如：3層濃郁口感、客人回購率90%、限時買一送一..."
+                        value={videoKeyPoint}
+                        onChange={e => setVideoKeyPoint(e.target.value)}
+                        className="h-8 text-xs rounded-lg"
+                      />
+                    </div>
+
+                    {/* 影片比例 */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-foreground">影片長寬比例</label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {(['9:16', '16:9', '1:1', '4:5'] as const).map(ratio => (
+                          <button
+                            key={ratio}
+                            type="button"
+                            onClick={() => setVideoAspect(ratio)}
+                            className={`py-1.5 px-2 rounded-lg border text-center text-xs transition-all ${
+                              videoAspect === ratio
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 font-bold'
+                                : 'border-border/60 hover:bg-muted/40 text-muted-foreground'
+                            }`}
+                          >
+                            {ratio}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 即時組裝提示詞與腳本工具 */}
+                  <div className="space-y-2 pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyVideoScript}
+                        className="text-xs h-7 gap-1 font-semibold"
+                      >
+                        {copiedVideoScript ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedVideoScript ? '已複製腳本' : '複製完整分鏡腳本'}</span>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCopyVideoPrompt}
+                        className="text-xs h-7 gap-1 font-semibold"
+                      >
+                        {copiedVideoPrompt ? <Check className="h-3 w-3 text-emerald-600" /> : <FileText className="h-3 w-3" />}
+                        <span>{copiedVideoPrompt ? '已複製Prompt' : '複製英文Prompt'}</span>
+                      </Button>
+                    </div>
+
+                    {/* AI 智慧擴寫完整口播對白 */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleExpandAiScript}
+                      disabled={expandingAiScript}
+                      className="w-full text-xs h-8 gap-1.5 font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"
+                    >
+                      {expandingAiScript ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      <span>✨ AI 智慧擴寫完整逐字口播台詞與分鏡指示</span>
+                    </Button>
+
+                    {expandedAiScript && (
+                      <div className="p-3 bg-muted/40 rounded-xl space-y-1 text-xs border animate-in fade-in-50">
+                        <div className="font-bold text-foreground flex items-center justify-between">
+                          <span>AI 逐字口播講稿建議</span>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(expandedAiScript)
+                              alert('已複製口播台詞')
+                            }}
+                            className="text-[10px] text-primary hover:underline"
+                          >
+                            複製講稿
+                          </button>
+                        </div>
+                        <p className="font-mono text-[11px] text-muted-foreground whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
+                          {expandedAiScript}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 錯誤訊息 */}
+                  {videoErrorMsg && (
+                    <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+                      {videoErrorMsg}
+                    </div>
+                  )}
+
+                  {/* 產生中狀態提示 */}
+                  {videoPollStatus && (
+                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                      <span>{videoPollStatus}</span>
+                    </div>
+                  )}
+
+                  {/* 影片產出播放器與社群直發按鈕 */}
+                  {videoResultUrl && (
+                    <div className="space-y-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 animate-in fade-in-50">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          AI 短影音生成完成！
+                        </span>
+                        <a href={videoResultUrl} download={`video-${selectedVideoTemplate.id}.mp4`} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 gap-1">
+                            <Download className="h-3 w-3" />
+                            下載影片
+                          </Button>
+                        </a>
+                      </div>
+
+                      <div className="rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                        <video src={videoResultUrl} controls className="max-h-[220px] w-auto" />
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={() => setShowVideoPublishModal(true)}
+                        className="w-full h-8 text-xs font-bold gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        🚀 一鍵串接上傳至社群短影音 (Reels / Shorts / TikTok)
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* 執行生成按鈕 */}
+                  <Button
+                    onClick={handleGenerateVideo}
+                    disabled={generatingVideo}
+                    className="w-full h-10 font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md gap-2"
+                  >
+                    {generatingVideo ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>AI 影片引擎運算中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Film className="h-4 w-4" />
+                        <span>呼叫 AI 影片引擎生成 (Kling/Haiper)</span>
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowVideoPublishModal(true)}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                    >
+                      <Share2 className="h-3.5 w-3.5 text-blue-600" />
+                      已有影片檔案？直接開啟上傳中心同步發布 →
+                    </Button>
+                  </div>
+                </Card>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* 社群平台發布 Modal */}
-      {generatedResult && (
+      {/* 圖片社群平台發布 Modal */}
+      {generatedImgResult && (
         <SocialPublishModal
-          open={showPublishModal}
-          onClose={() => setShowPublishModal(false)}
+          open={showImgPublishModal}
+          onClose={() => setShowImgPublishModal(false)}
           media={{
             type: 'image',
-            url: generatedResult.url,
-            title: `${selectedTemplate.title}（${selectedTemplate.feeling}）`,
-            aspectRatio: generatedResult.aspectRatio,
+            url: generatedImgResult.url,
+            title: `${selectedImgTemplate.title}（${selectedImgTemplate.feeling}）`,
+            aspectRatio: generatedImgResult.aspectRatio,
           }}
-          initialCopy={`✨【${selectedTemplate.title}】新視覺公開！\n\n以「${selectedTemplate.feeling}」專屬風格打造，呈現極致質感與細節魅力 🔥${userPrompt.trim() ? `\n\n重點特色：${userPrompt.trim()}` : ''}\n\n立即了解更多或私訊我們！\n\n#品牌視覺 #新品上市 #行銷設計 #社群亮點 #質感生活`}
-          sourceName={`視覺風格與廣告圖 (${selectedTemplate.title})`}
+          initialCopy={`✨【${selectedImgTemplate.title}】新視覺公開！\n\n以「${selectedImgTemplate.feeling}」專屬風格打造，呈現極致質感與細節魅力 🔥${imgUserPrompt.trim() ? `\n\n重點特色：${imgUserPrompt.trim()}` : ''}\n\n立即了解更多或私訊我們！\n\n#品牌視覺 #新品上市 #行銷設計 #社群亮點 #質感生活`}
+          sourceName={`視覺風格與廣告 (${selectedImgTemplate.title})`}
         />
       )}
+
+      {/* 影片社群平台發布 Modal */}
+      <SocialPublishModal
+        open={showVideoPublishModal}
+        onClose={() => setShowVideoPublishModal(false)}
+        media={{
+          type: 'video',
+          url: videoResultUrl || 'https://assets.mixkit.co/videos/preview/mixkit-vertical-video-of-a-latte-with-art-40810-large.mp4',
+          title: `${selectedVideoTemplate.title}（${selectedVideoTemplate.command}）`,
+          aspectRatio: videoAspect,
+        }}
+        initialCopy={
+          expandedAiScript ||
+          `🔥【${selectedVideoTemplate.title}】短影音重磅登場！\n\n${videoProductName ? `產品：${videoProductName}\n` : ''}${videoKeyPoint ? `亮點：${videoKeyPoint}\n\n` : ''}以專業短影音分鏡打造高停留與高轉化視覺，立即觀看完整亮點！\n\n#短影音 #Reels #Shorts #TikTok #品牌行銷`
+        }
+        sourceName={`視覺風格與廣告 - 影片分鏡 (${selectedVideoTemplate.command})`}
+      />
     </div>
   )
 }
