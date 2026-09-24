@@ -42,6 +42,15 @@ export default function MktPage() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <a
+            href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com/marketing/templates' : '/marketing/templates'}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-rose-600 text-white hover:opacity-95 transition-opacity shadow-sm"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            視覺風格與廣告圖 <ExternalLink className="h-3 w-3" />
+          </a>
+          <a
             href={typeof window !== 'undefined' && window.location.hostname.endsWith('im-tourist.com') ? 'https://marketing.im-tourist.com' : '/marketing'}
             target="_blank"
             rel="noreferrer"

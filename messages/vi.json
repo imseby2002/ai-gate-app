@@ -1518,6 +1518,7 @@
     "integratedFeatures": "Tính năng tích hợp",
     "enter": "Vào",
     "nav": {
+      "templates": "Phong cách & Mẫu quảng cáo",
       "auto": "Tự động hóa Marketing",
       "pipeline": "Quy trình Marketing",
       "designer": "Nhà thiết kế sản phẩm",
@@ -1663,6 +1664,18 @@
       }
     },
     "features": {
+      "templates": {
+        "title": "Phong cách hình ảnh & Mẫu quảng cáo",
+        "desc": "Không cần nhớ câu lệnh! 85 phong cách thị giác và mẫu quảng cáo, chỉ cần chọn cảm giác hiển thị, tải ảnh và nhập mô tả để tạo ngay hình ảnh thương mại chuẩn nét.",
+        "badge": "MỚI",
+        "tags": [
+          "85 Phong cách",
+          "Mô hình đất sét/3D",
+          "Ưu đãi & Giảm giá",
+          "Tự động ghép Prompt",
+          "Ảnh thương mại chuẩn nét"
+        ]
+      },
       "socialMatrix": {
         "title": "Ma trận MXH & Nuôi nick tự động",
         "desc": "Hỗ trợ IP tĩnh dân cư gia đình & proxy pool, nuôi nick AI 14 ngày, Phương án A (Copilot) & Phương án B (Tự động đăng), Radar nhóm mục tiêu & văn mẫu chống khóa nick",

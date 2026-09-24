@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 
 const FEATURES = [
+  { key: 'templates',    icon: Sparkles,   href: '/marketing/templates',        color: 'from-amber-500 via-rose-500 to-purple-600' },
   { key: 'socialMatrix', icon: Share2,     href: '/marketing/social-matrix',    color: 'from-blue-600 via-indigo-600 to-violet-600' },
   { key: 'auto',         icon: Megaphone,  href: '/marketing-auto',             color: 'from-violet-500 to-purple-600' },
   { key: 'designer',     icon: Sparkles,   href: '/marketing/product-designer', color: 'from-pink-500 to-rose-600' },

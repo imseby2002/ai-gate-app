@@ -1518,6 +1518,7 @@
     "integratedFeatures": "Integrated Features",
     "enter": "Enter",
     "nav": {
+      "templates": "Visual Styles & Ads",
       "auto": "Marketing Automation",
       "pipeline": "Marketing Pipeline",
       "designer": "Product Designer",
@@ -1756,6 +1757,18 @@
       }
     },
     "features": {
+      "templates": {
+        "title": "Visual Style & Ad Studio",
+        "desc": "No prompt commands needed! Explore 85 visual styles & promotional templates. Pick a visual vibe, upload your photo and text to create commercial graphics instantly.",
+        "badge": "NEW",
+        "tags": [
+          "85 Visual Vibes",
+          "Clay/Toy & 3D",
+          "Mega Sales & Promos",
+          "Auto-Prompt Synthesis",
+          "High-Res Commercial"
+        ]
+      },
       "socialMatrix": {
         "title": "Social Matrix & Warm-up",
         "desc": "Native home static residential IP binding, 14-day progressive AI warm-up, Mode A (Copilot) & Mode B (Matrix Auto-post), AI Target Radar & Anti-ban copy variations",
