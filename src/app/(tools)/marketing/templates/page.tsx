@@ -63,6 +63,7 @@ export default function VisualTemplatesPage() {
     aspectRatio: string
   } | null>(null)
   const [showImgPublishModal, setShowImgPublishModal] = useState(false)
+  const [previewModalTpl, setPreviewModalTpl] = useState<VisualTemplate | null>(null)
 
   // ─── 影片模式狀態 ───────────────────────────────────────────────
   const [selectedVideoCat, setSelectedVideoCat] = useState<VideoCategory>('all')
@@ -497,25 +498,65 @@ ${selectedVideoTemplate.rawScript}
                       <div
                         key={tpl.id}
                         onClick={() => handleSelectImgTemplate(tpl)}
-                        className={`group relative rounded-2xl border p-4 text-left transition-all cursor-pointer bg-card hover:shadow-md flex flex-col justify-between ${
+                        className={`group relative rounded-2xl border p-3 sm:p-3.5 text-left transition-all cursor-pointer bg-card hover:shadow-lg flex flex-col justify-between ${
                           isSelected
                             ? 'ring-2 ring-amber-500 border-amber-500 shadow-md bg-amber-50/20 dark:bg-amber-950/20'
-                            : 'hover:border-border/80'
+                            : 'hover:border-amber-400/50'
                         }`}
                       >
-                        <div className="space-y-2">
+                        {/* 示範縮圖預覽區 */}
+                        <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-muted/30 mb-2.5 border border-border/40 group/thumb">
+                          {tpl.previewUrl ? (
+                            <img
+                              src={tpl.previewUrl}
+                              alt={tpl.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none'
+                              }}
+                            />
+                          ) : null}
+                          {/* 背景漸層兜底 */}
+                          <div className={`absolute inset-0 bg-gradient-to-br ${tpl.gradient} opacity-25 -z-10`} />
+
+                          {/* 遮罩漸層與頂部/底部標籤 */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-between p-2 pointer-events-none">
+                            <div className="flex items-center justify-between">
+                              {tpl.badge ? (
+                                <Badge variant="outline" className="text-[10px] bg-black/70 text-amber-300 border-amber-400/40 backdrop-blur-xs font-semibold">
+                                  {tpl.badge}
+                                </Badge>
+                              ) : <span />}
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setPreviewModalTpl(tpl)
+                                }}
+                                className="pointer-events-auto p-1.5 rounded-lg bg-black/60 hover:bg-black/90 text-white/90 hover:text-white backdrop-blur-xs transition-all shadow-xs"
+                                title="放大檢視示意圖與參數"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="text-[11px] font-medium text-white/95 drop-shadow-sm flex items-center gap-1 truncate">
+                              <Sparkles className="h-3 w-3 text-amber-300 shrink-0" />
+                              <span className="truncate">{tpl.feeling.split('・')[0]}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 px-0.5">
                           <div className="flex items-center justify-between gap-1">
-                            <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                            <span className="font-bold text-sm text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                               {tpl.title}
                             </span>
-                            {tpl.badge && (
-                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300">
-                                {tpl.badge}
-                              </Badge>
-                            )}
                           </div>
 
-                          <div className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                          <div className="text-[11px] font-medium text-amber-600 dark:text-amber-400 line-clamp-1">
                             {tpl.feeling}
                           </div>
 
@@ -524,9 +565,9 @@ ${selectedVideoTemplate.rawScript}
                           </p>
                         </div>
 
-                        <div className="pt-3 mt-3 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                        <div className="pt-2.5 mt-2.5 border-t flex items-center justify-between text-[11px] text-muted-foreground px-0.5">
                           <span>預設比例 {tpl.defaultAspect}</span>
-                          <span className="text-amber-600 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
                             選擇此風格 →
                           </span>
                         </div>
@@ -548,9 +589,60 @@ ${selectedVideoTemplate.rawScript}
                         目前選用：<b className="text-foreground">{selectedImgTemplate.title}</b>
                       </p>
                     </div>
-                    <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-700 border-amber-200">
-                      {selectedImgTemplate.feeling}
+                    <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200">
+                      {selectedImgTemplate.badge || '視覺風格'}
                     </Badge>
+                  </div>
+
+                  {/* 示範效果預覽卡片 */}
+                  <div className="rounded-xl border border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-muted/20 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                        <span>風格示範效果 (Sample Preview)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewModalTpl(selectedImgTemplate)}
+                        className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        放大細看
+                      </button>
+                    </div>
+
+                    <div
+                      onClick={() => setPreviewModalTpl(selectedImgTemplate)}
+                      className="group/preview relative aspect-video w-full rounded-xl overflow-hidden border border-border/60 bg-muted/40 cursor-pointer shadow-inner"
+                    >
+                      {selectedImgTemplate.previewUrl ? (
+                        <img
+                          src={selectedImgTemplate.previewUrl}
+                          alt={selectedImgTemplate.title}
+                          className="w-full h-full object-cover group-hover/preview:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className={`w-full h-full bg-gradient-to-br ${selectedImgTemplate.gradient} flex items-center justify-center`}>
+                          <Sparkles className="h-8 w-8 text-white/70" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
+                      <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-white text-[11px]">
+                        <span className="font-medium drop-shadow-sm flex items-center gap-1 truncate mr-2">
+                          🎨 {selectedImgTemplate.feeling}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] text-amber-300 shrink-0">
+                          點擊放大
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-background/70 border text-[11px] text-muted-foreground space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-foreground shrink-0">💡 建議參數：</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-medium text-right">{selectedImgTemplate.paramAdvice}</span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* 尺寸比例選擇 */}
@@ -1097,6 +1189,102 @@ ${selectedVideoTemplate.rawScript}
           </div>
         )}
       </div>
+
+      {/* ─── 風格示意圖放大 Lightbox 彈窗 ───────────────────────────────── */}
+      {previewModalTpl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewModalTpl(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-card border rounded-3xl overflow-hidden shadow-2xl space-y-0"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 標題列 */}
+            <div className="p-4 sm:px-6 flex items-center justify-between border-b bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-0 text-xs">
+                  {previewModalTpl.badge || '視覺風格示意'}
+                </Badge>
+                <h3 className="font-bold text-base sm:text-lg text-foreground">
+                  {previewModalTpl.title}
+                </h3>
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  （{previewModalTpl.feeling}）
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewModalTpl(null)}
+                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* 圖片展示區 */}
+            <div className="relative aspect-[16/10] sm:aspect-video w-full bg-black/95 flex items-center justify-center overflow-hidden">
+              {previewModalTpl.previewUrl ? (
+                <img
+                  src={previewModalTpl.previewUrl}
+                  alt={previewModalTpl.title}
+                  className="w-full h-full object-cover sm:object-contain"
+                />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-br ${previewModalTpl.gradient} flex items-center justify-center`}>
+                  <Sparkles className="h-12 w-12 text-white/70" />
+                </div>
+              )}
+            </div>
+
+            {/* 參數與說明 */}
+            <div className="p-5 sm:p-6 space-y-4 bg-card">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-muted/40 border space-y-1">
+                  <span className="font-bold text-foreground">✨ 風格氛圍感知</span>
+                  <p className="text-amber-600 dark:text-amber-400 font-medium">{previewModalTpl.feeling}</p>
+                  <p className="text-muted-foreground text-[11px] mt-1">適用：{previewModalTpl.applicability}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-muted/40 border space-y-1">
+                  <span className="font-bold text-foreground">⚙️ 最佳生成建議</span>
+                  <p className="text-foreground">{previewModalTpl.paramAdvice}</p>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {previewModalTpl.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-muted/30 border font-mono text-[11px] text-muted-foreground break-all">
+                <div className="text-[10px] uppercase font-bold text-muted-foreground mb-1">提示詞骨架 (Positive Prompt)</div>
+                {previewModalTpl.positivePrompt}
+              </div>
+
+              {/* 按鈕動作 */}
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setPreviewModalTpl(null)}
+                >
+                  關閉
+                </Button>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                  onClick={() => {
+                    handleSelectImgTemplate(previewModalTpl)
+                    setPreviewModalTpl(null)
+                  }}
+                >
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                  套用此風格並設定生成
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 圖片社群平台發布 Modal */}
       {generatedImgResult && (

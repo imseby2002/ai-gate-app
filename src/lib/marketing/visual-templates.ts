@@ -22,6 +22,7 @@ export interface VisualTemplate {
   badge?: string
   gradient: string
   tags: string[]
+  previewUrl?: string
 }
 
 export const CATEGORIES: { key: TemplateCategory; label: string; icon: string; desc: string }[] = [
@@ -51,6 +52,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '熱門風格',
     gradient: 'from-amber-400 via-orange-400 to-rose-400',
     tags: ['商品擬人', '可愛軟萌', '黏土立體', 'IG封面'],
+    previewUrl: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'miniature',
@@ -65,6 +67,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '微距創意',
     gradient: 'from-emerald-400 via-teal-500 to-cyan-600',
     tags: ['移軸攝影', '微型模型', '小人國視角', '門市場景'],
+    previewUrl: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'popart',
@@ -79,6 +82,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '視覺張力',
     gradient: 'from-pink-500 via-rose-500 to-yellow-400',
     tags: ['高飽和', '網點色塊', '波普風', '活動海報'],
+    previewUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'inkline',
@@ -92,6 +96,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-slate-600 via-gray-700 to-zinc-800',
     tags: ['純白極簡', '向量線稿', '步驟教學', '包裝手繪'],
+    previewUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: '3drender',
@@ -106,6 +111,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '電商必備',
     gradient: 'from-blue-500 via-indigo-600 to-violet-700',
     tags: ['電商首圖', '攝影棚燈', '精緻倒影', '官網主視覺'],
+    previewUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'pixelart',
@@ -119,6 +125,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-purple-500 via-indigo-500 to-pink-500',
     tags: ['復古像素', '8-bit', '街機遊戲', '年輕潮流'],
+    previewUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'neoncyber',
@@ -133,6 +140,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '夜間檔期',
     gradient: 'from-fuchsia-600 via-purple-700 to-cyan-500',
     tags: ['霓虹發光', '賽博龐克', '夜店酒吧', '短影音封面'],
+    previewUrl: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'pastelsoft',
@@ -146,6 +154,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-rose-300 via-pink-200 to-amber-100',
     tags: ['奶油粉嫩', '甜點下午茶', '女性受眾', '高明度溫潤'],
+    previewUrl: 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'retro90s',
@@ -159,6 +168,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-amber-600 via-orange-600 to-red-700',
     tags: ['VHS膠卷', '90年代', '經典復刻', '懷舊情感'],
+    previewUrl: 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'magazine',
@@ -173,6 +183,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '高端質感',
     gradient: 'from-neutral-800 via-stone-700 to-zinc-900',
     tags: ['時尚雜誌', '人物專訪', '高端質感', '社論光影'],
+    previewUrl: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'mockupbox',
@@ -186,6 +197,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-slate-400 via-zinc-400 to-stone-500',
     tags: ['包裝打樣', '產品禮盒', '通路提案', '透視擬真'],
+    previewUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'stopmotion',
@@ -199,6 +211,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '9:16',
     gradient: 'from-yellow-400 via-amber-500 to-orange-500',
     tags: ['定格手作', '短影音封面', '黏土紙雕', '生動活潑'],
+    previewUrl: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'infographic',
@@ -212,6 +225,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-cyan-500 via-blue-500 to-indigo-600',
     tags: ['數據圖表', '知識圖卡', '成分拆解', '高清晰度'],
+    previewUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'memesticker',
@@ -225,6 +239,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-lime-400 via-emerald-400 to-teal-500',
     tags: ['迷因白邊', '社群互動', '貼圖表情', '幽默吸睛'],
+    previewUrl: 'https://images.unsplash.com/photo-1572375992501-4b0892d50c69?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'luxgold',
@@ -239,6 +254,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '尊榮頂級',
     gradient: 'from-yellow-600 via-amber-700 to-stone-900',
     tags: ['黑金奢華', '尊爵VIP', '金屬高光', '高客單價'],
+    previewUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'flatlay',
@@ -252,6 +268,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-orange-200 via-amber-200 to-stone-200',
     tags: ['俯拍平鋪', '全套開箱', '食材用料', '整齊排列'],
+    previewUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'cinematic',
@@ -265,6 +282,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '16:9',
     gradient: 'from-indigo-900 via-slate-800 to-zinc-900',
     tags: ['電影劇照', '光影調色', '品牌形象', '戲劇氛圍'],
+    previewUrl: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'uadvertising',
@@ -279,6 +297,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '高點擊投放',
     gradient: 'from-emerald-300 via-teal-400 to-sky-400',
     tags: ['真實UGC', '手機隨手拍', '素人視角', '低廣告感'],
+    previewUrl: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'beforeafter',
@@ -292,6 +311,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-violet-400 via-purple-500 to-indigo-600',
     tags: ['前後對比', '改造效果', '雙拼分割', '實證反差'],
+    previewUrl: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'seasonal',
@@ -305,6 +325,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-red-500 via-rose-500 to-amber-400',
     tags: ['節日氛圍', '應景道具', '節慶特刊', '歡慶裝飾'],
+    previewUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 促銷與優惠篇（15 種）────────────────────────────────────────
@@ -321,6 +342,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '超強轉化',
     gradient: 'from-red-600 via-rose-600 to-orange-500',
     tags: ['主檔促銷', '大折扣數字', '首頁Banner', '超強點擊'],
+    previewUrl: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'percentoff',
@@ -334,6 +356,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-rose-500 via-pink-600 to-purple-600',
     tags: ['折數角標', '百分比% ', '全店折扣', '簡約醒目'],
+    previewUrl: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'buymore',
@@ -348,6 +371,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '拉高客單',
     gradient: 'from-amber-500 via-orange-500 to-red-500',
     tags: ['第二件半價', '多入優惠', '衝客單價', '省錢算式'],
+    previewUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'freeship',
@@ -361,6 +385,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-blue-600 via-cyan-600 to-teal-500',
     tags: ['滿額免運', '外送專案', '湊單神卡', '宅配到府'],
+    previewUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'giftwithpurchase',
@@ -374,6 +399,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-purple-600 via-pink-600 to-rose-500',
     tags: ['滿額好禮', '送完為止', '主贈同框', '限量加碼'],
+    previewUrl: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'limitedtime',
@@ -388,6 +414,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '急迫搶購',
     gradient: 'from-red-500 via-orange-500 to-amber-500',
     tags: ['限時倒數', '閃購快閃', '急迫催購', '最後截止'],
+    previewUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'todayonly',
@@ -401,6 +428,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-amber-400 via-rose-500 to-red-600',
     tags: ['本日限定', '直播專屬', '破盤特賣', '秒殺快搶'],
+    previewUrl: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'priceanchor',
@@ -414,6 +442,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-emerald-500 via-teal-600 to-cyan-700',
     tags: ['劃線原價', '特價對比', '價格錨點', '心理省錢'],
+    previewUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'bundlecompare',
@@ -427,6 +456,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-indigo-500 via-purple-600 to-pink-500',
     tags: ['超值組合', '單買比對', '套組特惠', '省錢亮點'],
+    previewUrl: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'upsell',
@@ -440,6 +470,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-teal-400 via-cyan-500 to-blue-600',
     tags: ['臨櫃加購', '加價購', '順手帶一件', '甜甜加購價'],
+    previewUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'crosssell',
@@ -453,6 +484,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-amber-300 via-orange-400 to-rose-400',
     tags: ['絕佳搭配', '下午茶套裝', '關聯推薦', '情境同框'],
+    previewUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'abandonedcart',
@@ -466,6 +498,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-violet-500 via-fuchsia-500 to-pink-500',
     tags: ['購物車挽回', '未結帳提醒', '專屬折扣碼', '再行銷'],
+    previewUrl: 'https://images.unsplash.com/photo-1557821552-17105176677c?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'winback',
@@ -479,6 +512,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-rose-400 via-pink-400 to-amber-300',
     tags: ['老客喚醒', '好久不見', '回購好禮', '專屬思念'],
+    previewUrl: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'referral',
@@ -492,6 +526,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-cyan-400 via-teal-500 to-emerald-500',
     tags: ['好友推薦', '好康同享', '雙向購物金', '社群裂變'],
+    previewUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'lowstock',
@@ -506,6 +541,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '加速決策',
     gradient: 'from-orange-500 via-red-500 to-rose-600',
     tags: ['庫存告急', '最後現貨', '稀缺倒數', '猶豫必買'],
+    previewUrl: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 會員與 VIP 篇（6 種）────────────────────────────────────────
@@ -522,6 +558,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '會員專屬',
     gradient: 'from-purple-700 via-indigo-700 to-violet-900',
     tags: ['會員日', '專屬點數', '專屬折扣', '尊榮感'],
+    previewUrl: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'vipaccess',
@@ -536,6 +573,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '尊榮頂規',
     gradient: 'from-stone-900 via-amber-900 to-yellow-600',
     tags: ['黑金VIP', '私密通道', '高單價預購', '極致奢華'],
+    previewUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'earlyaccess',
@@ -549,6 +587,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-indigo-600 via-violet-600 to-pink-500',
     tags: ['早鳥開搶', '提前入場', '專屬特權', '搶先預約'],
+    previewUrl: 'https://images.unsplash.com/photo-1501139083538-0139583c060f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'presale',
@@ -562,6 +601,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-blue-600 via-indigo-600 to-purple-600',
     tags: ['新品預售', '募資預訂', '預計出貨', '首批搶先'],
+    previewUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'waitlist',
@@ -575,6 +615,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-slate-700 via-indigo-800 to-slate-900',
     tags: ['補貨通知', '候補登記', '排隊提醒', '第一時間發信'],
+    previewUrl: 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'restock',
@@ -589,6 +630,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '熱賣回歸',
     gradient: 'from-emerald-500 via-teal-600 to-blue-600',
     tags: ['補貨到', '重磅回歸', '現貨到齊', '人氣爆品'],
+    previewUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 檔期大促篇（8 種）────────────────────────────────────────
@@ -605,6 +647,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '全年最殺',
     gradient: 'from-black via-zinc-900 to-yellow-500',
     tags: ['黑色星期五', '全年最低', '黑黃撞色', '狂歡大促'],
+    previewUrl: 'https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'cybermonday',
@@ -618,6 +661,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-cyan-600 via-blue-600 to-indigo-800',
     tags: ['網一促銷', '線上限定', '科技光感', '電商狂歡'],
+    previewUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: '1212',
@@ -631,6 +675,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-red-600 via-orange-600 to-pink-600',
     tags: ['雙12', '年終大促', '最後檔期', '年末清倉'],
+    previewUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: '99',
@@ -644,6 +689,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-orange-500 via-amber-500 to-rose-500',
     tags: ['99購物節', '均一價99', '親民秒殺', '秋季大促'],
+    previewUrl: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'payday',
@@ -657,6 +703,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-emerald-400 via-teal-500 to-cyan-600',
     tags: ['發薪日', '犒賞自己', '小資小確幸', '月初限時'],
+    previewUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'midyear',
@@ -671,6 +718,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '年中大檔',
     gradient: 'from-pink-600 via-rose-500 to-orange-400',
     tags: ['年中慶', '618大促', '夏季狂歡', '年中最強'],
+    previewUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'anniversary',
@@ -685,6 +733,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '週年慶典',
     gradient: 'from-amber-400 via-yellow-500 to-rose-500',
     tags: ['週年慶', '週年回饋', '品牌生日', '感謝有你'],
+    previewUrl: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'grandopening',
@@ -699,6 +748,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '新店開幕',
     gradient: 'from-red-600 via-rose-600 to-amber-500',
     tags: ['盛大開幕', '新店報到', '開幕排隊禮', '門市地址'],
+    previewUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 節慶節日篇（8 種）────────────────────────────────────────
@@ -715,6 +765,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '春節檔期',
     gradient: 'from-red-600 via-red-700 to-amber-500',
     tags: ['農曆春節', '紅金大吉', '年節禮盒', '賀歲迎新'],
+    previewUrl: 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'midautumn',
@@ -729,6 +780,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '中秋專屬',
     gradient: 'from-indigo-900 via-blue-900 to-amber-400',
     tags: ['中秋月圓', '月餅禮盒', '闔家團圓', '秋季暖調'],
+    previewUrl: 'https://images.unsplash.com/photo-1532767153582-b1a0e5145009?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'christmas',
@@ -743,6 +795,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '聖誕必推',
     gradient: 'from-emerald-700 via-red-700 to-amber-400',
     tags: ['聖誕歡樂', '雪花聖誕樹', '交換禮物', '冬季限定'],
+    previewUrl: 'https://images.unsplash.com/photo-1512389142860-9c449e58a543?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'newyear',
@@ -756,6 +809,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '16:9',
     gradient: 'from-blue-900 via-indigo-900 to-purple-800',
     tags: ['跨年元旦', '迎新煙火', '開運祝福', '新年願景'],
+    previewUrl: 'https://images.unsplash.com/photo-1467810563316-b5476525c0f9?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'valentine',
@@ -769,6 +823,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-pink-500 via-rose-500 to-red-400',
     tags: ['浪漫情人節', '雙人套餐', '情侶對禮', '粉紅泡泡'],
+    previewUrl: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'mothersday',
@@ -782,6 +837,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-rose-400 via-pink-300 to-amber-200',
     tags: ['溫馨母親節', '康乃馨', '呵護媽咪', '孝親聚餐'],
+    previewUrl: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'fathersday',
@@ -795,6 +851,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-amber-900 via-stone-800 to-slate-900',
     tags: ['感恩父親節', '紳士品味', '老爸專屬', '沉穩暖男'],
+    previewUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'holiday',
@@ -808,6 +865,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-teal-500 via-emerald-600 to-cyan-600',
     tags: ['連假公告', '節日祝福', '通用慶祝', '溫馨問候'],
+    previewUrl: 'https://images.unsplash.com/photo-1513201099705-a9746e1e201f?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 社群互動與教育篇（9 種）────────────────────────────────────────
@@ -824,6 +882,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '互動破表',
     gradient: 'from-violet-600 via-indigo-600 to-pink-500',
     tags: ['二選一', '社群投票', '留言互動', '激發站隊'],
+    previewUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'quizcard',
@@ -837,6 +896,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-blue-500 via-cyan-500 to-teal-500',
     tags: ['趣味問答', '知識小測驗', '輪播第二張', '增粉互動'],
+    previewUrl: 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'checklist',
@@ -851,6 +911,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '超高收藏',
     gradient: 'from-emerald-500 via-teal-600 to-cyan-700',
     tags: ['必買清單', '行前準備', '打勾手冊', '收藏率高'],
+    previewUrl: 'https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'dosdonts',
@@ -864,6 +925,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-teal-600 via-emerald-600 to-rose-600',
     tags: ['該做與不該做', '避坑指南', '對照表', '專業教學'],
+    previewUrl: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'mythbust',
@@ -878,6 +940,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '打破迷思',
     gradient: 'from-purple-600 via-rose-600 to-amber-500',
     tags: ['迷思破解', '事實真相', '打破誤解', '權威科普'],
+    previewUrl: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'quicktips',
@@ -891,6 +954,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-amber-500 via-orange-500 to-rose-500',
     tags: ['3大秘訣', '乾貨精華', '快速教學', '高轉發量'],
+    previewUrl: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'hack',
@@ -904,6 +968,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-cyan-500 via-blue-500 to-indigo-600',
     tags: ['隱藏喝法', '生活小技巧', '妙用拆解', '驚喜感'],
+    previewUrl: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'challenge',
@@ -917,6 +982,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-orange-500 via-rose-500 to-purple-600',
     tags: ['打卡挑戰', '天數追蹤', '完賽好禮', '社群參與'],
+    previewUrl: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'countdownstory',
@@ -930,6 +996,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '9:16',
     gradient: 'from-rose-600 via-red-600 to-orange-500',
     tags: ['限動倒數', '9:16全屏', '最後幾小時', '緊湊大字'],
+    previewUrl: 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 信任與證言篇（8 種）────────────────────────────────────────
@@ -946,6 +1013,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '轉化催化劑',
     gradient: 'from-amber-400 via-yellow-500 to-orange-400',
     tags: ['五星好評', '真實口碑', '顧客見證', '信任背書'],
+    previewUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'ratingstars',
@@ -959,6 +1027,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-yellow-500 via-amber-500 to-orange-600',
     tags: ['4.9高分', '千人狂推', '綜合評分', '口碑推薦'],
+    previewUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'proofpoint',
@@ -973,6 +1042,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '數據說話',
     gradient: 'from-blue-600 via-indigo-600 to-cyan-600',
     tags: ['客觀數據', '回購率98%', '權威檢驗', '銷量紀錄'],
+    previewUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'casestudy',
@@ -986,6 +1056,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-slate-700 via-indigo-800 to-zinc-900',
     tags: ['成功案例', '加盟見證', 'B2B成果', '真實轉變'],
+    previewUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'presslogo',
@@ -999,6 +1070,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '16:9',
     gradient: 'from-gray-700 via-slate-800 to-zinc-800',
     tags: ['媒體報導', '新聞採訪', '各大報推薦', '權威公信'],
+    previewUrl: 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'awardbadge',
@@ -1013,6 +1085,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '品質金獎',
     gradient: 'from-yellow-500 via-amber-600 to-yellow-700',
     tags: ['榮譽得獎', '金牌認證', 'iTQi殊榮', '品質背書'],
+    previewUrl: 'https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'certification',
@@ -1026,6 +1099,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-emerald-600 via-teal-700 to-slate-800',
     tags: ['SGS檢驗', '國際認證', '安全無添加', '食安守護'],
+    previewUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'sustainability',
@@ -1039,6 +1113,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-emerald-500 via-teal-600 to-green-700',
     tags: ['綠色環保', '永續減碳', '友善在地', 'ESG承諾'],
+    previewUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80',
   },
 
   // ── 商業公告與運營篇（11 種）────────────────────────────────────────
@@ -1055,6 +1130,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '神秘引流',
     gradient: 'from-indigo-950 via-purple-900 to-slate-900',
     tags: ['即將上市', '新品預告', '神秘微透', '期待感爆棚'],
+    previewUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'reveal',
@@ -1069,6 +1145,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '正式登場',
     gradient: 'from-fuchsia-600 via-violet-600 to-indigo-700',
     tags: ['重磅揭曉', '正式開賣', '核心賣點', '現貨到門市'],
+    previewUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'announcement',
@@ -1082,6 +1159,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-blue-600 via-slate-700 to-indigo-800',
     tags: ['官方公告', '重要通知', '營業異動', '清楚條列'],
+    previewUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'relocation',
@@ -1095,6 +1173,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-teal-500 via-emerald-600 to-cyan-600',
     tags: ['喬遷新喜', '門市搬遷', '新地址指引', '擴大營業'],
+    previewUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'tempclose',
@@ -1108,6 +1187,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '1:1',
     gradient: 'from-amber-600 via-stone-700 to-slate-800',
     tags: ['內部改裝', '設備保養', '暫停營業', '重開日期'],
+    previewUrl: 'https://images.unsplash.com/photo-1519750157634-b6d493a0f77c?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'hiring',
@@ -1122,6 +1202,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '廣納人才',
     gradient: 'from-indigo-600 via-blue-600 to-teal-500',
     tags: ['我們在找你', '人才徵招', '門市正職', '福利優渥'],
+    previewUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'franchise',
@@ -1136,6 +1217,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '連鎖拓點',
     gradient: 'from-amber-600 via-orange-600 to-red-600',
     tags: ['連鎖加盟', '開店輔導', '總部支援', '說明會報名'],
+    previewUrl: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'partnership',
@@ -1150,6 +1232,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     badge: '跨界聯名',
     gradient: 'from-purple-600 via-pink-600 to-indigo-600',
     tags: ['跨界聯名', '強強聯手', '1+1大於2', '限量合作款'],
+    previewUrl: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'appupdate',
@@ -1163,6 +1246,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-cyan-500 via-blue-600 to-violet-600',
     tags: ['全新改版', 'APP更新', '功能升級', '即刻體驗'],
+    previewUrl: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'systemmaint',
@@ -1176,6 +1260,7 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '16:9',
     gradient: 'from-slate-600 via-zinc-700 to-stone-800',
     tags: ['系統維護', '深夜升級', '時段公告', '貼心致歉'],
+    previewUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 'beta',
@@ -1189,5 +1274,6 @@ export const VISUAL_TEMPLATES: VisualTemplate[] = [
     defaultAspect: '4:5',
     gradient: 'from-violet-700 via-indigo-700 to-cyan-600',
     tags: ['限量內測', '體驗官招募', '搶先品嚐', '共同創造'],
+    previewUrl: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80',
   },
 ]

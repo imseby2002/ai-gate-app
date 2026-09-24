@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.fal.ai" },
       { protocol: "https", hostname: "storage.googleapis.com" },
       { protocol: "https", hostname: "**.supabase.co" },
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
 };
