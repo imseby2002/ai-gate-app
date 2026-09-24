@@ -427,11 +427,42 @@ const PAYMENT_SUFFIX_REPLY_RE = /^\D{0,6}\d{3,6}\D{0,6}$/
 const PAYMENT_KEYWORD_RE = /轉帳|匯款/
 const PAYMENT_SUFFIX_CODE_RE = /(?:後|末)(?:五|5)碼\s*[:：]?\s*\d{4,6}/
 
+// 真實案例：商家在「自建表單」幫某類訂單（例如賞鯨行程）另外指定了專屬通知對象
+// （例如外部合作船公司的 LINE 群組，跟客服人員自己看的通知管道／Telegram 是不同
+// 對象）。但客人常常不是被 AI 逐欄位問完表單（走 saveFormSubmissionFromChat 那條
+// 「填完標記」流程），而是自己一次把行程/人數/名單都講完，這種情況完全不會產生
+// cs_form_submissions，表單指定的對象自然收不到通知。這裡在「訂單確認」工單成立
+// 的同一時機（跟結構化表單 batchMode='immediate' 通知的時機一致：欄位齊全、還沒
+// 談到付款），额外比對表單的觸發關鍵字，命中的話直接照表單設定的對象補發一份，
+// 不用等客人剛好被逐欄位問過。只處理 batchMode==='immediate' 的表單——'manual'
+// 是商家自己選的「等專員核對入帳才手動推播給外部廠商」，這裡沒有對應的逐欄位
+// 提交紀錄可以讓專員按「確認入帳並推播」，貿然自動推播會繞過那個把關，所以維持
+// 現況、仍只靠客服通知管道的工單提醒專員自己判斷；'daily' 彙整同理不處理。
+function matchFormsByKeywords(forms: CsChatForm[], text: string): CsChatForm[] {
+  if (!text) return []
+  return forms.filter(f => {
+    const kws = f.trigger_keywords.split(',').map(k => k.trim()).filter(Boolean)
+    return kws.some(kw => text.includes(kw))
+  })
+}
+
+async function forwardOrderToMatchingForms(
+  userId: string, forms: CsChatForm[], orderText: string, fromName?: string,
+): Promise<void> {
+  const matched = matchFormsByKeywords(forms, orderText).filter(f => f.notify_target?.batchMode === 'immediate')
+  for (const form of matched) {
+    void notifyFormSubmission(
+      userId, form.notify_target, form.name,
+      `📋 ${form.name}（客人已在對話中確認訂單，非逐欄位表單填寫）\n\n${orderText.slice(0, 900)}${fromName ? `\n\n客人：${fromName}` : ''}`,
+    )
+  }
+}
+
 // Order confirmed → open a follow-up ticket so staff see it in the inbox.
 // The AI only *says* "會安排專員跟進"; without this nothing notifies staff.
 async function maybeCreateOrderTicket(
   userId: string, platform: string, customerId: string, industry: string,
-  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], fromName?: string,
+  history: HistoryMsg[], text: string, notifyWebhooks: NotifyWebhook[], forms: CsChatForm[], fromName?: string,
 ): Promise<void> {
   try {
     const lastAssistant = [...history].reverse().find(m => m.role === 'assistant')?.content ?? ''
@@ -457,6 +488,7 @@ async function maybeCreateOrderTicket(
     // 工單之外，另用 LINE OA 主動 push 通知已綁定的專員 + 工作台設定的工單通知管道
     void notifyStaffOrder(userId, lastAssistant)
     dispatchTicketNotify(notifyWebhooks, { platform, customerId, industry, fromName }, `🔔 有新訂單已確認，請盡快跟進：\n\n${lastAssistant.slice(0, 900)}`)
+    void forwardOrderToMatchingForms(userId, forms, lastAssistant, fromName)
   } catch { /* 不中斷主流程 */ }
 }
 
@@ -889,7 +921,7 @@ async function replyToCustomer(
 
   // 客人確認訂單 → 開待跟進工單（AI 只會口頭說「安排專員」，本身不通知）
   if (knowledge.bookingFlowEnabled) {
-    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
+    void maybeCreateOrderTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, knowledge.csForms, fromName)
   }
   // 客人提供匯款末五碼 → 不論訂房走的是哪套流程，都直接建工單通知管家核對
   void maybeCreatePaymentProofTicket(userId, platform, customerId, knowledge.industry, history, text, knowledge.notifyWebhooks, fromName)
