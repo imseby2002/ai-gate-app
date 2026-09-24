@@ -49,23 +49,33 @@ export async function POST(req: NextRequest) {
 
   if (!check_in || !check_out) return NextResponse.json({ error: '入住/退房日期必填' }, { status: 400 })
 
-  // 同一 user_id+platform+platform_booking_id+property_id 有唯一限制（見 migration 090），
-  // 取消過的訂單不會被刪除，只是 status 改 cancelled，所以「取消再重新輸入同一張訂單」
-  // 會撞到這個唯一鍵。與其讓使用者看到原始的 DB 錯誤訊息，比對到既有的取消訂單就直接
-  // 重新啟用；比對到「非取消」的既有訂單則視為真的重複，給清楚的錯誤訊息。
+  // 空字串要當成沒填單號，不能直接存成 ''——bookings 的唯一鍵（migration 140）
+  // 只排除 platform_booking_id 為 null 的情況，'' 仍算「有值」，兩筆都留空單號的
+  // 手動訂單會撞到同一把唯一鍵，讓使用者看到看不懂的原始 DB 錯誤。
+  const pbid: string | null = (platform_booking_id ?? '').trim() || null
+
+  // 同一 user_id+platform+platform_booking_id+property_id 有唯一限制（見 migration 140，
+  // 只排除 null 單號），取消過的訂單不會被刪除，只是 status 改 cancelled，所以「取消
+  // 再重新輸入同一張訂單」（含都沒填單號）會撞到這個唯一鍵。與其讓使用者看到原始的
+  // DB 錯誤訊息，比對到既有的取消訂單就直接重新啟用；比對到「非取消」的既有訂單則
+  // 視為真的重複，給清楚的錯誤訊息。
   let existingId: string | null = null
-  if (platform_booking_id && property_id) {
-    const { data: existing } = await supabase
+  if (property_id) {
+    let q = supabase
       .from('bookings')
       .select('id, status')
       .eq('user_id', ctx.ownerId)
       .eq('platform', platform)
-      .eq('platform_booking_id', platform_booking_id)
       .eq('property_id', property_id)
-      .maybeSingle()
+    q = pbid ? q.eq('platform_booking_id', pbid) : q.is('platform_booking_id', null)
+    const { data: existing } = await q.maybeSingle()
     if (existing) {
       if (existing.status !== 'cancelled') {
-        return NextResponse.json({ error: `訂單號碼 ${platform_booking_id} 已存在（此房型），請確認是否重複輸入` }, { status: 409 })
+        return NextResponse.json({
+          error: pbid
+            ? `訂單號碼 ${pbid} 已存在（此房型），請確認是否重複輸入`
+            : '這個房型已經有一筆沒填訂單號碼的手動訂單了，請確認是否重複輸入，或幫其中一筆補上訂單號碼以便區分',
+        }, { status: 409 })
       }
       existingId = existing.id
     }
@@ -73,12 +83,12 @@ export async function POST(req: NextRequest) {
 
   // 訂單資料結構重整第二階段：不管是不是多房型，每一筆房型明細都要掛在一張真正
   // 的訂單（booking_orders）下面，不能再只靠 platform_booking_id 軟性關聯。
-  const orderId = await findOrCreateOrder(supabase, ctx.ownerId, platform, platform_booking_id || null, {
+  const orderId = await findOrCreateOrder(supabase, ctx.ownerId, platform, pbid, {
     guest_name, guest_email, guest_phone, currency, special_requests, notes, source,
   })
 
   const payload = {
-    user_id: ctx.ownerId, order_id: orderId, property_id, platform, platform_booking_id,
+    user_id: ctx.ownerId, order_id: orderId, property_id, platform, platform_booking_id: pbid,
     guest_name, guest_email, guest_phone,
     check_in, check_out, num_guests, total_price, currency,
     status, special_requests, notes, source, extras,
