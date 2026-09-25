@@ -20,7 +20,7 @@ const HERO_OUTPUTS = [
   { Icon: FileText, label: '社群貼文＋廣告文案' },
   { Icon: ImageIcon, label: '85 種風格廣告圖' },
   { Icon: Film, label: '短影音分鏡腳本' },
-  { Icon: Send, label: '潛客名單＋自動寄送' },
+  { Icon: Send, label: '一鍵推文到 11 個社群' },
 ]
 
 const STATS = [
@@ -45,8 +45,8 @@ const PILLARS = [
   },
   {
     id: 'reach', n: '02', Icon: Users, title: '客人，AI 幫你找', tint: 'from-[#a34be0] to-[#e0479b]',
-    one: 'AI 自動蒐集潛在客戶、篩選分類，再用電話／Email／簡訊主動聯繫；社群帳號也能矩陣化自動發文。',
-    chips: ['潛在客戶行銷', 'AI 電訪', 'Email／簡訊', '社群矩陣與自動養號'],
+    one: '做好的圖文與短影音一鍵推到 FB、IG、Threads、X、TikTok、YouTube、LINE 等 11 個平台；AI 也會自動蒐集潛在客戶，用電話／Email／簡訊主動聯繫。',
+    chips: ['一鍵主動推文', '社群矩陣與自動養號', '潛在客戶行銷', 'AI 電訪', 'Email／簡訊'],
   },
   {
     id: 'insight', n: '03', Icon: BarChart3, title: '市場，AI 幫你看', tint: 'from-[#e0479b] to-[#f0795c]',

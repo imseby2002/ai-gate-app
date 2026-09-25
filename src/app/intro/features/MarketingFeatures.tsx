@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import {
-  Sparkles, Share2, Megaphone, Wand2, Search, GitBranch, Phone, BarChart3, Target, Layers, Brain, ArrowRight,
+  Sparkles, Share2, Megaphone, Wand2, Search, GitBranch, Phone, BarChart3, Target, Layers, Brain, ArrowRight, Send,
 } from 'lucide-react'
 import { GRAD, DarkHeader, FinalCta, IntroFooter, GradText } from '../_ui'
 import { VisualStyleShowcase } from '../VisualStyleShowcase'
@@ -66,10 +66,18 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         plan: '免費：蒐集＋篩選 · CORE：+Email · PRO：+電話',
       },
       {
+        id: 'social-publish', Icon: Send, title: '一鍵主動推文',
+        lead: '圖文、短影音做好，直接推到各大社群。',
+        desc: 'AI 產出的圖片、影片與文案，一次發布到多個社群平台與官方帳號，不用逐一登入後台貼文。',
+        points: ['Facebook 粉專', 'Instagram', 'Threads', 'X', 'LinkedIn', 'TikTok', 'YouTube Shorts', 'FB／IG Reels', 'LINE VOOM', 'Zalo OA'],
+        plan: 'CORE 起',
+      },
+      {
         id: 'social-matrix', Icon: Share2, title: '社群矩陣與自動養號',
         lead: '多帳號、多平台，同時經營。',
         desc: '支援住宅 IP 與代理池綁定、14 天擬人化自動養號、真人 Copilot 與矩陣自動發文兩種模式，搭配 AI 目標社群雷達與防封防重文案庫。',
-        points: ['代理池管理', 'AI 自動養號', 'Copilot／自動發文', 'FB／IG／Threads／TikTok'],
+        points: ['代理池管理', 'AI 自動養號', 'Copilot／自動發文', 'FB／IG／Threads／TikTok／Dcard／X'],
+        plan: '全方案',
       },
     ],
   },
@@ -103,7 +111,7 @@ const GROUPS: Array<{ id: string; n: string; title: string; sub: string; items: 
         id: 'auto', Icon: Megaphone, title: '行銷自動化',
         lead: '一個行銷案，從頭做到尾。',
         desc: '資料蒐集、競品分析、文案生成、圖片影片製作，到平台上傳的全流程自動化。',
-        points: ['資料蒐集', '文案生成', '圖片（CORE 起）', '影片（PRO 起）', '主播影片（MAX）', '自動上傳平台'],
+        points: ['資料蒐集', '文案生成', '圖片（CORE 起）', '影片（PRO 起）', '主播影片（MAX）', '一鍵發布社群（CORE 起）'],
         plan: '免費起',
       },
       {
