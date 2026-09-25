@@ -132,7 +132,7 @@ export function MarketingFeatures() {
       />
 
       <div className="sticky top-0 z-10 bg-[#f5f3f8]/90 backdrop-blur border-b border-[#e6e2ee]">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex gap-2 overflow-x-auto text-[13px] font-bold">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex gap-2 overflow-x-auto text-[14px] font-bold">
           {GROUPS.map(g => (
             <a key={g.id} href={`#${g.id}`} className="shrink-0 rounded-full border border-[#e6e2ee] bg-white px-3 py-1 hover:border-[#6a4be0] hover:text-[#6a4be0]">
               {g.n} {g.title}
@@ -143,9 +143,9 @@ export function MarketingFeatures() {
 
       {GROUPS.map(g => (
         <section key={g.id} id={g.id} className="max-w-5xl mx-auto px-6 pt-14 scroll-mt-16">
-          <div className="font-mono font-extrabold text-[13px] text-[#e0479b]">{g.n}</div>
+          <div className="font-mono font-extrabold text-[14px] text-[#e0479b]">{g.n}</div>
           <h2 className="text-[clamp(24px,4vw,34px)] font-black tracking-tight">{g.title}</h2>
-          <p className="text-[#615c70] text-[15px] mb-6">{g.sub}</p>
+          <p className="text-[#3f3a4d] text-[15px] mb-6">{g.sub}</p>
           <div className="grid gap-3.5 sm:grid-cols-2">
             {g.items.map(f => (
               <article key={f.id} id={f.id} className="flex flex-col gap-2.5 rounded-2xl border border-[#e6e2ee] bg-white p-5 scroll-mt-16">
@@ -154,12 +154,12 @@ export function MarketingFeatures() {
                   <h3 className="font-black text-[18px] tracking-tight">{f.title}</h3>
                 </div>
                 <div className="text-[15px] font-bold">{f.lead}</div>
-                <p className="text-[13.5px] text-[#615c70] leading-relaxed">{f.desc}</p>
+                <p className="text-[15px] text-[#3f3a4d] leading-relaxed">{f.desc}</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {f.points.map(p => <span key={p} className="text-[11.5px] text-[#615c70] bg-[#efecf5] rounded-md px-2 py-0.5">{p}</span>)}
+                  {f.points.map(p => <span key={p} className="text-[12.5px] text-[#3f3a4d] bg-[#efecf5] rounded-md px-2 py-0.5">{p}</span>)}
                 </div>
                 {f.plan && (
-                  <div className="mt-auto pt-2 text-[12px] font-bold text-[#6a4be0]">可用方案：{f.plan}</div>
+                  <div className="mt-auto pt-2 text-[13px] font-bold text-[#6a4be0]">可用方案：{f.plan}</div>
                 )}
               </article>
             ))}
@@ -171,7 +171,7 @@ export function MarketingFeatures() {
         <Link href="/intro/pricing" className="group flex items-center justify-between gap-4 rounded-2xl border border-[#6a4be0] bg-white p-6 hover:shadow-[0_16px_40px_rgba(60,40,120,0.12)]">
           <div>
             <div className="font-black text-[20px]">哪個方案適合我？</div>
-            <div className="text-[14px] text-[#615c70]">免費／PRO／TEAM／企業，逐項功能比較。</div>
+            <div className="text-[14px] text-[#3f3a4d]">免費／PRO／TEAM／企業，逐項功能比較。</div>
           </div>
           <ArrowRight className="h-5 w-5 text-[#6a4be0] group-hover:translate-x-1 transition-transform" />
         </Link>

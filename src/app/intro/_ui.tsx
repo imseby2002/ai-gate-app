@@ -15,7 +15,7 @@ export function IntroNav() {
         <span className="grid place-items-center w-8 h-8 rounded-lg text-white font-black shrink-0" style={{ background: GRAD }}>⚡</span>
         <b className="font-black tracking-wide">AI GATE 行銷中心</b>
       </Link>
-      <div className="ml-auto flex items-center gap-4 text-[13px] text-[#b3aac6]">
+      <div className="ml-auto flex items-center gap-4 text-[14px] text-[#ddd5ee]">
         <Link href="/intro/features" className="hover:text-white">功能詳解</Link>
         <Link href="/intro/pricing" className="hover:text-white">方案比較</Link>
         <Link href="/login" className="hover:text-white">登入</Link>
@@ -49,9 +49,9 @@ export function DarkHeader({ eyebrow, title, sub }: { eyebrow: string; title: Re
       <div className="relative max-w-5xl mx-auto px-6">
         <IntroNav />
         <div className="pb-12">
-          <div className="font-mono text-[12px] tracking-[0.22em] uppercase text-[#c9b7ff]">{eyebrow}</div>
+          <div className="font-mono text-[13px] tracking-[0.22em] uppercase text-[#c9b7ff]">{eyebrow}</div>
           <h1 className="mt-3 font-black leading-[1.08] tracking-tight text-[clamp(30px,6vw,52px)]" style={BALANCE}>{title}</h1>
-          {sub && <p className="mt-4 text-[#b3aac6] text-[clamp(15px,2.2vw,18px)] max-w-[52ch]">{sub}</p>}
+          {sub && <p className="mt-4 text-[#ddd5ee] text-[clamp(15px,2.2vw,18px)] max-w-[52ch]">{sub}</p>}
         </div>
       </div>
     </header>
@@ -76,11 +76,11 @@ export function FinalCta({ title }: { title: React.ReactNode }) {
 
 export function IntroFooter() {
   return (
-    <footer className="text-center text-[#938da3] text-[12px] py-7 flex items-center justify-center gap-3 flex-wrap">
+    <footer className="text-center text-[#6b6480] text-[13px] py-7 flex items-center justify-center gap-3 flex-wrap">
       <span className="flex items-center gap-2"><Zap className="h-3.5 w-3.5" /> AI GATE 行銷中心 · IMT</span>
-      <Link href="/intro/features" className="hover:text-[#615c70]">功能詳解</Link>
-      <Link href="/intro/pricing" className="hover:text-[#615c70]">方案比較</Link>
-      <Link href="/privacy" className="hover:text-[#615c70]">隱私權政策</Link>
+      <Link href="/intro/features" className="hover:text-[#3f3a4d]">功能詳解</Link>
+      <Link href="/intro/pricing" className="hover:text-[#3f3a4d]">方案比較</Link>
+      <Link href="/privacy" className="hover:text-[#3f3a4d]">隱私權政策</Link>
     </footer>
   )
 }
