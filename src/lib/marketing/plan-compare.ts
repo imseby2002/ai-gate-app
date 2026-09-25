@@ -13,7 +13,7 @@ export const PLAN_CARDS: Array<{
 }> = [
   {
     plan: 'pro', name: 'CORE', monthlyId: 'pro_monthly', yearlyId: 'pro_yearly', monthlyUsd: 29, yearlyUsd: 278,
-    features: ['10 個行銷案', '圖片產出＋自動上傳平台', 'AI 產品行銷設計師（策略＋文案）', 'GEO 產文無限', 'Email 行銷'],
+    features: ['10 個行銷案', '圖片產出＋一鍵發布 11 個社群平台', 'AI 產品行銷設計師（策略＋文案）', 'GEO 產文無限', 'Email 行銷'],
   },
   {
     plan: 'team', name: 'PRO', monthlyId: 'team_monthly', yearlyId: 'team_yearly', monthlyUsd: 49, yearlyUsd: 470,
@@ -31,7 +31,8 @@ export const COMPARISON_ROWS: Array<{ label: string; values: [string, string, st
   { label: '協作人員', values: ['不可邀請', '1 位', '無限', '無限'] },
   { label: '資料蒐集／分析／文案', values: ['基本', '✓', '✓', '✓'] },
   { label: '圖片產出（點數扣款）', values: ['—', '✓', '✓', '✓'] },
-  { label: '自動上傳平台', values: ['—', '✓', '✓', '✓'] },
+  { label: '一鍵主動推文（11 個社群平台）', values: ['—', '✓', '✓', '✓'] },
+  { label: '社群矩陣自動發文＋養號', values: ['✓', '✓', '✓', '✓'] },
   { label: '影片產出（點數扣款）', values: ['—', '—', '✓', '✓'] },
   { label: 'AI 電訪＋Email（點數扣款）', values: ['—', 'Email', '✓', '✓'] },
   { label: '主播行銷 HeyGen（點數扣款）', values: ['—', '—', '—', '✓'] },
