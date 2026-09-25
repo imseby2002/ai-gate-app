@@ -218,6 +218,25 @@ export async function middleware(request: NextRequest) {
       }
     }
 
+    // 舊的共用 ERP 網址（office／work.im-tourist.com）：員工所屬公司已設定專屬子網域時，
+    // 轉到 <slug>.im-tourist.com 的同一頁，舊書籤與連結不用改。總管理員不轉址（需跨公司管理）。
+    if ((sub === 'office' || sub === 'work') && cookieDomain && !pathname.startsWith('/api')) {
+      const { data: viewer, error: viewerErr } = await supabase
+        .from('profiles').select('user_type, company_id').eq('id', user.id).single()
+      if (viewerErr) console.error('[middleware] profiles 查詢失敗', { userId: user.id, pathname, error: viewerErr })
+      if (viewer?.company_id && viewer.user_type !== 'admin') {
+        const { data: ownCompany, error: ownErr } = await supabase
+          .from('companies').select('slug').eq('id', viewer.company_id).maybeSingle()
+        if (ownErr) console.error('[middleware] companies 查詢失敗', { companyId: viewer.company_id, error: ownErr })
+        if (ownCompany?.slug) {
+          const url = request.nextUrl.clone()
+          url.hostname = `${ownCompany.slug}.im-tourist.com`
+          url.port = ''
+          return attachLocaleCookie(NextResponse.redirect(url))
+        }
+      }
+    }
+
     // scope guard 已移至 client-side ScopeManager（sessionStorage per-tab）
     // 這裡只保留 admin guard 和 module guard
     const needsProfileCheck = user && (
