@@ -53,6 +53,14 @@ export async function GET() {
     membersByCompany.set(m.company_id, list)
   }
 
+  // 公司錢包餘額（本月贈點＋儲值），每間公司一次 RPC
+  const walletEntries = await Promise.all((companies ?? []).map(async c => {
+    const { data } = await admin.rpc('get_company_credit_balance', { p_company_id: c.id })
+    const row = Array.isArray(data) ? data[0] : data
+    return [c.id, { gift: Number(row?.gift ?? 0), paid: Number(row?.paid ?? 0) }] as const
+  }))
+  const walletMap = new Map(walletEntries)
+
   const result = (companies ?? []).map(c => {
     const compMembers = membersByCompany.get(c.id) ?? []
     const ownerMember = compMembers.find(m => m.role === 'owner' && m.status === 'active')
@@ -71,6 +79,7 @@ export async function GET() {
       erpSeats: planMap.get(c.id)?.erp_seats ?? 0,
       retailStores: planMap.get(c.id)?.retail_stores ?? 0,
       customDomain: planMap.get(c.id)?.custom_domain ?? false,
+      wallet: walletMap.get(c.id) ?? { gift: 0, paid: 0 },
     }
   })
 
@@ -182,7 +191,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain } = body as {
+    const { id, name, enabledModules, bnbOwnerId, ownerId, itId, feedbackFree, freeFeatureQuotaMonthly, plan, erpSeats, retailStores, customDomain, creditTopUpUsd } = body as {
       id: string
       name?: string
       enabledModules?: string[] | null
@@ -195,6 +204,7 @@ export async function PATCH(req: NextRequest) {
       erpSeats?: number
       retailStores?: number
       customDomain?: boolean
+      creditTopUpUsd?: number
     }
 
     if (!id) {
@@ -229,6 +239,18 @@ export async function PATCH(req: NextRequest) {
         .from('company_subscriptions')
         .upsert({ company_id: id, ...subPatch }, { onConflict: 'company_id' })
       if (planErr) return NextResponse.json({ error: planErr.message }, { status: 500 })
+    }
+
+    // 管理員手動為公司錢包加值（寫入儲值桶）
+    if (creditTopUpUsd !== undefined && Number(creditTopUpUsd) > 0) {
+      const { error: topUpErr } = await admin.rpc('add_company_credits', {
+        p_company_id: id,
+        p_user_id: auth.user!.id,
+        p_amount: Number(creditTopUpUsd),
+        p_type: 'admin',
+        p_description: '管理員加值',
+      })
+      if (topUpErr) return NextResponse.json({ error: topUpErr.message }, { status: 500 })
     }
 
     // 若變更負責人

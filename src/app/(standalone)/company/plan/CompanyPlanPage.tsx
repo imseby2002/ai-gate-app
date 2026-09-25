@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Loader2, Lock, Building2 } from 'lucide-react'
-import { YEARLY_MONTHS, type CompanyPriceLine } from '@/lib/company/pricing'
+import { YEARLY_MONTHS, COMPANY_MONTHLY_GIFT_USD, type CompanyPriceLine } from '@/lib/company/pricing'
 
 type Cycle = 'monthly' | 'yearly'
 
@@ -11,6 +11,7 @@ interface PlanData {
   companyName: string
   currentPeriodEnd: string | null
   price: { lines: CompanyPriceLine[]; monthlyUsd: number }
+  wallet: { gift: number; paid: number }
 }
 
 // 公司方案為模組化計價：開通內容（模組、ERP 人數、門市數、自訂網域）由平台設定，
@@ -130,6 +131,13 @@ export function CompanyPlanPage({ isOwnerOrAdmin }: { isOwnerOrAdmin: boolean })
             <span>${total}</span>
           </div>
           <p className="text-[11px] text-muted-foreground">開通模組、ERP 人數與門市數由平台依合約設定，如需調整請聯繫我們。</p>
+        </div>
+
+        <div className="rounded-xl border bg-card p-4 space-y-1 text-sm">
+          <div className="font-semibold text-foreground">公司錢包</div>
+          <div className="flex justify-between text-muted-foreground tabular-nums"><span>本月贈點（每月 ${COMPANY_MONTHLY_GIFT_USD}，不累積）</span><span>${data.wallet.gift.toFixed(2)}</span></div>
+          <div className="flex justify-between text-muted-foreground tabular-nums"><span>儲值餘額</span><span>${data.wallet.paid.toFixed(2)}</span></div>
+          <p className="text-[11px] text-muted-foreground">成員使用行銷生成、智慧圓桌、AI Agent 等扣點功能時，先扣本月贈點，再扣儲值。儲值請聯繫我們。</p>
         </div>
 
         <button

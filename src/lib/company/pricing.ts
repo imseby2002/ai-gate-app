@@ -25,6 +25,8 @@ export const ERP_EXTRA_SEAT_USD = 2
 export const RETAIL_STORE_USD = 10
 export const CUSTOM_DOMAIN_USD = 10
 export const YEARLY_MONTHS = 10
+/** 公司方案每月贈點（美元），當月有效、不累積；數值需與 migration 20260925_company_credit_wallet.sql 一致 */
+export const COMPANY_MONTHLY_GIFT_USD = 10
 
 export interface CompanyPlanConfig {
   /** companies.enabled_modules；只有 COMPANY_MODULE_PRICES_USD 裡的模組會計費 */

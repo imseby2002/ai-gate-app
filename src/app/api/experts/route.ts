@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { deductCredits } from '@/lib/skills/billing'
+import { deductCredits, getBalance } from '@/lib/skills/billing'
 import { processExpertUrl, processExpertSearch, processExpertManual, detectSourceType } from '@/lib/experts/pipeline'
 
 export const maxDuration = 120
@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
   // 抓取 + Claude 合成有真實 API 成本 → 比照 chat/roundtable 慣例，只對 external 付費用戶計費
   const billable = profile.user_type === 'external'
   if (billable) {
-    const { data: balance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
+    // 公司方案成員看公司錢包餘額（見 lib/skills/billing.ts）
+    const balance = await getBalance(user.id)
     if ((balance ?? 0) < EXPERT_SYNTHESIS_COST) {
       return NextResponse.json({ error: 'insufficient_credits' }, { status: 402 })
     }

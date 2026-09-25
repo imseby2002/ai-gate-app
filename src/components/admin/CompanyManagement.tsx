@@ -46,6 +46,7 @@ export interface CompanyItem {
   erpSeats?: number
   retailStores?: number
   customDomain?: boolean
+  wallet?: { gift: number; paid: number }
   created_at: string
   creator: { id: string; email: string; full_name: string | null } | null
   owner: { id: string; email: string; full_name: string | null } | null
@@ -132,6 +133,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
   const [formErpSeats, setFormErpSeats] = useState('0')
   const [formRetailStores, setFormRetailStores] = useState('0')
   const [formCustomDomain, setFormCustomDomain] = useState(false)
+  const [formTopUp, setFormTopUp] = useState('')
 
   // Member Management state
   const [selectedUserToAdd, setSelectedUserToAdd] = useState('')
@@ -250,6 +252,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
     setFormErpSeats(String(company.erpSeats ?? 0))
     setFormRetailStores(String(company.retailStores ?? 0))
     setFormCustomDomain(company.customDomain ?? false)
+    setFormTopUp('')
   }
 
   const handleSaveEdit = async () => {
@@ -272,6 +275,7 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
           erpSeats: Number(formErpSeats) || 0,
           retailStores: Number(formRetailStores) || 0,
           customDomain: formCustomDomain,
+          creditTopUpUsd: Number(formTopUp) > 0 ? Number(formTopUp) : undefined,
         }),
       })
       const d = await res.json()
@@ -1065,6 +1069,17 @@ export function CompanyManagement({ initialCompanies, allUsers }: Props) {
                         className="rounded border-slate-300 h-4 w-4" />
                       自訂網域
                     </label>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <div className="tabular-nums">
+                        公司錢包：本月贈點 ${editingCompany?.wallet?.gift ?? 0}・儲值 ${editingCompany?.wallet?.paid ?? 0}
+                      </div>
+                      <label className="flex items-center gap-2">
+                        <span className="shrink-0">加值（美元）</span>
+                        <input id="company-credit-topup" type="number" min={0} step="0.01" value={formTopUp} onChange={e => setFormTopUp(e.target.value)}
+                          placeholder="0" className="w-28 h-8 px-2 rounded-lg border border-slate-200 bg-white text-sm" />
+                        <span className="text-slate-400">儲存時寫入</span>
+                      </label>
+                    </div>
                     <div className="text-xs text-slate-600 space-y-0.5 tabular-nums">
                       {price.lines.map(l => (
                         <div key={l.label} className="flex justify-between"><span>{l.label}</span><span>${l.usd}</span></div>

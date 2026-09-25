@@ -13,6 +13,7 @@ import {
 } from '@/lib/ai/roundtable'
 import { roundtableUsage } from '@/lib/ai/roundtable-usage'
 import { chargeRoundtable } from '@/lib/ai/roundtable-billing'
+import { getBalance } from '@/lib/skills/billing'
 
 export const maxDuration = 300
 
@@ -35,7 +36,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (profile.user_type === 'external') {
-    const { data: balance } = await supabase.rpc('get_credit_balance', { p_user_id: user.id })
+    // 公司方案成員看公司錢包餘額（見 lib/skills/billing.ts）
+    const balance = await getBalance(user.id)
     if ((balance ?? 0) < 0.1) {
       return new Response(JSON.stringify({ error: 'insufficient_credits' }), { status: 402 })
     }

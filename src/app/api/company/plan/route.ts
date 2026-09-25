@@ -22,6 +22,8 @@ export async function GET() {
     admin.from('companies').select('enabled_modules').eq('id', company.companyId).single(),
     admin.from('company_subscriptions').select('erp_seats, retail_stores, custom_domain, current_period_end').eq('company_id', company.companyId).maybeSingle(),
   ])
+  const { data: walletData } = await admin.rpc('get_company_credit_balance', { p_company_id: company.companyId })
+  const walletRow = Array.isArray(walletData) ? walletData[0] : walletData
   const config = {
     modules: companyRow?.enabled_modules ?? [],
     erpSeats: sub?.erp_seats ?? 0,
@@ -37,5 +39,6 @@ export async function GET() {
     currentPeriodEnd: sub?.current_period_end ?? null,
     config,
     price: calcCompanyMonthlyPrice(config),
+    wallet: { gift: Number(walletRow?.gift ?? 0), paid: Number(walletRow?.paid ?? 0) },
   })
 }

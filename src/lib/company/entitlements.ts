@@ -80,3 +80,19 @@ export async function hasCompanyModuleGrant(ownerId: string, moduleId: string): 
     return false
   }
 }
+
+/**
+ * userId 所屬公司若有有效的 'company' 方案，回傳公司 id（扣點改走公司錢包）；否則 null。
+ */
+export async function getBillingCompanyId(userId: string): Promise<string | null> {
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { data: profile } = await admin.from('profiles').select('company_id').eq('id', userId).maybeSingle()
+  if (!profile?.company_id) return null
+  const { data: active, error } = await admin.rpc('company_plan_active', { p_company_id: profile.company_id })
+  if (error) {
+    console.error('[company entitlements] company_plan_active 查詢失敗', { userId, error })
+    return null
+  }
+  return active ? profile.company_id : null
+}
