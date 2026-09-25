@@ -81,10 +81,11 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // 行銷中心介紹頁只在 marketing 子網域提供：
-    // - /intro/*（功能詳解、方案比較）為行銷專屬，其他子網域一律導到 marketing
-    // - /intro 在系統子網域（如 cs）由 page.tsx 依子網域顯示各自廣告頁；非系統網域（www、主網域）導到 marketing
-    const isMarketingIntroPath = pathname.startsWith('/intro/') || (pathname === '/intro' && !SUBDOMAIN_SYSTEM[sub])
+    // 介紹頁依子網域提供：
+    // - /intro 在系統子網域（cs、booking…）由 page.tsx 依子網域顯示各自廣告頁；非系統網域（www、主網域）導到 marketing
+    // - /intro/*（功能、方案）目前只有 marketing 與 cs 有自己的版本，其他子網域導到 marketing
+    const INTRO_SUBPAGE_SUBS = ['marketing', 'cs']
+    const isMarketingIntroPath = (pathname.startsWith('/intro/') && !INTRO_SUBPAGE_SUBS.includes(sub)) || (pathname === '/intro' && !SUBDOMAIN_SYSTEM[sub])
     if (cookieDomain && sub !== 'marketing' && isMarketingIntroPath) {
       const url = request.nextUrl.clone()
       url.hostname = 'marketing.im-tourist.com'
