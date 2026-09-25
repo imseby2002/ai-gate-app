@@ -54,13 +54,13 @@ export async function getUnitContextAny(unitKeys: string[]): Promise<UnitContext
   const hasUnit = unitKeys.some(k => units.includes(k))
   if (!isSuperAdmin && !isCompanyAdmin && !hasUnit) return DENY_403
 
-  // 管理者／owner：資料在自己名下；IT 或一般成員：解析公司 owner
+  // 總管理員若剛好也是某家公司的真員工（有 activeCompanyId），資料控管跟一般
+  // 員工一致，一樣解析到那家公司的 owner；沒有公司身分時才停留在自己名下
+  // （純後台管理員，不隸屬任何公司）。
   let ownerId = user.id
-  if (!isSuperAdmin) {
-    const owner = await resolveCompanyOwner(admin, activeCompanyId)
-    if (owner) {
-      ownerId = owner
-    }
+  const owner = await resolveCompanyOwner(admin, activeCompanyId)
+  if (owner) {
+    ownerId = owner
   }
 
   // 門市代碼限制（管理者為 null 可跨店；門市人員綁定本店代碼）
@@ -106,11 +106,9 @@ export async function getCompanyContext(): Promise<UnitContext> {
   }
 
   let ownerId = user.id
-  if (!isSuperAdmin) {
-    const owner = await resolveCompanyOwner(admin, activeCompanyId)
-    if (owner) {
-      ownerId = owner
-    }
+  const owner = await resolveCompanyOwner(admin, activeCompanyId)
+  if (owner) {
+    ownerId = owner
   }
 
   const storeCode = (isSuperAdmin || isCompanyAdmin) ? null : (profile?.department ? String(profile.department).trim() : null)

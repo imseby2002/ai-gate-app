@@ -17,9 +17,15 @@ export async function resolveCompanyOwner(admin: Admin, companyId: string | null
 
 // 解析「目前應該操作哪一家公司」：
 // - 有切換 cookie 且該公司確實有 active 成員資格（或本人是總管理員，可代操任一公司）→ 用 cookie 指定的公司
-// - 否則退回 profiles.company_id（單一公司員工的預設值，原本行為不變）
+// - 否則退回 profiles.company_id（單一公司員工的預設值）
 // 一個人現在可以同時是多家公司的一般成員（owner 除外，owner 仍一人限一家），
 // 所以「目前是哪家」不能只看 profiles.company_id，需要靠切換 cookie 明確指定。
+//
+// 總管理員也是這套資料控管：沒手動切換時，若本人剛好也是某家公司的真員工
+// （profiles.company_id 有值，代表有 active company_members），一樣預設代入
+// 那家公司，行為跟一般員工一致——不然總管理員自己測試都要每次手動切換。
+// 總管理員多出來的權限只在「有明確切換 cookie 時可以代操任一家公司」（不需
+// membership 驗證），不是「預設看自己」。
 export async function resolveActiveCompanyId(
   admin: Admin,
   userId: string,
@@ -36,7 +42,5 @@ export async function resolveActiveCompanyId(
     return data ? requested : fallbackCompanyId
   }
 
-  // 沒有切換 cookie：總管理員維持操作自己的帳號（不套用殘留的 profiles.company_id），
-  // 一般使用者才退回自己所屬的預設公司——跟原本行為一致。
-  return isSuperAdmin ? null : fallbackCompanyId
+  return fallbackCompanyId
 }
