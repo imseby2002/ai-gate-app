@@ -13,6 +13,8 @@ import {
   type SynthesisStyle,
   type VerbosityMode,
 } from '@/lib/ai/roundtable'
+import { roundtableUsage } from '@/lib/ai/roundtable-usage'
+import { chargeRoundtable } from '@/lib/ai/roundtable-billing'
 import { loadExpertContext } from '@/lib/experts/loader'
 
 export const maxDuration = 300
@@ -107,6 +109,8 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      // 本次請求的模型用量累計（roundtableUsage.run 範圍內的呼叫會寫入）
+      const usage = { costUsd: 0 }
       let finalReport: string | null = session.report ?? null
       const newStatements: Statement[] = []
       let isWaitingBoss = false
@@ -140,7 +144,7 @@ export async function POST(req: NextRequest) {
               content: synthesisGuidance,
             })
           }
-          const report = await executeSynthesize(
+          const report = await roundtableUsage.run(usage, () => executeSynthesize(
             session.instruction,
             factBriefing,
             [...priorTranscript, ...newStatements],
@@ -149,11 +153,11 @@ export async function POST(req: NextRequest) {
             synthesisStyle,
             verbosity,
             synthesisGuidance,
-          )
+          ))
           finalReport = report
         } else {
           // 老闆介入發言 (全體深化 或 點名單挑)
-          const stepStatements = await executeBossStep(
+          const stepStatements = await roundtableUsage.run(usage, () => executeBossStep(
             session.instruction,
             factBriefing,
             priorTranscript,
@@ -167,7 +171,7 @@ export async function POST(req: NextRequest) {
             emit,
             expertContextMap,
             verbosity,
-          )
+          ))
           newStatements.push(...stepStatements)
           // 完成本組輪次（論述輪 + 互評輪）後，取得最大結束輪次，再次暫停等待老闆後續指令
           const endRound = stepStatements.reduce((max, item) => Math.max(max, Number(item.round) || nextRound), nextRound)
@@ -202,6 +206,7 @@ export async function POST(req: NextRequest) {
             .eq('id', sessionId)
         }
 
+        await chargeRoundtable(user.id, profile.user_type, usage.costUsd, sessionId)
         controller.close()
       }
     },

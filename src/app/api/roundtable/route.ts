@@ -11,6 +11,8 @@ import {
   type SynthesisStyle,
   type VerbosityMode,
 } from '@/lib/ai/roundtable'
+import { roundtableUsage } from '@/lib/ai/roundtable-usage'
+import { chargeRoundtable } from '@/lib/ai/roundtable-billing'
 
 export const maxDuration = 300
 
@@ -89,6 +91,8 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      // 本次請求的模型用量累計（roundtableUsage.run 範圍內的呼叫會寫入）
+      const usage = { costUsd: 0 }
       // 廣播 sessionId 給前端
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'session-created', sessionId })}\n\n`))
 
@@ -124,7 +128,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        await runRoundtable(
+        await roundtableUsage.run(usage, () => runRoundtable(
           {
             bossInstruction: instruction,
             domain,
@@ -136,7 +140,7 @@ export async function POST(req: NextRequest) {
             verbosity,
           },
           emit,
-        )
+        ))
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
       } catch (err) {
         console.error('[roundtable] error:', err)
@@ -175,6 +179,7 @@ export async function POST(req: NextRequest) {
           const { error: fbErr } = await supabase.from('roundtable_sessions').upsert(fallbackPayload)
           if (fbErr) console.error('[roundtable] save session fallback failed:', fbErr)
         }
+        await chargeRoundtable(user.id, profile.user_type, usage.costUsd, sessionId)
         controller.close()
       }
     },
